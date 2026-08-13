@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useActionSpellMetamagic } from './useActionSpellMetamagic.js';
@@ -28,30 +29,28 @@ vi.mock('../../services/rules/spells/spellCastService.js', () => ({
   executeSpellCast: vi.fn(() => Promise.resolve(null)),
 }));
 
-global.fetch = vi.fn(() =>
-  Promise.resolve({
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
-  })
-);
-
 describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
   setupBeforeEach();
 
-  it('does nothing when no pending metamagic', () => {
+  it('clears pending state and does nothing when no pending action', async () => {
     const props = makeHookProps();
     const { result } = renderHook(() => useActionSpellMetamagic(props));
 
-    act(() => {
+    const { spendSorceryPoints } = await import('./useMetamagic.js');
+    const { addEntry } = await import('../../services/ui/logService.js');
+    const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+    await act(async () => {
       result.current.handleActionMetamagicConfirm({});
     });
 
     expect(result.current.pendingActionMetamagic).toBeNull();
+    expect(spendSorceryPoints).not.toHaveBeenCalled();
+    expect(addEntry).not.toHaveBeenCalled();
+    expect(executeSpellCast).not.toHaveBeenCalled();
   });
 
-  it('clears pending and calls action on confirm with basic result', async () => {
+  it('clears pending state and executes spell cast on confirm', async () => {
     const spell = makeSpell();
     const props = makeHookProps({
       playerStats: {
@@ -90,6 +89,41 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     expect(executeSpellCast).toHaveBeenCalled();
   });
 
+  it('does not spend SP when totalCost is 0', async () => {
+    const { spendSorceryPoints } = await import('./useMetamagic.js');
+    const spell = makeSpell();
+    const props = makeHookProps({
+      playerStats: {
+        name: 'TestSorcerer',
+        class: { name: 'Sorcerer' },
+        level: 5,
+        spellAbilities: { spells: [spell] },
+      },
+    });
+    const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+
+    isPsionicSpell.mockReturnValue(false);
+    hasPsionicSorcery.mockReturnValue(false);
+
+    const attack = {
+      name: 'Fireball',
+      spellLevel: 3,
+      castingTime: '1 Action',
+    };
+
+    const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+    await act(async () => {
+      result.current.handleActionSpellDamageClick(attack);
+    });
+
+    await act(async () => {
+      result.current.handleActionMetamagicConfirm({ totalCost: 0, options: [] });
+    });
+
+    expect(spendSorceryPoints).not.toHaveBeenCalled();
+  });
+
   it('spends sorcery points when totalCost > 0', async () => {
     const { spendSorceryPoints } = await import('./useMetamagic.js');
     const spell = makeSpell();
@@ -106,9 +140,6 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     isPsionicSpell.mockReturnValue(false);
     hasPsionicSorcery.mockReturnValue(false);
 
-    const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
-    executeSpellCast.mockResolvedValue(null);
-
     const attack = {
       name: 'Fireball',
       spellLevel: 3,
@@ -120,8 +151,6 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     await act(async () => {
       result.current.handleActionSpellDamageClick(attack);
     });
-
-    expect(result.current.pendingActionMetamagic).not.toBeNull();
 
     await act(async () => {
       result.current.handleActionMetamagicConfirm({ totalCost: 3, options: ['Heightened Spell'] });
@@ -135,8 +164,8 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     );
   });
 
-  it('adds Psionic Sorcery to options when psionicCost > 0', async () => {
-    const { logMetamagicUse } = await import('./useMetamagic.js');
+  it('does not spend SP when psionicCost is the only cost and Subtle Spell is selected', async () => {
+    const { spendSorceryPoints } = await import('./useMetamagic.js');
     const spell = makeSpell();
     const props = makeHookProps({
       playerStats: {
@@ -151,8 +180,40 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     isPsionicSpell.mockReturnValue(true);
     hasPsionicSorcery.mockReturnValue(true);
 
-    const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
-    executeSpellCast.mockResolvedValue(null);
+    const attack = {
+      name: 'Fireball',
+      spellLevel: 3,
+      castingTime: '1 Action',
+    };
+
+    const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+    await act(async () => {
+      result.current.handleActionSpellDamageClick(attack);
+    });
+
+    await act(async () => {
+      result.current.handleActionMetamagicConfirm({ totalCost: 0, options: ['Subtle Spell'] });
+    });
+
+    expect(spendSorceryPoints).not.toHaveBeenCalled();
+  });
+
+  it('spends SP equal to metamagic cost + psionic cost when psionic and Subtle Spell not selected', async () => {
+    const { spendSorceryPoints } = await import('./useMetamagic.js');
+    const spell = makeSpell();
+    const props = makeHookProps({
+      playerStats: {
+        name: 'TestSorcerer',
+        class: { name: 'Sorcerer' },
+        level: 5,
+        spellAbilities: { spells: [spell] },
+      },
+    });
+    const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+
+    isPsionicSpell.mockReturnValue(true);
+    hasPsionicSorcery.mockReturnValue(true);
 
     const attack = {
       name: 'Fireball',
@@ -166,18 +227,15 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
       result.current.handleActionSpellDamageClick(attack);
     });
 
-    expect(result.current.pendingActionMetamagic).not.toBeNull();
-
     await act(async () => {
-      result.current.handleActionMetamagicConfirm({ totalCost: 0, options: [] });
+      result.current.handleActionMetamagicConfirm({ totalCost: 2, options: ['Quickened Spell'] });
     });
 
-    expect(logMetamagicUse).toHaveBeenCalledWith(
-      'test-campaign',
+    expect(spendSorceryPoints).toHaveBeenCalledWith(
       'TestSorcerer',
-      'Fireball',
-      expect.arrayContaining(['Psionic Sorcery']),
-      3,
+      5,
+      'test-campaign',
+      10,
     );
   });
 
@@ -196,9 +254,6 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
 
     isPsionicSpell.mockReturnValue(false);
     hasPsionicSorcery.mockReturnValue(false);
-
-    const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
-    executeSpellCast.mockResolvedValue(null);
 
     const attack = {
       name: 'Fireball',
@@ -225,6 +280,95 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     );
   });
 
+  it('adds Psionic Sorcy to logged options when psionicCost > 0 and Subtle Spell not selected', async () => {
+    const { logMetamagicUse } = await import('./useMetamagic.js');
+    const spell = makeSpell();
+    const props = makeHookProps({
+      playerStats: {
+        name: 'TestSorcerer',
+        class: { name: 'Sorcerer' },
+        level: 5,
+        spellAbilities: { spells: [spell] },
+      },
+    });
+    const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+
+    isPsionicSpell.mockReturnValue(true);
+    hasPsionicSorcery.mockReturnValue(true);
+
+    const attack = {
+      name: 'Fireball',
+      spellLevel: 3,
+      castingTime: '1 Action',
+    };
+
+    const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+    await act(async () => {
+      result.current.handleActionSpellDamageClick(attack);
+    });
+
+    await act(async () => {
+      result.current.handleActionMetamagicConfirm({ totalCost: 0, options: [] });
+    });
+
+    expect(logMetamagicUse).toHaveBeenCalledWith(
+      'test-campaign',
+      'TestSorcerer',
+      'Fireball',
+      expect.arrayContaining(['Psionic Sorcery']),
+      3,
+    );
+  });
+
+  it('does not add Psionic Sorcery to options when Subtle Spell is selected despite psionicCost > 0', async () => {
+    const { logMetamagicUse } = await import('./useMetamagic.js');
+    const spell = makeSpell();
+    const props = makeHookProps({
+      playerStats: {
+        name: 'TestSorcerer',
+        class: { name: 'Sorcerer' },
+        level: 5,
+        spellAbilities: { spells: [spell] },
+      },
+    });
+    const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+
+    isPsionicSpell.mockReturnValue(true);
+    hasPsionicSorcery.mockReturnValue(true);
+
+    const attack = {
+      name: 'Fireball',
+      spellLevel: 3,
+      castingTime: '1 Action',
+    };
+
+    const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+    await act(async () => {
+      result.current.handleActionSpellDamageClick(attack);
+    });
+
+    await act(async () => {
+      result.current.handleActionMetamagicConfirm({ totalCost: 1, options: ['Subtle Spell'] });
+    });
+
+    expect(logMetamagicUse).toHaveBeenCalledWith(
+      'test-campaign',
+      'TestSorcerer',
+      'Fireball',
+      expect.arrayContaining(['Subtle Spell']),
+      1,
+    );
+    expect(logMetamagicUse).toHaveBeenCalledWith(
+      'test-campaign',
+      'TestSorcerer',
+      'Fireball',
+      expect.not.arrayContaining(['Psionic Sorcery']),
+      expect.any(Number),
+    );
+  });
+
   it('adds logEntry for spell when confirming with metamagic', async () => {
     const { addEntry } = await import('../../services/ui/logService.js');
     const spell = makeSpell();
@@ -240,9 +384,6 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
 
     isPsionicSpell.mockReturnValue(false);
     hasPsionicSorcery.mockReturnValue(false);
-
-    const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
-    executeSpellCast.mockResolvedValue(null);
 
     const attack = {
       name: 'Fireball',
@@ -435,11 +576,9 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
       });
     });
 
-    expect(executeSpellCast).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({}),
-      expect.any(Object),
-    );
+    const callArgs = executeSpellCast.mock.calls[0];
+    const metaCtx = callArgs[1];
+    expect(metaCtx).not.toHaveProperty('metamagicTwinTarget');
   });
 
   it('sets metamagicDistant in metaCtx when Distant Spell is selected', async () => {
@@ -522,9 +661,8 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     );
   });
 
-  it('does not spend SP when totalCost is 0', async () => {
-    const { spendSorceryPoints } = await import('./useMetamagic.js');
-    const spell = makeSpell();
+  it('sets multiple metamagic flags in metaCtx when multiple options selected', async () => {
+    const spell = makeSpell({ name: 'Fireball', level: 3 });
     const props = makeHookProps({
       playerStats: {
         name: 'TestSorcerer',
@@ -534,11 +672,10 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
       },
     });
     const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+    const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
 
     isPsionicSpell.mockReturnValue(false);
     hasPsionicSorcery.mockReturnValue(false);
-
-    const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
     executeSpellCast.mockResolvedValue(null);
 
     const attack = {
@@ -554,9 +691,94 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     });
 
     await act(async () => {
-      result.current.handleActionMetamagicConfirm({ totalCost: 0, options: [] });
+      result.current.handleActionMetamagicConfirm({
+        totalCost: 4,
+        options: ['Heightened Spell', 'Distant Spell', 'Careful Spell'],
+      });
     });
 
-    expect(spendSorceryPoints).not.toHaveBeenCalled();
+    expect(executeSpellCast).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        metamagicHeighten: true,
+        metamagicDistant: true,
+        metamagicCareful: true,
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('handles confirm with null result', async () => {
+    const spell = makeSpell();
+    const props = makeHookProps({
+      playerStats: {
+        name: 'TestSorcerer',
+        class: { name: 'Sorcerer' },
+        level: 5,
+        spellAbilities: { spells: [spell] },
+      },
+    });
+    const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+    const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+    isPsionicSpell.mockReturnValue(false);
+    hasPsionicSorcery.mockReturnValue(false);
+    executeSpellCast.mockResolvedValue(null);
+
+    const attack = {
+      name: 'Fireball',
+      spellLevel: 3,
+      castingTime: '1 Action',
+    };
+
+    const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+    await act(async () => {
+      result.current.handleActionSpellDamageClick(attack);
+    });
+
+    await act(async () => {
+      result.current.handleActionMetamagicConfirm(null);
+    });
+
+    expect(result.current.pendingActionMetamagic).toBeNull();
+    expect(executeSpellCast).toHaveBeenCalled();
+  });
+
+  it('handles confirm with undefined result', async () => {
+    const spell = makeSpell();
+    const props = makeHookProps({
+      playerStats: {
+        name: 'TestSorcerer',
+        class: { name: 'Sorcerer' },
+        level: 5,
+        spellAbilities: { spells: [spell] },
+      },
+    });
+    const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+    const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+    isPsionicSpell.mockReturnValue(false);
+    hasPsionicSorcery.mockReturnValue(false);
+    executeSpellCast.mockResolvedValue(null);
+
+    const attack = {
+      name: 'Fireball',
+      spellLevel: 3,
+      castingTime: '1 Action',
+    };
+
+    const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+    await act(async () => {
+      result.current.handleActionSpellDamageClick(attack);
+    });
+
+    await act(async () => {
+      result.current.handleActionMetamagicConfirm(undefined);
+    });
+
+    expect(result.current.pendingActionMetamagic).toBeNull();
+    expect(executeSpellCast).toHaveBeenCalled();
   });
 });

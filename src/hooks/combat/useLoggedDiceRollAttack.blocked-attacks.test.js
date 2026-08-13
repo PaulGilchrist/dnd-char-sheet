@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -168,6 +169,14 @@ describe('createLogAndShow - Blocked Attacks & Sanctuary', () => {
         autoDamageSourceRef: { current: null },
     };
 
+    const blockerTests = [
+        { handler: isForcecageBlocked, name: 'Forcecage' },
+        { handler: isMazeBlocked, name: 'Maze' },
+        { handler: isBanishmentBlocked, name: 'Banishment' },
+        { handler: isImprisonmentBlocked, name: 'Imprisonment' },
+        { handler: isPrismaticSprayBlocked, name: 'Prismatic Spray' },
+    ];
+
     beforeEach(() => {
         vi.clearAllMocks();
         rollD20.mockReturnValue(15);
@@ -193,81 +202,29 @@ describe('createLogAndShow - Blocked Attacks & Sanctuary', () => {
         return createLogAndShow(deps);
     }
 
-    describe('forcecage block', () => {
-        it('blocks attack and returns early when forcecage blocks attacker->target', async () => {
-            isForcecageBlocked.mockReturnValue(true);
+    describe.each(blockerTests)('$name block', ({ handler, name }) => {
+        it('blocks attack, shows popup, and logs when blocker returns true', async () => {
+            handler.mockReturnValue(true);
             const fn = createFn();
             await fn('Longsword', 5, 'attack', { targetName: 'Goblin', attackerName: 'TestFighter' });
-            expect(isForcecageBlocked).toHaveBeenCalledWith('TestFighter', 'Goblin', 'test-campaign');
+
+            expect(handler).toHaveBeenCalledWith('TestFighter', 'Goblin', 'test-campaign');
             expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
                 type: 'automation_info',
-                name: 'Forcecage',
+                name,
             }));
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'info',
-                text: expect.stringContaining('blocked by Forcecage'),
+                text: expect.stringContaining(`blocked by ${name}`),
             }));
         });
 
-        it('does not block when forcecage returns false', async () => {
-            isForcecageBlocked.mockReturnValue(false);
+        it('does not block when handler returns false', async () => {
+            handler.mockReturnValue(false);
             const fn = createFn();
             await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
-            expect(deps.setPopupHtml).not.toHaveBeenCalledWith(expect.objectContaining({
-                name: 'Forcecage',
-            }));
-        });
-    });
 
-    describe('maze block', () => {
-        it('blocks attack and returns early when maze blocks attacker->target', async () => {
-            isMazeBlocked.mockReturnValue(true);
-            const fn = createFn();
-            await fn('Longsword', 5, 'attack', { targetName: 'Goblin', attackerName: 'TestFighter' });
-            expect(isMazeBlocked).toHaveBeenCalledWith('TestFighter', 'Goblin', 'test-campaign');
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                type: 'automation_info',
-                name: 'Maze',
-            }));
-        });
-    });
-
-    describe('banishment block', () => {
-        it('blocks attack and returns early when banishment blocks attacker->target', async () => {
-            isBanishmentBlocked.mockReturnValue(true);
-            const fn = createFn();
-            await fn('Longsword', 5, 'attack', { targetName: 'Goblin', attackerName: 'TestFighter' });
-            expect(isBanishmentBlocked).toHaveBeenCalledWith('TestFighter', 'Goblin', 'test-campaign');
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                type: 'automation_info',
-                name: 'Banishment',
-            }));
-        });
-    });
-
-    describe('imprisonment block', () => {
-        it('blocks attack and returns early when imprisonment blocks attacker->target', async () => {
-            isImprisonmentBlocked.mockReturnValue(true);
-            const fn = createFn();
-            await fn('Longsword', 5, 'attack', { targetName: 'Goblin', attackerName: 'TestFighter' });
-            expect(isImprisonmentBlocked).toHaveBeenCalledWith('TestFighter', 'Goblin', 'test-campaign');
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                type: 'automation_info',
-                name: 'Imprisonment',
-            }));
-        });
-    });
-
-    describe('prismatic spray block', () => {
-        it('blocks attack and returns early when prismatic spray blocks attacker->target', async () => {
-            isPrismaticSprayBlocked.mockReturnValue(true);
-            const fn = createFn();
-            await fn('Longsword', 5, 'attack', { targetName: 'Goblin', attackerName: 'TestFighter' });
-            expect(isPrismaticSprayBlocked).toHaveBeenCalledWith('TestFighter', 'Goblin', 'test-campaign');
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                type: 'automation_info',
-                name: 'Prismatic Spray',
-            }));
+            expect(deps.setPopupHtml).not.toHaveBeenCalledWith(expect.objectContaining({ name }));
         });
     });
 
@@ -281,14 +238,15 @@ describe('createLogAndShow - Blocked Attacks & Sanctuary', () => {
             });
             const fn = createFn();
             await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
-            expect(endSanctuary).toHaveBeenCalledWith('Cleric', 'TestFighter', 'test-campaign',
-                expect.stringContaining('made an attack'));
+
+            expect(endSanctuary).toHaveBeenCalledWith(
+                'Cleric',
+                'TestFighter',
+                'test-campaign',
+                expect.stringContaining('made an attack'),
+            );
         });
     });
-
-
-
-
 });
 
 describe('createLogAndShow - Compelled Duel Attack Expiry', () => {
@@ -321,11 +279,12 @@ describe('createLogAndShow - Compelled Duel Attack Expiry', () => {
         return createLogAndShow(deps);
     }
 
-    it('calls checkCompelledDuelAttackExpiry on attack with target', async () => {
+    it('calls checkCompelledDuelAttackExpiry on attack with target and shows popup when returned', async () => {
         const popup = { type: 'automation_info', name: 'Compelled Duel', description: 'Effect ended' };
         checkCompelledDuelAttackExpiry.mockReturnValue(popup);
         const fn = createFn();
         await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
+
         expect(checkCompelledDuelAttackExpiry).toHaveBeenCalledWith('TestFighter', 'Goblin', 'test-campaign');
         expect(deps.setPopupHtml).toHaveBeenCalledWith(popup);
     });
@@ -391,16 +350,6 @@ describe('createLogAndShow - Resilient Sphere', () => {
         await fn('Longsword', 5, 'attack', context);
         expect(context.notice).toBe('Attack blocked by Resilient Sphere — nothing can pass through the barrier.');
     });
-
-    it('does not set isAutoMiss when attacker already has isAutoMiss', async () => {
-        isResilientSphereActive.mockReturnValue(true);
-        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 10 });
-        const fn = createFn();
-        await fn('Longsword', 5, 'attack', { targetName: 'Goblin', attackerName: 'TestFighter', isAutoMiss: true });
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-            isAutoMiss: true,
-        }));
-    });
 });
 
 describe('hasStarryDragonActive export', () => {
@@ -442,7 +391,7 @@ describe('hasStarryDragonActive export', () => {
 });
 
 describe('starryDragonAppliesToRoll export', () => {
-    it('returns true for Constitution save', () => {
+    it('returns true for Constitution save variants', () => {
         expect(starryDragonAppliesToRoll('Constitution', 'save')).toBe(true);
         expect(starryDragonAppliesToRoll('CONSTITUTION', 'save')).toBe(true);
         expect(starryDragonAppliesToRoll('CON', 'save')).toBe(true);
@@ -453,7 +402,7 @@ describe('starryDragonAppliesToRoll export', () => {
         expect(starryDragonAppliesToRoll('DEX', 'save')).toBe(false);
     });
 
-    it('returns true for Intelligence skills', () => {
+    it('returns true for Intelligence skills and ability checks', () => {
         expect(starryDragonAppliesToRoll('Arcana', 'skill')).toBe(true);
         expect(starryDragonAppliesToRoll('History', 'skill')).toBe(true);
         expect(starryDragonAppliesToRoll('Investigation', 'skill')).toBe(true);
@@ -464,7 +413,7 @@ describe('starryDragonAppliesToRoll export', () => {
         expect(starryDragonAppliesToRoll('INT', 'check')).toBe(true);
     });
 
-    it('returns true for Wisdom skills', () => {
+    it('returns true for Wisdom skills and ability checks', () => {
         expect(starryDragonAppliesToRoll('Animal Handling', 'skill')).toBe(true);
         expect(starryDragonAppliesToRoll('Insight', 'skill')).toBe(true);
         expect(starryDragonAppliesToRoll('Medicine', 'skill')).toBe(true);

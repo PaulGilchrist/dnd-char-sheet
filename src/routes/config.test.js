@@ -1,13 +1,19 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 import { VIEWS, SIDEBAR_BUTTONS, SIDEBAR_VIEWS } from './config.js';
 
 describe('routes config', () => {
   describe('VIEWS', () => {
-    it('should export a non-empty object with required fields on every view', () => {
+    it('should export a non-empty object with view keys', () => {
       expect(VIEWS).toBeTypeOf('object');
       expect(Object.keys(VIEWS).length).toBeGreaterThan(0);
+      // Keys should be uppercase identifiers (CHAR_SHEET, MAPS_MANAGER, etc.)
+      Object.keys(VIEWS).forEach(key => {
+        expect(key).toMatch(/^[A-Z][A-Z0-9_]*$/);
+      });
+    });
 
+    it('should export a non-empty object with required fields on every view', () => {
       Object.values(VIEWS).forEach(view => {
         expect(view).toMatchObject({
           name: expect.any(String),
@@ -47,6 +53,20 @@ describe('routes config', () => {
         }
       });
     });
+
+    it('should have PascalCase component names', () => {
+      Object.values(VIEWS).forEach(view => {
+        expect(view.component).toMatch(/^[A-Z][a-zA-Z]*$/);
+      });
+    });
+
+    it('should mark needsActiveCharacter only on wizard overlay views', () => {
+      Object.values(VIEWS).forEach(view => {
+        if (view.name.includes('Wizard')) {
+          expect(view.needsActiveCharacter).toBeTypeOf('boolean');
+        }
+      });
+    });
   });
 
   describe('SIDEBAR_BUTTONS', () => {
@@ -80,12 +100,36 @@ describe('routes config', () => {
         expect(allViewNames).toContain(button.view);
       });
     });
+
+    it('should have all sidebar views covered by buttons (set equality)', () => {
+      const buttonViews = new Set(SIDEBAR_BUTTONS.map(b => b.view));
+      SIDEBAR_VIEWS.forEach(name => {
+        expect(buttonViews).toContain(name);
+      });
+    });
+
+    it('should use fa-* icon format', () => {
+      SIDEBAR_BUTTONS.forEach(button => {
+        expect(button.icon).toMatch(/^fa-/);
+      });
+    });
   });
 
   describe('SIDEBAR_VIEWS', () => {
     it('should export an array of unique view names', () => {
       expect(Array.isArray(SIDEBAR_VIEWS)).toBe(true);
       expect(new Set(SIDEBAR_VIEWS).size).toBe(SIDEBAR_VIEWS.length);
+    });
+
+    it('should only contain string-type view names from VIEWS', () => {
+      const stringViewNames = new Set(
+        Object.values(VIEWS)
+          .filter(v => v.type === 'string')
+          .map(v => v.name)
+      );
+      SIDEBAR_VIEWS.forEach(name => {
+        expect(stringViewNames).toContain(name);
+      });
     });
   });
 
@@ -100,5 +144,6 @@ describe('routes config', () => {
         expect(viewNames).toContain(name);
       });
     });
+
   });
 });

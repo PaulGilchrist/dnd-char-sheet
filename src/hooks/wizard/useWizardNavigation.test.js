@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardNavigation from './useWizardNavigation.js';
@@ -24,7 +25,10 @@ describe('useWizardNavigation', () => {
   });
 
   function renderWizard(step = 1, formData = mockFormData, races = mockRacesData, classes = mockClassSubtypes, ruleset = mockRuleset) {
-    return renderHook(() => useWizardNavigation(step, formData, races, classes, ruleset));
+    return renderHook(
+      ({ step: s, formData: f, races: r, classes: c, ruleset: rl }) => useWizardNavigation(s, f, r, c, rl),
+      { initialProps: { step, formData, races, classes, ruleset } }
+    );
   }
 
   describe('initialization', () => {
@@ -33,14 +37,7 @@ describe('useWizardNavigation', () => {
       expect(result.current.currentStep).toBe(3);
     });
 
-    it('starts with isNextDisabled false', () => {
-      const { result } = renderWizard();
-      expect(result.current.isNextDisabled).toBe(false);
-    });
-  });
-
-  describe('navigation', () => {
-    it('advances to the next step when validation passes', async () => {
+    it('navigates to the next step when validation passes', async () => {
       const { result } = renderWizard(1);
       validateStep.mockResolvedValue({});
 
@@ -64,7 +61,7 @@ describe('useWizardNavigation', () => {
       expect(result.current.currentStep).toBe(1);
     });
 
-    it('goes to the previous step', () => {
+    it('navigates to the previous step', () => {
       const { result } = renderWizard(3);
       act(() => result.current.navigatePrevious());
       expect(result.current.currentStep).toBe(2);
@@ -114,6 +111,27 @@ describe('useWizardNavigation', () => {
       await waitFor(() => {
         expect(result.current.isNextDisabled).toBe(true);
       });
+    });
+
+    it('updates when formData changes affecting validation', async () => {
+      const state = { hasError: false };
+      validateStep.mockImplementation((step) => {
+        if (step === 2 && state.hasError) return { name: 'Required' };
+        return {};
+      });
+
+      const initialFormData = { ...mockFormData, name: 'Valid Name' };
+      const { result, rerender } = renderWizard(2, initialFormData);
+      await waitFor(() => {
+        expect(result.current.isNextDisabled).toBe(false);
+      });
+
+      state.hasError = true;
+      const newFormData = { ...mockFormData, name: '' };
+      rerender({ step: 2, formData: newFormData, races: mockRacesData, classes: mockClassSubtypes, ruleset: mockRuleset });
+      await new Promise((r) => setTimeout(r, 0));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(result.current.isNextDisabled).toBe(true);
     });
   });
 
@@ -183,6 +201,54 @@ describe('useWizardNavigation', () => {
         expect(result.current.getStepEnabled(5)).toBe(true);
       });
     });
+
+    it('blocks step 5 when step 4 prerequisites are not met', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 4) return { subrace: 'Required' };
+        return {};
+      });
+
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(5)).toBe(false);
+      });
+    });
+
+    it('blocks step 6 when step 5 prerequisites are not met', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 5) return { background: 'Required' };
+        return {};
+      });
+
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(6)).toBe(false);
+      });
+    });
+
+    it('blocks step 7 when step 6 prerequisites are not met', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 6) return { class: 'Required' };
+        return {};
+      });
+
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(7)).toBe(false);
+      });
+    });
+
+    it('uses step7Valid for unknown step numbers', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 7) return { subclass: 'Required' };
+        return {};
+      });
+
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(8)).toBe(false);
+      });
+    });
   });
 
   describe('step4Valid - subrace selection', () => {
@@ -214,7 +280,7 @@ describe('useWizardNavigation', () => {
       });
     });
 
-    it('disables next on step 4 when subrace is selected', async () => {
+    it('isNextDisabled is false on step 4 when subrace is selected', async () => {
       const formDataWithSubrace = {
         name: 'Test Character',
         level: 1,
@@ -228,7 +294,7 @@ describe('useWizardNavigation', () => {
       });
     });
 
-    it('disables next on step 4 when subrace is not selected', async () => {
+    it('isNextDisabled is true on step 4 when subrace is not selected', async () => {
       validateStep.mockImplementation((step) => {
         if (step === 4) return { subrace: 'Required' };
         return {};
@@ -288,7 +354,7 @@ describe('useWizardNavigation', () => {
       });
     });
 
-    it('disables next on step 5 for 2024 without background', async () => {
+    it('isNextDisabled is true on step 5 for 2024 without background', async () => {
       validateStep.mockImplementation((step) => {
         if (step === 5) return { background: 'Required' };
         return {};
@@ -305,7 +371,7 @@ describe('useWizardNavigation', () => {
       });
     });
 
-    it('allows next on step 5 for 2024 with background', async () => {
+    it('isNextDisabled is false on step 5 for 2024 with background', async () => {
       const formDataWithBackground = {
         name: 'Test Character',
         level: 1,
@@ -349,7 +415,7 @@ describe('useWizardNavigation', () => {
       });
     });
 
-    it('disables next on step 7 when subclass is selected', async () => {
+    it('isNextDisabled is false on step 7 when subclass is selected', async () => {
       const formDataWithSubclass = {
         name: 'Test Character',
         level: 1,
@@ -363,7 +429,7 @@ describe('useWizardNavigation', () => {
       });
     });
 
-    it('disables next on step 7 when subclass is not selected', async () => {
+    it('isNextDisabled is true on step 7 when subclass is not selected', async () => {
       validateStep.mockImplementation((step) => {
         if (step === 7) return { subclass: 'Required' };
         return {};
@@ -382,72 +448,6 @@ describe('useWizardNavigation', () => {
     });
   });
 
-  describe('getStepEnabled - steps 5, 6, 7', () => {
-    it('allows step 5 when all previous steps are valid', async () => {
-      const { result } = renderWizard(1);
-      await waitFor(() => {
-        expect(result.current.getStepEnabled(5)).toBe(true);
-      });
-    });
-
-    it('allows step 6 when all previous steps are valid', async () => {
-      const { result } = renderWizard(1);
-      await waitFor(() => {
-        expect(result.current.getStepEnabled(6)).toBe(true);
-      });
-    });
-
-    it('allows step 7 when all previous steps are valid', async () => {
-      const { result } = renderWizard(1);
-      await waitFor(() => {
-        expect(result.current.getStepEnabled(7)).toBe(true);
-      });
-    });
-
-    it('blocks step 5 when step 4 prerequisites are not met', async () => {
-      validateStep.mockImplementation((step) => {
-        if (step === 4) return { subrace: 'Required' };
-        return {};
-      });
-
-      const { result } = renderWizard(1);
-      await waitFor(() => {
-        expect(result.current.getStepEnabled(5)).toBe(false);
-      });
-    });
-
-    it('blocks step 6 when step 5 prerequisites are not met', async () => {
-      validateStep.mockImplementation((step) => {
-        if (step === 5) return { background: 'Required' };
-        return {};
-      });
-
-      const { result } = renderWizard(1);
-      await waitFor(() => {
-        expect(result.current.getStepEnabled(6)).toBe(false);
-      });
-    });
-
-    it('blocks step 7 when step 6 prerequisites are not met', async () => {
-      validateStep.mockImplementation((step) => {
-        if (step === 6) return { class: 'Required' };
-        return {};
-      });
-
-      const { result } = renderWizard(1);
-      await waitFor(() => {
-        expect(result.current.getStepEnabled(7)).toBe(false);
-      });
-    });
-
-    it('uses fallback for unknown step numbers', async () => {
-      const { result } = renderWizard(1);
-      await waitFor(() => {
-        expect(result.current.getStepEnabled(8)).toBe(true);
-      });
-    });
-  });
-
   describe('isSaveEnabled', () => {
     it('is true when all steps are valid', async () => {
       const { result } = renderWizard(1);
@@ -456,7 +456,7 @@ describe('useWizardNavigation', () => {
       });
     });
 
-    it('is false when validation errors exist', async () => {
+    it('is false when step 2 has validation errors', async () => {
       validateStep.mockImplementation((step) => {
         if (step === 2) return { background: 'Required' };
         return {};

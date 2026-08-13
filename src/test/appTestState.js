@@ -10,6 +10,10 @@ export const dataLoaderMocks = {
   loadClassData: vi.fn(),
   loadEquipment: vi.fn(),
   loadMagicItems: vi.fn(),
+  loadMonsters: vi.fn(),
+  loadFightingStyles: vi.fn(),
+  loadWildMagicSurgeTable: vi.fn(),
+  loadSkills: vi.fn(),
   loadRaceData: vi.fn(),
   loadSpells: vi.fn(),
 };

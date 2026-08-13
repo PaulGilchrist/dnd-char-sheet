@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -93,21 +94,47 @@ vi.mock('../../useAllySelection.js', () => ({
 
 import { getRuntimeValue } from '../../runtime/useRuntimeState.js';
 import { evaluateAutoExpression } from '../../../services/combat/automation/automationService.js';
+import { getHolyAuraTargets } from '../../../services/automation/handlers/buffs/holyAuraHandler.js';
 import { getCoronaSaveDisadvantage } from '../../../services/combat/auras/coronaAuraUtils.js';
 import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras/elderChampionAuraUtils.js';
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js';
-import { getHolyAuraTargets } from '../../../services/automation/handlers/buffs/holyAuraHandler.js';
 import { createPlayerSaveDamageHandler } from './handlePlayerSaveDamage.js';
 import { computeConditionEffects } from '../../../services/combat/conditions/conditionEffects.js';
 
-describe('handlePlayerSaveDamage - indomitable and fanatical focus', () => {
-    const deps = {
+const DEFAULT_CONTEXT = {
+    saveDc: 13,
+    saveType: 'DEX',
+    dcSuccess: 'half',
+    damageType: 'Fire',
+    targetName: 'TestWizard',
+};
+
+const DEFAULT_COMBAT_SUMMARY = {
+    creatures: [{ name: 'TestWizard', type: 'player' }],
+};
+
+function invokeHandler(handler, context = DEFAULT_CONTEXT, combatSummary = DEFAULT_COMBAT_SUMMARY) {
+    return handler(
+        'Fire Bolt',
+        '1d10',
+        5,
+        [6],
+        0,
+        context,
+        5,
+        combatSummary,
+        [6]
+    );
+}
+
+function makeDefaultDeps(level = 17) {
+    return {
         characterName: 'TestWizard',
         campaignName: 'test-campaign',
         characters: [
             {
                 name: 'TestWizard',
-                computedStats: { level: 17, saveModifiers: [] },
+                computedStats: { level, saveModifiers: [] },
             },
         ],
         charactersRef: { current: [] },
@@ -115,8 +142,13 @@ describe('handlePlayerSaveDamage - indomitable and fanatical focus', () => {
         logEntry: vi.fn(),
         pendingSaves: {},
     };
+}
+
+describe('handlePlayerSaveDamage - indomitable and fanatical focus', () => {
+    let deps;
 
     beforeEach(() => {
+        deps = makeDefaultDeps();
         vi.clearAllMocks();
         getRuntimeValue.mockReset().mockReturnValue(null);
         computeConditionEffects.mockReturnValue({
@@ -132,166 +164,260 @@ describe('handlePlayerSaveDamage - indomitable and fanatical focus', () => {
         isCircleOfPowerActive.mockReturnValue(false);
     });
 
-    it('disables autoRerollForSaves when fanaticalFocusUsed is true', async () => {
+    function setupRuntimeValues(overrides) {
         getRuntimeValue.mockImplementation((key, subKey) => {
-            if (key === 'TestWizard' && subKey === 'fanaticalFocusUsed') return true;
+            if (overrides[key]?.[subKey] !== undefined) return overrides[key][subKey];
             if (key === 'campaign' && subKey === 'targetEffects') return [];
             return null;
         });
+    }
 
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-        };
+    describe('fanaticalFocusUsed', () => {
+        it('disables autoRerollForSaves when fanaticalFocusUsed is true', async () => {
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 17, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { fanaticalFocusUsed: true },
+            });
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
 
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(
-            expect.objectContaining({ autoReroll: false })
-        );
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: false })
+            );
+        });
+
+        it('does not disable autoRerollForSaves when fanaticalFocusUsed is false', async () => {
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 17, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { fanaticalFocusUsed: false },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: true })
+            );
+        });
     });
 
-    it('disables autoRerollForSaves when indomitableUses >= indomitableMax', async () => {
-        getRuntimeValue.mockImplementation((key, subKey) => {
-            if (key === 'TestWizard' && subKey === 'fanaticalFocusUsed') return false;
-            if (key === 'TestWizard' && subKey === 'indomitableUses') return '3';
-            if (key === 'campaign' && subKey === 'targetEffects') return [];
-            return null;
+    describe('indomitable uses tracking', () => {
+        it('disables autoRerollForSaves when indomitableUses equals indomitableMax at level 17', async () => {
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 17, saveModifiers: [] } }];
+            // Level 17 -> indomitableMax = 3
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '3' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: false })
+            );
         });
 
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-        };
+        it('disables autoRerollForSaves when indomitableUses exceeds indomitableMax', async () => {
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 17, saveModifiers: [] } }];
+            // Level 17 -> indomitableMax = 3, uses = 5 > 3
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '5' },
+            });
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
 
-        // Level 17 -> indomitableMax = 3, uses = 3 >= 3, so disabled
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(
-            expect.objectContaining({ autoReroll: false })
-        );
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: false })
+            );
+        });
+
+        it('enables autoRerollForSaves when indomitableUses is below indomitableMax', async () => {
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 17, saveModifiers: [] } }];
+            // Level 17 -> indomitableMax = 3, uses = 2 < 3
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '2' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: true })
+            );
+        });
+
+        it('enables autoRerollForSaves when indomitableUses is zero', async () => {
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '0' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: true })
+            );
+        });
+
+        it('treats undefined indomitableUses as zero and enables autoRerollForSaves', async () => {
+            // indomitableUses not set -> Number(undefined ?? 0) = 0
+            setupRuntimeValues({});
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: true })
+            );
+        });
+
+        it('treats NaN indomitableUses (non-numeric string) as below max and enables autoRerollForSaves', async () => {
+            // Number('abc') = NaN, NaN >= 3 = false, so autoReroll stays true
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: 'abc' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: true })
+            );
+        });
     });
 
-    it('sets indomitableMax based on character level', async () => {
-        getRuntimeValue.mockImplementation((key, subKey) => {
-            if (key === 'TestWizard' && subKey === 'fanaticalFocusUsed') return false;
-            if (key === 'TestWizard' && subKey === 'indomitableUses') return '0';
-            if (key === 'campaign' && subKey === 'targetEffects') return [];
-            return null;
+    describe('indomitableMax calculation based on level', () => {
+        it('sets indomitableMax to 3 for level 17+', async () => {
+            deps.characters[0].computedStats.level = 17;
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 17, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '0' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: true })
+            );
         });
 
-        // Level 13 -> indomitableMax = 2
-        deps.characters[0].computedStats.level = 13;
+        it('sets indomitableMax to 2 for level 13-16', async () => {
+            deps.characters[0].computedStats.level = 13;
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 13, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '0' },
+            });
 
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-        };
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: true })
+            );
+        });
 
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(
-            expect.objectContaining({ autoReroll: true })
-        );
+        it('sets indomitableMax to 1 for level below 13', async () => {
+            deps.characters[0].computedStats.level = 10;
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 10, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '0' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: true })
+            );
+        });
+
+        it('sets indomitableMax to 1 for level 0 (edge case)', async () => {
+            deps.characters[0].computedStats.level = 0;
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 0, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '0' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: true })
+            );
+        });
+
+        it('disables autoRerollForSaves when uses equals max at level 13', async () => {
+            // Level 13 -> indomitableMax = 2, uses = 2
+            deps.characters[0].computedStats.level = 13;
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 13, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '2' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: false })
+            );
+        });
+
+        it('disables autoRerollForSaves when uses equals max at level 10', async () => {
+            // Level 10 -> indomitableMax = 1, uses = 1
+            deps.characters[0].computedStats.level = 10;
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 10, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { indomitableUses: '1' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: false })
+            );
+        });
     });
 
-    it('handles level < 13 for indomitable', async () => {
-        getRuntimeValue.mockImplementation((key, subKey) => {
-            if (key === 'TestWizard' && subKey === 'fanaticalFocusUsed') return false;
-            if (key === 'TestWizard' && subKey === 'indomitableUses') return '0';
-            if (key === 'campaign' && subKey === 'targetEffects') return [];
-            return null;
+    describe('fanaticalFocus + indomitable interaction', () => {
+        it('disables autoRerollForSaves when both fanaticalFocusUsed and indomitable are exhausted', async () => {
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 17, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { fanaticalFocusUsed: true, indomitableUses: '3' },
+            });
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: false })
+            );
         });
 
-        // Level 10 -> indomitableMax = 1
-        deps.characters[0].computedStats.level = 10;
+        it('disables autoRerollForSaves when fanaticalFocusUsed is true but indomitable still available', async () => {
+            deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 17, saveModifiers: [] } }];
+            setupRuntimeValues({
+                TestWizard: { fanaticalFocusUsed: true, indomitableUses: '0' },
+            });
 
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-        };
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
-
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(
-            expect.objectContaining({ autoReroll: true })
-        );
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ autoReroll: false })
+            );
+        });
     });
 });
 
 describe('handlePlayerSaveDamage - autoRerollBonus evaluation', () => {
-    const deps = {
-        characterName: 'TestWizard',
-        campaignName: 'test-campaign',
-        characters: [
-            {
-                name: 'TestWizard',
-                computedStats: { level: 10, saveModifiers: [] },
-            },
-        ],
-        charactersRef: { current: [] },
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        pendingSaves: {},
-    };
+    let deps;
 
     beforeEach(() => {
+        deps = makeDefaultDeps(10);
         vi.clearAllMocks();
         getRuntimeValue.mockReset().mockReturnValue(null);
         evaluateAutoExpression.mockReturnValue(5);
@@ -302,64 +428,83 @@ describe('handlePlayerSaveDamage - autoRerollBonus evaluation', () => {
             saveAdvantageCount: 0,
             saveAdvantageAbilities: null,
         });
+        getHolyAuraTargets.mockReturnValue([]);
+        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
+        isCircleOfPowerActive.mockReturnValue(false);
     });
 
     it('evaluates autoRerollBonus when present and targetChar has computedStats', async () => {
-        deps.charactersRef.current = [{ name: 'TestWizard', computedStats: { level: 10, saveModifiers: [] } }];
+        deps.charactersRef.current = [
+            { name: 'TestWizard', computedStats: { level: 10, saveModifiers: [] } },
+        ];
+
         const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-        };
+        await invokeHandler(handler);
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
+        expect(evaluateAutoExpression).toHaveBeenCalledWith(
+            '1d4 + 2',
+            deps.characters[0].computedStats
         );
-
-        expect(evaluateAutoExpression).toHaveBeenCalledWith('1d4 + 2', deps.characters[0].computedStats);
         expect(deps.setPopupHtml).toHaveBeenCalledWith(
-            expect.objectContaining({
-                autoRerollBonus: 5,
-            })
+            expect.objectContaining({ autoRerollBonus: 5 })
         );
     });
 
     it('does not evaluate autoRerollBonus when targetChar has no computedStats', async () => {
-        deps.charactersRef.current = [{ name: 'TestWizard', computedStats: undefined }];
+        deps.charactersRef.current = [
+            { name: 'TestWizard', computedStats: undefined },
+        ];
         deps.characters[0].computedStats = undefined;
 
         const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-        };
-
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
+        await invokeHandler(handler);
 
         expect(evaluateAutoExpression).not.toHaveBeenCalled();
+    });
+
+    it('does not evaluate autoRerollBonus when targetChar is not in charactersRef', async () => {
+        deps.charactersRef.current = [];
+
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        expect(evaluateAutoExpression).not.toHaveBeenCalled();
+    });
+
+    it('passes null autoRerollBonus when no expression is defined', async () => {
+        computeConditionEffects.mockReturnValue({
+            restoreBalance: false,
+            autoRerollForSaves: true,
+            autoRerollBonus: null,
+            saveAdvantageCount: 0,
+            saveAdvantageAbilities: null,
+        });
+        deps.charactersRef.current = [
+            { name: 'TestWizard', computedStats: { level: 10, saveModifiers: [] } },
+        ];
+
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        expect(evaluateAutoExpression).not.toHaveBeenCalled();
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({ autoRerollBonus: null })
+        );
+    });
+
+    it('passes zero autoRerollBonus when expression evaluates to 0', async () => {
+        evaluateAutoExpression.mockReturnValue(0);
+        deps.charactersRef.current = [
+            { name: 'TestWizard', computedStats: { level: 10, saveModifiers: [] } },
+        ];
+
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        expect(evaluateAutoExpression).toHaveBeenCalledTimes(1);
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({ autoRerollBonus: 0 })
+        );
     });
 });

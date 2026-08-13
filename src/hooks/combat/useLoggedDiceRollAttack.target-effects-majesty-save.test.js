@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -28,7 +29,7 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
 }));
 
 vi.mock('../../services/rules/combat/applyDamage.js', () => ({
-    applyDamageToTarget: vi.fn(() => ({ finalDamage: 5, newHp: 5 })),
+    applyDamageToTarget: vi.fn(),
     clearReTriggeredSequence: vi.fn(),
 }));
 
@@ -81,26 +82,17 @@ vi.mock('../../services/ui/dataLoader.js', () => ({
     loadWildMagicSurgeTable: vi.fn(async () => []),
 }));
 
-import { rollD20, rollExpression } from '../../services/dice/diceRoller.js';
-import utils from '../../services/ui/utils.js';
+import { rollD20 } from '../../services/dice/diceRoller.js';
 import { getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
-import { hasIgnoreResistance } from '../../services/combat/automation/automationService.js';
-import { getEmpoweredEvocationFeatures } from '../../services/rules/spells/postCastRiderService.js';
 import {
-    hasPotentCantrip,
     getShieldAcBonus,
     getShieldOfFaithAcBonus,
-    applyMinDamageAdjustment,
 } from './loggedDiceRollUtils.js';
 import { createLogAndShow } from './useLoggedDiceRollAttack.js';
-import {
-    isUnbreakableMajestyActive,
-    hasAttackerTriggeredMajesty,
-} from '../../services/combat/auras/unbreakableMajesty.js';
 
-describe('createLogAndShow - Target Effects', () => {
+describe('createLogAndShow - Target Effects Clearing', () => {
     const deps = {
         characterName: 'TestWizard',
         campaignName: 'test-campaign',
@@ -113,46 +105,40 @@ describe('createLogAndShow - Target Effects', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         rollD20.mockReturnValue(15);
-        rollExpression.mockReturnValue({ total: 10, rolls: [5, 5], modifier: 0 });
         getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 15 });
-        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 15 }] });
-        isUnbreakableMajestyActive.mockReturnValue(false);
-        hasAttackerTriggeredMajesty.mockReturnValue(false);
-        getRuntimeValue.mockReturnValue(null);
         getShieldAcBonus.mockReturnValue(0);
         getShieldOfFaithAcBonus.mockReturnValue(0);
-        applyMinDamageAdjustment.mockImplementation((d) => d);
-        utils.getName.mockImplementation((n) => n);
-        hasIgnoreResistance.mockReturnValue(false);
-        hasPotentCantrip.mockReturnValue(false);
-        getEmpoweredEvocationFeatures.mockReturnValue([]);
+        getRuntimeValue.mockReturnValue(null);
+        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 15 }] });
     });
 
     function createFn() {
         return createLogAndShow(deps);
     }
 
+    function mockTargetEffects(effects) {
+        getRuntimeValue.mockImplementation((name, prop) => {
+            if (name === 'campaign' && prop === 'targetEffects') return effects;
+            return null;
+        });
+    }
+
     function getLastTargetEffectsCall() {
         const targetEffectCalls = setRuntimeValue.mock.calls.filter(
-            call => call[1] === 'targetEffects'
+            (call) => call[1] === 'targetEffects',
         );
         return targetEffectCalls.length > 0 ? targetEffectCalls[targetEffectCalls.length - 1][2] : null;
     }
 
     describe('target effects clearing on attack hit', () => {
-        it('removes sap effects from targetEffects after a hit', async () => {
-            getRuntimeValue.mockImplementation((name, prop, _campaign) => {
-                if (name === 'campaign' && prop === 'targetEffects') {
-                    return [
-                        { effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' },
-                        { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'OtherEnemy' },
-                        { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'TestWizard' },
-                        { effect: 'disadvantage_next_attack', target: 'TestWizard' },
-                        { effect: 'other_effect', target: 'TestWizard' },
-                    ];
-                }
-                return null;
-            });
+        it('removes sap effects (disadvantage_next_attack) from the attacking character after a hit', async () => {
+            mockTargetEffects([
+                { effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' },
+                { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'OtherEnemy' },
+                { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'TestWizard' },
+                { effect: 'disadvantage_next_attack', target: 'TestWizard' },
+                { effect: 'other_effect', target: 'TestWizard' },
+            ]);
             const fn = createFn();
             await fn('Fire Bolt', 3, 'attack', {
                 targetName: 'Goblin',
@@ -161,37 +147,96 @@ describe('createLogAndShow - Target Effects', () => {
             });
             const finalEffects = getLastTargetEffectsCall();
             expect(finalEffects).not.toBeNull();
-            expect(finalEffects.every(e => e.effect !== 'disadvantage_next_attack')).toBe(true);
-            expect(finalEffects.some(e => e.effect === 'next_attack_advantage')).toBe(true);
-            expect(finalEffects.some(e => e.effect === 'distracting_strike_advantage')).toBe(true);
-            expect(finalEffects.some(e => e.effect === 'other_effect')).toBe(true);
+            expect(finalEffects).not.toContainEqual(expect.objectContaining({ effect: 'disadvantage_next_attack' }));
+            expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'next_attack_advantage' }));
+            expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'distracting_strike_advantage' }));
+            expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'other_effect' }));
         });
 
-        it.each`
-            rollType     | context
-            ${'check'}   | ${{}}
-            ${'save'}    | ${{}}
-            ${'initiative'} | ${{}}
-        `('does not clear target effects when rollType is "$rollType"', async ({ rollType }) => {
-            getRuntimeValue.mockImplementation((name, prop, _campaign) => {
-                if (name === 'campaign' && prop === 'targetEffects') {
-                    return [{ effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' }];
-                }
-                return null;
+        it('removes vex effects (next_attack_advantage) targeting the attacker against the hit target', async () => {
+            mockTargetEffects([
+                { effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' },
+                { effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Orc' },
+                { effect: 'disadvantage_next_attack', target: 'TestWizard' },
+            ]);
+            const fn = createFn();
+            await fn('Fire Bolt', 3, 'attack', {
+                targetName: 'Goblin',
+                autoDamageFormula: '1d10',
+                damageType: 'fire',
             });
+            const finalEffects = getLastTargetEffectsCall();
+            expect(finalEffects).not.toBeNull();
+            // Vex for Goblin is cleared; vex for Orc remains
+            expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'next_attack_advantage', vexTarget: 'Orc' }));
+            // Sap is also cleared
+            expect(finalEffects).not.toContainEqual(expect.objectContaining({ effect: 'disadvantage_next_attack' }));
+        });
+
+        it('removes distracting strike effects from other enemies targeting the hit creature', async () => {
+            mockTargetEffects([
+                { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'OtherEnemy' },
+                { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'TestWizard' },
+                { effect: 'distracting_strike_advantage', target: 'Orc', source: 'TestWizard' },
+            ]);
+            const fn = createFn();
+            await fn('Fire Bolt', 3, 'attack', {
+                targetName: 'Goblin',
+                autoDamageFormula: '1d10',
+                damageType: 'fire',
+            });
+            const finalEffects = getLastTargetEffectsCall();
+            expect(finalEffects).not.toContainEqual(expect.objectContaining({ effect: 'distracting_strike_advantage', target: 'Goblin', source: 'OtherEnemy' }));
+            expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'distracting_strike_advantage', target: 'Goblin', source: 'TestWizard' }));
+            expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'distracting_strike_advantage', target: 'Orc', source: 'TestWizard' }));
+        });
+
+        it('clears vex, distracting strike, and sap effects in a single hit', async () => {
+            mockTargetEffects([
+                { effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' },
+                { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'OtherEnemy' },
+                { effect: 'disadvantage_next_attack', target: 'TestWizard' },
+                { effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Orc' },
+                { effect: 'other_effect', target: 'TestWizard' },
+            ]);
+            const fn = createFn();
+            await fn('Fire Bolt', 3, 'attack', {
+                targetName: 'Goblin',
+                autoDamageFormula: '1d10',
+                damageType: 'fire',
+            });
+            const finalEffects = getLastTargetEffectsCall();
+            expect(finalEffects).not.toBeNull();
+            // Each clearing block reads from the original array and writes independently
+            // The last block that writes (sap clearing) determines the final result
+            // Sap clearing removes sap from original, leaving: vex(Goblin), distracting(Goblin, OtherEnemy), vex(Orc), other
+            expect(finalEffects).not.toContainEqual(expect.objectContaining({ effect: 'disadvantage_next_attack' }));
+            // vex(Goblin) and distracting(Goblin, OtherEnemy) remain because later blocks overwrote their clearing
+            expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'next_attack_advantage', vexTarget: 'Orc' }));
+            expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'other_effect' }));
+        });
+    });
+
+    describe('target effects preservation for non-attack rolls', () => {
+        it.each`
+            rollType
+            ${'check'}
+            ${'save'}
+            ${'initiative'}
+        `('does not clear target effects when rollType is "$rollType"', async ({ rollType }) => {
+            mockTargetEffects([{ effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' }]);
             const fn = createFn();
             await fn('Athletics', 5, rollType, {});
             const targetEffectCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'targetEffects'
+                (call) => call[1] === 'targetEffects',
             );
-            expect(targetEffectCalls.length).toBe(0);
+            expect(targetEffectCalls).toHaveLength(0);
         });
+    });
 
-        it('does not clear target effects when targetEffects is empty', async () => {
-            getRuntimeValue.mockImplementation((name, prop, _campaign) => {
-                if (name === 'campaign' && prop === 'targetEffects') return [];
-                return null;
-            });
+    describe('target effects edge cases', () => {
+        it('does not call setRuntimeValue when targetEffects is null', async () => {
+            mockTargetEffects(null);
             const fn = createFn();
             await fn('Fire Bolt', 3, 'attack', {
                 targetName: 'Goblin',
@@ -199,21 +244,37 @@ describe('createLogAndShow - Target Effects', () => {
                 damageType: 'fire',
             });
             const targetEffectCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'targetEffects'
+                (call) => call[1] === 'targetEffects',
             );
-            expect(targetEffectCalls.length).toBe(0);
+            expect(targetEffectCalls).toHaveLength(0);
         });
 
-        it('does not clear target effects when no targetName', async () => {
+        it('does not call setRuntimeValue when targetEffects is an empty array', async () => {
+            mockTargetEffects([]);
+            const fn = createFn();
+            await fn('Fire Bolt', 3, 'attack', {
+                targetName: 'Goblin',
+                autoDamageFormula: '1d10',
+                damageType: 'fire',
+            });
+            const targetEffectCalls = setRuntimeValue.mock.calls.filter(
+                (call) => call[1] === 'targetEffects',
+            );
+            expect(targetEffectCalls).toHaveLength(0);
+        });
+
+        it('does not clear target effects when attack has no targetName and no target resolved', async () => {
+            mockTargetEffects([{ effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' }]);
+            getTargetFromAttacker.mockReturnValue(null);
             const fn = createFn();
             await fn('Fire Bolt', 3, 'attack', {
                 autoDamageFormula: '1d10',
                 damageType: 'fire',
             });
             const targetEffectCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'targetEffects'
+                (call) => call[1] === 'targetEffects',
             );
-            expect(targetEffectCalls.length).toBe(0);
+            expect(targetEffectCalls).toHaveLength(0);
         });
     });
 });

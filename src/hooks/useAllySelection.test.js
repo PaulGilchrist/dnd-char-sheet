@@ -4,11 +4,11 @@ import * as useRuntimeState from './runtime/useRuntimeState.js';
 
 describe('useAllySelection', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getAllyList', () => {
-    it('returns stored allies when they exist as a non-empty array', () => {
+    it('returns stored allies array when it is non-empty', () => {
       vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue(['Ally1', 'Ally2']);
 
       const result = getAllyList('Hero');
@@ -16,20 +16,20 @@ describe('useAllySelection', () => {
       expect(result).toEqual(['Ally1', 'Ally2']);
     });
 
-    it('returns [creatureName] when stored allies is null', () => {
+    it('returns [creatureName] when stored allies is a single ally', () => {
+      vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue(['SingleAlly']);
+
+      const result = getAllyList('Hero');
+
+      expect(result).toEqual(['SingleAlly']);
+    });
+
+    it('returns [creatureName] when stored allies is missing (null/undefined)', () => {
       vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue(null);
 
       const result = getAllyList('Goblin');
 
       expect(result).toEqual(['Goblin']);
-    });
-
-    it('returns [creatureName] when stored allies is undefined', () => {
-      vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue(undefined);
-
-      const result = getAllyList('Skeleton');
-
-      expect(result).toEqual(['Skeleton']);
     });
 
     it('returns [creatureName] when stored allies is an empty array', () => {
@@ -40,49 +40,28 @@ describe('useAllySelection', () => {
       expect(result).toEqual(['Orc']);
     });
 
-    it('returns [creatureName] when stored allies is not an array', () => {
-      vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue('not-an-array');
+    it('returns [creatureName] when stored allies is a non-array value', () => {
+      vi.spyOn(useRuntimeState, 'getRuntimeValue')
+        .mockReturnValueOnce('not-an-array')
+        .mockReturnValueOnce('')
+        .mockReturnValueOnce(0);
 
-      const result = getAllyList('Giant');
-
-      expect(result).toEqual(['Giant']);
+      expect(getAllyList('Giant')).toEqual(['Giant']);
+      expect(getAllyList('Wraith')).toEqual(['Wraith']);
+      expect(getAllyList('Troll')).toEqual(['Troll']);
     });
 
-    it('returns [creatureName] when stored allies is a single string', () => {
-      vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue('SingleAlly');
+    it('reads from the correct runtime key', () => {
+      vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue(['Ally1']);
 
-      const result = getAllyList('Dragon');
+      getAllyList('Hero');
 
-      expect(result).toEqual(['Dragon']);
-    });
-
-    it('returns [creatureName] when stored allies is 0', () => {
-      vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue(0);
-
-      const result = getAllyList('Troll');
-
-      expect(result).toEqual(['Troll']);
-    });
-
-    it('returns [creatureName] when stored allies is an empty string', () => {
-      vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue('');
-
-      const result = getAllyList('Wraith');
-
-      expect(result).toEqual(['Wraith']);
-    });
-
-    it('returns stored allies with a single ally', () => {
-      vi.spyOn(useRuntimeState, 'getRuntimeValue').mockReturnValue(['SingleAlly']);
-
-      const result = getAllyList('Hero');
-
-      expect(result).toEqual(['SingleAlly']);
+      expect(useRuntimeState.getRuntimeValue).toHaveBeenCalledWith('Hero', 'selectedAllies');
     });
   });
 
   describe('setAllyList', () => {
-    it('calls setRuntimeValue with the correct parameters for a non-empty array', () => {
+    it('persists the ally list with all parameters', () => {
       const spy = vi.spyOn(useRuntimeState, 'setRuntimeValue').mockReturnValue(undefined);
 
       setAllyList('Hero', ['Ally1', 'Ally2'], 'test-campaign');
@@ -90,7 +69,7 @@ describe('useAllySelection', () => {
       expect(spy).toHaveBeenCalledWith('Hero', 'selectedAllies', ['Ally1', 'Ally2'], 'test-campaign');
     });
 
-    it('calls setRuntimeValue with an empty array', () => {
+    it('persists an empty ally list', () => {
       const spy = vi.spyOn(useRuntimeState, 'setRuntimeValue').mockReturnValue(undefined);
 
       setAllyList('Hero', [], 'test-campaign');
@@ -98,20 +77,20 @@ describe('useAllySelection', () => {
       expect(spy).toHaveBeenCalledWith('Hero', 'selectedAllies', [], 'test-campaign');
     });
 
-    it('calls setRuntimeValue with a single ally', () => {
+    it('persists without campaignName when omitted', () => {
       const spy = vi.spyOn(useRuntimeState, 'setRuntimeValue').mockReturnValue(undefined);
 
-      setAllyList('Hero', ['Ally1'], 'test-campaign');
+      setAllyList('Hero', ['Ally1']);
 
-      expect(spy).toHaveBeenCalledWith('Hero', 'selectedAllies', ['Ally1'], 'test-campaign');
+      expect(spy).toHaveBeenCalledWith('Hero', 'selectedAllies', ['Ally1'], undefined);
     });
 
-    it('calls setRuntimeValue without campaignName', () => {
+    it('writes to the correct runtime key', () => {
       const spy = vi.spyOn(useRuntimeState, 'setRuntimeValue').mockReturnValue(undefined);
 
-      setAllyList('Hero', ['Ally1', 'Ally2']);
+      setAllyList('Hero', ['Ally1'], 'campaign');
 
-      expect(spy).toHaveBeenCalledWith('Hero', 'selectedAllies', ['Ally1', 'Ally2'], undefined);
+      expect(spy).toHaveBeenLastCalledWith('Hero', 'selectedAllies', ['Ally1'], 'campaign');
     });
   });
 });

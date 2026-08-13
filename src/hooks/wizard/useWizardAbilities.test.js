@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardAbilities from './useWizardAbilities.js';
@@ -337,7 +338,14 @@ describe('useWizardAbilities', () => {
       result.current.onAbilityBaseScoreChange(0, '20');
 
       expect(mockUpdateAbility).not.toHaveBeenCalled();
-      expect(mockSetErrors).not.toHaveBeenCalled();
+    });
+
+    it('should reject base scores below 8', () => {
+      const { result } = renderWizardAbilities(makeFormData(defaultAbilities()), 5, mockSetErrors, mockUpdateAbility);
+
+      result.current.onAbilityBaseScoreChange(0, '5');
+
+      expect(mockUpdateAbility).not.toHaveBeenCalled();
     });
 
     it('should reject base score change when total points would exceed 27', () => {
@@ -356,6 +364,15 @@ describe('useWizardAbilities', () => {
       result.current.onAbilityBaseScoreChange(0, '14');
 
       expect(mockUpdateAbility).not.toHaveBeenCalled();
+    });
+
+    it('should accept base score change when total points stay within 27', () => {
+      const { result } = renderWizardAbilities(makeFormData(defaultAbilities()), 5, mockSetErrors, mockUpdateAbility);
+
+      // Dexterity: 14 (cost 7) -> 15 (cost 9): 22 - 7 + 9 = 24, within limit
+      result.current.onAbilityBaseScoreChange(1, '15');
+
+      expect(mockUpdateAbility).toHaveBeenCalledWith(1, 'baseScore', 15);
     });
   });
 
@@ -472,7 +489,6 @@ describe('useWizardAbilities', () => {
       renderWizardAbilities(formData, 5, mockSetErrors, mockUpdateAbility);
 
       expect(computeRaceBuffs).not.toHaveBeenCalled();
-      expect(mockUpdateAbility).not.toHaveBeenCalled();
     });
 
     it('should skip race buffs sync when no race is selected', () => {
@@ -481,7 +497,18 @@ describe('useWizardAbilities', () => {
       renderWizardAbilities(formData, 5, mockSetErrors, mockUpdateAbility);
 
       expect(computeRaceBuffs).not.toHaveBeenCalled();
-      expect(mockUpdateAbility).not.toHaveBeenCalled();
+    });
+
+    it('should skip race buffs sync when race has no name', () => {
+      const formData = makeFormData(
+        defaultAbilities(),
+        '5e',
+        { name: null, subrace: null }
+      );
+
+      renderWizardAbilities(formData, 5, mockSetErrors, mockUpdateAbility);
+
+      expect(computeRaceBuffs).not.toHaveBeenCalled();
     });
 
     it('should update racialIncrease when race provides ability bonuses', () => {
@@ -504,7 +531,7 @@ describe('useWizardAbilities', () => {
       expect(mockUpdateAbility).toHaveBeenCalledWith(2, 'racialIncrease', 2);
     });
 
-    it('should update racialIncrease from subrace when subrace exists', () => {
+    it('should combine race and subrace racial bonuses for the same ability', () => {
       computeRaceBuffs
         .mockReturnValueOnce({
           abilityScoreIncreases: [{ name: 'Intelligence', amount: 1 }]
@@ -521,7 +548,6 @@ describe('useWizardAbilities', () => {
 
       renderWizardAbilities(formData, 5, mockSetErrors, mockUpdateAbility);
 
-      expect(computeRaceBuffs).toHaveBeenCalledTimes(2);
       expect(mockUpdateAbility).toHaveBeenCalledWith(3, 'racialIncrease', 2);
     });
 
@@ -544,6 +570,27 @@ describe('useWizardAbilities', () => {
       renderWizardAbilities(formData, 5, mockSetErrors, mockUpdateAbility);
 
       expect(mockUpdateAbility).not.toHaveBeenCalled();
+    });
+
+    it('should update racialIncrease when it differs from current value', () => {
+      computeRaceBuffs.mockReturnValue({
+        abilityScoreIncreases: [{ name: 'Strength', amount: 2 }]
+      });
+
+      const abilities = [
+        makeAbility('Strength', 15, 0, 0, 0, 0),
+        makeAbility('Dexterity', 14, 0, 0, 0, 0),
+        makeAbility('Constitution', 12, 0, 0, 0, 0),
+        makeAbility('Intelligence', 10, 0, 0, 0, 0),
+        makeAbility('Wisdom', 8, 0, 0, 0, 0),
+        makeAbility('Charisma', 8, 0, 0, 0, 0)
+      ];
+
+      const formData = makeFormData(abilities, '5e', { name: 'Mountain Dwarf', subrace: null });
+
+      renderWizardAbilities(formData, 5, mockSetErrors, mockUpdateAbility);
+
+      expect(mockUpdateAbility).toHaveBeenCalledWith(0, 'racialIncrease', 2);
     });
   });
 

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -46,11 +47,6 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
     playerIsImmuneToCondition: vi.fn(),
     hasGreatWeaponFighting: vi.fn(),
     applyGreatWeaponFightingToDamage: vi.fn((rolls) => rolls),
-    evaluateAutoExpression: vi.fn((expr) => {
-        const match = expr.match(/^(\d+)d(\d+)\+(\d+)/);
-        if (match) return parseInt(match[1]) + parseInt(match[3]);
-        return 0;
-    }),
 }));
 
 vi.mock('../../services/rules/features/invisibilityService.js', () => ({
@@ -59,24 +55,6 @@ vi.mock('../../services/rules/features/invisibilityService.js', () => ({
 
 vi.mock('../../services/combat/conditions/savePromptService.js', () => ({
     sendSavePrompt: vi.fn(),
-}));
-
-vi.mock('../../services/rules/combat/aoeService.js', () => ({
-    getAffectedCreatures: vi.fn(),
-    processAoeNpcs: vi.fn(),
-    sendAoePlayerSaves: vi.fn(),
-}));
-
-vi.mock('./loggedDiceRollUtils.js', () => ({
-    readAoeContext: vi.fn(),
-    hasPotentCantrip: vi.fn(),
-    isMagicMissileImmune: vi.fn(),
-    hasSoulstitchProtection: vi.fn(),
-    applyMinDamageAdjustment: vi.fn((d) => d),
-}));
-
-vi.mock('../../services/ui/logService.js', () => ({
-    addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../services/rules/combat/applyDamage.js', () => ({
@@ -88,63 +66,24 @@ vi.mock('../../services/rules/combat/applyDamage.js', () => ({
     normalizeSaveType: (type) => type,
 }));
 
-vi.mock('../../services/combat/auras/coronaAuraUtils.js', () => ({
-    getCoronaSaveDisadvantage: vi.fn(),
+vi.mock('../loggedDiceRollUtils.js', () => ({
+    readAoeContext: vi.fn(),
+    hasPotentCantrip: vi.fn(),
+    isMagicMissileImmune: vi.fn(),
+    hasSoulstitchProtection: vi.fn(),
+    applyMinDamageAdjustment: vi.fn((d) => d),
 }));
 
-vi.mock('../../services/combat/auras/elderChampionAuraUtils.js', () => ({
-    getElderChampionSaveDisadvantage: vi.fn(),
-}));
-
-vi.mock('../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
-    isCircleOfPowerActive: vi.fn(),
-}));
-
-vi.mock('../../services/combat/auras/bardicInspirationState.js', () => ({
-    hasBardicInspirationOffense: vi.fn(),
-    getBardicInspirationDieSize: vi.fn(),
-    getBardicInspirationDieSizeFromClass: vi.fn(),
-}));
-
-vi.mock('../../services/rules/spells/empoweredSpellService.js', () => ({
-    hasEmpoweredSpell: vi.fn(),
-}));
-
-vi.mock('../../services/rules/spells/metamagicRules.js', () => ({
-    getChaModifier: vi.fn(),
-}));
-
-vi.mock('../../services/automation/handlers/buffs/holyAuraHandler.js', () => ({
-    getHolyAuraTargets: vi.fn(),
-}));
-
-vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
-    computeConditionEffects: vi.fn(() => ({
-        restoreBalance: false,
-        autoRerollForSaves: false,
-        autoRerollBonus: null,
-        autoRerollCondition: null,
-        saveAdvantageCount: 0,
-        saveAdvantageAbilities: [],
-    })),
-}));
-
-vi.mock('../../services/combat/auras/pendingSaveRegistry.js', () => ({
-    registerPendingSavePrompt: vi.fn(),
-}));
-
-vi.mock('../../hooks/useAllySelection.js', () => ({
-    getAllyList: vi.fn(),
+vi.mock('../../services/ui/logService.js', () => ({
+    addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
-import { hasIgnoreResistance } from '../../services/combat/automation/automationService.js';
-import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js';
-import { applyMinDamageAdjustment } from './loggedDiceRollUtils.js';
+import { sendSavePrompt } from '../../services/combat/conditions/savePromptService.js';
 import { applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
 import { createLogDamageAndShow } from './useLoggedDiceRollDamage.js';
-import { rollExpression } from '../../services/dice/diceRoller.js';
+
 describe('Death Strike handling', () => {
     const deps = {
         characterName: 'TestFighter',
@@ -156,13 +95,10 @@ describe('Death Strike handling', () => {
     };
 
     beforeEach(() => {
-        rollExpression.mockReturnValue({ total: 8, rolls: [5, 3], modifier: 0 });
-        getRuntimeValue.mockReturnValue(null);
+        getRuntimeValue.mockReset().mockReturnValue(null);
         setRuntimeValue.mockClear();
-        applyMinDamageAdjustment.mockImplementation((d) => d);
-        hasIgnoreResistance.mockReturnValue(false);
-        endInvisibilityOnHostileAction.mockReturnValue(undefined);
-        applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+        applyDamageToTarget.mockReset().mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+        sendSavePrompt.mockClear();
         loadCombatSummary.mockResolvedValue({
             creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13 }],
         });
@@ -174,41 +110,320 @@ describe('Death Strike handling', () => {
         return createLogDamageAndShow(deps);
     }
 
-    it('doubles damage when death strike save fails', async () => {
-        getRuntimeValue.mockImplementation((key) => {
+    function dispatchSaveResult(promptId, options) {
+        window.dispatchEvent(new CustomEvent('save-result', {
+            detail: {
+                promptId,
+                success: options.success || false,
+                roll: options.roll || 10,
+                bonus: options.bonus || 0,
+                rawRolls: options.rawRolls || [10],
+            },
+        }));
+    }
+
+    function setupDeathStrikeRuntime(saveDc = 15, saveType = 'CON') {
+        getRuntimeValue.mockImplementation((key, prop) => {
             if (key === 'campaign') {
                 return [
                     {
                         effect: 'death_strike',
                         target: 'Goblin',
-                        saveDc: 15,
-                        saveType: 'CON',
+                        saveDc,
+                        saveType,
                     },
                 ];
             }
+            if (key === 'Goblin' && prop === 'currentHitPoints') return 5;
+            if (key === 'Goblin' && prop === 'hitPoints') return 10;
             return null;
         });
+    }
 
-        const fn = createFn();
+    describe('death strike save failure', () => {
+        it('sends a save prompt with correct parameters', async () => {
+            setupDeathStrikeRuntime(15, 'CON');
 
-        // Simulate save-result event with failure
-        setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('save-result', {
-                detail: { promptId: 'test-guid-1234', success: false, roll: 5, bonus: 3 },
-            }));
-        }, 10);
+            const fn = createFn();
+            const promise = fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
 
-        await fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
-            targetName: 'Goblin',
-            damageType: 'slashing',
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            dispatchSaveResult('test-guid-1234', { success: false, roll: 5, bonus: 3, rawRolls: [5] });
+
+            await promise.catch(() => { });
+
+            expect(sendSavePrompt).toHaveBeenCalledWith(
+                'test-campaign',
+                expect.objectContaining({
+                    promptId: 'test-guid-1234',
+                    targetName: 'Goblin',
+                    saveType: 'CON',
+                    saveDc: 15,
+                    dcSuccess: false,
+                })
+            );
         });
 
-        // The log entry should show doubled formula
-        expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
-            name: 'Death Strike',
-            formula: '2× 2d6+3',
-            total: 20,
-        }));
+        it('applies doubled damage after save failure', async () => {
+            setupDeathStrikeRuntime();
+
+            const fn = createFn();
+            const promise = fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            dispatchSaveResult('test-guid-1234', { success: false, roll: 5, bonus: 3, rawRolls: [5] });
+
+            await promise.catch(() => { });
+
+            // adjustedTotal = 10, doubledTotal = 10 * 2 = 20
+            expect(applyDamageToTarget).toHaveBeenCalledWith(
+                expect.any(Object),
+                'Goblin',
+                20,
+                ['slashing'],
+                'test-campaign',
+                expect.any(Array),
+                false,
+                'TestFighter'
+            );
+        });
+
+        it('logs save-damage entry with full death strike context', async () => {
+            setupDeathStrikeRuntime(15, 'CON');
+
+            const fn = createFn();
+            const promise = fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            dispatchSaveResult('test-guid-1234', { success: false, roll: 5, bonus: 3, rawRolls: [5] });
+
+            await promise.catch(() => { });
+
+            expect(deps.logEntry).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'roll',
+                    rollType: 'save-damage',
+                    name: 'Death Strike',
+                    formula: '2× 2d6+3',
+                    total: 20,
+                    damageType: 'slashing',
+                    targetName: 'Goblin',
+                    saveType: 'CON',
+                    saveDc: 15,
+                    saveResult: 'failure',
+                    saveRoll: 5,
+                    saveBonus: 3,
+                    saveRawRolls: [5],
+                    finalDamage: null,
+                    note: 'death_strike_damage_roll_before_apply',
+                })
+            );
+        });
+
+        it('sets popup html with death strike details on failure', async () => {
+            setupDeathStrikeRuntime();
+            applyDamageToTarget.mockReturnValue({ finalDamage: 20, newHp: -7, damageReduced: false });
+
+            const fn = createFn();
+            const promise = fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            dispatchSaveResult('test-guid-1234', { success: false, roll: 5, bonus: 3, rawRolls: [5] });
+
+            await promise.catch(() => { });
+
+            const popupCalls = deps.setPopupHtml.mock.calls;
+            const deathStrikeCall = popupCalls.find(
+                (call) => typeof call[0] === 'function'
+            );
+            expect(deathStrikeCall).toBeDefined();
+            const result = deathStrikeCall[0]({});
+            expect(result).toMatchObject({
+                deathStrikeDoubled: true,
+                deathStrikeSaveRoll: 5,
+                deathStrikeSaveBonus: 3,
+                deathStrikeSaveDc: 15,
+                deathStrikeFinalDamage: 20,
+            });
+        });
+
+        it('removes death strike effect from targetEffects after processing', async () => {
+            setupDeathStrikeRuntime();
+
+            const fn = createFn();
+            const promise = fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            dispatchSaveResult('test-guid-1234', { success: false, roll: 5, bonus: 3, rawRolls: [5] });
+
+            await promise.catch(() => { });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.any(Array),
+                'test-campaign'
+            );
+
+            const cleanupCall = setRuntimeValue.mock.calls.find(
+                (call) => call[0] === 'campaign' && call[1] === 'targetEffects'
+            );
+            expect(cleanupCall).toBeDefined();
+            const cleanedEffects = cleanupCall[2];
+            const hasDeathStrike = cleanedEffects.some((te) => te.effect === 'death_strike');
+            expect(hasDeathStrike).toBe(false);
+        });
+    });
+
+    describe('death strike save success', () => {
+        it('does not apply doubled damage when save succeeds', async () => {
+            setupDeathStrikeRuntime();
+
+            const fn = createFn();
+            const promise = fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            dispatchSaveResult('test-guid-1234', { success: true, roll: 18, bonus: 3, rawRolls: [15] });
+
+            await promise.catch(() => { });
+
+            // Verify the death strike doubled damage was NOT applied
+            const deathStrikeCalls = applyDamageToTarget.mock.calls.filter(
+                (call) => call[1] === 'Goblin' && call[2] === 20
+            );
+            expect(deathStrikeCalls).toHaveLength(0);
+        });
+
+        it('does not set deathStrikeDoubled flag on popup when save succeeds', async () => {
+            setupDeathStrikeRuntime();
+
+            const fn = createFn();
+            const promise = fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            dispatchSaveResult('test-guid-1234', { success: true, roll: 18, bonus: 3, rawRolls: [15] });
+
+            await promise.catch(() => { });
+
+            const popupCalls = deps.setPopupHtml.mock.calls;
+            const deathStrikeCall = popupCalls.find(
+                (call) => typeof call[0] === 'function'
+            );
+            if (deathStrikeCall) {
+                const result = deathStrikeCall[0]({});
+                expect(result.deathStrikeDoubled).toBeUndefined();
+            }
+        });
+
+        it('logs no save-damage entry when save succeeds', async () => {
+            setupDeathStrikeRuntime();
+
+            const fn = createFn();
+            const promise = fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            dispatchSaveResult('test-guid-1234', { success: true, roll: 18, bonus: 3, rawRolls: [15] });
+
+            await promise.catch(() => { });
+
+            const saveDamageLogs = deps.logEntry.mock.calls.filter(
+                (call) => call[0]?.rollType === 'save-damage'
+            );
+            expect(saveDamageLogs).toHaveLength(0);
+        });
+
+        it('still removes death strike effect after save success', async () => {
+            setupDeathStrikeRuntime();
+
+            const fn = createFn();
+            const promise = fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            dispatchSaveResult('test-guid-1234', { success: true, roll: 18, bonus: 3, rawRolls: [15] });
+
+            await promise.catch(() => { });
+
+            const cleanupCall = setRuntimeValue.mock.calls.find(
+                (call) => call[0] === 'campaign' && call[1] === 'targetEffects'
+            );
+            expect(cleanupCall).toBeDefined();
+            const cleanedEffects = cleanupCall[2];
+            const hasDeathStrike = cleanedEffects.some((te) => te.effect === 'death_strike');
+            expect(hasDeathStrike).toBe(false);
+        });
+    });
+
+    describe('death strike with missing fields', () => {
+        it('does not send save prompt when death strike effect is missing saveDc', async () => {
+            getRuntimeValue.mockReset().mockImplementation((key) => {
+                if (key === 'campaign') {
+                    return [
+                        {
+                            effect: 'death_strike',
+                            target: 'Goblin',
+                        },
+                    ];
+                }
+                return null;
+            });
+
+            const fn = createFn();
+            await fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            expect(sendSavePrompt).not.toHaveBeenCalled();
+        });
+
+        it('does not send save prompt when death strike effect is missing saveType', async () => {
+            getRuntimeValue.mockReset().mockImplementation((key) => {
+                if (key === 'campaign') {
+                    return [
+                        {
+                            effect: 'death_strike',
+                            target: 'Goblin',
+                            saveDc: 15,
+                        },
+                    ];
+                }
+                return null;
+            });
+
+            const fn = createFn();
+            await fn('Greatsword', '2d6+3', 10, [4, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            expect(sendSavePrompt).not.toHaveBeenCalled();
+        });
     });
 });
-

@@ -1,27 +1,10 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
     rollExpression: vi.fn(),
     rollExpressionDoubled: vi.fn(),
-    formatDamageFormula: vi.fn((formula, rolls, isCrit) => {
-        if (!isCrit) return formula;
-        const parsed = formula.match(/^(\d+)?d(\d+)((?:[+-]\d+)+)?$/i);
-        if (!parsed) return formula;
-        const count = parsed[1] || 1;
-        const sides = parsed[2];
-        const modifierStr = parsed[3];
-        let modifier = 0;
-        if (modifierStr) {
-            const segments = modifierStr.match(/([+-]\d+)/g);
-            for (const seg of segments) { modifier += parseInt(seg, 10); }
-        }
-        const dicePart = count === 1 ? `d${sides}` : `${count}d${sides}`;
-        const rollStr = rolls && rolls.length > 0 ? ` (${rolls.join(', ')})` : '';
-        let result = `${dicePart}*2${rollStr}`;
-        if (modifier > 0) result += `+${modifier}`;
-        else if (modifier < 0) result += `${modifier}`;
-        return result;
-    }),
+    formatDamageFormula: vi.fn((formula) => formula),
 }));
 
 vi.mock('../../services/ui/utils.js', () => ({
@@ -36,43 +19,39 @@ vi.mock('../runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../services/encounters/combatData.js', () => ({
-    loadCombatSummary: vi.fn(),
-    getCombatSummary: vi.fn(),
-}));
-
 vi.mock('../../services/combat/automation/automationService.js', () => ({
     hasIgnoreResistance: vi.fn(),
     playerIsImmuneToCondition: vi.fn(),
     hasGreatWeaponFighting: vi.fn(),
     applyGreatWeaponFightingToDamage: vi.fn((rolls) => rolls),
-    evaluateAutoExpression: vi.fn((expr) => {
-        const match = expr.match(/^(\d+)d(\d+)\+(\d+)/);
-        if (match) return parseInt(match[1]) + parseInt(match[3]);
-        return 0;
-    }),
+    evaluateAutoExpression: vi.fn(),
 }));
 
 vi.mock('../../services/rules/features/invisibilityService.js', () => ({
     endInvisibilityOnHostileAction: vi.fn(),
 }));
 
-vi.mock('../../services/combat/conditions/savePromptService.js', () => ({
-    sendSavePrompt: vi.fn(),
-}));
-
-vi.mock('../../services/rules/combat/aoeService.js', () => ({
-    getAffectedCreatures: vi.fn(),
-    processAoeNpcs: vi.fn(),
-    sendAoePlayerSaves: vi.fn(),
-}));
-
 vi.mock('./loggedDiceRollUtils.js', () => ({
-    readAoeContext: vi.fn(),
-    hasPotentCantrip: vi.fn(),
     isMagicMissileImmune: vi.fn(),
+    hasPotentCantrip: vi.fn(),
     hasSoulstitchProtection: vi.fn(),
     applyMinDamageAdjustment: vi.fn((d) => d),
+}));
+
+vi.mock('../../services/combat/auras/coronaAuraUtils.js', () => ({
+    getCoronaSaveDisadvantage: vi.fn(() => ({ disadvantage: false })),
+}));
+
+vi.mock('../../services/combat/auras/elderChampionAuraUtils.js', () => ({
+    getElderChampionSaveDisadvantage: vi.fn(() => Promise.resolve({ disadvantage: false })),
+}));
+
+vi.mock('../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
+    isCircleOfPowerActive: vi.fn(),
+}));
+
+vi.mock('./handleOverchannelSelfDamage.js', () => ({
+    handleOverchannelSelfDamage: vi.fn(),
 }));
 
 vi.mock('../../services/ui/logService.js', () => ({
@@ -80,75 +59,29 @@ vi.mock('../../services/ui/logService.js', () => ({
 }));
 
 vi.mock('../../services/rules/combat/applyDamage.js', () => ({
-    computeDamageAfterSave: vi.fn((total, success, _dcSuccess) => success ? Math.floor(total / 2) : total),
-    computeDamageAfterEvasion: vi.fn((total, success, _dcSuccess, evasion) => (evasion && success ? 0 : (success ? Math.floor(total / 2) : total))),
+    computeDamageAfterSave: vi.fn((total, success) => success ? Math.floor(total / 2) : total),
+    computeDamageAfterEvasion: vi.fn((total, success) => success ? Math.floor(total / 2) : total),
     rollSaveForCreature: vi.fn(),
     applyDamageToTarget: vi.fn(),
     clearReTriggeredSequence: vi.fn(),
     normalizeSaveType: (type) => type,
 }));
 
-vi.mock('../../services/combat/auras/coronaAuraUtils.js', () => ({
-    getCoronaSaveDisadvantage: vi.fn(),
-}));
-
-vi.mock('../../services/combat/auras/elderChampionAuraUtils.js', () => ({
-    getElderChampionSaveDisadvantage: vi.fn(),
-}));
-
-vi.mock('../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
-    isCircleOfPowerActive: vi.fn(),
-}));
-
-vi.mock('../../services/combat/auras/bardicInspirationState.js', () => ({
-    hasBardicInspirationOffense: vi.fn(),
-    getBardicInspirationDieSize: vi.fn(),
-    getBardicInspirationDieSizeFromClass: vi.fn(),
-}));
-
-vi.mock('../../services/rules/spells/empoweredSpellService.js', () => ({
-    hasEmpoweredSpell: vi.fn(),
-}));
-
-vi.mock('../../services/rules/spells/metamagicRules.js', () => ({
-    getChaModifier: vi.fn(),
-}));
-
-vi.mock('../../services/automation/handlers/buffs/holyAuraHandler.js', () => ({
-    getHolyAuraTargets: vi.fn(),
-}));
-
-vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
-    computeConditionEffects: vi.fn(() => ({
-        restoreBalance: false,
-        autoRerollForSaves: false,
-        autoRerollBonus: null,
-        autoRerollCondition: null,
-        saveAdvantageCount: 0,
-        saveAdvantageAbilities: [],
-    })),
-}));
-
-vi.mock('../../services/combat/auras/pendingSaveRegistry.js', () => ({
-    registerPendingSavePrompt: vi.fn(),
-}));
-
-vi.mock('../../hooks/useAllySelection.js', () => ({
-    getAllyList: vi.fn(),
+vi.mock('../../services/encounters/combatData.js', () => ({
+    loadCombatSummary: vi.fn(),
+    getCombatSummary: vi.fn(),
 }));
 
 import { getRuntimeValue } from '../runtime/useRuntimeState.js';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
-import { hasIgnoreResistance, playerIsImmuneToCondition } from '../../services/combat/automation/automationService.js';
+import { hasIgnoreResistance, evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
 import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js';
-import { hasPotentCantrip, hasSoulstitchProtection, applyMinDamageAdjustment } from './loggedDiceRollUtils.js';
-import { computeDamageAfterSave, rollSaveForCreature, applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
+import { hasPotentCantrip, hasSoulstitchProtection, applyMinDamageAdjustment, isMagicMissileImmune } from './loggedDiceRollUtils.js';
+import { rollSaveForCreature, applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
 import { createLogDamageAndShow } from './useLoggedDiceRollDamage.js';
-import { getCoronaSaveDisadvantage } from '../../services/combat/auras/coronaAuraUtils.js';
-import { getElderChampionSaveDisadvantage } from '../../services/combat/auras/elderChampionAuraUtils.js';
-import { rollExpression } from '../../services/dice/diceRoller.js';
-describe('Blessed Strikes Potent Spellcasting', () => {
-    const deps = {
+
+describe('Blessed Strikes — Potent Spellcasting temp HP dispatch', () => {
+    const BASE_DEPS = {
         characterName: 'TestWizard',
         campaignName: 'test-campaign',
         characters: [
@@ -159,100 +92,264 @@ describe('Blessed Strikes Potent Spellcasting', () => {
         pendingSaves: {},
     };
 
+    const BASE_CONTEXT = {
+        targetName: 'Goblin',
+        damageType: 'lightning',
+        saveDc: 15,
+        saveType: 'DEX',
+        dcSuccess: 'none',
+        isCantrip: true,
+        attackerName: 'TestWizard',
+    };
+
+    const blessedStrikesAction = {
+        type: 'damage_bonus',
+        name: 'Blessed Strikes',
+        options: ['Potent Spellcasting'],
+        tempHpExpression: '1d4+2',
+    };
+
+    const playerStatsWithBlessedStrikes = {
+        automation: {
+            actions: [blessedStrikesAction],
+            passives: [],
+        },
+    };
+
     beforeEach(() => {
-        rollExpression.mockReturnValue({ total: 8, rolls: [5, 3], modifier: 0 });
+        vi.clearAllMocks();
+
+        // Default: save fails (target misses)
+        rollSaveForCreature.mockReturnValue({ success: false, roll: 5, total: 8, bonus: 3, rawRolls: [5] });
         getRuntimeValue.mockReturnValue(null);
         applyMinDamageAdjustment.mockImplementation((d) => d);
         hasIgnoreResistance.mockReturnValue(false);
         hasPotentCantrip.mockReturnValue(false);
+        isMagicMissileImmune.mockReturnValue(false);
         hasSoulstitchProtection.mockReturnValue(false);
-        playerIsImmuneToCondition.mockReturnValue(false);
         endInvisibilityOnHostileAction.mockReturnValue(undefined);
-        computeDamageAfterSave.mockImplementation((total, success, _dcSuccess) => success ? Math.floor(total / 2) : total);
-        rollSaveForCreature.mockReturnValue({ success: false, roll: 5, total: 8, bonus: 3, rawRolls: [5] });
         applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 3, damageReduced: false });
-        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
+        evaluateAutoExpression.mockReturnValue(3);
         loadCombatSummary.mockResolvedValue({
             creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13 }],
         });
-        deps.logEntry.mockClear();
-        deps.setPopupHtml.mockClear();
+        BASE_DEPS.logEntry.mockClear();
+        BASE_DEPS.setPopupHtml.mockClear();
     });
 
     function createFn() {
-        return createLogDamageAndShow(deps);
+        return createLogDamageAndShow(BASE_DEPS);
     }
 
-    it('dispatches potent-spellcasting-temp-hp event when blessed strikes cantrip misses', async () => {
-        const playerStats = {
-            automation: {
-                actions: [
-                    {
-                        type: 'damage_bonus',
-                        name: 'Blessed Strikes',
-                        options: ['Potent Spellcasting'],
-                        tempHpExpression: '1d4+2',
-                    },
-                ],
-                passives: [],
-            },
-        };
-
-        const fn = createFn();
-        let dispatchedEvent = null;
-        window.addEventListener('potent-spellcasting-temp-hp', (event) => {
-            dispatchedEvent = event.detail;
+    function trackEvent() {
+        return new Promise((resolve) => {
+            const handler = (event) => {
+                window.removeEventListener('potent-spellcasting-temp-hp', handler);
+                resolve(event.detail);
+            };
+            window.addEventListener('potent-spellcasting-temp-hp', handler);
         });
+    }
+
+    it('dispatches potent-spellcasting-temp-hp when cantrip misses and Blessed Strikes has tempHpExpression', async () => {
+        const fn = createFn();
+        const eventDetail = trackEvent();
 
         await fn('Shocking Grasp', '1d8', 5, [5], 0, {
-            targetName: 'Goblin',
-            damageType: 'lightning',
-            saveDc: 15,
-            saveType: 'DEX',
-            dcSuccess: 'none',
-            isCantrip: true,
-            attackerName: 'TestWizard',
-            playerStats,
+            ...BASE_CONTEXT,
+            playerStats: playerStatsWithBlessedStrikes,
         });
 
-        expect(dispatchedEvent).not.toBeNull();
-        expect(dispatchedEvent.title).toBe('Improved Blessed Strikes — Potent Spellcasting');
-        expect(dispatchedEvent.tempHp).toBeGreaterThan(0);
+        const detail = await eventDetail;
+        expect(detail).toBeDefined();
+        expect(detail.title).toBe('Improved Blessed Strikes — Potent Spellcasting');
+        expect(detail.tempHp).toBe(3);
+        expect(detail.attackerName).toBe('TestWizard');
+        expect(detail.confirmLabel).toBe('Grant Temp HP');
+        expect(detail.campaignName).toBe('test-campaign');
+        expect(Array.isArray(detail.targets)).toBe(true);
+        expect(detail.targets.length).toBeGreaterThan(0);
     });
 
-    it('does not dispatch event when no blessed strikes with tempHpExpression', async () => {
-        const playerStats = {
-            automation: {
-                actions: [
-                    {
-                        type: 'damage_bonus',
-                        name: 'Other Feature',
-                        options: ['Potent Spellcasting'],
-                    },
-                ],
-                passives: [],
+    it('does not dispatch when Blessed Strikes lacks tempHpExpression', async () => {
+        const actionsWithoutTempHp = [
+            {
+                type: 'damage_bonus',
+                name: 'Blessed Strikes',
+                options: ['Potent Spellcasting'],
             },
+        ];
+
+        const playerStats = {
+            automation: { actions: actionsWithoutTempHp, passives: [] },
         };
 
         const fn = createFn();
-        let dispatchedEvent = null;
-        window.addEventListener('potent-spellcasting-temp-hp', (event) => {
-            dispatchedEvent = event.detail;
-        });
+        let dispatched = false;
+        const handler = () => { dispatched = true; };
+        window.addEventListener('potent-spellcasting-temp-hp', handler);
 
         await fn('Shocking Grasp', '1d8', 5, [5], 0, {
-            targetName: 'Goblin',
-            damageType: 'lightning',
-            saveDc: 15,
-            saveType: 'DEX',
-            dcSuccess: 'none',
-            isCantrip: true,
-            attackerName: 'TestWizard',
+            ...BASE_CONTEXT,
             playerStats,
         });
 
-        expect(dispatchedEvent).toBeNull();
+        window.removeEventListener('potent-spellcasting-temp-hp', handler);
+        expect(dispatched).toBe(false);
+    });
+
+    it('does not dispatch when target succeeds on save', async () => {
+        rollSaveForCreature.mockReturnValue({ success: true, roll: 18, total: 21, bonus: 3, rawRolls: [18] });
+
+        const fn = createFn();
+        let dispatched = false;
+        const handler = () => { dispatched = true; };
+        window.addEventListener('potent-spellcasting-temp-hp', handler);
+
+        await fn('Shocking Grasp', '1d8', 5, [5], 0, {
+            ...BASE_CONTEXT,
+            playerStats: playerStatsWithBlessedStrikes,
+        });
+
+        window.removeEventListener('potent-spellcasting-temp-hp', handler);
+        expect(dispatched).toBe(false);
+    });
+
+    it('does not dispatch when not a cantrip', async () => {
+        const fn = createFn();
+        let dispatched = false;
+        const handler = () => { dispatched = true; };
+        window.addEventListener('potent-spellcasting-temp-hp', handler);
+
+        await fn('Fireball', '8d6', 20, [4, 6, 2, 5, 1, 3, 4, 5], 0, {
+            ...BASE_CONTEXT,
+            isCantrip: false,
+            playerStats: playerStatsWithBlessedStrikes,
+        });
+
+        window.removeEventListener('potent-spellcasting-temp-hp', handler);
+        expect(dispatched).toBe(false);
+    });
+
+    it('does not dispatch when target is soulstitch protected', async () => {
+        hasSoulstitchProtection.mockReturnValue(true);
+
+        const fn = createFn();
+        let dispatched = false;
+        const handler = () => { dispatched = true; };
+        window.addEventListener('potent-spellcasting-temp-hp', handler);
+
+        await fn('Shocking Grasp', '1d8', 5, [5], 0, {
+            ...BASE_CONTEXT,
+            playerStats: playerStatsWithBlessedStrikes,
+        });
+
+        window.removeEventListener('potent-spellcasting-temp-hp', handler);
+        expect(dispatched).toBe(false);
+    });
+
+    it('dispatches only the upgraded feature when both original and upgraded exist', async () => {
+        const actionsWithUpgrade = [
+            {
+                type: 'damage_bonus',
+                name: 'Blessed Strikes',
+                options: ['Potent Spellcasting'],
+                tempHpExpression: '1d4+2',
+            },
+            {
+                type: 'damage_bonus',
+                name: 'Improved Blessed Strikes',
+                options: ['Potent Spellcasting'],
+                tempHpExpression: '2d4+3',
+                upgrades: 'Blessed Strikes',
+            },
+        ];
+
+        const playerStats = {
+            automation: { actions: actionsWithUpgrade, passives: [] },
+        };
+
+        const fn = createFn();
+        let dispatchedCount = 0;
+        let lastDetail = null;
+        const handler = (event) => { dispatchedCount++; lastDetail = event.detail; };
+        window.addEventListener('potent-spellcasting-temp-hp', handler);
+
+        await fn('Shocking Grasp', '1d8', 5, [5], 0, {
+            ...BASE_CONTEXT,
+            playerStats,
+        });
+
+        window.removeEventListener('potent-spellcasting-temp-hp', handler);
+        expect(dispatchedCount).toBe(1);
+        expect(lastDetail.title).toBe('Improved Blessed Strikes — Potent Spellcasting');
+        expect(lastDetail.tempHp).toBe(3);
+    });
+
+    it('does not dispatch when dcSuccess is not "none"', async () => {
+        const fn = createFn();
+        let dispatched = false;
+        const handler = () => { dispatched = true; };
+        window.addEventListener('potent-spellcasting-temp-hp', handler);
+
+        await fn('Shocking Grasp', '1d8', 5, [5], 0, {
+            ...BASE_CONTEXT,
+            dcSuccess: 'half',
+            playerStats: playerStatsWithBlessedStrikes,
+        });
+
+        window.removeEventListener('potent-spellcasting-temp-hp', handler);
+        expect(dispatched).toBe(false);
+    });
+
+    it('evaluates tempHpExpression via evaluateAutoExpression', async () => {
+        evaluateAutoExpression.mockReturnValue(7);
+
+        const fn = createFn();
+        const detail = trackEvent();
+
+        await fn('Shocking Grasp', '1d8', 5, [5], 0, {
+            ...BASE_CONTEXT,
+            playerStats: playerStatsWithBlessedStrikes,
+        });
+
+        const eventDetail = await detail;
+        expect(eventDetail).toBeDefined();
+        expect(eventDetail.tempHp).toBe(7);
+        expect(evaluateAutoExpression).toHaveBeenCalledWith('1d4+2', playerStatsWithBlessedStrikes);
+    });
+
+    it('does not dispatch when evaluateAutoExpression returns 0', async () => {
+        evaluateAutoExpression.mockReturnValue(0);
+
+        const fn = createFn();
+        let dispatched = false;
+        const handler = () => { dispatched = true; };
+        window.addEventListener('potent-spellcasting-temp-hp', handler);
+
+        await fn('Shocking Grasp', '1d8', 5, [5], 0, {
+            ...BASE_CONTEXT,
+            playerStats: playerStatsWithBlessedStrikes,
+        });
+
+        window.removeEventListener('potent-spellcasting-temp-hp', handler);
+        expect(dispatched).toBe(false);
+    });
+
+    it('does not dispatch when evaluateAutoExpression returns NaN', async () => {
+        evaluateAutoExpression.mockReturnValue(NaN);
+
+        const fn = createFn();
+        let dispatched = false;
+        const handler = () => { dispatched = true; };
+        window.addEventListener('potent-spellcasting-temp-hp', handler);
+
+        await fn('Shocking Grasp', '1d8', 5, [5], 0, {
+            ...BASE_CONTEXT,
+            playerStats: playerStatsWithBlessedStrikes,
+        });
+
+        window.removeEventListener('potent-spellcasting-temp-hp', handler);
+        expect(dispatched).toBe(false);
     });
 });
-

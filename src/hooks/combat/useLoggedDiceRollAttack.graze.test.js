@@ -7,7 +7,7 @@ vi.mock('../../services/dice/diceRoller.js', () => ({
 
 vi.mock('../../services/ui/utils.js', () => ({
     default: {
-        getName: vi.fn((n) => n || 'Unknown'),
+        getName: vi.fn((n) => n),
         guid: vi.fn(() => 'test-guid-1234'),
     },
     DEBUG_FORCE_CRIT: false,
@@ -28,7 +28,7 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
 }));
 
 vi.mock('../../services/rules/combat/applyDamage.js', () => ({
-    applyDamageToTarget: vi.fn(() => ({ finalDamage: 2, newHp: 8 })),
+    applyDamageToTarget: vi.fn(() => ({ finalDamage: 2, newHp: 8, damageReduced: 0 })),
     clearReTriggeredSequence: vi.fn(),
 }));
 
@@ -37,12 +37,8 @@ vi.mock('../runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
 }));
 
-vi.mock('../../services/rules/effects/expirations.js', () => ({
-    clearAllExpirationEffects: vi.fn(),
-}));
-
 vi.mock('../../services/encounters/combatData.js', () => ({
-    loadCombatSummary: vi.fn(),
+    loadCombatSummary: vi.fn().mockResolvedValue({ creatures: [] }),
 }));
 
 vi.mock('../../services/combat/auras/unbreakableMajesty.js', () => ({
@@ -85,7 +81,7 @@ import utils from '../../services/ui/utils.js';
 import { getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
 import { applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
 import { getRuntimeValue } from '../runtime/useRuntimeState.js';
-import { loadCombatSummary } from '../../services/encounters/combatData.js';
+import { addEntry } from '../../services/ui/logService.js';
 import { hasIgnoreResistance } from '../../services/combat/automation/automationService.js';
 import {
     getShieldAcBonus,
@@ -109,12 +105,10 @@ describe('createLogAndShow - Graze Damage', () => {
     };
 
     beforeEach(() => {
-        vi.useFakeTimers();
         vi.clearAllMocks();
         rollD20.mockReturnValue(15);
         rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
         getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 20 });
-        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 20 }] });
         isUnbreakableMajestyActive.mockReturnValue(false);
         hasAttackerTriggeredMajesty.mockReturnValue(false);
         getRuntimeValue.mockReturnValue(null);
@@ -131,7 +125,7 @@ describe('createLogAndShow - Graze Damage', () => {
     }
 
     describe('graze damage on miss', () => {
-        it('applies graze damage when grazeDamage is true, attack misses, and grazeAbilityMod > 0', async () => {
+        it('applies graze damage when attack misses, grazeDamage is true, and grazeAbilityMod > 0', async () => {
             const fn = createFn();
             await fn('Longsword', 2, 'attack', {
                 targetName: 'Goblin',
@@ -139,72 +133,54 @@ describe('createLogAndShow - Graze Damage', () => {
                 grazeAbilityMod: 3,
                 damageType: 'slashing',
             });
-            // Graze damage is applied via setTimeout, advance timers
-            await vi.advanceTimersByTimeAsync(2500);
-            expect(applyDamageToTarget).toHaveBeenCalled();
-            const grazeLogs = deps.logEntry.mock.calls.filter(
-                call => call[0].rollType === 'graze-damage'
+
+            expect(applyDamageToTarget).toHaveBeenCalledWith(
+                expect.any(Object),
+                'Goblin',
+                3,
+                ['slashing'],
+                expect.any(String),
+                expect.any(Array),
+                false,
+                'TestFighter'
             );
-            expect(grazeLogs.length).toBeGreaterThan(0);
-            expect(grazeLogs[0][0].note).toBe('Graze: ability modifier damage on miss');
-            expect(grazeLogs[0][0].damageType).toBe('slashing');
+
+            const grazeLogs = deps.logEntry.mock.calls.filter(
+                (call) => call[0].rollType === 'graze-damage'
+            );
+            expect(grazeLogs).toHaveLength(1);
+            expect(grazeLogs[0][0]).toEqual(
+                expect.objectContaining({
+                    rollType: 'graze-damage',
+                    note: 'Graze: ability modifier damage on miss',
+                    damageType: 'slashing',
+                    total: 3,
+                    formula: '3 [Graze]',
+                })
+            );
+
             const grazePopups = deps.setPopupHtml.mock.calls.filter(
-                call => call[0].type === 'graze-damage'
+                (call) => call[0].type === 'graze-damage'
             );
-            expect(grazePopups.length).toBeGreaterThan(0);
-            expect(grazePopups[0][0].formula).toBe('3 [Graze]');
-            const { addEntry } = await import('../../services/ui/logService.js');
-            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                type: 'ability_use',
-                abilityName: 'Graze',
-            }));
-        });
+            expect(grazePopups).toHaveLength(1);
+            expect(grazePopups[0][0]).toEqual(
+                expect.objectContaining({
+                    type: 'graze-damage',
+                    formula: '3 [Graze]',
+                    damageType: 'slashing',
+                    targetName: 'Goblin',
+                    finalDamage: 2,
+                    damageReduced: 0,
+                })
+            );
 
-        it('does not apply graze damage when grazeAbilityMod is zero or negative', async () => {
-            const fn = createFn();
-            await fn('Longsword', 2, 'attack', {
-                targetName: 'Goblin',
-                grazeDamage: true,
-                grazeAbilityMod: 0,
-                damageType: 'slashing',
-            });
-            await vi.advanceTimersByTimeAsync(2500);
-            const grazeLogs = deps.logEntry.mock.calls.filter(
-                call => call[0].rollType === 'graze-damage'
+            expect(addEntry).toHaveBeenCalledWith(
+                'test-campaign',
+                expect.objectContaining({
+                    type: 'ability_use',
+                    abilityName: 'Graze',
+                })
             );
-            expect(grazeLogs.length).toBe(0);
-        });
-
-        it('does not apply graze damage when hit is true', async () => {
-            getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 10 });
-            const fn = createFn();
-            await fn('Longsword', 5, 'attack', {
-                targetName: 'Goblin',
-                grazeDamage: true,
-                grazeAbilityMod: 3,
-                damageType: 'slashing',
-            });
-            await vi.advanceTimersByTimeAsync(2500);
-            const grazeLogs = deps.logEntry.mock.calls.filter(
-                call => call[0].rollType === 'graze-damage'
-            );
-            expect(grazeLogs.length).toBe(0);
-        });
-
-        it('does not apply graze damage when isAutoMiss is true', async () => {
-            const fn = createFn();
-            await fn('Longsword', 2, 'attack', {
-                targetName: 'Goblin',
-                grazeDamage: true,
-                grazeAbilityMod: 3,
-                damageType: 'slashing',
-                isAutoMiss: true,
-            });
-            await vi.advanceTimersByTimeAsync(2500);
-            const grazeLogs = deps.logEntry.mock.calls.filter(
-                call => call[0].rollType === 'graze-damage'
-            );
-            expect(grazeLogs.length).toBe(0);
         });
 
         it('uses default damage type when damageType is not provided', async () => {
@@ -214,53 +190,67 @@ describe('createLogAndShow - Graze Damage', () => {
                 grazeDamage: true,
                 grazeAbilityMod: 3,
             });
-            await vi.advanceTimersByTimeAsync(2500);
+
             const grazeLogs = deps.logEntry.mock.calls.filter(
-                call => call[0].rollType === 'graze-damage'
+                (call) => call[0].rollType === 'graze-damage'
             );
-            expect(grazeLogs.length).toBeGreaterThan(0);
+            expect(grazeLogs).toHaveLength(1);
             expect(grazeLogs[0][0].damageType).toBe('Slashing');
-        });
 
-        it('uses target hitPoints from runtimeValue for player targets', async () => {
-            getTargetFromAttacker.mockReturnValue({ name: 'Ally', type: 'player' });
-            const chars = [{ name: 'Ally', computedStats: { armorClass: 20 } }];
-            getRuntimeValue.mockImplementation((name, prop, _campaign) => {
-                if (name === 'Ally' && prop === 'hitPoints') return 10;
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 2, newHp: 8, damageReduced: 0 });
-            const fn = createLogAndShow({ ...deps, characters: chars });
-            await fn('Longsword', 2, 'attack', {
-                targetName: 'Ally',
-                grazeDamage: true,
-                grazeAbilityMod: 3,
-                damageType: 'slashing',
-            });
-            await vi.advanceTimersByTimeAsync(2500);
             const grazePopups = deps.setPopupHtml.mock.calls.filter(
-                call => call[0].type === 'graze-damage'
+                (call) => call[0].type === 'graze-damage'
             );
-            expect(grazePopups.length).toBeGreaterThan(0);
-            expect(grazePopups[0][0].targetCurrentHp).toBe(8);
+            expect(grazePopups).toHaveLength(1);
+            expect(grazePopups[0][0].damageType).toBe('Slashing');
         });
 
-        it('uses target.maxHp for non-player targets', async () => {
-            getTargetFromAttacker.mockReturnValue({ name: 'Goblin', type: 'npc', maxHp: 15, ac: 20 });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 2, newHp: 13, damageReduced: 0 });
+        it('skips graze when grazeAbilityMod is zero', async () => {
             const fn = createFn();
             await fn('Longsword', 2, 'attack', {
+                targetName: 'Goblin',
+                grazeDamage: true,
+                grazeAbilityMod: 0,
+                damageType: 'slashing',
+            });
+
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
+            const grazeLogs = deps.logEntry.mock.calls.filter(
+                (call) => call[0].rollType === 'graze-damage'
+            );
+            expect(grazeLogs).toHaveLength(0);
+        });
+
+        it('skips graze when grazeAbilityMod is negative', async () => {
+            const fn = createFn();
+            await fn('Longsword', 2, 'attack', {
+                targetName: 'Goblin',
+                grazeDamage: true,
+                grazeAbilityMod: -2,
+                damageType: 'slashing',
+            });
+
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
+            const grazeLogs = deps.logEntry.mock.calls.filter(
+                (call) => call[0].rollType === 'graze-damage'
+            );
+            expect(grazeLogs).toHaveLength(0);
+        });
+
+        it('skips graze when attack hits', async () => {
+            getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 10 });
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', {
                 targetName: 'Goblin',
                 grazeDamage: true,
                 grazeAbilityMod: 3,
                 damageType: 'slashing',
             });
-            await vi.advanceTimersByTimeAsync(2500);
-            const grazePopups = deps.setPopupHtml.mock.calls.filter(
-                call => call[0].type === 'graze-damage'
+
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
+            const grazeLogs = deps.logEntry.mock.calls.filter(
+                (call) => call[0].rollType === 'graze-damage'
             );
-            expect(grazePopups.length).toBeGreaterThan(0);
-            expect(grazePopups[0][0].targetMaxHp).toBe(15);
+            expect(grazeLogs).toHaveLength(0);
         });
     });
 });

@@ -1,27 +1,10 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
     rollExpression: vi.fn(),
     rollExpressionDoubled: vi.fn(),
-    formatDamageFormula: vi.fn((formula, rolls, isCrit) => {
-        if (!isCrit) return formula;
-        const parsed = formula.match(/^(\d+)?d(\d+)((?:[+-]\d+)+)?$/i);
-        if (!parsed) return formula;
-        const count = parsed[1] || 1;
-        const sides = parsed[2];
-        const modifierStr = parsed[3];
-        let modifier = 0;
-        if (modifierStr) {
-            const segments = modifierStr.match(/([+-]\d+)/g);
-            for (const seg of segments) { modifier += parseInt(seg, 10); }
-        }
-        const dicePart = count === 1 ? `d${sides}` : `${count}d${sides}`;
-        const rollStr = rolls && rolls.length > 0 ? ` (${rolls.join(', ')})` : '';
-        let result = `${dicePart}*2${rollStr}`;
-        if (modifier > 0) result += `+${modifier}`;
-        else if (modifier < 0) result += `${modifier}`;
-        return result;
-    }),
+    formatDamageFormula: vi.fn((formula) => formula),
 }));
 
 vi.mock('../../services/ui/utils.js', () => ({
@@ -46,11 +29,7 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
     playerIsImmuneToCondition: vi.fn(),
     hasGreatWeaponFighting: vi.fn(),
     applyGreatWeaponFightingToDamage: vi.fn((rolls) => rolls),
-    evaluateAutoExpression: vi.fn((expr) => {
-        const match = expr.match(/^(\d+)d(\d+)\+(\d+)/);
-        if (match) return parseInt(match[1]) + parseInt(match[3]);
-        return 0;
-    }),
+    evaluateAutoExpression: vi.fn(),
 }));
 
 vi.mock('../../services/rules/features/invisibilityService.js', () => ({
@@ -89,11 +68,11 @@ vi.mock('../../services/rules/combat/applyDamage.js', () => ({
 }));
 
 vi.mock('../../services/combat/auras/coronaAuraUtils.js', () => ({
-    getCoronaSaveDisadvantage: vi.fn(),
+    getCoronaSaveDisadvantage: vi.fn(() => ({ disadvantage: false })),
 }));
 
 vi.mock('../../services/combat/auras/elderChampionAuraUtils.js', () => ({
-    getElderChampionSaveDisadvantage: vi.fn(),
+    getElderChampionSaveDisadvantage: vi.fn(() => Promise.resolve({ disadvantage: false })),
 }));
 
 vi.mock('../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
@@ -141,11 +120,12 @@ import { getRuntimeValue } from '../runtime/useRuntimeState.js';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import { hasIgnoreResistance } from '../../services/combat/automation/automationService.js';
 import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js';
-import { applyMinDamageAdjustment } from './loggedDiceRollUtils.js';
+import { isMagicMissileImmune, applyMinDamageAdjustment } from './loggedDiceRollUtils.js';
 import { computeDamageAfterSave, applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
 import { createLogDamageAndShow } from './useLoggedDiceRollDamage.js';
 import { getAllyList } from '../../hooks/useAllySelection.js';
-describe('Careful Spell for player save', () => {
+
+describe('Careful Spell — player save damage with ally protection', () => {
     const deps = {
         characterName: 'Wizard1',
         campaignName: 'test-campaign',
@@ -157,12 +137,14 @@ describe('Careful Spell for player save', () => {
     };
 
     beforeEach(() => {
+        vi.clearAllMocks();
         getRuntimeValue.mockReturnValue(null);
         applyMinDamageAdjustment.mockImplementation((d) => d);
         hasIgnoreResistance.mockReturnValue(false);
         endInvisibilityOnHostileAction.mockReturnValue(undefined);
-        computeDamageAfterSave.mockImplementation((total, success, _dcSuccess) => success ? Math.floor(total / 2) : total);
-        applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 10, damageReduced: false });
+        isMagicMissileImmune.mockReturnValue(false);
+        computeDamageAfterSave.mockImplementation((total, success) => (success ? Math.floor(total / 2) : total));
+        applyDamageToTarget.mockResolvedValue({ finalDamage: 10, newHp: 10, damageReduced: false });
         loadCombatSummary.mockResolvedValue({
             creatures: [{ name: 'Ally1', type: 'player', ac: 14, currentHp: 20, maxHp: 20 }],
         });
@@ -174,7 +156,7 @@ describe('Careful Spell for player save', () => {
         return createLogDamageAndShow(deps);
     }
 
-    it('applies half damage with careful spell when ally is protected', async () => {
+    it('applies half damage, logs carefully, and shows popup when ally is protected', async () => {
         getAllyList.mockReturnValue(['Ally1']);
 
         const fn = createFn();
@@ -187,11 +169,150 @@ describe('Careful Spell for player save', () => {
             metamagicCareful: true,
         });
 
-        expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
-            saveResult: 'success',
-            note: 'careful_spell_damage_roll_before_apply',
-        }));
-        expect(applyDamageToTarget).toHaveBeenCalled();
+        expect(computeDamageAfterSave).toHaveBeenCalledWith(20, true, 'half');
+        expect(applyDamageToTarget).toHaveBeenCalledWith(
+            expect.any(Object),
+            'Ally1',
+            10,
+            ['fire'],
+            'test-campaign',
+            expect.any(Array),
+            false,
+            'Wizard1'
+        );
+        expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith('Wizard1', 'test-campaign');
+        expect(deps.logEntry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                rollType: 'save-damage',
+                saveResult: 'success',
+                note: 'careful_spell_damage_roll_before_apply',
+                total: 20,
+            })
+        );
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'save-damage',
+                carefulSpell: true,
+                finalDamage: 10,
+                damageApplied: true,
+                damageReduced: false,
+            })
+        );
+    });
+
+    it('does not take careful spell path when metamagicCareful is false', async () => {
+        getAllyList.mockReturnValue(['Ally1']);
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
+            targetName: 'Ally1',
+            damageType: 'fire',
+            saveDc: 15,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            metamagicCareful: false,
+        });
+
+        expect(computeDamageAfterSave).not.toHaveBeenCalled();
+        expect(deps.logEntry).not.toHaveBeenCalledWith(
+            expect.objectContaining({ note: 'careful_spell_damage_roll_before_apply' })
+        );
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({ waitingForPlayerSave: true })
+        );
+    });
+
+    it('falls through to normal save path when target is not in ally list', async () => {
+        getAllyList.mockReturnValue(['OtherAlly']);
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
+            targetName: 'Ally1',
+            damageType: 'fire',
+            saveDc: 15,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            metamagicCareful: true,
+        });
+
+        expect(computeDamageAfterSave).not.toHaveBeenCalled();
+        expect(deps.logEntry).not.toHaveBeenCalledWith(
+            expect.objectContaining({ note: 'careful_spell_damage_roll_before_apply' })
+        );
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'damage', damageApplied: true })
+        );
+    });
+
+    it('does not call endInvisibility when careful spell applies zero damage', async () => {
+        getAllyList.mockReturnValue(['Ally1']);
+        applyDamageToTarget.mockResolvedValue({ finalDamage: 0, newHp: 20, damageReduced: false });
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 0, [], 0, {
+            targetName: 'Ally1',
+            damageType: 'fire',
+            saveDc: 15,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            metamagicCareful: true,
+        });
+
+        expect(endInvisibilityOnHostileAction).not.toHaveBeenCalled();
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                carefulSpell: true,
+                finalDamage: 0,
+            })
+        );
+    });
+
+    it('does not call endInvisibility when applyDamageToTarget returns null', async () => {
+        getAllyList.mockReturnValue(['Ally1']);
+        applyDamageToTarget.mockResolvedValue(null);
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
+            targetName: 'Ally1',
+            damageType: 'fire',
+            saveDc: 15,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            metamagicCareful: true,
+        });
+
+        expect(endInvisibilityOnHostileAction).not.toHaveBeenCalled();
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                carefulSpell: true,
+            })
+        );
+    });
+
+    it('passes ignoreResistance=true when playerStats has it for the damage type', async () => {
+        getAllyList.mockReturnValue(['Ally1']);
+        hasIgnoreResistance.mockReturnValue(true);
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
+            targetName: 'Ally1',
+            damageType: 'fire',
+            saveDc: 15,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            metamagicCareful: true,
+            playerStats: { automation: { passives: [] } },
+        });
+
+        expect(applyDamageToTarget).toHaveBeenCalledWith(
+            expect.any(Object),
+            'Ally1',
+            10,
+            ['fire'],
+            'test-campaign',
+            expect.any(Array),
+            true,
+            'Wizard1'
+        );
     });
 });
-

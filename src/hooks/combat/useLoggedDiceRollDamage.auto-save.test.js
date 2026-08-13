@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -89,11 +90,11 @@ vi.mock('../../services/rules/combat/applyDamage.js', () => ({
 }));
 
 vi.mock('../../services/combat/auras/coronaAuraUtils.js', () => ({
-    getCoronaSaveDisadvantage: vi.fn(),
+    getCoronaSaveDisadvantage: vi.fn(() => ({ disadvantage: false })),
 }));
 
 vi.mock('../../services/combat/auras/elderChampionAuraUtils.js', () => ({
-    getElderChampionSaveDisadvantage: vi.fn(),
+    getElderChampionSaveDisadvantage: vi.fn(() => Promise.resolve({ disadvantage: false })),
 }));
 
 vi.mock('../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
@@ -144,10 +145,8 @@ import { endInvisibilityOnHostileAction } from '../../services/rules/features/in
 import { applyMinDamageAdjustment } from './loggedDiceRollUtils.js';
 import { computeDamageAfterSave, applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
 import { createLogDamageAndShow } from './useLoggedDiceRollDamage.js';
-import { getCoronaSaveDisadvantage } from '../../services/combat/auras/coronaAuraUtils.js';
-import { getElderChampionSaveDisadvantage } from '../../services/combat/auras/elderChampionAuraUtils.js';
-import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { sendSavePrompt } from '../../services/combat/conditions/savePromptService.js';
+
 describe('Contact Other Plane auto-save', () => {
     const deps = {
         characterName: 'Warlock1',
@@ -159,21 +158,46 @@ describe('Contact Other Plane auto-save', () => {
         pendingSaves: {},
     };
 
+    const playerStats = {
+        automation: {
+            passives: [
+                { type: 'passive_rule', effect: 'contact_patron_auto_save' },
+            ],
+        },
+    };
+
+    const autoSaveContext = {
+        targetName: 'Warlock1',
+        damageType: 'psychic',
+        saveDc: 15,
+        saveType: 'WIS',
+        dcSuccess: 'half',
+        playerStats,
+    };
+
+    const nonAutoSaveContext = {
+        targetName: 'Warlock1',
+        damageType: 'fire',
+        saveDc: 15,
+        saveType: 'DEX',
+        dcSuccess: 'half',
+        playerStats,
+    };
+
     beforeEach(() => {
+        vi.clearAllMocks();
+
         getRuntimeValue.mockReturnValue(null);
         applyMinDamageAdjustment.mockImplementation((d) => d);
         hasIgnoreResistance.mockReturnValue(false);
         endInvisibilityOnHostileAction.mockReturnValue(undefined);
-        computeDamageAfterSave.mockImplementation((total, success, _dcSuccess) => success ? Math.floor(total / 2) : total);
-        applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 10, damageReduced: false });
-        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
-        isCircleOfPowerActive.mockReturnValue(false);
+        computeDamageAfterSave.mockImplementation((total, success) =>
+            success ? Math.floor(total / 2) : total
+        );
+        applyDamageToTarget.mockResolvedValue({ finalDamage: 10, newHp: 10, damageReduced: false });
         loadCombatSummary.mockResolvedValue({
             creatures: [{ name: 'Warlock1', type: 'player', ac: 14, currentHp: 20, maxHp: 20 }],
         });
-        deps.logEntry.mockClear();
-        deps.setPopupHtml.mockClear();
     });
 
     function createFn() {
@@ -181,60 +205,118 @@ describe('Contact Other Plane auto-save', () => {
     }
 
     it('applies auto-save for Contact Other Plane when caster is the target', async () => {
-        const playerStats = {
-            automation: {
-                passives: [
-                    { type: 'passive_rule', effect: 'contact_patron_auto_save' },
-                ],
-            },
-        };
-
         const fn = createFn();
-        await fn('Contact Other Plane', '4d6', 14, [3, 4, 5, 2], 0, {
-            targetName: 'Warlock1',
-            damageType: 'psychic',
-            saveDc: 15,
-            saveType: 'WIS',
-            dcSuccess: 'half',
-            playerStats,
-        });
+        await fn('Contact Other Plane', '4d6', 14, [3, 4, 5, 2], 0, autoSaveContext);
 
-        expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
-            saveResult: 'success',
-            note: 'contact_patron_damage_roll_before_apply',
-        }));
+        expect(deps.logEntry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'roll',
+                rollType: 'save-damage',
+                name: 'Contact Other Plane',
+                saveResult: 'success',
+                note: 'contact_patron_damage_roll_before_apply',
+                targetName: 'Warlock1',
+                damageType: 'psychic',
+                formula: '4d6',
+                total: 14,
+            })
+        );
+
         expect(applyDamageToTarget).toHaveBeenCalledWith(
             expect.any(Object),
             'Warlock1',
-            expect.any(Number),
+            7,
             ['psychic'],
             'test-campaign',
             null,
             false,
             'Warlock1'
         );
+
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'save-damage',
+                name: 'Contact Other Plane',
+                contactPatron: true,
+                finalDamage: 7,
+                total: 7,
+                damageApplied: true,
+                damageReduced: false,
+            })
+        );
+
+        expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith(
+            'Warlock1',
+            'test-campaign'
+        );
+
+        expect(sendSavePrompt).not.toHaveBeenCalled();
     });
 
-    it('does not apply auto-save for other spells', async () => {
-        const playerStats = {
+    it('does not auto-save for other spells and falls through to save prompt', async () => {
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, nonAutoSaveContext);
+
+        expect(applyDamageToTarget).not.toHaveBeenCalled();
+        expect(deps.setPopupHtml).not.toHaveBeenCalledWith(
+            expect.objectContaining({ contactPatron: true })
+        );
+
+        expect(sendSavePrompt).toHaveBeenCalledTimes(1);
+        const savePromptCall = sendSavePrompt.mock.calls[0][1];
+        expect(savePromptCall).toEqual(
+            expect.objectContaining({
+                promptId: 'test-guid-1234',
+                targetName: 'Warlock1',
+                saveType: 'DEX',
+                saveDc: 15,
+                dcSuccess: 'half',
+                damageType: 'fire',
+            })
+        );
+
+        expect(deps.pendingSaves).toHaveProperty('test-guid-1234');
+    });
+
+    it('does not auto-save when target is not the caster', async () => {
+        const allyContext = {
+            ...autoSaveContext,
+            targetName: 'Ally1',
+        };
+
+        loadCombatSummary.mockResolvedValue({
+            creatures: [{ name: 'Ally1', type: 'player', ac: 16, currentHp: 30, maxHp: 30 }],
+        });
+
+        const fn = createFn();
+        await fn('Contact Other Plane', '4d6', 14, [3, 4, 5, 2], 0, allyContext);
+
+        expect(applyDamageToTarget).not.toHaveBeenCalled();
+        expect(deps.setPopupHtml).not.toHaveBeenCalledWith(
+            expect.objectContaining({ contactPatron: true })
+        );
+
+        expect(sendSavePrompt).toHaveBeenCalledTimes(1);
+        expect(deps.pendingSaves).toHaveProperty('test-guid-1234');
+    });
+
+    it('does not auto-save when character has no contact_patron_auto_save passive', async () => {
+        const noPassiveStats = {
             automation: {
-                passives: [
-                    { type: 'passive_rule', effect: 'contact_patron_auto_save' },
-                ],
+                passives: [],
             },
         };
 
-        const fn = createFn();
-        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
-            targetName: 'Warlock1',
-            damageType: 'fire',
-            saveDc: 15,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            playerStats,
-        });
+        const context = {
+            ...autoSaveContext,
+            playerStats: noPassiveStats,
+        };
 
-        expect(sendSavePrompt).toHaveBeenCalled();
+        const fn = createFn();
+        await fn('Contact Other Plane', '4d6', 14, [3, 4, 5, 2], 0, context);
+
+        expect(applyDamageToTarget).not.toHaveBeenCalled();
+        expect(sendSavePrompt).toHaveBeenCalledTimes(1);
+        expect(deps.pendingSaves).toHaveProperty('test-guid-1234');
     });
 });
-

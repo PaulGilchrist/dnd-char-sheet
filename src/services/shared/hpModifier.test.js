@@ -1,6 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// --- mocks ---
+// The module-level mock establishes vi.fn() stubs for getRuntimeValue and setRuntimeValue.
+// We do NOT call vi.clearAllMocks() in beforeEach because doing so would clear
+// the mock implementations that the player tests set via mockImplementation().
+// Instead we only clear call counts/args with vi.clearAllMocks() AFTER setting up mocks.
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
@@ -10,7 +14,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn(),
 }));
 
-import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { modifyHitPoints } from './hpModifier.js';
 
 const campaignName = 'TestCampaign';
@@ -36,7 +40,14 @@ function makeCombatSummary(creatures) {
 
 describe('modifyHitPoints', () => {
   beforeEach(() => {
+    // Only clear call history, not the mock function itself.
+    // Player tests set mockImplementation on getRuntimeValue — clearing all would remove it.
     vi.clearAllMocks();
+    vi.spyOn(window, 'dispatchEvent').mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('early returns', () => {
@@ -53,6 +64,24 @@ describe('modifyHitPoints', () => {
       const summary = makeCombatSummary([makeCreature('Goblin', 'npc', 5, 7)]);
       expect(modifyHitPoints(summary, 'Dragon', 5, campaignName)).toBeNull();
     });
+
+    it('returns result with zero delta when creature exists and delta is zero', () => {
+      const summary = makeCombatSummary([makeCreature('Goblin', 'npc', 5, 7)]);
+      const result = modifyHitPoints(summary, 'Goblin', 0, campaignName);
+      expect(result).not.toBeNull();
+      expect(result.oldHp).toBe(5);
+      expect(result.newHp).toBe(5);
+      expect(result.delta).toBe(0);
+    });
+
+    it('returns result with non-zero delta when creature exists and delta is negative (healing)', () => {
+      const summary = makeCombatSummary([makeCreature('Goblin', 'npc', 5, 7)]);
+      const result = modifyHitPoints(summary, 'Goblin', -2, campaignName);
+      expect(result).not.toBeNull();
+      expect(result.oldHp).toBe(5);
+      expect(result.newHp).toBe(3);
+      expect(result.delta).toBe(-2);
+    });
   });
 
   describe('NPC creatures', () => {
@@ -60,7 +89,9 @@ describe('modifyHitPoints', () => {
       { desc: 'decreases HP and clamps to 0', currentHp: 3, maxHp: 7, delta: -5, expectedOld: 3, expectedNew: 0, expectedDelta: -3 },
       { desc: 'decreases HP without clamping', currentHp: 10, maxHp: 15, delta: -4, expectedOld: 10, expectedNew: 6, expectedDelta: -4 },
       { desc: 'increases HP and clamps to maxHp', currentHp: 3, maxHp: 7, delta: 10, expectedOld: 3, expectedNew: 7, expectedDelta: 4 },
-    ])('($desc)', ({ currentHp, maxHp, delta, expectedOld, expectedNew, expectedDelta }) => {
+      { desc: 'zero delta returns unchanged', currentHp: 5, maxHp: 10, delta: 0, expectedOld: 5, expectedNew: 5, expectedDelta: 0 },
+      { desc: 'negative delta (healing) without clamping', currentHp: 5, maxHp: 10, delta: -2, expectedOld: 5, expectedNew: 3, expectedDelta: -2 },
+    ])('$desc', ({ currentHp, maxHp, delta, expectedOld, expectedNew, expectedDelta }) => {
       const summary = makeCombatSummary([
         makeCreature('Goblin', 'npc', currentHp, maxHp),
       ]);
@@ -76,10 +107,31 @@ describe('modifyHitPoints', () => {
         maxHp,
       });
     });
+
+    it('mutates the creature object in the combat summary', () => {
+      const summary = makeCombatSummary([makeCreature('Goblin', 'npc', 10, 15)]);
+      modifyHitPoints(summary, 'Goblin', -3, campaignName);
+      expect(summary.creatures[0].currentHp).toBe(7);
+    });
+
+    it('does not dispatch event when delta is zero', () => {
+      const summary = makeCombatSummary([makeCreature('Goblin', 'npc', 5, 7)]);
+      modifyHitPoints(summary, 'Goblin', 0, campaignName);
+      expect(window.dispatchEvent).not.toHaveBeenCalled();
+    });
+
+    it('dispatches event when delta is non-zero', () => {
+      const summary = makeCombatSummary([makeCreature('Goblin', 'npc', 5, 7)]);
+      modifyHitPoints(summary, 'Goblin', -3, campaignName);
+      expect(window.dispatchEvent).toHaveBeenCalledTimes(1);
+      const event = window.dispatchEvent.mock.calls[0][0];
+      expect(event.type).toBe('combat-summary-updated');
+    });
   });
 
   describe('Player creatures', () => {
     function mockPlayerRuntime(maxHp, currentHp) {
+      getRuntimeValue.mockReset();
       getRuntimeValue.mockImplementation((key, prop) => {
         if (prop === 'hitPoints') return maxHp;
         if (prop === 'currentHitPoints') return currentHp;
@@ -90,7 +142,9 @@ describe('modifyHitPoints', () => {
     it.each([
       { desc: 'decreases HP and clamps to 0', currentHp: 3, maxHp: 10, delta: -20, expectedOld: 3, expectedNew: 0, expectedDelta: -3 },
       { desc: 'increases HP and clamps to maxHp', currentHp: 8, maxHp: 10, delta: 10, expectedOld: 8, expectedNew: 10, expectedDelta: 2 },
-    ])('($desc)', ({ currentHp, maxHp, delta, expectedOld, expectedNew, expectedDelta }) => {
+      { desc: 'zero delta returns unchanged', currentHp: 5, maxHp: 10, delta: 0, expectedOld: 5, expectedNew: 5, expectedDelta: 0 },
+      { desc: 'negative delta (healing) without clamping', currentHp: 5, maxHp: 10, delta: -3, expectedOld: 5, expectedNew: 2, expectedDelta: -3 },
+    ])('$desc', ({ currentHp, maxHp, delta, expectedOld, expectedNew, expectedDelta }) => {
       mockPlayerRuntime(maxHp, currentHp);
 
       const summary = makeCombatSummary([
@@ -103,6 +157,68 @@ describe('modifyHitPoints', () => {
       expect(result.newHp).toBe(expectedNew);
       expect(result.delta).toBe(expectedDelta);
       expect(result.isPlayer).toBe(true);
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Thorin',
+        'currentHitPoints',
+        expectedNew,
+        campaignName,
+      );
+    });
+
+    it('falls back to creature.maxHp when runtime hitPoints is null', () => {
+      getRuntimeValue.mockImplementation((key, prop) => {
+        if (prop === 'hitPoints') return null;
+        if (prop === 'currentHitPoints') return 5;
+        return null;
+      });
+
+      const summary = makeCombatSummary([
+        makeCreature('Thorin', 'player', undefined, 10),
+      ]);
+
+      const result = modifyHitPoints(summary, 'Thorin', 5, campaignName);
+
+      expect(result.newHp).toBe(10);
+      expect(result.maxHp).toBe(10);
+    });
+
+    it('uses 0 as default when currentHitPoints is null', () => {
+      getRuntimeValue.mockImplementation((key, prop) => {
+        if (prop === 'hitPoints') return 10;
+        if (prop === 'currentHitPoints') return null;
+        return null;
+      });
+
+      const summary = makeCombatSummary([
+        makeCreature('Thorin', 'player', undefined, 10),
+      ]);
+
+      const result = modifyHitPoints(summary, 'Thorin', 5, campaignName);
+
+      expect(result.oldHp).toBe(0);
+      expect(result.newHp).toBe(5);
+    });
+
+    it('does not dispatch event when player delta is zero', () => {
+      mockPlayerRuntime(10, 5);
+
+      const summary = makeCombatSummary([
+        makeCreature('Thorin', 'player', undefined, 10),
+      ]);
+
+      modifyHitPoints(summary, 'Thorin', 0, campaignName);
+      expect(window.dispatchEvent).not.toHaveBeenCalled();
+    });
+
+    it('dispatches event when player delta is non-zero', () => {
+      mockPlayerRuntime(10, 5);
+
+      const summary = makeCombatSummary([
+        makeCreature('Thorin', 'player', undefined, 10),
+      ]);
+
+      modifyHitPoints(summary, 'Thorin', -2, campaignName);
+      expect(window.dispatchEvent).toHaveBeenCalledTimes(1);
     });
   });
 });

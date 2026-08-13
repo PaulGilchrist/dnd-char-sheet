@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -76,19 +77,30 @@ import { getCoronaSaveDisadvantage } from '../../../services/combat/auras/corona
 import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras/elderChampionAuraUtils.js';
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { applyDamageToTarget, rollSaveForCreature } from '../../../services/rules/combat/applyDamage.js';
-import { addEntry } from '../../../services/ui/logService.js';
 import { createNpcSaveDamageHandler } from './handleNpcSaveDamage.js';
 
-describe('handleNpcSaveDamage - player targets, secondary features', () => {
+describe('handleNpcSaveDamage - player targets', () => {
     const deps = {
         characterName: 'TestWizard',
         campaignName: 'test-campaign',
         characters: [
             { name: 'TestWizard' },
-            { name: 'Goblin', computedStats: { saveBonuses: { con: 2 }, evasionEffects: [] } },
+            { name: 'PlayerTarget', computedStats: { saveBonuses: { con: 2 }, evasionEffects: [] } },
         ],
         setPopupHtml: vi.fn(),
         logEntry: vi.fn(),
+    };
+
+    const defaultSaveResult = { roll: 12, total: 14, bonus: 2, success: false, rawRolls: [12] };
+    const defaultContext = {
+        targetName: 'PlayerTarget',
+        saveDc: 12,
+        saveType: 'dex',
+        dcSuccess: 'none',
+        damageType: 'fire',
+    };
+    const defaultCombatSummary = {
+        creatures: [{ name: 'PlayerTarget', type: 'player', currentHp: 10, maxHp: 10 }],
     };
 
     beforeEach(() => {
@@ -96,7 +108,6 @@ describe('handleNpcSaveDamage - player targets, secondary features', () => {
         rollExpression.mockReturnValue({ total: 10, rolls: [6, 4], modifier: 0 });
         rollExpressionDoubled.mockReturnValue({ total: 20, rolls: [6, 4, 6, 4], modifier: 0 });
         getRuntimeValue.mockReset().mockReturnValue(null);
-        setRuntimeValue.mockClear();
         hasIgnoreResistance.mockReturnValue(false);
         hasPotentCantrip.mockReturnValue(false);
         hasSoulstitchProtection.mockReturnValue(false);
@@ -105,10 +116,9 @@ describe('handleNpcSaveDamage - player targets, secondary features', () => {
         getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
         getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
         isCircleOfPowerActive.mockReturnValue(false);
-        rollSaveForCreature.mockReturnValue({ roll: 12, total: 14, bonus: 2, success: false, rawRolls: [12] });
+        rollSaveForCreature.mockReturnValue(defaultSaveResult);
         applyDamageToTarget.mockResolvedValue({ finalDamage: 10, newHp: 3, damageReduced: false });
         endInvisibilityOnHostileAction.mockClear();
-        addEntry.mockClear();
         deps.logEntry.mockClear();
         deps.setPopupHtml.mockClear();
     });
@@ -117,176 +127,292 @@ describe('handleNpcSaveDamage - player targets, secondary features', () => {
         return createNpcSaveDamageHandler(deps);
     }
 
-    describe('player target HP/death saves', () => {
-        it('sets death saves when player target drops to 0 HP', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
-                if (key === 'Goblin' && prop === 'hitPoints') return 10;
-                return null;
-            });
+    function callHandler(fn, contextOverride = {}, combatSummaryOverride = null) {
+        return fn(
+            'Fire Bolt', '1d10', 10, [6, 4], 0,
+            { ...defaultContext, ...contextOverride },
+            10,
+            combatSummaryOverride || defaultCombatSummary
+        );
+    }
+
+    function setupPlayerActiveConditions(conditions) {
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'PlayerTarget' && prop === 'activeConditions') return conditions;
+            return null;
+        });
+    }
+
+    function setupPlayerHp(hp) {
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'PlayerTarget' && prop === 'hitPoints') return hp;
+            if (key === 'PlayerTarget' && prop === 'activeConditions') return [];
+            return null;
+        });
+    }
+
+    function getSetRuntimeValueCalls(prop) {
+        return setRuntimeValue.mock.calls.filter((call) => call[1] === prop);
+    }
+
+    describe('death saves on dropping to 0 HP', () => {
+        it('initializes death saves and death failures when player drops to 0 HP', async () => {
+            setupPlayerHp(10);
             applyDamageToTarget.mockResolvedValue({ finalDamage: 10, newHp: 0, damageReduced: false });
 
             const fn = createFn();
-            await fn('Fire Bolt', '1d10', 10, [6, 4], 0, {
-                targetName: 'Goblin',
-                saveDc: 12,
-                saveType: 'dex',
-                dcSuccess: 'none',
-                damageType: 'fire',
-            }, 10, { creatures: [{ name: 'Goblin', type: 'player', currentHp: 10, maxHp: 10 }] });
+            await callHandler(fn);
 
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Goblin', 'deathSaves', [false, false, false], 'test-campaign'
-            );
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Goblin', 'deathFailures', [false, false, false], 'test-campaign'
-            );
+            const deathSaveCalls = getSetRuntimeValueCalls('deathSaves');
+            expect(deathSaveCalls.length).toBe(1);
+            expect(deathSaveCalls[0]).toEqual([
+                'PlayerTarget', 'deathSaves', [false, false, false], 'test-campaign',
+            ]);
+
+            const deathFailureCalls = getSetRuntimeValueCalls('deathFailures');
+            expect(deathFailureCalls.length).toBe(1);
+            expect(deathFailureCalls[0]).toEqual([
+                'PlayerTarget', 'deathFailures', [false, false, false], 'test-campaign',
+            ]);
         });
 
-        it('updates currentHitPoints for player target', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
-                if (key === 'Goblin' && prop === 'hitPoints') return 10;
-                return null;
-            });
+        it('does not set death saves when player takes damage but survives', async () => {
+            setupPlayerHp(10);
             applyDamageToTarget.mockResolvedValue({ finalDamage: 5, newHp: 5, damageReduced: false });
 
             const fn = createFn();
+            await callHandler(fn);
+
+            expect(getSetRuntimeValueCalls('deathSaves')).toHaveLength(0);
+            expect(getSetRuntimeValueCalls('deathFailures')).toHaveLength(0);
+        });
+
+        it('does not set death saves for non-player targets', async () => {
+            setupPlayerHp(10);
+            applyDamageToTarget.mockResolvedValue({ finalDamage: 10, newHp: 0, damageReduced: false });
+
+            const combatSummary = {
+                creatures: [{ name: 'Goblin', type: 'npc', currentHp: 10, maxHp: 10 }],
+            };
+            const fn = createFn();
             await fn('Fire Bolt', '1d10', 10, [6, 4], 0, {
+                ...defaultContext,
                 targetName: 'Goblin',
-                saveDc: 12,
-                saveType: 'dex',
-                dcSuccess: 'none',
-                damageType: 'fire',
-            }, 10, { creatures: [{ name: 'Goblin', type: 'player', currentHp: 10, maxHp: 10 }] });
+            }, 10, combatSummary);
+
+            expect(getSetRuntimeValueCalls('deathSaves')).toHaveLength(0);
+            expect(getSetRuntimeValueCalls('deathFailures')).toHaveLength(0);
+        });
+
+        it('does not set death saves when save succeeds and deals zero damage', async () => {
+            setupPlayerHp(10);
+            rollSaveForCreature.mockReturnValue({ roll: 18, total: 20, bonus: 2, success: true, rawRolls: [18] });
+            applyDamageToTarget.mockResolvedValue({ finalDamage: 0, newHp: 10, damageReduced: false });
+
+            const fn = createFn();
+            await callHandler(fn);
+
+            expect(getSetRuntimeValueCalls('deathSaves')).toHaveLength(0);
+        });
+    });
+
+    describe('currentHitPoints updates', () => {
+        it('updates player currentHitPoints to the value returned by applyDamageToTarget', async () => {
+            setupPlayerHp(10);
+            applyDamageToTarget.mockResolvedValue({ finalDamage: 7, newHp: 3, damageReduced: false });
+
+            const fn = createFn();
+            await callHandler(fn);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Goblin', 'currentHitPoints', 5, 'test-campaign'
+                'PlayerTarget', 'currentHitPoints', 3, 'test-campaign'
+            );
+        });
+
+        it('updates currentHitPoints even when no damage is dealt', async () => {
+            setupPlayerHp(10);
+            rollSaveForCreature.mockReturnValue({ roll: 18, total: 20, bonus: 2, success: true, rawRolls: [18] });
+            applyDamageToTarget.mockResolvedValue({ finalDamage: 0, newHp: 10, damageReduced: false });
+
+            const fn = createFn();
+            await callHandler(fn);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'PlayerTarget', 'currentHitPoints', 10, 'test-campaign'
             );
         });
     });
 
-    describe('secondary ignoreResistance', () => {
-        it('passes ignoreResistance to secondary damage', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
-                return null;
-            });
+    describe('ignoreResistance with secondary damage', () => {
+        it('passes ignoreResistance=true to secondary damage when player has the feat', async () => {
+            setupPlayerActiveConditions([]);
             hasIgnoreResistance.mockReturnValue(true);
-            rollExpression.mockReturnValueOnce({ total: 4, rolls: [3, 2], modifier: 0 });
             applyDamageToTarget.mockResolvedValueOnce({ finalDamage: 4, newHp: 9, damageReduced: false })
                 .mockResolvedValueOnce({ finalDamage: 10, newHp: 3, damageReduced: false });
 
             const fn = createFn();
-            await fn('Fire Bolt', '1d10', 10, [6, 4], 0, {
-                targetName: 'Goblin',
-                saveDc: 12,
-                saveType: 'dex',
-                dcSuccess: 'none',
-                damageType: 'fire',
+            await callHandler(fn, {
                 autoDamageSecondaryFormula: '1d6',
                 autoDamageSecondaryDamageType: 'fire',
                 playerStats: { name: 'TestWizard' },
-            }, 10, { creatures: [{ name: 'Goblin', type: 'npc', currentHp: 13, maxHp: 13 }] });
+            });
 
-            // First call is secondary damage (line 197) - should pass ignoreResistance=true
+            // First call is secondary damage — should have ignoreResistance=true at position 6
             const secondaryCall = applyDamageToTarget.mock.calls[0];
-            expect(secondaryCall[6]).toBe(true); // ignoreResistance
-            expect(hasIgnoreResistance).toHaveBeenCalledWith(
-                expect.any(Object), 'fire'
-            );
+            expect(secondaryCall[6]).toBe(true);
+        });
+
+        it('passes ignoreResistance=false to secondary damage when player lacks the feat', async () => {
+            setupPlayerActiveConditions([]);
+            hasIgnoreResistance.mockReturnValue(false);
+            applyDamageToTarget.mockResolvedValueOnce({ finalDamage: 4, newHp: 9, damageReduced: false })
+                .mockResolvedValueOnce({ finalDamage: 10, newHp: 3, damageReduced: false });
+
+            const fn = createFn();
+            await callHandler(fn, {
+                autoDamageSecondaryFormula: '1d6',
+                autoDamageSecondaryDamageType: 'fire',
+                playerStats: { name: 'TestWizard' },
+            });
+
+            const secondaryCall = applyDamageToTarget.mock.calls[0];
+            expect(secondaryCall[6]).toBe(false);
         });
     });
 
-    describe('secondary potent cantrip', () => {
-        it('halves secondary damage on success when potent cantrip', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
-                return null;
-            });
+    describe('potent cantrip', () => {
+        it('halves secondary damage on save success when potent cantrip is active', async () => {
+            setupPlayerActiveConditions([]);
             hasPotentCantrip.mockReturnValue(true);
             const primarySave = { roll: 12, total: 14, bonus: 2, success: false, rawRolls: [12] };
             const secondarySave = { roll: 15, total: 17, bonus: 2, success: true, rawRolls: [15] };
-            rollSaveForCreature.mockReturnValueOnce(primarySave)
-                .mockReturnValueOnce(secondarySave);
+            rollSaveForCreature.mockReturnValueOnce(primarySave).mockReturnValueOnce(secondarySave);
             rollExpression.mockReturnValueOnce({ total: 8, rolls: [5, 3], modifier: 0 });
             applyDamageToTarget.mockResolvedValueOnce({ finalDamage: 4, newHp: 9, damageReduced: false })
                 .mockResolvedValueOnce({ finalDamage: 10, newHp: 3, damageReduced: false });
 
             const fn = createFn();
-            await fn('Fire Bolt', '1d10', 10, [6, 4], 0, {
-                targetName: 'Goblin',
-                saveDc: 14,
-                saveType: 'con',
-                dcSuccess: 'none',
-                damageType: 'fire',
+            await callHandler(fn, {
                 autoDamageSecondaryFormula: '1d6',
                 autoDamageSecondaryDamageType: 'fire',
                 isCantrip: true,
                 playerStats: { automation: { passives: [{ type: 'potent_cantrip' }] } },
-            }, 10, { creatures: [{ name: 'Goblin', type: 'npc', currentHp: 13, maxHp: 13 }] });
+            });
 
-            // First call is secondary damage (line 197) - should have halved damage (8/2 = 4)
+            // Secondary damage should be halved: floor(8/2) = 4
             const secondaryCall = applyDamageToTarget.mock.calls[0];
-            expect(secondaryCall[2]).toBe(4); // secondaryRawDamage after potent cantrip halving
+            expect(secondaryCall[2]).toBe(4);
+            // Secondary should skip concentration tracking
             expect(secondaryCall[9]).toEqual(expect.objectContaining({ skipConcentration: true }));
+        });
+
+        it('does not halve secondary damage on save failure when potent cantrip is active', async () => {
+            setupPlayerActiveConditions([]);
+            hasPotentCantrip.mockReturnValue(true);
+            const primarySave = { roll: 12, total: 14, bonus: 2, success: false, rawRolls: [12] };
+            const secondarySave = { roll: 10, total: 12, bonus: 2, success: false, rawRolls: [10] };
+            rollSaveForCreature.mockReturnValueOnce(primarySave).mockReturnValueOnce(secondarySave);
+            rollExpression.mockReturnValueOnce({ total: 8, rolls: [5, 3], modifier: 0 });
+            applyDamageToTarget.mockResolvedValueOnce({ finalDamage: 8, newHp: 9, damageReduced: false })
+                .mockResolvedValueOnce({ finalDamage: 10, newHp: 3, damageReduced: false });
+
+            const fn = createFn();
+            await callHandler(fn, {
+                autoDamageSecondaryFormula: '1d6',
+                autoDamageSecondaryDamageType: 'fire',
+                isCantrip: true,
+                playerStats: { automation: { passives: [{ type: 'potent_cantrip' }] } },
+            });
+
+            // Secondary damage should NOT be halved on failed save
+            const secondaryCall = applyDamageToTarget.mock.calls[0];
+            expect(secondaryCall[2]).toBe(8);
         });
     });
 
-    describe('ignoreResistance', () => {
-        it('passes ignoreResistance=true when player has ignoreResistance feat', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
-                return null;
-            });
+    describe('ignoreResistance on primary damage', () => {
+        it('passes ignoreResistance=true to primary damage when player has the feat', async () => {
+            setupPlayerActiveConditions([]);
             hasIgnoreResistance.mockReturnValue(true);
             applyDamageToTarget.mockResolvedValue({ finalDamage: 10, newHp: 3, damageReduced: false });
 
             const fn = createFn();
-            await fn('Fire Bolt', '1d10', 10, [6, 4], 0, {
-                targetName: 'Goblin',
-                saveDc: 12,
-                saveType: 'dex',
-                dcSuccess: 'none',
-                damageType: 'fire',
-                playerStats: { name: 'TestWizard' },
-            }, 10, { creatures: [{ name: 'Goblin', type: 'npc', currentHp: 13, maxHp: 13 }] });
+            await callHandler(fn, { playerStats: { name: 'TestWizard' } });
 
-            expect(applyDamageToTarget).toHaveBeenCalledWith(
-                expect.anything(), 'Goblin', 10, expect.any(Array), 'test-campaign',
-                expect.any(Array), true, 'TestWizard', true
-            );
+            const primaryCall = applyDamageToTarget.mock.calls[0];
+            expect(primaryCall[6]).toBe(true);
+        });
+
+        it('passes ignoreResistance=false to primary damage when player lacks the feat', async () => {
+            setupPlayerActiveConditions([]);
+            hasIgnoreResistance.mockReturnValue(false);
+            applyDamageToTarget.mockResolvedValue({ finalDamage: 10, newHp: 3, damageReduced: false });
+
+            const fn = createFn();
+            await callHandler(fn, { playerStats: { name: 'TestWizard' } });
+
+            const primaryCall = applyDamageToTarget.mock.calls[0];
+            expect(primaryCall[6]).toBe(false);
         });
     });
 
-    describe('concentrationTotalDamage option', () => {
-        it('passes concentrationTotalDamage when secondary damage exists', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
-                return null;
-            });
+    describe('concentrationTotalDamage with secondary', () => {
+        it('passes combined total damage to primary apply when secondary damage exists', async () => {
+            setupPlayerActiveConditions([]);
             rollExpression.mockReturnValueOnce({ total: 10, rolls: [6, 4], modifier: 0 })
                 .mockReturnValueOnce({ total: 5, rolls: [3, 2], modifier: 0 });
             applyDamageToTarget.mockResolvedValueOnce({ finalDamage: 5, newHp: 8, damageReduced: false })
                 .mockResolvedValueOnce({ finalDamage: 10, newHp: 3, damageReduced: false });
 
             const fn = createFn();
-            await fn('Fire Bolt', '1d10', 10, [6, 4], 0, {
-                targetName: 'Goblin',
-                saveDc: 12,
-                saveType: 'dex',
-                dcSuccess: 'none',
-                damageType: 'fire',
+            await callHandler(fn, {
                 autoDamageSecondaryFormula: '1d6',
                 autoDamageSecondaryDamageType: 'fire',
-            }, 10, { creatures: [{ name: 'Goblin', type: 'npc', currentHp: 13, maxHp: 13 }] });
+            });
 
-            // Second call should include concentrationTotalDamage
-            expect(applyDamageToTarget).toHaveBeenNthCalledWith(
-                2,
-                expect.anything(), 'Goblin', 10, expect.any(Array), 'test-campaign',
-                expect.any(Array), false, 'TestWizard', true,
-                expect.objectContaining({ concentrationTotalDamage: 15 })
+            // Second call is primary damage — should include concentrationTotalDamage
+            const primaryCall = applyDamageToTarget.mock.calls[1];
+            expect(primaryCall[9]).toEqual(expect.objectContaining({ concentrationTotalDamage: 15 }));
+        });
+
+        it('does not pass concentrationTotalDamage when there is no secondary damage', async () => {
+            setupPlayerActiveConditions([]);
+            applyDamageToTarget.mockResolvedValue({ finalDamage: 10, newHp: 3, damageReduced: false });
+
+            const fn = createFn();
+            await callHandler(fn);
+
+            const primaryCall = applyDamageToTarget.mock.calls[0];
+            expect(primaryCall[9]).toBeUndefined();
+        });
+    });
+
+    describe('dcSuccess=half with player targets', () => {
+        it('applies full damage on failed save when dcSuccess is half without evasion', async () => {
+            setupPlayerHp(10);
+            rollSaveForCreature.mockReturnValue({ roll: 12, total: 14, bonus: 2, success: false, rawRolls: [12] });
+            applyDamageToTarget.mockResolvedValue({ finalDamage: 10, newHp: 0, damageReduced: false });
+
+            const fn = createFn();
+            await callHandler(fn, { dcSuccess: 'half' });
+
+            expect(applyDamageToTarget).toHaveBeenCalledWith(
+                expect.anything(), 'PlayerTarget', 10, expect.any(Array), 'test-campaign',
+                expect.any(Array), false, 'TestWizard', true
+            );
+        });
+
+        it('applies zero damage on successful save when dcSuccess is half', async () => {
+            setupPlayerHp(10);
+            rollSaveForCreature.mockReturnValue({ roll: 18, total: 20, bonus: 2, success: true, rawRolls: [18] });
+            applyDamageToTarget.mockResolvedValue({ finalDamage: 0, newHp: 10, damageReduced: false });
+
+            const fn = createFn();
+            await callHandler(fn, { dcSuccess: 'half' });
+
+            expect(applyDamageToTarget).toHaveBeenCalledWith(
+                expect.anything(), 'PlayerTarget', 0, expect.any(Array), 'test-campaign',
+                expect.any(Array), false, 'TestWizard', true
             );
         });
     });

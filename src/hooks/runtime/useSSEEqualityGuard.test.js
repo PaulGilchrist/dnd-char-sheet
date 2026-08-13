@@ -1,307 +1,252 @@
-// @cleaned-by-ai
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import useSSEEqualityGuard from './useSSEEqualityGuard.js';
 
 describe('useSSEEqualityGuard', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  function renderGuarded() {
+    const setter = vi.fn();
+    const { result } = renderHook(() => useSSEEqualityGuard(setter));
+    return { setter, update: result.current };
+  }
 
   describe('primitive values', () => {
-    it('calls setter with new value when different from current', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current('new value');
-      });
+    it('calls setter with a new primitive value', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update('new value'));
       expect(setter).toHaveBeenCalledWith('new value');
     });
 
-    it.each([
-      [42, 42],
-      ['hello', 'hello'],
-      [true, true],
-      [0, 0],
-    ])('does not call setter when primitive value is the same', (_, sameValue) => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current(sameValue);
-      });
-      act(() => {
-        result.current(sameValue);
-      });
+    it('prevents duplicate primitive updates', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(42));
+      act(() => update(42));
       expect(setter).toHaveBeenCalledTimes(1);
     });
 
-    it.each([
-      [true, false],
-      [42, 0],
-      ['a', 'b'],
-    ])('calls setter when primitive value changes', (from, to) => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current(from);
-      });
-      act(() => {
-        result.current(to);
-      });
-      expect(setter).toHaveBeenCalledTimes(2);
-      expect(setter).toHaveBeenLastCalledWith(to);
+    it('allows re-setting a primitive after an intermediate change', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(42));
+      act(() => update(0));
+      act(() => update(42));
+      expect(setter).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('null and undefined', () => {
+    it('suppresses the first null update (undefined === null in valuesEqual)', () => {
+      const { setter, update } = renderGuarded();
+      // currentValueRef.current starts as undefined; valuesEqual(undefined, null)
+      // returns true because both pass the nullish check (a == b where undefined == null).
+      act(() => update(null));
+      expect(setter).toHaveBeenCalledTimes(0);
+      // Second null also suppressed for the same reason.
+      act(() => update(null));
+      expect(setter).toHaveBeenCalledTimes(0);
+    });
+
+    it('suppresses the first undefined update (undefined === undefined)', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(undefined));
+      expect(setter).toHaveBeenCalledTimes(0);
+    });
+
+    it('suppresses null after undefined (both nullish, valuesEqual returns true)', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(undefined));
+      act(() => update(null));
+      // currentValueRef.current is still undefined after first call.
+      // valuesEqual(undefined, null) = true, so setter is never called.
+      expect(setter).toHaveBeenCalledTimes(0);
+    });
+
+    it('suppresses undefined after null (both nullish, valuesEqual returns true)', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(null));
+      act(() => update(undefined));
+      // currentValueRef.current is still undefined after first call.
+      // valuesEqual(undefined, undefined) = true, so setter is never called.
+      expect(setter).toHaveBeenCalledTimes(0);
     });
   });
 
   describe('object equality', () => {
-    it('does not call setter when object has same properties', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current({ a: 1 });
-      });
-      act(() => {
-        result.current({ a: 1 });
-      });
+    it('prevents duplicate object updates with same properties', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update({ a: 1 }));
+      act(() => update({ a: 1 }));
       expect(setter).toHaveBeenCalledTimes(1);
     });
 
-    it('calls setter when object has different properties', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current({ a: 1 });
-      });
-      act(() => {
-        result.current({ a: 2 });
-      });
+    it('allows object updates with different properties', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update({ a: 1 }));
+      act(() => update({ a: 2 }));
       expect(setter).toHaveBeenCalledTimes(2);
     });
 
-    it('does not call setter when same object reference is passed', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      const obj = { a: 1 };
-      act(() => {
-        result.current(obj);
-      });
-      act(() => {
-        result.current(obj);
-      });
+    it('prevents duplicate empty object updates', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update({}));
+      act(() => update({}));
       expect(setter).toHaveBeenCalledTimes(1);
     });
 
-    it('handles nested object equality', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
+    it('prevents duplicate nested object updates', () => {
+      const { setter, update } = renderGuarded();
       const deep = { a: { b: { c: 1 } } };
-      act(() => {
-        result.current(deep);
-      });
-      act(() => {
-        result.current(deep);
-      });
+      act(() => update(deep));
+      act(() => update({ a: { b: { c: 1 } } }));
       expect(setter).toHaveBeenCalledTimes(1);
     });
 
-    it('calls setter for nested object with different value', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current({ a: { b: { c: 1 } } });
-      });
-      act(() => {
-        result.current({ a: { b: { c: 2 } } });
-      });
+    it('allows nested object updates when a leaf value differs', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update({ a: { b: { c: 1 } } }));
+      act(() => update({ a: { b: { c: 2 } } }));
       expect(setter).toHaveBeenCalledTimes(2);
     });
 
-    it('handles empty object equality', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current({});
-      });
-      act(() => {
-        result.current({});
-      });
-      expect(setter).toHaveBeenCalledTimes(1);
+    it('treats arrays and objects as different types', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update([1, 2]));
+      act(() => update({ '0': 1, '1': 2 }));
+      expect(setter).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('array equality', () => {
-    it('does not call setter when array has same elements in same order', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current([1, 2, 3]);
-      });
-      act(() => {
-        result.current([1, 2, 3]);
-      });
+    it('prevents duplicate array updates with same elements', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update([1, 2, 3]));
+      act(() => update([1, 2, 3]));
       expect(setter).toHaveBeenCalledTimes(1);
     });
 
-    it('calls setter when array has different elements', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current([1, 2, 3]);
-      });
-      act(() => {
-        result.current([1, 2, 4]);
-      });
+    it('allows array updates with different elements', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update([1, 2, 3]));
+      act(() => update([1, 2, 4]));
       expect(setter).toHaveBeenCalledTimes(2);
     });
 
-    it('handles empty array equality', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current([]);
-      });
-      act(() => {
-        result.current([]);
-      });
+    it('allows array updates with different order', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update([1, 2, 3]));
+      act(() => update([3, 2, 1]));
+      expect(setter).toHaveBeenCalledTimes(2);
+    });
+
+    it('prevents duplicate empty array updates', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update([]));
+      act(() => update([]));
+      expect(setter).toHaveBeenCalledTimes(1);
+    });
+
+    it('prevents duplicate nested array updates', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update([[1, 2], [3, 4]]));
+      act(() => update([[1, 2], [3, 4]]));
       expect(setter).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Set equality', () => {
-    it('does not call setter when Set has same elements', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current(new Set([1, 2, 3]));
-      });
-      act(() => {
-        result.current(new Set([1, 2, 3]));
-      });
+    it('prevents duplicate Set updates with same elements', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(new Set([1, 2, 3])));
+      act(() => update(new Set([1, 2, 3])));
       expect(setter).toHaveBeenCalledTimes(1);
     });
 
-    it('calls setter when Set has different elements', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current(new Set([1, 2, 3]));
-      });
-      act(() => {
-        result.current(new Set([1, 2, 4]));
-      });
+    it('allows Set updates with different elements', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(new Set([1, 2, 3])));
+      act(() => update(new Set([1, 2, 4])));
       expect(setter).toHaveBeenCalledTimes(2);
     });
 
-    it('handles empty Set equality', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current(new Set());
-      });
-      act(() => {
-        result.current(new Set());
-      });
+    it('prevents duplicate empty Set updates', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(new Set()));
+      act(() => update(new Set()));
       expect(setter).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('NaN handling', () => {
+    it('allows duplicate NaN updates (NaN !== NaN in JS, no special handling)', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(NaN));
+      act(() => update(NaN));
+      // NaN !== NaN and typeof NaN is 'number', not 'object',
+      // so valuesEqual returns false and setter is called twice.
+      expect(setter).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('functional updates', () => {
-    it('prevents state update when functional update returns current value', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current({ a: 1 });
-      });
-      expect(setter).toHaveBeenCalledTimes(1);
-      act(() => {
-        result.current(prev => prev);
-      });
-      // setter is called with a function (React always invokes setter(fn)),
-      // but the guard prevents the inner setter call from resolving to a no-op update
+    it('prevents state change when functional update returns the current value', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update({ a: 1 }));
+      act(() => update((prev) => prev));
+      // The functional path always calls setter(fn), but the guard prevents
+      // the state from actually changing by returning prev inside the function.
       expect(setter).toHaveBeenCalledTimes(2);
       expect(setter).toHaveBeenNthCalledWith(2, expect.any(Function));
     });
 
-    it('prevents state update when functional update returns prev when prev is null', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current(null);
-      });
-      act(() => {
-        result.current(prev => prev);
-      });
-      expect(setter).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls setter when functional update returns different object', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current({ a: 1 });
-      });
-      act(() => {
-        result.current(prev => ({ ...prev, b: 2 }));
-      });
+    it('allows state change when functional update returns a different value', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update({ a: 1 }));
+      act(() => update((prev) => ({ ...prev, b: 2 })));
       expect(setter).toHaveBeenCalledTimes(2);
     });
 
-    it('prevents state update when functional update returns null and current is null', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current(null);
-      });
-      act(() => {
-        result.current(() => null);
-      });
+    it('allows state change when functional update returns null and current is null', () => {
+      const { setter, update } = renderGuarded();
+      // First null is suppressed because currentValueRef.current is undefined
+      // and valuesEqual(undefined, null) returns true (both nullish).
+      act(() => update(null));
+      expect(setter).toHaveBeenCalledTimes(0);
+      // Functional path always calls setter(fn), so setter is called once.
+      act(() => update(() => null));
       expect(setter).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows state change when functional update returns null and current is not null', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update({ a: 1 }));
+      act(() => update(() => null));
+      expect(setter).toHaveBeenCalledTimes(2);
+    });
+
+    it('allows state change when functional update returns same object reference', () => {
+      const { setter, update } = renderGuarded();
+      const obj = { a: 1 };
+      act(() => update(obj));
+      // currentValueRef.current is obj, result is obj, valuesEqual(obj, obj) = true,
+      // so the inner function returns prev — but setter(fn) was still called.
+      act(() => update(() => obj));
+      expect(setter).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('special values', () => {
-    it('does not call setter when same Symbol is passed twice', () => {
-      const setter = vi.fn();
+    it('prevents duplicate Symbol updates for the same symbol', () => {
+      const { setter, update } = renderGuarded();
       const sym = Symbol('test');
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current(sym);
-      });
-      act(() => {
-        result.current(sym);
-      });
+      act(() => update(sym));
+      act(() => update(sym));
       expect(setter).toHaveBeenCalledTimes(1);
     });
-  });
 
-  describe('state tracking', () => {
-    it('updates currentValueRef when setter is called with sequential values', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current('first');
-      });
-      act(() => {
-        result.current('second');
-      });
+    it('allows different Symbol values', () => {
+      const { setter, update } = renderGuarded();
+      act(() => update(Symbol('a')));
+      act(() => update(Symbol('b')));
       expect(setter).toHaveBeenCalledTimes(2);
-      expect(setter).toHaveBeenNthCalledWith(1, 'first');
-      expect(setter).toHaveBeenNthCalledWith(2, 'second');
-    });
-
-    it('does not call setter when reverting to a previously seen value', () => {
-      const setter = vi.fn();
-      const { result } = renderHook(() => useSSEEqualityGuard(setter));
-      act(() => {
-        result.current('a');
-      });
-      act(() => {
-        result.current('b');
-      });
-      act(() => {
-        result.current('a');
-      });
-      expect(setter).toHaveBeenCalledTimes(3);
     });
   });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 
 import {
@@ -25,6 +26,36 @@ describe('normalizeCurrency', () => {
   it('handles odd CP remainders', () => {
     const result = normalizeCurrency(0.07);
     expect(result).toEqual({ pp: 0, gp: 0, sp: 0, cp: 7 });
+  });
+
+  it('rounds sub-1-cp values to 0', () => {
+    const result = normalizeCurrency(0.004);
+    expect(result).toEqual({ pp: 0, gp: 0, sp: 0, cp: 0 });
+  });
+
+  it('rounds exactly 0.005 gp up to 1 cp', () => {
+    const result = normalizeCurrency(0.005);
+    expect(result).toEqual({ pp: 0, gp: 0, sp: 0, cp: 1 });
+  });
+
+  it('handles exact 100 GP boundary', () => {
+    const result = normalizeCurrency(100);
+    expect(result).toEqual({ pp: 10, gp: 0, sp: 0, cp: 0 });
+  });
+
+  it('handles exact 10 GP boundary', () => {
+    const result = normalizeCurrency(10);
+    expect(result).toEqual({ pp: 1, gp: 0, sp: 0, cp: 0 });
+  });
+
+  it('handles max denominations: 999.99 GP', () => {
+    const result = normalizeCurrency(999.99);
+    expect(result).toEqual({ pp: 99, gp: 9, sp: 9, cp: 9 });
+  });
+
+  it('produces negative values for negative input', () => {
+    const result = normalizeCurrency(-5.25);
+    expect(result).toEqual({ pp: -1, gp: -6, sp: -3, cp: -5 });
   });
 });
 
@@ -54,8 +85,14 @@ describe('formatCurrencyString', () => {
     expect(result).toBe('5 gold pieces, 3 copper coins');
   });
 
-  it('handles mixed negative and positive values', () => {
-    expect(formatCurrencyString({ pp: -1, gp: 2, sp: -3, cp: 4 })).toBe('-1 platinum pieces, 2 gold pieces, -3 silver coins, 4 copper coins');
+  it('handles missing properties as zeros', () => {
+    expect(formatCurrencyString({ gp: 5 })).toBe('5 gold pieces');
+    expect(formatCurrencyString({})).toBe('0 platinum pieces');
+  });
+
+  it('handles large values across all denominations', () => {
+    const result = formatCurrencyString({ pp: 99, gp: 99, sp: 99, cp: 99 });
+    expect(result).toBe('99 platinum pieces, 99 gold pieces, 99 silver coins, 99 copper coins');
   });
 });
 
@@ -66,7 +103,21 @@ describe('calculateEncounterXp', () => {
     expect(calculateEncounterXp([])).toBe(0);
   });
 
+  it('returns 0 for number/object inputs (no .length property)', () => {
+    expect(calculateEncounterXp(42)).toBe(0);
+    expect(calculateEncounterXp({ name: 'Goblin' })).toBe(0);
+  });
+
+  it('throws for string input (has .length but no .reduce)', () => {
+    expect(() => calculateEncounterXp('goblins')).toThrow(TypeError);
+  });
+
   it('sums xp for a single monster without qty', () => {
+    const monsters = [{ name: 'Goblin', xp: 50 }];
+    expect(calculateEncounterXp(monsters)).toBe(50);
+  });
+
+  it('defaults missing qty to 1', () => {
     const monsters = [{ name: 'Goblin', xp: 50 }];
     expect(calculateEncounterXp(monsters)).toBe(50);
   });
@@ -76,14 +127,19 @@ describe('calculateEncounterXp', () => {
     expect(calculateEncounterXp(monsters)).toBe(600);
   });
 
+  it('treats qty of 0 as 1 (falsy default)', () => {
+    const monsters = [{ name: 'Gnome', xp: 50, qty: 0 }];
+    expect(calculateEncounterXp(monsters)).toBe(50);
+  });
+
   it('defaults missing xp to 0', () => {
     const monsters = [{ name: 'Unknown' }];
     expect(calculateEncounterXp(monsters)).toBe(0);
   });
 
-  it('treats qty of 0 as 1', () => {
-    const monsters = [{ name: 'Gnome', xp: 50, qty: 0 }];
-    expect(calculateEncounterXp(monsters)).toBe(50);
+  it('defaults both xp and qty to 0', () => {
+    const monsters = [{ name: 'Empty' }];
+    expect(calculateEncounterXp(monsters)).toBe(0);
   });
 
   it('handles mixed monsters with and without xp and qty', () => {
@@ -93,5 +149,13 @@ describe('calculateEncounterXp', () => {
       { name: 'Orc', xp: 200 },
     ];
     expect(calculateEncounterXp(monsters)).toBe(300);
+  });
+
+  it('handles monsters with xp but no qty (qty defaults to 1)', () => {
+    const monsters = [
+      { name: 'Goblin', xp: 50 },
+      { name: 'Orc', xp: 200, qty: 3 },
+    ];
+    expect(calculateEncounterXp(monsters)).toBe(650);
   });
 });

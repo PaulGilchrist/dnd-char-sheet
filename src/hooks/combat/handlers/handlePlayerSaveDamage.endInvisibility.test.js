@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -112,7 +113,7 @@ describe('handlePlayerSaveDamage - endInvisibilityOnHostileAction', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReset().mockReturnValue(null);
+        getRuntimeValue.mockReturnValue(null);
         computeConditionEffects.mockReturnValue({
             restoreBalance: false,
             autoRerollForSaves: false,
@@ -121,12 +122,13 @@ describe('handlePlayerSaveDamage - endInvisibilityOnHostileAction', () => {
             saveAdvantageAbilities: null,
         });
         hasIgnoreResistance.mockReturnValue(false);
-        endInvisibilityOnHostileAction.mockClear();
         applyDamageToTarget.mockResolvedValue({ newHp: 15, finalDamage: 2 });
         getAllyList.mockReturnValue(['Ally1']);
     });
 
-    it('calls endInvisibilityOnHostileAction when careful spell damage > 0', async () => {
+    it('calls endInvisibilityOnHostileAction when careful spell applies damage > 0', async () => {
+        applyDamageToTarget.mockResolvedValue({ newHp: 15, finalDamage: 2 });
+
         const handler = createPlayerSaveDamageHandler(deps);
         const context = {
             saveDc: 11,
@@ -137,7 +139,7 @@ describe('handlePlayerSaveDamage - endInvisibilityOnHostileAction', () => {
             metamagicCareful: true,
         };
 
-        await handler(
+        const result = await handler(
             'Fire Bolt',
             '1d10',
             5,
@@ -149,11 +151,74 @@ describe('handlePlayerSaveDamage - endInvisibilityOnHostileAction', () => {
             [6]
         );
 
+        expect(result).toBe(true);
+        expect(applyDamageToTarget).toHaveBeenCalledTimes(1);
+        expect(applyDamageToTarget).toHaveBeenCalledWith(
+            expect.any(Object),
+            'Ally1',
+            0,
+            ['Fire'],
+            'test-campaign',
+            expect.any(Array),
+            false,
+            'TestWizard'
+        );
         expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith('TestWizard', 'test-campaign');
+        expect(deps.logEntry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'roll',
+                rollType: 'save-damage',
+                note: 'careful_spell_damage_roll_before_apply',
+            })
+        );
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'save-damage',
+                carefulSpell: true,
+                finalDamage: 0,
+                damageApplied: true,
+            })
+        );
     });
 
-    it('does not call endInvisibilityOnHostileAction when damage is 0', async () => {
+    it('does not call endInvisibilityOnHostileAction when careful spell applies 0 damage', async () => {
         applyDamageToTarget.mockResolvedValue({ newHp: 20, finalDamage: 0 });
+
+        const handler = createPlayerSaveDamageHandler(deps);
+        const context = {
+            saveDc: 11,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            damageType: 'Fire',
+            targetName: 'Ally1',
+            metamagicCareful: true,
+        };
+
+        const result = await handler(
+            'Fire Bolt',
+            '1d10',
+            5,
+            [6],
+            0,
+            context,
+            5,
+            { creatures: [{ name: 'Ally1', type: 'player' }] },
+            [6]
+        );
+
+        expect(result).toBe(true);
+        expect(endInvisibilityOnHostileAction).not.toHaveBeenCalled();
+        expect(deps.logEntry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'roll',
+                rollType: 'save-damage',
+                note: 'careful_spell_damage_roll_before_apply',
+            })
+        );
+    });
+
+    it('does not call endInvisibilityOnHostileAction when applyDamageToTarget returns null result', async () => {
+        applyDamageToTarget.mockResolvedValue(null);
 
         const handler = createPlayerSaveDamageHandler(deps);
         const context = {
@@ -181,6 +246,107 @@ describe('handlePlayerSaveDamage - endInvisibilityOnHostileAction', () => {
     });
 
     it('calls endInvisibilityOnHostileAction for contact patron when damage > 0', async () => {
+        applyDamageToTarget.mockResolvedValue({ newHp: 15, finalDamage: 3 });
+
+        const handler = createPlayerSaveDamageHandler(deps);
+        const context = {
+            saveDc: 13,
+            saveType: 'INT',
+            dcSuccess: 'half',
+            damageType: 'Psychic',
+            targetName: 'TestWizard',
+            playerStats: {
+                automation: {
+                    passives: [{ type: 'passive_rule', effect: 'contact_patron_auto_save' }],
+                },
+            },
+        };
+
+        const result = await handler(
+            'Contact Other Plane',
+            '4d6',
+            14,
+            [3, 5, 2, 4],
+            0,
+            context,
+            14,
+            { creatures: [{ name: 'TestWizard', type: 'player' }] },
+            [3, 5, 2, 4]
+        );
+
+        expect(result).toBe(true);
+        expect(applyDamageToTarget).toHaveBeenCalledTimes(1);
+        expect(applyDamageToTarget).toHaveBeenCalledWith(
+            expect.any(Object),
+            'TestWizard',
+            0,
+            ['Psychic'],
+            'test-campaign',
+            null,
+            false,
+            'TestWizard'
+        );
+        expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith('TestWizard', 'test-campaign');
+        expect(deps.logEntry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'roll',
+                rollType: 'save-damage',
+                note: 'contact_patron_damage_roll_before_apply',
+            })
+        );
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'save-damage',
+                contactPatron: true,
+                finalDamage: 0,
+                damageApplied: true,
+            })
+        );
+    });
+
+    it('does not call endInvisibilityOnHostileAction for contact patron when damage is 0', async () => {
+        applyDamageToTarget.mockResolvedValue({ newHp: 20, finalDamage: 0 });
+
+        const handler = createPlayerSaveDamageHandler(deps);
+        const context = {
+            saveDc: 13,
+            saveType: 'INT',
+            dcSuccess: 'half',
+            damageType: 'Psychic',
+            targetName: 'TestWizard',
+            playerStats: {
+                automation: {
+                    passives: [{ type: 'passive_rule', effect: 'contact_patron_auto_save' }],
+                },
+            },
+        };
+
+        const result = await handler(
+            'Contact Other Plane',
+            '4d6',
+            14,
+            [3, 5, 2, 4],
+            0,
+            context,
+            14,
+            { creatures: [{ name: 'TestWizard', type: 'player' }] },
+            [3, 5, 2, 4]
+        );
+
+        expect(result).toBe(true);
+        expect(endInvisibilityOnHostileAction).not.toHaveBeenCalled();
+        expect(deps.logEntry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'roll',
+                rollType: 'save-damage',
+                note: 'contact_patron_damage_roll_before_apply',
+            })
+        );
+    });
+
+    it('does not call endInvisibilityOnHostileAction for contact patron when applyDamageToTarget returns null', async () => {
+        applyDamageToTarget.mockResolvedValue(null);
+
         const handler = createPlayerSaveDamageHandler(deps);
         const context = {
             saveDc: 13,
@@ -207,6 +373,6 @@ describe('handlePlayerSaveDamage - endInvisibilityOnHostileAction', () => {
             [3, 5, 2, 4]
         );
 
-        expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith('TestWizard', 'test-campaign');
+        expect(endInvisibilityOnHostileAction).not.toHaveBeenCalled();
     });
 });

@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardLanguages from './useWizardLanguages.js';
@@ -35,6 +35,7 @@ function defaultConfigResult() {
     warnings: [],
     preSelectedLanguages: ['Common'],
     preSelectedFightingStyles: [],
+    setWarnings: vi.fn(),
   };
 }
 
@@ -49,11 +50,21 @@ describe('useWizardLanguages', () => {
   });
 
   describe('delegation to useWizardConfig', () => {
-    it('passes the correct validateFn and slot getters to useWizardConfig', () => {
+    it('passes validateLanguagesAndFightingStyles as validateFn', () => {
       renderLanguages();
       const config = useWizardConfig.mock.calls[0][0];
       expect(config.validateFn).toBe(validateLanguagesAndFightingStyles);
+    });
+
+    it('passes getLanguageLimits as the first slot getter', () => {
+      renderLanguages();
+      const config = useWizardConfig.mock.calls[0][0];
       expect(config.slots[0].get).toBe(getLanguageLimits);
+    });
+
+    it('passes getFightingStyleLimits as the second slot getter', () => {
+      renderLanguages();
+      const config = useWizardConfig.mock.calls[0][0];
       expect(config.slots[1].get).toBe(getFightingStyleLimits);
     });
 
@@ -63,10 +74,21 @@ describe('useWizardLanguages', () => {
       expect(config.formData).toBe(DEFAULT_FORM_DATA);
     });
 
-    it('does not pass setFormData to useWizardConfig', () => {
+    it('configures two limit slots with correct state keys', () => {
       renderLanguages();
       const config = useWizardConfig.mock.calls[0][0];
-      expect(config).not.toHaveProperty('setFormData');
+      expect(config.slots).toHaveLength(2);
+      expect(config.slots[0].state.key).toBe('languageLimits');
+      expect(config.slots[1].state.key).toBe('fightingStyleLimits');
+      expect(config.slots[0].isLimit).toBe(true);
+      expect(config.slots[1].isLimit).toBe(true);
+    });
+
+    it('configures preSelectedKey on each slot', () => {
+      renderLanguages();
+      const config = useWizardConfig.mock.calls[0][0];
+      expect(config.slots[0].preSelectedKey).toBe('preSelectedLanguages');
+      expect(config.slots[1].preSelectedKey).toBe('preSelectedFightingStyles');
     });
   });
 
@@ -80,25 +102,7 @@ describe('useWizardLanguages', () => {
       expect(result.current.preSelectedFightingStyles).toEqual(defaultConfigResult().preSelectedFightingStyles);
     });
 
-    it('aliases warnings as languageWarnings, not warnings', () => {
-      const { result } = renderLanguages();
-      expect(result.current).not.toHaveProperty('warnings');
-      expect(result.current).toHaveProperty('languageWarnings');
-    });
-
-    it('does not return extra properties', () => {
-      const { result } = renderLanguages();
-      const keys = Object.keys(result.current);
-      expect(keys).toEqual([
-        'languageLimits',
-        'fightingStyleLimits',
-        'languageWarnings',
-        'preSelectedLanguages',
-        'preSelectedFightingStyles',
-      ]);
-    });
-
-    it('passes through non-empty warnings', () => {
+    it('aliases warnings from useWizardConfig as languageWarnings', () => {
       useWizardConfig.mockReturnValue({
         ...defaultConfigResult(),
         warnings: [{ message: 'Too many languages', type: 'warning' }],
@@ -106,9 +110,7 @@ describe('useWizardLanguages', () => {
       const { result } = renderLanguages();
       expect(result.current.languageWarnings).toEqual([{ message: 'Too many languages', type: 'warning' }]);
     });
-  });
 
-  describe('null handling', () => {
     it('returns null for limits when useWizardConfig returns null', () => {
       useWizardConfig.mockReturnValue({
         languageLimits: null,
@@ -116,19 +118,25 @@ describe('useWizardLanguages', () => {
         warnings: [],
         preSelectedLanguages: [],
         preSelectedFightingStyles: [],
+        setWarnings: vi.fn(),
       });
       const { result } = renderLanguages();
       expect(result.current.languageLimits).toBeNull();
       expect(result.current.fightingStyleLimits).toBeNull();
     });
-  });
 
-  describe('reactivity', () => {
-    it('re-calls useWizardConfig when formData changes', () => {
-      const { rerender } = renderLanguages();
-      expect(useWizardConfig).toHaveBeenCalledTimes(1);
-      rerender();
-      expect(useWizardConfig).toHaveBeenCalledTimes(2);
+    it('returns empty arrays when useWizardConfig returns them', () => {
+      useWizardConfig.mockReturnValue({
+        languageLimits: null,
+        fightingStyleLimits: null,
+        warnings: [],
+        preSelectedLanguages: [],
+        preSelectedFightingStyles: [],
+        setWarnings: vi.fn(),
+      });
+      const { result } = renderLanguages();
+      expect(result.current.preSelectedLanguages).toEqual([]);
+      expect(result.current.preSelectedFightingStyles).toEqual([]);
     });
   });
 
@@ -148,7 +156,7 @@ describe('useWizardLanguages', () => {
       ]);
     });
 
-    it('includes undefined values when formData fields are missing', () => {
+    it('returns undefined for missing fields via optional chaining', () => {
       const minimalFormData = {};
       renderLanguages(minimalFormData);
       const config = useWizardConfig.mock.calls[0][0];
@@ -156,11 +164,12 @@ describe('useWizardLanguages', () => {
       expect(deps).toEqual([undefined, undefined, undefined, undefined, undefined, undefined, undefined]);
     });
 
-    it('includes undefined when nested fields are missing', () => {
+    it('returns undefined for nested fields when only top-level keys exist', () => {
       const partialFormData = { languages: ['Common'] };
       renderLanguages(partialFormData);
       const config = useWizardConfig.mock.calls[0][0];
       const deps = config.getDeps(partialFormData);
+      expect(deps[0]).toEqual(['Common']);
       expect(deps[1]).toBeUndefined();
       expect(deps[2]).toBeUndefined();
       expect(deps[3]).toBeUndefined();

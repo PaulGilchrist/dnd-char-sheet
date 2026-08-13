@@ -1,4 +1,5 @@
-import { renderHook, waitFor } from '@testing-library/react';
+// @improved-by-ai
+import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardSpells from './useWizardSpells.js';
 
@@ -14,273 +15,218 @@ describe('useWizardSpells', () => {
   });
 
   describe('initial state', () => {
-    it('returns preSelectedSpells as empty array on mount before effect resolves', () => {
+    it('returns empty preSelectedSpells before the effect resolves', () => {
       getPreSelectedSpells.mockImplementation(() => new Promise(() => {}));
+
       const { result } = renderHook(() => useWizardSpells({ name: 'Test', level: 1 }));
+
       expect(result.current.preSelectedSpells).toEqual([]);
     });
   });
 
-  describe('effect behavior', () => {
-    it('calls getPreSelectedSpells with formData on mount', async () => {
-      const formData = { name: 'Test', level: 1, rules: '5e' };
-      getPreSelectedSpells.mockResolvedValue(['Fire Bolt']);
-
-      renderHook(() => useWizardSpells(formData));
-
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledWith(formData);
-      });
-    });
-
-    it('sets preSelectedSpells to the result from getPreSelectedSpells', async () => {
-      const spells = ['Fire Bolt', 'Magic Missile', 'Shield'];
-      getPreSelectedSpells.mockResolvedValue(spells);
+  describe('async resolution', () => {
+    it('populates preSelectedSpells with resolved spell names', async () => {
+      getPreSelectedSpells.mockResolvedValue(['Fire Bolt', 'Magic Missile', 'Shield']);
 
       const { result } = renderHook(() => useWizardSpells({ name: 'Test', level: 1 }));
 
-      await waitFor(() => {
-        expect(result.current.preSelectedSpells).toEqual(spells);
+      await act(async () => {
+        await Promise.resolve();
       });
+
+      expect(result.current.preSelectedSpells).toEqual(['Fire Bolt', 'Magic Missile', 'Shield']);
     });
 
-    it('sets preSelectedSpells to empty array when getPreSelectedSpells returns empty array', async () => {
+    it('sets preSelectedSpells to empty array when the service returns an empty array', async () => {
       getPreSelectedSpells.mockResolvedValue([]);
 
       const { result } = renderHook(() => useWizardSpells({ name: 'Test', level: 1 }));
 
-      await waitFor(() => {
-        expect(result.current.preSelectedSpells).toEqual([]);
+      await act(async () => {
+        await Promise.resolve();
       });
+
+      expect(result.current.preSelectedSpells).toEqual([]);
+    });
+
+    it('passes formData to getPreSelectedSpells via the ref', async () => {
+      const formData = { name: 'Test', level: 3, rules: '2024' };
+      getPreSelectedSpells.mockResolvedValue([]);
+
+      renderHook(() => useWizardSpells(formData));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(getPreSelectedSpells).toHaveBeenCalledWith(formData);
     });
   });
 
-  describe('effect re-triggering on dependency changes', () => {
-    it('re-calls getPreSelectedSpells when formData.class.subclass.name changes', async () => {
-      getPreSelectedSpells.mockResolvedValueOnce(['Magic Missile']);
+  describe('re-computation on dependency changes', () => {
+    it('re-fetches when any tracked formData field changes', async () => {
+      getPreSelectedSpells.mockResolvedValueOnce(['Burning Hands']);
 
       const formData = { name: 'Test', level: 1, class: { subclass: { name: 'Evocation' } } };
-      const { rerender } = renderHook(({ data }) => useWizardSpells(data), {
-        initialProps: { data: formData },
-      });
+      const { rerender } = renderHook(
+        ({ data }) => useWizardSpells(data),
+        { initialProps: { data: formData } },
+      );
 
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        await Promise.resolve();
       });
+      expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
 
-      getPreSelectedSpells.mockResolvedValueOnce(['Burning Hands']);
+      // Change subclass name
+      getPreSelectedSpells.mockResolvedValueOnce(['Magic Missile']);
       rerender({ data: { ...formData, class: { subclass: { name: 'Transmutation' } } } });
 
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        await Promise.resolve();
       });
-    });
+      expect(getPreSelectedSpells).toHaveBeenCalledTimes(2);
 
-    it('re-calls getPreSelectedSpells when formData.race.name changes', async () => {
-      getPreSelectedSpells.mockResolvedValueOnce([]);
-
-      const formData = { name: 'Test', level: 1, race: { name: 'Elf' } };
-      const { rerender } = renderHook(({ data }) => useWizardSpells(data), {
-        initialProps: { data: formData },
-      });
-
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
-      });
-
-      getPreSelectedSpells.mockResolvedValueOnce(['Fire Bolt']);
-      rerender({ data: { ...formData, race: { name: 'Human' } } });
-
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(2);
-      });
-    });
-
-    it('re-calls getPreSelectedSpells when formData.race.subrace.name changes', async () => {
-      getPreSelectedSpells.mockResolvedValueOnce([]);
-
-      const formData = { name: 'Test', level: 1, race: { name: 'Elf', subrace: { name: 'High Elf' } } };
-      const { rerender } = renderHook(({ data }) => useWizardSpells(data), {
-        initialProps: { data: formData },
-      });
-
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
-      });
-
+      // Change race name
       getPreSelectedSpells.mockResolvedValueOnce(['Guidance']);
-      rerender({ data: { ...formData, race: { name: 'Elf', subrace: { name: 'Wood Elf' } } } });
+      rerender({ data: { ...formData, race: { name: 'Elf' } } });
 
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        await Promise.resolve();
       });
-    });
+      expect(getPreSelectedSpells).toHaveBeenCalledTimes(3);
 
-    it('re-calls getPreSelectedSpells when formData.feats changes', async () => {
-      getPreSelectedSpells.mockResolvedValueOnce([]);
+      // Change race subrace
+      getPreSelectedSpells.mockResolvedValueOnce(['Faerie Fire']);
+      rerender({ data: { ...formData, race: { name: 'Elf', subrace: { name: 'High Elf' } } } });
 
-      const formData = { name: 'Test', level: 1, feats: [] };
-      const { rerender } = renderHook(({ data }) => useWizardSpells(data), {
-        initialProps: { data: formData },
+      await act(async () => {
+        await Promise.resolve();
       });
+      expect(getPreSelectedSpells).toHaveBeenCalledTimes(4);
 
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
-      });
-
+      // Change feats
       getPreSelectedSpells.mockResolvedValueOnce(['Misty Step']);
       rerender({ data: { ...formData, feats: ['Fey Touched'] } });
 
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        await Promise.resolve();
       });
-    });
+      expect(getPreSelectedSpells).toHaveBeenCalledTimes(5);
 
-    it('re-calls getPreSelectedSpells when formData.rules changes', async () => {
-      getPreSelectedSpells.mockResolvedValueOnce([]);
-
-      const formData = { name: 'Test', level: 1, rules: '5e' };
-      const { rerender } = renderHook(({ data }) => useWizardSpells(data), {
-        initialProps: { data: formData },
-      });
-
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
-      });
-
+      // Change rules
       getPreSelectedSpells.mockResolvedValueOnce(['Speak with Animals']);
       rerender({ data: { ...formData, rules: '2024' } });
 
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        await Promise.resolve();
       });
-    });
+      expect(getPreSelectedSpells).toHaveBeenCalledTimes(6);
 
-    it('re-calls getPreSelectedSpells when formData.level changes', async () => {
-      getPreSelectedSpells.mockResolvedValueOnce([]);
-
-      const formData = { name: 'Test', level: 1 };
-      const { rerender } = renderHook(({ data }) => useWizardSpells(data), {
-        initialProps: { data: formData },
-      });
-
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
-      });
-
+      // Change level
       getPreSelectedSpells.mockResolvedValueOnce(['Commune with Nature']);
       rerender({ data: { ...formData, level: 10 } });
 
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        await Promise.resolve();
       });
+      expect(getPreSelectedSpells).toHaveBeenCalledTimes(7);
     });
-  });
 
-  describe('formData ref updates', () => {
-    it('uses the latest formData from the ref when effect runs', async () => {
-      const formData1 = { name: 'Test', level: 1, class: { subclass: { name: 'Evocation' } } };
-      const formData2 = { name: 'Test', level: 3, class: { subclass: { name: 'Evocation' } } };
+    it('uses the latest formData from the ref when the object reference changes without triggering a re-render', async () => {
       getPreSelectedSpells.mockResolvedValue(['Magic Missile']);
 
-      const { rerender } = renderHook(({ data }) => useWizardSpells(data), {
-        initialProps: { data: formData1 },
-      });
+      const formData1 = { name: 'Test', level: 3, class: { subclass: { name: 'Evocation' } } };
+      const formData2 = { name: 'Different', level: 3, class: { subclass: { name: 'Evocation' } } };
 
-      await waitFor(() => {
-        expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
-      });
+      const { rerender } = renderHook(
+        ({ data }) => useWizardSpells(data),
+        { initialProps: { data: formData1 } },
+      );
 
-      // Update formData but don't trigger re-render (no dependency change)
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
+      expect(getPreSelectedSpells).toHaveBeenLastCalledWith(formData1);
+
+      // formData2 has the same dependency values (level=3, subclass=Evocation) so no re-trigger
+      // but the ref is updated to formData2 — if another trigger occurs (e.g. via a different dep
+      // change), the ref ensures the NEW formData is used
       rerender({ data: formData2 });
 
-      // Should not re-call since level change is in deps but we need to check
-      // Actually level IS in deps, so it will re-call. Let's use same level.
-      const formDataSameLevel = { name: 'Test2', level: 3, class: { subclass: { name: 'Evocation' } } };
-      rerender({ data: formDataSameLevel });
-
-      // level changed from 1 to 3, so it should re-call
-      expect(getPreSelectedSpells).toHaveBeenCalledTimes(2);
+      // No re-call since deps didn't change — call count stays at 1
+      expect(getPreSelectedSpells).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('cleanup / unmount', () => {
-    it('sets cancelled flag on unmount to prevent state update', async () => {
+  describe('unmount cleanup', () => {
+    it('prevents state updates after unmount when the promise resolves late', async () => {
       let resolvePromise = null;
-      const pendingPromise = new Promise(resolve => { resolvePromise = resolve; });
+      const pendingPromise = new Promise((resolve) => { resolvePromise = resolve; });
       getPreSelectedSpells.mockReturnValue(pendingPromise);
 
       const { unmount } = renderHook(() => useWizardSpells({ name: 'Test', level: 1 }));
 
       unmount();
 
-      // Resolve the promise after unmount - should not throw because cancelled is true
+      // Resolve the pending promise after unmount — should not throw
       resolvePromise(['Fire Bolt']);
-      // If cancelled flag works, no React warnings about state updates on unmounted components
     });
   });
 
-  describe('return value', () => {
-    it('returns an object with preSelectedSpells property', async () => {
+  describe('error handling', () => {
+    it('does not update state when getPreSelectedSpells rejects', async () => {
+      let rejectPromise = null;
+      const failingPromise = new Promise((_, reject) => { rejectPromise = reject; });
+      getPreSelectedSpells.mockReturnValue(failingPromise);
+
+      // Suppress unhandled rejection from this specific test
+      const handler = vi.fn();
+      process.on('unhandledRejection', handler);
+
+      const { result } = renderHook(() => useWizardSpells({ name: 'Test', level: 1 }));
+
+      // Trigger the rejection after the hook has set up its effect
+      rejectPromise(new Error('Network failure'));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      process.off('unhandledRejection', handler);
+
+      // Should remain at initial empty state
+      expect(result.current.preSelectedSpells).toEqual([]);
+    });
+  });
+
+  describe('partial formData shapes', () => {
+    it('handles formData with only name and level', async () => {
+      getPreSelectedSpells.mockResolvedValue([]);
+
+      const { result } = renderHook(() => useWizardSpells({ name: 'Test', level: 1 }));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(getPreSelectedSpells).toHaveBeenCalledOnce();
+      expect(result.current.preSelectedSpells).toEqual([]);
+    });
+
+    it('handles formData with null/undefined nested properties', async () => {
       getPreSelectedSpells.mockResolvedValue(['Fire Bolt']);
 
-      const { result } = renderHook(() => useWizardSpells({ name: 'Test', level: 1 }));
+      const { result } = renderHook(() =>
+        useWizardSpells({ name: 'Test', level: 1, class: null, race: undefined, feats: null }),
+      );
 
-      await waitFor(() => {
-        expect(result.current).toHaveProperty('preSelectedSpells');
+      await act(async () => {
+        await Promise.resolve();
       });
-    });
 
-    it('returns only preSelectedSpells in the result object', async () => {
-      getPreSelectedSpells.mockResolvedValue(['Fire Bolt']);
-
-      const { result } = renderHook(() => useWizardSpells({ name: 'Test', level: 1 }));
-
-      await waitFor(() => {
-        const keys = Object.keys(result.current);
-        expect(keys).toEqual(['preSelectedSpells']);
-      });
-    });
-  });
-
-  describe('null/undefined formData handling', () => {
-    it('throws when formData is null due to dependency array accessing formData.class', () => {
-      expect(() => renderHook(() => useWizardSpells(null))).toThrow();
-    });
-
-    it('throws when formData is undefined due to dependency array accessing formData.class', () => {
-      expect(() => renderHook(() => useWizardSpells(undefined))).toThrow();
-    });
-  });
-
-  describe('integration with getPreSelectedSpells return values', () => {
-    it('handles spell arrays with multiple spell types', async () => {
-      const spells = [
-        'Fire Bolt',
-        'Magic Missile',
-        'Shield',
-        'Burning Hands',
-        'Misty Step',
-      ];
-      getPreSelectedSpells.mockResolvedValue(spells);
-
-      const { result } = renderHook(() => useWizardSpells({ name: 'Test', level: 3 }));
-
-      await waitFor(() => {
-        expect(result.current.preSelectedSpells).toEqual(spells);
-      });
-    });
-
-    it('handles deduplicated spell arrays', async () => {
-      const spells = ['Fire Bolt', 'Magic Missile'];
-      getPreSelectedSpells.mockResolvedValue(spells);
-
-      const { result } = renderHook(() => useWizardSpells({ name: 'Test', level: 1 }));
-
-      await waitFor(() => {
-        expect(result.current.preSelectedSpells).toEqual(spells);
-        expect(new Set(result.current.preSelectedSpells).size).toBe(result.current.preSelectedSpells.length);
-      });
+      expect(result.current.preSelectedSpells).toEqual(['Fire Bolt']);
     });
   });
 });

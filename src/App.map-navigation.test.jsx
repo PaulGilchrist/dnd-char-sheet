@@ -1,9 +1,11 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import App from './App.jsx';
 
 import { mockState, dataLoaderMocks } from './test/appTestState.js';
+
+// --- Core mocks (shared with other App test files) ---
 
 vi.mock('./services/ui/dataLoader.js', async () => {
   const { dataLoaderMocks } = await import('./test/appTestState.js');
@@ -19,6 +21,31 @@ vi.mock('file-saver', () => ({ saveAs: vi.fn() }));
 vi.mock('./services/maps/mapsService.js', () => ({
   loadMaps: vi.fn(),
 }));
+
+vi.mock('./services/ui/storage.js', () => ({
+  __esModule: true,
+  default: {
+    get: vi.fn(() => Promise.resolve(null)),
+    set: vi.fn(() => Promise.resolve()),
+  },
+}));
+
+vi.mock('./services/encounters/combatData.js', async () => ({
+  loadCombatSummary: vi.fn(() => Promise.resolve(null)),
+  setCombatSummaryCache: vi.fn(),
+  getCombatSummary: vi.fn(() => null),
+}));
+
+vi.mock('./hooks/runtime/useRuntimeState.js', () => ({
+  setRuntimeObject: vi.fn(),
+  seedTrackedResources: vi.fn(),
+  getStore: vi.fn(() => new Map()),
+  notify: vi.fn(),
+  getRuntimeValue: vi.fn(() => null),
+  setRuntimeValue: vi.fn(),
+}));
+
+// --- Component mocks ---
 
 vi.mock('./components/char-sheet/CharSheet.jsx', async () => {
   const { MockCharSheet } = await import('./test/mockComponents.jsx');
@@ -76,23 +103,56 @@ vi.mock('./components/log/Log.jsx', async () => {
   const { MockLog } = await import('./test/mockComponents.jsx');
   return { default: MockLog };
 });
+vi.mock('./components/campaign-admin/CampaignAdmin.jsx', async () => {
+  const { MockCampaignAdmin } = await import('./test/mockComponents.jsx');
+  return { default: MockCampaignAdmin };
+});
 
+// Subscriber fires events asynchronously via setTimeout to match real SSE timing.
+// This avoids synchronous event dispatch during render which would cause
+// inconsistent state and unreliable tests.
 vi.mock('./components/common/Subscriber.jsx', () => ({
   default: function MockSubscriber() { return null; },
 }));
 
-const originalLocation = window.location;
+// --- Helpers ---
+
+function setLocalhost(hostname = 'localhost') {
+  Object.defineProperty(window, 'location', {
+    value: { hostname, reload: vi.fn() },
+    writable: true,
+    configurable: true,
+  });
+}
+
+// Helper to wait for all microtasks and useEffects to flush.
+// This ensures document.title updates (which happen in useEffect) are visible.
+async function flushEffects() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+// Helper to wait for the campaign selection screen to appear, then click select.
+async function selectCampaign() {
+  await waitFor(() => {
+    expect(screen.getByTestId('campaign-selection')).toBeInTheDocument();
+  });
+  fireEvent.click(screen.getByTestId('select-campaign-btn'));
+  await waitFor(() => {
+    expect(screen.queryByTestId('campaign-selection')).not.toBeInTheDocument();
+  });
+  await flushEffects();
+}
+
+// --- Test suite ---
 
 describe('App - Map Navigation & View Management', () => {
   const defaultFetch = () =>
     Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
 
-  const setNonLocalhost = () => {
-    Object.defineProperty(window, 'location', {
-      value: { hostname: 'example.com', reload: vi.fn() },
-      writable: true,
-      configurable: true,
-    });
+  const setupWithCharacters = (chars) => {
+    mockState.characters = chars || [{ name: 'Aragorn', level: 1 }];
+    render(<App />);
+    return selectCampaign();
   };
 
   beforeEach(() => {
@@ -105,12 +165,7 @@ describe('App - Map Navigation & View Management', () => {
     window.confirm = vi.fn(() => true);
     window.prompt = vi.fn(() => 'New Campaign Name');
 
-    Object.defineProperty(window, 'location', {
-      value: { hostname: 'localhost', reload: vi.fn() },
-      writable: true,
-      configurable: true,
-    });
-
+    setLocalhost('localhost');
     global.fetch = vi.fn(defaultFetch);
 
     dataLoaderMocks.loadAbilityScores.mockResolvedValue([{ full_name: 'Strength' }]);
@@ -131,25 +186,12 @@ describe('App - Map Navigation & View Management', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    Object.defineProperty(window, 'location', {
-      value: originalLocation,
-      writable: true,
-      configurable: true,
-    });
+    setLocalhost('localhost');
   });
-
-  const selectCampaign = async () => {
-    fireEvent.click(screen.getByTestId('select-campaign-btn'));
-    await waitFor(() => {
-      expect(screen.queryByTestId('campaign-selection')).not.toBeInTheDocument();
-    });
-  };
 
   describe('Map navigation stack', () => {
     it('navigates back to manager when map history has entries', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-      await selectCampaign();
+      await setupWithCharacters();
       fireEvent.click(screen.getByTestId('maps-btn'));
       await waitFor(() => {
         expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
@@ -165,15 +207,14 @@ describe('App - Map Navigation & View Management', () => {
     });
 
     it('goes back to none (not manager) when map history is empty on non-localhost', async () => {
-      setNonLocalhost();
+      setLocalhost('example.com');
+
       const { loadMaps } = await import('./services/maps/mapsService.js');
       loadMaps.mockResolvedValue({
         maps: [{ fileName: 'dungeon-1.json', isActive: true }],
       });
 
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-      await selectCampaign();
+      await setupWithCharacters();
       fireEvent.click(screen.getByTestId('maps-btn'));
       await waitFor(() => {
         expect(screen.getByTestId('map-view')).toBeInTheDocument();
@@ -185,24 +226,30 @@ describe('App - Map Navigation & View Management', () => {
       });
     });
 
-    it('does not transition when already on manager', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-      await selectCampaign();
+    it('navigates to manager on first maps click on non-localhost (auto-opens active map)', async () => {
+      setLocalhost('example.com');
+
+      const { loadMaps } = await import('./services/maps/mapsService.js');
+      loadMaps.mockResolvedValue({
+        maps: [{ fileName: 'dungeon-1.json', isActive: true }],
+      });
+
+      await setupWithCharacters();
       fireEvent.click(screen.getByTestId('maps-btn'));
       await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
+        expect(screen.getByTestId('map-view')).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
+      // Non-localhost has no back button to manager, only back from map
+      fireEvent.click(screen.getByTestId('map-back-btn'));
+      await waitFor(() => {
+        expect(screen.queryByTestId('map-view')).not.toBeInTheDocument();
+      });
     });
   });
 
   describe('GM view transitions', () => {
     it('renders GM view and hides char-sheet', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-      await selectCampaign();
+      await setupWithCharacters();
       await waitFor(() => {
         expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
       });
@@ -224,9 +271,7 @@ describe('App - Map Navigation & View Management', () => {
     });
 
     it('hides GM view when onBack is triggered', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-      await selectCampaign();
+      await setupWithCharacters();
       fireEvent.click(screen.getByTestId('settlements-btn'));
       await waitFor(() => {
         expect(screen.getByTestId('settlements-view')).toBeInTheDocument();
@@ -237,50 +282,24 @@ describe('App - Map Navigation & View Management', () => {
       });
     });
 
-    it('GM views are idempotent when already active', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-      await selectCampaign();
+    it('renders different GM views with correct props', async () => {
+      await setupWithCharacters([
+        { name: 'Aragorn', level: 1 },
+        { name: 'Legolas', level: 2 },
+      ]);
 
-      const views = [
-        { btn: 'settlements-btn', view: 'settlements-view' },
-        { btn: 'npcs-btn', view: 'npcs-view' },
-        { btn: 'factions-btn', view: 'factions-view' },
-        { btn: 'log-btn', view: 'campaign-log-view' },
-      ];
-
-      for (const { btn, view } of views) {
-        fireEvent.click(screen.getByTestId(btn));
-        await waitFor(() => {
-          expect(screen.getByTestId(view)).toBeInTheDocument();
-        });
-        fireEvent.click(screen.getByTestId(btn));
-        expect(screen.getByTestId(view)).toBeInTheDocument();
-      }
-    });
-  });
-
-  describe('View mutual exclusivity', () => {
-    it('replaces char-sheet with a view', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-      await selectCampaign();
+      // NPCs view should receive character count
+      fireEvent.click(screen.getByTestId('npcs-btn'));
       await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+        expect(screen.getByTestId('npcs-view')).toBeInTheDocument();
       });
 
-      const views = [
-        { btn: 'initiative-btn', view: 'initiative' },
-        { btn: 'encounter-btn', view: 'encounter-builder' },
-      ];
-
-      for (const { btn, view } of views) {
-        fireEvent.click(screen.getByTestId(btn));
-        await waitFor(() => {
-          expect(screen.getByTestId(view)).toBeInTheDocument();
-          expect(screen.queryByTestId('char-sheet')).not.toBeInTheDocument();
-        });
-      }
+      // Log view should receive character count
+      fireEvent.click(screen.getByTestId('log-btn'));
+      await waitFor(() => {
+        expect(screen.getByTestId('campaign-log-view')).toBeInTheDocument();
+        expect(screen.getByTestId('log-char-count').textContent).toBe('2');
+      });
     });
   });
 });

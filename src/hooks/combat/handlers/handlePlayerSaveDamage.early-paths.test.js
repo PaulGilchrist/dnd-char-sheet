@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -104,7 +105,7 @@ import { computeConditionEffects } from '../../../services/combat/conditions/con
 import { getAllyList } from '../../useAllySelection.js';
 
 describe('handlePlayerSaveDamage - early returns', () => {
-    const deps = {
+    const makeDeps = (overrides = {}) => ({
         characterName: 'TestWizard',
         campaignName: 'test-campaign',
         characters: [{ name: 'TestWizard' }],
@@ -112,44 +113,16 @@ describe('handlePlayerSaveDamage - early returns', () => {
         setPopupHtml: vi.fn(),
         logEntry: vi.fn(),
         pendingSaves: {},
-    };
+        ...overrides,
+    });
 
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReset().mockReturnValue(null);
-    });
-
-    it('returns undefined when target is not found in combatSummary', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
-        const result = await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            { saveDc: 11, saveType: 'DEX', dcSuccess: 'half', damageType: 'Fire', targetName: 'Goblin' }
-        );
-        expect(result).toBeUndefined();
-    });
-
-    it('returns undefined when target type is not player', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
-        const result = await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            { saveDc: 11, saveType: 'DEX', dcSuccess: 'half', damageType: 'Fire', targetName: 'Goblin' },
-            5,
-            { creatures: [{ name: 'Goblin', type: 'npc' }] },
-            [6]
-        );
-        expect(result).toBeUndefined();
+        getRuntimeValue.mockReturnValue(null);
     });
 
     it('returns undefined when combatSummary is null', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
+        const handler = createPlayerSaveDamageHandler(makeDeps());
         const result = await handler(
             'Fire Bolt',
             '1d10',
@@ -160,24 +133,62 @@ describe('handlePlayerSaveDamage - early returns', () => {
         );
         expect(result).toBeUndefined();
     });
+
+    it('returns undefined when combatSummary.creatures is missing', async () => {
+        const handler = createPlayerSaveDamageHandler(makeDeps());
+        const result = await handler(
+            'Fire Bolt',
+            '1d10',
+            5,
+            [6],
+            0,
+            { saveDc: 11, saveType: 'DEX', dcSuccess: 'half', damageType: 'Fire', targetName: 'TestWizard' },
+            5,
+            {}
+        );
+        expect(result).toBeUndefined();
+    });
+
+    it('returns undefined when target is not found in combatSummary', async () => {
+        const handler = createPlayerSaveDamageHandler(makeDeps());
+        const result = await handler(
+            'Fire Bolt',
+            '1d10',
+            5,
+            [6],
+            0,
+            { saveDc: 11, saveType: 'DEX', dcSuccess: 'half', damageType: 'Fire', targetName: 'Goblin' },
+            5,
+            { creatures: [{ name: 'TestWizard', type: 'player' }] }
+        );
+        expect(result).toBeUndefined();
+    });
+
+    it('returns undefined when target type is not player', async () => {
+        const handler = createPlayerSaveDamageHandler(makeDeps());
+        const result = await handler(
+            'Fire Bolt',
+            '1d10',
+            5,
+            [6],
+            0,
+            { saveDc: 11, saveType: 'DEX', dcSuccess: 'half', damageType: 'Fire', targetName: 'Goblin' },
+            5,
+            { creatures: [{ name: 'Goblin', type: 'npc' }] }
+        );
+        expect(result).toBeUndefined();
+    });
 });
 
 describe('handlePlayerSaveDamage - careful ally path', () => {
-    const deps = {
-        characterName: 'TestWizard',
-        campaignName: 'test-campaign',
-        characters: [{ name: 'TestWizard' }],
-        charactersRef: { current: [] },
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        pendingSaves: {},
-    };
+    let logEntry;
+    let setPopupHtml;
+    let pendingSaves;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReset().mockReturnValue(null);
+        getRuntimeValue.mockReturnValue(null);
         hasIgnoreResistance.mockReturnValue(false);
-        endInvisibilityOnHostileAction.mockClear();
         applyDamageToTarget.mockResolvedValue({ newHp: 15, finalDamage: 2 });
         getAllyList.mockReturnValue(['Ally1']);
         computeConditionEffects.mockReturnValue({
@@ -191,10 +202,59 @@ describe('handlePlayerSaveDamage - careful ally path', () => {
         getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
         getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
         isCircleOfPowerActive.mockReturnValue(false);
+        logEntry = vi.fn();
+        setPopupHtml = vi.fn();
+        pendingSaves = {};
+    });
+
+    it('returns undefined when careful ally target is NOT in ally list', async () => {
+        getAllyList.mockReturnValue(['OtherAlly']);
+
+        const handler = createPlayerSaveDamageHandler({
+            characterName: 'TestWizard',
+            campaignName: 'test-campaign',
+            characters: [{ name: 'TestWizard' }],
+            charactersRef: { current: [] },
+            setPopupHtml,
+            logEntry,
+            pendingSaves,
+        });
+        const context = {
+            saveDc: 11,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            damageType: 'Fire',
+            targetName: 'Ally1',
+            metamagicCareful: true,
+        };
+
+        const result = await handler(
+            'Fire Bolt',
+            '1d10',
+            5,
+            [6],
+            0,
+            context,
+            5,
+            { creatures: [{ name: 'Ally1', type: 'player' }] },
+            [6]
+        );
+
+        expect(result).toBeUndefined();
+        expect(applyDamageToTarget).not.toHaveBeenCalled();
+        expect(endInvisibilityOnHostileAction).not.toHaveBeenCalled();
     });
 
     it('applies careful spell damage when target is in ally list', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
+        const handler = createPlayerSaveDamageHandler({
+            characterName: 'TestWizard',
+            campaignName: 'test-campaign',
+            characters: [{ name: 'TestWizard' }],
+            charactersRef: { current: [] },
+            setPopupHtml,
+            logEntry,
+            pendingSaves,
+        });
         const context = {
             saveDc: 11,
             saveType: 'DEX',
@@ -217,56 +277,46 @@ describe('handlePlayerSaveDamage - careful ally path', () => {
         );
 
         expect(result).toBe(true);
-        expect(deps.logEntry).toHaveBeenCalledWith(
+        expect(applyDamageToTarget).toHaveBeenCalledTimes(1);
+        expect(applyDamageToTarget).toHaveBeenCalledWith(
+            expect.any(Object),
+            'Ally1',
+            0,
+            ['Fire'],
+            'test-campaign',
+            expect.any(Array),
+            false,
+            'TestWizard'
+        );
+        expect(logEntry).toHaveBeenCalledWith(
             expect.objectContaining({
                 type: 'roll',
                 rollType: 'save-damage',
                 note: 'careful_spell_damage_roll_before_apply',
             })
         );
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+        expect(setPopupHtml).toHaveBeenCalledWith(
             expect.objectContaining({
                 type: 'save-damage',
                 carefulSpell: true,
-                saveResult: { success: true, roll: 20, total: 11, bonus: 0 },
+                finalDamage: 0,
+                damageApplied: true,
             })
         );
-    });
-
-    it('returns early when careful ally target is NOT in ally list', async () => {
-        getAllyList.mockReturnValue(['OtherAlly']);
-
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 11,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'Ally1',
-            metamagicCareful: true,
-        };
-
-        const result = await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'Ally1', type: 'player' }] },
-            [6]
-        );
-
-        expect(result).toBeUndefined();
-        expect(deps.logEntry).not.toHaveBeenCalled();
-        expect(deps.setPopupHtml).not.toHaveBeenCalled();
     });
 
     it('applies ignoreResistance when context.playerStats has it', async () => {
         hasIgnoreResistance.mockReturnValue(true);
 
-        const handler = createPlayerSaveDamageHandler(deps);
+        const handler = createPlayerSaveDamageHandler({
+            characterName: 'TestWizard',
+            campaignName: 'test-campaign',
+            characters: [{ name: 'TestWizard' }],
+            charactersRef: { current: [] },
+            setPopupHtml,
+            logEntry,
+            pendingSaves,
+        });
         const context = {
             saveDc: 11,
             saveType: 'DEX',
@@ -290,25 +340,28 @@ describe('handlePlayerSaveDamage - careful ally path', () => {
         );
 
         expect(hasIgnoreResistance).toHaveBeenCalledWith(context.playerStats, 'Fire');
+        expect(applyDamageToTarget).toHaveBeenCalledWith(
+            expect.any(Object),
+            'Ally1',
+            expect.any(Number),
+            ['Fire'],
+            'test-campaign',
+            expect.any(Array),
+            true,
+            'TestWizard'
+        );
     });
 });
 
 describe('handlePlayerSaveDamage - contact patron path', () => {
-    const deps = {
-        characterName: 'TestWizard',
-        campaignName: 'test-campaign',
-        characters: [{ name: 'TestWizard' }],
-        charactersRef: { current: [] },
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        pendingSaves: {},
-    };
+    let logEntry;
+    let setPopupHtml;
+    let pendingSaves;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReset().mockReturnValue(null);
+        getRuntimeValue.mockReturnValue(null);
         hasIgnoreResistance.mockReturnValue(false);
-        endInvisibilityOnHostileAction.mockClear();
         applyDamageToTarget.mockResolvedValue({ newHp: 15, finalDamage: 3 });
         computeConditionEffects.mockReturnValue({
             restoreBalance: false,
@@ -321,10 +374,21 @@ describe('handlePlayerSaveDamage - contact patron path', () => {
         getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
         getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
         isCircleOfPowerActive.mockReturnValue(false);
+        logEntry = vi.fn();
+        setPopupHtml = vi.fn();
+        pendingSaves = {};
     });
 
     it('applies contact patron auto save when conditions match', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
+        const handler = createPlayerSaveDamageHandler({
+            characterName: 'TestWizard',
+            campaignName: 'test-campaign',
+            characters: [{ name: 'TestWizard' }],
+            charactersRef: { current: [] },
+            setPopupHtml,
+            logEntry,
+            pendingSaves,
+        });
         const context = {
             saveDc: 13,
             saveType: 'INT',
@@ -351,24 +415,34 @@ describe('handlePlayerSaveDamage - contact patron path', () => {
         );
 
         expect(result).toBe(true);
-        expect(deps.logEntry).toHaveBeenCalledWith(
+        expect(applyDamageToTarget).toHaveBeenCalledTimes(1);
+        expect(logEntry).toHaveBeenCalledWith(
             expect.objectContaining({
                 type: 'roll',
                 rollType: 'save-damage',
                 note: 'contact_patron_damage_roll_before_apply',
             })
         );
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+        expect(setPopupHtml).toHaveBeenCalledWith(
             expect.objectContaining({
                 type: 'save-damage',
                 contactPatron: true,
-                saveResult: { success: true, roll: 20, total: 13, bonus: 0 },
+                finalDamage: 0,
+                damageApplied: true,
             })
         );
     });
 
-    it('does not apply contact patron when spell name does not match', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
+    it('falls through to main save prompt when spell name does not match', async () => {
+        const handler = createPlayerSaveDamageHandler({
+            characterName: 'TestWizard',
+            campaignName: 'test-campaign',
+            characters: [{ name: 'TestWizard' }],
+            charactersRef: { current: [] },
+            setPopupHtml,
+            logEntry,
+            pendingSaves,
+        });
         const context = {
             saveDc: 13,
             saveType: 'INT',
@@ -394,13 +468,28 @@ describe('handlePlayerSaveDamage - contact patron path', () => {
             [3]
         );
 
-        // Contact patron path doesn't apply (wrong spell name), but main save prompt path still runs
         expect(result).toBe(true);
-        expect(deps.pendingSaves).toHaveProperty('test-guid-1234');
+        expect(pendingSaves).toHaveProperty('test-guid-1234');
+        expect(setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                waitingForPlayerSave: true,
+            })
+        );
+        const popupCall = setPopupHtml.mock.calls[0][0];
+        expect(popupCall).not.toHaveProperty('contactPatron');
+        expect(popupCall).not.toHaveProperty('carefulSpell');
     });
 
-    it('does not apply contact patron when target is not the caster', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
+    it('falls through to main save prompt when target is not the caster', async () => {
+        const handler = createPlayerSaveDamageHandler({
+            characterName: 'TestWizard',
+            campaignName: 'test-campaign',
+            characters: [{ name: 'TestWizard' }],
+            charactersRef: { current: [] },
+            setPopupHtml,
+            logEntry,
+            pendingSaves,
+        });
         const context = {
             saveDc: 13,
             saveType: 'INT',
@@ -426,8 +515,15 @@ describe('handlePlayerSaveDamage - contact patron path', () => {
             [3, 5, 2, 4]
         );
 
-        // Contact patron path doesn't apply, but main save prompt path still runs
         expect(result).toBe(true);
-        expect(deps.pendingSaves).toHaveProperty('test-guid-1234');
+        expect(pendingSaves).toHaveProperty('test-guid-1234');
+        expect(setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                waitingForPlayerSave: true,
+            })
+        );
+        const popupCall = setPopupHtml.mock.calls[0][0];
+        expect(popupCall).not.toHaveProperty('contactPatron');
+        expect(popupCall).not.toHaveProperty('carefulSpell');
     });
 });

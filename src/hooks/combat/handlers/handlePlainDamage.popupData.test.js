@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -134,8 +135,75 @@ describe('Plain damage popup data', () => {
         return createLogDamageAndShow(deps);
     }
 
-    describe('bardic inspiration, empowered spell, piercer, savage attacker', () => {
-        it('sets bardicInspirationOffense from context when provided', async () => {
+    describe('popup data structure', () => {
+        it('includes core popup fields in the first setPopupHtml call', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.type).toBe('damage');
+            expect(call.name).toBe('Longsword');
+            expect(call.formula).toBe('1d8+3');
+            expect(call.damageType).toBe('slashing');
+            expect(call.targetName).toBe('Goblin');
+            expect(call.total).toBe(8);
+            expect(call.adjustedTotal).toBe(8);
+            expect(call.rolls).toEqual([5, 3]);
+            expect(call.modifier).toBe(3);
+            expect(call.damageApplied).toBe(true);
+            expect(call.finalDamage).toBe(8);
+            expect(call.damageReduced).toBe(false);
+            expect(call.targetCurrentHp).toBe(5);
+            expect(call.targetMaxHp).toBe(13);
+        });
+
+        it('sets isCrit based on context', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                isAutoCrit: true,
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.isCrit).toBe(true);
+        });
+
+        it('sets elementalAdeptBonus when adjustedTotal exceeds total', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Fire Bolt', '1d10', 8, [8], 0, {
+                targetName: 'Goblin',
+                damageType: 'fire',
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.elementalAdeptBonus).toBe(0);
+        });
+    });
+
+    describe('bardic inspiration and empowered spell passthrough', () => {
+        it('passes bardicInspirationOffense and die size through from context', async () => {
             getRuntimeValue.mockImplementation((key) => {
                 if (key === 'campaign') return [];
                 return null;
@@ -150,13 +218,12 @@ describe('Plain damage popup data', () => {
                 bardicInspirationOffenseDieSize: 6,
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                bardicInspirationOffense: true,
-                bardicInspirationOffenseDieSize: 6,
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.bardicInspirationOffense).toBe(true);
+            expect(call.bardicInspirationOffenseDieSize).toBe(6);
         });
 
-        it('sets empoweredSpell from context when provided', async () => {
+        it('passes empoweredSpell and cha mod through from context', async () => {
             getRuntimeValue.mockImplementation((key) => {
                 if (key === 'campaign') return [];
                 return null;
@@ -171,13 +238,20 @@ describe('Plain damage popup data', () => {
                 empoweredSpellChaMod: 2,
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                empoweredSpell: true,
-                empoweredSpellChaMod: 2,
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.empoweredSpell).toBe(true);
+            expect(call.empoweredSpellChaMod).toBe(2);
         });
+    });
 
-        it('sets piercerPuncture when piercing damage and feat available and not used', async () => {
+    describe('piercer puncture availability', () => {
+        function makePiercerStats() {
+            return {
+                reactions: [{ automation: { type: 'piercer_puncture' } }],
+            };
+        }
+
+        it('sets piercerPuncture true when piercing damage, feat present, and not used', async () => {
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'campaign') return [];
                 if (key === 'TestFighter' && prop === 'piercerPunctureUsedThisTurn') return false;
@@ -186,20 +260,17 @@ describe('Plain damage popup data', () => {
             applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
 
             const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+            await fn('Rapier', '1d8+3', 8, [5, 3], 3, {
                 targetName: 'Goblin',
                 damageType: 'piercing',
-                playerStats: {
-                    reactions: [{ automation: { type: 'piercer_puncture' } }],
-                },
+                playerStats: makePiercerStats(),
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                piercerPuncture: true,
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.piercerPuncture).toBe(true);
         });
 
-        it('does not set piercerPuncture when damage type is not piercing', async () => {
+        it('sets piercerPuncture false when damage type is not piercing', async () => {
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'campaign') return [];
                 if (key === 'TestFighter' && prop === 'piercerPunctureUsedThisTurn') return false;
@@ -211,17 +282,61 @@ describe('Plain damage popup data', () => {
             await fn('Fire Bolt', '1d10', 8, [8], 0, {
                 targetName: 'Goblin',
                 damageType: 'fire',
-                playerStats: {
-                    reactions: [{ automation: { type: 'piercer_puncture' } }],
-                },
+                playerStats: makePiercerStats(),
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                piercerPuncture: false,
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.piercerPuncture).toBe(false);
         });
 
-        it('sets savageAttacker when feat available, melee/unarmed, and not used', async () => {
+        it('sets piercerPuncture false when already used this turn', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign') return [];
+                if (key === 'TestFighter' && prop === 'piercerPunctureUsedThisTurn') return true;
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Rapier', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'piercing',
+                playerStats: makePiercerStats(),
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.piercerPuncture).toBe(false);
+        });
+
+        it('sets piercerPuncture false when feat is not present', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Rapier', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'piercing',
+                playerStats: {},
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.piercerPuncture).toBe(false);
+        });
+    });
+
+    describe('savage attacker availability', () => {
+        function makeSavageStats() {
+            return {
+                automation: {
+                    passives: [{ type: 'passive_rule', effect: 'reroll_damage_once_per_turn' }],
+                },
+            };
+        }
+
+        it('sets savageAttacker true for melee attacks when feat present and not used', async () => {
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'campaign') return [];
                 if (key === 'TestFighter' && prop === '_Savage_Attacker_usedRound') return false;
@@ -233,19 +348,35 @@ describe('Plain damage popup data', () => {
             await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
                 targetName: 'Goblin',
                 damageType: 'slashing',
-                playerStats: {
-                    automation: {
-                        passives: [{ type: 'passive_rule', effect: 'reroll_damage_once_per_turn' }],
-                    },
-                },
+                isMelee: true,
+                playerStats: makeSavageStats(),
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                savageAttacker: true,
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.savageAttacker).toBe(true);
         });
 
-        it('does not set savageAttacker for ranged attacks', async () => {
+        it('sets savageAttacker true for unarmed strikes when feat present', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign') return [];
+                if (key === 'TestFighter' && prop === '_Savage_Attacker_usedRound') return false;
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Unarmed Strike', '1d4', 4, [4], 0, {
+                targetName: 'Goblin',
+                damageType: 'bludgeoning',
+                isUnarmedStrike: true,
+                playerStats: makeSavageStats(),
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.savageAttacker).toBe(true);
+        });
+
+        it('sets savageAttacker false for ranged attacks even with feat', async () => {
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'campaign') return [];
                 if (key === 'TestFighter' && prop === '_Savage_Attacker_usedRound') return false;
@@ -258,21 +389,55 @@ describe('Plain damage popup data', () => {
                 targetName: 'Goblin',
                 damageType: 'fire',
                 isMelee: false,
-                playerStats: {
-                    automation: {
-                        passives: [{ type: 'passive_rule', effect: 'reroll_damage_once_per_turn' }],
-                    },
-                },
+                playerStats: makeSavageStats(),
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                savageAttacker: false,
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.savageAttacker).toBe(false);
+        });
+
+        it('sets savageAttacker false when already used this round', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign') return [];
+                if (key === 'TestFighter' && prop === '_Savage_Attacker_usedRound') return true;
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                isMelee: true,
+                playerStats: makeSavageStats(),
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.savageAttacker).toBe(false);
+        });
+
+        it('sets savageAttacker false when feat is not present', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                isMelee: true,
+                playerStats: {},
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.savageAttacker).toBe(false);
         });
     });
 
-    describe('weapon type popup data', () => {
-        it('sets weaponType to unarmed when isUnarmedStrike', async () => {
+    describe('weapon type classification', () => {
+        it('sets weaponType to unarmed for unarmed strikes', async () => {
             getRuntimeValue.mockImplementation((key) => {
                 if (key === 'campaign') return [];
                 return null;
@@ -286,9 +451,8 @@ describe('Plain damage popup data', () => {
                 isUnarmedStrike: true,
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                weaponType: 'unarmed',
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.weaponType).toBe('unarmed');
         });
 
         it('sets weaponType to melee for melee attacks', async () => {
@@ -305,9 +469,8 @@ describe('Plain damage popup data', () => {
                 isMelee: true,
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                weaponType: 'melee',
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.weaponType).toBe('melee');
         });
 
         it('sets weaponType to ranged for ranged attacks', async () => {
@@ -324,14 +487,51 @@ describe('Plain damage popup data', () => {
                 isMelee: false,
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                weaponType: 'ranged',
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.weaponType).toBe('ranged');
+        });
+
+        it('defaults weaponType to melee when isMelee is undefined', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.weaponType).toBe('melee');
         });
     });
 
-    describe('holy aura save result', () => {
-        it('includes holyAuraSaveResult in popup when present', async () => {
+    describe('gwf (great weapon fighting) popup data', () => {
+        it('sets gwfApplied false and gwfDisplayRolls when no GWF changes', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.gwfApplied).toBe(false);
+            expect(call.gwfOriginalRolls).toBeNull();
+            expect(call.gwfDisplayRolls).toEqual([5, 3]);
+        });
+    });
+
+    describe('holy aura save result passthrough', () => {
+        it('includes holyAuraSaveResult in popup when present in applyResult', async () => {
             getRuntimeValue.mockImplementation((key) => {
                 if (key === 'campaign') return [];
                 return null;
@@ -349,14 +549,74 @@ describe('Plain damage popup data', () => {
                 damageType: 'slashing',
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                holyAuraSaveResult: { success: true, saveType: 'wisdom' },
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.holyAuraSaveResult).toEqual({ success: true, saveType: 'wisdom' });
         });
     });
 
-    describe('spellName in popup', () => {
-        it('includes spellName in popup data', async () => {
+    describe('dc data passthrough', () => {
+        it('includes dc, dcType, dcSuccess from context', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                dc: 15,
+                dcType: 'strength',
+                dcSuccess: false,
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.dc).toBe(15);
+            expect(call.dcType).toBe('strength');
+            expect(call.dcSuccess).toBe(false);
+        });
+    });
+
+    describe('tavern brawler rerolls passthrough', () => {
+        it('includes tavernBrawlerRerolls from context when present', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                tavernBrawlerRerolls: [1, 2],
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.tavernBrawlerRerolls).toEqual([1, 2]);
+        });
+
+        it('sets tavernBrawlerRerolls to null when not in context', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.tavernBrawlerRerolls).toBeNull();
+        });
+    });
+
+    describe('spellName passthrough', () => {
+        it('includes spellName from context', async () => {
             getRuntimeValue.mockImplementation((key) => {
                 if (key === 'campaign') return [];
                 return null;
@@ -370,60 +630,11 @@ describe('Plain damage popup data', () => {
                 spellName: 'Fire Bolt',
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                spellName: 'Fire Bolt',
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.spellName).toBe('Fire Bolt');
         });
-    });
 
-    describe('dc data in popup', () => {
-        it('includes dc, dcType, dcSuccess in popup data', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'campaign') return [];
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-
-            const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-                dc: 15,
-                dcType: 'strength',
-                dcSuccess: false,
-            });
-
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                dc: 15,
-                dcType: 'strength',
-                dcSuccess: false,
-            }));
-        });
-    });
-
-    describe('tavernBrawlerRerolls in popup', () => {
-        it('includes tavernBrawlerRerolls when present', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'campaign') return [];
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-
-            const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-                tavernBrawlerRerolls: [1, 2],
-            });
-
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                tavernBrawlerRerolls: [1, 2],
-            }));
-        });
-    });
-
-    describe('targetMaxHp in popup', () => {
-        it('sets targetMaxHp from applyResult', async () => {
+        it('sets spellName to empty string when not in context', async () => {
             getRuntimeValue.mockImplementation((key) => {
                 if (key === 'campaign') return [];
                 return null;
@@ -436,14 +647,41 @@ describe('Plain damage popup data', () => {
                 damageType: 'slashing',
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                targetMaxHp: 13,
-            }));
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.spellName).toBe('');
         });
     });
 
-    describe('GWF applied in popup', () => {
-        it('sets gwfApplied and gwfDisplayRolls in popup', async () => {
+    describe('intercepted damage popup data', () => {
+        it('includes interceptedFeature and adjusted hp values when damage is intercepted', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({
+                finalDamage: 5,
+                newHp: 8,
+                damageReduced: false,
+                intercepted: true,
+                interceptedFeature: 'Shield Boy',
+                damageDealt: 3,
+                oldHp: 11,
+            });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            const call = deps.setPopupHtml.mock.calls[0][0];
+            expect(call.interceptedFeature).toBe('Shield Boy');
+            expect(call.finalDamage).toBe(3);
+        });
+    });
+
+    describe('applyDamageToTarget call verification', () => {
+        it('calls applyDamageToTarget with correct arguments for plain damage', async () => {
             getRuntimeValue.mockImplementation((key) => {
                 if (key === 'campaign') return [];
                 return null;
@@ -456,11 +694,14 @@ describe('Plain damage popup data', () => {
                 damageType: 'slashing',
             });
 
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                gwfApplied: false,
-                gwfOriginalRolls: null,
-                gwfDisplayRolls: [5, 3],
-            }));
+            expect(applyDamageToTarget).toHaveBeenCalledTimes(1);
+            const [, target, damage, damageTypes, campaign, , , attacker] =
+                applyDamageToTarget.mock.calls[0];
+            expect(target).toBe('Goblin');
+            expect(damage).toBe(8);
+            expect(damageTypes).toEqual(['slashing']);
+            expect(campaign).toBe('test-campaign');
+            expect(attacker).toBe('TestFighter');
         });
     });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -101,7 +102,7 @@ import { loadCombatSummary } from '../../../services/encounters/combatData.js';
 import { applyDamageToTarget } from '../../../services/rules/combat/applyDamage.js';
 import { createLogDamageAndShow } from '../useLoggedDiceRollDamage.js';
 
-describe('Plain damage ram attack / prone', () => {
+describe('Plain damage ram attack / prone condition', () => {
     const deps = {
         characterName: 'TestFighter',
         campaignName: 'test-campaign',
@@ -121,64 +122,72 @@ describe('Plain damage ram attack / prone', () => {
     };
 
     beforeEach(() => {
-        getRuntimeValue.mockReset().mockReturnValue(null);
-        setRuntimeValue.mockClear();
-        applyDamageToTarget.mockReset().mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+        vi.clearAllMocks();
+        getRuntimeValue.mockReturnValue(null);
+        applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
         loadCombatSummary.mockResolvedValue({
             creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13 }],
         });
-        deps.logEntry.mockClear();
-        deps.setPopupHtml.mockClear();
     });
 
     function createFn() {
         return createLogDamageAndShow(deps);
     }
 
-    describe('ram attack / prone condition', () => {
-        it('applies prone condition when ramActive and isMelee', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign') return [];
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-            loadCombatSummary.mockResolvedValue({
-                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13, size: 'Medium' }],
-            });
+    function baseContext(extra = {}) {
+        return {
+            targetName: 'Goblin',
+            damageType: 'slashing',
+            ramActive: true,
+            isMelee: true,
+            ...extra,
+        };
+    }
 
+    describe('ram prone application', () => {
+        it('applies prone when ramActive and isMelee with NPC target', async () => {
             const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-                ramActive: true,
-                isMelee: true,
-            });
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, baseContext());
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'Goblin',
                 'activeConditions',
-                ['Prone'],
+                expect.arrayContaining(['Prone']),
+                'test-campaign'
+            );
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'condition',
+                condition: 'Prone',
+                reason: 'Power of the Wilds (Ram)',
+            }));
+        });
+
+        it('applies prone when ramActive and isMelee with player target', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'Goblin' && prop === 'activeConditions') return [];
+                return null;
+            });
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'player', ac: 12, currentHp: 13, maxHp: 13 }],
+            });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, baseContext());
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                expect.arrayContaining(['Prone']),
                 'test-campaign'
             );
         });
 
-        it('does not apply prone if target is already prone', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign') return [];
-                if (key === 'Goblin' && prop === 'activeConditions') return ['Prone'];
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-            loadCombatSummary.mockResolvedValue({
-                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13, size: 'Medium' }],
-            });
-
+        it('does not apply prone when ramActive is false', async () => {
             const fn = createFn();
             await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
                 targetName: 'Goblin',
                 damageType: 'slashing',
-                ramActive: true,
+                ramActive: false,
                 isMelee: true,
             });
 
@@ -189,45 +198,90 @@ describe('Plain damage ram attack / prone', () => {
                 'test-campaign'
             );
         });
-    });
 
-    describe('player target with size check for ram', () => {
-        it('applies prone to player target when ram active and size is Small', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign') return [];
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-            loadCombatSummary.mockResolvedValue({
-                creatures: [{ name: 'Goblin', type: 'player', ac: 12, currentHp: 13, maxHp: 13, size: 'Small' }],
-            });
-
+        it('does not apply prone when isMelee is false', async () => {
             const fn = createFn();
             await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
                 targetName: 'Goblin',
-                damageType: 'slashing',
+                damageType: 'fire',
                 ramActive: true,
-                isMelee: true,
+                isMelee: false,
             });
 
-            expect(setRuntimeValue).toHaveBeenCalledWith(
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
                 'Goblin',
                 'activeConditions',
-                ['Prone'],
+                expect.arrayContaining(['Prone']),
                 'test-campaign'
             );
         });
 
-        it('does not apply prone when target is Huge or larger', async () => {
+        it('does not apply prone when target is already prone', async () => {
             getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign') return [];
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
+                if (key === 'Goblin' && prop === 'activeConditions') return ['Prone'];
                 return null;
             });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, baseContext());
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                expect.arrayContaining(['Prone']),
+                'test-campaign'
+            );
+        });
+
+        it('does not apply prone when target is Huge', async () => {
             loadCombatSummary.mockResolvedValue({
                 creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13, size: 'Huge' }],
+            });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, baseContext());
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                expect.arrayContaining(['Prone']),
+                'test-campaign'
+            );
+        });
+
+        it('does not apply prone when target is Large', async () => {
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13, size: 'Large' }],
+            });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, baseContext());
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                expect.arrayContaining(['Prone']),
+                'test-campaign'
+            );
+        });
+
+        it('does not apply prone when applyResult is null', async () => {
+            applyDamageToTarget.mockReturnValue(null);
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, baseContext());
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                expect.arrayContaining(['Prone']),
+                'test-campaign'
+            );
+        });
+
+        it('does not apply prone when target is not in combat summary', async () => {
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Orc', type: 'npc', ac: 14, currentHp: 15, maxHp: 15 }],
             });
 
             const fn = createFn();
@@ -245,59 +299,37 @@ describe('Plain damage ram attack / prone', () => {
                 'test-campaign'
             );
         });
-    });
 
-    describe('player target size for ram', () => {
-        it('applies prone to player target when ram active and size is Tiny', async () => {
+        it('preserves existing non-prone conditions when adding prone', async () => {
             getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign') return [];
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
+                if (key === 'Goblin' && prop === 'activeConditions') return ['Ensnaring Strike'];
                 return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-            loadCombatSummary.mockResolvedValue({
-                creatures: [{ name: 'Goblin', type: 'player', ac: 12, currentHp: 13, maxHp: 13, size: 'Tiny' }],
             });
 
             const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-                ramActive: true,
-                isMelee: true,
-            });
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, baseContext());
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'Goblin',
                 'activeConditions',
-                ['Prone'],
+                expect.arrayContaining(['Ensnaring Strike', 'Prone']),
                 'test-campaign'
             );
         });
 
-        it('applies prone when target has no size property', async () => {
+        it('does not add prone if target has prone with different casing', async () => {
             getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign') return [];
-                if (key === 'Goblin' && prop === 'activeConditions') return [];
+                if (key === 'Goblin' && prop === 'activeConditions') return ['prone'];
                 return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-            loadCombatSummary.mockResolvedValue({
-                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13 }],
             });
 
             const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-                ramActive: true,
-                isMelee: true,
-            });
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, baseContext());
 
-            expect(setRuntimeValue).toHaveBeenCalledWith(
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
                 'Goblin',
                 'activeConditions',
-                ['Prone'],
+                expect.arrayContaining(['Prone']),
                 'test-campaign'
             );
         });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -98,9 +99,25 @@ import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { createPlayerSaveDamageHandler } from './handlePlayerSaveDamage.js';
 import { computeConditionEffects } from '../../../services/combat/conditions/conditionEffects.js';
+import { sendSavePrompt } from '../../../services/combat/conditions/savePromptService.js';
+import { registerPendingSavePrompt } from '../../../services/combat/auras/pendingSaveRegistry.js';
+import { registerPendingPopupSetter } from '../../../services/combat/auras/pendingPopupRegistry.js';
+import { handleOverchannelSelfDamage } from './handleOverchannelSelfDamage.js';
 
-describe('handlePlayerSaveDamage - main save prompt path', () => {
-    const deps = {
+const BASE_CONTEXT = {
+    saveDc: 13,
+    saveType: 'DEX',
+    dcSuccess: 'half',
+    damageType: 'Fire',
+    targetName: 'TestWizard',
+};
+
+const BASE_COMBAT_SUMMARY = {
+    creatures: [{ name: 'TestWizard', type: 'player' }],
+};
+
+function makeDeps(overrides = {}) {
+    return {
         characterName: 'TestWizard',
         campaignName: 'test-campaign',
         characters: [{ name: 'TestWizard' }],
@@ -108,11 +125,32 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
         setPopupHtml: vi.fn(),
         logEntry: vi.fn(),
         pendingSaves: {},
+        ...overrides,
     };
+}
+
+function invokeHandler(handler, context = BASE_CONTEXT, combatSummary = BASE_COMBAT_SUMMARY, ...extraArgs) {
+    return handler(
+        'Fire Bolt',
+        '1d10',
+        5,
+        [6],
+        0,
+        context,
+        5,
+        combatSummary,
+        [6],
+        ...extraArgs
+    );
+}
+
+describe('handlePlayerSaveDamage - pending data structure', () => {
+    const deps = makeDeps();
 
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReset().mockReturnValue(null);
+        deps.pendingSaves = {};
+        getRuntimeValue.mockReturnValue(null);
         computeConditionEffects.mockReturnValue({
             restoreBalance: false,
             autoRerollForSaves: false,
@@ -126,201 +164,111 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
         isCircleOfPowerActive.mockReturnValue(false);
     });
 
-    it('sends a save prompt when no special paths apply', async () => {
+    it('stores core save fields in pending data', async () => {
         const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-        };
+        await invokeHandler(handler);
 
-        const result = await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
-
-        expect(result).toBe(true);
         expect(deps.pendingSaves).toHaveProperty('test-guid-1234');
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'save-damage',
-                waitingForPlayerSave: true,
-                promptId: 'test-guid-1234',
-                rawDamage: 5,
-                gwfApplied: false,
-                gwfOriginalRolls: null,
-            })
-        );
-        expect(deps.logEntry).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'roll',
-                rollType: 'save-prompt',
-            })
-        );
-    });
-
-    it('sets metamagicHeighten disadvantage in pending data', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
+        const pending = deps.pendingSaves['test-guid-1234'];
+        expect(pending).toMatchObject({
+            targetName: 'TestWizard',
+            rawDamage: 5,
             saveDc: 13,
             saveType: 'DEX',
             dcSuccess: 'half',
             damageType: 'Fire',
-            targetName: 'TestWizard',
+            name: 'Fire Bolt',
+            formula: '1d10',
+            modifier: 0,
+            rolls: [6],
+            campaignName: 'test-campaign',
+        });
+    });
+
+    it('defaults metamagicHeighten and saveAdvantage to false when no special sources apply', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        const pending = deps.pendingSaves['test-guid-1234'];
+        expect(pending).toHaveProperty('metamagicHeighten', false);
+        expect(pending).toHaveProperty('saveAdvantage', false);
+    });
+
+    it('defaults isCantrip, overchannel, and autoDamage fields to falsy values', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        const pending = deps.pendingSaves['test-guid-1234'];
+        expect(pending).toHaveProperty('isCantrip', false);
+        expect(pending).toHaveProperty('overchannelActive', false);
+        expect(pending).toHaveProperty('overchannelUseCount', 0);
+        expect(pending).toHaveProperty('overchannelSpellLevel', 1);
+        expect(pending).toHaveProperty('autoDamageSecondaryFormula', null);
+        expect(pending).toHaveProperty('autoDamageSecondaryName', null);
+        expect(pending).toHaveProperty('autoDamageSecondaryDamageType', null);
+    });
+
+    it('passes context boolean flags through to pending data', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        const context = {
+            ...BASE_CONTEXT,
             metamagicHeighten: true,
-        };
-
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
-
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('metamagicHeighten', true);
-    });
-
-    it('sets isCantrip in pending data', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
             isCantrip: true,
-        };
-
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
-
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('isCantrip', true);
-    });
-
-    it('sets overchannel fields in pending data', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
             overchannelActive: true,
             overchannelUseCount: 2,
             overchannelSpellLevel: 3,
         };
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
+        await invokeHandler(handler, context);
 
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('overchannelActive', true);
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('overchannelUseCount', 2);
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('overchannelSpellLevel', 3);
+        const pending = deps.pendingSaves['test-guid-1234'];
+        expect(pending).toHaveProperty('metamagicHeighten', true);
+        expect(pending).toHaveProperty('isCantrip', true);
+        expect(pending).toHaveProperty('overchannelActive', true);
+        expect(pending).toHaveProperty('overchannelUseCount', 2);
+        expect(pending).toHaveProperty('overchannelSpellLevel', 3);
     });
 
-    it('sets autoDamage fields in pending data', async () => {
+    it('passes context autoDamage fields through to pending data', async () => {
         const handler = createPlayerSaveDamageHandler(deps);
         const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
+            ...BASE_CONTEXT,
             autoDamageSecondaryFormula: '2d6',
             autoDamageSecondaryName: 'Radiant',
             autoDamageSecondaryDamageType: 'Radiant',
         };
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
+        await invokeHandler(handler, context);
 
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('autoDamageSecondaryFormula', '2d6');
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('autoDamageSecondaryName', 'Radiant');
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('autoDamageSecondaryDamageType', 'Radiant');
+        const pending = deps.pendingSaves['test-guid-1234'];
+        expect(pending).toHaveProperty('autoDamageSecondaryFormula', '2d6');
+        expect(pending).toHaveProperty('autoDamageSecondaryName', 'Radiant');
+        expect(pending).toHaveProperty('autoDamageSecondaryDamageType', 'Radiant');
     });
 
-    it('uses attackerName when provided in pending data', async () => {
+    it('passes context statusEffects and playerStats through to pending data', async () => {
         const handler = createPlayerSaveDamageHandler(deps);
         const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-            attackerName: 'EnemyMage',
+            ...BASE_CONTEXT,
+            statusEffects: ['exhaustion', 'poisoned'],
+            playerStats: { level: 10, class: { name: 'Wizard' } },
         };
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
+        await invokeHandler(handler, context);
 
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('attackerName', 'EnemyMage');
+        const pending = deps.pendingSaves['test-guid-1234'];
+        expect(pending).toHaveProperty('statusEffects', ['exhaustion', 'poisoned']);
+        expect(pending).toHaveProperty('playerStats', { level: 10, class: { name: 'Wizard' } });
     });
 });
 
-describe('handlePlayerSaveDamage - gwf (Great Weapon Fighting) tracking', () => {
-    const deps = {
-        characterName: 'TestWizard',
-        campaignName: 'test-campaign',
-        characters: [{ name: 'TestWizard' }],
-        charactersRef: { current: [] },
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        pendingSaves: {},
-    };
+describe('handlePlayerSaveDamage - attackerName resolution', () => {
+    const deps = makeDeps();
 
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReset().mockReturnValue(null);
+        deps.pendingSaves = {};
+        getRuntimeValue.mockReturnValue(null);
         computeConditionEffects.mockReturnValue({
             restoreBalance: false,
             autoRerollForSaves: false,
@@ -334,63 +282,61 @@ describe('handlePlayerSaveDamage - gwf (Great Weapon Fighting) tracking', () => 
         isCircleOfPowerActive.mockReturnValue(false);
     });
 
-    it('tracks gwfApplied when displayRolls differ from baseRolls', async () => {
+    it('uses attackerName from context when provided', async () => {
         const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-        };
+        const context = { ...BASE_CONTEXT, attackerName: 'EnemyMage' };
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6],
-            undefined,
-            [3] // gwfDisplayRolls differs from gwfBaseRolls (default undefined)
-        );
+        await invokeHandler(handler, context);
+
+        const pending = deps.pendingSaves['test-guid-1234'];
+        expect(pending).toHaveProperty('attackerName', 'EnemyMage');
+    });
+
+    it('defaults attackerName to characterName when context lacks attackerName', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        const pending = deps.pendingSaves['test-guid-1234'];
+        expect(pending).toHaveProperty('attackerName', 'TestWizard');
+    });
+});
+
+describe('handlePlayerSaveDamage - GWF tracking in pending data', () => {
+    const deps = makeDeps();
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        deps.pendingSaves = {};
+        getRuntimeValue.mockReturnValue(null);
+        computeConditionEffects.mockReturnValue({
+            restoreBalance: false,
+            autoRerollForSaves: false,
+            autoRerollBonus: null,
+            saveAdvantageCount: 0,
+            saveAdvantageAbilities: null,
+        });
+        getHolyAuraTargets.mockReturnValue([]);
+        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
+        isCircleOfPowerActive.mockReturnValue(false);
+    });
+
+    it('sets gwfApplied false and gwfOriginalRolls null in popup when gwfBaseRolls and gwfDisplayRolls are both undefined', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler, BASE_CONTEXT, BASE_COMBAT_SUMMARY, undefined, undefined);
 
         expect(deps.setPopupHtml).toHaveBeenCalledWith(
             expect.objectContaining({
-                gwfApplied: true,
-                gwfOriginalRolls: undefined,
+                gwfApplied: false,
+                gwfOriginalRolls: null,
             })
         );
     });
 
-    it('tracks gwfApplied when gwfDisplayRolls equals gwfBaseRolls', async () => {
+    it('sets gwfApplied true and gwfOriginalRolls set in popup when gwfBaseRolls and gwfDisplayRolls differ', async () => {
         const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-        };
+        await invokeHandler(handler, BASE_CONTEXT, BASE_COMBAT_SUMMARY, [6, 6], [3, 3]);
 
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6],
-            [6, 6], // gwfBaseRolls
-            [6, 6]  // gwfDisplayRolls same content but different object reference
-        );
-
-        // Arrays are compared by reference, not value, so [6,6] !== [6,6] is true
         expect(deps.setPopupHtml).toHaveBeenCalledWith(
             expect.objectContaining({
                 gwfApplied: true,
@@ -400,20 +346,13 @@ describe('handlePlayerSaveDamage - gwf (Great Weapon Fighting) tracking', () => 
     });
 });
 
-describe('handlePlayerSaveDamage - status effects and player stats', () => {
-    const deps = {
-        characterName: 'TestWizard',
-        campaignName: 'test-campaign',
-        characters: [{ name: 'TestWizard' }],
-        charactersRef: { current: [] },
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        pendingSaves: {},
-    };
+describe('handlePlayerSaveDamage - side effects', () => {
+    const deps = makeDeps();
 
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReset().mockReturnValue(null);
+        deps.pendingSaves = {};
+        getRuntimeValue.mockReturnValue(null);
         computeConditionEffects.mockReturnValue({
             restoreBalance: false,
             autoRerollForSaves: false,
@@ -427,34 +366,145 @@ describe('handlePlayerSaveDamage - status effects and player stats', () => {
         isCircleOfPowerActive.mockReturnValue(false);
     });
 
-    it('stores statusEffects and playerStats in pending data', async () => {
+    it('registers pending save prompt with the registry', async () => {
         const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 15,
-            saveType: 'CON',
-            dcSuccess: 'half',
-            damageType: 'Poison',
-            targetName: 'TestWizard',
-            statusEffects: ['exhaustion', 'poisoned'],
-            playerStats: { level: 10, class: { name: 'Wizard' } },
-        };
+        await invokeHandler(handler);
 
-        await handler(
-            'Acid Arrow',
-            '4d4',
-            10,
-            [3, 4, 2, 1],
-            0,
-            context,
-            10,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [3, 4, 2, 1]
+        expect(registerPendingSavePrompt).toHaveBeenCalledWith(
+            'test-guid-1234',
+            expect.objectContaining({
+                targetName: 'TestWizard',
+                rawDamage: 5,
+                saveDc: 13,
+                saveType: 'DEX',
+            })
         );
+    });
 
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('statusEffects', ['exhaustion', 'poisoned']);
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('playerStats', {
-            level: 10,
-            class: { name: 'Wizard' },
+    it('registers pending popup setter with the registry', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        expect(registerPendingPopupSetter).toHaveBeenCalledWith(
+            'test-guid-1234',
+            expect.any(Function)
+        );
+    });
+
+    it('sends save prompt via savePromptService', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        expect(sendSavePrompt).toHaveBeenCalledWith(
+            'test-campaign',
+            expect.objectContaining({
+                promptId: 'test-guid-1234',
+                targetName: 'TestWizard',
+                saveType: 'DEX',
+                saveDc: 13,
+                dcSuccess: 'half',
+                damageFormula: '1d10',
+                damageType: 'Fire',
+                sourceName: 'Fire Bolt',
+                rawDamage: 5,
+                disadvantage: false,
+                advantage: false,
+            })
+        );
+    });
+
+    it('calls handleOverchannelSelfDamage at the end of the handler', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        expect(handleOverchannelSelfDamage).toHaveBeenCalledWith(
+            'TestWizard',
+            'test-campaign',
+            expect.any(Object),
+            expect.any(Function),
+            expect.any(Array)
+        );
+    });
+
+    it('logs a save-prompt roll entry', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        expect(deps.logEntry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'roll',
+                rollType: 'save-prompt',
+                name: 'Fire Bolt',
+                formula: '1d10',
+                total: 5,
+                damageType: 'Fire',
+                targetName: 'TestWizard',
+                saveType: 'DEX',
+                saveDc: 13,
+                dcSuccess: 'half',
+                forcedMode: 'normal',
+            })
+        );
+    });
+
+    it('sets popup with waitingForPlayerSave and promptId', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'save-damage',
+                waitingForPlayerSave: true,
+                promptId: 'test-guid-1234',
+                rawDamage: 5,
+                gwfApplied: false,
+                gwfOriginalRolls: null,
+                autoReroll: false,
+                autoRerollBonus: null,
+            })
+        );
+    });
+});
+
+describe('handlePlayerSaveDamage - forcedMode in logging', () => {
+    const deps = makeDeps();
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        deps.pendingSaves = {};
+        getRuntimeValue.mockReturnValue(null);
+        computeConditionEffects.mockReturnValue({
+            restoreBalance: false,
+            autoRerollForSaves: false,
+            autoRerollBonus: null,
+            saveAdvantageCount: 0,
+            saveAdvantageAbilities: null,
         });
+        getHolyAuraTargets.mockReturnValue([]);
+        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
+        isCircleOfPowerActive.mockReturnValue(false);
+    });
+
+    it('logs forcedMode: disadvantage when metamagicHeighten is true', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler, { ...BASE_CONTEXT, metamagicHeighten: true });
+
+        expect(deps.logEntry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                forcedMode: 'disadvantage',
+            })
+        );
+    });
+
+    it('logs forcedMode: normal when metamagicHeighten is false', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        await invokeHandler(handler);
+
+        expect(deps.logEntry).toHaveBeenCalledWith(
+            expect.objectContaining({
+                forcedMode: 'normal',
+            })
+        );
     });
 });

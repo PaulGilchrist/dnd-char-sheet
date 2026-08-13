@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -102,7 +103,7 @@ import { applyDamageToTarget } from '../../../services/rules/combat/applyDamage.
 import { createLogDamageAndShow } from '../useLoggedDiceRollDamage.js';
 
 describe('Plain damage sentinel', () => {
-    const deps = {
+    const baseDeps = {
         characterName: 'TestFighter',
         campaignName: 'test-campaign',
         characters: [
@@ -120,6 +121,10 @@ describe('Plain damage sentinel', () => {
         pendingSaves: {},
     };
 
+    function buildDeps(overrides = {}) {
+        return { ...baseDeps, ...overrides };
+    }
+
     beforeEach(() => {
         getRuntimeValue.mockReset().mockReturnValue(null);
         setRuntimeValue.mockClear();
@@ -127,16 +132,162 @@ describe('Plain damage sentinel', () => {
         loadCombatSummary.mockResolvedValue({
             creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13 }],
         });
-        deps.logEntry.mockClear();
-        deps.setPopupHtml.mockClear();
     });
 
-    function createFn() {
-        return createLogDamageAndShow(deps);
+    function createFn(deps) {
+        return createLogDamageAndShow(deps || baseDeps);
     }
 
-    describe('sentinel without opportunity attack', () => {
-        it('does not apply sentinel effect when not an opportunity attack', async () => {
+    function makeOpportunityAttackContext(extra = {}) {
+        return {
+            targetName: 'Goblin',
+            damageType: 'slashing',
+            isOpportunityAttack: true,
+            ...extra,
+        };
+    }
+
+    describe('sentinel effect application', () => {
+        it('applies sentinel speed_zero effect on hit opportunity attack when attacker has feat', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'lastAttack') return { hit: true, attackerName: 'TestFighter' };
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, makeOpportunityAttackContext());
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Goblin',
+                        source: 'Sentinel',
+                        option: 'Halt',
+                        effect: 'speed_zero',
+                        duration: 'end_of_turn',
+                    }),
+                ]),
+                'test-campaign'
+            );
+        });
+
+        it('applies sentinel effect by attacker name when context attackerName differs from characterName', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'lastAttack') return { hit: true, attackerName: 'TestFighter' };
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, makeOpportunityAttackContext({ attackerName: 'TestFighter' }));
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({ target: 'Goblin', source: 'Sentinel' }),
+                ]),
+                'test-campaign'
+            );
+        });
+
+        it('merges sentinel effect into existing targetEffects array', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'lastAttack') return { hit: true, attackerName: 'TestFighter' };
+                if (key === 'campaign') return [
+                    { target: 'Goblin', source: 'Other', effect: 'some_effect' },
+                ];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, makeOpportunityAttackContext());
+
+            const targetEffectsCall = setRuntimeValue.mock.calls.find(
+                (call) => call[1] === 'targetEffects'
+            );
+            expect(targetEffectsCall).toBeDefined();
+            const updatedEffects = targetEffectsCall[2];
+            expect(updatedEffects).toHaveLength(2);
+            expect(updatedEffects[0]).toEqual({ target: 'Goblin', source: 'Other', effect: 'some_effect' });
+            expect(updatedEffects[1]).toMatchObject({
+                target: 'Goblin',
+                source: 'Sentinel',
+                effect: 'speed_zero',
+            });
+        });
+    });
+
+    describe('sentinel effect not applied', () => {
+        it('does not apply sentinel when attack did not hit', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'lastAttack') return { hit: false };
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, makeOpportunityAttackContext());
+
+            const targetEffectsCalls = setRuntimeValue.mock.calls.filter(
+                (call) => call[1] === 'targetEffects'
+            );
+            expect(targetEffectsCalls).toHaveLength(0);
+        });
+
+        it('does not apply sentinel when attacker name does not match', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'lastAttack') return { hit: true, attackerName: 'OtherAttacker' };
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, makeOpportunityAttackContext());
+
+            const targetEffectsCalls = setRuntimeValue.mock.calls.filter(
+                (call) => call[1] === 'targetEffects'
+            );
+            expect(targetEffectsCalls).toHaveLength(0);
+        });
+
+        it('does not apply sentinel when attacker lacks the feat', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'lastAttack') return { hit: true, attackerName: 'TestFighter' };
+                if (key === 'campaign') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+
+            const fn = createFn(buildDeps({
+                characters: [
+                    {
+                        name: 'TestFighter',
+                        computedStats: {
+                            armorClass: 16,
+                            characterAdvancement: [],
+                        },
+                    },
+                    { name: 'Goblin', computedStats: { armorClass: 12 } },
+                ],
+            }));
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, makeOpportunityAttackContext());
+
+            const targetEffectsCalls = setRuntimeValue.mock.calls.filter(
+                (call) => call[1] === 'targetEffects'
+            );
+            expect(targetEffectsCalls).toHaveLength(0);
+        });
+
+        it('does not apply sentinel when not an opportunity attack', async () => {
             getRuntimeValue.mockImplementation((key) => {
                 if (key === 'campaign') return [];
                 return null;
@@ -149,53 +300,10 @@ describe('Plain damage sentinel', () => {
                 damageType: 'slashing',
             });
 
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.anything(),
-                'test-campaign'
+            const targetEffectsCalls = setRuntimeValue.mock.calls.filter(
+                (call) => call[1] === 'targetEffects'
             );
-        });
-    });
-
-    describe('sentinel on attacker without sentinel feat', () => {
-        it('does not apply sentinel effect when attacker does not have sentinel', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'campaign') return [];
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-            loadCombatSummary.mockResolvedValue({
-                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13 }],
-            });
-
-            const fighterDeps = {
-                ...deps,
-                characters: [
-                    {
-                        name: 'TestFighter',
-                        computedStats: {
-                            armorClass: 16,
-                            characterAdvancement: [],
-                        },
-                    },
-                    { name: 'Goblin', computedStats: { armorClass: 12 } },
-                ],
-            };
-
-            const fn = createLogDamageAndShow(fighterDeps);
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-                isOpportunityAttack: true,
-            });
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.anything(),
-                'test-campaign'
-            );
+            expect(targetEffectsCalls).toHaveLength(0);
         });
     });
 });

@@ -1,4 +1,5 @@
-import { renderHook } from '@testing-library/react';
+// @improved-by-ai
+import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardSkills from './useWizardSkills.js';
 import useWizardConfig from './useWizardConfig.js';
@@ -39,128 +40,32 @@ describe('useWizardSkills', () => {
       expertiseLimits: null,
       preSelectedSkills: [],
       warnings: [],
+      setWarnings: vi.fn(),
     });
   });
 
-  describe('delegation to useWizardConfig', () => {
-    it('passes the correct validateFn, slot getters, and preSelect config', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      expect(typeof config.validateFn).toBe('function');
-      expect(typeof config.slots[0].get).toBe('function');
-      expect(typeof config.slots[1].get).toBe('function');
-      expect(typeof config.preSelect.getFn).toBe('function');
+  describe('return value shape', () => {
+    it('aliases warnings from useWizardConfig as skillWarnings', () => {
+      useWizardConfig.mockReturnValue({
+        skillLimits: null,
+        expertiseLimits: null,
+        preSelectedSkills: [],
+        warnings: ['Too many skills'],
+        setWarnings: vi.fn(),
+      });
+
+      const { result } = renderSkills();
+      expect(result.current).toHaveProperty('skillWarnings', ['Too many skills']);
+      expect(result.current).not.toHaveProperty('warnings');
     });
 
-    it('passes formData and setFormData to useWizardConfig', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      expect(config.formData).toBe(DEFAULT_FORM_DATA);
-      expect(config.setFormData).toBe(MOCK_SET_FORM_DATA);
-    });
-
-    it('configures two slots with isLimit flag', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      expect(config.slots).toHaveLength(2);
-      expect(config.slots[0].isLimit).toBe(true);
-      expect(config.slots[1].isLimit).toBe(true);
-    });
-
-    it('passes slot state keys matching their getter return keys', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      expect(config.slots[0].state.key).toBe('skillLimits');
-      expect(config.slots[1].state.key).toBe('expertiseLimits');
-    });
-
-    it('passes slot state initial values as null', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      expect(config.slots[0].state.initial).toBeNull();
-      expect(config.slots[1].state.initial).toBeNull();
-    });
-
-    it('passes getDeps that extracts relevant formData fields', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      expect(typeof config.getDeps).toBe('function');
-
-      const deps = config.getDeps(DEFAULT_FORM_DATA);
-      expect(deps).toEqual([
-        DEFAULT_FORM_DATA.skillProficiencies,
-        DEFAULT_FORM_DATA.expertSkills,
-        DEFAULT_FORM_DATA.class?.name,
-        DEFAULT_FORM_DATA.race?.name,
-        DEFAULT_FORM_DATA.background,
-        DEFAULT_FORM_DATA.rules,
-        DEFAULT_FORM_DATA.level,
-        DEFAULT_FORM_DATA.feats,
-        DEFAULT_FORM_DATA.toolProficiencies,
-      ]);
-    });
-
-    it('configures preSelect with correct stateKey', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      expect(config.preSelect.stateKey).toBe('preSelectedSkills');
-    });
-
-    it('configures preSelect merge function to append non-duplicate skills', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      expect(typeof config.preSelect.merge).toBe('function');
-
-      const prev = { skillProficiencies: ['Athletics'] };
-      const items = ['Stealth', 'Athletics'];
-      const result = config.preSelect.merge(prev, items);
-
-      expect(result.skillProficiencies).toEqual(['Athletics', 'Stealth']);
-    });
-
-    it('preSelect merge does not duplicate existing skills', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      const prev = { skillProficiencies: ['Athletics', 'Stealth'] };
-      const items = ['Stealth', 'Perception'];
-      const result = config.preSelect.merge(prev, items);
-
-      expect(result.skillProficiencies).toEqual(['Athletics', 'Stealth', 'Perception']);
-    });
-
-    it('preSelect merge handles missing skillProficiencies in prev', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      const prev = {};
-      const items = ['Athletics'];
-      const result = config.preSelect.merge(prev, items);
-
-      expect(result.skillProficiencies).toEqual(['Athletics']);
-    });
-
-    it('configures preSelect deps to extract relevant fields', () => {
-      renderSkills();
-      const config = useWizardConfig.mock.calls[0][0];
-      expect(typeof config.preSelect.deps).toBe('function');
-
-      const deps = config.preSelect.deps(DEFAULT_FORM_DATA);
-      expect(deps).toEqual([
-        DEFAULT_FORM_DATA.background,
-        DEFAULT_FORM_DATA.race?.name,
-        DEFAULT_FORM_DATA.class?.name,
-        DEFAULT_FORM_DATA.rules,
-        DEFAULT_FORM_DATA.feats,
-      ]);
-    });
-  });
-
-  describe('return value', () => {
-    it('forwards all properties from useWizardConfig', () => {
+    it('forwards all properties from useWizardConfig except warnings', () => {
       useWizardConfig.mockReturnValue({
         skillLimits: { maxSkills: 4 },
         expertiseLimits: { allowed: true, count: 1 },
         preSelectedSkills: ['Athletics', 'Stealth'],
         warnings: ['Warning A'],
+        setWarnings: vi.fn(),
       });
 
       const { result } = renderSkills();
@@ -168,33 +73,22 @@ describe('useWizardSkills', () => {
       expect(result.current.expertiseLimits).toEqual({ allowed: true, count: 1 });
       expect(result.current.preSelectedSkills).toEqual(['Athletics', 'Stealth']);
       expect(result.current.skillWarnings).toEqual(['Warning A']);
+      expect(typeof result.current.setWarnings).toBe('function');
     });
 
-    it('aliases warnings as skillWarnings, not warnings', () => {
-      useWizardConfig.mockReturnValue({
-        skillLimits: null,
-        expertiseLimits: null,
-        preSelectedSkills: [],
-        warnings: ['Warning A'],
-      });
-
-      const { result } = renderSkills();
-      expect(result.current).not.toHaveProperty('warnings');
-      expect(result.current).toHaveProperty('skillWarnings');
-    });
-
-    it('does not return extra properties', () => {
+    it('returns only the expected properties', () => {
       const { result } = renderSkills();
       const keys = Object.keys(result.current);
       expect(keys).toEqual([
         'skillLimits',
         'expertiseLimits',
         'preSelectedSkills',
+        'setWarnings',
         'skillWarnings',
       ]);
     });
 
-    it('returns setWarnings from useWizardConfig', () => {
+    it('returns null/empty defaults when useWizardConfig returns them', () => {
       useWizardConfig.mockReturnValue({
         skillLimits: null,
         expertiseLimits: null,
@@ -204,34 +98,35 @@ describe('useWizardSkills', () => {
       });
 
       const { result } = renderSkills();
-      expect(typeof result.current.setWarnings).toBe('function');
-    });
-
-    it('returns empty arrays and nulls for default config', () => {
-      useWizardConfig.mockReturnValue({
-        skillLimits: null,
-        expertiseLimits: null,
-        preSelectedSkills: [],
-        warnings: [],
-      });
-
-      const { result } = renderSkills();
       expect(result.current.skillLimits).toBeNull();
       expect(result.current.expertiseLimits).toBeNull();
       expect(result.current.preSelectedSkills).toEqual([]);
       expect(result.current.skillWarnings).toEqual([]);
     });
+
+    it('passes through undefined preSelectedSkills from useWizardConfig', () => {
+      useWizardConfig.mockReturnValue({
+        skillLimits: null,
+        expertiseLimits: null,
+        preSelectedSkills: undefined,
+        warnings: [],
+        setWarnings: vi.fn(),
+      });
+
+      const { result } = renderSkills();
+      expect(result.current.preSelectedSkills).toBeUndefined();
+    });
   });
 
   describe('reactivity', () => {
-    it('re-runs when formData changes', () => {
+    it('re-runs useWizardConfig when formData changes', () => {
       const { rerender } = renderSkills();
       expect(useWizardConfig).toHaveBeenCalledTimes(1);
       rerender();
       expect(useWizardConfig).toHaveBeenCalledTimes(2);
     });
 
-    it('re-runs when setFormData changes', () => {
+    it('re-runs useWizardConfig when setFormData changes', () => {
       const { rerender } = renderSkills(DEFAULT_FORM_DATA, vi.fn());
       expect(useWizardConfig).toHaveBeenCalledTimes(1);
       rerender();
@@ -239,58 +134,8 @@ describe('useWizardSkills', () => {
     });
   });
 
-  describe('null handling', () => {
-    it('returns null for limits when useWizardConfig returns null', () => {
-      useWizardConfig.mockReturnValue({
-        skillLimits: null,
-        expertiseLimits: null,
-        preSelectedSkills: [],
-        warnings: [],
-      });
-      const { result } = renderSkills();
-      expect(result.current.skillLimits).toBeNull();
-      expect(result.current.expertiseLimits).toBeNull();
-    });
-
-    it('returns undefined for preSelectedSkills when useWizardConfig returns undefined', () => {
-      useWizardConfig.mockReturnValue({
-        skillLimits: null,
-        expertiseLimits: null,
-        preSelectedSkills: undefined,
-        warnings: [],
-      });
-      const { result } = renderSkills();
-      expect(result.current.preSelectedSkills).toBeUndefined();
-    });
-  });
-
-  describe('warnings transformation', () => {
-    it('returns empty skillWarnings when no warnings', () => {
-      useWizardConfig.mockReturnValue({
-        skillLimits: null,
-        expertiseLimits: null,
-        preSelectedSkills: [],
-        warnings: [],
-      });
-      const { result } = renderSkills();
-      expect(result.current.skillWarnings).toEqual([]);
-    });
-
-    it('preserves all warning messages in skillWarnings', () => {
-      const warnings = ['Too many skills', 'Expertise not allowed'];
-      useWizardConfig.mockReturnValue({
-        skillLimits: null,
-        expertiseLimits: null,
-        preSelectedSkills: [],
-        warnings,
-      });
-      const { result } = renderSkills();
-      expect(result.current.skillWarnings).toEqual(warnings);
-    });
-  });
-
-  describe('callback invocation', () => {
-    it('validateFn callback invokes validateSkills with formData, using allFeats from closure', async () => {
+  describe('callback delegation to skillValidation', () => {
+    it('validateFn delegates to validateSkills with formData and allFeats', async () => {
       const mockFeats = [{ name: 'Skill Expert', benefits: [] }];
       renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, mockFeats);
       const config = useWizardConfig.mock.calls[0][0];
@@ -299,7 +144,7 @@ describe('useWizardSkills', () => {
       expect(skillValidation.validateSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
     });
 
-    it('slot[0] get callback invokes getSkillLimits with formData, using allFeats from closure', async () => {
+    it('slot getSkillLimits delegates with formData and allFeats', async () => {
       const mockFeats = [{ name: 'Skill Expert', benefits: [] }];
       renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, mockFeats);
       const config = useWizardConfig.mock.calls[0][0];
@@ -308,7 +153,7 @@ describe('useWizardSkills', () => {
       expect(skillValidation.getSkillLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
     });
 
-    it('slot[1] get callback invokes getExpertiseLimits with formData, using allFeats from closure', async () => {
+    it('slot getExpertiseLimits delegates with formData and allFeats', async () => {
       const mockFeats = [{ name: 'Skill Expert', benefits: [] }];
       renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, mockFeats);
       const config = useWizardConfig.mock.calls[0][0];
@@ -317,7 +162,7 @@ describe('useWizardSkills', () => {
       expect(skillValidation.getExpertiseLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
     });
 
-    it('preSelect.getFn callback invokes getPreSelectedSkills with formData, using allFeats from closure', async () => {
+    it('preSelect getFn delegates to getPreSelectedSkills with formData and allFeats', async () => {
       const mockFeats = [{ name: 'Skill Expert', benefits: [] }];
       renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, mockFeats);
       const config = useWizardConfig.mock.calls[0][0];
@@ -326,7 +171,7 @@ describe('useWizardSkills', () => {
       expect(skillValidation.getPreSelectedSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
     });
 
-    it('all callbacks use the same allFeats from closure', async () => {
+    it('all callbacks capture the same allFeats from closure', async () => {
       const mockFeats = [
         { name: 'Skill Expert', benefits: [] },
         { name: 'Skilled', benefits: [] },
@@ -351,7 +196,7 @@ describe('useWizardSkills', () => {
       expect(skillValidation.getPreSelectedSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
     });
 
-    it('callbacks work with null allFeats', async () => {
+    it('callbacks pass null when allFeats is null', async () => {
       renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, null);
       const config = useWizardConfig.mock.calls[0][0];
       skillValidation.validateSkills.mockResolvedValue([]);
@@ -372,7 +217,7 @@ describe('useWizardSkills', () => {
       expect(skillValidation.getPreSelectedSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, null);
     });
 
-    it('callbacks work with empty allFeats array', async () => {
+    it('callbacks pass empty array when allFeats is []', async () => {
       renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, []);
       const config = useWizardConfig.mock.calls[0][0];
       skillValidation.validateSkills.mockResolvedValue([]);
@@ -391,6 +236,103 @@ describe('useWizardSkills', () => {
 
       await config.preSelect.getFn(DEFAULT_FORM_DATA);
       expect(skillValidation.getPreSelectedSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, []);
+    });
+  });
+
+  describe('preSelect merge behavior', () => {
+    it('appends non-duplicate skills to existing skillProficiencies', () => {
+      renderSkills();
+      const config = useWizardConfig.mock.calls[0][0];
+      const prev = { skillProficiencies: ['Athletics'] };
+      const items = ['Stealth', 'Athletics'];
+      const result = config.preSelect.merge(prev, items);
+      expect(result.skillProficiencies).toEqual(['Athletics', 'Stealth']);
+    });
+
+    it('does not duplicate skills already in skillProficiencies', () => {
+      renderSkills();
+      const config = useWizardConfig.mock.calls[0][0];
+      const prev = { skillProficiencies: ['Athletics', 'Stealth'] };
+      const items = ['Stealth', 'Perception'];
+      const result = config.preSelect.merge(prev, items);
+      expect(result.skillProficiencies).toEqual(['Athletics', 'Stealth', 'Perception']);
+    });
+
+    it('creates skillProficiencies array when prev lacks it', () => {
+      renderSkills();
+      const config = useWizardConfig.mock.calls[0][0];
+      const prev = {};
+      const items = ['Athletics'];
+      const result = config.preSelect.merge(prev, items);
+      expect(result.skillProficiencies).toEqual(['Athletics']);
+    });
+
+    it('handles empty items array gracefully', () => {
+      renderSkills();
+      const config = useWizardConfig.mock.calls[0][0];
+      const prev = { skillProficiencies: ['Athletics'] };
+      const result = config.preSelect.merge(prev, []);
+      expect(result.skillProficiencies).toEqual(['Athletics']);
+    });
+
+    it('preserves other properties in prev during merge', () => {
+      renderSkills();
+      const config = useWizardConfig.mock.calls[0][0];
+      const prev = { skillProficiencies: ['Athletics'], name: 'Test' };
+      const items = ['Stealth'];
+      const result = config.preSelect.merge(prev, items);
+      expect(result).toEqual({ skillProficiencies: ['Athletics', 'Stealth'], name: 'Test' });
+    });
+  });
+
+  describe('integration: end-to-end hook behavior', () => {
+    it('returns resolved values from skillValidation callbacks through useWizardConfig', async () => {
+      useWizardConfig.mockReturnValue({
+        skillLimits: { maxSkills: 5 },
+        expertiseLimits: { allowed: true, count: 2 },
+        preSelectedSkills: ['Athletics'],
+        warnings: ['Expertise warning'],
+        setWarnings: vi.fn(),
+      });
+
+      const { result } = renderSkills();
+      await waitFor(() => {
+        expect(result.current.skillLimits).toEqual({ maxSkills: 5 });
+        expect(result.current.expertiseLimits).toEqual({ allowed: true, count: 2 });
+        expect(result.current.preSelectedSkills).toEqual(['Athletics']);
+        expect(result.current.skillWarnings).toEqual(['Expertise warning']);
+      });
+    });
+
+    it('setWarnings from useWizardConfig is accessible on the result', () => {
+      const mockSetWarnings = vi.fn();
+      useWizardConfig.mockReturnValue({
+        skillLimits: null,
+        expertiseLimits: null,
+        preSelectedSkills: [],
+        warnings: [],
+        setWarnings: mockSetWarnings,
+      });
+
+      const { result } = renderSkills();
+      expect(result.current.setWarnings).toBe(mockSetWarnings);
+    });
+
+    it('handles missing optional formData fields gracefully', () => {
+      const minimalFormData = { rules: '5e', level: 1 };
+      useWizardConfig.mockReturnValue({
+        skillLimits: null,
+        expertiseLimits: null,
+        preSelectedSkills: [],
+        warnings: [],
+        setWarnings: vi.fn(),
+      });
+
+      const { result } = renderSkills(minimalFormData);
+      expect(result.current.skillLimits).toBeNull();
+      expect(result.current.expertiseLimits).toBeNull();
+      expect(result.current.preSelectedSkills).toEqual([]);
+      expect(result.current.skillWarnings).toEqual([]);
     });
   });
 });

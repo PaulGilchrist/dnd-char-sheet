@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useCombatSuperiorityModal } from './useCombatSuperiorityModal.js';
@@ -33,26 +33,21 @@ vi.mock('../../services/automation/handlers/class-fighter-rogue/combatSuperiorit
   onCombatSuperioritySelected: vi.fn(),
 }));
 
-import { executeHandler } from '../../services/automation/index.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { executeManeuver, onCombatSuperioritySelected } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 
-const createMockPlayerStats = (overrides = {}) => ({ name: 'Thorin', level: 5, ...overrides });
-const defaultModalPayload = { action: { name: 'Test Maneuver' } };
+const mockPlayerStats = { name: 'Thorin', level: 5 };
 const mockCampaignName = 'test-campaign';
+const defaultModalPayload = { action: { name: 'Test Maneuver' } };
 
 describe('useCombatSuperiorityModal - handleCombatSuperiorityConfirm (no modal)', () => {
-  const mockPlayerStats = createMockPlayerStats();
-  const mockRollAttack = vi.fn();
-  const mockRollDamage = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('should return early without error when combatSuperiorityModal is null', async () => {
     const { result } = renderHook(
-      () => useCombatSuperiorityModal(mockPlayerStats, mockCampaignName, mockRollAttack, mockRollDamage)
+      () => useCombatSuperiorityModal(mockPlayerStats, mockCampaignName)
     );
 
     await act(async () => {
@@ -60,13 +55,15 @@ describe('useCombatSuperiorityModal - handleCombatSuperiorityConfirm (no modal)'
     });
 
     expect(result.current.combatSuperiorityModal).toBeNull();
-    expect(executeHandler).not.toHaveBeenCalled();
     expect(executeManeuver).not.toHaveBeenCalled();
     expect(onCombatSuperioritySelected).not.toHaveBeenCalled();
     expect(addEntry).not.toHaveBeenCalled();
   });
 
-  it('should clear the modal and not call any handlers when confirm is called with a modal set but no maneuver path taken', async () => {
+  it('should clear the modal and call onCombatSuperioritySelected when confirm is called with a modal set but no single-use maneuver', async () => {
+    const mockRollAttack = vi.fn();
+    const mockRollDamage = vi.fn();
+
     const { result } = renderHook(
       () => useCombatSuperiorityModal(mockPlayerStats, mockCampaignName, mockRollAttack, mockRollDamage)
     );
@@ -77,18 +74,25 @@ describe('useCombatSuperiorityModal - handleCombatSuperiorityConfirm (no modal)'
 
     expect(result.current.combatSuperiorityModal).toEqual(defaultModalPayload);
 
-    executeManeuver.mockResolvedValue({});
-
     await act(async () => {
       await result.current.handleCombatSuperiorityConfirm(['Test Maneuver']);
     });
 
     expect(result.current.combatSuperiorityModal).toBeNull();
+    expect(executeManeuver).not.toHaveBeenCalled();
+    expect(onCombatSuperioritySelected).toHaveBeenCalledWith(
+      { name: 'Test Maneuver' },
+      mockPlayerStats,
+      mockCampaignName,
+      ['Test Maneuver'],
+      undefined
+    );
+    expect(mockRollAttack).not.toHaveBeenCalled();
+    expect(mockRollDamage).not.toHaveBeenCalled();
   });
 });
 
 describe('useCombatSuperiorityModal - handleCombatSuperiorityConfirm (single-use maneuver)', () => {
-  const mockPlayerStats = createMockPlayerStats();
   const mockRollAttack = vi.fn();
   const mockRollDamage = vi.fn();
   const mockOnPopupHtml = vi.fn();
@@ -333,6 +337,28 @@ describe('useCombatSuperiorityModal - handleCombatSuperiorityConfirm (single-use
     );
   });
 
+  it('should call onPopupHtml with formatted HTML when onCombatSuperioritySelected returns popup property', async () => {
+    const { result } = renderHook(
+      () => useCombatSuperiorityModal(mockPlayerStats, mockCampaignName, mockRollAttack, mockRollDamage, mockOnPopupHtml)
+    );
+
+    onCombatSuperioritySelected.mockResolvedValue({
+      popup: { name: 'Pushing Attack', description: 'Target pushed 10 feet.' },
+    });
+
+    act(() => {
+      result.current.setCombatSuperiorityModal({ action: { name: 'Select Maneuvers' } });
+    });
+
+    await act(async () => {
+      await result.current.handleCombatSuperiorityConfirm(['Pushing Attack']);
+    });
+
+    expect(mockOnPopupHtml).toHaveBeenCalledWith(
+      '<b><i class="fa-solid fa-bolt"></i> Pushing Attack</b><br/>Target pushed 10 feet.<br/><span class="dice-roll-hint">click to dismiss</span>'
+    );
+  });
+
   it('should dispatch bait-and-switch-modal-show event when executeManeuver returns baitAndSwitchChoice modal', async () => {
     const baitAndSwitchPayload = {
       playerStats: mockPlayerStats,
@@ -560,28 +586,6 @@ describe('useCombatSuperiorityModal - handleCombatSuperiorityConfirm (single-use
         autoDamageFormula: '1d4 + 2',
         superiorityDieValue: 0,
       })
-    );
-  });
-
-  it('should call onPopupHtml with popup property from onCombatSuperioritySelected', async () => {
-    onCombatSuperioritySelected.mockResolvedValue({
-      popup: { name: 'Pushing Attack', description: 'Target pushed 10 feet.' },
-    });
-
-    const { result } = renderHook(
-      () => useCombatSuperiorityModal(mockPlayerStats, mockCampaignName, mockRollAttack, mockRollDamage, mockOnPopupHtml)
-    );
-
-    act(() => {
-      result.current.setCombatSuperiorityModal({ action: { name: 'Select Maneuvers' } });
-    });
-
-    await act(async () => {
-      await result.current.handleCombatSuperiorityConfirm(['Pushing Attack']);
-    });
-
-    expect(mockOnPopupHtml).toHaveBeenCalledWith(
-      '<b><i class="fa-solid fa-bolt"></i> Pushing Attack</b><br/>Target pushed 10 feet.<br/><span class="dice-roll-hint">click to dismiss</span>'
     );
   });
 

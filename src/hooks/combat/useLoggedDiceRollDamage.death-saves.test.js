@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -145,6 +146,7 @@ import { applyMinDamageAdjustment } from './loggedDiceRollUtils.js';
 import { applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
 import { createLogDamageAndShow } from './useLoggedDiceRollDamage.js';
 import { rollExpression } from '../../services/dice/diceRoller.js';
+
 describe('Player death saves on unconscious', () => {
     const deps = {
         characterName: 'TestWizard',
@@ -156,9 +158,9 @@ describe('Player death saves on unconscious', () => {
     };
 
     beforeEach(() => {
+        vi.clearAllMocks();
         rollExpression.mockReturnValue({ total: 8, rolls: [5, 3], modifier: 0 });
         getRuntimeValue.mockReturnValue(null);
-        setRuntimeValue.mockClear();
         applyMinDamageAdjustment.mockImplementation((d) => d);
         hasIgnoreResistance.mockReturnValue(false);
         endInvisibilityOnHostileAction.mockReturnValue(undefined);
@@ -166,50 +168,125 @@ describe('Player death saves on unconscious', () => {
         loadCombatSummary.mockResolvedValue({
             creatures: [{ name: 'Ally1', type: 'player', ac: 14, currentHp: 20, maxHp: 20 }],
         });
-        deps.logEntry.mockClear();
-        deps.setPopupHtml.mockClear();
     });
 
     function createFn() {
         return createLogDamageAndShow(deps);
     }
 
-    it('sets death saves when player dies from plain damage', async () => {
-        const fn = createFn();
-        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
-            targetName: 'Ally1',
-            damageType: 'fire',
+    describe('death saves initialization', () => {
+        it('sets deathSaves and deathFailures arrays when player drops to 0 HP', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'Ally1' && prop === 'hitPoints') return 20;
+                return null;
+            });
+
+            const fn = createFn();
+            await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
+                targetName: 'Ally1',
+                damageType: 'fire',
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Ally1',
+                'deathSaves',
+                [false, false, false],
+                'test-campaign'
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Ally1',
+                'deathFailures',
+                [false, false, false],
+                'test-campaign'
+            );
         });
 
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-            'Ally1',
-            'deathSaves',
-            [false, false, false],
-            'test-campaign'
-        );
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-            'Ally1',
-            'deathFailures',
-            [false, false, false],
-            'test-campaign'
-        );
-    });
+        it('sets death saves when player drops below 0 HP', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'Ally1' && prop === 'hitPoints') return 10;
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 20, newHp: -10, damageReduced: false });
 
-    it('does not set death saves when player survives', async () => {
-        applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 10, damageReduced: false });
+            const fn = createFn();
+            await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
+                targetName: 'Ally1',
+                damageType: 'fire',
+            });
 
-        const fn = createFn();
-        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
-            targetName: 'Ally1',
-            damageType: 'fire',
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Ally1',
+                'deathSaves',
+                [false, false, false],
+                'test-campaign'
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Ally1',
+                'deathFailures',
+                [false, false, false],
+                'test-campaign'
+            );
         });
 
-        expect(setRuntimeValue).not.toHaveBeenCalledWith(
-            'Ally1',
-            'deathSaves',
-            expect.any(Array),
-            'test-campaign'
-        );
+        it('does not set death saves when player survives with positive HP', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'Ally1' && prop === 'hitPoints') return 20;
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 10, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Fireball', '8d6', 10, [3, 4, 5, 2], 0, {
+                targetName: 'Ally1',
+                damageType: 'fire',
+            });
+
+            const deathSaveCalls = setRuntimeValue.mock.calls.filter(
+                (call) => call[1] === 'deathSaves' || call[1] === 'deathFailures'
+            );
+            expect(deathSaveCalls).toHaveLength(0);
+        });
+
+        it('does not reset death saves when player was already unconscious before damage', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'Ally1' && prop === 'hitPoints') return 0;
+                if (key === 'Ally1' && prop === 'currentHitPoints') return -5;
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 5, newHp: -5, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Fire Bolt', '1d10', 5, [5], 0, {
+                targetName: 'Ally1',
+                damageType: 'fire',
+            });
+
+            const deathSaveCalls = setRuntimeValue.mock.calls.filter(
+                (call) => call[1] === 'deathSaves' || call[1] === 'deathFailures'
+            );
+            expect(deathSaveCalls).toHaveLength(0);
+        });
+
+        it('does not set death saves for NPC targets', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'Goblin' && prop === 'hitPoints') return 10;
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 0, damageReduced: false });
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 10, maxHp: 10 }],
+            });
+
+            const fn = createFn();
+            await fn('Claw', '1d4+2', 5, [3], 2, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+            });
+
+            const deathSaveCalls = setRuntimeValue.mock.calls.filter(
+                (call) => call[1] === 'deathSaves' || call[1] === 'deathFailures'
+            );
+            expect(deathSaveCalls).toHaveLength(0);
+        });
     });
 });
-

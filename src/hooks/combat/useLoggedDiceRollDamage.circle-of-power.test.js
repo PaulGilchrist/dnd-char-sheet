@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -142,12 +143,18 @@ import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import { hasIgnoreResistance, playerIsImmuneToCondition } from '../../services/combat/automation/automationService.js';
 import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js';
 import { hasSoulstitchProtection, applyMinDamageAdjustment } from './loggedDiceRollUtils.js';
-import { computeDamageAfterSave, rollSaveForCreature, applyDamageToTarget, computeDamageAfterEvasion } from '../../services/rules/combat/applyDamage.js';
+import {
+    computeDamageAfterSave,
+    rollSaveForCreature,
+    applyDamageToTarget,
+    computeDamageAfterEvasion,
+} from '../../services/rules/combat/applyDamage.js';
 import { createLogDamageAndShow } from './useLoggedDiceRollDamage.js';
 import { getCoronaSaveDisadvantage } from '../../services/combat/auras/coronaAuraUtils.js';
 import { getElderChampionSaveDisadvantage } from '../../services/combat/auras/elderChampionAuraUtils.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { rollExpression } from '../../services/dice/diceRoller.js';
+
 describe('Circle of Power advantage on saves', () => {
     const deps = {
         characterName: 'TestWizard',
@@ -169,6 +176,10 @@ describe('Circle of Power advantage on saves', () => {
         playerIsImmuneToCondition.mockReturnValue(false);
         endInvisibilityOnHostileAction.mockReturnValue(undefined);
         computeDamageAfterSave.mockImplementation((total, success, _dcSuccess) => success ? Math.floor(total / 2) : total);
+        computeDamageAfterEvasion.mockImplementation(
+            (total, success, _dcSuccess, evasion) =>
+                evasion && success ? 0 : success ? Math.floor(total / 2) : total,
+        );
         rollSaveForCreature.mockReturnValue({ success: false, roll: 8, total: 11, bonus: 3, rawRolls: [8] });
         applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 3, damageReduced: false });
         getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
@@ -185,50 +196,100 @@ describe('Circle of Power advantage on saves', () => {
         return createLogDamageAndShow(deps);
     }
 
-    it('applies circle of power advantage on NPC save', async () => {
+    const fireballContext = {
+        targetName: 'Goblin',
+        damageType: 'fire',
+        saveDc: 15,
+        saveType: 'DEX',
+        dcSuccess: 'half',
+        attackerName: 'TestWizard',
+    };
+
+    it('passes advantage to NPC save roll when circle of power is active', async () => {
         isCircleOfPowerActive.mockReturnValue(true);
-        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
 
         const fn = createFn();
-        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
-            targetName: 'Goblin',
-            damageType: 'fire',
-            saveDc: 15,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            attackerName: 'TestWizard',
-        });
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, fireballContext);
 
         expect(rollSaveForCreature).toHaveBeenCalledWith(
             expect.any(Object),
             'DEX',
             15,
             false,
-            true // advantage from circle of power
+            true,
         );
     });
 
-    it('applies circle of power evasion on NPC save', async () => {
+    it('passes no advantage to NPC save roll when circle of power is inactive', async () => {
+        isCircleOfPowerActive.mockReturnValue(false);
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, fireballContext);
+
+        expect(rollSaveForCreature).toHaveBeenCalledWith(
+            expect.any(Object),
+            'DEX',
+            15,
+            false,
+            false,
+        );
+    });
+
+    it('passes evasion flag to damage computation when circle of power is active', async () => {
         isCircleOfPowerActive.mockReturnValue(true);
-        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
         computeDamageAfterEvasion.mockReturnValue(10);
 
         const fn = createFn();
-        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
-            targetName: 'Goblin',
-            damageType: 'fire',
-            saveDc: 15,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            attackerName: 'TestWizard',
-        });
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, fireballContext);
 
         expect(computeDamageAfterEvasion).toHaveBeenCalledWith(
             20,
             false,
             'half',
-            true // evasion from circle of power
+            true,
+        );
+    });
+
+    it('does not pass evasion flag when circle of power is inactive', async () => {
+        isCircleOfPowerActive.mockReturnValue(false);
+        computeDamageAfterEvasion.mockReturnValue(10);
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, fireballContext);
+
+        expect(computeDamageAfterEvasion).toHaveBeenCalledWith(
+            20,
+            false,
+            'half',
+            false,
+        );
+    });
+
+    it('sets popup forcedMode to advantage when circle of power is active', async () => {
+        isCircleOfPowerActive.mockReturnValue(true);
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, fireballContext);
+
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'save-damage',
+                forcedMode: 'advantage',
+            }),
+        );
+    });
+
+    it('sets popup forcedMode to normal when circle of power is inactive', async () => {
+        isCircleOfPowerActive.mockReturnValue(false);
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, fireballContext);
+
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'save-damage',
+                forcedMode: 'normal',
+            }),
         );
     });
 });
-
