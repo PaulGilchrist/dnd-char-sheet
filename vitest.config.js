@@ -47,6 +47,6 @@ export default defineConfig({
             ],
         },
         include: ['src/**/*.{test,spec}.{js,jsx}', 'src/**/*.{test,spec}.*.{js,jsx}', 'server/**/*.{test,spec}.{js,jsx}', 'server/**/*.{test,spec}.*.{js,jsx}'],
-        exclude: ['node_modules', 'dist', '.git', '**/*.test.helpers.js', '**/*.test.setup.js', '**/useCharActionsAutomation.test.js', '**/*.test-mocks.test.jsx']
+        exclude: ['node_modules', 'dist', '.git', '**/*.test.helpers.js', '**/*.test.helpers.jsx', '**/*.test.setup.js', '**/useCharActionsAutomation.test.js', '**/*.test-mocks.test.jsx']
     },
 });

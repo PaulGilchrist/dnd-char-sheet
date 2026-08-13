@@ -1,7 +1,14 @@
 // @cleaned-by-ai
-import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import ResourcePoolModal from './ResourcePoolModal.jsx';
+import { screen, fireEvent } from '@testing-library/react';
+import * as useRuntimeState from '../../../hooks/runtime/useRuntimeState.js';
+import * as combatData from '../../../services/encounters/combatData.js';
+import {
+  makePlayerStats,
+  makeAutomation,
+  renderModal,
+  findRowByText,
+} from './ResourcePoolModal.test.helpers.jsx';
 
 // ── Mocked modules ──
 
@@ -14,43 +21,7 @@ vi.mock('../../../services/encounters/combatData.js', () => ({
   getCurrentCombatRound: vi.fn(() => 1),
 }));
 
-// ── Re-import mocked modules ──
-import * as useRuntimeState from '../../../hooks/runtime/useRuntimeState.js';
-import * as combatData from '../../../services/encounters/combatData.js';
-
-// ── Test fixtures ──
-
-function makePlayerStats(overrides = {}) {
-  return {
-    name: 'Druid1',
-    spellAbilities: {
-      spell_slots_level_1: 4,
-      spell_slots_level_2: 3,
-      spell_slots_level_3: 2,
-      spell_slots_level_4: 0,
-      spell_slots_level_5: 0,
-      spell_slots_level_6: 0,
-      spell_slots_level_7: 0,
-      spell_slots_level_8: 0,
-      spell_slots_level_9: 0,
-    },
-    _trackedResources: {
-      wildShapeUses: { max: 2 },
-    },
-    ...overrides,
-  };
-}
-
-function makeAutomation(overrides = {}) {
-  return {
-    conversion: '',
-    reverseConversion: '',
-    conversionRate: '',
-    ...overrides,
-  };
-}
-
-// ── Test helpers ──
+// ── Test helpers (local to this file since they need mocks) ──
 
 function setupRuntimeMock(returnValues) {
   useRuntimeState.getRuntimeValue.mockImplementation((name, key) =>
@@ -58,30 +29,17 @@ function setupRuntimeMock(returnValues) {
   );
 }
 
-function renderModal(playerStats, automation, campaignName, onClose) {
-  const handleClose = onClose ?? vi.fn();
-  return {
-    ...render(
-      <ResourcePoolModal
-        playerStats={playerStats}
-        campaignName={campaignName ?? 'test-campaign'}
-        automation={automation}
-        onClose={handleClose}
-      />
-    ),
-    handleClose,
-  };
-}
-
-// ── Tests ──
-
-describe('ResourcePoolModal', () => {
+function setupBaseMocks() {
   beforeEach(() => {
     vi.clearAllMocks();
     combatData.getCurrentCombatRound.mockReturnValue(1);
   });
+}
 
-  // ── Rendering ──
+// ── Rendering ──
+
+describe('ResourcePoolModal', () => {
+  setupBaseMocks();
 
   it('renders modal with title, subtitle, and cancel button', () => {
     renderModal(makePlayerStats(), makeAutomation());
@@ -123,8 +81,12 @@ describe('ResourcePoolModal', () => {
     fireEvent.click(overlay);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+});
 
-  // ── Forward conversion visibility ──
+// ── Forward conversion visibility ──
+
+describe('ResourcePoolModal - Forward Conversion', () => {
+  setupBaseMocks();
 
   it('shows forward conversion section when automation.conversion is spell_slot_to_wild_shape', () => {
     setupRuntimeMock({});
@@ -204,9 +166,7 @@ describe('ResourcePoolModal', () => {
       makePlayerStats(),
       makeAutomation({ conversion: 'spell_slot_to_wild_shape' })
     );
-    const level4Row = [...document.querySelectorAll('.resource-pool-table tbody tr')].find(
-      (row) => row.children[0]?.textContent === '4'
-    );
+    const level4Row = findRowByText('4');
     const radio = level4Row.querySelector('input[type="radio"]');
     expect(radio.disabled).toBe(true);
   });
@@ -218,9 +178,7 @@ describe('ResourcePoolModal', () => {
       makePlayerStats(),
       makeAutomation({ conversion: 'spell_slot_to_wild_shape' })
     );
-    const level4Row = [...document.querySelectorAll('.resource-pool-table tbody tr')].find(
-      (row) => row.children[0]?.textContent === '4'
-    );
+    const level4Row = findRowByText('4');
     expect(level4Row.classList.contains('resource-pool-dim')).toBe(true);
   });
 
@@ -248,9 +206,7 @@ describe('ResourcePoolModal', () => {
       handleClose
     );
 
-    const level2Row = [...document.querySelectorAll('.resource-pool-table tbody tr')].find(
-      (row) => row.children[0]?.textContent === '2'
-    );
+    const level2Row = findRowByText('2');
     const radio = level2Row.querySelector('input[type="radio"]');
     fireEvent.click(radio);
 
@@ -296,9 +252,7 @@ describe('ResourcePoolModal', () => {
       handleClose
     );
 
-    const level1Row = [...document.querySelectorAll('.resource-pool-table tbody tr')].find(
-      (row) => row.children[0]?.textContent === '1'
-    );
+    const level1Row = findRowByText('1');
     expect(level1Row.children[1].textContent).toBe('1 / 4');
 
     const radio = level1Row.querySelector('input[type="radio"]');
@@ -339,17 +293,19 @@ describe('ResourcePoolModal', () => {
       makePlayerStats(),
       makeAutomation({ conversion: 'spell_slot_to_wild_shape' })
     );
-    const level3Row = [...document.querySelectorAll('.resource-pool-table tbody tr')].find(
-      (row) => row.children[0]?.textContent === '3'
-    );
+    const level3Row = findRowByText('3');
     const radio = level3Row.querySelector('input[type="radio"]');
     fireEvent.click(radio);
     expect(
       screen.getByRole('button', { name: /Expend Level 3 Slot/i })
     ).toBeInTheDocument();
   });
+});
 
-  // ── Archdruid / Nature Magician visibility ──
+// ── Archdruid / Nature Magician visibility ──
+
+describe('ResourcePoolModal - Archdruid', () => {
+  setupBaseMocks();
 
   it('shows archdruid section when conversion is wild_shape_to_spell_slot and conversionRate is 2_levels_per_use', () => {
     setupRuntimeMock({ wildShapeUses: 1 });
@@ -586,8 +542,12 @@ describe('ResourcePoolModal', () => {
       screen.getByRole('button', { name: /Convert 2 Wild Shape.*Level 4 Slot/i })
     ).toBeInTheDocument();
   });
+});
 
-  // ── Reverse conversion visibility ──
+// ── Reverse conversion ──
+
+describe('ResourcePoolModal - Reverse Conversion', () => {
+  setupBaseMocks();
 
   it('shows reverse conversion section when automation.reverseConversion is wild_shape_to_spell_slot', () => {
     setupRuntimeMock({ wildShapeUses: 1 });
@@ -706,8 +666,12 @@ describe('ResourcePoolModal', () => {
     expect(screen.getByText(/no Wild Shape uses remaining/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Convert 1 Wild Shape/i })).not.toBeInTheDocument();
   });
+});
 
-  // ── Edge cases ──
+// ── Edge cases ──
+
+describe('ResourcePoolModal - Edge Cases', () => {
+  setupBaseMocks();
 
   it('handles missing playerStats.spellAbilities gracefully', () => {
     combatData.getCurrentCombatRound.mockReturnValue(1);
@@ -738,9 +702,7 @@ describe('ResourcePoolModal', () => {
       makePlayerStats(),
       makeAutomation({ conversion: 'spell_slot_to_wild_shape' })
     );
-    const level1Row = [...document.querySelectorAll('.resource-pool-table tbody tr')].find(
-      (row) => row.children[0]?.textContent === '1'
-    );
+    const level1Row = findRowByText('1');
     expect(level1Row.children[1].textContent).toBe('4 / 4');
   });
 
