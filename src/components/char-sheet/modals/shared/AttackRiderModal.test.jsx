@@ -3,112 +3,26 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AttackRiderModal from './AttackRiderModal.jsx';
 
-// ── Mocked modules ──
-
 vi.mock('../../../../services/automation/handlers/combat/attackRiderHandler.js', () => ({
   applyRiderOption: vi.fn(),
 }));
-
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
 }));
-
 vi.mock('../../../../services/automation/handlers/class-fighter-rogue/versatileTricksterHandler.js', () => ({
   applyVersatileTrickster: vi.fn(),
 }));
 
-// ── Re-import mocked modules ──
-
 import { applyRiderOption } from '../../../../services/automation/handlers/combat/attackRiderHandler.js';
-
-// ── Test fixtures ──
-
-const defaultPlayerStats = { name: 'TestCharacter' };
-const defaultCampaignName = 'test-campaign';
-const defaultTargetName = 'Goblin A';
-const defaultResult = {
-  type: 'popup',
-  payload: {
-    type: 'automation_info',
-    name: 'Test Action',
-    description: 'Effect applied successfully.',
-  },
-};
-
-function makeProps(overrides) {
-  return {
-    action: makeSingleSelectAction(),
-    playerStats: { ...defaultPlayerStats },
-    campaignName: defaultCampaignName,
-    targetName: defaultTargetName,
-    onClose: vi.fn(),
-    ...(overrides || {}),
-  };
-}
-
-function makeSingleSelectAction(overrides) {
-  return {
-    name: 'Divine Smite',
-    automation: {
-      type: 'attack_rider',
-      options: [
-        { name: 'Burning Hands', effect: 'next_attack_advantage', value: 5 },
-        { name: 'Push Back', effect: 'push_15ft' },
-      ],
-      maxEffects: 1,
-      ...overrides,
-    },
-    ...overrides,
-  };
-}
-
-function makeMultiSelectAction(overrides) {
-  return {
-    name: 'Multi-Rider Attack',
-    automation: {
-      type: 'attack_rider',
-      options: [
-        { name: 'Disadvantage Curse', effect: 'disadvantage_on_next_save' },
-        { name: 'No Opportunity', noOpportunityAttacks: true },
-        { name: 'Speed Drain', effect: 'speed_reduction' },
-      ],
-      maxEffects: 3,
-      ...overrides,
-    },
-    ...overrides,
-  };
-}
-
-// ── Helpers ──
-
-function selectSingleOption(labelText) {
-  const optionLabel = screen.getByText(labelText).parentElement;
-  fireEvent.click(optionLabel);
-  return optionLabel;
-}
-
-function clickApplySingle() {
-  return fireEvent.click(screen.getByRole('button', { name: /Apply Effect$/ }));
-}
-
-function clickApplyMulti() {
-  return fireEvent.click(screen.getByRole('button', { name: /Apply Effects$/ }));
-}
-
-function clickCheckbox(index) {
-  const checkboxes = screen.getAllByRole('checkbox');
-  fireEvent.click(checkboxes[index]);
-}
-
-// ── Tests ──
+import {
+  makeProps, makeSingleSelectAction, makeMultiSelectAction,
+  cunningStrikeAction, selectSingleOption, clickApplySingle,
+  clickApplyMulti, clickCheckbox, defaultResult,
+} from './AttackRiderModal.fixtures.js';
 
 describe('AttackRiderModal', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  // ── Initial render ──
+  beforeEach(() => vi.clearAllMocks());
 
   describe('initial render', () => {
     it('renders the modal overlay, modal container, header, and action name', () => {
@@ -160,135 +74,31 @@ describe('AttackRiderModal', () => {
     });
 
     it('renders option name without effect description when no effects match', () => {
-      const action = {
-        name: 'Plain Action',
-        automation: {
-          type: 'attack_rider',
-          options: [{ name: 'Plain Effect' }],
-          maxEffects: 1,
-        },
-      };
+      const action = { name: 'Plain Action', automation: { type: 'attack_rider', options: [{ name: 'Plain Effect' }], maxEffects: 1 } };
       render(<AttackRiderModal {...makeProps({ action })} />);
       expect(screen.getByText('Plain Effect')).toBeInTheDocument();
     });
   });
 
-  // ── Effect description rendering ──
-
   describe('effect descriptions', () => {
     const effectTests = [
-      { action: () => makeMultiSelectAction(), name: 'Disadvantage Curse', desc: /— Disadvantage on next save/ },
-      { action: () => makeMultiSelectAction(), name: 'No Opportunity', desc: /— Cannot make Opportunity Attacks/ },
-      { action: () => makeMultiSelectAction(), name: 'Speed Drain', desc: /— Speed reduced by 15 ft/ },
-      {
-        action: () => ({
-          name: 'Custom Smite',
-          automation: { type: 'attack_rider', options: [{ name: 'Power Strike', effect: 'next_attack_advantage', value: 10 }], maxEffects: 1 },
-        }),
-        name: 'Power Strike',
-        desc: /— \+10 to next attack/,
-      },
-      {
-        action: () => ({
-          name: 'Default Value Smite',
-          automation: { type: 'attack_rider', options: [{ name: 'Basic Strike', effect: 'next_attack_advantage' }], maxEffects: 1 },
-        }),
-        name: 'Basic Strike',
-        desc: /— \+5 to next attack/,
-      },
-      {
-        action: () => ({
-          name: 'Sudden Strike',
-          automation: { type: 'attack_rider', options: [{ name: 'Sudden Strike', effect: 'sudden_strike' }], maxEffects: 1 },
-        }),
-        name: 'Sudden Strike',
-        desc: /— Make another attack vs\. different creature within 5 ft/,
-      },
-      {
-        action: () => ({
-          name: 'Mass Fear',
-          automation: { type: 'attack_rider', options: [{ name: 'Mass Fear', effect: 'mass_fear' }], maxEffects: 1 },
-        }),
-        name: 'Mass Fear',
-        desc: /— Target \+ creatures within 10 ft make WIS save or be Frightened/,
-      },
-      {
-        action: () => makeSingleSelectAction({ options: [{ name: 'Trip', effect: 'prone' }] }),
-        name: 'Trip',
-        desc: /— Target makes DEX save or gains Prone condition/,
-      },
-      {
-        action: () => ({
-          name: 'Cunning Strike Poison',
-          automation: { type: 'attack_rider', options: [{ name: 'Poison', effect: 'poisoned' }], maxEffects: 1 },
-        }),
-        name: 'Poison',
-        desc: /— Target makes CON save or becomes Poisoned \(1 min, repeating\)/,
-      },
-      {
-        action: () => ({
-          name: 'Charger',
-          automation: { type: 'attack_rider', options: [{ name: 'Charger Move', effect: 'no_opportunity_attacks', movement: 30 }], maxEffects: 1 },
-        }),
-        name: 'Charger Move',
-        desc: /— Move up to 30 without provoking OAs/,
-      },
-      {
-        action: () => ({
-          name: 'Daze Attack',
-          automation: { type: 'attack_rider', options: [{ name: 'Daze', effect: 'daze' }], maxEffects: 1 },
-        }),
-        name: 'Daze',
-        desc: /— Target makes CON save or on next turn can only do one of: move, action, or Bonus Action/,
-      },
-      {
-        action: () => ({
-          name: 'Unconscious Strike',
-          automation: { type: 'attack_rider', options: [{ name: 'Unconscious', effect: 'unconscious' }], maxEffects: 1 },
-        }),
-        name: 'Unconscious',
-        desc: /— Target makes CON save or becomes Unconscious \(1 min, repeating\)/,
-      },
-      {
-        action: () => ({
-          name: 'Blinding Strike',
-          automation: { type: 'attack_rider', options: [{ name: 'Blinded', effect: 'blinded' }], maxEffects: 1 },
-        }),
-        name: 'Blinded',
-        desc: /— Target makes DEX save or becomes Blinded \(until end of its next turn\)/,
-      },
-      {
-        action: () => ({
-          name: 'Elemental Attack',
-          automation: { type: 'attack_rider', options: [{ name: 'Fire Damage', effect: 'damage_bonus' }], maxEffects: 1 },
-        }),
-        name: 'Fire Damage',
-        desc: /— 1d6 damage/,
-      },
-      {
-        action: () => ({
-          name: 'Elemental Attack',
-          automation: { type: 'attack_rider', options: [{ name: 'Fire Damage', effect: 'damage_bonus', damageExpression: '2d6' }], maxEffects: 1 },
-        }),
-        name: 'Fire Damage',
-        desc: /— 2d6 damage/,
-      },
-      {
-        action: () => ({
-          name: 'Push Attack',
-          automation: { type: 'attack_rider', options: [{ name: 'Push', effect: 'push', value: 15 }], maxEffects: 1 },
-        }),
-        name: 'Push',
-        desc: /— Push 15 ft/,
-      },
-      {
-        action: () => ({
-          name: 'Push Attack',
-          automation: { type: 'attack_rider', options: [{ name: 'Push', effect: 'push' }], maxEffects: 1 },
-        }),
-        name: 'Push',
-        desc: /— Push 10 ft/,
-      },
+      { action: makeMultiSelectAction, name: 'Disadvantage Curse', desc: /— Disadvantage on next save/ },
+      { action: makeMultiSelectAction, name: 'No Opportunity', desc: /— Cannot make Opportunity Attacks/ },
+      { action: makeMultiSelectAction, name: 'Speed Drain', desc: /— Speed reduced by 15 ft/ },
+      { action: () => ({ name: 'Custom Smite', automation: { type: 'attack_rider', options: [{ name: 'Power Strike', effect: 'next_attack_advantage', value: 10 }], maxEffects: 1 } }), name: 'Power Strike', desc: /— \+10 to next attack/ },
+      { action: () => ({ name: 'Default Value Smite', automation: { type: 'attack_rider', options: [{ name: 'Basic Strike', effect: 'next_attack_advantage' }], maxEffects: 1 } }), name: 'Basic Strike', desc: /— \+5 to next attack/ },
+      { action: () => ({ name: 'Sudden Strike', automation: { type: 'attack_rider', options: [{ name: 'Sudden Strike', effect: 'sudden_strike' }], maxEffects: 1 } }), name: 'Sudden Strike', desc: /— Make another attack vs\. different creature within 5 ft/ },
+      { action: () => ({ name: 'Mass Fear', automation: { type: 'attack_rider', options: [{ name: 'Mass Fear', effect: 'mass_fear' }], maxEffects: 1 } }), name: 'Mass Fear', desc: /— Target \+ creatures within 10 ft make WIS save or be Frightened/ },
+      { action: () => makeSingleSelectAction({ options: [{ name: 'Trip', effect: 'prone' }] }), name: 'Trip', desc: /— Target makes DEX save or gains Prone condition/ },
+      { action: () => ({ name: 'Cunning Strike Poison', automation: { type: 'attack_rider', options: [{ name: 'Poison', effect: 'poisoned' }], maxEffects: 1 } }), name: 'Poison', desc: /— Target makes CON save or becomes Poisoned \(1 min, repeating\)/ },
+      { action: () => ({ name: 'Charger', automation: { type: 'attack_rider', options: [{ name: 'Charger Move', effect: 'no_opportunity_attacks', movement: 30 }], maxEffects: 1 } }), name: 'Charger Move', desc: /— Move up to 30 without provoking OAs/ },
+      { action: () => ({ name: 'Daze Attack', automation: { type: 'attack_rider', options: [{ name: 'Daze', effect: 'daze' }], maxEffects: 1 } }), name: 'Daze', desc: /— Target makes CON save or on next turn can only do one of: move, action, or Bonus Action/ },
+      { action: () => ({ name: 'Unconscious Strike', automation: { type: 'attack_rider', options: [{ name: 'Unconscious', effect: 'unconscious' }], maxEffects: 1 } }), name: 'Unconscious', desc: /— Target makes CON save or becomes Unconscious \(1 min, repeating\)/ },
+      { action: () => ({ name: 'Blinding Strike', automation: { type: 'attack_rider', options: [{ name: 'Blinded', effect: 'blinded' }], maxEffects: 1 } }), name: 'Blinded', desc: /— Target makes DEX save or becomes Blinded \(until end of its next turn\)/ },
+      { action: () => ({ name: 'Elemental Attack', automation: { type: 'attack_rider', options: [{ name: 'Fire Damage', effect: 'damage_bonus' }], maxEffects: 1 } }), name: 'Fire Damage', desc: /— 1d6 damage/ },
+      { action: () => ({ name: 'Elemental Attack', automation: { type: 'attack_rider', options: [{ name: 'Fire Damage', effect: 'damage_bonus', damageExpression: '2d6' }], maxEffects: 1 } }), name: 'Fire Damage', desc: /— 2d6 damage/ },
+      { action: () => ({ name: 'Push Attack', automation: { type: 'attack_rider', options: [{ name: 'Push', effect: 'push', value: 15 }], maxEffects: 1 } }), name: 'Push', desc: /— Push 15 ft/ },
+      { action: () => ({ name: 'Push Attack', automation: { type: 'attack_rider', options: [{ name: 'Push', effect: 'push' }], maxEffects: 1 } }), name: 'Push', desc: /— Push 10 ft/ },
     ];
 
     for (const { action, name, desc } of effectTests) {
@@ -299,21 +109,11 @@ describe('AttackRiderModal', () => {
     }
 
     it('renders cost description for Cunning Strike', () => {
-      const action = {
-        name: 'Cunning Strike',
-        automation: {
-          type: 'attack_rider',
-          options: [{ name: 'Poison', effect: 'poisoned', cost: '2d6' }],
-          maxEffects: 1,
-        },
-      };
+      const action = { name: 'Cunning Strike', automation: { type: 'attack_rider', options: [{ name: 'Poison', effect: 'poisoned', cost: '2d6' }], maxEffects: 1 } };
       render(<AttackRiderModal {...makeProps({ action })} />);
-      const bodyDiv = document.querySelector('.sp-body');
-      expect(bodyDiv.textContent).toContain('Cost: 2d6 Sneak Attack dice');
+      expect(document.querySelector('.sp-body').textContent).toContain('Cost: 2d6 Sneak Attack dice');
     });
   });
-
-  // ── Single select mode ──
 
   describe('single select mode', () => {
     it('renders radio inputs for each option', () => {
@@ -363,8 +163,7 @@ describe('AttackRiderModal', () => {
 
     it('uses the radio input name "riderOption"', () => {
       render(<AttackRiderModal {...makeProps()} />);
-      const inputs = document.querySelectorAll('input[type="radio"]');
-      expect(inputs[0].name).toBe('riderOption');
+      expect(document.querySelectorAll('input[type="radio"]')[0].name).toBe('riderOption');
     });
 
     it('shows singular "Effect" on the apply button', () => {
@@ -372,8 +171,6 @@ describe('AttackRiderModal', () => {
       expect(screen.getByRole('button', { name: /Apply Effect$/ })).toBeInTheDocument();
     });
   });
-
-  // ── Multi-select mode ──
 
   describe('multi-select mode', () => {
     const action = makeMultiSelectAction();
@@ -392,8 +189,7 @@ describe('AttackRiderModal', () => {
 
     it('renders multi-select label without target name when null', () => {
       render(<AttackRiderModal {...makeProps({ action, targetName: null })} />);
-      const bodyDiv = document.querySelector('.sp-body');
-      expect(bodyDiv.innerHTML).not.toMatch(/against/);
+      expect(document.querySelector('.sp-body').innerHTML).not.toMatch(/against/);
     });
 
     it('shows selected count starting at zero', () => {
@@ -409,8 +205,7 @@ describe('AttackRiderModal', () => {
 
     it('decrements selected count when checkbox is unclicked', () => {
       render(<AttackRiderModal {...makeProps({ action })} />);
-      clickCheckbox(0);
-      clickCheckbox(0);
+      clickCheckbox(0); clickCheckbox(0);
       expect(screen.getByText(/0\/3 selected/)).toBeInTheDocument();
     });
 
@@ -425,14 +220,12 @@ describe('AttackRiderModal', () => {
       render(<AttackRiderModal {...makeProps({ action })} />);
       const checkboxes = screen.getAllByRole('checkbox');
       fireEvent.click(checkboxes[0]);
-      const label = checkboxes[0].parentElement;
-      expect(label.style.background).toMatch(/rgba\(255,\s*255,\s*255,\s*0\.15\)/);
+      expect(checkboxes[0].parentElement.style.background).toMatch(/rgba\(255,\s*255,\s*255,\s*0\.15\)/);
     });
 
     it('uses checkbox input names with riderOption_ prefix and index', () => {
       render(<AttackRiderModal {...makeProps({ action })} />);
-      const inputs = document.querySelectorAll('input[type="checkbox"]');
-      expect(inputs[0].name).toMatch(/riderOption_/);
+      expect(document.querySelectorAll('input[type="checkbox"]')[0].name).toMatch(/riderOption_/);
     });
 
     it('shows plural "Effects" on the apply button', () => {
@@ -442,63 +235,39 @@ describe('AttackRiderModal', () => {
 
     it('prevents selecting more than maxEffects', () => {
       render(<AttackRiderModal {...makeProps({ action })} />);
-      clickCheckbox(0);
-      clickCheckbox(1);
-      clickCheckbox(2);
+      clickCheckbox(0); clickCheckbox(1); clickCheckbox(2);
       expect(screen.getByText(/3\/3 selected/)).toBeInTheDocument();
       expect(screen.queryByText(/4\/3 selected/)).not.toBeInTheDocument();
     });
   });
 
-  // ── Apply behavior — single select ──
-
   describe('apply behavior — single select', () => {
-    beforeEach(() => {
-      applyRiderOption.mockResolvedValue(defaultResult);
-    });
+    beforeEach(() => applyRiderOption.mockResolvedValue(defaultResult));
 
     it('calls applyRiderOption with correct arguments when applied', async () => {
       const props = makeProps();
       render(<AttackRiderModal {...props} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
+      selectSingleOption('Burning Hands'); clickApplySingle();
       await waitFor(() => {
-        expect(applyRiderOption).toHaveBeenCalledWith(
-          props.action,
-          props.playerStats,
-          props.campaignName,
-          props.targetName,
-          ['Burning Hands']
-        );
+        expect(applyRiderOption).toHaveBeenCalledWith(props.action, props.playerStats, props.campaignName, props.targetName, ['Burning Hands']);
       });
     });
 
     it('shows result screen after applying', async () => {
       render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        expect(screen.getByText('Effect applied successfully.')).toBeInTheDocument();
-      });
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText('Effect applied successfully.')).toBeInTheDocument());
     });
 
     it('hides selection options after applying', async () => {
       render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Choose an effect/)).not.toBeInTheDocument();
-      });
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.queryByText(/Choose an effect/)).not.toBeInTheDocument());
     });
 
     it('hides the apply and cancel buttons after applying', async () => {
       render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
+      selectSingleOption('Burning Hands'); clickApplySingle();
       await waitFor(() => {
         expect(screen.queryByRole('button', { name: /Apply Effect$/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
@@ -507,9 +276,7 @@ describe('AttackRiderModal', () => {
 
     it('renders result with bolt icon and action name in header', async () => {
       render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
+      selectSingleOption('Burning Hands'); clickApplySingle();
       await waitFor(() => {
         expect(screen.getByText('Divine Smite')).toBeInTheDocument();
         expect(document.querySelector('.sp-header .fa-solid.fa-bolt')).toBeInTheDocument();
@@ -517,41 +284,23 @@ describe('AttackRiderModal', () => {
     });
 
     it('renders result description as HTML in the body', async () => {
-      applyRiderOption.mockResolvedValue({
-        type: 'popup',
-        payload: { type: 'automation_info', name: 'Action', description: '<strong>Bold</strong> result.' },
-      });
+      applyRiderOption.mockResolvedValue({ type: 'popup', payload: { type: 'automation_info', name: 'Action', description: '<strong>Bold</strong> result.' } });
       render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        const bodyDiv = document.querySelector('.sp-body');
-        expect(bodyDiv.innerHTML).toContain('<strong>Bold</strong>');
-      });
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(document.querySelector('.sp-body').innerHTML).toContain('<strong>Bold</strong>'));
     });
 
     it('renders Done button with sp-roll-btn class', async () => {
       render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        const doneBtn = screen.getByRole('button', { name: 'Done' });
-        expect(doneBtn.classList.contains('sp-roll-btn')).toBe(true);
-      });
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Done' }).classList.contains('sp-roll-btn')).toBe(true));
     });
 
     it('calls onClose when Done button is clicked', async () => {
       const onClose = vi.fn();
       render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        expect(screen.getByText('Done')).toBeInTheDocument();
-      });
-
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
       fireEvent.click(screen.getByText('Done'));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -559,13 +308,8 @@ describe('AttackRiderModal', () => {
     it('calls onClose when clicking the overlay in applied state', async () => {
       const onClose = vi.fn();
       render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        expect(screen.getByText('Done')).toBeInTheDocument();
-      });
-
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
       fireEvent.click(document.querySelector('.sp-overlay'));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -573,61 +317,34 @@ describe('AttackRiderModal', () => {
     it('does NOT close when clicking inside the modal in applied state', async () => {
       const onClose = vi.fn();
       render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        expect(screen.getByText('Done')).toBeInTheDocument();
-      });
-
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
       fireEvent.click(document.querySelector('.sp-modal'));
       expect(onClose).not.toHaveBeenCalled();
     });
   });
 
-  // ── Apply behavior — multi-select ──
-
   describe('apply behavior — multi-select', () => {
     const action = makeMultiSelectAction();
-
-    beforeEach(() => {
-      applyRiderOption.mockResolvedValue(defaultResult);
-    });
+    beforeEach(() => applyRiderOption.mockResolvedValue(defaultResult));
 
     it('calls applyRiderOption with all selected options', async () => {
       render(<AttackRiderModal {...makeProps({ action })} />);
-      clickCheckbox(0);
-      clickCheckbox(1);
-      clickApplyMulti();
-
+      clickCheckbox(0); clickCheckbox(1); clickApplyMulti();
       await waitFor(() => {
-        expect(applyRiderOption).toHaveBeenCalledWith(
-          action,
-          expect.any(Object),
-          'test-campaign',
-          'Goblin A',
-          ['Disadvantage Curse', 'No Opportunity']
-        );
+        expect(applyRiderOption).toHaveBeenCalledWith(action, expect.any(Object), 'test-campaign', 'Goblin A', ['Disadvantage Curse', 'No Opportunity']);
       });
     });
 
     it('calls onClose when Done is clicked after multi-select apply', async () => {
       const onClose = vi.fn();
       render(<AttackRiderModal {...makeProps({ action, onClose })} />);
-      clickCheckbox(0);
-      clickCheckbox(1);
-      clickApplyMulti();
-
-      await waitFor(() => {
-        expect(screen.getByText('Done')).toBeInTheDocument();
-      });
-
+      clickCheckbox(0); clickCheckbox(1); clickApplyMulti();
+      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
       fireEvent.click(screen.getByText('Done'));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
-
-  // ── Close / cancel behavior ──
 
   describe('close behavior', () => {
     it('calls onClose when Cancel is clicked', () => {
@@ -637,8 +354,6 @@ describe('AttackRiderModal', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
-
-  // ── Edge cases ──
 
   describe('edge cases', () => {
     it('handles empty options array gracefully', () => {
@@ -659,77 +374,23 @@ describe('AttackRiderModal', () => {
     it('handles null result from applyRiderOption gracefully (stays open)', async () => {
       applyRiderOption.mockResolvedValue(null);
       render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        expect(screen.queryByText('Done')).not.toBeInTheDocument();
-      });
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.queryByText('Done')).not.toBeInTheDocument());
     });
 
     it('uses radio inputs when maxEffects is 1 (default)', () => {
-      const action = {
-        name: 'Default Max',
-        automation: {
-          type: 'attack_rider',
-          options: [{ name: 'Opt A' }],
-        },
-      };
+      const action = { name: 'Default Max', automation: { type: 'attack_rider', options: [{ name: 'Opt A' }] } };
       render(<AttackRiderModal {...makeProps({ action })} />);
       expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(1);
     });
 
     it('uses checkbox inputs when maxEffects > 1', () => {
-      const action = makeMultiSelectAction();
-      render(<AttackRiderModal {...makeProps({ action })} />);
+      render(<AttackRiderModal {...makeProps({ action: makeMultiSelectAction() })} />);
       expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);
     });
   });
 
-  // ── Improved Cunning Strike multi-select ──
-
   describe('Improved Cunning Strike multi-select', () => {
-    const cunningStrikeAction = {
-      name: 'Improved Cunning Strike',
-      automation: {
-        type: 'attack_rider',
-        oncePerTurn: true,
-        chooseOne: true,
-        maxEffects: 2,
-        options: [
-          {
-            name: 'Poison',
-            cost: '1d6',
-            effect: 'poisoned',
-            saveType: 'CON',
-            saveDc: 'ability',
-            saveAbility: 'DEX',
-            condition: 'poisoned',
-            duration: '1_minute',
-            repeatingSave: true,
-            requires: "Poisoner's Kit",
-          },
-          {
-            name: 'Trip',
-            cost: '1d6',
-            effect: 'prone',
-            saveType: 'DEX',
-            saveDc: 'ability',
-            saveAbility: 'DEX',
-            condition: 'prone',
-            sizeLimit: 'large_or_smaller',
-          },
-          {
-            name: 'Withdraw',
-            cost: '1d6',
-            effect: 'no_opportunity_attacks',
-            movement: 'half_speed',
-            noOAs: true,
-          },
-        ],
-      },
-    };
-
     it('renders checkbox inputs for Improved Cunning Strike', () => {
       render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
       expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);
@@ -738,8 +399,7 @@ describe('AttackRiderModal', () => {
 
     it('shows label with max count of 2', () => {
       render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
-      const bodyDiv = document.querySelector('.sp-body');
-      expect(bodyDiv.textContent).toMatch(/Choose up to 2 effects/);
+      expect(document.querySelector('.sp-body').textContent).toMatch(/Choose up to 2 effects/);
     });
 
     it('shows selected count starting at 0/2', () => {
@@ -749,8 +409,7 @@ describe('AttackRiderModal', () => {
 
     it('limits selection to maxEffects (2)', () => {
       render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
-      clickCheckbox(0);
-      clickCheckbox(1);
+      clickCheckbox(0); clickCheckbox(1);
       expect(screen.getByText(/2\/2 selected/)).toBeInTheDocument();
       clickCheckbox(2);
       expect(screen.getByText(/2\/2 selected/)).toBeInTheDocument();
@@ -759,25 +418,155 @@ describe('AttackRiderModal', () => {
     it('calls applyRiderOption with multiple selected options', async () => {
       applyRiderOption.mockResolvedValue(defaultResult);
       render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
-      clickCheckbox(0);
-      clickCheckbox(1);
-      clickApplyMulti();
-
+      clickCheckbox(0); clickCheckbox(1); clickApplyMulti();
       await waitFor(() => {
-        expect(applyRiderOption).toHaveBeenCalledWith(
-          cunningStrikeAction,
-          expect.any(Object),
-          defaultCampaignName,
-          defaultTargetName,
-          ['Poison', 'Trip']
-        );
+        expect(applyRiderOption).toHaveBeenCalledWith(cunningStrikeAction, expect.any(Object), 'test-campaign', 'Goblin A', ['Poison', 'Trip']);
       });
     });
 
     it('shows cost for each option', () => {
       render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
-      const bodyDiv = document.querySelector('.sp-body');
-      expect(bodyDiv.textContent).toContain('Cost: 1d6 Sneak Attack dice');
+      expect(document.querySelector('.sp-body').textContent).toContain('Cost: 1d6 Sneak Attack dice');
+    });
+  });
+
+  describe('Versatile Trickster secondary targets', () => {
+    beforeEach(() => applyRiderOption.mockResolvedValue(defaultResult));
+
+    it('shows Versatile Trickster secondary target modal after applying', async () => {
+      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
+      grv.mockImplementation((char, key) => {
+        if (key === 'versatileTricksterSecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }, { label: 'Creature B', value: 'Creature B' }];
+        return undefined;
+      });
+      render(<AttackRiderModal {...makeProps()} />);
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText('Versatile Trickster')).toBeInTheDocument());
+      expect(screen.getByText(/Trip applied to/)).toBeInTheDocument();
+      expect(screen.getByText(/Trip another creature within 5 feet/)).toBeInTheDocument();
+    });
+
+    it('calls applyVersatileTrickster when a target is selected', async () => {
+      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
+      grv.mockImplementation((char, key) => {
+        if (key === 'versatileTricksterSecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
+        if (key === 'versatileTricksterAction') return { name: 'VT Action' };
+        return undefined;
+      });
+      const { applyVersatileTrickster } = await import('../../../../services/automation/handlers/class-fighter-rogue/versatileTricksterHandler.js');
+      applyVersatileTrickster.mockResolvedValue(defaultResult);
+      render(<AttackRiderModal {...makeProps()} />);
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText('Versatile Trickster')).toBeInTheDocument());
+      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
+      fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
+      await waitFor(() => expect(applyVersatileTrickster).toHaveBeenCalled());
+    });
+
+    it('shows result screen after Versatile Trickster apply', async () => {
+      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
+      grv.mockImplementation((char, key) => {
+        if (key === 'versatileTricksterSecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
+        if (key === 'versatileTricksterAction') return { name: 'VT Action' };
+        return undefined;
+      });
+      const { applyVersatileTrickster } = await import('../../../../services/automation/handlers/class-fighter-rogue/versatileTricksterHandler.js');
+      applyVersatileTrickster.mockResolvedValue(defaultResult);
+      render(<AttackRiderModal {...makeProps()} />);
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText('Versatile Trickster')).toBeInTheDocument());
+      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
+      fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
+      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
+    });
+
+    it('closes after Done is clicked in Versatile Trickster result', async () => {
+      const onClose = vi.fn();
+      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
+      grv.mockImplementation((char, key) => {
+        if (key === 'versatileTricksterSecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
+        if (key === 'versatileTricksterAction') return { name: 'VT Action' };
+        return undefined;
+      });
+      const { applyVersatileTrickster } = await import('../../../../services/automation/handlers/class-fighter-rogue/versatileTricksterHandler.js');
+      applyVersatileTrickster.mockResolvedValue(defaultResult);
+      render(<AttackRiderModal {...makeProps({ onClose })} />);
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText('Versatile Trickster')).toBeInTheDocument());
+      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
+      fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
+      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
+      fireEvent.click(screen.getByText('Done'));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Stalker's Flurry secondary targets", () => {
+    beforeEach(() => applyRiderOption.mockResolvedValue(defaultResult));
+
+    it("shows Stalker's Flurry secondary target modal after applying", async () => {
+      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
+      grv.mockImplementation((char, key) => {
+        if (key === 'stalkersFlurrySecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
+        return undefined;
+      });
+      render(<AttackRiderModal {...makeProps()} />);
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText("Stalker's Flurry")).toBeInTheDocument());
+    });
+
+    it("handles Sudden Strike path when selected", async () => {
+      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
+      grv.mockImplementation((char, key) => {
+        if (key === 'stalkersFlurrySecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
+        if (key === 'stalkersFlurryOptions') return ['Sudden Strike'];
+        return undefined;
+      });
+      const onClose = vi.fn();
+      render(<AttackRiderModal {...makeProps({ onClose })} />);
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText("Stalker's Flurry")).toBeInTheDocument());
+      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
+      fireEvent.click(screen.getByRole('button', { name: 'Attack Target' }));
+      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    });
+
+    it("handles Mass Fear path when selected", async () => {
+      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
+      grv.mockImplementation((char, key) => {
+        if (key === 'stalkersFlurrySecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
+        if (key === 'stalkersFlurryOptions') return ['Mass Fear'];
+        if (key === 'targetEffects' && char === 'campaign') return [{ effect: 'mass_fear', duration: '1_round' }];
+        return undefined;
+      });
+      render(<AttackRiderModal {...makeProps()} />);
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText("Stalker's Flurry")).toBeInTheDocument());
+      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
+      fireEvent.click(screen.getByRole('button', { name: 'Apply Fear' }));
+      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
+    });
+
+    it("shows Stalker's Flurry result screen after apply", async () => {
+      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
+      grv.mockImplementation((char, key) => {
+        if (key === 'stalkersFlurrySecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
+        if (key === 'stalkersFlurryOptions') return ['Mass Fear'];
+        if (key === 'targetEffects' && char === 'campaign') return [];
+        return undefined;
+      });
+      const onClose = vi.fn();
+      render(<AttackRiderModal {...makeProps({ onClose })} />);
+      selectSingleOption('Burning Hands'); clickApplySingle();
+      await waitFor(() => expect(screen.getByText("Stalker's Flurry")).toBeInTheDocument());
+      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
+      fireEvent.click(screen.getByRole('button', { name: 'Apply Fear' }));
+      await waitFor(() => {
+        expect(screen.getByText("Stalker's Flurry")).toBeInTheDocument();
+        expect(screen.getByText('Done')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Done'));
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });
