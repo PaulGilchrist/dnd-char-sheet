@@ -1,13 +1,12 @@
 // @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createPlayerStats } from './CharSpecialActions.helpers.js';
 import CharSpecialActions from './CharSpecialActions.jsx';
-
 // Mock executeHandler
 vi.mock('../../services/automation/index.js', () => ({
   executeHandler: vi.fn(),
 }));
-
 // Mock automation service
 vi.mock('../../services/combat/automation/automationService.js', () => ({
   hasAutomation: vi.fn((action) => !!(action?.automation)),
@@ -22,7 +21,6 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
     return interactiveTypes.includes(auto.type);
   }),
 }));
-
 // Mock TeleportModal
 vi.mock('./modals/TeleportModal.jsx', () => ({
   default: ({ action, onClose }) => (
@@ -32,7 +30,6 @@ vi.mock('./modals/TeleportModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock SignatureSpellsModal
 vi.mock('./modals/arcane/SignatureSpellsModal.jsx', () => ({
   default: ({ payload: _payload, onConfirm, onClose }) => (
@@ -43,7 +40,6 @@ vi.mock('./modals/arcane/SignatureSpellsModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock SpellMasteryModal
 vi.mock('./modals/arcane/SpellMasteryModal.jsx', () => ({
   default: ({ payload: _payload, onConfirm, onClose }) => (
@@ -54,7 +50,6 @@ vi.mock('./modals/arcane/SpellMasteryModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock SavantModal
 vi.mock('./modals/arcane/SavantModal.jsx', () => ({
   default: ({ payload, onConfirm, onClose }) => (
@@ -65,7 +60,6 @@ vi.mock('./modals/arcane/SavantModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock WeaponKindMasteryModal
 vi.mock('./modals/WeaponKindMasteryModal.jsx', () => ({
   default: ({ action, onClose }) => (
@@ -75,7 +69,6 @@ vi.mock('./modals/WeaponKindMasteryModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock WeaponMasteryChoiceModal
 vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({
   default: ({ action: _action, onClose, onConfirm }) => (
@@ -86,7 +79,6 @@ vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock CombatSuperiorityModal
 vi.mock('./modals/CombatSuperiorityModal.jsx', () => ({
   default: ({ _payload, onConfirm, _onReopenSelection, _onClose }) => (
@@ -96,7 +88,6 @@ vi.mock('./modals/CombatSuperiorityModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock ResourcePoolModal
 vi.mock('./modals/ResourcePoolModal.jsx', () => ({
   default: ({ playerStats: _ps, campaignName: _cn, automation: _auto, onClose }) => (
@@ -106,7 +97,6 @@ vi.mock('./modals/ResourcePoolModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock NaturalRecoveryModal
 vi.mock('./modals/NaturalRecoveryModal.jsx', () => ({
   default: ({ playerStats: _ps, campaignName: _cn, onClose }) => (
@@ -116,7 +106,6 @@ vi.mock('./modals/NaturalRecoveryModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock CircleOfTheLandSpellsModal
 vi.mock('./modals/CircleOfTheLandSpellsModal.jsx', () => ({
   default: ({ playerStats: _ps, campaignName: _cn, onClose }) => (
@@ -126,7 +115,6 @@ vi.mock('./modals/CircleOfTheLandSpellsModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock ElementalAffinityModal
 vi.mock('./modals/ElementalAffinityModal.jsx', () => ({
   default: ({ action, playerStats: _ps, campaignName: _cn, onClose }) => (
@@ -136,7 +124,6 @@ vi.mock('./modals/ElementalAffinityModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock WildMagicSurgeModal
 vi.mock('./modals/WildMagicSurgeModal.jsx', () => ({
   default: ({ onClose }) => (
@@ -146,7 +133,6 @@ vi.mock('./modals/WildMagicSurgeModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock StrideOfTheElementsModal
 vi.mock('./modals/StrideOfTheElementsModal.jsx', () => ({
   default: ({ action, playerStats: _ps, campaignName: _cn, onConfirm, onClose }) => (
@@ -160,7 +146,6 @@ vi.mock('./modals/StrideOfTheElementsModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock ElementalEpitomeModal
 vi.mock('./modals/ElementalEpitomeModal.jsx', () => ({
   default: ({ action, playerStats: _ps, campaignName: _cn, currentResistance: _cr, onConfirm, onClose }) => (
@@ -171,7 +156,6 @@ vi.mock('./modals/ElementalEpitomeModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock DestructiveStrideModal
 vi.mock('./modals/DestructiveStrideModal.jsx', () => ({
   default: ({ action, playerStats: _ps, campaignName: _cn, onConfirm, onClose }) => (
@@ -183,7 +167,6 @@ vi.mock('./modals/DestructiveStrideModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock SecondaryTargetModal
 vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
   default: ({ title, icon: _icon, targets, description, confirmLabel, confirmIcon: _ci, onTargetSelected, onSkip }) => (
@@ -195,7 +178,6 @@ vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock QuiveringPalmModal
 vi.mock('./modals/QuiveringPalmModal.jsx', () => ({
   default: ({ onClose }) => (
@@ -205,7 +187,6 @@ vi.mock('./modals/QuiveringPalmModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock StepsOfTheFeyTauntModal
 vi.mock('./modals/StepsOfTheFeyTauntModal.jsx', () => ({
   default: ({ onClose }) => (
@@ -215,7 +196,6 @@ vi.mock('./modals/StepsOfTheFeyTauntModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock HurlThroughHellModal
 vi.mock('./modals/HurlThroughHellModal.jsx', () => ({
   default: ({ onClose }) => (
@@ -225,7 +205,6 @@ vi.mock('./modals/HurlThroughHellModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock ClairvoyantCombatantModal
 vi.mock('./modals/ClairvoyantCombatantModal.jsx', () => ({
   default: ({ onClose }) => (
@@ -235,7 +214,6 @@ vi.mock('./modals/ClairvoyantCombatantModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock CreatureSelectionModal
 vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
   default: ({ title, confirmLabel, description, onConfirm, onSkip, targets }) => (
@@ -247,7 +225,6 @@ vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock SingleResistanceSelectionModal
 vi.mock('./modals/SingleResistanceSelectionModal.jsx', () => ({
   default: ({ onClose }) => (
@@ -257,7 +234,6 @@ vi.mock('./modals/SingleResistanceSelectionModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock MultiResistanceSelectionModal
 vi.mock('./modals/MultiResistanceSelectionModal.jsx', () => ({
   default: ({ title, icon: _icon, damageTypes: _dt, existingTypes: _et, maxSelections: _ms, action: _a, playerStats: _ps, campaignName: _cn, onConfirm, onClose }) => (
@@ -268,14 +244,12 @@ vi.mock('./modals/MultiResistanceSelectionModal.jsx', () => ({
     </div>
   ),
 }));
-
 // Mock renderMarkdownInline
 vi.mock('../../services/ui/sanitize.js', () => ({
   sanitizeHtml: vi.fn((html) => html),
   renderMarkdown: vi.fn((md) => md),
   renderMarkdownInline: vi.fn((md) => md),
 }));
-
 // Mock fighting styles
 vi.mock('../../services/ui/dataLoader.js', () => ({
   loadFightingStyles: vi.fn(() => Promise.resolve([
@@ -283,60 +257,46 @@ vi.mock('../../services/ui/dataLoader.js', () => ({
     { name: 'Protection', description: 'When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield.' },
   ])),
 }));
-
 // Mock the handler functions called by modal confirm callbacks
 vi.mock('../../services/automation/handlers/class-wizard/signatureSpellsHandler.js', () => ({
   onSignatureSpellsSelected: vi.fn(),
 }));
-
 vi.mock('../../services/automation/handlers/class-wizard/spellMasteryHandler.js', () => ({
   onSpellMasterySelected: vi.fn(),
 }));
-
 vi.mock('../../services/automation/handlers/class-wizard/SavantHandler.js', () => ({
   onSavantSelected: vi.fn(),
 }));
-
 vi.mock('../../services/automation/handlers/class-ranger/defensiveTacticsHandler.js', () => ({
   applyChoice: vi.fn(),
 }));
-
 vi.mock('../../services/automation/handlers/class-ranger/hunterPreyHandler.js', () => ({
   applyChoice: vi.fn(),
 }));
-
 vi.mock('../../services/automation/handlers/class-wizard/portentHandler.js', () => ({
   applyPortentChoice: vi.fn(() => Promise.resolve({ type: 'popup', payload: { name: 'Portent', description: 'Die applied.' } })),
 }));
-
 vi.mock('../../services/automation/handlers/class-warlock/tempTeleportHandler.js', () => ({
   confirmTeleport: vi.fn(() => Promise.resolve({ type: 'popup', payload: { name: 'Moonlight Step', description: 'Teleported.' } })),
 }));
-
 vi.mock('../../services/automation/handlers/buffs/tempHpService.js', () => ({
   setTempHp: vi.fn(() => Promise.resolve()),
 }));
-
 vi.mock('../../services/automation/handlers/buffs/tempHpBuffHandler.js', () => ({
   confirmBolsteringPerformance: vi.fn(() => Promise.resolve({ type: 'popup', payload: { name: 'Bolstering Performance', description: 'Allies inspired.' } })),
 }));
-
 vi.mock('../../services/automation/handlers/buffs/encouragingSongHandler.js', () => ({
   confirmEncouragingSong: vi.fn(() => Promise.resolve({ type: 'popup', payload: { name: 'Encouraging Song', description: 'Allies inspired.' } })),
   skipEncouragingSong: vi.fn(() => Promise.resolve({ type: 'popup', payload: { name: 'Encouraging Song', description: 'Skipped.' } })),
 }));
-
 vi.mock('../../services/automation/handlers/reactions/boonOfEnergyResistanceHandler.js', () => ({
   applyTypeChoice: vi.fn(() => Promise.resolve({ type: 'popup', payload: { name: 'Boon of Energy', description: 'Resistances chosen.' } })),
 }));
-
 vi.mock('../../services/automation/handlers/combat/destructiveStrideHandler.js', () => ({
   applyTargetChoice: vi.fn(() => Promise.resolve({ type: 'popup', payload: { name: 'Destructive Stride', description: 'Struck target.' } })),
 }));
-
 // Mock runtime state
 const mockRuntimeStore = {};
-
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn((_key, runtimeKey) => mockRuntimeStore[runtimeKey] ?? null),
   setRuntimeValue: vi.fn((_key, runtimeKey, value, _campaign) => {
@@ -345,12 +305,10 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   }),
   useRuntimeValue: vi.fn((_key, runtimeKey) => mockRuntimeStore[runtimeKey] ?? null),
 }));
-
 // Mock DiceRollContext
 vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
   useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
 }));
-
 // Mock useCombatSuperiorityModal
 vi.mock('../../hooks/combat/useCombatSuperiorityModal.js', () => ({
   useCombatSuperiorityModal: vi.fn(() => ({
@@ -360,7 +318,6 @@ vi.mock('../../hooks/combat/useCombatSuperiorityModal.js', () => ({
     handleCombatSuperiorityReopenSelection: vi.fn(),
   })),
 }));
-
 // Mock useLoggedDiceRoll
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
   default: vi.fn(() => ({
@@ -368,51 +325,28 @@ vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
     rollDamage: vi.fn(),
   })),
 }));
-
 // Mock log service
 vi.mock('../../services/ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
-
 // Mock normalizeAutoDamage / resolveAttackDamageStandalone
 vi.mock('./useAttackDamageResolution.js', () => ({
   normalizeAutoDamage: vi.fn(() => ({ attack: {}, ctx: {} })),
   resolveAttackDamageStandalone: vi.fn(() => Promise.resolve()),
 }));
-
 // Mock getCombatContext
 vi.mock('../../services/rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(() => Promise.resolve({ creatures: [] })),
 }));
-
 // Import mocked modules for use with vi.mocked()
 import { executeHandler } from '../../services/automation/index.js';
 import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 import { applyPortentChoice } from '../../services/automation/handlers/class-wizard/portentHandler.js';
 import { applyTargetChoice } from '../../services/automation/handlers/combat/destructiveStrideHandler.js';
-
-const basePlayerStats = {
-  name: 'TestCharacter',
-  specialActions: [],
-  class: {
-    fightingStyles: [],
-  },
-  actions: [],
-  bonusActions: [],
-  reactions: [],
-  characterAdvancement: [],
-  proficiency: 2,
-};
-
-function createPlayerStats(overrides = {}) {
-  return { ...basePlayerStats, ...overrides };
-}
-
 describe('CharSpecialActions - Destructive Stride', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
   describe('handleDestructiveStrideConfirm', () => {
     it('opens destructive stride target modal when result is modal', async () => {
       executeHandler.mockResolvedValue({
@@ -420,34 +354,27 @@ describe('CharSpecialActions - Destructive Stride', () => {
         modalName: 'destructiveStride',
         payload: {
           action: { name: 'Destructive Stride' },
-          playerStats: basePlayerStats,
+          playerStats: createPlayerStats(),
           campaignName: 'test',
           chosenType: 'bludgeoning',
           martialArtsDie: '1d6',
         },
       });
-
       const playerStats = createPlayerStats({
         specialActions: [
           { name: 'Destructive Stride', description: 'Deal damage when striding.', automation: { type: 'destructive_stride' } },
         ],
       });
-
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
       fireEvent.click(screen.getByText(/Destructive Stride/));
-
       await waitFor(() => {
         expect(screen.getByTestId('destructive-stride-modal')).toBeInTheDocument();
       });
-
       fireEvent.click(screen.getByText('Confirm Target'));
-
       await waitFor(() => {
         expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
       });
     });
-
     it('shows popup when result is popup', async () => {
       const mockSetPopupHtml = vi.fn();
       const playerStats = createPlayerStats({
@@ -455,42 +382,33 @@ describe('CharSpecialActions - Destructive Stride', () => {
           { name: 'Destructive Stride', description: 'Deal damage when striding.', automation: { type: 'destructive_stride' } },
         ],
       });
-
       vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
       executeHandler.mockResolvedValue({
         type: 'modal',
         modalName: 'destructiveStride',
         payload: {
           action: { name: 'Destructive Stride' },
-          playerStats: basePlayerStats,
+          playerStats: createPlayerStats(),
           campaignName: 'test',
           chosenType: 'piercing',
           martialArtsDie: '1d4',
         },
       });
-
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
       fireEvent.click(screen.getByText(/Destructive Stride/));
-
       await waitFor(() => {
         expect(screen.getByTestId('destructive-stride-modal')).toBeInTheDocument();
       });
-
       fireEvent.click(screen.getByText('Confirm Popup'));
-
       await waitFor(() => {
         expect(mockSetPopupHtml).toHaveBeenCalled();
       });
-
       const popupCall = mockSetPopupHtml.mock.calls[0][0];
       expect(popupCall).toContain('Destructive Stride');
       expect(popupCall).toContain('Struck target.');
       expect(screen.queryByTestId('destructive-stride-modal')).not.toBeInTheDocument();
     });
   });
-
   describe('handleDestructiveStrideTargetConfirm', () => {
     it('calls applyTargetChoice and shows popup on result', async () => {
       const mockSetPopupHtml = vi.fn();
@@ -499,43 +417,33 @@ describe('CharSpecialActions - Destructive Stride', () => {
           { name: 'Destructive Stride', description: 'Deal damage when striding.', automation: { type: 'destructive_stride' } },
         ],
       });
-
       vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
       executeHandler.mockResolvedValue({
         type: 'modal',
         modalName: 'destructiveStride',
         payload: {
           action: { name: 'Destructive Stride' },
-          playerStats: basePlayerStats,
+          playerStats: createPlayerStats(),
           campaignName: 'test',
           chosenType: 'bludgeoning',
           martialArtsDie: '1d6',
         },
       });
-
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
       fireEvent.click(screen.getByText(/Destructive Stride/));
-
       await waitFor(() => {
         expect(screen.getByTestId('destructive-stride-modal')).toBeInTheDocument();
       });
-
       fireEvent.click(screen.getByText('Confirm Target'));
-
       await waitFor(() => {
         expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
       });
-
       fireEvent.click(screen.getByText('Strike'));
-
       await waitFor(() => {
         expect(applyTargetChoice).toHaveBeenCalled();
       });
     });
   });
-
   describe('handleDestructiveStrideTargetSkip', () => {
     it('closes the target modal when skip is clicked', async () => {
       executeHandler.mockResolvedValue({
@@ -543,47 +451,37 @@ describe('CharSpecialActions - Destructive Stride', () => {
         modalName: 'destructiveStride',
         payload: {
           action: { name: 'Destructive Stride' },
-          playerStats: basePlayerStats,
+          playerStats: createPlayerStats(),
           campaignName: 'test',
           chosenType: 'slashing',
           martialArtsDie: '1d8',
         },
       });
-
       const playerStats = createPlayerStats({
         specialActions: [
           { name: 'Destructive Stride', description: 'Deal damage when striding.', automation: { type: 'destructive_stride' } },
         ],
       });
-
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
       fireEvent.click(screen.getByText(/Destructive Stride/));
-
       await waitFor(() => {
         expect(screen.getByTestId('destructive-stride-modal')).toBeInTheDocument();
       });
-
       fireEvent.click(screen.getByText('Confirm Target'));
-
       await waitFor(() => {
         expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
       });
-
       fireEvent.click(screen.getByText('Skip'));
-
       await waitFor(() => {
         expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
       });
     });
   });
 });
-
 describe('CharSpecialActions - Moonlight Step Fallback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
   describe('handleMoonlightStepFallbackConfirm', () => {
     it('renders the moonlight step fallback modal with correct slot level', async () => {
       executeHandler.mockResolvedValue({
@@ -591,22 +489,18 @@ describe('CharSpecialActions - Moonlight Step Fallback', () => {
         modalName: 'moonlightStepFallback',
         payload: {
           action: { name: 'Moonlight Step' },
-          playerStats: basePlayerStats,
+          playerStats: createPlayerStats(),
           campaignName: 'test',
           slotLevel: 3,
         },
       });
-
       const playerStats = createPlayerStats({
         specialActions: [
           { name: 'Moonlight Step', description: 'Teleport using moonlight.', automation: { type: 'teleport', effect: 'moonlight_step_teleport' } },
         ],
       });
-
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
       fireEvent.click(screen.getByText(/Moonlight Step/));
-
       await waitFor(() => {
         expect(screen.getByText(/Consume a level 3 spell slot to use Moonlight Step/)).toBeInTheDocument();
         expect(screen.getByText('Yes, Consume Slot')).toBeInTheDocument();
@@ -615,22 +509,18 @@ describe('CharSpecialActions - Moonlight Step Fallback', () => {
     });
   });
 });
-
 describe('CharSpecialActions - getEventDisplayLabel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
   describe('getEventDisplayLabel helper', () => {
     it('returns attack label with target name', () => {
-      // The getEventDisplayLabel function is defined inside the component
-      // We can test it indirectly through the Portent modal rendering
       executeHandler.mockResolvedValue({
         type: 'modal',
         modalName: 'portentDiceChoice',
         payload: {
           action: { name: 'Portent' },
-          playerStats: basePlayerStats,
+          playerStats: createPlayerStats(),
           campaignName: 'test',
           targetName: 'Goblin',
           eventType: 'attack',
@@ -639,41 +529,22 @@ describe('CharSpecialActions - getEventDisplayLabel', () => {
           diceOptions: [7, 12],
         },
       });
-
       const playerStats = createPlayerStats({
         specialActions: [
           { name: 'Portent', description: 'Replace a dice roll.', automation: { type: 'portent' } },
         ],
       });
-
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
       fireEvent.click(screen.getByText(/Portent/));
-
-      // The Portent modal renders with the event display label
-      // Since getEventDisplayLabel is an inner function, we test it indirectly
-      // by checking the modal renders
     });
-
     it('handles ability event type', () => {
-      // Test indirectly - the getEventDisplayLabel function returns checkName for ability type
-    });
-
-    it('handles save event type with saveType', () => {
-      // Test indirectly - the getEventDisplayLabel function returns saveType.toUpperCase() for save type
-    });
-
-    it('handles save event type without saveType (defaults to "Save")', () => {
-      // Test indirectly - the getEventDisplayLabel function returns "Save" when no saveType
     });
   });
 });
-
 describe('CharSpecialActions - Portent Die Choice', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
   describe('handlePortentDieChoice', () => {
     it('calls applyPortentChoice and shows popup on result', async () => {
       const mockSetPopupHtml = vi.fn();
@@ -682,15 +553,13 @@ describe('CharSpecialActions - Portent Die Choice', () => {
           { name: 'Portent', description: 'Replace a dice roll.', automation: { type: 'portent' } },
         ],
       });
-
       vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
       executeHandler.mockResolvedValue({
         type: 'modal',
         modalName: 'portentDiceChoice',
         payload: {
           action: { name: 'Portent' },
-          playerStats: basePlayerStats,
+          playerStats: createPlayerStats(),
           campaignName: 'test',
           targetName: 'Orc',
           eventType: 'save',
@@ -699,36 +568,28 @@ describe('CharSpecialActions - Portent Die Choice', () => {
           diceOptions: [5, 15],
         },
       });
-
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
       fireEvent.click(screen.getByText(/Portent/));
-
       await waitFor(() => {
         expect(screen.getByText('Orc')).toBeInTheDocument();
       });
-
-      // Click on a die option
       fireEvent.click(screen.getByText('5'));
-
       await waitFor(() => {
         expect(applyPortentChoice).toHaveBeenCalled();
       });
     });
-
     it('handles error in applyPortentChoice by closing modal', async () => {
       const playerStats = createPlayerStats({
         specialActions: [
           { name: 'Portent', description: 'Replace a dice roll.', automation: { type: 'portent' } },
         ],
       });
-
       executeHandler.mockResolvedValue({
         type: 'modal',
         modalName: 'portentDiceChoice',
         payload: {
           action: { name: 'Portent' },
-          playerStats: basePlayerStats,
+          playerStats: createPlayerStats(),
           campaignName: 'test',
           targetName: 'Troll',
           eventType: 'attack',
@@ -737,25 +598,18 @@ describe('CharSpecialActions - Portent Die Choice', () => {
           diceOptions: [3, 8],
         },
       });
-
       applyPortentChoice.mockRejectedValue(new Error('Portent failed'));
-
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
       fireEvent.click(screen.getByText(/Portent/));
-
       await waitFor(() => {
         expect(screen.getByText('Troll')).toBeInTheDocument();
       });
-
       fireEvent.click(screen.getByText('3'));
-
       await waitFor(() => {
         expect(screen.queryByText('Troll')).not.toBeInTheDocument();
       });
     });
   });
-
   describe('handlePortentModalClose', () => {
     it('closes the portent modal when cancel is clicked', async () => {
       const playerStats = createPlayerStats({
@@ -763,13 +617,12 @@ describe('CharSpecialActions - Portent Die Choice', () => {
           { name: 'Portent', description: 'Replace a dice roll.', automation: { type: 'portent' } },
         ],
       });
-
       executeHandler.mockResolvedValue({
         type: 'modal',
         modalName: 'portentDiceChoice',
         payload: {
           action: { name: 'Portent' },
-          playerStats: basePlayerStats,
+          playerStats: createPlayerStats(),
           campaignName: 'test',
           targetName: 'Dragon',
           eventType: 'attack',
@@ -778,17 +631,12 @@ describe('CharSpecialActions - Portent Die Choice', () => {
           diceOptions: [10, 14],
         },
       });
-
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
       fireEvent.click(screen.getByText(/Portent/));
-
       await waitFor(() => {
         expect(screen.getByText('Dragon')).toBeInTheDocument();
       });
-
       fireEvent.click(screen.getByText('Cancel'));
-
       await waitFor(() => {
         expect(screen.queryByText('Dragon')).not.toBeInTheDocument();
       });
