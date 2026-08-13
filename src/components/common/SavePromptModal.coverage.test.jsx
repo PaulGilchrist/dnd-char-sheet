@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // SavePromptModal — Additional coverage for rerolls, evasion overlay, and dismiss behavior
 // These tests provide deeper coverage of edge cases already tested in other files
 

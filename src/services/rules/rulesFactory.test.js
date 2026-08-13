@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import rulesFactory from './rulesFactory.js'
 import rules from './rules.js'

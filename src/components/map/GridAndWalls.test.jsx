@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import GridAndWalls from './GridAndWalls.jsx';

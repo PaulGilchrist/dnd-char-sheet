@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // Removed redundant tests: duplicate constant enumeration, overlapping monotonicity checks,
 // duplicate passability/road edge cases, overlapping terrain pace tests, and redundant A* pathfinding tests.
 // Consolidated edge-case assertions into single tests where behavior is identical.

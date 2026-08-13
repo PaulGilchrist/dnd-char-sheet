@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // Removed redundant error handling tests: three identical error pattern tests
 // ("custom error", "generic message", "network failure") were duplicated across
 // every function. Consolidated into a single combined error test per function.

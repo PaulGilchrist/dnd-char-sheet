@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { handle } from './guardedMindHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';
@@ -217,4 +216,3 @@ describe('guardedMindHandler', () => {
     });
 });
 
-// @cleaned-by-ai

@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest'
 import { spellHandlers } from './spell.js'
 import * as expressModule from '../automationExpressions.js'

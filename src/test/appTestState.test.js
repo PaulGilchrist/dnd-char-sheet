@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mockState, dataLoaderMocks } from './appTestState.js';
 

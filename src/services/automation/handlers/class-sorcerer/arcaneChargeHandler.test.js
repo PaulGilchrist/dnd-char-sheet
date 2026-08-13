@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { handle, confirmArcaneCharge } from './arcaneChargeHandler.js';
 
 const campaignName = 'test-campaign';
@@ -99,4 +98,3 @@ describe('arcaneChargeHandler', () => {
     });
 });
 
-// @cleaned-by-ai

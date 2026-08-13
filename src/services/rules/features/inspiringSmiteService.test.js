@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerInspiringSmite, getInspiringSmitePassives } from './inspiringSmiteService.js';
 import { executeHandler } from '../../automation/index.js';

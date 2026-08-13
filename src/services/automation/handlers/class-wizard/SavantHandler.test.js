@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { handle, onSavantSelected, onSavantLevelUp } from './SavantHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { loadSpells } from '../../../ui/dataLoader.js';

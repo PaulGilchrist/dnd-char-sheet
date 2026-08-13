@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 import { VIEWS, SIDEBAR_BUTTONS, SIDEBAR_VIEWS } from './config.js';
 

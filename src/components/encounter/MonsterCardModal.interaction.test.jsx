@@ -1,4 +1,3 @@
-/* @cleaned-by-ai */
 // Tests removed (redundant with other test files):
 //
 //   "clicking saving throw dice link calls rollSavingThrow"
@@ -44,7 +43,6 @@
 //   "clicking initiative dice link calls rollInitiative" — only test verifying
 //     initiative dice link click handler fires with correct bonus
 //
-// @cleaned-by-ai
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';

@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardArrayToggle from './useWizardArrayToggle.js';

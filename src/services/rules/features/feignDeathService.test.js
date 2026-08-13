@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerFeignDeath } from './feignDeathService.js';
 import { executeHandler } from '../../automation/index.js';

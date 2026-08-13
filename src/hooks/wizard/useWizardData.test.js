@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardData from './useWizardData.js';

@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 // ── initiative.test.js ───────────────────────────────────────────────
 // Tests for initiative.js — behavior-first, minimal over-mocking
 //

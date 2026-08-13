@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ReactDOM from 'react-dom/client';

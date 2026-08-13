@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Sidebar from './Sidebar.jsx';
 
-const defaultProps = {
+const baseProps = {
   campaignName: 'Test Campaign',
   characters: [],
   activeCharacter: null,
@@ -16,26 +16,28 @@ const defaultProps = {
   onNotesClick: vi.fn(),
   onQuestsClick: vi.fn(),
   onNPCsClick: vi.fn(),
+  onSettlementsClick: vi.fn(),
+  onLogClick: vi.fn(),
   onRepairClick: vi.fn(),
   isLocalhost: true,
 };
 
-describe('Sidebar', () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-  });
+function renderSidebar(props = {}) {
+  return render(<Sidebar {...baseProps} {...props} />);
+}
 
+describe('Sidebar', () => {
   describe('rendering', () => {
-    it('should display campaign name', () => {
-      render(<Sidebar {...defaultProps} />);
+    it('displays the campaign name', () => {
+      renderSidebar();
       expect(screen.getByText('Test Campaign')).toBeInTheDocument();
     });
 
-    it('should render Maps label on localhost, Map label on non-localhost', () => {
-      render(<Sidebar {...defaultProps} isLocalhost={true} />);
+    it('renders Maps label on localhost, Map label on non-localhost', () => {
+      renderSidebar({ isLocalhost: true });
       expect(screen.getByText('Maps')).toBeInTheDocument();
 
-      render(<Sidebar {...defaultProps} isLocalhost={false} />);
+      renderSidebar({ isLocalhost: false });
       expect(screen.getByText('Map')).toBeInTheDocument();
     });
 
@@ -44,9 +46,9 @@ describe('Sidebar', () => {
       { label: /Factions/ },
       { label: /NPCs/ },
       { label: /Quests/ },
-    ])('should render %s button on localhost', ({ label }) => {
-      const localhostProps = { ...defaultProps, isLocalhost: true };
-      render(<Sidebar {...localhostProps} />);
+      { label: /Settlements/ },
+    ])('renders %s button on localhost', ({ label }) => {
+      renderSidebar({ isLocalhost: true });
       expect(screen.getByText(label)).toBeInTheDocument();
     });
 
@@ -55,121 +57,164 @@ describe('Sidebar', () => {
       { label: /Factions/ },
       { label: /NPCs/ },
       { label: /Quests/ },
-    ])('should not render %s button on non-localhost', ({ label }) => {
-      const nonLocalhostProps = { ...defaultProps, isLocalhost: false };
-      render(<Sidebar {...nonLocalhostProps} />);
+      { label: /Settlements/ },
+    ])('does not render %s button on non-localhost', ({ label }) => {
+      renderSidebar({ isLocalhost: false });
       expect(screen.queryByText(label)).not.toBeInTheDocument();
     });
 
-    it('should render character names when characters exist', () => {
-      const props = { ...defaultProps, characters: [{ name: 'Aragorn' }, { name: 'Legolas' }] };
-      render(<Sidebar {...props} />);
+    it('renders character names when characters exist', () => {
+      renderSidebar({
+        characters: [{ name: 'Aragorn' }, { name: 'Legolas' }],
+      });
       expect(screen.getByText('Aragorn')).toBeInTheDocument();
       expect(screen.getByText('Legolas')).toBeInTheDocument();
+    });
+
+    it('renders without character buttons when characters list is empty', () => {
+      renderSidebar({ characters: [] });
+      expect(screen.getByText('Characters')).toBeInTheDocument();
+      expect(screen.queryByText('Aragorn')).not.toBeInTheDocument();
+    });
+
+    it.each([
+      { label: /Initiative/ },
+      { label: /Log/ },
+      { label: /Notes/ },
+      { label: /Rules/ },
+    ])('always renders %s regardless of localhost', ({ label }) => {
+      renderSidebar({ isLocalhost: false });
+      expect(screen.getByText(label)).toBeInTheDocument();
     });
   });
 
   describe('event handlers', () => {
-    it('should call onBackToCampaigns when Campaigns button is clicked', () => {
-      render(<Sidebar {...defaultProps} />);
+    it('calls onBackToCampaigns when Campaigns button is clicked', () => {
+      renderSidebar();
       fireEvent.click(screen.getByText(/Campaigns/));
-      expect(defaultProps.onBackToCampaigns).toHaveBeenCalledTimes(1);
+      expect(baseProps.onBackToCampaigns).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onAddCharacter when Add Character button is clicked', () => {
-      render(<Sidebar {...defaultProps} />);
+    it('calls onAddCharacter when Add Character button is clicked', () => {
+      renderSidebar();
       fireEvent.click(screen.getByText(/Add Character/));
-      expect(defaultProps.onAddCharacter).toHaveBeenCalledTimes(1);
+      expect(baseProps.onAddCharacter).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onInitiativeClick when Initiative button is clicked', () => {
-      render(<Sidebar {...defaultProps} />);
+    it('calls onInitiativeClick when Initiative button is clicked', () => {
+      renderSidebar();
       fireEvent.click(screen.getByText(/Initiative/));
-      expect(defaultProps.onInitiativeClick).toHaveBeenCalledTimes(1);
+      expect(baseProps.onInitiativeClick).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onNotesClick when Notes button is clicked', () => {
-      render(<Sidebar {...defaultProps} />);
+    it('calls onLogClick when Log button is clicked', () => {
+      renderSidebar();
+      fireEvent.click(screen.getByText(/Log/));
+      expect(baseProps.onLogClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onMapsClick when Map/Maps button is clicked', () => {
+      renderSidebar({ isLocalhost: true });
+      fireEvent.click(screen.getByText('Maps'));
+      expect(baseProps.onMapsClick).toHaveBeenCalledTimes(1);
+
+      baseProps.onMapsClick.mockClear();
+      renderSidebar({ isLocalhost: false });
+      fireEvent.click(screen.getByText('Map'));
+      expect(baseProps.onMapsClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onNotesClick when Notes button is clicked', () => {
+      renderSidebar();
       fireEvent.click(screen.getByText(/Notes/));
-      expect(defaultProps.onNotesClick).toHaveBeenCalledTimes(1);
+      expect(baseProps.onNotesClick).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onMapsClick when Map button is clicked', () => {
-      render(<Sidebar {...defaultProps} />);
-      fireEvent.click(screen.getByText(/Map/));
-      expect(defaultProps.onMapsClick).toHaveBeenCalledTimes(1);
-    });
-
-    it('should call onRepairClick when Admin button is clicked', () => {
-      render(<Sidebar {...defaultProps} />);
+    it('calls onRepairClick when Admin button is clicked on localhost', () => {
+      renderSidebar({ isLocalhost: true });
       fireEvent.click(screen.getByText(/Admin/));
-      expect(defaultProps.onRepairClick).toHaveBeenCalledTimes(1);
+      expect(baseProps.onRepairClick).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onRepairClick when Admin button is clicked', () => {
-      defaultProps.onRepairClick.mockClear();
-      render(<Sidebar {...defaultProps} isLocalhost={true} />);
-      fireEvent.click(screen.getByText(/Admin/));
-      expect(defaultProps.onRepairClick).toHaveBeenCalled();
+    it('does not render Admin button on non-localhost', () => {
+      renderSidebar({ isLocalhost: false });
+      expect(screen.queryByText(/Admin/)).not.toBeInTheDocument();
     });
 
-    it('should not render Admin button on non-localhost', () => {
-      render(<Sidebar {...defaultProps} isLocalhost={false} />);
-      expect(screen.queryByTestId('admin-btn')).not.toBeInTheDocument();
-    });
+    it('calls localhost-only handlers when those buttons are clicked', () => {
+      renderSidebar({ isLocalhost: true });
 
-    it('should call localhost-only handlers when those buttons are clicked', () => {
-      render(<Sidebar {...defaultProps} isLocalhost={true} />);
       fireEvent.click(screen.getByText(/Encounters/));
-      expect(defaultProps.onEncounterClick).toHaveBeenCalledTimes(1);
+      expect(baseProps.onEncounterClick).toHaveBeenCalledTimes(1);
 
       fireEvent.click(screen.getByText(/Factions/));
-      expect(defaultProps.onFactionsClick).toHaveBeenCalledTimes(1);
+      expect(baseProps.onFactionsClick).toHaveBeenCalledTimes(1);
 
       fireEvent.click(screen.getByText(/NPCs/));
-      expect(defaultProps.onNPCsClick).toHaveBeenCalledTimes(1);
+      expect(baseProps.onNPCsClick).toHaveBeenCalledTimes(1);
 
       fireEvent.click(screen.getByText(/Quests/));
-      expect(defaultProps.onQuestsClick).toHaveBeenCalledTimes(1);
+      expect(baseProps.onQuestsClick).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByText(/Settlements/));
+      expect(baseProps.onSettlementsClick).toHaveBeenCalledTimes(1);
     });
 
-    it('should open rules URL in new tab when Rules clicked', () => {
+    it('opens rules URL in new tab when Rules clicked', () => {
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-      render(<Sidebar {...defaultProps} />);
+      renderSidebar();
       fireEvent.click(screen.getByText(/Rules/));
-      expect(openSpy).toHaveBeenCalledWith('https://paulgilchrist.github.io/dnd-tools/rules/general', '_blank');
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://paulgilchrist.github.io/dnd-tools/rules/general',
+        '_blank'
+      );
       openSpy.mockRestore();
     });
   });
 
   describe('button states', () => {
-    it('should not render rename button in header', () => {
-      render(<Sidebar {...defaultProps} isLocalhost={true} />);
+    it('does not render rename button in header', () => {
+      renderSidebar({ isLocalhost: true });
       expect(screen.queryByTitle('Rename Campaign')).not.toBeInTheDocument();
     });
 
-    it('should not render delete button in header', () => {
-      render(<Sidebar {...defaultProps} isLocalhost={true} />);
+    it('does not render delete button in header', () => {
+      renderSidebar({ isLocalhost: true });
       expect(screen.queryByTitle('Delete Campaign')).not.toBeInTheDocument();
     });
   });
 
   describe('active highlighting', () => {
-    it('should highlight active character only when charSheet is active', () => {
-      const props = {
-        ...defaultProps,
+    it('highlights active character button when charSheet is active', () => {
+      renderSidebar({
         characters: [{ name: 'Aragorn' }, { name: 'Legolas' }],
         activeCharacter: { name: 'Legolas' },
-      };
-      const { unmount } = render(<Sidebar {...props} activeView="charSheet" />);
-      const charBtns = screen.getAllByText('Legolas').map(el => el.closest('button'));
-      const sidebarCharBtn = charBtns.find(btn => btn && btn.classList.contains('sidebar-link'));
-      expect(sidebarCharBtn).toHaveClass('active');
-      unmount();
+        activeView: 'charSheet',
+      });
 
-      render(<Sidebar {...props} activeView="initiative" />);
-      const legolasBtn = screen.getByText('Legolas').closest('button');
-      expect(legolasBtn).not.toHaveClass('active');
+      const buttons = Array.from(document.querySelectorAll('button.sidebar-link'));
+      const legolasBtn = buttons.find(
+        (btn) => btn.textContent === 'Legolas'
+      );
+      expect(legolasBtn).toHaveClass('active');
+
+      const aragornBtn = buttons.find(
+        (btn) => btn.textContent === 'Aragorn'
+      );
+      expect(aragornBtn).not.toHaveClass('active');
+    });
+
+    it('does not highlight character buttons when charSheet is not active', () => {
+      renderSidebar({
+        characters: [{ name: 'Aragorn' }, { name: 'Legolas' }],
+        activeCharacter: { name: 'Legolas' },
+        activeView: 'initiative',
+      });
+
+      const buttons = Array.from(document.querySelectorAll('button.sidebar-link'));
+      buttons.forEach((btn) => {
+        expect(btn).not.toHaveClass('active');
+      });
     });
 
     it.each([
@@ -182,95 +227,112 @@ describe('Sidebar', () => {
       { activeView: 'notes', label: /Notes/ },
       { activeView: 'quests', label: /Quests/ },
       { activeView: 'settlements', label: /Settlements/ },
-    ])('should show active class on $label button when activeView is $activeView', ({ activeView, label }) => {
-      render(<Sidebar {...defaultProps} activeView={activeView} />);
-      const buttons = screen.getAllByText(label).map(el => el.closest('button'));
-      const sectionHeaderBtn = buttons.find(btn => btn && btn.classList.contains('sidebar-section-header'));
-      expect(sectionHeaderBtn).toHaveClass('active');
+    ])(
+      'shows active class on $label button when activeView is $activeView',
+      ({ activeView, label }) => {
+        renderSidebar({ isLocalhost: true, activeView });
+        const buttons = Array.from(
+          document.querySelectorAll('button.sidebar-section-header')
+        );
+        const matchingBtn = buttons.find((btn) => label.test(btn.textContent));
+        expect(matchingBtn).toHaveClass('active');
+      }
+    );
+
+    it('does not highlight buttons when activeView is not set', () => {
+      renderSidebar({ isLocalhost: true, activeView: null });
+      const buttons = Array.from(
+        document.querySelectorAll('button.sidebar-section-header')
+      );
+      buttons.forEach((btn) => {
+        expect(btn).not.toHaveClass('active');
+      });
     });
   });
 
   describe('active view indicator', () => {
-    it('should show active view name in indicator', () => {
-      const { container } = render(<Sidebar {...defaultProps} activeView="initiative" />);
+    it('shows the active view label in the indicator', () => {
+      const { container } = renderSidebar({ activeView: 'initiative' });
       const indicator = container.querySelector('.sidebar-active-indicator');
-      expect(indicator).toHaveTextContent('Initiative');
+      expect(indicator).toBeInTheDocument();
+      expect(indicator.textContent).toContain('Initiative');
     });
 
-    it('should show character name in indicator when charSheet is active', () => {
-      const { container } = render(<Sidebar {...defaultProps} activeView="charSheet" activeCharacter={{ name: 'Frodo' }} />);
+    it('shows the character name in the indicator when charSheet is active', () => {
+      const { container } = renderSidebar({
+        activeView: 'charSheet',
+        activeCharacter: { name: 'Frodo' },
+      });
       const indicator = container.querySelector('.sidebar-active-indicator');
-      expect(indicator).toHaveTextContent('Frodo');
+      expect(indicator).toBeInTheDocument();
+      expect(indicator.textContent).toContain('Frodo');
     });
 
-    it('should not render indicator when activeView is null', () => {
-      const { container } = render(<Sidebar {...defaultProps} activeView={null} />);
+    it('does not render the indicator when activeView is null', () => {
+      const { container } = renderSidebar({ activeView: null });
       expect(container.querySelector('.sidebar-active-indicator')).not.toBeInTheDocument();
+    });
+
+    it('shows the correct icon in the indicator for each view', () => {
+      const { container, rerender } = renderSidebar({ activeView: 'initiative' });
+      let indicator = container.querySelector('.sidebar-active-indicator');
+      expect(indicator.querySelector('.fa-shield-alt')).toBeInTheDocument();
+
+      rerender(<Sidebar {...baseProps} activeView="charSheet" activeCharacter={{ name: 'Test' }} />);
+      indicator = container.querySelector('.sidebar-active-indicator');
+      expect(indicator.querySelector('.fa-user')).toBeInTheDocument();
     });
   });
 
   describe('characters section', () => {
-    it('should always show the characters section without toggle', () => {
-      const props = { ...defaultProps, characters: [{ name: 'Aragorn' }] };
-      render(<Sidebar {...props} />);
+    it('always shows the characters section header', () => {
+      renderSidebar({ characters: [] });
       expect(screen.getByText('Characters')).toBeInTheDocument();
-      expect(screen.getByText('Aragorn')).toBeInTheDocument();
     });
 
-    it('should call onCharacterClick with the character when a character button is clicked', () => {
-      const props = {
-        ...defaultProps,
+    it('calls onCharacterClick with the character object when clicked', () => {
+      renderSidebar({
         characters: [{ name: 'Gandalf' }, { name: 'Saruman' }],
-      };
-      render(<Sidebar {...props} />);
+      });
       fireEvent.click(screen.getByText('Gandalf'));
-      expect(props.onCharacterClick).toHaveBeenCalledWith({ name: 'Gandalf' });
-      expect(props.onCharacterClick).toHaveBeenCalledTimes(1);
+      expect(baseProps.onCharacterClick).toHaveBeenCalledWith({ name: 'Gandalf' });
+      expect(baseProps.onCharacterClick).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onCharacterClick with the correct character when multiple characters exist', () => {
-      const props = {
-        ...defaultProps,
+    it('calls onCharacterClick with the correct character when multiple exist', () => {
+      renderSidebar({
         characters: [{ name: 'Gimli' }, { name: 'Legolas' }],
-      };
-      render(<Sidebar {...props} />);
+      });
       fireEvent.click(screen.getByText('Legolas'));
-      expect(props.onCharacterClick).toHaveBeenCalledWith({ name: 'Legolas' });
+      expect(baseProps.onCharacterClick).toHaveBeenCalledWith({ name: 'Legolas' });
     });
   });
 
-  describe('dice tray and popup', () => {
-    it('should render DicePopup when diceResult is set', () => {
-      const mockOnRoll = vi.fn();
-      const props = { ...defaultProps, onRoll: mockOnRoll };
-      const { container } = render(<Sidebar {...props} />);
-      // DiceTray renders dice buttons
+  describe('dice tray integration', () => {
+    it('renders dice tray buttons for all die types', () => {
+      renderSidebar();
+      const diceLabels = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+      for (const label of diceLabels) {
+        expect(screen.getByTitle(`Roll ${label}`)).toBeInTheDocument();
+      }
+    });
+
+    it('renders DicePopup overlay when a die is rolled', () => {
+      const { container } = renderSidebar();
       const d20Btn = screen.getByTitle('Roll d20');
       fireEvent.click(d20Btn);
-      // After clicking, the DiceTray calls onRoll which sets diceResult
-      // The DicePopup should render
       expect(container.querySelector('.dice-tray-popup-overlay')).toBeInTheDocument();
     });
 
-    it('should close DicePopup when overlay is clicked', () => {
-      const mockOnRoll = vi.fn();
-      const props = { ...defaultProps, onRoll: mockOnRoll };
-      const { container } = render(<Sidebar {...props} />);
+    it('closes DicePopup when overlay is clicked', () => {
+      const { container } = renderSidebar();
       const d20Btn = screen.getByTitle('Roll d20');
       fireEvent.click(d20Btn);
       expect(container.querySelector('.dice-tray-popup-overlay')).toBeInTheDocument();
+
       const overlay = container.querySelector('.dice-tray-popup-overlay');
       fireEvent.click(overlay);
       expect(container.querySelector('.dice-tray-popup-overlay')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('settlements', () => {
-    it('should show active class on settlements button when activeView is settlements', () => {
-      render(<Sidebar {...defaultProps} activeView="settlements" />);
-      const settlementsBtns = screen.getAllByText('Settlements').map(el => el.closest('button'));
-      const sectionHeaderBtn = settlementsBtns.find(btn => btn && btn.classList.contains('sidebar-section-header'));
-      expect(sectionHeaderBtn).toHaveClass('active');
     });
   });
 });

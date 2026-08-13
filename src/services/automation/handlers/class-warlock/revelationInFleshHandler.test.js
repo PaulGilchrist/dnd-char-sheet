@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { handle, applyRevelationOptions } from './revelationInFleshHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as metamagic from '../../../../hooks/combat/useMetamagic.js';

@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     triggerSilence,
@@ -505,4 +504,3 @@ describe('silenceService', () => {
         });
     });
 });
-// @cleaned-by-ai

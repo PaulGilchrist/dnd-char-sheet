@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerAidSpell, confirmAidSpell } from './aidSpellService.js';
 import { executeHandler, applyAidEffect } from '../../automation/index.js';

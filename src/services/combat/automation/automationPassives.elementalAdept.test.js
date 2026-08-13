@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
 }));

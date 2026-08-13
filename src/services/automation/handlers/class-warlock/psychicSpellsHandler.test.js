@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { isPsychicSpellsActive, getPsychicSpellsConfig, handle } from './psychicSpellsHandler.js';
 import * as logService from '../../../ui/logService.js';
 

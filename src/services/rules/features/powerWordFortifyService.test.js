@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerPowerWordFortify } from './powerWordFortifyService.js';
 import { rollExpression } from '../../dice/diceRoller.js';

@@ -1,4 +1,3 @@
-/* @improved-by-ai */
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import WeatherOverlay from './WeatherOverlay.jsx';
@@ -107,4 +106,3 @@ describe('WeatherOverlay', () => {
         });
     });
 });
-// @cleaned-by-ai

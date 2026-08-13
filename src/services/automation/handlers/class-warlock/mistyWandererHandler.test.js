@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { handle, confirmMistyWanderer } from './mistyWandererHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationExpressions.js';

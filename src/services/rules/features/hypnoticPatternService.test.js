@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerHypnoticPattern } from './hypnoticPatternService.js';
 import { executeHandler } from '../../automation/index.js';

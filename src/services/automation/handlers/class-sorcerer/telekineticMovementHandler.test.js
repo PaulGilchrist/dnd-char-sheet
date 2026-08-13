@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { handle } from './telekineticMovementHandler.js';
 import * as logService from '../../../ui/logService.js';
 

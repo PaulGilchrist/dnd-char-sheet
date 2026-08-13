@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HexGridLayer from './HexGridLayer.jsx';
@@ -106,4 +105,3 @@ describe('HexGridLayer', () => {
         expect(paths.length).toBe(300);
     });
 });
-// @cleaned-by-ai

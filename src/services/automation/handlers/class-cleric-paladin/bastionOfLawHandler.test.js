@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, handleApply, handleSpendDice, handleClearWard } from './bastionOfLawHandler.js';
 

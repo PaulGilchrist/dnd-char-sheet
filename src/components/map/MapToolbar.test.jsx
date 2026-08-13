@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import MapToolbar from './MapToolbar.jsx';

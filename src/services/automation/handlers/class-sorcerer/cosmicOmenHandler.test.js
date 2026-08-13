@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, clearCosmicOmenEffect } from './cosmicOmenHandler.js';
 
@@ -301,4 +300,3 @@ describe('cosmicOmenHandler', () => {
         });
     });
 });
-// @cleaned-by-ai

@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 import { handle } from './concentrationBonusAttackHandler.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';

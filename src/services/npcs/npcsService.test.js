@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { loadNPCs, saveNPCs, loadNPC, deleteNPC, saveNPC } from './npcsService.js';
 

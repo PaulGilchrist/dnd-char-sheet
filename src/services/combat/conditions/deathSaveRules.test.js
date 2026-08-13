@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import { rollDeathSave, rollDeathSaveWithAdvantage, isStable, isDead } from './deathSaveRules.js';
 import * as diceRoller from '../../dice/diceRoller.js';

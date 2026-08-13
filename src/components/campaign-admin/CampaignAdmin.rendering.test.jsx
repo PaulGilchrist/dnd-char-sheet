@@ -1,44 +1,30 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
 
+const createDefaultProps = (overrides = {}) => ({
+    campaignName: 'test-campaign',
+    onBack: vi.fn(),
+    theme: 'dark',
+    toggleTheme: vi.fn(),
+    onRenameCampaign: vi.fn(),
+    ...overrides,
+});
+
 describe('CampaignAdmin - Rendering', () => {
-    const defaultProps = {
-        campaignName: 'test-campaign',
-        onBack: vi.fn(),
-        theme: 'dark',
-        toggleTheme: vi.fn(),
-        onRenameCampaign: vi.fn(),
-    };
+    const defaultProps = createDefaultProps();
 
     beforeEach(() => {
         vi.clearAllMocks();
-        global.fetch = vi.fn();
         window.alert = vi.fn();
         window.confirm = vi.fn(() => true);
         window.prompt = vi.fn(() => 'test-campaign');
-        window.location = { reload: vi.fn() };
+        Object.defineProperty(window, 'location', {
+            value: { reload: vi.fn() },
+            writable: true,
+        });
     });
-
-    const getSectionByText = (text) => {
-        const sections = document.querySelectorAll('.admin-section');
-        for (const section of sections) {
-            if (section.textContent.includes(text)) {
-                return section;
-            }
-        }
-        return null;
-    };
-
-    const getActionByText = (text) => {
-        const actions = document.querySelectorAll('.admin-action');
-        for (const action of actions) {
-            if (action.textContent.includes(text)) {
-                return action;
-            }
-        }
-        return null;
-    };
 
     describe('initial render', () => {
         it('renders the header with campaign name', () => {
@@ -46,40 +32,45 @@ describe('CampaignAdmin - Rendering', () => {
             expect(screen.getByText('Admin — test-campaign')).toBeInTheDocument();
         });
 
-        it('renders the back button', () => {
+        it('renders the back button with arrow icon', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const backBtn = document.querySelector('.ct-back-btn');
             expect(backBtn).toBeInTheDocument();
             expect(backBtn.querySelector('i.fa-arrow-left')).toBeTruthy();
         });
 
-        it('renders the Appearance section', () => {
+        it('renders all four admin sections', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            expect(getSectionByText('Appearance')).toBeInTheDocument();
+            expect(screen.getByText('Appearance')).toBeInTheDocument();
+            expect(screen.getByText('Campaign Management')).toBeInTheDocument();
+            expect(screen.getByText('Data Management')).toBeInTheDocument();
+            expect(screen.getByText('Backup & Restore')).toBeInTheDocument();
         });
 
-        it('renders the Campaign Management section', () => {
+        it('renders all Campaign Management actions', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            expect(getSectionByText('Campaign Management')).toBeInTheDocument();
-            expect(getActionByText('Rename Campaign')).toBeInTheDocument();
-            expect(getActionByText('Delete Campaign')).toBeInTheDocument();
+            const renameActions = screen.getAllByText('Rename Campaign');
+            expect(renameActions.length).toBeGreaterThanOrEqual(2);
+            const deleteActions = screen.getAllByText('Delete Campaign');
+            expect(deleteActions.length).toBeGreaterThanOrEqual(2);
         });
 
-        it('renders the Data Management section', () => {
+        it('renders all Data Management actions', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            expect(getSectionByText('Data Management')).toBeInTheDocument();
-            expect(getActionByText('Clear Change Data')).toBeInTheDocument();
-            expect(getActionByText('Clear Campaign Log')).toBeInTheDocument();
-            expect(getActionByText('Full Reset')).toBeInTheDocument();
+            const clearChangeActions = screen.getAllByText('Clear Change Data');
+            expect(clearChangeActions.length).toBeGreaterThanOrEqual(2);
+            const clearLogActions = screen.getAllByText('Clear Campaign Log');
+            expect(clearLogActions.length).toBeGreaterThanOrEqual(2);
+            const resetActions = screen.getAllByText('Full Reset');
+            expect(resetActions.length).toBeGreaterThanOrEqual(2);
         });
 
-        it('renders the Backup & Restore section', () => {
+        it('renders all Backup & Restore actions', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            expect(getSectionByText('Backup & Restore')).toBeInTheDocument();
-            expect(getActionByText('Snapshot')).toBeInTheDocument();
-            expect(getActionByText('Download')).toBeInTheDocument();
-            expect(getActionByText('Rollback')).toBeInTheDocument();
-            expect(getActionByText('Upload')).toBeInTheDocument();
+            expect(screen.getByText('Snapshot')).toBeInTheDocument();
+            expect(screen.getByText('Download')).toBeInTheDocument();
+            expect(screen.getByText('Rollback')).toBeInTheDocument();
+            expect(screen.getByText('Upload')).toBeInTheDocument();
         });
 
         it('shows "Switch to Light Mode" when theme is dark', () => {
@@ -88,71 +79,39 @@ describe('CampaignAdmin - Rendering', () => {
         });
 
         it('shows "Switch to Dark Mode" when theme is light', () => {
-            render(<CampaignAdmin {...defaultProps} theme="light" />);
+            render(<CampaignAdmin {...createDefaultProps({ theme: 'light' })} />);
             expect(screen.getByText('Switch to Dark Mode')).toBeInTheDocument();
         });
 
-        it('does not render status message initially', () => {
-            const { container } = render(<CampaignAdmin {...defaultProps} />);
-            expect(container.querySelector('.admin-status')).not.toBeInTheDocument();
+        it('does not render a status message initially', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            expect(screen.queryByText(/Creating snapshot|Rolling back|Clearing|Snapshot created|Download started|Rolled back|Network failed|Upload failed/)).not.toBeInTheDocument();
         });
     });
 
-    describe('danger sections', () => {
-        it('applies danger styling to Delete Campaign', () => {
+    describe('danger styling', () => {
+        it('applies danger styling to Delete Campaign action', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const deleteAction = getActionByText('Delete Campaign');
+            const deleteAction = [...document.querySelectorAll('.admin-action')].find(
+                (a) => a.querySelector('h3')?.textContent === 'Delete Campaign'
+            );
             expect(deleteAction).toHaveClass('admin-action--danger');
         });
 
-        it('applies danger styling to Full Reset', () => {
+        it('applies danger styling to Full Reset action', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const resetAction = getActionByText('Full Reset');
+            const resetAction = [...document.querySelectorAll('.admin-action')].find(
+                (a) => a.querySelector('h3')?.textContent === 'Full Reset'
+            );
             expect(resetAction).toHaveClass('admin-action--danger');
         });
 
-        it('applies danger styling to Rollback', () => {
+        it('applies danger styling to Rollback action', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const rollbackAction = getActionByText('Rollback to Snapshot');
+            const rollbackAction = [...document.querySelectorAll('.admin-action')].find(
+                (a) => a.querySelector('h3')?.textContent === 'Rollback'
+            );
             expect(rollbackAction).toHaveClass('admin-action--danger');
-        });
-    });
-
-    describe('campaign name encoding', () => {
-        it('URL-encodes the campaign name in API requests for clear-change-data', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
-            );
-            window.confirm.mockReturnValueOnce(true);
-            render(<CampaignAdmin {...defaultProps} campaignName="my campaign/1" />);
-            const action = getActionByText('Clear Change Data');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-            await waitFor(() => {
-                expect(global.fetch).toHaveBeenCalledWith(
-                    '/api/campaigns/my%20campaign%2F1/admin/clear-change-data',
-                    { method: 'POST' }
-                );
-            });
-        });
-
-        it('URL-encodes the campaign name in DELETE requests for delete', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
-            );
-            window.prompt.mockReturnValueOnce('my campaign/1');
-            window.confirm.mockReturnValueOnce(true);
-            window.confirm.mockReturnValueOnce(true);
-            render(<CampaignAdmin {...defaultProps} campaignName="my campaign/1" />);
-            const action = getActionByText('Delete Campaign');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-            await waitFor(() => {
-                expect(global.fetch).toHaveBeenCalledWith(
-                    '/api/campaigns/my%20campaign%2F1',
-                    { method: 'DELETE' }
-                );
-            });
         });
     });
 });

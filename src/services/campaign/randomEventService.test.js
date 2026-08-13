@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // Removed redundant Math.random spy tests: "should not call Math.random when
 // frequency is none or invalid" duplicated assertions already made in individual
 // tests. Removed "should apply terrain modifiers for all defined terrains" which

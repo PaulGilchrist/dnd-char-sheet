@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle, handleEscape, isForcecageBlocked, isCreatureTrappedInForcecage, removeForcecageEffect } from './forcecageHandler.js';

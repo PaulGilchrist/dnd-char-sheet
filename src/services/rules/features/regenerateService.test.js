@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerRegenerate, confirmRegenerate } from './regenerateService.js';
 import { executeHandler, applyRegenerateEffect } from '../../automation/index.js';

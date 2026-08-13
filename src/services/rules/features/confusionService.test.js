@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerConfusion } from './confusionService.js';
 import { executeHandler } from '../../automation/index.js';

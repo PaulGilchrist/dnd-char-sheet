@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import WizardProgressBar from './WizardProgressBar.jsx';

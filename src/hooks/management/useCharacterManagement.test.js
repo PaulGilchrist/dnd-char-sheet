@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-/* @improved-by-ai */
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import useCharacterManagement from './useCharacterManagement.js';

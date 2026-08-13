@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import useSelectMove from './useSelectMove.js';

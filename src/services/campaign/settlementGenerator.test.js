@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // Removed brittle tests that assert specific string content from JSON data files
 // (description, atmosphere, government, threat, rumors) — these break when data
 // files change. Removed "uses guild names for guild-type services" which only

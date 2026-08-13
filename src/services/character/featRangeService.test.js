@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi } from 'vitest'
 import { computeFeatRangeEffects } from './featRangeService.js'
 import * as dataLoader from '../ui/dataLoader.js'

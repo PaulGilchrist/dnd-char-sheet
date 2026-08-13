@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     handle,
@@ -401,4 +400,3 @@ describe('clockworkCavalcadeHandler', () => {
         });
     });
 });
-// @cleaned-by-ai

@@ -1,6 +1,5 @@
-// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NPCListItem from './NPCListItem.jsx';
 
 vi.mock('../../services/encounters/npcStatBlockUtils.js', () => ({
@@ -16,15 +15,15 @@ vi.mock('../../services/npcs/npcFormUtils.js', () => ({
 }));
 
 vi.mock('../common/AvatarImage.jsx', () => ({
-  default: ({ name }) => (
-    <img
-      data-testid="avatar-image"
-      alt={`${name} avatar`}
-    />
-  ),
+  default: vi.fn(({ name, campaignName }) => (
+    <div data-testid="avatar-image" data-name={name} data-campaign={campaignName}>
+      <img alt={`${name} avatar`} />
+    </div>
+  )),
 }));
 
 import { npcHasStatBlock } from '../../services/encounters/npcStatBlockUtils.js';
+import AvatarImage from '../common/AvatarImage.jsx';
 
 describe('NPCListItem', () => {
   const mockOnEdit = vi.fn();
@@ -39,16 +38,22 @@ describe('NPCListItem', () => {
     armorClass: undefined,
   };
 
-  const renderListItem = (npcProps = {}) => {
+  const renderListItem = (npcProps = {}, extraProps = {}) => {
     const npc = { ...baseNPC, ...npcProps };
     return render(
       <NPCListItem
         npc={npc}
         onEdit={mockOnEdit}
         onAddToInitiative={mockOnAddToInitiative}
+        campaignName="test-campaign"
+        {...extraProps}
       />
     );
   };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   // ── Basic Rendering ───────────────────────────────────────────────
 
@@ -63,6 +68,19 @@ describe('NPCListItem', () => {
       const listItem = screen.getByRole('button', { name: 'Edit NPC: Gandalf' });
       expect(listItem).toBeInTheDocument();
       expect(listItem).toHaveClass('ct-list-item');
+      expect(listItem).toHaveAttribute('aria-label', 'Edit NPC: Gandalf');
+      expect(listItem).toHaveAttribute('tabIndex', '0');
+    });
+
+    it('updates aria-label when NPC name changes', () => {
+      renderListItem({ name: 'Aragorn' });
+      expect(screen.getByRole('button', { name: 'Edit NPC: Aragorn' })).toBeInTheDocument();
+    });
+
+    it('renders as an li element', () => {
+      renderListItem();
+      const listItem = screen.getByRole('button');
+      expect(listItem.tagName).toBe('LI');
     });
   });
 
@@ -72,13 +90,23 @@ describe('NPCListItem', () => {
     it('does not render AvatarImage when no imagePath', () => {
       renderListItem();
       expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
+      expect(AvatarImage).not.toHaveBeenCalled();
     });
 
-    it('renders AvatarImage with correct alt text when imagePath provided', () => {
+    it('renders AvatarImage with correct name when imagePath provided', () => {
       renderListItem({ name: 'Aragorn', imagePath: '/images/aragorn.png' });
-      const avatar = screen.getByTestId('avatar-image');
-      expect(avatar).toBeInTheDocument();
-      expect(avatar).toHaveAttribute('alt', 'Aragorn avatar');
+      expect(AvatarImage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ name: 'Aragorn', imagePath: '/images/aragorn.png', size: 36, campaignName: 'test-campaign' }),
+        undefined
+      );
+    });
+
+    it('passes campaignName to AvatarImage', () => {
+      renderListItem({ imagePath: '/img.png' }, { campaignName: 'my-campaign' });
+      expect(AvatarImage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ campaignName: 'my-campaign' }),
+        undefined
+      );
     });
   });
 
@@ -86,15 +114,17 @@ describe('NPCListItem', () => {
 
   describe('Stat block badge', () => {
     it('does not render badge when npc has no stat block', () => {
-      vi.mocked(npcHasStatBlock).mockReturnValue(false);
+      npcHasStatBlock.mockReturnValue(false);
       renderListItem();
-      expect(document.querySelector('.npcs-stat-badge')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Has stat block')).not.toBeInTheDocument();
     });
 
-    it('renders badge when npc has stat block', () => {
-      vi.mocked(npcHasStatBlock).mockReturnValue(true);
+    it('renders badge with icon when npc has stat block', () => {
+      npcHasStatBlock.mockReturnValue(true);
       renderListItem({ armorClass: 15 });
-      expect(document.querySelector('.npcs-stat-badge')).toBeInTheDocument();
+      const badge = screen.getByTitle('Has stat block');
+      expect(badge).toBeInTheDocument();
+      expect(badge.querySelector('i.fa-solid.fa-shield')).toBeInTheDocument();
     });
   });
 
@@ -103,6 +133,7 @@ describe('NPCListItem', () => {
   describe('Attitude badge', () => {
     it('does not render badge when attitude is empty', () => {
       renderListItem({ attitude: '' });
+      expect(screen.queryByLabelText('')).not.toBeInTheDocument();
       expect(document.querySelector('.ct-list-attitude')).not.toBeInTheDocument();
     });
 
@@ -161,6 +192,7 @@ describe('NPCListItem', () => {
       const tagsEl = document.querySelector('.npcs-list-tags');
       expect(tagsEl).toBeInTheDocument();
       expect(tagsEl).toHaveTextContent('ally, quest-giver');
+      expect(tagsEl.querySelector('i.fa-solid.fa-tags')).toBeInTheDocument();
     });
   });
 
@@ -168,23 +200,31 @@ describe('NPCListItem', () => {
 
   describe('Add to Initiative button', () => {
     it('does not render button when npc has no stat block', () => {
-      vi.mocked(npcHasStatBlock).mockReturnValue(false);
+      npcHasStatBlock.mockReturnValue(false);
       renderListItem();
-      expect(document.querySelector('.npcs-init-btn')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Add to Initiative')).not.toBeInTheDocument();
     });
 
     it('renders button when npc has stat block', () => {
-      vi.mocked(npcHasStatBlock).mockReturnValue(true);
+      npcHasStatBlock.mockReturnValue(true);
       renderListItem({ armorClass: 15 });
-      expect(document.querySelector('.npcs-init-btn')).toBeInTheDocument();
+      expect(screen.getByTitle('Add to Initiative')).toBeInTheDocument();
     });
 
     it('calls onAddToInitiative when clicked', () => {
-      vi.mocked(npcHasStatBlock).mockReturnValue(true);
+      npcHasStatBlock.mockReturnValue(true);
       renderListItem({ armorClass: 15 });
-      const btn = document.querySelector('.npcs-init-btn');
+      const btn = screen.getByTitle('Add to Initiative');
       fireEvent.click(btn);
       expect(mockOnAddToInitiative).toHaveBeenCalledWith({ ...baseNPC, armorClass: 15 });
+    });
+
+    it('stops propagation when clicked to prevent parent edit trigger', () => {
+      npcHasStatBlock.mockReturnValue(true);
+      renderListItem({ armorClass: 15 });
+      const btn = screen.getByTitle('Add to Initiative');
+      fireEvent.click(btn);
+      expect(mockOnEdit).not.toHaveBeenCalled();
     });
   });
 
@@ -195,7 +235,9 @@ describe('NPCListItem', () => {
       renderListItem();
       const listItem = screen.getByRole('button', { name: 'Edit NPC: Gandalf' });
       fireEvent.click(listItem);
-      expect(mockOnEdit).toHaveBeenCalledWith(baseNPC);
+      expect(mockOnEdit).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Gandalf', race: '', classRole: '', attitude: '', tags: '', armorClass: undefined })
+      );
     });
   });
 
@@ -206,7 +248,16 @@ describe('NPCListItem', () => {
       renderListItem();
       const listItem = screen.getByRole('button', { name: 'Edit NPC: Gandalf' });
       fireEvent.keyDown(listItem, { key });
-      expect(mockOnEdit).toHaveBeenCalledWith(baseNPC);
+      expect(mockOnEdit).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Gandalf' })
+      );
+    });
+
+    it('does not call onEdit for other keys', () => {
+      renderListItem();
+      const listItem = screen.getByRole('button', { name: 'Edit NPC: Gandalf' });
+      fireEvent.keyDown(listItem, { key: 'Escape' });
+      expect(mockOnEdit).not.toHaveBeenCalled();
     });
   });
 });

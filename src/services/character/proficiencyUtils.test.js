@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import { getProficiencies, getProficiencyChoiceCount } from './proficiencyUtils.js';
 

@@ -1,4 +1,3 @@
-/* @improved-by-ai */
 import { describe, it, expect } from 'vitest';
 
 // All 25 tests in this file duplicate behavioral coverage already provided
@@ -57,7 +56,6 @@ import { describe, it, expect } from 'vitest';
 // (CONDITIONS_THAT_CANNOT_ACT.has(c)) with different values.
 //
 // Removed: 25 tests (all redundant with existing test files)
-// @cleaned-by-ai
 
 describe('MonsterCardModal - logic tests removed', () => {
   it('no-op: all logic tests were redundant and removed', () => {

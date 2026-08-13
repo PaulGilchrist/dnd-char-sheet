@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect } from 'vitest'
 import { elementalHandlers } from './elemental-handlers.js'
 import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'

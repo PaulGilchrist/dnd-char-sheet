@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './reactionBonusHandler.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';

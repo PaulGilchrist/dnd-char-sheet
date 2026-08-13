@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { dispelSpellsOnTarget, resolveSpellLevel } from './clockworkCavalcadeDispel.js';
 
@@ -171,4 +170,3 @@ describe('clockworkCavalcadeDispel', () => {
         });
     });
 });
-// @cleaned-by-ai

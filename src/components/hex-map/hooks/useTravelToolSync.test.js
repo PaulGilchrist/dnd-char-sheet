@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import useTravelToolSync from './useTravelToolSync.js';
@@ -322,5 +321,4 @@ describe('useTravelToolSync', () => {
         });
     });
 
-    // @cleaned-by-ai
 });

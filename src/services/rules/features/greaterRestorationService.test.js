@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerGreaterRestoration, confirmGreaterRestoration } from './greaterRestorationService.js';
 import { executeHandler, applyGreaterRestorationEffect } from '../../automation/index.js';

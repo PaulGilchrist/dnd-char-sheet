@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // Redundant, brittle, and low-value tests removed:
 // - Consolidated null/undefined/empty targetName fallback into single test
 // - Consolidated unknown mastery default case into single test

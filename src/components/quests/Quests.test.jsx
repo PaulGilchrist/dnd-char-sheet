@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Quests from './Quests.jsx';
@@ -48,7 +47,6 @@ function renderWithQuests(items, loading = false) {
 
 describe('Quests', () => {
   beforeEach(() => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -121,6 +119,24 @@ describe('Quests', () => {
 
       const emptyState = screen.getByText(/No quests found matching/);
       expect(emptyState.textContent).toContain('dragons');
+    });
+
+    it('shows empty state when search filters out all quests', async () => {
+      renderWithQuests([
+        {
+          id: 'quest-1',
+          name: 'Find the Lost Sword',
+          status: 'active',
+          description: '',
+          rewards: '',
+          notes: '',
+        },
+      ]);
+
+      const searchInput = screen.getByPlaceholderText(/Search Quests/);
+      fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
+
+      expect(screen.getByText(/No quests found matching/)).toBeInTheDocument();
     });
   });
 
@@ -204,6 +220,28 @@ describe('Quests', () => {
       expect(saveButton).not.toHaveAttribute('disabled');
     });
 
+    it('disables Cancel button during save', async () => {
+      mockUseQuestsManagement.mockReturnValue({
+        items: [],
+        loading: false,
+        loadItems: vi.fn(),
+        saveItems: vi.fn().mockImplementation(() => new Promise(() => {})),
+        deleteItem: vi.fn(),
+      });
+
+      render(<Quests {...defaultProps} />);
+      fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
+
+      const nameInput = screen.getByLabelText(/Name/);
+      fireEvent.change(nameInput, { target: { value: 'New Quest' } });
+
+      const saveButton = screen.getByRole('button', { name: 'Save' });
+      fireEvent.click(saveButton);
+
+      const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+      expect(cancelButton).toHaveAttribute('disabled');
+    });
+
     it('does not save when name is empty', async () => {
       const { mockSave } = renderWithQuests([]);
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
@@ -231,6 +269,42 @@ describe('Quests', () => {
       });
 
       expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
+    });
+
+    it('passes correct quest data to saveItems on new quest', async () => {
+      const { mockSave } = renderWithQuests([]);
+      fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
+
+      const nameInput = screen.getByLabelText(/Name/);
+      fireEvent.change(nameInput, { target: { value: 'New Quest' } });
+
+      const statusSelect = screen.getByLabelText('Status');
+      fireEvent.change(statusSelect, { target: { value: 'completed' } });
+
+      const descField = screen.getByTestId('field-quest-description');
+      fireEvent.change(descField, { target: { value: 'New desc' } });
+
+      const rewardsField = screen.getByTestId('field-quest-rewards');
+      fireEvent.change(rewardsField, { target: { value: '50 gold' } });
+
+      const notesField = screen.getByTestId('field-quest-notes');
+      fireEvent.change(notesField, { target: { value: 'New notes' } });
+
+      const saveButton = screen.getByRole('button', { name: 'Save' });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockSave).toHaveBeenCalled();
+      });
+
+      const savedQuests = mockSave.mock.calls[0][0];
+      const newQuest = savedQuests.find(q => q.name === 'New Quest');
+      expect(newQuest).toBeDefined();
+      expect(newQuest.status).toBe('completed');
+      expect(newQuest.description).toBe('New desc');
+      expect(newQuest.rewards).toBe('50 gold');
+      expect(newQuest.notes).toBe('New notes');
+      expect(newQuest.id).toBeDefined();
     });
   });
 
@@ -315,6 +389,76 @@ describe('Quests', () => {
 
       expect(screen.getByLabelText('Edit quest: Test Quest')).toBeInTheDocument();
     });
+
+    it('renders quest list items as interactive elements', async () => {
+      renderWithQuests([
+        {
+          id: 'quest-1',
+          name: 'Test Quest',
+          status: 'active',
+          description: '',
+          rewards: '',
+          notes: '',
+        },
+      ]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Quest')).toBeInTheDocument();
+      });
+
+      const listItem = screen.getByLabelText('Edit quest: Test Quest').closest('li');
+      expect(listItem).toHaveAttribute('role', 'button');
+      expect(listItem).toHaveAttribute('tabIndex', '0');
+    });
+
+    it('opens edit modal when quest list item is clicked', async () => {
+      renderWithQuests([
+        {
+          id: 'quest-1',
+          name: 'Clickable Quest',
+          status: 'active',
+          description: '',
+          rewards: '',
+          notes: '',
+        },
+      ]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Clickable Quest')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Clickable Quest'));
+      expect(screen.getByRole('heading', { name: 'Edit Quest' })).toBeInTheDocument();
+    });
+
+    it('opens edit modal when quest list item is activated via keyboard', async () => {
+      renderWithQuests([
+        {
+          id: 'quest-1',
+          name: 'Keyboard Quest',
+          status: 'active',
+          description: '',
+          rewards: '',
+          notes: '',
+        },
+      ]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Keyboard Quest')).toBeInTheDocument();
+      });
+
+      const listItem = screen.getByLabelText('Edit quest: Keyboard Quest').closest('li');
+
+      fireEvent.keyDown(listItem, { key: 'Enter' });
+      expect(screen.getByRole('heading', { name: 'Edit Quest' })).toBeInTheDocument();
+
+      // Close the modal for the next keyboard test
+      fireEvent.click(screen.getByText('Cancel'));
+
+      // Test space key
+      fireEvent.keyDown(listItem, { key: ' ' });
+      expect(screen.getByRole('heading', { name: 'Edit Quest' })).toBeInTheDocument();
+    });
   });
 
   describe('edit quest modal', () => {
@@ -368,6 +512,13 @@ describe('Quests', () => {
       expect(screen.getByText(/Delete/)).toBeInTheDocument();
     });
 
+    it('hides delete button in new quest modal', async () => {
+      renderWithQuests([]);
+      fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
+      expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
+      expect(screen.queryByText(/Delete/)).not.toBeInTheDocument();
+    });
+
     it('saves edited quest via saveQuestsList with updated data', async () => {
       const { mockSave } = renderWithQuests([
         {
@@ -417,6 +568,40 @@ describe('Quests', () => {
       expect(updatedQuest.rewards).toBe('100 gold');
       expect(updatedQuest.notes).toBe('Updated notes');
     });
+
+    it('disables delete button while delete is in progress', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      let deleteResolve;
+      const { mockDelete } = renderWithQuests([
+        {
+          id: 'quest-1',
+          name: 'Delete Test Quest',
+          status: 'active',
+          description: '',
+          rewards: '',
+          notes: '',
+        },
+      ]);
+
+      mockDelete.mockImplementation(() => new Promise((resolve) => { deleteResolve = resolve; }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete Test Quest')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Delete Test Quest'));
+      const deleteBtn = screen.getByRole('button', { name: 'Delete' });
+      fireEvent.click(deleteBtn);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Deleting/)).toBeInTheDocument();
+      });
+
+      expect(deleteBtn).toHaveAttribute('disabled');
+
+      deleteResolve();
+    });
   });
 
   describe('search', () => {
@@ -449,6 +634,47 @@ describe('Quests', () => {
 
       expect(screen.queryByText('Find the Lost Sword')).not.toBeInTheDocument();
       expect(screen.getByText('Defeat the Dragon')).toBeInTheDocument();
+    });
+
+    it('filters quests case-insensitively', async () => {
+      renderWithQuests([
+        {
+          id: 'quest-1',
+          name: 'Find the Lost Sword',
+          status: 'active',
+          description: '',
+          rewards: '',
+          notes: '',
+        },
+      ]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Find the Lost Sword')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText(/Search Quests/);
+      fireEvent.change(searchInput, { target: { value: 'find the lost sword' } });
+
+      expect(screen.getByText('Find the Lost Sword')).toBeInTheDocument();
+      expect(screen.queryByText('No quests found')).not.toBeInTheDocument();
+    });
+
+    it('does not filter by description, only by name', async () => {
+      renderWithQuests([
+        {
+          id: 'quest-1',
+          name: 'Find the Lost Sword',
+          status: 'active',
+          description: 'Search in the dark dungeon',
+          rewards: '',
+          notes: '',
+        },
+      ]);
+
+      const searchInput = screen.getByPlaceholderText(/Search Quests/);
+      fireEvent.change(searchInput, { target: { value: 'dungeon' } });
+
+      expect(screen.queryByText('Find the Lost Sword')).not.toBeInTheDocument();
     });
 
     it('shows clear search button when search has text and clears on click', () => {
@@ -512,6 +738,8 @@ describe('Quests', () => {
 
   describe('delete quest', () => {
     it('calls delete when delete confirmed', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
       const { mockDelete } = renderWithQuests([
         {
           id: 'quest-1',
@@ -535,7 +763,7 @@ describe('Quests', () => {
     });
 
     it('does not call delete when confirm is cancelled', async () => {
-      window.confirm.mockReturnValueOnce(false);
+      vi.spyOn(window, 'confirm').mockReturnValue(false);
 
       const { mockDelete } = renderWithQuests([
         {
@@ -560,6 +788,8 @@ describe('Quests', () => {
     });
 
     it('shows confirming delete text when delete is in progress', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
       let deleteResolve;
       const { mockDelete } = renderWithQuests([
         {
@@ -584,13 +814,15 @@ describe('Quests', () => {
       fireEvent.click(deleteBtn);
 
       await waitFor(() => {
-        expect(screen.getByText(/Deleting/)).toBeInTheDocument();
+        expect(screen.queryByText(/Deleting/)).toBeInTheDocument();
       });
 
       deleteResolve();
     });
 
     it('handles delete error gracefully', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
       const { mockDelete } = renderWithQuests([
         {
           id: 'quest-1',

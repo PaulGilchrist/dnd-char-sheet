@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { handle } from './psychicTeleportationHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';
@@ -139,4 +138,3 @@ describe('psychicTeleportationHandler', () => {
     });
 });
 
-// @cleaned-by-ai

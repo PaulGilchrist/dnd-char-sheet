@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { render, screen, fireEvent, renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import usePopup from './usePopup.js';

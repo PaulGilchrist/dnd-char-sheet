@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js';

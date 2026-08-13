@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('../shared/featFinder.js', () => ({

@@ -1,4 +1,3 @@
-// @improved-by-ai
 // ── passive.test.js ──────────────────────────────────────────────────
 // Tests for passive.js — behavior-first, minimal over-mocking
 //

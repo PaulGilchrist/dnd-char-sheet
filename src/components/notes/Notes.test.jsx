@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Notes from './Notes.jsx';

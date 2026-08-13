@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // Suppress fire-and-forget logService.addEntry rejection warnings from source code
 process.on('unhandledRejection', () => {});
 

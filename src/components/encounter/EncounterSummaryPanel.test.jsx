@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EncounterSummaryPanel from './EncounterSummaryPanel.jsx';
 
-// @cleaned-by-ai
 
 describe('EncounterSummaryPanel', () => {
   let defaultProps;

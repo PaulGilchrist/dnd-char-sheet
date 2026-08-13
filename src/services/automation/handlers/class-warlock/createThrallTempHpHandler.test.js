@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { handle } from './createThrallTempHpHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';

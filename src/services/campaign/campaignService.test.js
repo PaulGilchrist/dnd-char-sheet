@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // Removed redundant error handling tests: API error and network error patterns
 // were duplicated across every function. Consolidated into single representative
 // tests per function. Removed brittle URL-encoding tests that duplicate behavior

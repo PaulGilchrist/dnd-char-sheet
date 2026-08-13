@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 import { applyGreatWeaponFighting, greatWeaponFightingApplies } from './greatWeaponFighting.js';
 

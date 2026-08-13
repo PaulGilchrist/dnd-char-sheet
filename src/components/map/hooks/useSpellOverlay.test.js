@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useSpellOverlay from './useSpellOverlay.js';

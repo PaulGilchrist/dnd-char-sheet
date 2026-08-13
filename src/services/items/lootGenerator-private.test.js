@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 
 import { normalizeCurrency, formatCurrencyString } from './lootGenerator.js';

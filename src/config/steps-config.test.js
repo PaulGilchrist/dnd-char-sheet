@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import { WIZARD_STEPS, getTotalSteps, getStepConfig } from './steps-config.js';
 

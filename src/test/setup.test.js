@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { clearActiveInstances, setApplyBusy, isApplyBusy } from '../components/char-sheet/modals/shared/areaEffectModalInstances.js';

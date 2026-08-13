@@ -1,4 +1,3 @@
-// @improved-by-ai
 // SpellDetailPopup no longer calls prepareSpellCast directly.
 // Slot consumption, free cast cleanup, and concentration management
 // are handled downstream in gateMetamagic → prepareSpellCast.

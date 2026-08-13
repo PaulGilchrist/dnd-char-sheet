@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './restoreBalanceHandler.js';
@@ -194,4 +193,3 @@ describe('restoreBalanceHandler.handle', () => {
         });
     });
 });
-// @cleaned-by-ai

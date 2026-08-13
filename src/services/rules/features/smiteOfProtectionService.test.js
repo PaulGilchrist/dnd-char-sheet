@@ -1,4 +1,3 @@
-// @improved-by-ai
 import {
     getSmiteOfProtectionPassives,
     triggerSmiteOfProtection,
