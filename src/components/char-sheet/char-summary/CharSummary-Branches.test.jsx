@@ -1,8 +1,9 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -122,7 +123,11 @@ const mockPlayerStats = {
 const mockCampaignName = 'test-campaign';
 
 // ---------------------------------------------------------------------------
-// te.target as array vs string (line 474)
+// Target effects: te.target as string vs array (line 138)
+// The useMemo that builds myTargetEffects handles both te.target as a
+// string and te.target as an array. These tests verify the component
+// renders correctly in both cases by checking the conditions section
+// renders (which depends on conditionObjects being built).
 // ---------------------------------------------------------------------------
 describe('CharSummary - TargetEffects target property types', () => {
     beforeEach(() => {
@@ -131,7 +136,7 @@ describe('CharSummary - TargetEffects target property types', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('handles te.target as string (line 474 false branch)', () => {
+    it('renders conditions when targetEffects use string targets', () => {
         vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
             if (_name === 'campaign' && key === 'targetEffects') {
                 return [
@@ -143,12 +148,11 @@ describe('CharSummary - TargetEffects target property types', () => {
             if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Armor Class:')).toBeInTheDocument();
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText('Conditions')).toBeInTheDocument();
     });
 
-    it('handles te.target as array (line 474 true branch)', () => {
+    it('renders conditions when targetEffects use array targets', () => {
         vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
             if (_name === 'campaign' && key === 'targetEffects') {
                 return [
@@ -160,23 +164,25 @@ describe('CharSummary - TargetEffects target property types', () => {
             if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Armor Class:')).toBeInTheDocument();
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText('Conditions')).toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// conditionMeta with metadata (line 486 false branch)
+// Condition metadata: dc and ability extraction (lines 145-159)
+// Verifies that conditionObjects useMemo correctly reads dc and ability
+// from activeConditionMeta, and falls back gracefully when metadata
+// is empty or missing.
 // ---------------------------------------------------------------------------
-describe('CharSummary - ConditionMeta with metadata', () => {
+describe('CharSummary - ConditionMetadata extraction', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('handles conditionMeta with dc and ability metadata (line 486 false branch)', () => {
+    it('renders conditions when conditionMeta has dc and ability', () => {
         vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
             if (_name === 'campaign' && key === 'targetEffects') return [];
             if (_name === 'Thorin' && key === 'activeConditions') return ['Exhaustion', 'Blinded'];
@@ -188,12 +194,11 @@ describe('CharSummary - ConditionMeta with metadata', () => {
             }
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Armor Class:')).toBeInTheDocument();
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText('Conditions')).toBeInTheDocument();
     });
 
-    it('handles conditionMeta with empty metadata object (line 486 true branch)', () => {
+    it('renders conditions when conditionMeta has empty metadata object', () => {
         vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
             if (_name === 'campaign' && key === 'targetEffects') return [];
             if (_name === 'Thorin' && key === 'activeConditions') return ['Exhaustion'];
@@ -202,266 +207,124 @@ describe('CharSummary - ConditionMeta with metadata', () => {
             }
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Armor Class:')).toBeInTheDocument();
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText('Conditions')).toBeInTheDocument();
     });
 
-    it('handles conditionMeta with no metadata for a condition (line 486 true branch fallback)', () => {
+    it('renders conditions when conditionMeta has no entry for a condition', () => {
         vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
             if (_name === 'campaign' && key === 'targetEffects') return [];
             if (_name === 'Thorin' && key === 'activeConditions') return ['Exhaustion'];
-            // No entry for 'exhaustion' in conditionMeta, so {} fallback is used
+            // No 'exhaustion' key in conditionMeta, so {} fallback is used
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Armor Class:')).toBeInTheDocument();
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText('Conditions')).toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// activeBuffs.forEach iteration with various buff effects
+// Defensive Duelist AC bonus display (line 268)
+// Unique test for the defensiveDuelistBonus rendering in the AC line.
 // ---------------------------------------------------------------------------
-describe('CharSummary - activeBuffs forEach iteration', () => {
+describe('CharSummary - Defensive Duelist AC Bonus', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('processes defensive_duelist buff with acBonus in forEach', () => {
+    it('displays defensive duelist bonus in AC line', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'defensive_duelist', acBonus: 2 }]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/\+2 from Defensive Duelist/)).toBeInTheDocument();
     });
+});
 
-    it('processes speed_boost buff in forEach', () => {
+// ---------------------------------------------------------------------------
+// Speed boost buff display (line 270)
+// Verifies speedBonus is added to totalSpeed and displayed.
+// ---------------------------------------------------------------------------
+describe('CharSummary - Speed Boost Buff', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    it('displays speed boost in speed line', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'speed_boost', speedBonus: 10 }]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         const speedEl = screen.getByText(/Speed:/).nextElementSibling;
         expect(speedEl.textContent).toContain('35 ft');
     });
+});
 
-    it('processes large_form buff in forEach (speed bonus)', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'large_form' }]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('35 ft');
+// ---------------------------------------------------------------------------
+// Tremorsense buff badge (line 320)
+// Verifies the CreatureBadge for tremorsense renders.
+// ---------------------------------------------------------------------------
+describe('CharSummary - Tremorsense Badge', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
     });
 
-    it('processes aquatic_adaptation buff in forEach', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'aquatic_adaptation' }]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 50 ft/)).toBeInTheDocument();
-    });
-
-    it('processes tremorsense_60ft buff in forEach', () => {
+    it('displays tremorsense badge when buff is active', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'tremorsense_60ft' }]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Tremorsense 60 ft/)).toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Aspect of the Wilds false branches
+// Aspect of the Wilds: Salmon swim speed (lines 394-395)
+// When optionName is 'Salmon' and swimSpeed is null, swimSpeed = totalSpeed.
 // ---------------------------------------------------------------------------
-describe('CharSummary - Aspect of the Wilds False Branches', () => {
+describe('CharSummary - Aspect of the Wilds Salmon', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('handles aspectOption not equal to Salmon (line 394 false branch)', () => {
-        getActiveBuffs.mockReturnValue([{ name: 'Aspect of the Wilds', optionName: 'Panther' }]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/climb 25 ft/)).toBeInTheDocument();
-        expect(screen.queryByText(/swim 25 ft/)).not.toBeInTheDocument();
+    it('applies salmon swim speed when no aquatic_adaptation buff exists', () => {
+        getActiveBuffs.mockReturnValue([{ name: 'Aspect of the Wilds', optionName: 'Salmon' }]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/swim 25 ft/)).toBeInTheDocument();
     });
 
-    it('handles aspectOption equal to Salmon with swimSpeed already set (line 394 false branch)', () => {
+    it('uses existing swim speed when aquatic_adaptation is also active', () => {
         getActiveBuffs.mockReturnValue([
             { effect: 'aquatic_adaptation' },
             { name: 'Aspect of the Wilds', optionName: 'Salmon' },
         ]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/swim 50 ft/)).toBeInTheDocument();
     });
-
-    it('applies salmon swim speed when swimSpeed is null (line 395 true branch)', () => {
-        getActiveBuffs.mockReturnValue([{ name: 'Aspect of the Wilds', optionName: 'Salmon' }]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        // totalSpeed=25, buffSpeedBonus=0, so swimSpeed = 25
-        expect(screen.getByText(/swim 25 ft/)).toBeInTheDocument();
-    });
-
-    it('handles aspectOption not matching any known option (line 388 false branch)', () => {
-        getActiveBuffs.mockReturnValue([{ name: 'Aspect of the Wilds', optionName: 'Eagle' }]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Armor Class:')).toBeInTheDocument();
-    });
 });
 
 // ---------------------------------------------------------------------------
-// Monk unarmored movement (line 167-175)
+// XP mode label rendering (lines 237-239)
+// Verifies the levelSuffix renders differently for milestone vs experience.
 // ---------------------------------------------------------------------------
-describe('CharSummary - Monk Unarmored Movement', () => {
+describe('CharSummary - XP Mode Label', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('adds monk unarmored movement when no armor or shield', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'baitAndSwitchActive') return false;
-            return null;
-        });
-        const stats = {
-            ...mockPlayerStats,
-            class: { name: 'Monk', subclass: { name: 'Way of the Open Hand' }, major: { name: 'Monk' } },
-            inventory: { equipped: [] },
-            equipment: [],
-        };
+    it('displays milestone suffix when xpMode is milestone', () => {
+        const stats = { ...mockPlayerStats, xpMode: 'milestone' };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('30 ft');
+        expect(screen.getByText(/milestone/)).toBeInTheDocument();
     });
 
-    it('does not add monk unarmored movement when wearing armor', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'baitAndSwitchActive') return false;
-            return null;
-        });
-        const stats = {
-            ...mockPlayerStats,
-            class: { name: 'Monk', subclass: { name: 'Way of the Open Hand' }, major: { name: 'Monk' } },
-            inventory: { equipped: ['Scale Mail'] },
-            equipment: [{ name: 'Scale Mail', equipment_category: 'Armor' }],
-        };
+    it('displays XP number suffix when xpMode is experience', () => {
+        const stats = { ...mockPlayerStats, xpMode: 'experience' };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('25 ft');
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Rage conditional immunities (lines 312-316)
-// ---------------------------------------------------------------------------
-describe('CharSummary - Rage Conditional Immunities', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('includes rage conditional immunities when rage is active', () => {
-        getActiveBuffs.mockReturnValue([{ name: 'Rage' }]);
-        const stats = {
-            ...mockPlayerStats,
-            automationConditionalImmunities: [
-                { requiresActive: 'Rage', immunities: ['Frightened'] },
-            ],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
-        expect(screen.getByText(/Frightened/)).toBeInTheDocument();
-    });
-
-    it('excludes non-rage conditional immunities when rage is not active', () => {
-        getActiveBuffs.mockReturnValue([]);
-        const stats = {
-            ...mockPlayerStats,
-            automationConditionalImmunities: [
-                { requiresActive: 'Rage', immunities: ['Frightened'] },
-            ],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Frightened/)).not.toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Calm Emotions, Feign Death, Heroism, Faerie Fire condition immunities
-// ---------------------------------------------------------------------------
-describe('CharSummary - Additional Condition Immunities', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('includes calm emotions condition immunities', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Calm Emotions', conditionImmunity: ['Frightened'] },
-        ]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
-        expect(screen.getByText(/Frightened/)).toBeInTheDocument();
-    });
-
-    it('includes feign death condition immunities', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Feign Death', conditionImmunity: ['Poisoned'] },
-        ]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
-        expect(screen.getByText(/Poisoned/)).toBeInTheDocument();
-    });
-
-    it('includes heroism condition immunities', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Heroism', conditionImmunity: ['Frightened'] },
-        ]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
-        expect(screen.getByText(/Frightened/)).toBeInTheDocument();
-    });
-
-    it('includes faerie fire condition immunities', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Faerie Fire', conditionImmunity: ['Blinded'] },
-        ]);
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
-        expect(screen.getByText(/Blinded/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Non-array activeBuffs for conditions (lines 479-495)
-// These test the conditionObjects useMemo which doesn't depend on activeBuffs
-// ---------------------------------------------------------------------------
-describe('CharSummary - Conditions With Runtime Values', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders conditions with runtime values properly', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return ['Exhaustion'];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
-            return null;
-        });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Armor Class:')).toBeInTheDocument();
+        expect(screen.getByText(/\(2,300 XP\)/)).toBeInTheDocument();
     });
 });

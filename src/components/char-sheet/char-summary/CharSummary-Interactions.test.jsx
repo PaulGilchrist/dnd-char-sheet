@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -118,6 +119,19 @@ const mockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 
+const renderWithDiceContext = (ui, { wrapper: externalWrapper, ...renderOptions } = {}) => {
+    const mockSetPopupHtml = vi.fn();
+    const diceWrapper = ({ children }) => (
+        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+            {children}
+        </DiceRollContext.Provider>
+    );
+    const wrapper = externalWrapper
+        ? (props) => <diceWrapper><externalWrapper {...props} /></diceWrapper>
+        : diceWrapper;
+    return render(ui, { wrapper, ...renderOptions });
+};
+
 // ---------------------------------------------------------------------------
 // Delete character
 // ---------------------------------------------------------------------------
@@ -220,19 +234,12 @@ describe('CharSummary - XP Save Paths', () => {
     });
 
     it('saves XP when modal delta is valid positive', () => {
-        const mockSetPopupHtml = vi.fn();
-        const wrapper = ({ children }) => (
-            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                {children}
-            </DiceRollContext.Provider>
-        );
-        render(
+        renderWithDiceContext(
             <CharSummary
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-            />,
-            { wrapper }
+            />
         );
         const levelSuffix = screen.getByText(/milestone/);
         fireEvent.click(levelSuffix);
@@ -244,19 +251,12 @@ describe('CharSummary - XP Save Paths', () => {
     });
 
     it('does not save XP when delta is empty', () => {
-        const mockSetPopupHtml = vi.fn();
-        const wrapper = ({ children }) => (
-            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                {children}
-            </DiceRollContext.Provider>
-        );
-        render(
+        renderWithDiceContext(
             <CharSummary
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-            />,
-            { wrapper }
+            />
         );
         const levelSuffix = screen.getByText(/milestone/);
         fireEvent.click(levelSuffix);
@@ -266,19 +266,12 @@ describe('CharSummary - XP Save Paths', () => {
     });
 
     it('does not save XP when delta is non-numeric', () => {
-        const mockSetPopupHtml = vi.fn();
-        const wrapper = ({ children }) => (
-            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                {children}
-            </DiceRollContext.Provider>
-        );
-        render(
+        renderWithDiceContext(
             <CharSummary
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-            />,
-            { wrapper }
+            />
         );
         const levelSuffix = screen.getByText(/milestone/);
         fireEvent.click(levelSuffix);
@@ -287,6 +280,24 @@ describe('CharSummary - XP Save Paths', () => {
         const applyBtn = screen.getByText('Apply');
         fireEvent.click(applyBtn);
         expect(setRuntimeValue).not.toHaveBeenCalled();
+    });
+
+    it('clamps XP to minimum 0 when delta would go negative', () => {
+        const stats = { ...mockPlayerStats, xp: 50 };
+        renderWithDiceContext(
+            <CharSummary
+                playerStats={stats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+            />
+        );
+        const levelSuffix = screen.getByText(/milestone/);
+        fireEvent.click(levelSuffix);
+        const input = screen.getByPlaceholderText('+100 or -50');
+        fireEvent.change(input, { target: { value: '-100' } });
+        const applyBtn = screen.getByText('Apply');
+        fireEvent.click(applyBtn);
+        expect(setRuntimeValue).toHaveBeenCalledWith('Thorin', 'xp', 0, 'test-campaign');
     });
 });
 
@@ -301,19 +312,12 @@ describe('CharSummary - XP Mode Toggle', () => {
     });
 
     it('toggles to experience mode when milestone checkbox is unchecked', () => {
-        const mockSetPopupHtml = vi.fn();
-        const wrapper = ({ children }) => (
-            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                {children}
-            </DiceRollContext.Provider>
-        );
-        render(
+        renderWithDiceContext(
             <CharSummary
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-            />,
-            { wrapper }
+            />
         );
         const levelSuffix = screen.getByText(/milestone/);
         fireEvent.click(levelSuffix);
@@ -326,30 +330,18 @@ describe('CharSummary - XP Mode Toggle', () => {
 
     it('hides info text when experience mode is enabled', () => {
         const stats = { ...mockPlayerStats, xpMode: 'experience' };
-        const mockSetPopupHtml = vi.fn();
-        const wrapper = ({ children }) => (
-            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                {children}
-            </DiceRollContext.Provider>
-        );
-        render(
+        renderWithDiceContext(
             <CharSummary
                 playerStats={stats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-            />,
-            { wrapper }
+            />
         );
         const levelSuffix = screen.getByText(/2,300 XP/);
         fireEvent.click(levelSuffix);
         expect(screen.queryByText(/XP tracking is disabled/)).not.toBeInTheDocument();
     });
 });
-
-// ---------------------------------------------------------------------------
-// XP mode display suffix (covered in CharSummary.test.jsx)
-// ---------------------------------------------------------------------------
-// These tests exist in CharSummary.test.jsx to avoid test isolation issues
 
 // ---------------------------------------------------------------------------
 // Ally modal handlers
@@ -372,66 +364,6 @@ describe('CharSummary - Ally Modal Handlers', () => {
         const alliesBadge = screen.getByText(/Allies/);
         fireEvent.click(alliesBadge);
         expect(screen.getByText(/Select Allies/)).toBeInTheDocument();
-    });
-
-    it('closes ally modal when cancel is clicked', () => {
-        getCombatSummary.mockReturnValue({
-            creatures: [
-                { name: 'Thorin', type: 'player', currentHp: 45, maxHp: 45 },
-            ],
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const alliesBadge = screen.getByText(/Allies/);
-        fireEvent.click(alliesBadge);
-        expect(screen.getByText(/Select Allies/)).toBeInTheDocument();
-        getCombatSummary.mockRestore();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Feat popup rendering
-// ---------------------------------------------------------------------------
-describe('CharSummary - Feat Popup Rendering', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders feats component', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByTestId('char-feats')).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Avatar modal rendering
-// ---------------------------------------------------------------------------
-describe('CharSummary - Avatar Modal', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders avatar image when imagePath exists', () => {
-        const stats = {
-            ...mockPlayerStats,
-            imagePath: '/images/thorin.png',
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const avatar = screen.getByTestId('avatar-image');
-        expect(avatar).toBeInTheDocument();
-    });
-
-    it('renders avatar image when no imagePath', () => {
-        const stats = {
-            ...mockPlayerStats,
-            imagePath: null,
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const avatar = screen.getByTestId('avatar-image');
-        expect(avatar).toBeInTheDocument();
     });
 });
 

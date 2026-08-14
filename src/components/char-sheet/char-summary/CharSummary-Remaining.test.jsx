@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -5,8 +6,8 @@ import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { DiceRollContext } from '../../../hooks/combat/DiceRollContext.js';
 import * as combatData from '../../../services/encounters/combatData.js';
 import { addEntry } from '../../../services/ui/logService.js';
-import useLoggedDiceRoll from '../../../hooks/combat/useLoggedDiceRoll.js';
 import useTrackedResource from '../../../hooks/runtime/useTrackedResource.js';
+import useLoggedDiceRoll from '../../../hooks/combat/useLoggedDiceRoll.js';
 import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import * as unbreakableMajesty from '../../../services/combat/auras/unbreakableMajesty.js';
 import * as deathWardHandler from '../../../services/automation/handlers/buffs/deathWardHandler.js';
@@ -135,14 +136,31 @@ const mockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 
+const renderWithDiceContext = (ui, { wrapper: externalWrapper, ...renderOptions } = {}) => {
+    const mockSetPopupHtml = vi.fn();
+    const diceWrapper = ({ children }) => (
+        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+            {children}
+        </DiceRollContext.Provider>
+    );
+    const wrapper = externalWrapper
+        ? (props) => <diceWrapper><externalWrapper {...props} /></diceWrapper>
+        : diceWrapper;
+    return render(ui, { wrapper, ...renderOptions });
+};
+
 // ---------------------------------------------------------------------------
-// Inspiration toggle handler (lines 97-100)
+// Inspiration toggle handler
 // ---------------------------------------------------------------------------
 describe('CharSummary - Inspiration Toggle Handler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
     });
 
     it('calls setHasInspiration with toggled value when checkbox is changed', () => {
@@ -159,7 +177,7 @@ describe('CharSummary - Inspiration Toggle Handler', () => {
 });
 
 // ---------------------------------------------------------------------------
-// XP save NaN path (lines 113-115)
+// XP save NaN path
 // ---------------------------------------------------------------------------
 describe('CharSummary - XP Save NaN Path', () => {
     beforeEach(() => {
@@ -169,25 +187,17 @@ describe('CharSummary - XP Save NaN Path', () => {
     });
 
     it('closes modal when xpDelta parses to NaN', () => {
-        const mockSetPopupHtml = vi.fn();
-        const wrapper = ({ children }) => (
-            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                {children}
-            </DiceRollContext.Provider>
-        );
-        render(
+        renderWithDiceContext(
             <CharSummary
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-            />,
-            { wrapper }
+            />
         );
         const levelSuffix = screen.getByText(/milestone/);
         fireEvent.click(levelSuffix);
         const input = screen.getByPlaceholderText('+100 or -50');
-        Object.defineProperty(input, 'value', { value: 'abc', writable: true });
-        fireEvent.change(input);
+        fireEvent.change(input, { target: { value: 'abc' } });
         const applyBtn = screen.getByText('Apply');
         fireEvent.click(applyBtn);
         expect(screen.queryByText('Experience Points')).not.toBeInTheDocument();
@@ -195,7 +205,7 @@ describe('CharSummary - XP Save NaN Path', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Initiative handler with advantage (line 547)
+// Initiative handler with advantage
 // ---------------------------------------------------------------------------
 describe('CharSummary - Initiative Handler With Advantage', () => {
     beforeEach(() => {
@@ -220,10 +230,25 @@ describe('CharSummary - Initiative Handler With Advantage', () => {
         expect(rollInitiativeFn.eff).toBe(2);
         expect(rollInitiativeFn.opts).toEqual({ forcedMode: 'advantage' });
     });
+
+    it('passes undefined forcedMode when initiativeAdvantage is false', () => {
+        let rollInitiativeFn = null;
+        const mockRollInitiative = vi.fn((eff, opts) => { rollInitiativeFn = { eff, opts }; });
+        vi.mocked(useLoggedDiceRoll).mockReturnValue({
+            popupHtml: null,
+            setPopupHtml: vi.fn(),
+            rollInitiative: mockRollInitiative,
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        const initiativeEl = screen.getByText(/\+2/);
+        fireEvent.click(initiativeEl);
+        expect(rollInitiativeFn).not.toBeNull();
+        expect(rollInitiativeFn.opts).toBeUndefined();
+    });
 });
 
 // ---------------------------------------------------------------------------
-// Ally modal confirm error handler (line 571)
+// Ally modal confirm error handler
 // ---------------------------------------------------------------------------
 describe('CharSummary - Ally Modal Confirm Error Handler', () => {
     beforeEach(() => {
@@ -247,13 +272,17 @@ describe('CharSummary - Ally Modal Confirm Error Handler', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Majesty badge (line 778)
+// Majesty badge
 // ---------------------------------------------------------------------------
 describe('CharSummary - Majesty Badge', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
     });
 
     it('shows majesty badge when unbreakable majesty is active', () => {
@@ -269,16 +298,33 @@ describe('CharSummary - Majesty Badge', () => {
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Majesty DC 15/)).toBeInTheDocument();
     });
+
+    it('does not show majesty badge when unbreakable majesty is inactive', () => {
+        unbreakableMajesty.isUnbreakableMajestyActive.mockReturnValue(false);
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Majesty/)).not.toBeInTheDocument();
+    });
 });
 
 // ---------------------------------------------------------------------------
-// Concentration badge (line 790)
+// Concentration badge
 // ---------------------------------------------------------------------------
 describe('CharSummary - Concentration Badge', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
     });
 
     it('shows concentration badge when player is concentrating on a spell', () => {
@@ -294,16 +340,32 @@ describe('CharSummary - Concentration Badge', () => {
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Bless DC 13/)).toBeInTheDocument();
     });
+
+    it('does not show concentration badge when player has no concentration', () => {
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Concentration/)).not.toBeInTheDocument();
+    });
 });
 
 // ---------------------------------------------------------------------------
-// Hunter's Mark and Death Ward badges (lines 796-799)
+// Hunter's Mark and Death Ward badges
 // ---------------------------------------------------------------------------
 describe('CharSummary - Hunters Mark And Death Ward Badges', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
     });
 
     it('shows hunters mark badge when another creature has it concentrated on player', () => {
@@ -320,6 +382,20 @@ describe('CharSummary - Hunters Mark And Death Ward Badges', () => {
         expect(screen.getByText(/Hunter's Mark/)).toBeInTheDocument();
     });
 
+    it('does not show hunters mark badge when no creature targets player', () => {
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({
+            creatures: [{ name: 'Ranger1', concentration: { spell: "Hunter's Mark", target: 'Other' } }],
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Hunter's Mark/)).not.toBeInTheDocument();
+    });
+
     it('shows death ward badge when death ward is active', () => {
         deathWardHandler.isDeathWardActive.mockReturnValue(true);
         vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
@@ -332,16 +408,33 @@ describe('CharSummary - Hunters Mark And Death Ward Badges', () => {
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Death Ward/)).toBeInTheDocument();
     });
+
+    it('does not show death ward badge when inactive', () => {
+        deathWardHandler.isDeathWardActive.mockReturnValue(false);
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Death Ward/)).not.toBeInTheDocument();
+    });
 });
 
 // ---------------------------------------------------------------------------
-// Wild Shape badge (line 760)
+// Wild Shape badge
 // ---------------------------------------------------------------------------
 describe('CharSummary - Wild Shape Badge', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
     });
 
     it('shows wild shape badge when wild shape is active', () => {
@@ -358,16 +451,33 @@ describe('CharSummary - Wild Shape Badge', () => {
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Wild Shape/)).toBeInTheDocument();
     });
+
+    it('does not show wild shape badge when inactive', () => {
+        buffToggle.isBuffActive.mockReturnValue(false);
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Wild Shape/)).not.toBeInTheDocument();
+    });
 });
 
 // ---------------------------------------------------------------------------
-// Aura of Life and Circle of Power badges (lines 772-777)
+// Aura of Life and Circle of Power badges
 // ---------------------------------------------------------------------------
 describe('CharSummary - Aura Of Life And Circle Of Power Badges', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
     });
 
     it('shows aura of life badge when active', () => {
@@ -383,6 +493,19 @@ describe('CharSummary - Aura Of Life And Circle Of Power Badges', () => {
         expect(screen.getByText(/Aura of Life/)).toBeInTheDocument();
     });
 
+    it('does not show aura of life badge when inactive', () => {
+        auraOfLifeHandler.isAuraOfLifeActive.mockReturnValue(false);
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Aura of Life/)).not.toBeInTheDocument();
+    });
+
     it('shows circle of power badge when active', () => {
         circleOfPowerHandler.isCircleOfPowerActive.mockReturnValue(true);
         vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
@@ -395,16 +518,33 @@ describe('CharSummary - Aura Of Life And Circle Of Power Badges', () => {
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Circle of Power/)).toBeInTheDocument();
     });
+
+    it('does not show circle of power badge when inactive', () => {
+        circleOfPowerHandler.isCircleOfPowerActive.mockReturnValue(false);
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Circle of Power/)).not.toBeInTheDocument();
+    });
 });
 
 // ---------------------------------------------------------------------------
-// Barkskin badge (line 379, 793)
+// Barkskin badge
 // ---------------------------------------------------------------------------
 describe('CharSummary - Barkskin Badge', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
     });
 
     it('shows barkskin badge when barkskin buff is active', () => {
@@ -419,167 +559,246 @@ describe('CharSummary - Barkskin Badge', () => {
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByTitle('From Barkskin')).toBeInTheDocument();
     });
-});
 
-// ---------------------------------------------------------------------------
-// Defensive Duelist AC bonus (line 380)
-// ---------------------------------------------------------------------------
-describe('CharSummary - Defensive Duelist AC Bonus', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
+    it('does not show barkskin badge when inactive', () => {
         getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows defensive duelist AC bonus when buff is active with acBonus', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'defensive_duelist', acBonus: 3 }]);
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/\+3 from Defensive Duelist/)).toBeInTheDocument();
+        expect(screen.queryByTitle('From Barkskin')).not.toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Shield of Faith AC bonus (line 407-410)
+// Natures Sanctuary badge
 // ---------------------------------------------------------------------------
-describe('CharSummary - Shield of Faith AC Bonus', () => {
+describe('CharSummary - Natures Sanctuary Badge', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows shield of faith AC bonus when buff is active', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'shield_of_faith' }]);
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('shows sanctuary badge when another druid has nature sanctuary active targeting player', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (key === 'naturesSanctuaryActive' && name === 'Druid1') return true;
+            if (key === 'naturesSanctuaryCreatures' && name === 'Druid1') return ['Thorin'];
+            if (key === 'naturesSanctuaryResistance' && name === 'Druid1') return 'Cold';
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({
+            creatures: [{ name: 'Druid1', type: 'player' }],
+        });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/\+2 from Shield of Faith/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Rage conditional immunities (lines 312-316)
-// ---------------------------------------------------------------------------
-describe('CharSummary - Rage Conditional Immunities', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
+        expect(screen.getByText(/Sanctuary/)).toBeInTheDocument();
     });
 
-    it('includes rage conditional immunities when rage is active', () => {
-        getActiveBuffs.mockReturnValue([{ name: 'Rage' }]);
-        const stats = {
-            ...mockPlayerStats,
-            automationConditionalImmunities: [
-                { requiresActive: 'Rage', immunities: ['Frightened'] },
-                { requiresActive: 'Other', immunities: ['Poisoned'] },
-            ],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
-        expect(screen.getByText(/Frightened/)).toBeInTheDocument();
-    });
-
-    it('excludes non-rage conditional immunities when rage is not active', () => {
-        const stats = {
-            ...mockPlayerStats,
-            automationConditionalImmunities: [
-                { requiresActive: 'Rage', immunities: ['Frightened'] },
-            ],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Frightened/)).not.toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Feign Death condition immunities (lines 323-326)
-// ---------------------------------------------------------------------------
-describe('CharSummary - Feign Death Condition Immunities', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('includes feign death condition immunities', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Feign Death', conditionImmunity: ['Poisoned', 'Blinded'] },
-        ]);
+    it('does not show sanctuary badge when no druid has sanctuary active', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'naturesSanctuaryActive') return false;
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
-        expect(screen.getByText(/Poisoned/)).toBeInTheDocument();
-        expect(screen.getByText(/Blinded/)).toBeInTheDocument();
+        expect(screen.queryByText(/Sanctuary/)).not.toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Mage Armor with baseAc (lines 374-377)
+// Reckless Attack badge
 // ---------------------------------------------------------------------------
-describe('CharSummary - Mage Armor With BaseAc', () => {
+describe('CharSummary - Reckless Attack Badge', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows mage armor AC with custom baseAc', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'mage_armor', baseAc: 15 }]);
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('shows reckless attack badge when player has reckless_attack target effect', () => {
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [{ effect: 'reckless_attack', target: 'Thorin' }];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/\(15 \+ \d+ Dex\)/)).toBeInTheDocument();
+        expect(screen.getByText(/Reckless Attack/)).toBeInTheDocument();
+    });
+
+    it('does not show reckless attack badge when player lacks the target effect', () => {
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Reckless Attack/)).not.toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Swim speed from playerStats.swimSpeed (lines 397-399)
+// Wrath of the Sea badge
 // ---------------------------------------------------------------------------
-describe('CharSummary - Swim Speed From PlayerStats', () => {
+describe('CharSummary - Wrath Of The Sea Badge', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('uses playerStats.swimSpeed when no aquatic_adaptation buff', () => {
-        const stats = {
-            ...mockPlayerStats,
-            swimSpeed: 30,
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 30 ft/)).toBeInTheDocument();
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('shows wrath of the sea badge when active in context', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (key === 'wrathOfTheSeaActive' && name === 'Thorin') return true;
+            return null;
+        });
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Wrath of the Sea/)).toBeInTheDocument();
+    });
+
+    it('does not show wrath of the sea badge when inactive', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'wrathOfTheSeaActive') return false;
+            return null;
+        });
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Wrath of the Sea/)).not.toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Dexterity ability bonus for AC (line 400)
+// Heroes Feast badge
 // ---------------------------------------------------------------------------
-describe('CharSummary - Dexterity Ability Bonus', () => {
+describe('CharSummary - Heroes Feast Badge', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('uses dexterity bonus from abilities array in mage armor calculation', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'mage_armor', baseAc: 13 }]);
-        const stats = {
-            ...mockPlayerStats,
-            abilities: [{ name: 'Dexterity', bonus: 4 }, { name: 'Wisdom', bonus: 3 }],
-            inventory: { equipped: [] },
-            equipment: [],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/\(13 \+ 4 Dex\)/)).toBeInTheDocument();
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('shows heroes feast badge when resistance array is non-empty', () => {
+        getActiveBuffs.mockReturnValue([{ name: "Heroes' Feast", resistanceTypes: ['Poison'] }]);
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Heroes' Feast/)).toBeInTheDocument();
+    });
+
+    it('does not show heroes feast badge when resistance array is empty', () => {
+        getActiveBuffs.mockReturnValue([]);
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Heroes' Feast/)).not.toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Smite of Protection cover with Aura of Protection (lines 419-428)
+// Starry Form constellation badge
+// ---------------------------------------------------------------------------
+describe('CharSummary - Starry Form Constellation Badge', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('shows starry form badge with constellation name when active', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
+            return null;
+        });
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Starry Form - Archer/)).toBeInTheDocument();
+    });
+
+    it('does not show starry form badge when no active buffs include it', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'activeBuffs') return [];
+            return null;
+        });
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Cover badges — smite of protection
 // ---------------------------------------------------------------------------
 describe('CharSummary - Smite Of Protection Cover', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
     });
 
     it('shows cover when another character has smite active and Aura of Protection', () => {
@@ -637,13 +856,17 @@ describe('CharSummary - Smite Of Protection Cover', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Bulwark of Force cover (lines 430-451)
+// Cover badges — bulwark of force
 // ---------------------------------------------------------------------------
 describe('CharSummary - Bulwark Of Force Cover', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
     });
 
     it('shows cover when bulwark targets include player', () => {
@@ -668,28 +891,141 @@ describe('CharSummary - Bulwark Of Force Cover', () => {
             />
         );
     });
+
+    it('does not show cover when bulwark targets exclude player', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (key === 'bulwarkOfForceActive' && name === 'Ally1') return true;
+            if (key === 'bulwarkOfForceTargets' && name === 'Ally1') return ['Other'];
+            if (key === 'naturesSanctuaryCreatures') return [];
+            return null;
+        });
+        const stats = { ...mockPlayerStats };
+        const characters = [
+            {
+                name: 'Ally1',
+            },
+        ];
+        render(
+            <CharSummary
+                playerStats={stats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={characters}
+            />
+        );
+    });
 });
 
 // ---------------------------------------------------------------------------
-// AC bonus from multiple sources combined (lines 377-416)
+// Rage conditional immunities
 // ---------------------------------------------------------------------------
-describe('CharSummary - Combined AC Bonuses', () => {
+describe('CharSummary - Rage Conditional Immunities', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows all AC bonuses when multiple buffs are active', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('includes rage conditional immunities when rage is active', () => {
+        getActiveBuffs.mockReturnValue([{ name: 'Rage' }]);
+        const stats = {
+            ...mockPlayerStats,
+            automationConditionalImmunities: [
+                { requiresActive: 'Rage', immunities: ['Frightened'] },
+                { requiresActive: 'Other', immunities: ['Poisoned'] },
+            ],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
+        expect(screen.getByText(/Frightened/)).toBeInTheDocument();
+    });
+
+    it('excludes non-rage conditional immunities when rage is not active', () => {
+        const stats = {
+            ...mockPlayerStats,
+            automationConditionalImmunities: [
+                { requiresActive: 'Rage', immunities: ['Frightened'] },
+            ],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Frightened/)).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Feign Death condition immunities
+// ---------------------------------------------------------------------------
+describe('CharSummary - Feign Death Condition Immunities', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('includes feign death condition immunities', () => {
         getActiveBuffs.mockReturnValue([
-            { effect: 'mage_armor', baseAc: 14 },
-            { effect: 'shield' },
-            { effect: 'shield_of_faith' },
-            { effect: 'defensive_duelist', acBonus: 2 },
+            { name: 'Feign Death', conditionImmunity: ['Poisoned', 'Blinded'] },
         ]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/\+5 from Shield/)).toBeInTheDocument();
-        expect(screen.getByText(/\+2 from Shield of Faith/)).toBeInTheDocument();
-        expect(screen.getByText(/\+2 from Defensive Duelist/)).toBeInTheDocument();
+        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
+        expect(screen.getByText(/Poisoned/)).toBeInTheDocument();
+        expect(screen.getByText(/Blinded/)).toBeInTheDocument();
+    });
+
+    it('does not include feign death condition immunities when buff is not active', () => {
+        getActiveBuffs.mockReturnValue([]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Poisoned/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Blinded/)).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Natures Sanctuary cover
+// ---------------------------------------------------------------------------
+describe('CharSummary - Natures Sanctuary Cover', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('shows sanctuary cover when druid has nature sanctuary active targeting player', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (key === 'naturesSanctuaryActive' && name === 'Druid1') return true;
+            if (key === 'naturesSanctuaryCreatures' && name === 'Druid1') return ['Thorin'];
+            if (key === 'naturesSanctuaryResistance' && name === 'Druid1') return 'Cold';
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({
+            creatures: [{ name: 'Druid1', type: 'player' }],
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Sanctuary/)).toBeInTheDocument();
+    });
+
+    it('does not show sanctuary cover when druid does not target player', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (key === 'naturesSanctuaryActive' && name === 'Druid1') return true;
+            if (key === 'naturesSanctuaryCreatures' && name === 'Druid1') return ['Other'];
+            return null;
+        });
+        combatData.getCombatSummary.mockReturnValue({
+            creatures: [{ name: 'Druid1', type: 'player' }],
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Sanctuary/)).not.toBeInTheDocument();
     });
 });

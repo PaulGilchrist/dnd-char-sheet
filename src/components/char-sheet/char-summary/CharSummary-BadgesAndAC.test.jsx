@@ -1,13 +1,14 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 
+
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
 vi.mock('./CharClassFeatures.jsx', () => ({ default: () => <div data-testid="char-class-features">Class Features</div> }));
 vi.mock('../char-feats/CharFeats.jsx', () => ({ default: () => <div data-testid="char-feats">Feats</div> }));
-vi.mock('../../common/Popup.jsx', () => ({ default: ({ children, onClick }) => <div data-testid="popup" onClick={onClick}>{children}</div> }));
 vi.mock('../../common/AvatarImage.jsx', () => ({ default: () => <div data-testid="avatar-image">Avatar</div> }));
 vi.mock('../../common/AvatarModal.jsx', () => ({ default: () => null }));
 vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-rest-btn">Long Rest</div> }));
@@ -53,6 +54,34 @@ vi.mock('../../../services/rules/core/attackCalc.js', () => ({
     parseMagicItemName: (name) => ({ baseName: name }),
 }));
 
+vi.mock('../../../services/encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => ({ creatures: [] })),
+}));
+
+vi.mock('../../../services/automation/common/buffToggle.js', () => ({
+    isBuffActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/combat/auras/unbreakableMajesty.js', () => ({
+    isUnbreakableMajestyActive: vi.fn(() => false),
+    getUnbreakableMajestySaveDc: vi.fn(() => 0),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/auraOfLifeHandler.js', () => ({
+    handle: vi.fn(),
+    isAuraOfLifeActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
+    handle: vi.fn(),
+    isCircleOfPowerActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
+    handle: vi.fn(),
+    isDeathWardActive: vi.fn(() => false),
+}));
+
 const mockPlayerStats = {
     name: 'Thorin',
     xp: 2300,
@@ -94,10 +123,20 @@ describe('CharSummary - Barkskin Badge', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows barkskin badge when barkskin buff is active', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('renders barkskin badge when barkskin buff is active', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'barkskin' }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Barkskin \(AC 17\)/)).toBeInTheDocument();
+    });
+
+    it('does not render barkskin badge when no barkskin buff is present', () => {
+        getActiveBuffs.mockReturnValue([]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Barkskin/)).not.toBeInTheDocument();
     });
 });
 
@@ -111,10 +150,20 @@ describe('CharSummary - Tremorsense Badge', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows tremorsense badge when tremorsense_60ft buff is active', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('renders tremorsense badge when tremorsense_60ft buff is active', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'tremorsense_60ft' }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Tremorsense 60 ft/)).toBeInTheDocument();
+    });
+
+    it('does not render tremorsense badge when no tremorsense buff is present', () => {
+        getActiveBuffs.mockReturnValue([]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Tremorsense/)).not.toBeInTheDocument();
     });
 });
 
@@ -128,27 +177,47 @@ describe('CharSummary - Large Form Badge', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows large form badge when large_form buff is active', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('renders large form badge when large_form buff is active', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'large_form' }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Large Form/)).toBeInTheDocument();
+    });
+
+    it('does not render large form badge when no large_form buff is present', () => {
+        getActiveBuffs.mockReturnValue([]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Large Form/)).not.toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
 // Hunter's Mark badge
 // ---------------------------------------------------------------------------
-describe('CharSummary - Hunters Mark Badge', () => {
+describe('CharSummary - Hunter\'s Mark Badge', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows hunter mark badge when active', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('renders hunter mark badge when active', () => {
         getActiveBuffs.mockReturnValue([{ name: "Hunter's Mark" }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Hunter's Mark Active/)).toBeInTheDocument();
+    });
+
+    it('does not render hunter mark badge when not active', () => {
+        getActiveBuffs.mockReturnValue([]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Hunter's Mark/)).not.toBeInTheDocument();
     });
 });
 
@@ -162,7 +231,11 @@ describe('CharSummary - AC Slow Penalty', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows AC slow penalty when acPenalty is set', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('renders AC slow penalty when acPenalty condition is set', () => {
         render(<CharSummary
             playerStats={mockPlayerStats}
             campaignName={mockCampaignName}
@@ -170,6 +243,26 @@ describe('CharSummary - AC Slow Penalty', () => {
             conditionEffects={{ acPenalty: 2 }}
         />);
         expect(screen.getByText(/\(−2 from Slow\)/)).toBeInTheDocument();
+    });
+
+    it('does not render AC slow penalty when acPenalty is zero', () => {
+        render(<CharSummary
+            playerStats={mockPlayerStats}
+            campaignName={mockCampaignName}
+            exhaustionLevel={0}
+            conditionEffects={{ acPenalty: 0 }}
+        />);
+        expect(screen.queryByText(/from Slow/)).not.toBeInTheDocument();
+    });
+
+    it('renders correct penalty value for different acPenalty amounts', () => {
+        render(<CharSummary
+            playerStats={mockPlayerStats}
+            campaignName={mockCampaignName}
+            exhaustionLevel={0}
+            conditionEffects={{ acPenalty: 5 }}
+        />);
+        expect(screen.getByText(/\(−5 from Slow\)/)).toBeInTheDocument();
     });
 });
 
@@ -183,10 +276,20 @@ describe('CharSummary - Shield of Faith Badge', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows shield of faith badge when active', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('renders shield of faith badge when active', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'shield_of_faith' }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/\+2 from Shield of Faith/)).toBeInTheDocument();
+    });
+
+    it('does not render shield of faith badge when inactive', () => {
+        getActiveBuffs.mockReturnValue([]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Shield of Faith/)).not.toBeInTheDocument();
     });
 });
 
@@ -200,10 +303,26 @@ describe('CharSummary - Defensive Duelist Badge', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows defensive duelist badge when buff is active with acBonus', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('renders defensive duelist badge with correct acBonus value', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'defensive_duelist', acBonus: 3 }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/\+3 from Defensive Duelist/)).toBeInTheDocument();
+    });
+
+    it('renders defensive duelist badge with different acBonus value', () => {
+        getActiveBuffs.mockReturnValue([{ effect: 'defensive_duelist', acBonus: 5 }]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/\+5 from Defensive Duelist/)).toBeInTheDocument();
+    });
+
+    it('does not render defensive duelist badge when inactive', () => {
+        getActiveBuffs.mockReturnValue([]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Defensive Duelist/)).not.toBeInTheDocument();
     });
 });
 
@@ -217,10 +336,20 @@ describe('CharSummary - Ice Walk Badge', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows ice walk when ice_walk buff is active', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('renders ice walk when ice_walk buff is active', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'ice_walk' }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/ice walk/)).toBeInTheDocument();
+    });
+
+    it('does not render ice walk when no ice_walk buff is present', () => {
+        getActiveBuffs.mockReturnValue([]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/ice walk/)).not.toBeInTheDocument();
     });
 });
 
@@ -234,7 +363,11 @@ describe('CharSummary - Mage Armor AC', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('shows mage armor AC override with dex bonus', () => {
+    afterEach(() => {
+        window.location.hostname = '';
+    });
+
+    it('renders mage armor AC override with dex bonus', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'mage_armor', baseAc: 14 }]);
         const stats = {
             ...mockPlayerStats,
@@ -244,5 +377,29 @@ describe('CharSummary - Mage Armor AC', () => {
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/17/)).toBeInTheDocument();
+    });
+
+    it('renders mage armor AC override with different baseAc', () => {
+        getActiveBuffs.mockReturnValue([{ effect: 'mage_armor', baseAc: 13 }]);
+        const stats = {
+            ...mockPlayerStats,
+            inventory: { equipped: [] },
+            equipment: [],
+            abilities: [{ name: 'Dexterity', bonus: 2 }],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/15/)).toBeInTheDocument();
+    });
+
+    it('does not render mage armor when inactive', () => {
+        getActiveBuffs.mockReturnValue([]);
+        const stats = {
+            ...mockPlayerStats,
+            inventory: { equipped: [] },
+            equipment: [],
+            abilities: [{ name: 'Dexterity', bonus: 3 }],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Mage Armor/)).not.toBeInTheDocument();
     });
 });

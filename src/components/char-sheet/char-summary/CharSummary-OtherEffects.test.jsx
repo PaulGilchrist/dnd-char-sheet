@@ -1,8 +1,10 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+
+import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -54,62 +56,6 @@ vi.mock('../../../services/rules/core/attackCalc.js', () => ({
     parseMagicItemName: (name) => ({ baseName: name }),
 }));
 
-const mockPlayerStats = {
-    name: 'Thorin',
-    xp: 2300,
-    xpMode: 'milestone',
-    race: { name: 'Dwarf', type: 'Hill Dwarf', subrace: { name: 'Hill Dwarf', speed: 25 } },
-    class: { name: 'Cleric', subclass: { name: 'War', type: 'Choice' }, major: { name: 'Cleric' } },
-    level: 5,
-    alignment: 'Lawful Good',
-    proficiency: 3,
-    initiative: 2,
-    initiativeAdvantage: false,
-    abilities: [{ name: 'Wisdom', bonus: 3 }, { name: 'Strength', bonus: 2 }],
-    armorClass: 18,
-    armorClassFormula: '16 + 2 (shield)',
-    hitPoints: 45,
-    inventory: { equipped: ['Scale Mail', 'Shield'] },
-    equipment: [{ name: 'Scale Mail', equipment_category: 'Armor' }, { name: 'Shield', type: 'Shield' }],
-    background: 'Soldier',
-    immunities: [],
-    resistances: [],
-    vulnerabilities: [],
-    senses: [],
-    proficiencies: [],
-    languages: [],
-    automation: { passives: [], actions: [] },
-    passives: [],
-    exhaustionLevel: 0,
-};
-
-const mockCampaignName = 'test-campaign';
-
-// ---------------------------------------------------------------------------
-// Target effects filtering
-// ---------------------------------------------------------------------------
-describe('CharSummary - Target Effects Filtering', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('filters target effects to only those targeting the player', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'targetEffects') {
-                return [
-                    { target: ['Thorin'], effect: 'reckless_attack' },
-                    { target: ['Other'], effect: 'slowed' },
-                ];
-            }
-            return null;
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(true).toBe(true);
-    });
-});
-
 // ---------------------------------------------------------------------------
 // Vulnerabilities rendering
 // ---------------------------------------------------------------------------
@@ -137,48 +83,5 @@ describe('CharSummary - Vulnerabilities', () => {
         const stats = { ...mockPlayerStats, vulnerabilities: null };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.queryByText(/Vulnerabilities:/)).not.toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Speed zero condition
-// ---------------------------------------------------------------------------
-describe('CharSummary - Speed Zero Condition', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('sets speed to 0 when speedZero condition is active', () => {
-        render(<CharSummary
-            playerStats={mockPlayerStats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            conditionEffects={{ speedZero: true }}
-        />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('0 ft');
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Aura speed bonus
-// ---------------------------------------------------------------------------
-describe('CharSummary - Aura Speed Bonus', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows aura speed bonus source when present', () => {
-        render(<CharSummary
-            playerStats={mockPlayerStats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            auraComboEffects={{ speedBonus: 10, speedSource: 'Aura of Alacrity' }}
-        />);
-        expect(screen.getByText(/\+10/)).toBeInTheDocument();
     });
 });

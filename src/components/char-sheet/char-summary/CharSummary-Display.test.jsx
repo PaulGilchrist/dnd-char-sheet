@@ -1,15 +1,18 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
-import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
 
+// ---------------------------------------------------------------------------
+// Shared mocks — kept minimal. Each test file should mock everything it needs
+// to avoid brittle cross-file mock state dependency.
+// ---------------------------------------------------------------------------
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
 vi.mock('./CharClassFeatures.jsx', () => ({ default: () => <div data-testid="char-class-features">Class Features</div> }));
 vi.mock('../char-feats/CharFeats.jsx', () => ({ default: () => <div data-testid="char-feats">Feats</div> }));
-vi.mock('../../common/Popup.jsx', () => ({ default: ({ children, onClick }) => <div data-testid="popup" onClick={onClick}>{children}</div> }));
 vi.mock('../../common/AvatarImage.jsx', () => ({ default: () => <div data-testid="avatar-image">Avatar</div> }));
 vi.mock('../../common/AvatarModal.jsx', () => ({ default: () => null }));
 vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-rest-btn">Long Rest</div> }));
@@ -24,7 +27,7 @@ vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
     useRuntimeValue: vi.fn((_name, _key, _campaign) => null),
-    getRuntimeValue: vi.fn(),
+    getRuntimeValue: vi.fn((_name, _key, _campaign) => null),
     getStore: vi.fn(() => new Map()),
 }));
 
@@ -37,7 +40,7 @@ vi.mock('../../../hooks/combat/useActionPopup.js', () => ({
 }));
 
 vi.mock('../../../hooks/combat/useLoggedDiceRoll.js', () => ({
-  default: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn(), rollInitiative: vi.fn() })),
+    default: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn(), rollInitiative: vi.fn() })),
 }));
 
 vi.mock('../../../services/ui/sanitize.js', () => ({
@@ -59,191 +62,213 @@ vi.mock('../../../services/rules/core/attackCalc.js', () => ({
     parseMagicItemName: (name) => ({ baseName: name }),
 }));
 
-describe('CharSummary - Avatar Modal', () => {
+vi.mock('../../../services/encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => ({ creatures: [] })),
+}));
+
+vi.mock('../../../services/automation/common/buffToggle.js', () => ({
+    isBuffActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/combat/auras/unbreakableMajesty.js', () => ({
+    isUnbreakableMajestyActive: vi.fn(() => false),
+    getUnbreakableMajestySaveDc: vi.fn(() => 0),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/auraOfLifeHandler.js', () => ({
+    isAuraOfLifeActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
+    isCircleOfPowerActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
+    isDeathWardActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+describe('CharSummary - Display', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.restoreAllMocks();
         window.location.hostname = 'localhost';
     });
 
-    it('renders AvatarModal when imagePath is present and showAvatarModal is true', () => {
-        const stats = {
-            ...mockPlayerStats,
-            imagePath: '/images/character.png',
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
-    });
-
-    it('does not render AvatarModal when imagePath is missing', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Avatar Image Click', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders avatar image that can be clicked', () => {
-        const stats = {
-            ...mockPlayerStats,
-            imagePath: '/images/character.png',
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Starry Form Badge', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows Starry Form badge with Archer constellation', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
-            if (key === 'activeBuffs') {
-                return [{ name: 'Starry Form', constellation: 'Archer' }];
-            }
-            return null;
+    // -------------------------------------------------------------------
+    // Basic rendering — avatar image always renders (imagePath optional)
+    // -------------------------------------------------------------------
+    describe('Avatar Image', () => {
+        it('renders avatar image when imagePath is present', () => {
+            const stats = { ...mockPlayerStats, imagePath: '/images/character.png' };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
         });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Starry Form - Archer/)).toBeInTheDocument();
-    });
 
-    it('shows Starry Form badge with Chalice constellation', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
-            if (key === 'activeBuffs') {
-                return [{ name: 'Starry Form', constellation: 'Chalice' }];
-            }
-            return null;
+        it('renders avatar image when imagePath is null', () => {
+            const stats = { ...mockPlayerStats, imagePath: null };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
         });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Starry Form - Chalice/)).toBeInTheDocument();
     });
 
-    it('shows Starry Form badge with other constellation', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
-            if (key === 'activeBuffs') {
-                return [{ name: 'Starry Form', constellation: 'Dragon' }];
-            }
-            return null;
+    // -------------------------------------------------------------------
+    // Senses rendering
+    // -------------------------------------------------------------------
+    describe('Senses', () => {
+        it('renders senses with see_invisibility buff', () => {
+            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+                if (key === 'activeBuffs') return [{ effect: 'see_invisibility' }];
+                return null;
+            });
+            const stats = { ...mockPlayerStats, senses: [{ name: 'Blindsight', value: '60 ft' }] };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByText(/Senses:/)).toBeInTheDocument();
+            expect(screen.getByText(/Blindsight 60 ft/)).toBeInTheDocument();
+            expect(screen.getByText(/See Invisibility/)).toBeInTheDocument();
         });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Starry Form - Dragon/)).toBeInTheDocument();
-    });
 
-    it('does not show Starry Form badge when activeBuffs is empty', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'activeBuffs') {
-                return [];
-            }
-            return null;
+        it('renders senses without see_invisibility when buff is absent', () => {
+            vi.mocked(getRuntimeValue).mockReset();
+            const stats = { ...mockPlayerStats, senses: [{ name: 'Darkvision', value: '120 ft' }] };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByText(/Senses:/)).toBeInTheDocument();
+            expect(screen.getByText(/Darkvision 120 ft/)).toBeInTheDocument();
+            expect(screen.queryByText(/See Invisibility/)).not.toBeInTheDocument();
         });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
-    });
 
-    it('does not show Starry Form badge when constellation is missing', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'activeBuffs') {
-                return [{ name: 'Starry Form' }];
-            }
-            return null;
+        it('does not render senses section when senses array is empty', () => {
+            const stats = { ...mockPlayerStats, senses: [] };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.queryByText(/Senses:/)).not.toBeInTheDocument();
         });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Senses Proficiencies Languages', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
     });
 
-    it('renders senses with see_invisibility buff', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'see_invisibility' }]);
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'activeBuffs') return [{ effect: 'see_invisibility' }];
-            return null;
+    // -------------------------------------------------------------------
+    // Proficiencies rendering
+    // -------------------------------------------------------------------
+    describe('Proficiencies', () => {
+        it('renders proficiency items and tool proficiencies', () => {
+            const stats = {
+                ...mockPlayerStats,
+                proficiencies: ['Heavy Armor'],
+                toolProficiencies: ["Blacksmith's Tools"],
+            };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByText(/Proficiencies:/)).toBeInTheDocument();
+            expect(screen.getByText(/Heavy Armor/)).toBeInTheDocument();
+            expect(screen.getByText(/Blacksmith/)).toBeInTheDocument();
         });
-        const stats = {
-            ...mockPlayerStats,
-            senses: [{ name: 'Blindsight', value: '60 ft' }],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Senses:/)).toBeInTheDocument();
-        expect(screen.getByText(/See Invisibility/)).toBeInTheDocument();
+
+        it('filters out regex-matched proficiency patterns', () => {
+            const stats = {
+                ...mockPlayerStats,
+                proficiencies: ['10 from: Druid', 'Heavy Armor'],
+                toolProficiencies: [],
+            };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByText(/Proficiencies:/)).toBeInTheDocument();
+            expect(screen.getByText(/Heavy Armor/)).toBeInTheDocument();
+            expect(screen.queryByText(/10 from:/)).not.toBeInTheDocument();
+        });
+
+        it('does not render proficiencies section when both arrays are empty', () => {
+            const stats = { ...mockPlayerStats, proficiencies: [], toolProficiencies: [] };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.queryByText(/Proficiencies:/)).not.toBeInTheDocument();
+        });
     });
 
-    it('renders proficiencies with tool proficiencies', () => {
-        const stats = {
-            ...mockPlayerStats,
-            proficiencies: ['Heavy Armor'],
-            toolProficiencies: ['Blacksmith\'s Tools'],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Proficiencies:/)).toBeInTheDocument();
-        expect(screen.getByText(/Heavy Armor/)).toBeInTheDocument();
-        expect(screen.getByText(/Blacksmith/)).toBeInTheDocument();
+    // -------------------------------------------------------------------
+    // Languages rendering
+    // -------------------------------------------------------------------
+    describe('Languages', () => {
+        it('renders multiple languages joined by comma', () => {
+            const stats = { ...mockPlayerStats, languages: ['Common', 'Dwarvish', 'Celestial'] };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByText(/Languages:/)).toBeInTheDocument();
+            expect(screen.getByText(/Common/)).toBeInTheDocument();
+            expect(screen.getByText(/Dwarvish/)).toBeInTheDocument();
+            expect(screen.getByText(/Celestial/)).toBeInTheDocument();
+        });
+
+        it('does not render languages section when array is empty', () => {
+            const stats = { ...mockPlayerStats, languages: [] };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.queryByText(/Languages:/)).not.toBeInTheDocument();
+        });
     });
 
-    it('renders languages', () => {
-        const stats = {
-            ...mockPlayerStats,
-            languages: ['Common', 'Dwarvish'],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Languages:/)).toBeInTheDocument();
-        expect(screen.getByText(/Common/)).toBeInTheDocument();
-        expect(screen.getByText(/Dwarvish/)).toBeInTheDocument();
+    // -------------------------------------------------------------------
+    // Starry Form constellation badge
+    // Tests the conditional rendering of the Starry Form badge based on
+    // activeBuffs runtime value — verifies all constellation variants and
+    // the absence case.
+    // -------------------------------------------------------------------
+    describe('Starry Form Constellation Badge', () => {
+        it('renders badge with Archer constellation', () => {
+            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+                if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
+                return null;
+            });
+            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByText(/Starry Form - Archer/)).toBeInTheDocument();
+        });
+
+        it('renders badge with Chalice constellation', () => {
+            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+                if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Chalice' }];
+                return null;
+            });
+            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByText(/Starry Form - Chalice/)).toBeInTheDocument();
+        });
+
+        it('renders badge with any other constellation value', () => {
+            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+                if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Dragon' }];
+                return null;
+            });
+            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByText(/Starry Form - Dragon/)).toBeInTheDocument();
+        });
+
+        it('does not render badge when activeBuffs is empty array', () => {
+            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+                if (key === 'activeBuffs') return [];
+                return null;
+            });
+            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
+        });
+
+        it('does not render badge when constellation property is missing', () => {
+            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+                if (key === 'activeBuffs') return [{ name: 'Starry Form' }];
+                return null;
+            });
+            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
+        });
+
+        it('does not render badge when activeBuffs is null', () => {
+            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+                if (key === 'activeBuffs') return null;
+                return null;
+            });
+            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
+        });
     });
 
-    it('does not render senses when empty', () => {
-        const stats = {
-            ...mockPlayerStats,
-            senses: [],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Senses:/)).not.toBeInTheDocument();
-    });
-
-    it('does not render proficiencies when empty', () => {
-        const stats = {
-            ...mockPlayerStats,
-            proficiencies: [],
-            toolProficiencies: [],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Proficiencies:/)).not.toBeInTheDocument();
-    });
-
-    it('does not render languages when empty', () => {
-        const stats = {
-            ...mockPlayerStats,
-            languages: [],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Languages:/)).not.toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Short Rest Modal', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders ShortRestModal when short rest button is clicked', () => {
-        const mockOnLongRest = vi.fn();
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} onLongRest={mockOnLongRest} />);
-        expect(screen.getByTestId('short-rest-btn')).toBeInTheDocument();
+    // -------------------------------------------------------------------
+    // Short rest button rendering
+    // -------------------------------------------------------------------
+    describe('Short Rest Button', () => {
+        it('renders the short rest button on localhost', () => {
+            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.getByTestId('short-rest-btn')).toBeInTheDocument();
+        });
     });
 });

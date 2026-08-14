@@ -1,4 +1,5 @@
-import { render } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
@@ -7,14 +8,18 @@ import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
 vi.mock('./CharClassFeatures.jsx', () => ({ default: () => <div data-testid="char-class-features">Class Features</div> }));
+vi.mock('./CharRaceFeatures.jsx', () => ({ default: () => <div data-testid="char-race-features">Race Features</div> }));
+vi.mock('./CharFeatFeatures.jsx', () => ({ default: () => <div data-testid="char-feat-features">Feat Features</div> }));
 vi.mock('../char-feats/CharFeats.jsx', () => ({ default: () => <div data-testid="char-feats">Feats</div> }));
-vi.mock('../../common/Popup.jsx', () => ({ default: ({ children, onClick }) => <div data-testid="popup" onClick={onClick}>{children}</div> }));
 vi.mock('../../common/AvatarImage.jsx', () => ({ default: () => <div data-testid="avatar-image">Avatar</div> }));
 vi.mock('../../common/AvatarModal.jsx', () => ({ default: () => null }));
+vi.mock('../../common/AllySelectionModal.jsx', () => ({ default: () => <div data-testid="ally-selection-modal">Ally Selection</div> }));
+vi.mock('./TrackedResourceInput.jsx', () => ({ default: () => <div data-testid="tracked-resource-input">Tracked Resource</div> }));
 vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-rest-btn">Long Rest</div> }));
 vi.mock('../ShortRestButton.jsx', () => ({ default: () => <div data-testid="short-rest-btn">Short Rest</div> }));
 vi.mock('../ShortRestModal.jsx', () => ({ default: () => <div data-testid="short-rest-modal">Short Rest Modal</div> }));
 vi.mock('./CharConditions.jsx', () => ({ default: () => <div data-testid="char-conditions">Conditions</div> }));
+vi.mock('../../initiative/ConditionEffectBadges.jsx', () => ({ default: () => <div data-testid="condition-effect-badges">Badges</div> }));
 
 vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
     default: vi.fn((key, name, init, _deps, _campaign) => ({ current: init(), update: vi.fn() })),
@@ -23,7 +28,7 @@ vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
     useRuntimeValue: vi.fn((_name, _key, _campaign) => null),
-    getRuntimeValue: vi.fn(),
+    getRuntimeValue: vi.fn((_name, _key, _campaign) => null),
     getStore: vi.fn(() => new Map()),
 }));
 
@@ -52,6 +57,34 @@ vi.mock('../../../services/rules/rulesFactory.js', () => ({
 
 vi.mock('../../../services/rules/core/attackCalc.js', () => ({
     parseMagicItemName: (name) => ({ baseName: name }),
+}));
+
+vi.mock('../../../services/encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => ({ creatures: [] })),
+}));
+
+vi.mock('../../../services/automation/common/buffToggle.js', () => ({
+    isBuffActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/combat/auras/unbreakableMajesty.js', () => ({
+    isUnbreakableMajestyActive: vi.fn(() => false),
+    getUnbreakableMajestySaveDc: vi.fn(() => 0),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/auraOfLifeHandler.js', () => ({
+    handle: vi.fn(),
+    isAuraOfLifeActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
+    handle: vi.fn(),
+    isCircleOfPowerActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
+    handle: vi.fn(),
+    isDeathWardActive: vi.fn(() => false),
 }));
 
 const mockPlayerStats = {
@@ -86,16 +119,17 @@ const mockPlayerStats = {
 const mockCampaignName = 'test-campaign';
 
 // ---------------------------------------------------------------------------
-// Cover source badges - smiteOfProtection
+// Cover source badges - smiteOfProtection DOM rendering
+// Cover badges render inline in the AC line as "(+2 Cover: Smite of Protection)"
 // ---------------------------------------------------------------------------
-describe('CharSummary - Cover Source Badges', () => {
+describe('CharSummary - smiteOfProtection cover badge rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('activates smiteOfProtection cover when another character has it with Aura of Protection', () => {
+    it('renders smiteOfProtection cover badge when another character has smite active with Aura of Protection', () => {
         const otherCharacter = {
             name: 'Ally',
             type: 'player',
@@ -109,17 +143,18 @@ describe('CharSummary - Cover Source Badges', () => {
             if (key === 'smiteOfProtectionActive') return true;
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary
-            playerStats={stats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            characters={[otherCharacter]}
-        />);
-        expect(true).toBe(true);
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[otherCharacter]}
+            />
+        );
+        expect(screen.getByText(/Cover: Smite of Protection/)).toBeInTheDocument();
     });
 
-    it('does not activate smiteOfProtection cover without Aura of Protection', () => {
+    it('does not render smiteOfProtection cover badge when Aura of Protection is missing', () => {
         const otherCharacter = {
             name: 'Ally',
             type: 'player',
@@ -133,28 +168,54 @@ describe('CharSummary - Cover Source Badges', () => {
             if (key === 'smiteOfProtectionActive') return true;
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary
-            playerStats={stats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            characters={[otherCharacter]}
-        />);
-        expect(true).toBe(true);
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[otherCharacter]}
+            />
+        );
+        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
+    });
+
+    it('does not render smiteOfProtection cover badge when smite is not active', () => {
+        const otherCharacter = {
+            name: 'Ally',
+            type: 'player',
+            computedStats: {
+                automation: {
+                    passives: [{ name: 'Aura of Protection' }],
+                },
+            },
+        };
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'smiteOfProtectionActive') return false;
+            return null;
+        });
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[otherCharacter]}
+            />
+        );
+        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Cover source badges - bulwarkOfForce
+// Cover source badges - bulwarkOfForce DOM rendering
 // ---------------------------------------------------------------------------
-describe('CharSummary - Bulwark of Force Cover', () => {
+describe('CharSummary - bulwarkOfForce cover badge rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('activates bulwarkOfForce cover when target list includes player', () => {
+    it('renders bulwarkOfForce cover badge when target list includes player', () => {
         const otherCharacter = {
             name: 'Ally',
             type: 'player',
@@ -164,17 +225,18 @@ describe('CharSummary - Bulwark of Force Cover', () => {
             if (key === 'bulwarkOfForceTargets') return ['Thorin'];
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary
-            playerStats={stats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            characters={[otherCharacter]}
-        />);
-        expect(true).toBe(true);
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[otherCharacter]}
+            />
+        );
+        expect(screen.getByText(/Cover: Bulwark of Force/)).toBeInTheDocument();
     });
 
-    it('does not activate bulwarkOfForce cover when target list does not include player', () => {
+    it('does not render bulwarkOfForce cover badge when target list does not include player', () => {
         const otherCharacter = {
             name: 'Ally',
             type: 'player',
@@ -184,28 +246,50 @@ describe('CharSummary - Bulwark of Force Cover', () => {
             if (key === 'bulwarkOfForceTargets') return ['Other'];
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary
-            playerStats={stats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            characters={[otherCharacter]}
-        />);
-        expect(true).toBe(true);
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[otherCharacter]}
+            />
+        );
+        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
+    });
+
+    it('does not render bulwarkOfForce cover badge when bulwark is not active', () => {
+        const otherCharacter = {
+            name: 'Ally',
+            type: 'player',
+        };
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'bulwarkOfForceActive') return false;
+            if (key === 'bulwarkOfForceTargets') return ['Thorin'];
+            return null;
+        });
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[otherCharacter]}
+            />
+        );
+        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Cover source badges - naturesSanctuary
+// Cover source badges - naturesSanctuary DOM rendering
 // ---------------------------------------------------------------------------
-describe('CharSummary - Nature Sanctuary Cover', () => {
+describe('CharSummary - naturesSanctuary cover badge rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('activates naturesSanctuary cover when sanctuary creatures list includes player', () => {
+    it('renders naturesSanctuary cover badge when sanctuary creatures list includes player', () => {
         const otherCharacter = {
             name: 'Ally',
             type: 'player',
@@ -214,13 +298,140 @@ describe('CharSummary - Nature Sanctuary Cover', () => {
             if (key === 'naturesSanctuaryCreatures') return ['Thorin'];
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary
-            playerStats={stats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            characters={[otherCharacter]}
-        />);
-        expect(true).toBe(true);
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[otherCharacter]}
+            />
+        );
+        expect(screen.getByText(/Cover: Nature's Sanctuary/)).toBeInTheDocument();
+    });
+
+    it('does not render naturesSanctuary cover badge when player is not in sanctuary list', () => {
+        const otherCharacter = {
+            name: 'Ally',
+            type: 'player',
+        };
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'naturesSanctuaryCreatures') return ['Other'];
+            return null;
+        });
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[otherCharacter]}
+            />
+        );
+        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
+    });
+
+    it('does not render naturesSanctuary cover badge when creatures list is empty', () => {
+        const otherCharacter = {
+            name: 'Ally',
+            type: 'player',
+        };
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'naturesSanctuaryCreatures') return [];
+            return null;
+        });
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[otherCharacter]}
+            />
+        );
+        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Cover badges - null/undefined characters handling
+// ---------------------------------------------------------------------------
+describe('CharSummary - cover badges with no characters', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    it('renders without cover badges when characters is null', () => {
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={null}
+            />
+        );
+        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
+    });
+
+    it('renders without cover badges when characters is undefined', () => {
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+            />
+        );
+        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
+    });
+
+    it('renders without cover badges when characters is empty array', () => {
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[]}
+            />
+        );
+        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Cover badges - both bulwark and sanctuary active simultaneously
+// ---------------------------------------------------------------------------
+describe('CharSummary - multiple cover badges rendering', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    it('renders both bulwarkOfForce and naturesSanctuary badges when both are active from different characters', () => {
+        const characters = [
+            { name: 'Ally1', type: 'player' },
+            { name: 'Ally2', type: 'player' },
+        ];
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (name === 'Ally1' && key === 'bulwarkOfForceActive') return true;
+            if (name === 'Ally1' && key === 'bulwarkOfForceTargets') return ['Thorin'];
+            if (name === 'Ally2' && key === 'naturesSanctuaryCreatures') return ['Thorin'];
+            return null;
+        });
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={characters}
+            />
+        );
+        expect(screen.getByText(/Cover: Bulwark of Force/)).toBeInTheDocument();
+        expect(screen.getByText(/Cover: Nature's Sanctuary/)).toBeInTheDocument();
     });
 });

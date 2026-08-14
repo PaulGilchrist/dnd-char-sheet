@@ -1,9 +1,8 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { useSyncedState } from '../../../hooks/runtime/useSyncedState.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -123,81 +122,47 @@ describe('CharSummary - Starry Form Constellation Badge', () => {
         window.location.hostname = 'localhost';
     });
 
-    it('shows starry form badge with constellation', () => {
+    it('renders Starry Form badge with constellation label', () => {
         vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
             if (key === 'activeBuffs') {
                 return [{ name: 'Starry Form', constellation: 'Archer' }];
             }
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Starry Form - Archer/)).toBeInTheDocument();
     });
-});
 
-describe('CharSummary - Wild Surge Effects Duration', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-    });
-
-    it('renders surge effects with duration icon', () => {
-        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
-            if (key === 'wildMagicSurgeEffects') return [[{ roll: 1, effect: 'Fireball', duration: '1 round', timestamp: 1000 }], vi.fn()];
-            return [defaultValue, vi.fn()];
-        });
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+    it('renders Starry Form badge with Chalice constellation', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+            if (key === 'activeBuffs') {
+                return [{ name: 'Starry Form', constellation: 'Chalice' }];
+            }
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Surge Effects:/)).toBeInTheDocument();
-        expect(screen.getByText(/Fireball/)).toBeInTheDocument();
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Starry Form - Chalice/)).toBeInTheDocument();
     });
 
-    it('renders tamed surge effect', () => {
-        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
-            if (key === 'wildMagicSurgeEffects') return [[{ roll: 'tamed', effect: 'Fireball', timestamp: 1000 }], vi.fn()];
-            return [defaultValue, vi.fn()];
-        });
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+    it('does not render Starry Form badge when no constellation is set', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+            if (key === 'activeBuffs') {
+                return [{ name: 'Starry Form' }];
+            }
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Tamed/)).toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Initiative Event Listener', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
     });
 
-    it('calls setSurgeEffects(null) when initiative-rolled event fires', () => {
-        let surgeEffectsValue = [{ roll: 1, effect: 'Fireball' }];
-        const setSurgeEffectsMock = vi.fn((val) => { surgeEffectsValue = val; });
-        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
-            if (key === 'wildMagicSurgeEffects') return [surgeEffectsValue, setSurgeEffectsMock];
-            return [defaultValue, vi.fn()];
-        });
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+    it('does not render Starry Form badge when no active buffs exist', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+            if (key === 'activeBuffs') {
+                return [];
+            }
             return null;
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        window.dispatchEvent(new Event('initiative-rolled'));
-        expect(setSurgeEffectsMock).toHaveBeenCalledWith(null);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
     });
 });

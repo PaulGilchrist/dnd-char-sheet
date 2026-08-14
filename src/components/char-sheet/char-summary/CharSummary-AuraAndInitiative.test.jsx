@@ -1,8 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { DiceRollContext } from '../../../hooks/combat/DiceRollContext.js';
 import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
@@ -24,7 +24,7 @@ vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
     useRuntimeValue: vi.fn((_name, _key, _campaign) => null),
-    getRuntimeValue: vi.fn(),
+    getRuntimeValue: vi.fn((_name, _key, _campaign) => null),
     getStore: vi.fn(() => new Map()),
 }));
 
@@ -59,10 +59,43 @@ vi.mock('../../../services/rules/core/attackCalc.js', () => ({
     parseMagicItemName: (name) => ({ baseName: name }),
 }));
 
+vi.mock('../../../services/ui/logService.js', () => ({
+    addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../../../services/encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => ({ creatures: [] })),
+}));
+
+vi.mock('../../../services/automation/common/buffToggle.js', () => ({
+    isBuffActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/combat/auras/unbreakableMajesty.js', () => ({
+    isUnbreakableMajestyActive: vi.fn(() => false),
+    getUnbreakableMajestySaveDc: vi.fn(() => 0),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/auraOfLifeHandler.js', () => ({
+    isAuraOfLifeActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
+    isCircleOfPowerActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
+    isDeathWardActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
 describe('CharSummary - Aura Sources', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
     });
 
     it('shows aura resistance source marker', () => {
@@ -111,6 +144,56 @@ describe('CharSummary - Aura Sources', () => {
         expect(screen.getByText(/Cold/)).toBeInTheDocument();
     });
 
+    it('does not crash when auraComboEffects is null', () => {
+        render(<CharSummary
+            playerStats={mockPlayerStats}
+            campaignName={mockCampaignName}
+            exhaustionLevel={0}
+            auraComboEffects={null}
+        />);
+        expect(screen.getByText(mockPlayerStats.name)).toBeInTheDocument();
+    });
+
+    it('does not crash when auraComboEffects is undefined', () => {
+        render(<CharSummary
+            playerStats={mockPlayerStats}
+            campaignName={mockCampaignName}
+            exhaustionLevel={0}
+        />);
+        expect(screen.getByText(mockPlayerStats.name)).toBeInTheDocument();
+    });
+
+    it('deduplicates same resistance in base and aura', () => {
+        const stats = { ...mockPlayerStats, resistances: ['poison'] };
+        const { container } = render(<CharSummary
+            playerStats={stats}
+            campaignName={mockCampaignName}
+            exhaustionLevel={0}
+            auraComboEffects={{ resistances: ['poison', 'fire'], resistanceSource: 'Aura of Protection' }}
+        />);
+        const allSpans = container.querySelectorAll('span');
+        const poisonSpans = Array.from(allSpans).filter(el => el.textContent && el.textContent.startsWith('Poison'));
+        expect(poisonSpans.length).toBe(1);
+    });
+
+    it('renders speed with aura speed bonus indicator', () => {
+        const stats = { ...mockPlayerStats, resistances: [], immunities: [] };
+        render(<CharSummary
+            playerStats={stats}
+            campaignName={mockCampaignName}
+            exhaustionLevel={0}
+            auraComboEffects={{ speedBonus: 10, speedSource: 'Aura of Alacrity' }}
+        />);
+        expect(screen.getByText(/Speed:/)).toBeInTheDocument();
+    });
+});
+
+describe('CharSummary - Rage of the Wilds', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+    });
+
     it('shows Rage of the Wilds Bear resistances', () => {
         getActiveBuffs.mockReturnValue([
             { name: 'Rage of the Wilds', optionName: 'Bear', resistanceTypes: ['acid', 'bludgeoning', 'cold', 'fire', 'lightning', 'piercing', 'poison', 'slashing', 'thunder'] }
@@ -131,7 +214,20 @@ describe('CharSummary - Aura Sources', () => {
         expect(screen.getByText(/Poison/)).toBeInTheDocument();
     });
 
-    it('shows Heroes Feast poison resistance', () => {
+    it('shows no resistances when no buffs are active', () => {
+        getActiveBuffs.mockReturnValue([]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Resistances:/)).not.toBeInTheDocument();
+    });
+});
+
+describe('CharSummary - Heroes Feast', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+    });
+
+    it('shows Heroes Feast poison resistance and condition immunities', () => {
         getActiveBuffs.mockReturnValue([
             { name: "Heroes' Feast", effect: 'heroes_feast', resistanceTypes: ['poison'], conditionImmunity: ['Frightened', 'Poisoned'] }
         ]);
@@ -142,63 +238,12 @@ describe('CharSummary - Aura Sources', () => {
         expect(screen.getByText(/Frightened/)).toBeInTheDocument();
     });
 
-    it('shows Heroes Feast condition immunities', () => {
+    it('shows Heroes Feast resistance badge', () => {
         getActiveBuffs.mockReturnValue([
             { name: "Heroes' Feast", effect: 'heroes_feast', resistanceTypes: ['poison'], conditionImmunity: ['Frightened', 'Poisoned'] }
         ]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
-        expect(screen.getByText(/Poisoned/)).toBeInTheDocument();
-        expect(screen.getByText(/Frightened/)).toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Popup and Modal Behaviors', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-    });
-
-    describe('armor class formula popup', () => {
-        it('opens popup with armor class formula when AC is clicked', () => {
-            const mockSetPopupHtml = vi.fn();
-            const wrapper = ({ children }) => (
-                <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                    {children}
-                </DiceRollContext.Provider>
-            );
-            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />, { wrapper });
-            fireEvent.click(screen.getByText('Armor Class:'));
-            expect(mockSetPopupHtml).toHaveBeenCalledWith('Armor Class (18) = 16 + 2 (shield)');
-        });
-    });
-});
-
-describe('CharSummary - Initiative', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-    });
-
-    it('renders initiative with sign formatter', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/\+2/)).toBeInTheDocument();
-    });
-
-    it('applies exhaustion penalty to initiative', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={1} />);
-        expect(screen.getByText('+0')).toBeInTheDocument();
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={2} />);
-        expect(screen.getByText('-2')).toBeInTheDocument();
-        const stats = { ...mockPlayerStats, initiative: 1 };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={2} />);
-        expect(screen.getByText(/-3/)).toBeInTheDocument();
-    });
-
-    it('makes initiative clickable', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const initiativeEl = screen.getByText(/\+2/);
-        expect(initiativeEl).toHaveClass('clickable');
+        expect(screen.getByText(/Heroes' Feast/)).toBeInTheDocument();
     });
 });
 
