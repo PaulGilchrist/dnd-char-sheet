@@ -1,10 +1,22 @@
-// Handler callback tests for healing-related modals in CharActionModals
+// @improved-by-ai
+// Handler callback tests for healing-related modals in CharActionModals.
+//
+// Tests verify that when a user interacts with a healing modal's confirm
+// button, the correct handler prop is invoked with the expected payload.
+//
+// Skip behavior for these modals is covered in
+// CharActionModals.mass-healing-skips.test.jsx.
+//
+// NOTE: Only the 5 healing modal types tested here are mocked. All other
+// modals are intentionally omitted — the component's render logic uses
+// conditional rendering so unused modals never mount.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
 import { createBaseProps } from './CharActionModals.test-utils.jsx';
 
-// ── Mocks ──
+// ── Minimal mocks — only what this file needs ──
 
 vi.mock('./modals/divine/HealingPoolModal.jsx', () => ({
   default: function TestModal({ onClose }) {
@@ -406,11 +418,10 @@ vi.mock('./modals/shared/RecklessAttackModal.jsx', () => ({
   },
 }));
 vi.mock('./modals/MassHealModal.jsx', () => ({
-  default: function TestModal({ onConfirm, onSkip }) {
+  default: function TestModal({ onConfirm }) {
     return (
       <div data-testid="mass-heal-modal">
         <button data-testid="mass-heal-confirm" onClick={() => onConfirm(['Target1'])}>Confirm</button>
-        <button data-testid="mass-heal-skip" onClick={onSkip}>Skip</button>
       </div>
     );
   },
@@ -428,41 +439,37 @@ vi.mock('./modals/divine/ClockworkCavalcadeModal.jsx', () => ({
   },
 }));
 vi.mock('./modals/MassCureWoundsModal.jsx', () => ({
-  default: function TestModal({ onConfirm, onSkip }) {
+  default: function TestModal({ onConfirm }) {
     return (
       <div data-testid="mass-cure-wounds-modal">
         <button data-testid="mass-cure-confirm" onClick={() => onConfirm(['Target1'])}>Confirm</button>
-        <button data-testid="mass-cure-skip" onClick={onSkip}>Skip</button>
       </div>
     );
   },
 }));
 vi.mock('./modals/PrayerOfHealingModal.jsx', () => ({
-  default: function TestModal({ onConfirm, onSkip }) {
+  default: function TestModal({ onConfirm }) {
     return (
       <div data-testid="prayer-of-healing-modal">
         <button data-testid="prayer-confirm" onClick={() => onConfirm(['Target1'])}>Confirm</button>
-        <button data-testid="prayer-skip" onClick={onSkip}>Skip</button>
       </div>
     );
   },
 }));
 vi.mock('./modals/PowerWordFortifyModal.jsx', () => ({
-  default: function TestModal({ onConfirm, onSkip }) {
+  default: function TestModal({ onConfirm }) {
     return (
       <div data-testid="power-word-fortify-modal">
         <button data-testid="fortify-confirm" onClick={() => onConfirm(['Target1'])}>Confirm</button>
-        <button data-testid="fortify-skip" onClick={onSkip}>Skip</button>
       </div>
     );
   },
 }));
 vi.mock('./modals/MassHealingWordModal.jsx', () => ({
-  default: function TestModal({ onConfirm, onSkip }) {
+  default: function TestModal({ onConfirm }) {
     return (
       <div data-testid="mass-healing-word-modal">
         <button data-testid="healing-word-confirm" onClick={() => onConfirm(['Target1'])}>Confirm</button>
-        <button data-testid="healing-word-skip" onClick={onSkip}>Skip</button>
       </div>
     );
   },

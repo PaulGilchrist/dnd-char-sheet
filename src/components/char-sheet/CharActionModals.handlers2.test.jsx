@@ -1,7 +1,12 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
 import { createBaseProps } from './CharActionModals.test-utils.jsx';
+
+const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+const { addEntry } = await import('../../services/ui/logService.js');
+const { logHealingToSSE } = await import('../../services/automation/common/healingRoll.js');
 
 // ── Mocks ──
 
@@ -475,7 +480,7 @@ describe('CharActionModals — Invoke Duplicity and Healing Illusion handlers', 
   });
 
   describe('handleInvokeDuplicityConfirm', () => {
-    it('dispatches buffs-updated event and logs entry when allies selected', async () => {
+    it('sets runtime value, logs entry, dispatches event, and closes modal when allies are selected', async () => {
       const events = {};
       const origDispatch = window.dispatchEvent;
       window.dispatchEvent = vi.fn((event) => {
@@ -483,6 +488,7 @@ describe('CharActionModals — Invoke Duplicity and Healing Illusion handlers', 
         return origDispatch.call(window, event);
       });
 
+      const setModalState = vi.fn();
       const playerStats = { name: 'Test Character' };
       const modalData = { action: {}, playerStats };
       const characters = [{ name: 'Ally1', type: 'humanoid', size: 'M', currentHp: 30, maxHp: 50 }];
@@ -490,23 +496,39 @@ describe('CharActionModals — Invoke Duplicity and Healing Illusion handlers', 
       render(<CharActionModals
         {...createBaseProps({})}
         playerStats={playerStats}
+        campaignName="test-campaign"
         characters={characters}
         modalState={{ invokeDuplicityModal: modalData }}
-        setModalState={vi.fn()}
+        setModalState={setModalState}
       />);
 
       // Click the creature confirm button which calls onConfirm with target names
       fireEvent.click(screen.getByTestId('creature-confirm'));
 
       await waitFor(() => {
+        // Should set runtime value for advantage targets (creature mock renders "Ally1")
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'Test Character',
+          'invokeDuplicityAdvantageTargets',
+          ['Ally1'],
+          'test-campaign'
+        );
+        // Should log the ability use
+        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'Test Character',
+          abilityName: 'Improved Duplicity',
+        }));
         // Should dispatch buffs-updated event
         expect(window.dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'buffs-updated' }));
+        // Should close the modal
+        expect(setModalState).toHaveBeenCalledWith({ invokeDuplicityModal: null });
       });
 
       window.dispatchEvent = origDispatch;
     });
 
-    it('closes modal immediately when no allies selected', async () => {
+    it('closes modal immediately without side effects when no allies selected', async () => {
       const setModalState = vi.fn();
       const playerStats = { name: 'Test Character' };
       const modalData = { action: {}, playerStats };
@@ -514,6 +536,7 @@ describe('CharActionModals — Invoke Duplicity and Healing Illusion handlers', 
       render(<CharActionModals
         {...createBaseProps({})}
         playerStats={playerStats}
+        campaignName="test-campaign"
         modalState={{ invokeDuplicityModal: modalData }}
         setModalState={setModalState}
       />);
@@ -524,11 +547,93 @@ describe('CharActionModals — Invoke Duplicity and Healing Illusion handlers', 
       await waitFor(() => {
         expect(setModalState).toHaveBeenCalledWith({ invokeDuplicityModal: null });
       });
+
+      // Should NOT have called any side-effect handlers
+      expect(setRuntimeValue).not.toHaveBeenCalled();
+      expect(addEntry).not.toHaveBeenCalled();
+      expect(logHealingToSSE).not.toHaveBeenCalled();
     });
   });
 
   describe('handleHealingIllusionConfirm', () => {
-    it('removes active buff and heals target', async () => {
+    it('removes active buff, sets target HP, logs healing, and closes modal on confirm', async () => {
+      const setModalState = vi.fn();
+      const playerStats = { name: 'Caster', level: 5 };
+      const modalData = { action: { name: 'Healing Illusion' }, playerStats };
+      // Pre-populate the store with an active buff matching the action name
+      setRuntimeValue('Caster', 'activeBuffs', [{ name: 'Healing Illusion', duration: 1 }], 'test-campaign');
+
+      render(<CharActionModals
+        {...createBaseProps({})}
+        playerStats={playerStats}
+        campaignName="test-campaign"
+        characters={[{ name: 'Target1', maxHp: 100 }]}
+        modalState={{ healingIllusionModal: modalData }}
+        setModalState={setModalState}
+      />);
+
+      // Click the target label to trigger onTargetSelected
+      fireEvent.click(screen.getByTestId('secondary-target-Target1'));
+
+      await waitFor(() => {
+        // Should have removed the buff from the activeBuffs store
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'Caster',
+          'activeBuffs',
+          expect.arrayContaining([]),
+          'test-campaign'
+        );
+        // Should have set the target's current HP
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'Target1',
+          'currentHitPoints',
+          expect.any(Number),
+          'test-campaign'
+        );
+        // Should have logged the healing
+        expect(logHealingToSSE).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+          targetName: 'Target1',
+          sourceName: 'Healing Illusion',
+          healingName: 'Healing Illusion',
+        }));
+        // Should have closed the modal
+        expect(setModalState).toHaveBeenCalledWith({ healingIllusionModal: null });
+      });
+    });
+
+    it('heals the caster themselves when they are the only creature available', async () => {
+      const setModalState = vi.fn();
+      const playerStats = { name: 'Caster', level: 3, hitPoints: 50 };
+      const modalData = { action: { name: 'Healing Illusion' }, playerStats };
+      // Pre-populate the store with active buff
+      setRuntimeValue('Caster', 'activeBuffs', [{ name: 'Healing Illusion' }], 'test-campaign');
+      setRuntimeValue('Caster', 'currentHitPoints', 20, 'test-campaign');
+
+      render(<CharActionModals
+        {...createBaseProps({})}
+        playerStats={playerStats}
+        campaignName="test-campaign"
+        characters={[{ name: 'Caster', maxHp: 50 }]}
+        modalState={{ healingIllusionModal: modalData }}
+        setModalState={setModalState}
+      />);
+
+      // Click the target label to trigger onTargetSelected
+      fireEvent.click(screen.getByTestId('secondary-target-Caster'));
+
+      await waitFor(() => {
+        // Should have set the caster's HP (20 + 3 = 23, capped at hitPoints=50)
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'Caster',
+          'currentHitPoints',
+          23,
+          'test-campaign'
+        );
+        expect(setModalState).toHaveBeenCalledWith({ healingIllusionModal: null });
+      });
+    });
+
+    it('closes modal without side effects on skip', async () => {
       const setModalState = vi.fn();
       const playerStats = { name: 'Caster', level: 5 };
       const modalData = { action: { name: 'Healing Illusion' }, playerStats };
@@ -536,6 +641,7 @@ describe('CharActionModals — Invoke Duplicity and Healing Illusion handlers', 
       render(<CharActionModals
         {...createBaseProps({})}
         playerStats={playerStats}
+        campaignName="test-campaign"
         modalState={{ healingIllusionModal: modalData }}
         setModalState={setModalState}
       />);
@@ -546,6 +652,10 @@ describe('CharActionModals — Invoke Duplicity and Healing Illusion handlers', 
       await waitFor(() => {
         expect(setModalState).toHaveBeenCalledWith({ healingIllusionModal: null });
       });
+
+      // Should NOT have called any side-effect handlers
+      expect(setRuntimeValue).not.toHaveBeenCalled();
+      expect(logHealingToSSE).not.toHaveBeenCalled();
     });
   });
 });

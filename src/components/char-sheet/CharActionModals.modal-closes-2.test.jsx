@@ -1,8 +1,12 @@
+// @improved-by-ai
 // Tests for modal close handlers in CharActionModals.jsx:
-// - openHandFromFlurry modal
-// - shieldBashModal close handler
-// - quiveringPalmModal close handler
+// - openHandFromFlurry modal (close/dispatch events, confirm/dispatch events)
+// - shieldBashModal close handler (close/dispatch events)
+// - quiveringPalmModal close handler (close/dispatch events)
 // - CelestialResilienceModal onSkip handler
+//
+// This file focuses on the behavior that close handlers set modalState to null
+// AND dispatch target-effects-updated and combat-summary-updated events.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -398,13 +402,18 @@ describe('CharActionModals — modal close handlers', () => {
   });
 
   describe('openHandFromFlurry modal', () => {
-    it('renders OpenHandTechniqueModal with correct props', () => {
+    it('renders OpenHandTechniqueModal and dispatches events on close', () => {
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
       render(<CharActionModals
-        {...createBaseProps({ handleOpenHandFromFlurryConfirm: vi.fn(), handleOpenHandFromFlurrySkip: vi.fn() })}
+        {...createBaseProps({ handleOpenHandFromFlurrySkip: vi.fn() })}
         modalState={{ openHandFromFlurry: { targets: [{ action: {}, playerStats: {}, campaignName: 'test-campaign', targetName: 'Goblin' }], currentIndex: 0, saveDc: 15 } }}
         setModalState={vi.fn()}
       />);
       expect(screen.getByTestId('open-hand-technique-modal')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('open-hand-close'));
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'target-effects-updated' }));
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
+      dispatchSpy.mockRestore();
     });
 
     it('calls handleOpenHandFromFlurrySkip on close', () => {
@@ -418,7 +427,7 @@ describe('CharActionModals — modal close handlers', () => {
       expect(handler).toHaveBeenCalled();
     });
 
-    it('calls handleOpenHandFromFlurryConfirm on confirm', () => {
+    it('calls handleOpenHandFromFlurryConfirm with optionName on confirm', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleOpenHandFromFlurryConfirm: handler })}
@@ -428,31 +437,52 @@ describe('CharActionModals — modal close handlers', () => {
       fireEvent.click(screen.getByTestId('open-hand-confirm'));
       expect(handler).toHaveBeenCalledWith({ optionName: 'grappled' });
     });
+
+    it('dispatches events on confirm', () => {
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+      render(<CharActionModals
+        {...createBaseProps({ handleOpenHandFromFlurryConfirm: vi.fn() })}
+        modalState={{ openHandFromFlurry: { targets: [{ action: {}, playerStats: {}, campaignName: 'test-campaign', targetName: 'Goblin' }], currentIndex: 0, saveDc: 15 } }}
+        setModalState={vi.fn()}
+      />);
+      fireEvent.click(screen.getByTestId('open-hand-confirm'));
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'target-effects-updated' }));
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
+      dispatchSpy.mockRestore();
+    });
   });
 
   describe('shieldBashModal close handler', () => {
-    it('dispatches target-effects-updated and combat-summary-updated on close', () => {
+    it('sets modalState to null and dispatches events on close', () => {
       const setModalState = vi.fn();
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
       render(<CharActionModals
-        {...createBaseProps({})}
+        {...createBaseProps()}
         modalState={{ shieldBashModal: { action: {} } }}
         setModalState={setModalState}
       />);
       fireEvent.click(screen.getByTestId('shield-bash-close'));
       expect(setModalState).toHaveBeenCalledWith({ shieldBashModal: null });
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'target-effects-updated' }));
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
+      dispatchSpy.mockRestore();
     });
   });
 
   describe('quiveringPalmModal close handler', () => {
-    it('dispatches target-effects-updated and combat-summary-updated on close', () => {
+    it('sets modalState to null and dispatches events on close', () => {
       const setModalState = vi.fn();
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
       render(<CharActionModals
-        {...createBaseProps({})}
+        {...createBaseProps()}
         modalState={{ quiveringPalmModal: { action: {} } }}
         setModalState={setModalState}
       />);
       fireEvent.click(screen.getByTestId('quivering-palm-close'));
       expect(setModalState).toHaveBeenCalledWith({ quiveringPalmModal: null });
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'target-effects-updated' }));
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
+      dispatchSpy.mockRestore();
     });
   });
 

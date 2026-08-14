@@ -1,4 +1,21 @@
-// Tests for helper modals in CharActionModals (target selection, confirm modals)
+// @improved-by-ai
+// Tests for helper modals in CharActionModals (target selection, confirm modals).
+//
+// Scope:
+// - HealingIllusionModal → SecondaryTargetModal rendering + skip
+// - InvokeDuplicityModal → CreatureSelectionModal rendering + skip
+// - FlurryOfBlowsModal → FlurryOfBlowsTargetPopup rendering, confirm, skip
+// - StarryChaliceHealModal → SecondaryTargetModal rendering + skip
+// - ElementalEpitomeModal → rendering + close
+// - DestructiveStrideModal → rendering + close
+// - DestructiveStrideTargetModal → SecondaryTargetModal rendering
+// - RecklessAttackModal → mode prop forwarding
+//
+// Handler integration (runtime state, logging, SSE) is covered in:
+// - CharActionModals.handlers2.test.jsx (invokeDuplicity + healingIllusion full flow)
+// - CharActionModals.secondary-targets.test.jsx (secondary target confirmations)
+// - CharActionModals.mass-healing-skips.test.jsx (mass healing skips)
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -28,11 +45,6 @@ vi.mock('./modals/shared/SetConditionModal.jsx', () => ({
 }));
 vi.mock('./modals/EyebiteEffectModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="eyebite-effect-modal">EyebiteEffectModal</div>; },
-}));
-vi.mock('./modals/BlindnessDeafnessModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="blindness-deafness-modal"><button data-testid="blindness-deafness-close" onClick={onClose}>Close</button></div>;
-  },
 }));
 vi.mock('./modals/shared/AttackRiderModal.jsx', () => ({
   default: function TestModal({ onClose }) {
@@ -83,13 +95,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
   listeners: new Map(),
-  getRuntimeValue: vi.fn((character, key) => {
-    if (key === 'activeBuffs') return [];
-    if (key === 'currentHitPoints') return 50;
-    if (key === 'hitPoints') return 100;
-    if (key === '_cunningStrikeCostUsed') return 0;
-    return null;
-  }),
+  getRuntimeValue: vi.fn((_character, _key, _campaign) => null),
   setRuntimeValue: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../services/automation/common/healingRoll.js', () => ({
@@ -480,23 +486,20 @@ describe('CharActionModals — helper modals', () => {
   });
 
   describe('Healing Illusion modal', () => {
-    it('renders SecondaryTargetModal with correct title and description', () => {
+    it('renders SecondaryTargetModal with correct title, description, and HP indicator', () => {
       const playerStats = { name: 'Test Character', level: 5 };
-      const characters = [{ name: 'Ally1', type: 'humanoid', size: 'M', currentHp: 30, maxHp: 50 }];
-      const combatSummary = { creatures: [{ name: 'Goblin', type: 'humanoid', currentHp: 10, maxHp: 30 }] };
       render(<CharActionModals
         {...createBaseProps({})}
         playerStats={playerStats}
-        characters={characters}
         modalState={{ healingIllusionModal: { action: {}, playerStats } }}
         setModalState={vi.fn()}
-        combatSummary={combatSummary}
       />);
       expect(screen.getByTestId('secondary-title').textContent).toBe('Healing Illusion');
+      expect(screen.getByTestId('secondary-desc').textContent).toContain('Choose a creature within 5 feet');
       expect(screen.getByTestId('secondary-show-hp')).toBeTruthy();
     });
 
-    it('builds target list from characters and internal combatSummary', async () => {
+    it('builds target list from characters and combatSummary creatures', async () => {
       const playerStats = { name: 'Caster', level: 3 };
       const characters = [{ name: 'Ally1', type: 'humanoid', size: 'M', currentHp: 30, maxHp: 50 }];
       render(<CharActionModals
@@ -507,9 +510,8 @@ describe('CharActionModals — helper modals', () => {
         setModalState={vi.fn()}
       />);
       await waitFor(() => {
-        // Both characters and creatures from getCombatContext appear as targets
-        expect(screen.getByTestId('secondary-target-Ally1')).toBeTruthy();
-        expect(screen.getByTestId('secondary-target-Goblin')).toBeTruthy();
+        expect(screen.getByTestId('secondary-target-Ally1')).toBeInTheDocument();
+        expect(screen.getByTestId('secondary-target-Goblin')).toBeInTheDocument();
       });
     });
 
@@ -530,19 +532,16 @@ describe('CharActionModals — helper modals', () => {
   });
 
   describe('Invoke Duplicity modal', () => {
-    it('renders CreatureSelectionModal with correct title', () => {
+    it('renders CreatureSelectionModal with correct title and note', () => {
       const playerStats = { name: 'Test Character' };
-      const characters = [{ name: 'Ally1', type: 'humanoid', size: 'M', currentHp: 30, maxHp: 50 }];
-      const combatSummary = { creatures: [{ name: 'Goblin', type: 'humanoid', currentHp: 10, maxHp: 30 }] };
       render(<CharActionModals
         {...createBaseProps({})}
         playerStats={playerStats}
-        characters={characters}
         modalState={{ invokeDuplicityModal: { action: {}, playerStats } }}
         setModalState={vi.fn()}
-        combatSummary={combatSummary}
       />);
       expect(screen.getByTestId('creature-title').textContent).toBe('Improved Duplicity — Choose Allies');
+      expect(screen.getByTestId('creature-note').textContent).toContain('Select all allies');
     });
 
     it('builds target list with deduplication by name', async () => {
@@ -556,20 +555,20 @@ describe('CharActionModals — helper modals', () => {
         setModalState={vi.fn()}
       />);
       await waitFor(() => {
-        expect(screen.getByTestId('creature-target-Ally1')).toBeTruthy();
-        expect(screen.getByTestId('creature-target-Goblin')).toBeTruthy();
+        expect(screen.getByTestId('creature-target-Ally1')).toBeInTheDocument();
+        expect(screen.getByTestId('creature-target-Goblin')).toBeInTheDocument();
       });
     });
   });
 
   describe('Flurry of Blows modal', () => {
-    it('renders FlurryOfBlowsTargetPopup with correct props', () => {
+    it('renders FlurryOfBlowsTargetPopup', () => {
       render(<CharActionModals
         {...createBaseProps({ handleFlurryOfBlowsConfirm: vi.fn() })}
         modalState={{ flurryOfBlowsModal: { numAttacks: 3, creatureTargets: ['Goblin'], currentTargetName: 'Goblin' } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByTestId('flurry-of-blows-popup')).toBeTruthy();
+      expect(screen.getByTestId('flurry-of-blows-popup')).toBeInTheDocument();
     });
 
     it('calls handleFlurryOfBlowsConfirm on confirm', () => {
@@ -618,13 +617,13 @@ describe('CharActionModals — helper modals', () => {
   });
 
   describe('Elemental Epitome modal', () => {
-    it('renders ElementalEpitomeModal with correct props', () => {
+    it('renders ElementalEpitomeModal with action and resistance props', () => {
       render(<CharActionModals
         {...createBaseProps({ handleEpitomeConfirm: vi.fn() })}
         modalState={{ epitomeModal: { action: {}, playerStats: {}, campaignName: 'test-campaign', currentResistance: 'cold' } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByTestId('elemental-epitome-modal')).toBeTruthy();
+      expect(screen.getByTestId('elemental-epitome-modal')).toBeInTheDocument();
     });
 
     it('dismisses modal on close', () => {
@@ -640,13 +639,13 @@ describe('CharActionModals — helper modals', () => {
   });
 
   describe('Destructive Stride modal', () => {
-    it('renders DestructiveStrideModal with correct props', () => {
+    it('renders DestructiveStrideModal with action and campaign props', () => {
       render(<CharActionModals
         {...createBaseProps({ handleDestructiveStrideConfirm: vi.fn() })}
         modalState={{ destructiveStrideModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByTestId('destructive-stride-modal')).toBeTruthy();
+      expect(screen.getByTestId('destructive-stride-modal')).toBeInTheDocument();
     });
 
     it('dismisses modal on close', () => {
@@ -662,7 +661,7 @@ describe('CharActionModals — helper modals', () => {
   });
 
   describe('Destructive Stride Target modal', () => {
-    it('renders SecondaryTargetModal with correct description', () => {
+    it('renders SecondaryTargetModal with correct title and description', () => {
       render(<CharActionModals
         {...createBaseProps({ handleDestructiveStrideTargetConfirm: vi.fn(), handleDestructiveStrideTargetSkip: vi.fn() })}
         modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }], action: {}, chosenType: 'fire', martialArtsDie: 4 } }}

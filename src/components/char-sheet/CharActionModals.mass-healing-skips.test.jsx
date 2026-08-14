@@ -1,362 +1,89 @@
-// Tests for mass healing modal skip handlers in CharActionModals.jsx:
-// - MassHealModal onSkip handler
-// - MassCureWoundsModal onSkip handler
-// - PrayerOfHealingModal onSkip handler
-// - PowerWordFortifyModal onSkip handler
-// - MassHealingWordModal onSkip handler
+// @improved-by-ai
+// Tests for skip handlers in HealingModals.jsx (rendered through CharActionModals):
+// - MassHealModal onSkip
+// - MassCureWoundsModal onSkip
+// - PrayerOfHealingModal onSkip
+// - PowerWordFortifyModal onSkip
+// - MassHealingWordModal onSkip
+// - ClockworkCavalcadeHealModal onSkip
+// - ClockworkCavalcadeDispelModal onSkip
+// - NaturesSanctuaryCreaturesModal onSkip
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
 import { createBaseProps } from './CharActionModals.test-utils.jsx';
 
-// ── Mocks ──
+// ── Minimal mocks — only what skip tests need ──
 
-vi.mock('./modals/divine/HealingPoolModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="healing-pool-modal"><button data-testid="healing-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/shared/HandOfHealingModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="hand-of-healing-modal">HandOfHealingModal</div>; },
-}));
-vi.mock('./modals/FontOfMagicModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="font-of-magic-modal">FontOfMagicModal</div>; },
-}));
-vi.mock('./modals/ResourcePoolModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="resource-pool-modal">ResourcePoolModal</div>; },
-}));
-vi.mock('./modals/WildCompanionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="wild-companion-modal">WildCompanionModal</div>; },
-}));
-vi.mock('./modals/shared/SetConditionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="set-condition-modal">SetConditionModal</div>; },
-}));
-vi.mock('./modals/EyebiteEffectModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="eyebite-effect-modal">EyebiteEffectModal</div>; },
-}));
-vi.mock('./modals/shared/AttackRiderModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="attack-rider-modal"><button data-testid="attack-rider-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/OpenHandTechniqueModal.jsx', () => ({
-  default: function TestModal({ onClose, onConfirm }) {
-    return (
-      <div data-testid="open-hand-technique-modal">
-        <button data-testid="open-hand-close" onClick={onClose}>Close</button>
-        <button data-testid="open-hand-confirm" onClick={() => onConfirm('grappled')}>Grapple</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/WeaponMasteryModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="weapon-mastery-modal"><button data-testid="weapon-mastery-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({
-  default: function TestModal({ onClose, onConfirm }) {
-    return (
-      <div data-testid="weapon-mastery-choice-modal">
-        <button data-testid="weapon-mastery-confirm" onClick={() => onConfirm('test-choice')}>Confirm</button>
-        <button data-testid="weapon-mastery-close" onClick={onClose}>Close</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/WeaponKindMasteryModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="weapon-kind-mastery-modal"><button data-testid="weapon-kind-mastery-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/shared/CombatStanceModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="combat-stance-modal"><button data-testid="combat-stance-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/TeleportModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="teleport-modal"><button data-testid="teleport-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/shared/HealingIllusionModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="healing-illusion-modal"><button data-testid="healing-illusion-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
-  getRuntimeValue: vi.fn((character, key) => {
-    if (key === 'activeBuffs') return [];
-    if (key === 'currentHitPoints') return 50;
-    if (key === 'hitPoints') return 100;
-    if (key === '_cunningStrikeCostUsed') return 0;
-    if (key === '_Stalkers_Flurry_option') return 'attack';
-    return null;
-  }),
-  setRuntimeValue: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock('../../services/automation/common/healingRoll.js', () => ({
-  logHealingToSSE: vi.fn(),
-}));
-vi.mock('../../services/rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn().mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'humanoid', currentHp: 10, maxHp: 30 }] }),
-}));
-vi.mock('../../services/ui/logService.js', () => ({
-  addEntry: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock('./modals/shared/SaveAttackHealModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="save-attack-heal-modal">SaveAttackHealModal</div>; },
-}));
-vi.mock('./modals/shared/SaveAttackAoeModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="save-attack-aoe-modal">SaveAttackAoeModal</div>; },
-}));
-vi.mock('./modals/shared/AOEConditionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="aoe-condition-modal">AOEConditionModal</div>; },
-}));
-vi.mock('./modals/shared/FearModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="fear-modal">FearModal</div>; },
-}));
-vi.mock('./modals/shared/HypnoticPatternModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="hypnotic-pattern-modal">HypnoticPatternModal</div>; },
-}));
-vi.mock('./modals/shared/MassSuggestionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="mass-suggestion-modal">MassSuggestionModal</div>; },
-}));
-vi.mock('./modals/shared/CalmEmotionsModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="calm-emotions-modal">CalmEmotionsModal</div>; },
-}));
-vi.mock('./modals/shared/TashasLaughterModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="tashas-laughter-modal">TashasLaughterModal</div>; },
-}));
-vi.mock('./modals/SilenceModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="silence-modal">SilenceModal</div>; },
-}));
-vi.mock('./modals/ElementalAttunementModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="elemental-attunement-modal">ElementalAttunementModal</div>; },
-}));
-vi.mock('./modals/ElementalBurstModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="elemental-burst-modal">ElementalBurstModal</div>; },
-}));
-vi.mock('./modals/divine/DivineSparkModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="divine-spark-modal">DivineSparkModal</div>; },
-}));
-vi.mock('./modals/divine/DivineInterventionModal.jsx', () => ({
-  default: function TestModal({ onClose, onSelect }) {
-    return (
-      <div data-testid="divine-intervention-modal">
-        <button data-testid="divine-intervention-close" onClick={onClose}>Close</button>
-        {onSelect && <button data-testid="divine-intervention-cast" onClick={() => onSelect('cast')}>Cast</button>}
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/arcane/ArcaneChargeModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="arcane-charge-modal">ArcaneChargeModal</div>; },
-}));
-vi.mock('./modals/WarMagicCantripModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="war-magic-cantrip-modal">WarMagicCantripModal</div>; },
-}));
-vi.mock('./modals/WarMagicSpellModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="war-magic-spell-modal">WarMagicSpellModal</div>; },
-}));
-vi.mock('./modals/divine/SacredWeaponModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="sacred-weapon-modal">SacredWeaponModal</div>; },
-}));
-vi.mock('./modals/PrimalCompanionBonusActionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="primal-companion-bonus-action-modal">PrimalCompanionBonusActionModal</div>; },
-}));
-vi.mock('./modals/PrimalCompanionSummonModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="primal-companion-summon-modal">PrimalCompanionSummonModal</div>; },
-}));
-vi.mock('./modals/MistyWandererModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="misty-wanderer-modal">MistyWandererModal</div>; },
-}));
-vi.mock('./modals/FeyReinforcementsModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="fey-reinforcements-modal">FeyReinforcementsModal</div>; },
-}));
-vi.mock('./modals/StepsOfTheFeyTauntModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="steps-of-the-fey-taunt-modal">StepsOfTheFeyTauntModal</div>; },
-}));
-vi.mock('./modals/shared/BonusActionChoiceModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="bonus-action-choice-modal">BonusActionChoiceModal</div>; },
-}));
-vi.mock('./modals/shared/StealthAttackModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="stealth-attack-modal">StealthAttackModal</div>; },
-}));
-vi.mock('./modals/CelestialRevelationModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="celestial-revelation-modal">CelestialRevelationModal</div>; },
-}));
-vi.mock('./modals/RevelationInFleshModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="revelation-in-flesh-modal"><button data-testid="revelation-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/ElementalAffinityModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="elemental-affinity-modal">ElementalAffinityModal</div>; },
-}));
-vi.mock('./modals/SingleResistanceSelectionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="single-resistance-selection-modal">SingleResistanceSelectionModal</div>; },
-}));
-vi.mock('./modals/shared/ChoiceListModal.jsx', () => ({
-  ChoiceListModal: function TestModal() { return <div data-testid="choice-list-modal">ChoiceListModal</div>; },
-}));
-vi.mock('./modals/DragonCompanionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="dragon-companion-modal">DragonCompanionModal</div>; },
-}));
-vi.mock('./modals/WildMagicDoubleRollModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="wild-magic-double-roll-modal">WildMagicDoubleRollModal</div>; },
-}));
-vi.mock('./modals/WildMagicTamedModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="wild-magic-tamed-modal">WildMagicTamedModal</div>; },
-}));
-vi.mock('./modals/arcane/ThirdEyeModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="third-eye-modal">ThirdEyeModal</div>; },
-}));
-vi.mock('./modals/arcane/SoulstitchSpellsModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="soulstitch-spells-modal">SoulstitchSpellsModal</div>; },
-}));
-vi.mock('./modals/arcane/IllusoryRealityModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="illusory-reality-modal">IllusoryRealityModal</div>; },
-}));
-vi.mock('./modals/FiendishLegacyModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="fiendish-legacy-modal"><button data-testid="fiendish-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/racial/BreathWeaponShapeModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="breath-weapon-shape-modal"><button data-testid="breath-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/shared/HypnoticPatternShakeModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="hypnotic-pattern-shake-modal"><button data-testid="hypnotic-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/arcane/ArcaneWardRestoreModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="arcane-ward-restore-modal">ArcaneWardRestoreModal</div>; },
-}));
-vi.mock('./modals/CombatSuperiorityModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="combat-superiority-modal"><button data-testid="combat-superiority-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/AttackRiderManeuverPrompt.jsx', () => ({
-  default: function TestModal({ onSkip }) {
-    return <div data-testid="attack-rider-maneuver-prompt"><button data-testid="maneuver-skip" onClick={onSkip}>Skip</button></div>;
-  },
-}));
-vi.mock('./modals/ConstellationSelectionModal.jsx', () => ({
-  default: function TestModal({ onConfirm, onClose }) {
-    return (
-      <div data-testid="constellation-selection-modal">
-        <button data-testid="const-confirm" onClick={() => onConfirm('test-option')}>Confirm</button>
-        <button data-testid="const-close" onClick={onClose}>Close</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/divine/BastionOfLawModal.jsx', () => ({
-  default: function TestModal({ onClose, onConfirm }) {
-    return (
-      <div data-testid="bastion-of-law-modal">
-        <button data-testid="bastion-close" onClick={onClose}>Close</button>
-        {onConfirm && <button data-testid="bastion-confirm" onClick={() => onConfirm(5, 'target')}>Confirm</button>}
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/MoonlightStepResourceModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="moonlight-step-resource-modal">MoonlightStepResourceModal</div>; },
-}));
-vi.mock('./modals/BulwarkOfForceModal.jsx', () => ({
-  default: function TestModal({ onSkip }) {
-    return (
-      <div data-testid="bulwark-of-force-modal">
-        <button data-testid="bulwark-skip" onClick={onSkip}>Skip</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/CoronaEnemySelectionModal.jsx', () => ({
-  default: function TestModal({ onSkip }) {
-    return (
-      <div data-testid="corona-enemy-selection-modal">
-        <button data-testid="corona-skip" onClick={onSkip}>Skip</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/RadianceOfDawnModal.jsx', () => ({
-  default: function TestModal({ onSkip }) {
-    return (
-      <div data-testid="radiance-of-dawn-modal">
-        <button data-testid="radiance-skip" onClick={onSkip}>Skip</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/MantleOfInspirationModal.jsx', () => ({
-  default: function TestModal({ onSkip }) {
-    return (
-      <div data-testid="mantle-of-inspiration-modal">
-        <button data-testid="mantle-skip" onClick={onSkip}>Skip</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/CelestialResilienceModal.jsx', () => ({
+vi.mock('./modals/MassHealModal.jsx', () => ({
   default: function TestModal({ onSkip, onConfirm }) {
     return (
-      <div data-testid="celestial-resilience-modal">
-        <button data-testid="celestial-resilience-skip" onClick={onSkip}>Skip</button>
-        <button data-testid="celestial-resilience-confirm" onClick={() => onConfirm([])}>Confirm</button>
+      <div data-testid="mass-heal-modal">
+        <button data-testid="mass-heal-skip" onClick={onSkip}>Skip</button>
+        <button data-testid="mass-heal-confirm" onClick={() => onConfirm([])}>Confirm</button>
       </div>
     );
   },
 }));
-vi.mock('./modals/VitalityOfTheTreeModal.jsx', () => ({
+
+vi.mock('./modals/MassCureWoundsModal.jsx', () => ({
   default: function TestModal({ onSkip, onConfirm }) {
     return (
-      <div data-testid="vitality-of-the-tree-modal">
-        <button data-testid="vitality-skip" onClick={onSkip}>Skip</button>
-        <button data-testid="vitality-confirm" onClick={() => onConfirm([])}>Confirm</button>
+      <div data-testid="mass-cure-wounds-modal">
+        <button data-testid="mass-cure-skip" onClick={onSkip}>Skip</button>
+        <button data-testid="mass-cure-confirm" onClick={() => onConfirm([])}>Confirm</button>
       </div>
     );
   },
 }));
-vi.mock('./modals/InspiringSmiteModal.jsx', () => ({
+
+vi.mock('./modals/PrayerOfHealingModal.jsx', () => ({
   default: function TestModal({ onSkip, onConfirm }) {
     return (
-      <div data-testid="inspiring-smite-modal">
-        <button data-testid="inspiring-smite-skip" onClick={onSkip}>Skip</button>
-        <button data-testid="inspiring-smite-confirm" onClick={() => onConfirm([])}>Confirm</button>
+      <div data-testid="prayer-of-healing-modal">
+        <button data-testid="prayer-skip" onClick={onSkip}>Skip</button>
+        <button data-testid="prayer-confirm" onClick={() => onConfirm([])}>Confirm</button>
       </div>
     );
   },
 }));
-vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
-  default: function TestModal({ title, targets, onTargetSelected, onSkip, confirmLabel, description, showHp }) {
+
+vi.mock('./modals/PowerWordFortifyModal.jsx', () => ({
+  default: function TestModal({ onSkip, onConfirm }) {
     return (
-      <div data-testid="secondary-target-modal">
-        <div data-testid="secondary-title">{title}</div>
-        {description && <div data-testid="secondary-desc">{description}</div>}
-        {showHp && <div data-testid="secondary-show-hp">true</div>}
-        {targets.map((target, i) => (
-          <label key={i} data-testid={`secondary-target-${target.name}`} onClick={() => onTargetSelected(target.name)}>
-            {target.name}
-          </label>
-        ))}
-        <button data-testid="secondary-confirm" onClick={() => onTargetSelected(targets[0]?.name)}>{confirmLabel}</button>
-        <button data-testid="secondary-skip" onClick={onSkip}>Skip</button>
+      <div data-testid="power-word-fortify-modal">
+        <button data-testid="fortify-skip" onClick={onSkip}>Skip</button>
+        <button data-testid="fortify-confirm" onClick={() => onConfirm([])}>Confirm</button>
       </div>
     );
   },
 }));
+
+vi.mock('./modals/MassHealingWordModal.jsx', () => ({
+  default: function TestModal({ onSkip, onConfirm }) {
+    return (
+      <div data-testid="mass-healing-word-modal">
+        <button data-testid="healing-word-skip" onClick={onSkip}>Skip</button>
+        <button data-testid="healing-word-confirm" onClick={() => onConfirm([])}>Confirm</button>
+      </div>
+    );
+  },
+}));
+
+vi.mock('./modals/divine/ClockworkCavalcadeModal.jsx', () => ({
+  default: function TestModal({ onChoose, onClose }) {
+    return (
+      <div data-testid="clockwork-cavalcade-modal">
+        <button data-testid="cc-close" onClick={onClose}>Close</button>
+        <button data-testid="cc-heal" onClick={() => onChoose('heal')}>Heal</button>
+        <button data-testid="cc-dispel" onClick={() => onChoose('dispel')}>Dispel</button>
+        <button data-testid="cc-repair" onClick={() => onChoose('repair')}>Repair</button>
+      </div>
+    );
+  },
+}));
+
 vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
   default: function TestModal({ title, targets, onConfirm, onSkip, confirmLabel, note }) {
     return (
@@ -374,144 +101,203 @@ vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
     );
   },
 }));
-vi.mock('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js', () => ({
-  handle: vi.fn().mockResolvedValue(undefined),
-  handleClearWard: vi.fn().mockResolvedValue(undefined),
-  handleSpendDice: vi.fn().mockResolvedValue(undefined),
-  handleApply: vi.fn().mockResolvedValue(undefined),
+
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
+  useSyncedState: vi.fn(() => [null, vi.fn()]),
+  getRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('./modals/MassHealModal.jsx', () => ({
-  default: function TestModal({ onSkip, onConfirm }) {
-    return (
-      <div data-testid="mass-heal-modal">
-        <button data-testid="mass-heal-skip" onClick={onSkip}>Skip</button>
-        <button data-testid="mass-heal-confirm" onClick={() => onConfirm([])}>Confirm</button>
-      </div>
-    );
-  },
+
+vi.mock('../../services/automation/common/healingRoll.js', () => ({
+  logHealingToSSE: vi.fn(),
 }));
-vi.mock('./modals/divine/ClockworkCavalcadeModal.jsx', () => ({
-  default: function TestModal({ onChoose, onClose }) {
-    return (
-      <div data-testid="clockwork-cavalcade-modal">
-        <button data-testid="cc-close" onClick={onClose}>Close</button>
-        <button data-testid="cc-heal" onClick={() => onChoose('heal')}>Heal</button>
-        <button data-testid="cc-dispel" onClick={() => onChoose('dispel')}>Dispel</button>
-        <button data-testid="cc-repair" onClick={() => onChoose('repair')}>Repair</button>
-      </div>
-    );
-  },
+
+vi.mock('../../services/rules/combat/damageUtils.js', () => ({
+  getCombatContext: vi.fn().mockResolvedValue({ creatures: [] }),
 }));
-vi.mock('./modals/MassCureWoundsModal.jsx', () => ({
-  default: function TestModal({ onSkip, onConfirm }) {
-    return (
-      <div data-testid="mass-cure-wounds-modal">
-        <button data-testid="mass-cure-skip" onClick={onSkip}>Skip</button>
-        <button data-testid="mass-cure-confirm" onClick={() => onConfirm([])}>Confirm</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/PrayerOfHealingModal.jsx', () => ({
-  default: function TestModal({ onSkip, onConfirm }) {
-    return (
-      <div data-testid="prayer-of-healing-modal">
-        <button data-testid="prayer-skip" onClick={onSkip}>Skip</button>
-        <button data-testid="prayer-confirm" onClick={() => onConfirm([])}>Confirm</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/PowerWordFortifyModal.jsx', () => ({
-  default: function TestModal({ onSkip, onConfirm }) {
-    return (
-      <div data-testid="power-word-fortify-modal">
-        <button data-testid="fortify-skip" onClick={onSkip}>Skip</button>
-        <button data-testid="fortify-confirm" onClick={() => onConfirm([])}>Confirm</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/MassHealingWordModal.jsx', () => ({
-  default: function TestModal({ onSkip, onConfirm }) {
-    return (
-      <div data-testid="mass-healing-word-modal">
-        <button data-testid="healing-word-skip" onClick={onSkip}>Skip</button>
-        <button data-testid="healing-word-confirm" onClick={() => onConfirm([])}>Confirm</button>
-      </div>
-    );
-  },
+
+vi.mock('../../services/ui/logService.js', () => ({
+  addEntry: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ── Tests ──
 
-describe('CharActionModals — mass healing modals skip handlers', () => {
+describe('CharActionModals — mass healing modal skip handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('MassHealModal onSkip', () => {
-    it('calls setModalState with null', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleMassHealConfirm: vi.fn() })}
-        modalState={{ massHealModal: { creatureTargets: ['Goblin'], totalPool: 50, campaignName: 'test-campaign', combatSummary: {} } }}
+  function renderModal({ modalKey, modalData, handlerName, skipTestId }) {
+    const setModalState = vi.fn();
+    const renderResult = render(
+      <CharActionModals
+        {...createBaseProps({ [handlerName]: vi.fn() })}
+        modalState={{ [modalKey]: modalData }}
         setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('mass-heal-skip'));
+      />,
+    );
+    fireEvent.click(screen.getByTestId(skipTestId));
+    return { setModalState, renderResult };
+  }
+
+  describe('MassHealModal', () => {
+    it('closes modal on skip', () => {
+      const { setModalState } = renderModal({
+        modalKey: 'massHealModal',
+        modalData: { creatureTargets: ['Goblin'], totalPool: 50, campaignName: 'test-campaign', combatSummary: {} },
+        handlerName: 'handleMassHealConfirm',
+        skipTestId: 'mass-heal-skip',
+      });
       expect(setModalState).toHaveBeenCalledWith({ massHealModal: null });
     });
+
+    it('does not call the confirm handler on skip', () => {
+      const handleMassHealConfirm = vi.fn();
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleMassHealConfirm })}
+          modalState={{ massHealModal: { creatureTargets: ['Goblin'], totalPool: 50, campaignName: 'test-campaign', combatSummary: {} } }}
+          setModalState={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('mass-heal-skip'));
+      expect(handleMassHealConfirm).not.toHaveBeenCalled();
+    });
   });
 
-  describe('MassCureWoundsModal onSkip', () => {
-    it('calls setModalState with null', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleMassCureWoundsConfirm: vi.fn() })}
-        modalState={{ massCureWoundsModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('mass-cure-skip'));
+  describe('MassCureWoundsModal', () => {
+    it('closes modal on skip', () => {
+      const { setModalState } = renderModal({
+        modalKey: 'massCureWoundsModal',
+        modalData: { creatureTargets: ['Goblin'], maxTargets: 5 },
+        handlerName: 'handleMassCureWoundsConfirm',
+        skipTestId: 'mass-cure-skip',
+      });
       expect(setModalState).toHaveBeenCalledWith({ massCureWoundsModal: null });
     });
+
+    it('does not call the confirm handler on skip', () => {
+      const handleMassCureWoundsConfirm = vi.fn();
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleMassCureWoundsConfirm })}
+          modalState={{ massCureWoundsModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
+          setModalState={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('mass-cure-skip'));
+      expect(handleMassCureWoundsConfirm).not.toHaveBeenCalled();
+    });
   });
 
-  describe('PrayerOfHealingModal onSkip', () => {
-    it('calls setModalState with null', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handlePrayerOfHealingConfirm: vi.fn() })}
-        modalState={{ prayerOfHealingModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('prayer-skip'));
+  describe('PrayerOfHealingModal', () => {
+    it('closes modal on skip', () => {
+      const { setModalState } = renderModal({
+        modalKey: 'prayerOfHealingModal',
+        modalData: { creatureTargets: ['Goblin'], maxTargets: 5 },
+        handlerName: 'handlePrayerOfHealingConfirm',
+        skipTestId: 'prayer-skip',
+      });
       expect(setModalState).toHaveBeenCalledWith({ prayerOfHealingModal: null });
     });
-  });
 
-  describe('PowerWordFortifyModal onSkip', () => {
-    it('calls setModalState with null', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handlePowerWordFortifyConfirm: vi.fn() })}
-        modalState={{ powerWordFortifyModal: { creatureTargets: ['Goblin'], totalTempHp: 10 } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('fortify-skip'));
-      expect(setModalState).toHaveBeenCalledWith({ powerWordFortifyModal: null });
+    it('does not call the confirm handler on skip', () => {
+      const handlePrayerOfHealingConfirm = vi.fn();
+      render(
+        <CharActionModals
+          {...createBaseProps({ handlePrayerOfHealingConfirm })}
+          modalState={{ prayerOfHealingModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
+          setModalState={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('prayer-skip'));
+      expect(handlePrayerOfHealingConfirm).not.toHaveBeenCalled();
     });
   });
 
-  describe('MassHealingWordModal onSkip', () => {
-    it('calls setModalState with null', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleMassHealingWordConfirm: vi.fn() })}
-        modalState={{ massHealingWordModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('healing-word-skip'));
+  describe('PowerWordFortifyModal', () => {
+    it('closes modal on skip', () => {
+      const { setModalState } = renderModal({
+        modalKey: 'powerWordFortifyModal',
+        modalData: { creatureTargets: ['Goblin'], totalTempHp: 10 },
+        handlerName: 'handlePowerWordFortifyConfirm',
+        skipTestId: 'fortify-skip',
+      });
+      expect(setModalState).toHaveBeenCalledWith({ powerWordFortifyModal: null });
+    });
+
+    it('does not call the confirm handler on skip', () => {
+      const handlePowerWordFortifyConfirm = vi.fn();
+      render(
+        <CharActionModals
+          {...createBaseProps({ handlePowerWordFortifyConfirm })}
+          modalState={{ powerWordFortifyModal: { creatureTargets: ['Goblin'], totalTempHp: 10 } }}
+          setModalState={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('fortify-skip'));
+      expect(handlePowerWordFortifyConfirm).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('MassHealingWordModal', () => {
+    it('closes modal on skip', () => {
+      const { setModalState } = renderModal({
+        modalKey: 'massHealingWordModal',
+        modalData: { creatureTargets: ['Goblin'], maxTargets: 5 },
+        handlerName: 'handleMassHealingWordConfirm',
+        skipTestId: 'healing-word-skip',
+      });
       expect(setModalState).toHaveBeenCalledWith({ massHealingWordModal: null });
+    });
+
+    it('does not call the confirm handler on skip', () => {
+      const handleMassHealingWordConfirm = vi.fn();
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleMassHealingWordConfirm })}
+          modalState={{ massHealingWordModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
+          setModalState={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('healing-word-skip'));
+      expect(handleMassHealingWordConfirm).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ClockworkCavalcadeHealModal', () => {
+    it('closes modal on skip', () => {
+      const { setModalState } = renderModal({
+        modalKey: 'clockworkCavalcadeHealModal',
+        modalData: { creatureTargets: ['Goblin'], maxHeal: 100, campaignName: 'test-campaign', combatSummary: {} },
+        handlerName: 'handleClockworkCavalcadeHealConfirm',
+        skipTestId: 'mass-heal-skip',
+      });
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeHealModal: null });
+    });
+  });
+
+  describe('ClockworkCavalcadeDispelModal', () => {
+    it('closes modal on skip', () => {
+      const { setModalState } = renderModal({
+        modalKey: 'clockworkCavalcadeDispelModal',
+        modalData: { creatureTargets: [{ name: 'Goblin' }] },
+        handlerName: 'handleClockworkCavalcadeDispelConfirm',
+        skipTestId: 'creature-skip',
+      });
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeDispelModal: null });
+    });
+  });
+
+  describe('NaturesSanctuaryCreaturesModal', () => {
+    it('closes modal on skip', () => {
+      const { setModalState } = renderModal({
+        modalKey: 'naturesSanctuaryCreaturesModal',
+        modalData: { creatureTargets: [{ name: 'Goblin' }], isMove: false },
+        handlerName: 'handleNaturesSanctuaryConfirm',
+        skipTestId: 'creature-skip',
+      });
+      expect(setModalState).toHaveBeenCalledWith({ naturesSanctuaryCreaturesModal: null });
     });
   });
 });

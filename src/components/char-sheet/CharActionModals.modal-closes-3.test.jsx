@@ -1,4 +1,23 @@
-// Tests for modal close handlers in CharActionModals.jsx
+// @improved-by-ai
+// Tests for modal close handlers in CharActionModals.jsx that are NOT covered
+// by modal-closes.test.jsx, modal-closes-2.test.jsx, or other test files.
+//
+// This file focuses on:
+// - healingPoolModal close
+// - saveAttackHealModal close
+// - openHandTechniqueModal close (dispatches events)
+// - elementalAffinityModal close
+// - fiendishResilienceModal close (uses SingleResistanceSelectionModal)
+// - dragonCompanionModal close
+// - wildMagicSurgeModal close (closes both modalState and spellModalState)
+// - breathWeaponShapeModal close
+// - vitalityOfTheTreeTarget onSkip
+//
+// Already covered elsewhere:
+// - blindnessDeafnessModal, celestialRevelationModal, fiendishLegacyModal,
+//   hypnoticPatternShakeModal, clockworkCavalcadeModal → modal-closes.test.jsx
+// - shieldBashModal, quiveringPalmModal, openHandFromFlurry, celestialResilienceModal → modal-closes-2.test.jsx
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -28,11 +47,6 @@ vi.mock('./modals/shared/SetConditionModal.jsx', () => ({
 }));
 vi.mock('./modals/EyebiteEffectModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="eyebite-effect-modal">EyebiteEffectModal</div>; },
-}));
-vi.mock('./modals/BlindnessDeafnessModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="blindness-deafness-modal"><button data-testid="blindness-deafness-close" onClick={onClose}>Close</button></div>;
-  },
 }));
 vi.mock('./modals/shared/AttackRiderModal.jsx', () => ({
   default: function TestModal({ onClose }) {
@@ -260,8 +274,13 @@ vi.mock('./modals/MantleOfInspirationModal.jsx', () => ({
   },
 }));
 vi.mock('./modals/VitalityOfTheTreeModal.jsx', () => ({
-  default: function TestModal({ onSkip }) {
-    return <div data-testid="vitality-of-the-tree-modal"><button data-testid="vitality-skip" onClick={onSkip}>Skip</button></div>;
+  default: function TestModal({ onSkip, onConfirm }) {
+    return (
+      <div data-testid="vitality-of-the-tree-modal">
+        <button data-testid="vitality-skip" onClick={onSkip}>Skip</button>
+        <button data-testid="vitality-confirm" onClick={() => onConfirm([])}>Confirm</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
@@ -479,8 +498,8 @@ describe('CharActionModals — modal close handlers', () => {
     vi.clearAllMocks();
   });
 
-  describe('Modal close handlers for uncovered modals', () => {
-    it('closes healingPoolModal via close button', () => {
+  describe('healingPoolModal close handler', () => {
+    it('sets modalState to null when close button is clicked', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
         {...createBaseProps({})}
@@ -490,8 +509,10 @@ describe('CharActionModals — modal close handlers', () => {
       fireEvent.click(screen.getByTestId('healing-close'));
       expect(setModalState).toHaveBeenCalledWith({ healingPoolModal: null });
     });
+  });
 
-    it('closes saveAttackHealModal via close button', () => {
+  describe('saveAttackHealModal close handler', () => {
+    it('sets modalState to null when close button is clicked', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
         {...createBaseProps({})}
@@ -501,8 +522,10 @@ describe('CharActionModals — modal close handlers', () => {
       fireEvent.click(screen.getByTestId('save-attack-heal-modal-close'));
       expect(setModalState).toHaveBeenCalledWith({ saveAttackHealModal: null });
     });
+  });
 
-    it('closes openHandTechniqueModal and dispatches events', async () => {
+  describe('openHandTechniqueModal close handler', () => {
+    it('dispatches target-effects-updated and combat-summary-updated events on close', () => {
       const setModalState = vi.fn();
       const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
       render(<CharActionModals
@@ -516,19 +539,10 @@ describe('CharActionModals — modal close handlers', () => {
       expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
       dispatchSpy.mockRestore();
     });
+  });
 
-    it('closes blindnessDeafnessModal via close button', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({})}
-        modalState={{ blindnessDeafnessModal: { action: {} } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('blindness-deafness-close'));
-      expect(setModalState).toHaveBeenCalledWith({ blindnessDeafnessModal: null });
-    });
-
-    it('closes elementalAffinityModal via close button', () => {
+  describe('elementalAffinityModal close handler', () => {
+    it('sets modalState to null when close button is clicked', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
         {...createBaseProps({})}
@@ -538,8 +552,10 @@ describe('CharActionModals — modal close handlers', () => {
       fireEvent.click(screen.getByTestId('elemental-affinity-close'));
       expect(setModalState).toHaveBeenCalledWith({ elementalAffinityModal: null });
     });
+  });
 
-    it('closes fiendishResilienceModal via close button', () => {
+  describe('fiendishResilienceModal close handler', () => {
+    it('sets modalState to null via SingleResistanceSelectionModal close', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
         {...createBaseProps({})}
@@ -549,8 +565,10 @@ describe('CharActionModals — modal close handlers', () => {
       fireEvent.click(screen.getByTestId('single-resistance-close'));
       expect(setModalState).toHaveBeenCalledWith({ fiendishResilienceModal: null });
     });
+  });
 
-    it('closes dragonCompanionModal via close button', () => {
+  describe('dragonCompanionModal close handler', () => {
+    it('sets modalState to null when close button is clicked', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
         {...createBaseProps({})}
@@ -560,8 +578,10 @@ describe('CharActionModals — modal close handlers', () => {
       fireEvent.click(screen.getByTestId('dragon-companion-close'));
       expect(setModalState).toHaveBeenCalledWith({ dragonCompanionModal: null });
     });
+  });
 
-    it('closes wildMagicSurgeModal and clears spellModalState', () => {
+  describe('wildMagicSurgeModal close handler', () => {
+    it('sets both modalState and spellModalState to null on close', () => {
       const setModalState = vi.fn();
       const setSpellModalState = vi.fn();
       render(<CharActionModals
@@ -574,30 +594,10 @@ describe('CharActionModals — modal close handlers', () => {
       expect(setModalState).toHaveBeenCalledWith({ wildMagicSurgeModal: null });
       expect(setSpellModalState).toHaveBeenCalledWith({ wildMagicSurgeModal: null });
     });
+  });
 
-    it('closes celestialRevelationModal via close button', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({})}
-        modalState={{ celestialRevelationModal: { action: {} } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('celestial-revelation-close'));
-      expect(setModalState).toHaveBeenCalledWith({ celestialRevelationModal: null });
-    });
-
-    it('closes fiendishLegacyModal via close button', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({})}
-        modalState={{ fiendishLegacyModal: { action: {} } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('fiendish-close'));
-      expect(setModalState).toHaveBeenCalledWith({ fiendishLegacyModal: null });
-    });
-
-    it('closes breathWeaponShapeModal via close button', () => {
+  describe('breathWeaponShapeModal close handler', () => {
+    it('sets modalState to null when close button is clicked', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
         {...createBaseProps({})}
@@ -607,30 +607,10 @@ describe('CharActionModals — modal close handlers', () => {
       fireEvent.click(screen.getByTestId('breath-close'));
       expect(setModalState).toHaveBeenCalledWith({ breathWeaponShapeModal: null });
     });
+  });
 
-    it('closes hypnoticPatternShakeModal via close button', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({})}
-        modalState={{ hypnoticPatternShakeModal: { action: {} } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('hypnotic-close'));
-      expect(setModalState).toHaveBeenCalledWith({ hypnoticPatternShakeModal: null });
-    });
-
-    it('closes clockworkCavalcadeModal via close button', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({})}
-        modalState={{ clockworkCavalcadeModal: {} }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('cc-close'));
-      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeModal: null });
-    });
-
-    it('handles vitalityOfTheTreeTarget onSkip', () => {
+  describe('vitalityOfTheTreeTarget onSkip handler', () => {
+    it('sets modalState to null when skip is clicked', () => {
       const setModalState = vi.fn();
       const handleConfirm = vi.fn();
       render(<CharActionModals
