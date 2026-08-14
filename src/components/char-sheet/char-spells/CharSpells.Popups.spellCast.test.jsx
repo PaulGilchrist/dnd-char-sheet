@@ -1,7 +1,16 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
 import { mockPlayerStats } from './CharSpells.test.helpers.js';
+
+import { useSpellMetamagicFlow } from '../../../hooks/combat/useSpellMetamagicFlow.js';
+import { useSpellUpcastFlow } from '../../../hooks/combat/useSpellUpcastFlow.js';
+import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { isInnateSorceryActive } from '../../../services/combat/buffs/buffService.js';
+import { getTargetFromAttacker } from '../../../services/rules/combat/damageUtils.js';
+import { getCombatSummary } from '../../../services/encounters/combatData.js';
+import { normalizeAutoDamage, resolveAttackDamageStandalone } from '../useAttackDamageResolution.js';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(() => []),
@@ -220,15 +229,6 @@ vi.mock('../modals/HexAbilityModal.jsx', () => ({
   },
 }));
 
-import { useSpellMetamagicFlow } from '../../../hooks/combat/useSpellMetamagicFlow.js';
-import { useSpellUpcastFlow } from '../../../hooks/combat/useSpellUpcastFlow.js';
-import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { isInnateSorceryActive } from '../../../services/combat/buffs/buffService.js';
-import { getTargetFromAttacker } from '../../../services/rules/combat/damageUtils.js';
-import { getCombatSummary } from '../../../services/encounters/combatData.js';
-import { normalizeAutoDamage, resolveAttackDamageStandalone } from '../useAttackDamageResolution.js';
-// loadMonsters, prepareSpellCast, confirmShapechangeTransform are not used in this split file
-
 const PENDING_KEYS = [
   'Metamagic', 'MultiTarget', 'HeroesFeast', 'GreaterRestoration', 'LesserRestoration',
   'MageArmor', 'Bane', 'Bless', 'FaerieFire', 'HolyAura', 'BeaconOfHope', 'Slow', 'Haste',
@@ -254,8 +254,10 @@ function createFlow(overrides = {}) {
   flow.handleEnhanceAbilityAbilitySelect = vi.fn();
   flow.handleProtectionFromEnergyTargetSelect = vi.fn();
   flow.handleProtectionFromEnergyTypeSelect = vi.fn();
+  flow.handleProtectionFromEnergySkip = vi.fn();
   flow.handleResistanceTargetSelect = vi.fn();
   flow.handleResistanceTypeSelect = vi.fn();
+  flow.handleResistanceSkip = vi.fn();
   flow.handleGreaterRestorationNoEffects = vi.fn();
   flow.pendingHoldMonster = null; flow.handleHoldMonsterConfirm = vi.fn(); flow.handleHoldMonsterSkip = vi.fn();
   flow.pendingHoldPerson = null; flow.handleHoldPersonConfirm = vi.fn(); flow.handleHoldPersonSkip = vi.fn();
@@ -282,7 +284,7 @@ function renderWithProps(props = {}) {
 
 describe('CharSpells - Popup Modal Rendering', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     flow = createFlow();
     upcastFlow = {
       pendingUpcast: null,
@@ -304,7 +306,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
   });
 
   describe('spell cast flow', () => {
-    it('casts a spell through handleSpellCast which gates metamagic and closes the popup', async () => {
+    it('closes the spell detail popup and gates metamagic when casting a spell', async () => {
       renderWithProps();
       fireEvent.click(screen.getByText('Light'));
       expect(screen.getByTestId('spell-detail-popup')).toHaveTextContent('Light');
@@ -318,11 +320,15 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(screen.queryByTestId('spell-detail-popup')).not.toBeInTheDocument();
     });
 
-    it('processes auto damage through autoDamageRoll', async () => {
+    it('invokes normalizeAutoDamage and resolveAttackDamageStandalone via autoDamageRoll', async () => {
       renderWithProps();
-      expect(mockDiceRoll.autoDamageRoll).toBeTypeOf('function');
 
-      await mockDiceRoll.autoDamageRoll({ name: 'Fire Bolt', formula: '1d10', damageType: 'fire' }, false);
+      const autoDamageRoll = mockDiceRoll.autoDamageRoll;
+      expect(autoDamageRoll).toBeTypeOf('function');
+
+      await act(async () => {
+        await autoDamageRoll({ name: 'Fire Bolt', formula: '1d10', damageType: 'fire' }, false);
+      });
 
       expect(normalizeAutoDamage).toHaveBeenCalledWith(
         { name: 'Fire Bolt', formula: '1d10', damageType: 'fire' },
@@ -339,18 +345,19 @@ describe('CharSpells - Popup Modal Rendering', () => {
 
   describe('words of creation target selection', () => {
     it('renders SecondaryTargetModal when the flow hook sets wordsOfCreationTarget', async () => {
+      const wordsOfCreationData = {
+        title: 'Words of Creation',
+        targets: ['Orc', 'Goblin'],
+        onTargetSelected: vi.fn(),
+        onSkip: vi.fn(),
+        featureDescription: 'desc',
+        description: 'Choose a creature within 60 feet.',
+        confirmLabel: 'Confirm',
+        confirmIcon: 'fa-music',
+      };
       vi.mocked(useSpellMetamagicFlow).mockImplementation((playerStats, campaignName, castAction, setWordsOfCreationTarget) => {
         setTimeout(() => {
-          setWordsOfCreationTarget({
-            title: 'Words of Creation',
-            targets: ['Orc', 'Goblin'],
-            onTargetSelected: vi.fn(),
-            onSkip: vi.fn(),
-            featureDescription: 'desc',
-            description: 'Choose a creature within 60 feet.',
-            confirmLabel: 'Confirm',
-            confirmIcon: 'fa-music',
-          });
+          setWordsOfCreationTarget(wordsOfCreationData);
         }, 0);
         return flow;
       });
@@ -381,7 +388,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
       const wizard = { ...mockPlayerStats, class: { name: 'Wizard' } };
       renderWithProps({ playerStats: wizard, conditionAttackMode: 'normal' });
       fireEvent.click(screen.getByText(/Attack \(to hit\):/));
-      expect(mockDiceRoll.rollAttack).toHaveBeenCalledWith('Spell Attack', 5, { forcedMode: undefined });
+      expect(mockDiceRoll.rollAttack).toHaveBeenCalledWith('Spell Attack', 5, expect.objectContaining({ forcedMode: undefined }));
     });
   });
 

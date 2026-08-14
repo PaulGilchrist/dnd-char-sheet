@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -159,7 +160,7 @@ vi.mock('../modals/shared/CreatureSelectionModal.jsx', () => ({
         <span>{title}</span>
         {targets?.map(t => {
           const name = typeof t === 'string' ? t : t.name;
-          return <button key={name} data-testid={`csm-${name}`} onClick={() => onConfirm?.(targets)}>{name}</button>;
+          return <button key={name} data-testid={`csm-${name}`} onClick={() => onConfirm?.([name])}>{name}</button>;
         })}
         <button data-testid="csm-skip" onClick={() => onSkip?.()}>skip</button>
       </div>
@@ -169,18 +170,19 @@ vi.mock('../modals/shared/CreatureSelectionModal.jsx', () => ({
 
 vi.mock('../modals/shared/SecondaryTargetModal.jsx', () => ({
   default: function SecondaryTargetModal({ title, targets, onTargetSelected, onSkip, hideConfirm, description }) {
+    const targetItems = targets?.map(t => typeof t === 'string' ? { value: t, name: t, label: t } : t) || [];
     return (
       <div data-testid="secondary-target-modal" data-title={title} data-hideconfirm={String(Boolean(hideConfirm))}>
         <span>{title}</span>
         <span data-testid="stm-description">{description}</span>
         <button data-testid="stm-skip" onClick={() => onSkip?.()}>skip</button>
-        {targets?.map(t => (
+        {targetItems.map(t => (
           <button key={t.value || t.name} data-testid={`stm-${t.value || t.name}`} onClick={() => onTargetSelected?.(t.value || t.name)}>
             {t.label || t.name}
           </button>
         ))}
-        {!hideConfirm && targets?.length > 0 && (
-          <button data-testid="stm-confirm" onClick={() => onTargetSelected?.(targets[0].value || targets[0].name)}>confirm</button>
+        {!hideConfirm && targetItems.length > 0 && (
+          <button data-testid="stm-confirm" onClick={() => onTargetSelected?.(targetItems[0].value || targetItems[0].name)}>confirm</button>
         )}
       </div>
     );
@@ -192,6 +194,7 @@ vi.mock('../modals/TruePolymorphPathModal.jsx', () => ({
     return (
       <div data-testid="true-polymorph-path-modal">
         <button data-testid="tp-path-creature" onClick={() => onConfirm('creature_to_creature')}>creature to creature</button>
+        <button data-testid="tp-path-object" onClick={() => onConfirm('creature_to_object')}>creature to object</button>
         <button data-testid="tp-cancel" onClick={onCancel}>cancel</button>
       </div>
     );
@@ -199,11 +202,12 @@ vi.mock('../modals/TruePolymorphPathModal.jsx', () => ({
 }));
 
 vi.mock('../modals/SingleResistanceSelectionModal.jsx', () => ({
-  default: function SingleResistanceSelectionModal({ title, action }) {
+  default: function SingleResistanceSelectionModal({ title, action, onClose }) {
     return (
       <div data-testid="single-resistance-selection-modal">
         <span>{title}</span>
         <span data-testid="res-damage-types">{action?.automation?.damageTypes?.join(',')}</span>
+        <button data-testid="stm-skip" onClick={onClose}>cancel</button>
       </div>
     );
   },
@@ -214,6 +218,11 @@ vi.mock('../modals/HexAbilityModal.jsx', () => ({
     return (
       <div data-testid="hex-ability-modal" data-title={title}>
         <button data-testid="hex-ability-STR" onClick={() => onAbilitySelected('STR')}>Strength</button>
+        <button data-testid="hex-ability-DEX" onClick={() => onAbilitySelected('DEX')}>Dexterity</button>
+        <button data-testid="hex-ability-CON" onClick={() => onAbilitySelected('CON')}>Constitution</button>
+        <button data-testid="hex-ability-INT" onClick={() => onAbilitySelected('INT')}>Intelligence</button>
+        <button data-testid="hex-ability-WIS" onClick={() => onAbilitySelected('WIS')}>Wisdom</button>
+        <button data-testid="hex-ability-CHA" onClick={() => onAbilitySelected('CHA')}>Charisma</button>
         <button data-testid="hex-cancel" onClick={onCancel}>cancel</button>
       </div>
     );
@@ -227,7 +236,6 @@ import { isInnateSorceryActive } from '../../../services/combat/buffs/buffServic
 import { getTargetFromAttacker } from '../../../services/rules/combat/damageUtils.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
 import { normalizeAutoDamage, resolveAttackDamageStandalone } from '../useAttackDamageResolution.js';
-// loadMonsters, prepareSpellCast, confirmShapechangeTransform are not used in this split file
 
 const PENDING_KEYS = [
   'Metamagic', 'MultiTarget', 'HeroesFeast', 'GreaterRestoration', 'LesserRestoration',
@@ -252,10 +260,13 @@ function createFlow(overrides = {}) {
   flow.protectionFromEnergyStage = null;
   flow.resistanceStage = null;
   flow.handleEnhanceAbilityAbilitySelect = vi.fn();
+  flow.handleEnhanceAbilitySkip = vi.fn();
   flow.handleProtectionFromEnergyTargetSelect = vi.fn();
   flow.handleProtectionFromEnergyTypeSelect = vi.fn();
+  flow.handleProtectionFromEnergySkip = vi.fn();
   flow.handleResistanceTargetSelect = vi.fn();
   flow.handleResistanceTypeSelect = vi.fn();
+  flow.handleResistanceSkip = vi.fn();
   flow.handleGreaterRestorationNoEffects = vi.fn();
   flow.pendingHoldMonster = null; flow.handleHoldMonsterConfirm = vi.fn(); flow.handleHoldMonsterSkip = vi.fn();
   flow.pendingHoldPerson = null; flow.handleHoldPersonConfirm = vi.fn(); flow.handleHoldPersonSkip = vi.fn();
@@ -304,7 +315,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
   });
 
   describe('secondary target modals', () => {
-    it.each([
+    const secondaryTargetSpells = [
       { key: 'pendingAuraOfVitality', title: 'Aura of Vitality', handler: 'handleAuraOfVitalityConfirm', expectedArgs: ['Orc'] },
       { key: 'pendingForesight', title: 'Foresight', handler: 'handleForesightConfirm', expectedArgs: ['Orc'] },
       { key: 'pendingProtectionFromEvilAndGood', title: 'Protection from Evil and Good', handler: 'handleProtectionFromEvilAndGoodConfirm', expectedArgs: ['Orc'] },
@@ -327,19 +338,412 @@ describe('CharSpells - Popup Modal Rendering', () => {
       { key: 'pendingRevivify', title: 'Revivify', handler: 'handleRevivifyConfirm', expectedArgs: { targetName: 'Orc' } },
       { key: 'pendingRemoveCurse', title: 'Remove Curse', handler: 'handleRemoveCurseConfirm', expectedArgs: { targetName: 'Orc' } },
       { key: 'pendingMageArmor', title: 'Mage Armor', handler: 'handleMageArmorConfirm', expectedArgs: ['Orc'] },
-    ])('renders SecondaryTargetModal for $title and wires target selection', ({ key, title, handler, expectedArgs }) => {
+    ];
+
+    it.each(secondaryTargetSpells)('renders SecondaryTargetModal with correct title for $title', ({ key, title }) => {
       flow[key] = { creatureTargets: ['Orc'], range: '60 feet' };
       renderWithProps();
       expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', title);
+    });
+
+    it.each(secondaryTargetSpells)('renders creature target buttons for $title', ({ key }) => {
+      flow[key] = { creatureTargets: ['Orc', 'Goblin'], range: '60 feet' };
+      renderWithProps();
+      expect(screen.getByTestId('stm-Orc')).toBeInTheDocument();
+      expect(screen.getByTestId('stm-Goblin')).toBeInTheDocument();
+    });
+
+    it.each(secondaryTargetSpells)('wires target selection to the correct handler for $title', ({ key, handler, expectedArgs }) => {
+      flow[key] = { creatureTargets: ['Orc'], range: '60 feet' };
+      renderWithProps();
       fireEvent.click(screen.getByTestId('stm-Orc'));
       expect(flow[handler]).toHaveBeenCalledWith(expectedArgs);
     });
 
-    it('wires Remove Curse skip to handleRemoveCurseSkip', () => {
-      flow.pendingRemoveCurse = { creatureTargets: ['Orc'], range: 'Touch' };
+    it.each(secondaryTargetSpells)('wires skip to the correct skip handler for $title', ({ key, handler }) => {
+      flow[key] = { creatureTargets: ['Orc'], range: '60 feet' };
+      renderWithProps();
+      const skipHandler = handler.replace('Confirm', 'Skip');
+      fireEvent.click(screen.getByTestId('stm-skip'));
+      expect(flow[skipHandler]).toHaveBeenCalled();
+    });
+
+    it('renders target buttons with correct testids for string targets', () => {
+      flow.pendingStoneSkin = { creatureTargets: ['Orc', 'Goblin'], range: 'Touch' };
+      renderWithProps();
+      expect(screen.getByTestId('stm-Orc')).toBeInTheDocument();
+      expect(screen.getByTestId('stm-Goblin')).toBeInTheDocument();
+    });
+  });
+
+  describe('staged flow - enhance ability', () => {
+    it('renders HexAbilityModal at the ability stage', () => {
+      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+      flow.enhanceAbilityStage = 'ability';
+      renderWithProps();
+      expect(screen.getByTestId('hex-ability-modal')).toHaveAttribute('data-title', 'Enhance Ability — Choose Ability');
+    });
+
+    it('renders all six ability buttons in HexAbilityModal', () => {
+      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+      flow.enhanceAbilityStage = 'ability';
+      renderWithProps();
+      expect(screen.getByTestId('hex-ability-STR')).toBeInTheDocument();
+      expect(screen.getByTestId('hex-ability-DEX')).toBeInTheDocument();
+      expect(screen.getByTestId('hex-ability-CON')).toBeInTheDocument();
+      expect(screen.getByTestId('hex-ability-INT')).toBeInTheDocument();
+      expect(screen.getByTestId('hex-ability-WIS')).toBeInTheDocument();
+      expect(screen.getByTestId('hex-ability-CHA')).toBeInTheDocument();
+    });
+
+    it('wires HexAbilityModal ability selection to handleEnhanceAbilityAbilitySelect', () => {
+      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+      flow.enhanceAbilityStage = 'ability';
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('hex-ability-DEX'));
+      expect(flow.handleEnhanceAbilityAbilitySelect).toHaveBeenCalledWith('DEX');
+    });
+
+    it('wires HexAbilityModal cancel to handleEnhanceAbilitySkip', () => {
+      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+      flow.enhanceAbilityStage = 'ability';
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('hex-cancel'));
+      expect(flow.handleEnhanceAbilitySkip).toHaveBeenCalled();
+    });
+
+    it('renders SecondaryTargetModal at the enhance ability target stage', () => {
+      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+      flow.enhanceAbilityStage = 'target';
+      renderWithProps();
+      expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Enhance Ability');
+    });
+
+    it('wires SecondaryTargetModal skip to handleEnhanceAbilitySkip at target stage', () => {
+      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+      flow.enhanceAbilityStage = 'target';
       renderWithProps();
       fireEvent.click(screen.getByTestId('stm-skip'));
-      expect(flow.handleRemoveCurseSkip).toHaveBeenCalled();
+      expect(flow.handleEnhanceAbilitySkip).toHaveBeenCalled();
+    });
+
+    it('renders multiple creature targets in the enhance ability target modal', () => {
+      flow.pendingEnhanceAbility = { creatureTargets: ['Orc', 'Goblin', 'Skeleton'] };
+      flow.enhanceAbilityStage = 'target';
+      renderWithProps();
+      expect(screen.getByTestId('stm-Orc')).toBeInTheDocument();
+      expect(screen.getByTestId('stm-Goblin')).toBeInTheDocument();
+      expect(screen.getByTestId('stm-Skeleton')).toBeInTheDocument();
+    });
+
+    it('wires enhance ability target selection to handleEnhanceAbilityConfirm', () => {
+      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+      flow.enhanceAbilityStage = 'target';
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-Orc'));
+      expect(flow.handleEnhanceAbilityConfirm).toHaveBeenCalledWith(['Orc']);
+    });
+  });
+
+  describe('staged flow - protection from energy', () => {
+    it('renders SecondaryTargetModal for protection from energy target stage', () => {
+      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
+      flow.protectionFromEnergyStage = 'target';
+      renderWithProps();
+      expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Protection from Energy');
+    });
+
+    it('wires SecondaryTargetModal skip to handleProtectionFromEnergySkip at target stage', () => {
+      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
+      flow.protectionFromEnergyStage = 'target';
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-skip'));
+      expect(flow.handleProtectionFromEnergySkip).toHaveBeenCalled();
+    });
+
+    it('wires target selection to handleProtectionFromEnergyTargetSelect', () => {
+      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
+      flow.protectionFromEnergyStage = 'target';
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-Orc'));
+      expect(flow.handleProtectionFromEnergyTargetSelect).toHaveBeenCalledWith('Orc');
+    });
+
+    it('renders SingleResistanceSelectionModal for protection from energy type stage', () => {
+      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
+      flow.protectionFromEnergyStage = 'type';
+      renderWithProps();
+      expect(screen.getByTestId('single-resistance-selection-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire,cold');
+    });
+
+    it('wires SingleResistanceSelectionModal skip to handleProtectionFromEnergySkip at type stage', () => {
+      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
+      flow.protectionFromEnergyStage = 'type';
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-skip'));
+      expect(flow.handleProtectionFromEnergySkip).toHaveBeenCalled();
+    });
+
+    it('renders multiple damage types in the selection modal', () => {
+      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold', 'lightning'] };
+      flow.protectionFromEnergyStage = 'type';
+      renderWithProps();
+      expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire,cold,lightning');
+    });
+
+    it('renders single damage type in the selection modal', () => {
+      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+      flow.protectionFromEnergyStage = 'type';
+      renderWithProps();
+      expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire');
+    });
+  });
+
+  describe('staged flow - resistance', () => {
+    it('renders SecondaryTargetModal for resistance target stage', () => {
+      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+      flow.resistanceStage = 'target';
+      renderWithProps();
+      expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Resistance');
+    });
+
+    it('wires SecondaryTargetModal skip to handleResistanceSkip at target stage', () => {
+      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+      flow.resistanceStage = 'target';
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-skip'));
+      expect(flow.handleResistanceSkip).toHaveBeenCalled();
+    });
+
+    it('wires target selection to handleResistanceTargetSelect', () => {
+      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+      flow.resistanceStage = 'target';
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-Orc'));
+      expect(flow.handleResistanceTargetSelect).toHaveBeenCalledWith('Orc');
+    });
+
+    it('renders SingleResistanceSelectionModal for resistance type stage', () => {
+      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+      flow.resistanceStage = 'type';
+      renderWithProps();
+      expect(screen.getByTestId('single-resistance-selection-modal')).toBeInTheDocument();
+    });
+
+    it('wires SingleResistanceSelectionModal skip to handleResistanceSkip at type stage', () => {
+      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+      flow.resistanceStage = 'type';
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-skip'));
+      expect(flow.handleResistanceSkip).toHaveBeenCalled();
+    });
+
+    it('renders multiple damage types in the resistance selection modal', () => {
+      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold', 'acid'] };
+      flow.resistanceStage = 'type';
+      renderWithProps();
+      expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire,cold,acid');
+    });
+  });
+
+  describe('staged flow visibility', () => {
+    it('does not render staged flow modals when enhanceAbilityStage is null', () => {
+      flow.pendingEnhanceAbility = null;
+      flow.enhanceAbilityStage = null;
+      renderWithProps();
+      expect(screen.queryByTestId('hex-ability-modal')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
+    });
+
+    it('does not render staged flow modals when protectionFromEnergyStage is null', () => {
+      flow.pendingProtectionFromEnergy = null;
+      flow.protectionFromEnergyStage = null;
+      renderWithProps();
+      expect(screen.queryByTestId('single-resistance-selection-modal')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
+    });
+
+    it('does not render staged flow modals when resistanceStage is null', () => {
+      flow.pendingResistance = null;
+      flow.resistanceStage = null;
+      renderWithProps();
+      expect(screen.queryByTestId('single-resistance-selection-modal')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('creature selection modals', () => {
+    const creatureModalSpells = [
+      { key: 'pendingHoldMonster', title: 'Hold Monster' },
+      { key: 'pendingHoldPerson', title: 'Hold Person' },
+      { key: 'pendingPolymorph', title: 'Polymorph' },
+      { key: 'pendingAnimalShapes', title: 'Animal Shapes' },
+      { key: 'pendingCharmPerson', title: 'Charm Person' },
+      { key: 'pendingCharmMonster', title: 'Charm Monster' },
+      { key: 'pendingBanishment', title: 'Banishment' },
+      { key: 'pendingPrismaticSpray', title: 'Prismatic Spray' },
+      { key: 'pendingHeroesFeast', title: "Heroes' Feast" },
+      { key: 'pendingBane', title: 'Bane' },
+      { key: 'pendingBless', title: 'Bless' },
+      { key: 'pendingFaerieFire', title: 'Faerie Fire' },
+      { key: 'pendingHolyAura', title: 'Holy Aura' },
+      { key: 'pendingBeaconOfHope', title: 'Beacon of Hope' },
+      { key: 'pendingSlow', title: 'Slow' },
+      { key: 'pendingPassWithoutTrace', title: 'Pass Without Trace' },
+      { key: 'pendingGlobe', title: 'Globe of Invulnerability' },
+      { key: 'pendingAntimagicField', title: 'Antimagic Field' },
+      { key: 'pendingForcecage', title: 'Forcecage' },
+      { key: 'pendingStinkingCloud', title: 'Stinking Cloud' },
+      { key: 'pendingConfusion', title: 'Confusion' },
+      { key: 'pendingWeb', title: 'Web' },
+      { key: 'pendingAnimalFriendship', title: 'Animal Friendship' },
+      { key: 'pendingAuraOfLife', title: 'Aura of Life' },
+      { key: 'pendingAuraOfPurity', title: 'Aura of Purity' },
+      { key: 'pendingCircleOfPower', title: 'Circle of Power' },
+      { key: 'pendingCompulsion', title: 'Compulsion' },
+      { key: 'pendingSleetStorm', title: 'Sleet Storm' },
+    ];
+
+    const HANDLER_MAP = {
+      HoldMonster: { confirm: 'handleHoldMonsterConfirm', skip: 'handleHoldMonsterSkip' },
+      HoldPerson: { confirm: 'handleHoldPersonConfirm', skip: 'handleHoldPersonSkip' },
+      Polymorph: { confirm: 'handlePolymorphConfirm', skip: 'handlePolymorphSkip' },
+      AnimalShapes: { confirm: 'handleAnimalShapesTargetConfirm', skip: 'handleAnimalShapesSkip' },
+      CharmPerson: { confirm: 'handleCharmPersonConfirm', skip: 'handleCharmPersonSkip' },
+      CharmMonster: { confirm: 'handleCharmMonsterConfirm', skip: 'handleCharmMonsterSkip' },
+      Banishment: { confirm: 'handleBanishmentConfirm', skip: 'handleBanishmentSkip' },
+      PrismaticSpray: { confirm: 'handlePrismaticSprayConfirm', skip: 'handlePrismaticSpraySkip' },
+      HeroesFeast: { confirm: 'handleHeroesFeastConfirm', skip: 'handleHeroesFeastSkip' },
+      Bane: { confirm: 'handleBaneConfirm', skip: 'handleBaneSkip' },
+      Bless: { confirm: 'handleBlessConfirm', skip: 'handleBlessSkip' },
+      FaerieFire: { confirm: 'handleFaerieFireConfirm', skip: 'handleFaerieFireSkip' },
+      HolyAura: { confirm: 'handleHolyAuraConfirm', skip: 'handleHolyAuraSkip' },
+      BeaconOfHope: { confirm: 'handleBeaconOfHopeConfirm', skip: 'handleBeaconOfHopeSkip' },
+      Slow: { confirm: 'handleSlowConfirm', skip: 'handleSlowSkip' },
+      PassWithoutTrace: { confirm: 'handlePassWithoutTraceConfirm', skip: 'handlePassWithoutTraceSkip' },
+      Globe: { confirm: 'handleGlobeConfirm', skip: 'handleGlobeSkip' },
+      AntimagicField: { confirm: 'handleAntimagicFieldConfirm', skip: 'handleAntimagicFieldSkip' },
+      Forcecage: { confirm: 'handleForcecageConfirm', skip: 'handleForcecageSkip' },
+      StinkingCloud: { confirm: 'handleStinkingCloudConfirm', skip: 'handleStinkingCloudSkip' },
+      Confusion: { confirm: 'handleConfusionConfirm', skip: 'handleConfusionSkip' },
+      Web: { confirm: 'handleWebConfirm', skip: 'handleWebSkip' },
+      AnimalFriendship: { confirm: 'handleAnimalFriendshipConfirm', skip: 'handleAnimalFriendshipSkip' },
+      AuraOfLife: { confirm: 'handleAuraOfLifeConfirm', skip: 'handleAuraOfLifeSkip' },
+      AuraOfPurity: { confirm: 'handleAuraOfPurityConfirm', skip: 'handleAuraOfPuritySkip' },
+      CircleOfPower: { confirm: 'handleCircleOfPowerConfirm', skip: 'handleCircleOfPowerSkip' },
+      Compulsion: { confirm: 'handleCompulsionConfirm', skip: 'handleCompulsionSkip' },
+      SleetStorm: { confirm: 'handleSleetStormConfirm', skip: 'handleSleetStormSkip' },
+    };
+
+    it.each(creatureModalSpells)('renders CreatureSelectionModal with correct title for $title', ({ key, title }) => {
+      flow[key] = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
+      renderWithProps();
+      const modals = screen.getAllByTestId('creature-selection-modal');
+      const modal = modals.find(m => m.getAttribute('data-title') === title);
+      expect(modal).toBeInTheDocument();
+    });
+
+    it.each(creatureModalSpells)('renders creature target buttons for $title', ({ key }) => {
+      flow[key] = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
+      renderWithProps();
+      expect(screen.getAllByTestId('csm-Orc').length).toBeGreaterThan(0);
+      expect(screen.getAllByTestId('csm-Goblin').length).toBeGreaterThan(0);
+    });
+
+    it.each(creatureModalSpells)('wires skip handler for $title', ({ key, title }) => {
+      const handlerInfo = HANDLER_MAP[title];
+      if (!handlerInfo) return;
+      flow[key] = { creatureTargets: ['Orc'], maxTargets: 1 };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('csm-skip'));
+      expect(flow[handlerInfo.skip]).toHaveBeenCalled();
+    });
+
+    it.each(creatureModalSpells)('wires confirm handler when a creature is selected for $title', ({ key, title }) => {
+      const handlerInfo = HANDLER_MAP[title];
+      if (!handlerInfo) return;
+      flow[key] = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('csm-Orc'));
+      expect(flow[handlerInfo.confirm]).toHaveBeenCalled();
+    });
+
+    it('confirms with the selected creature name, not all targets', () => {
+      flow.pendingBane = { creatureTargets: ['Orc', 'Goblin', 'Skeleton'], maxTargets: 3 };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('csm-Goblin'));
+      expect(flow.handleBaneConfirm).toHaveBeenCalledWith(['Goblin']);
+    });
+
+    it('renders multiple creature targets when maxTargets is large', () => {
+      flow.pendingBless = { creatureTargets: ['Orc', 'Goblin', 'Skeleton', 'Zombie', 'Ghoul'], maxTargets: 5 };
+      renderWithProps();
+      expect(screen.getByTestId('csm-Orc')).toBeInTheDocument();
+      expect(screen.getByTestId('csm-Goblin')).toBeInTheDocument();
+      expect(screen.getByTestId('csm-Skeleton')).toBeInTheDocument();
+      expect(screen.getByTestId('csm-Zombie')).toBeInTheDocument();
+      expect(screen.getByTestId('csm-Ghoul')).toBeInTheDocument();
+    });
+  });
+
+  describe('true polymorph path flow', () => {
+    it('renders TruePolymorphPathModal when pendingTruePolymorph has no path', () => {
+      flow.pendingTruePolymorph = { creatureTargets: ['Orc'] };
+      renderWithProps();
+      expect(screen.getByTestId('true-polymorph-path-modal')).toBeInTheDocument();
+      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+    });
+
+    it.each([
+      { path: 'creature_to_creature' },
+      { path: 'creature_to_object' },
+    ])('renders CreatureSelectionModal for True Polymorph path $path', ({ path }) => {
+      flow.pendingTruePolymorph = { path, creatureTargets: ['Orc'], maxTargets: 1 };
+      renderWithProps();
+      expect(screen.getByTestId('creature-selection-modal')).toHaveAttribute('data-title', 'True Polymorph');
+    });
+
+    it('renders both path buttons in TruePolymorphPathModal', () => {
+      flow.pendingTruePolymorph = { creatureTargets: ['Orc'] };
+      renderWithProps();
+      expect(screen.getByTestId('tp-path-creature')).toBeInTheDocument();
+      expect(screen.getByTestId('tp-path-object')).toBeInTheDocument();
+    });
+
+    it('calls handleTruePolymorphPathSelect when creature path is chosen', () => {
+      flow.pendingTruePolymorph = { creatureTargets: ['Orc'] };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('tp-path-creature'));
+      expect(flow.handleTruePolymorphPathSelect).toHaveBeenCalledWith('creature_to_creature');
+    });
+
+    it('calls handleTruePolymorphPathSelect when object path is chosen', () => {
+      flow.pendingTruePolymorph = { creatureTargets: ['Orc'] };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('tp-path-object'));
+      expect(flow.handleTruePolymorphPathSelect).toHaveBeenCalledWith('creature_to_object');
+    });
+
+    it('calls handleTruePolymorphTargetConfirm when a True Polymorph target is confirmed', () => {
+      flow.pendingTruePolymorph = { path: 'creature_to_creature', creatureTargets: ['Orc'], maxTargets: 1 };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('csm-Orc'));
+      expect(flow.handleTruePolymorphTargetConfirm).toHaveBeenCalled();
+    });
+
+    it('calls handleTruePolymorphSkip when True Polymorph path modal is skipped', () => {
+      flow.pendingTruePolymorph = { creatureTargets: ['Orc'] };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('tp-cancel'));
+      expect(flow.handleTruePolymorphSkip).toHaveBeenCalled();
+    });
+
+    it('calls handleTruePolymorphSkip when True Polymorph creature selection is skipped', () => {
+      flow.pendingTruePolymorph = { path: 'creature_to_creature', creatureTargets: ['Orc'], maxTargets: 1 };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('csm-skip'));
+      expect(flow.handleTruePolymorphSkip).toHaveBeenCalled();
     });
   });
 });

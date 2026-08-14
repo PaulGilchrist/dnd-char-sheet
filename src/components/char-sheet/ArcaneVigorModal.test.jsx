@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ArcaneVigorModal from './ArcaneVigorModal.jsx';
@@ -15,12 +16,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
 }));
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
-  rollDice: vi.fn((count, _die) => ({ total: count * 4, rolls: Array(count).fill(4) })),
-}));
-
-vi.mock('../../services/rules/effects/restRules.js', () => ({
-  getHitDieSize: vi.fn(() => 8),
-  computeHitDieRecovery: vi.fn((roll, conBonus) => roll + conBonus),
+  rollDice: vi.fn((_count, _die) => ({ total: 4, rolls: [4] })),
 }));
 
 vi.mock('../../services/rules/combat/damageUtils.js', () => ({
@@ -64,59 +60,44 @@ describe('ArcaneVigorModal', () => {
     getRuntimeValueMock.mockImplementation(() => null);
   });
 
-  describe('rendering', () => {
-    it('renders the modal title', () => {
+  describe('core rendering', () => {
+    it('renders the modal overlay and title', () => {
       renderModal();
+      expect(document.querySelector('.arcane-vigor-overlay')).toBeTruthy();
+      expect(document.querySelector('.arcane-vigor-modal')).toBeTruthy();
       expect(screen.getByText('Arcane Vigor')).toBeInTheDocument();
     });
 
-    it('displays hit dice information', () => {
-      renderModal();
-      expect(screen.getByText(/d8 — .* remaining/)).toBeInTheDocument();
+    it('renders the description with ability modifier', () => {
+      renderModal({ spellcastingAbilityModifier: 3, spellcastingAbility: 'INT' });
+      expect(screen.getByText(/roll total \+ 3 \(INT modifier\)/)).toBeInTheDocument();
     });
 
-    it('renders the roll button', () => {
+    it('renders all action buttons', () => {
       renderModal();
       expect(screen.getByText(/Roll One/)).toBeInTheDocument();
-    });
-
-    it('renders cancel button', () => {
-      renderModal();
+      expect(screen.getByText('Apply Healing')).toBeInTheDocument();
       expect(screen.getByText('Cancel')).toBeInTheDocument();
     });
 
-    it('renders apply healing button', () => {
+    it('renders hit dice information', () => {
       renderModal();
-      expect(screen.getByText('Apply Healing')).toBeInTheDocument();
+      expect(screen.getByText(/d8 — .* remaining/)).toBeInTheDocument();
+      expect(screen.getByText(/up to 2 dice/)).toBeInTheDocument();
     });
   });
 
-  describe('rolling dice', () => {
-    it('shows roll log after rolling one die', () => {
+  describe('core rolling behavior', () => {
+    it('disables apply healing until dice are rolled', () => {
       renderModal();
-      fireEvent.click(screen.getByText(/Roll One/));
-      expect(screen.getByText(/Roll Total:/)).toBeInTheDocument();
+      expect(screen.getByText('Apply Healing')).toBeDisabled();
     });
 
-    it('displays roll result with correct values', () => {
-      renderModal();
-      fireEvent.click(screen.getByText(/Roll One/));
-      expect(screen.getByText('d8 = 4')).toBeInTheDocument();
-    });
-
-    it('calculates projected healing correctly', () => {
+    it('shows roll results and projected healing after rolling', () => {
       renderModal({ spellcastingAbilityModifier: 3 });
       fireEvent.click(screen.getByText(/Roll One/));
-      const totalText = screen.getByText(/Roll Total:/).textContent;
-      expect(totalText).toContain('7');
-    });
-
-    it('allows rolling multiple dice', () => {
-      renderModal();
-      fireEvent.click(screen.getByText(/Roll One/));
-      fireEvent.click(screen.getByText(/Roll One/));
-      const rows = screen.getAllByRole('row');
-      expect(rows.length).toBeGreaterThan(2);
+      expect(screen.getByText('d8 = 4')).toBeInTheDocument();
+      expect(screen.getByText(/Roll Total: 4 \+ 3 = 7 HP/)).toBeInTheDocument();
     });
 
     it('disables roll button when no hit dice remain', () => {
@@ -129,17 +110,8 @@ describe('ArcaneVigorModal', () => {
     });
   });
 
-  describe('healing', () => {
-    it('applies healing when button is clicked', async () => {
-      renderModal();
-      fireEvent.click(screen.getByText(/Roll One/));
-      await act(async () => {
-        fireEvent.click(screen.getByText('Apply Healing'));
-      });
-      expect(screen.getByText(/HP healed/)).toBeInTheDocument();
-    });
-
-    it('calls onComplete after applying healing', async () => {
+  describe('core healing flow', () => {
+    it('applies healing and calls onComplete', async () => {
       const onComplete = vi.fn();
       renderModal({ onComplete });
       fireEvent.click(screen.getByText(/Roll One/));
@@ -147,9 +119,10 @@ describe('ArcaneVigorModal', () => {
         fireEvent.click(screen.getByText('Apply Healing'));
       });
       expect(onComplete).toHaveBeenCalled();
+      expect(screen.getByText(/HP healed/)).toBeInTheDocument();
     });
 
-    it('calls addEntry for spell log after applying healing', async () => {
+    it('logs to campaign after applying healing', async () => {
       const { addEntry } = await import('../../services/ui/logService.js');
       renderModal();
       fireEvent.click(screen.getByText(/Roll One/));
@@ -159,7 +132,7 @@ describe('ArcaneVigorModal', () => {
       expect(addEntry).toHaveBeenCalled();
     });
 
-    it('disables buttons after healing is applied', async () => {
+    it('disables all buttons after healing is applied', async () => {
       renderModal();
       fireEvent.click(screen.getByText(/Roll One/));
       await act(async () => {
@@ -167,20 +140,30 @@ describe('ArcaneVigorModal', () => {
       });
       expect(screen.getByText(/Roll One/)).toBeDisabled();
       expect(screen.getByText('Apply Healing')).toBeDisabled();
-    });
-
-    it('does not allow cancel after healing is applied', async () => {
-      renderModal();
-      fireEvent.click(screen.getByText(/Roll One/));
-      await act(async () => {
-        fireEvent.click(screen.getByText('Apply Healing'));
-      });
       expect(screen.getByText('Cancel')).toBeDisabled();
     });
   });
 
-  describe('hit dice consumption', () => {
-    it('decrements shortRestHitDice after applying healing', async () => {
+  describe('core cancellation', () => {
+    it('calls onClose and not onComplete when cancelled', () => {
+      const onClose = vi.fn();
+      const onComplete = vi.fn();
+      renderModal({ onClose, onComplete });
+      fireEvent.click(screen.getByText('Cancel'));
+      expect(onClose).toHaveBeenCalled();
+      expect(onComplete).not.toHaveBeenCalled();
+    });
+
+    it('does not log when cancelled', async () => {
+      const { addEntry } = await import('../../services/ui/logService.js');
+      renderModal();
+      fireEvent.click(screen.getByText('Cancel'));
+      expect(addEntry).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('core hit dice consumption', () => {
+    it('decrements shortRestHitDice by dice rolled count', async () => {
       getRuntimeValueMock.mockImplementation((_name, key) => {
         if (key === 'shortRestHitDice') return 5;
         return null;
@@ -195,43 +178,7 @@ describe('ArcaneVigorModal', () => {
     });
   });
 
-  describe('cancellation', () => {
-    it('calls onClose when cancel is clicked', () => {
-      const onClose = vi.fn();
-      renderModal({ onClose });
-      fireEvent.click(screen.getByText('Cancel'));
-      expect(onClose).toHaveBeenCalled();
-    });
-
-    it('does not call onComplete when cancelled', () => {
-      const onComplete = vi.fn();
-      const onClose = vi.fn();
-      renderModal({ onComplete, onClose });
-      fireEvent.click(screen.getByText('Cancel'));
-      expect(onComplete).not.toHaveBeenCalled();
-    });
-
-    it('does not log to campaign when cancelled', async () => {
-      const { addEntry } = await import('../../services/ui/logService.js');
-      renderModal();
-      fireEvent.click(screen.getByText('Cancel'));
-      expect(addEntry).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('slot level display', () => {
-    it('shows correct dice count for upcast level 2', () => {
-      renderModal({ slotLevel: 2, diceCount: 2 });
-      expect(screen.getByText(/up to 2 dice/)).toBeInTheDocument();
-    });
-
-    it('shows correct dice count for upcast level 5', () => {
-      renderModal({ slotLevel: 5, diceCount: 5 });
-      expect(screen.getByText(/up to 5 dice/)).toBeInTheDocument();
-    });
-  });
-
-  describe('overlay close', () => {
+  describe('core overlay interaction', () => {
     it('calls onClose when overlay background is clicked', () => {
       const onClose = vi.fn();
       renderModal({ onClose });

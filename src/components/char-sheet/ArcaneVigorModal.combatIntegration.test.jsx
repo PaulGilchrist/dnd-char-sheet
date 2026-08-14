@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ArcaneVigorModal from './ArcaneVigorModal.jsx';
@@ -63,7 +64,7 @@ describe('ArcaneVigorModal - combat context integration', () => {
     applyHealingToTargetMock.mockReturnValue(null);
   });
 
-  it('calls getCombatContext when applying healing', async () => {
+  it('calls getCombatContext with campaign name when applying healing', async () => {
     renderModal();
     fireEvent.click(screen.getByText(/Roll One/));
     await act(async () => {
@@ -72,7 +73,7 @@ describe('ArcaneVigorModal - combat context integration', () => {
     expect(getCombatContextMock).toHaveBeenCalledWith(mockCampaignName);
   });
 
-  it('calls applyHealingToTarget with correct arguments when combat context exists', async () => {
+  it('calls applyHealingToTarget with combat summary, player name, healing amount, and campaign name', async () => {
     const combatSummary = {
       creatures: [{ name: 'Elyra', hp: 10, maxHp: 20 }],
     };
@@ -91,7 +92,7 @@ describe('ArcaneVigorModal - combat context integration', () => {
     );
   });
 
-  it('shows actual healing from applyHealingToTarget result', async () => {
+  it('displays actual healing from applyHealingToTarget result', async () => {
     const combatSummary = {
       creatures: [{ name: 'Elyra', hp: 10, maxHp: 20 }],
     };
@@ -105,7 +106,7 @@ describe('ArcaneVigorModal - combat context integration', () => {
     expect(screen.getByText(/5 HP healed/)).toBeInTheDocument();
   });
 
-  it('handles applyHealingToTarget returning null', async () => {
+  it('uses zero healing when applyHealingToTarget returns null with combat context', async () => {
     const combatSummary = {
       creatures: [{ name: 'OtherPlayer', hp: 10, maxHp: 20 }],
     };
@@ -116,20 +117,20 @@ describe('ArcaneVigorModal - combat context integration', () => {
     await act(async () => {
       fireEvent.click(screen.getByText('Apply Healing'));
     });
-    expect(screen.getByText(/HP healed/)).toBeInTheDocument();
+    expect(screen.getByText(/0 HP healed/)).toBeInTheDocument();
   });
 
-  it('handles getCombatContext returning null', async () => {
+  it('uses zero healing when getCombatContext returns null', async () => {
     getCombatContextMock.mockResolvedValue(null);
     renderModal();
     fireEvent.click(screen.getByText(/Roll One/));
     await act(async () => {
       fireEvent.click(screen.getByText('Apply Healing'));
     });
-    expect(screen.getByText(/HP healed/)).toBeInTheDocument();
+    expect(screen.getByText(/0 HP healed/)).toBeInTheDocument();
   });
 
-  it('logs actual healing in spell entry when combat context available', async () => {
+  it('logs spell entry with actual healing from combat applyHealingToTarget', async () => {
     const { addEntry } = await import('../../services/ui/logService.js');
     const combatSummary = {
       creatures: [{ name: 'Elyra', hp: 10, maxHp: 20 }],
@@ -145,7 +146,7 @@ describe('ArcaneVigorModal - combat context integration', () => {
     expect(spellEntry.healing).toBe(8);
   });
 
-  it('logs hp_change with newHp and maxHp when combat context available', async () => {
+  it('logs hp_change with newHp and maxHp from combat result', async () => {
     const { addEntry } = await import('../../services/ui/logService.js');
     const combatSummary = {
       creatures: [{ name: 'Elyra', hp: 10, maxHp: 20 }],
@@ -162,7 +163,40 @@ describe('ArcaneVigorModal - combat context integration', () => {
     expect(hpEntry.maxHp).toBe(20);
   });
 
-  it('logs hp_change with zero newHp/maxHp when no combat context', async () => {
+  it('logs hp_change with delta from actual healing in combat', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    const combatSummary = {
+      creatures: [{ name: 'Elyra', hp: 10, maxHp: 20 }],
+    };
+    getCombatContextMock.mockResolvedValue(combatSummary);
+    applyHealingToTargetMock.mockReturnValue({ actualHeal: 6, newHp: 16, oldHp: 10 });
+    renderModal();
+    fireEvent.click(screen.getByText(/Roll One/));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Apply Healing'));
+    });
+    const hpEntry = addEntry.mock.calls[1][1];
+    expect(hpEntry.delta).toBe(6);
+  });
+
+  it('logs hp_change formula with correct dice count when multiple dice rolled', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    const combatSummary = {
+      creatures: [{ name: 'Elyra', hp: 10, maxHp: 20 }],
+    };
+    getCombatContextMock.mockResolvedValue(combatSummary);
+    applyHealingToTargetMock.mockReturnValue({ actualHeal: 10, newHp: 20, oldHp: 10 });
+    renderModal();
+    fireEvent.click(screen.getByText(/Roll One/));
+    fireEvent.click(screen.getByText(/Roll One/));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Apply Healing'));
+    });
+    const hpEntry = addEntry.mock.calls[1][1];
+    expect(hpEntry.formula).toBe('2d8 + 3');
+  });
+
+  it('logs hp_change with zero newHp and maxHp when no combat context', async () => {
     const { addEntry } = await import('../../services/ui/logService.js');
     getCombatContextMock.mockResolvedValue(null);
     renderModal();
@@ -173,5 +207,76 @@ describe('ArcaneVigorModal - combat context integration', () => {
     const hpEntry = addEntry.mock.calls[1][1];
     expect(hpEntry.currentHp).toBe(0);
     expect(hpEntry.maxHp).toBe(0);
+  });
+
+  it('logs spell entry with zero healing when no combat context', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    getCombatContextMock.mockResolvedValue(null);
+    renderModal();
+    fireEvent.click(screen.getByText(/Roll One/));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Apply Healing'));
+    });
+    const spellEntry = addEntry.mock.calls[0][1];
+    expect(spellEntry.healing).toBe(0);
+  });
+
+  it('logs hp_change with zero delta when no combat context', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    getCombatContextMock.mockResolvedValue(null);
+    renderModal();
+    fireEvent.click(screen.getByText(/Roll One/));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Apply Healing'));
+    });
+    const hpEntry = addEntry.mock.calls[1][1];
+    expect(hpEntry.delta).toBe(0);
+  });
+
+  it('logs spell entry with actual healing when applyHealingToTarget returns null but combat context exists', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    const combatSummary = {
+      creatures: [{ name: 'OtherPlayer', hp: 10, maxHp: 20 }],
+    };
+    getCombatContextMock.mockResolvedValue(combatSummary);
+    applyHealingToTargetMock.mockReturnValue(null);
+    renderModal();
+    fireEvent.click(screen.getByText(/Roll One/));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Apply Healing'));
+    });
+    const spellEntry = addEntry.mock.calls[0][1];
+    expect(spellEntry.healing).toBe(0);
+  });
+
+  it('logs hp_change with creature maxHp when creature has no maxHp property', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    const combatSummary = {
+      creatures: [{ name: 'Elyra', hp: 10 }],
+    };
+    getCombatContextMock.mockResolvedValue(combatSummary);
+    applyHealingToTargetMock.mockReturnValue({ actualHeal: 4, newHp: 14, oldHp: 10 });
+    renderModal();
+    fireEvent.click(screen.getByText(/Roll One/));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Apply Healing'));
+    });
+    const hpEntry = addEntry.mock.calls[1][1];
+    expect(hpEntry.maxHp).toBe(0);
+  });
+
+  it('calls onComplete after applying healing with combat context', async () => {
+    const onComplete = vi.fn();
+    const combatSummary = {
+      creatures: [{ name: 'Elyra', hp: 10, maxHp: 20 }],
+    };
+    getCombatContextMock.mockResolvedValue(combatSummary);
+    applyHealingToTargetMock.mockReturnValue({ actualHeal: 5, newHp: 15, oldHp: 10 });
+    renderModal({ onComplete });
+    fireEvent.click(screen.getByText(/Roll One/));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Apply Healing'));
+    });
+    expect(onComplete).toHaveBeenCalled();
   });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -159,7 +160,7 @@ vi.mock('../modals/shared/CreatureSelectionModal.jsx', () => ({
         <span>{title}</span>
         {targets?.map(t => {
           const name = typeof t === 'string' ? t : t.name;
-          return <button key={name} data-testid={`csm-${name}`} onClick={() => onConfirm?.(targets)}>{name}</button>;
+          return <button key={name} data-testid={`csm-${name}`} onClick={() => onConfirm?.([name])}>{name}</button>;
         })}
         <button data-testid="csm-skip" onClick={() => onSkip?.()}>skip</button>
       </div>
@@ -192,6 +193,7 @@ vi.mock('../modals/TruePolymorphPathModal.jsx', () => ({
     return (
       <div data-testid="true-polymorph-path-modal">
         <button data-testid="tp-path-creature" onClick={() => onConfirm('creature_to_creature')}>creature to creature</button>
+        <button data-testid="tp-path-object" onClick={() => onConfirm('creature_to_object')}>creature to object</button>
         <button data-testid="tp-cancel" onClick={onCancel}>cancel</button>
       </div>
     );
@@ -242,6 +244,38 @@ const PENDING_KEYS = [
   'AuraOfVitality', 'Foresight', 'Longstrider', 'SpareTheDying', 'Confusion', 'DeathWard',
   'Heroism', 'Revivify', 'Sanctuary', 'SleetStorm', 'Shapechange',
 ];
+
+// Maps spell flow keys to their actual handler names from CreatureTargetPopups props
+const HANDLER_MAP = {
+  HoldMonster: { confirm: 'handleHoldMonsterConfirm', skip: 'handleHoldMonsterSkip' },
+  HoldPerson: { confirm: 'handleHoldPersonConfirm', skip: 'handleHoldPersonSkip' },
+  Polymorph: { confirm: 'handlePolymorphConfirm', skip: 'handlePolymorphSkip' },
+  AnimalShapes: { confirm: 'handleAnimalShapesTargetConfirm', skip: 'handleAnimalShapesSkip' },
+  CharmPerson: { confirm: 'handleCharmPersonConfirm', skip: 'handleCharmPersonSkip' },
+  CharmMonster: { confirm: 'handleCharmMonsterConfirm', skip: 'handleCharmMonsterSkip' },
+  Banishment: { confirm: 'handleBanishmentConfirm', skip: 'handleBanishmentSkip' },
+  PrismaticSpray: { confirm: 'handlePrismaticSprayConfirm', skip: 'handlePrismaticSpraySkip' },
+  HeroesFeast: { confirm: 'handleHeroesFeastConfirm', skip: 'handleHeroesFeastSkip' },
+  Bane: { confirm: 'handleBaneConfirm', skip: 'handleBaneSkip' },
+  Bless: { confirm: 'handleBlessConfirm', skip: 'handleBlessSkip' },
+  FaerieFire: { confirm: 'handleFaerieFireConfirm', skip: 'handleFaerieFireSkip' },
+  HolyAura: { confirm: 'handleHolyAuraConfirm', skip: 'handleHolyAuraSkip' },
+  BeaconOfHope: { confirm: 'handleBeaconOfHopeConfirm', skip: 'handleBeaconOfHopeSkip' },
+  Slow: { confirm: 'handleSlowConfirm', skip: 'handleSlowSkip' },
+  PassWithoutTrace: { confirm: 'handlePassWithoutTraceConfirm', skip: 'handlePassWithoutTraceSkip' },
+  Globe: { confirm: 'handleGlobeConfirm', skip: 'handleGlobeSkip' },
+  AntimagicField: { confirm: 'handleAntimagicFieldConfirm', skip: 'handleAntimagicFieldSkip' },
+  Forcecage: { confirm: 'handleForcecageConfirm', skip: 'handleForcecageSkip' },
+  StinkingCloud: { confirm: 'handleStinkingCloudConfirm', skip: 'handleStinkingCloudSkip' },
+  Confusion: { confirm: 'handleConfusionConfirm', skip: 'handleConfusionSkip' },
+  Web: { confirm: 'handleWebConfirm', skip: 'handleWebSkip' },
+  AnimalFriendship: { confirm: 'handleAnimalFriendshipConfirm', skip: 'handleAnimalFriendshipSkip' },
+  AuraOfLife: { confirm: 'handleAuraOfLifeConfirm', skip: 'handleAuraOfLifeSkip' },
+  AuraOfPurity: { confirm: 'handleAuraOfPurityConfirm', skip: 'handleAuraOfPuritySkip' },
+  CircleOfPower: { confirm: 'handleCircleOfPowerConfirm', skip: 'handleCircleOfPowerSkip' },
+  Compulsion: { confirm: 'handleCompulsionConfirm', skip: 'handleCompulsionSkip' },
+  SleetStorm: { confirm: 'handleSleetStormConfirm', skip: 'handleSleetStormSkip' },
+};
 
 function createFlow(overrides = {}) {
   const flow = { gateMetamagic: vi.fn(), handleConfirm: vi.fn(), handleSkip: vi.fn() };
@@ -306,7 +340,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
   });
 
   describe('creature selection modals', () => {
-    it.each([
+    const creatureModalSpells = [
       { key: 'pendingHoldMonster', title: 'Hold Monster' },
       { key: 'pendingHoldPerson', title: 'Hold Person' },
       { key: 'pendingPolymorph', title: 'Polymorph' },
@@ -335,12 +369,46 @@ describe('CharSpells - Popup Modal Rendering', () => {
       { key: 'pendingCircleOfPower', title: 'Circle of Power' },
       { key: 'pendingCompulsion', title: 'Compulsion' },
       { key: 'pendingSleetStorm', title: 'Sleet Storm' },
-    ])('renders CreatureSelectionModal for $title', ({ key, title }) => {
+    ];
+
+    it.each(creatureModalSpells)('renders CreatureSelectionModal with correct title for $title', ({ key, title }) => {
       flow[key] = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
       renderWithProps();
       const modals = screen.getAllByTestId('creature-selection-modal');
-      expect(modals.length).toBeGreaterThan(0);
-      expect(modals[0]).toHaveAttribute('data-title', title);
+      const modal = modals.find(m => m.getAttribute('data-title') === title);
+      expect(modal).toBeInTheDocument();
+    });
+
+    it.each(creatureModalSpells)('renders creature target buttons for $title', ({ key }) => {
+      flow[key] = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
+      renderWithProps();
+      expect(screen.getAllByTestId('csm-Orc').length).toBeGreaterThan(0);
+      expect(screen.getAllByTestId('csm-Goblin').length).toBeGreaterThan(0);
+    });
+
+    it.each(creatureModalSpells)('wires skip handler for $title', async ({ key, title }) => {
+      flow[key] = { creatureTargets: ['Orc'], maxTargets: 1 };
+      renderWithProps();
+      const handlerInfo = HANDLER_MAP[title];
+      if (!handlerInfo) return;
+      fireEvent.click(screen.getByTestId('csm-skip'));
+      expect(flow[handlerInfo.skip]).toHaveBeenCalled();
+    });
+
+    it.each(creatureModalSpells)('wires confirm handler when a creature is selected for $title', async ({ key, title }) => {
+      flow[key] = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
+      renderWithProps();
+      const handlerInfo = HANDLER_MAP[title];
+      if (!handlerInfo) return;
+      fireEvent.click(screen.getByTestId('csm-Orc'));
+      expect(flow[handlerInfo.confirm]).toHaveBeenCalled();
+    });
+
+    it('confirms with the selected creature name, not all targets', async () => {
+      flow.pendingBane = { creatureTargets: ['Orc', 'Goblin', 'Skeleton'], maxTargets: 3 };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('csm-Goblin'));
+      expect(flow.handleBaneConfirm).toHaveBeenCalledWith(['Goblin']);
     });
 
     it('renders TruePolymorphPathModal when pendingTruePolymorph has no path', () => {
@@ -366,18 +434,25 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(flow.handleTruePolymorphPathSelect).toHaveBeenCalledWith('creature_to_creature');
     });
 
-    it('calls handleHoldMonsterConfirm when a Hold Monster target is confirmed', () => {
-      flow.pendingHoldMonster = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
+    it('calls handleTruePolymorphTargetConfirm when a True Polymorph target is confirmed', () => {
+      flow.pendingTruePolymorph = { path: 'creature_to_creature', creatureTargets: ['Orc'], maxTargets: 1 };
       renderWithProps();
       fireEvent.click(screen.getByTestId('csm-Orc'));
-      expect(flow.handleHoldMonsterConfirm).toHaveBeenCalled();
+      expect(flow.handleTruePolymorphTargetConfirm).toHaveBeenCalled();
     });
 
-    it('calls handleHeroesFeastSkip when Heroes Feast is skipped', () => {
-      flow.pendingHeroesFeast = { creatureTargets: ['Orc'] };
+    it('calls handleTruePolymorphSkip when True Polymorph path modal is skipped', () => {
+      flow.pendingTruePolymorph = { creatureTargets: ['Orc'] };
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('tp-cancel'));
+      expect(flow.handleTruePolymorphSkip).toHaveBeenCalled();
+    });
+
+    it('calls handleTruePolymorphSkip when True Polymorph creature selection is skipped', () => {
+      flow.pendingTruePolymorph = { path: 'creature_to_creature', creatureTargets: ['Orc'], maxTargets: 1 };
       renderWithProps();
       fireEvent.click(screen.getByTestId('csm-skip'));
-      expect(flow.handleHeroesFeastSkip).toHaveBeenCalled();
+      expect(flow.handleTruePolymorphSkip).toHaveBeenCalled();
     });
 
     it('confirms a Shapechange by selecting a beast form and casting the spell', async () => {

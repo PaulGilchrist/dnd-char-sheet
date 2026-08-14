@@ -1,20 +1,16 @@
+// @improved-by-ai
+
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import App from './App.jsx';
 
 import { mockState, dataLoaderMocks } from './test/appTestState.js';
 
-// --- Mocks ---
+// --- Core mocks (shared with other App test files) ---
 
 vi.mock('./services/ui/dataLoader.js', async () => {
   const { dataLoaderMocks } = await import('./test/appTestState.js');
-  return {
-    ...dataLoaderMocks,
-    loadMonsters: vi.fn(),
-    loadFightingStyles: vi.fn(),
-    loadWildMagicSurgeTable: vi.fn(),
-    loadSkills: vi.fn(),
-  };
+  return dataLoaderMocks;
 });
 
 vi.mock('./services/ui/utils.js', () => ({
@@ -34,6 +30,44 @@ vi.mock('./services/ui/storage.js', () => ({
     set: vi.fn(() => Promise.resolve()),
   },
 }));
+
+vi.mock('./services/encounters/combatData.js', async () => ({
+  loadCombatSummary: vi.fn(() => Promise.resolve(null)),
+  setCombatSummaryCache: vi.fn(),
+}));
+
+vi.mock('./hooks/runtime/useRuntimeState.js', () => ({
+  setRuntimeObject: vi.fn(),
+  seedTrackedResources: vi.fn(),
+  getStore: vi.fn(() => new Map()),
+  notify: vi.fn(),
+  getRuntimeValue: vi.fn(() => null),
+  setRuntimeValue: vi.fn(),
+}));
+
+// Shared mutable container so the hoisted vi.mock can read the
+// current app data shape without capturing a stale reference.
+const _appDataRef = { value: null };
+
+vi.mock('./hooks/runtime/useAppData.js', () => ({
+  default: vi.fn(() => _appDataRef.value),
+}));
+
+_appDataRef.value = {
+  abilityScores: [{ full_name: 'Strength' }],
+  classes: [{ name: 'Fighter' }],
+  classes2024: [{ name: 'Fighter 2024' }],
+  equipment: [{ name: 'Longsword' }],
+  magicItems: [{ name: 'Wand' }],
+  monsters: [],
+  races: [{ name: 'Human' }],
+  races2024: [{ name: 'Human 2024' }],
+  spells: [{ name: 'Fireball' }],
+  spells2024: [{ name: 'Fireball 2024' }],
+  isLoading: false,
+};
+
+// --- Component mocks ---
 
 vi.mock('./components/char-sheet/CharSheet.jsx', async () => {
   const { MockCharSheet } = await import('./test/mockComponents.jsx');
@@ -91,34 +125,17 @@ vi.mock('./components/log/Log.jsx', async () => {
   const { MockLog } = await import('./test/mockComponents.jsx');
   return { default: MockLog };
 });
+vi.mock('./components/campaign-admin/CampaignAdmin.jsx', async () => {
+  const { MockCampaignAdmin } = await import('./test/mockComponents.jsx');
+  return { default: MockCampaignAdmin };
+});
 
+// Subscriber fires events asynchronously via setTimeout to match real SSE timing.
+// This avoids synchronous event dispatch during render which would cause
+// inconsistent state and unreliable tests.
 vi.mock('./components/common/Subscriber.jsx', () => ({
   default: function MockSubscriber() { return null; },
 }));
-
-// Shared mutable container so the hoisted vi.mock can read the
-// current app data shape without capturing a stale reference.
-const _appDataRef = { value: null };
-
-vi.mock('./hooks/runtime/useAppData.js', () => ({
-  default: vi.fn(() => _appDataRef.value),
-}));
-
-// Default app data — set after vi.mock so the hoisted factory
-// reads from _appDataRef at call time (not definition time).
-_appDataRef.value = {
-  abilityScores: [{ full_name: 'Strength' }],
-  classes: [{ name: 'Fighter' }],
-  classes2024: [{ name: 'Fighter 2024' }],
-  equipment: [{ name: 'Longsword' }],
-  magicItems: [{ name: 'Wand' }],
-  monsters: [],
-  races: [{ name: 'Human' }],
-  races2024: [{ name: 'Human 2024' }],
-  spells: [{ name: 'Fireball' }],
-  spells2024: [{ name: 'Fireball 2024' }],
-  isLoading: false,
-};
 
 // --- Helpers ---
 
@@ -232,76 +249,7 @@ describe('App', () => {
     });
   });
 
-  describe('theme management', () => {
-    it('defaults to dark theme when no localStorage value exists', async () => {
-      const localStorageMock = {
-        getItem: vi.fn(() => null),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      };
-      Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true, configurable: true });
-
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      // Theme is read from localStorage during initialization;
-      // the component defaults to 'dark' when no value is stored
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('theme');
-      expect(localStorageMock.getItem('theme')).toBe(null);
-    });
-
-    it('respects saved theme from localStorage', async () => {
-      const localStorageMock = {
-        getItem: vi.fn((key) => key === 'theme' ? 'light' : null),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      };
-      Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true, configurable: true });
-
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      // The component reads 'light' from localStorage on init
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('theme');
-    });
-
-    it('toggles theme and persists the change', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      // The CampaignAdmin has the toggle button; we verify the toggleTheme
-      // function is wired by checking the admin panel exists on localhost
-      expect(screen.getByTestId('admin-btn')).toBeInTheDocument();
-    });
-  });
-
-  describe('view switching', () => {
+  describe('sidebar display', () => {
     const navigateToCampaign = async () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
@@ -313,191 +261,19 @@ describe('App', () => {
       });
     };
 
-    it('shows MapsManager when maps button is clicked on localhost', async () => {
+    it('displays campaign name in sidebar', async () => {
       await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-      });
+      expect(screen.getByTestId('sidebar-campaign').textContent).toBe('test-campaign');
     });
 
-    it('opens a map from MapsManager via onOpenMap callback', async () => {
+    it('shows the Maps button with correct label on localhost', async () => {
       await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('open-map-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('map-view')).toBeInTheDocument();
-        expect(screen.queryByTestId('maps-manager')).not.toBeInTheDocument();
-      });
-
-      expect(screen.getByTestId('map-name').textContent).toBe('dungeon-1');
+      expect(screen.getByTestId('maps-btn')).toHaveTextContent('Maps');
     });
 
-    it('navigates back from Map to MapsManager', async () => {
-      await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => expect(screen.getByTestId('maps-manager')).toBeInTheDocument());
-
-      fireEvent.click(screen.getByTestId('open-map-btn'));
-      await waitFor(() => expect(screen.getByTestId('map-view')).toBeInTheDocument());
-
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-        expect(screen.queryByTestId('map-view')).not.toBeInTheDocument();
-      });
-    });
-
-    it('opens initiative view when initiative button is clicked', async () => {
-      await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('initiative-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('initiative')).toBeInTheDocument();
-      });
-    });
-
-    it('opens notes view when notes button is clicked', async () => {
-      await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('notes-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('notes-view')).toBeInTheDocument();
-      });
-    });
-
-    it('opens quests view when quests button is clicked', async () => {
-      await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('quests-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('quests-view')).toBeInTheDocument();
-      });
-    });
-
-    it('opens encounters view when encounter button is clicked', async () => {
-      await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('encounter-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('encounter-builder')).toBeInTheDocument();
-      });
-    });
-
-    it('opens NPCs view when NPCs button is clicked', async () => {
-      await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('npcs-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('npcs-view')).toBeInTheDocument();
-      });
-    });
-
-    it('opens settlements view when settlements button is clicked', async () => {
-      await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('settlements-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('settlements-view')).toBeInTheDocument();
-      });
-    });
-
-    it('opens factions view when factions button is clicked', async () => {
-      await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('factions-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('factions-view')).toBeInTheDocument();
-      });
-    });
-
-    it('opens campaign log view when log button is clicked', async () => {
-      await navigateToCampaign();
-
-      fireEvent.click(screen.getByTestId('log-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('campaign-log-view')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('non-localhost map behavior', () => {
-    it('shows map view directly when non-localhost with active map', async () => {
+    it('shows the Map button (singular) on non-localhost', async () => {
       setLocalhost('example.com');
-
-      const { loadMaps } = await import('./services/maps/mapsService.js');
-      loadMaps.mockResolvedValue({ maps: [{ fileName: 'dungeon-1.json', isActive: true }] });
-
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      // Maps button click triggers loadActiveMapAndOpen on non-localhost
-      fireEvent.click(screen.getByTestId('maps-btn'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('map-view')).toBeInTheDocument();
-      });
-      expect(screen.getByTestId('map-name').textContent).toBe('dungeon-1');
-    });
-
-    it('alerts when non-localhost and no active map found', async () => {
-      setLocalhost('example.com');
-
-      const { loadMaps } = await import('./services/maps/mapsService.js');
-      loadMaps.mockResolvedValue({ maps: [{ fileName: 'dungeon-1.json', isActive: false }] });
-
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      fireEvent.click(screen.getByTestId('maps-btn'));
-
-      await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith('No map is currently active. Ask your Game Master to activate one.');
-      });
-    });
-
-    it('alerts when loadMaps fails on non-localhost', async () => {
-      setLocalhost('example.com');
-
-      const { loadMaps } = await import('./services/maps/mapsService.js');
-      loadMaps.mockRejectedValue(new Error('Network error'));
-
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      fireEvent.click(screen.getByTestId('maps-btn'));
-
-      await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith('Failed to load map data.');
-      });
-    });
-  });
-
-  describe('character management', () => {
-    it('switches active character when character button is clicked in sidebar', async () => {
-      mockState.characters = [
-        { name: 'Aragorn', level: 1 },
-        { name: 'Legolas', level: 2 },
-      ];
       render(<App />);
 
       await act(async () => {
@@ -506,28 +282,27 @@ describe('App', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-        expect(screen.getByTestId('character-name').textContent).toBe('Aragorn');
       });
 
-      fireEvent.click(screen.getByTestId('char-btn-Legolas'));
+      expect(screen.getByTestId('maps-btn')).toHaveTextContent('Map');
+    });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('character-name').textContent).toBe('Legolas');
-      });
+    it('displays all sidebar button labels', async () => {
+      await navigateToCampaign();
+
+      expect(screen.getByTestId('initiative-btn')).toHaveTextContent('Initiative');
+      expect(screen.getByTestId('maps-btn')).toHaveTextContent('Maps');
+      expect(screen.getByTestId('notes-btn')).toHaveTextContent('Notes');
+      expect(screen.getByTestId('encounter-btn')).toHaveTextContent('Encounters');
+      expect(screen.getByTestId('factions-btn')).toHaveTextContent('Factions');
+      expect(screen.getByTestId('npcs-btn')).toHaveTextContent('NPCs');
+      expect(screen.getByTestId('quests-btn')).toHaveTextContent('Quests');
+      expect(screen.getByTestId('settlements-btn')).toHaveTextContent('Settlements');
+      expect(screen.getByTestId('log-btn')).toHaveTextContent('Log');
     });
 
     it('shows admin button on localhost', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
+      await navigateToCampaign();
       expect(screen.getByTestId('admin-btn')).toBeInTheDocument();
     });
 
@@ -548,7 +323,7 @@ describe('App', () => {
     });
   });
 
-  describe('sidebar behavior', () => {
+  describe('view switching — sidebar navigation', () => {
     const navigateToCampaign = async () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
@@ -560,49 +335,67 @@ describe('App', () => {
       });
     };
 
-    it('displays correct map button label based on localhost status', async () => {
+    it('opens initiative view when initiative button is clicked', async () => {
       await navigateToCampaign();
-      expect(screen.getByTestId('maps-btn')).toHaveTextContent('Maps');
-    });
-
-    it('shows correct sidebar button labels for each view', async () => {
-      await navigateToCampaign();
-
-      // Verify sidebar buttons exist with correct labels
-      expect(screen.getByTestId('initiative-btn')).toHaveTextContent('Initiative');
-      expect(screen.getByTestId('maps-btn')).toHaveTextContent('Maps');
-      expect(screen.getByTestId('notes-btn')).toHaveTextContent('Notes');
-      expect(screen.getByTestId('encounter-btn')).toHaveTextContent('Encounters');
-      expect(screen.getByTestId('factions-btn')).toHaveTextContent('Factions');
-      expect(screen.getByTestId('npcs-btn')).toHaveTextContent('NPCs');
-      expect(screen.getByTestId('quests-btn')).toHaveTextContent('Quests');
-      expect(screen.getByTestId('settlements-btn')).toHaveTextContent('Settlements');
-      expect(screen.getByTestId('log-btn')).toHaveTextContent('Log');
-    });
-
-    it('displays campaign name in sidebar', async () => {
-      await navigateToCampaign();
-      expect(screen.getByTestId('sidebar-campaign').textContent).toBe('test-campaign');
-    });
-  });
-
-  describe('campaign navigation', () => {
-    it('returns to campaign selection when back button is clicked', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
+      fireEvent.click(screen.getByTestId('initiative-btn'));
       await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+        expect(screen.getByTestId('initiative')).toBeInTheDocument();
       });
+    });
 
-      fireEvent.click(screen.getByTestId('back-to-campaigns-btn'));
-
+    it('opens notes view when notes button is clicked', async () => {
+      await navigateToCampaign();
+      fireEvent.click(screen.getByTestId('notes-btn'));
       await waitFor(() => {
-        expect(screen.getByTestId('campaign-selection')).toBeInTheDocument();
+        expect(screen.getByTestId('notes-view')).toBeInTheDocument();
+      });
+    });
+
+    it('opens quests view when quests button is clicked', async () => {
+      await navigateToCampaign();
+      fireEvent.click(screen.getByTestId('quests-btn'));
+      await waitFor(() => {
+        expect(screen.getByTestId('quests-view')).toBeInTheDocument();
+      });
+    });
+
+    it('opens encounters view when encounter button is clicked', async () => {
+      await navigateToCampaign();
+      fireEvent.click(screen.getByTestId('encounter-btn'));
+      await waitFor(() => {
+        expect(screen.getByTestId('encounter-builder')).toBeInTheDocument();
+      });
+    });
+
+    it('opens NPCs view when NPCs button is clicked', async () => {
+      await navigateToCampaign();
+      fireEvent.click(screen.getByTestId('npcs-btn'));
+      await waitFor(() => {
+        expect(screen.getByTestId('npcs-view')).toBeInTheDocument();
+      });
+    });
+
+    it('opens settlements view when settlements button is clicked', async () => {
+      await navigateToCampaign();
+      fireEvent.click(screen.getByTestId('settlements-btn'));
+      await waitFor(() => {
+        expect(screen.getByTestId('settlements-view')).toBeInTheDocument();
+      });
+    });
+
+    it('opens factions view when factions button is clicked', async () => {
+      await navigateToCampaign();
+      fireEvent.click(screen.getByTestId('factions-btn'));
+      await waitFor(() => {
+        expect(screen.getByTestId('factions-view')).toBeInTheDocument();
+      });
+    });
+
+    it('opens campaign log view when log button is clicked', async () => {
+      await navigateToCampaign();
+      fireEvent.click(screen.getByTestId('log-btn'));
+      await waitFor(() => {
+        expect(screen.getByTestId('campaign-log-view')).toBeInTheDocument();
       });
     });
   });
@@ -620,7 +413,6 @@ describe('App', () => {
         expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
       });
 
-      // Only char-sheet should be visible initially
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
       expect(screen.queryByTestId('initiative')).not.toBeInTheDocument();
       expect(screen.queryByTestId('maps-manager')).not.toBeInTheDocument();

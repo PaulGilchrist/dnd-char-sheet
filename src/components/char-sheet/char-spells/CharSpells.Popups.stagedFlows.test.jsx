@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -159,7 +160,7 @@ vi.mock('../modals/shared/CreatureSelectionModal.jsx', () => ({
         <span>{title}</span>
         {targets?.map(t => {
           const name = typeof t === 'string' ? t : t.name;
-          return <button key={name} data-testid={`csm-${name}`} onClick={() => onConfirm?.(targets)}>{name}</button>;
+          return <button key={name} data-testid={`csm-${name}`} onClick={() => onConfirm?.([name])}>{name}</button>;
         })}
         <button data-testid="csm-skip" onClick={() => onSkip?.()}>skip</button>
       </div>
@@ -192,6 +193,7 @@ vi.mock('../modals/TruePolymorphPathModal.jsx', () => ({
     return (
       <div data-testid="true-polymorph-path-modal">
         <button data-testid="tp-path-creature" onClick={() => onConfirm('creature_to_creature')}>creature to creature</button>
+        <button data-testid="tp-path-object" onClick={() => onConfirm('creature_to_object')}>creature to object</button>
         <button data-testid="tp-cancel" onClick={onCancel}>cancel</button>
       </div>
     );
@@ -199,11 +201,12 @@ vi.mock('../modals/TruePolymorphPathModal.jsx', () => ({
 }));
 
 vi.mock('../modals/SingleResistanceSelectionModal.jsx', () => ({
-  default: function SingleResistanceSelectionModal({ title, action }) {
+  default: function SingleResistanceSelectionModal({ title, action, onClose }) {
     return (
       <div data-testid="single-resistance-selection-modal">
         <span>{title}</span>
         <span data-testid="res-damage-types">{action?.automation?.damageTypes?.join(',')}</span>
+        <button data-testid="stm-skip" onClick={onClose}>cancel</button>
       </div>
     );
   },
@@ -214,6 +217,11 @@ vi.mock('../modals/HexAbilityModal.jsx', () => ({
     return (
       <div data-testid="hex-ability-modal" data-title={title}>
         <button data-testid="hex-ability-STR" onClick={() => onAbilitySelected('STR')}>Strength</button>
+        <button data-testid="hex-ability-DEX" onClick={() => onAbilitySelected('DEX')}>Dexterity</button>
+        <button data-testid="hex-ability-CON" onClick={() => onAbilitySelected('CON')}>Constitution</button>
+        <button data-testid="hex-ability-INT" onClick={() => onAbilitySelected('INT')}>Intelligence</button>
+        <button data-testid="hex-ability-WIS" onClick={() => onAbilitySelected('WIS')}>Wisdom</button>
+        <button data-testid="hex-ability-CHA" onClick={() => onAbilitySelected('CHA')}>Charisma</button>
         <button data-testid="hex-cancel" onClick={onCancel}>cancel</button>
       </div>
     );
@@ -252,10 +260,13 @@ function createFlow(overrides = {}) {
   flow.protectionFromEnergyStage = null;
   flow.resistanceStage = null;
   flow.handleEnhanceAbilityAbilitySelect = vi.fn();
+  flow.handleEnhanceAbilitySkip = vi.fn();
   flow.handleProtectionFromEnergyTargetSelect = vi.fn();
   flow.handleProtectionFromEnergyTypeSelect = vi.fn();
+  flow.handleProtectionFromEnergySkip = vi.fn();
   flow.handleResistanceTargetSelect = vi.fn();
   flow.handleResistanceTypeSelect = vi.fn();
+  flow.handleResistanceSkip = vi.fn();
   flow.handleGreaterRestorationNoEffects = vi.fn();
   flow.pendingHoldMonster = null; flow.handleHoldMonsterConfirm = vi.fn(); flow.handleHoldMonsterSkip = vi.fn();
   flow.pendingHoldPerson = null; flow.handleHoldPersonConfirm = vi.fn(); flow.handleHoldPersonSkip = vi.fn();
@@ -283,6 +294,7 @@ function renderWithProps(props = {}) {
 describe('CharSpells - Popup Modal Rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetAllMocks();
     flow = createFlow();
     upcastFlow = {
       pendingUpcast: null,
@@ -304,53 +316,168 @@ describe('CharSpells - Popup Modal Rendering', () => {
   });
 
   describe('enhance ability / resistance / protection from energy staged flows', () => {
-    it('renders HexAbilityModal at the ability stage and wires ability selection', () => {
-      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
-      flow.enhanceAbilityStage = 'ability';
-      renderWithProps();
-      expect(screen.getByTestId('hex-ability-modal')).toHaveAttribute('data-title', 'Enhance Ability — Choose Ability');
-      fireEvent.click(screen.getByTestId('hex-ability-STR'));
-      expect(flow.handleEnhanceAbilityAbilitySelect).toHaveBeenCalledWith('STR');
+    describe('enhance ability stage flow', () => {
+      it('renders HexAbilityModal at the ability stage and wires ability selection', () => {
+        flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+        flow.enhanceAbilityStage = 'ability';
+        renderWithProps();
+        expect(screen.getByTestId('hex-ability-modal')).toHaveAttribute('data-title', 'Enhance Ability — Choose Ability');
+        fireEvent.click(screen.getByTestId('hex-ability-STR'));
+        expect(flow.handleEnhanceAbilityAbilitySelect).toHaveBeenCalledWith('STR');
+      });
+
+      it('renders HexAbilityModal with all six ability buttons', () => {
+        flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+        flow.enhanceAbilityStage = 'ability';
+        renderWithProps();
+        expect(screen.getByTestId('hex-ability-STR')).toBeInTheDocument();
+        expect(screen.getByTestId('hex-ability-DEX')).toBeInTheDocument();
+        expect(screen.getByTestId('hex-ability-CON')).toBeInTheDocument();
+        expect(screen.getByTestId('hex-ability-INT')).toBeInTheDocument();
+        expect(screen.getByTestId('hex-ability-WIS')).toBeInTheDocument();
+        expect(screen.getByTestId('hex-ability-CHA')).toBeInTheDocument();
+      });
+
+      it('wires HexAbilityModal cancel to handleEnhanceAbilitySkip', () => {
+        flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+        flow.enhanceAbilityStage = 'ability';
+        renderWithProps();
+        fireEvent.click(screen.getByTestId('hex-cancel'));
+        expect(flow.handleEnhanceAbilitySkip).toHaveBeenCalled();
+      });
+
+      it('renders SecondaryTargetModal at the enhance ability target stage', () => {
+        flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+        flow.enhanceAbilityStage = 'target';
+        renderWithProps();
+        expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Enhance Ability');
+        fireEvent.click(screen.getByTestId('stm-Orc'));
+        expect(flow.handleEnhanceAbilityConfirm).toHaveBeenCalledWith(['Orc']);
+      });
+
+      it('wires SecondaryTargetModal skip to handleEnhanceAbilitySkip at target stage', () => {
+        flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
+        flow.enhanceAbilityStage = 'target';
+        renderWithProps();
+        fireEvent.click(screen.getByTestId('stm-skip'));
+        expect(flow.handleEnhanceAbilitySkip).toHaveBeenCalled();
+      });
+
+      it('renders SecondaryTargetModal with multiple creature targets', () => {
+        flow.pendingEnhanceAbility = { creatureTargets: ['Orc', 'Goblin', 'Skeleton'] };
+        flow.enhanceAbilityStage = 'target';
+        renderWithProps();
+        expect(screen.getByTestId('stm-Orc')).toBeInTheDocument();
+        expect(screen.getByTestId('stm-Goblin')).toBeInTheDocument();
+        expect(screen.getByTestId('stm-Skeleton')).toBeInTheDocument();
+      });
     });
 
-    it('renders SecondaryTargetModal at the enhance ability target stage', () => {
-      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
-      flow.enhanceAbilityStage = 'target';
-      renderWithProps();
-      expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Enhance Ability');
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-      expect(flow.handleEnhanceAbilityConfirm).toHaveBeenCalledWith(['Orc']);
+    describe('protection from energy staged flow', () => {
+      it('renders SecondaryTargetModal for protection from energy target stage', () => {
+        flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
+        flow.protectionFromEnergyStage = 'target';
+        renderWithProps();
+        fireEvent.click(screen.getByTestId('stm-Orc'));
+        expect(flow.handleProtectionFromEnergyTargetSelect).toHaveBeenCalledWith('Orc');
+      });
+
+      it('wires SecondaryTargetModal skip to handleProtectionFromEnergySkip at target stage', () => {
+        flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
+        flow.protectionFromEnergyStage = 'target';
+        renderWithProps();
+        fireEvent.click(screen.getByTestId('stm-skip'));
+        expect(flow.handleProtectionFromEnergySkip).toHaveBeenCalled();
+      });
+
+      it('renders SingleResistanceSelectionModal for protection from energy type stage', () => {
+        flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
+        flow.protectionFromEnergyStage = 'type';
+        renderWithProps();
+        expect(screen.getByTestId('single-resistance-selection-modal')).toBeInTheDocument();
+        expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire,cold');
+      });
+
+      it('wires SingleResistanceSelectionModal skip to handleProtectionFromEnergySkip at type stage', () => {
+        flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
+        flow.protectionFromEnergyStage = 'type';
+        renderWithProps();
+        fireEvent.click(screen.getByTestId('stm-skip'));
+        expect(flow.handleProtectionFromEnergySkip).toHaveBeenCalled();
+      });
+
+      it('renders with multiple damage types in the selection modal', () => {
+        flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold', 'lightning'] };
+        flow.protectionFromEnergyStage = 'type';
+        renderWithProps();
+        expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire,cold,lightning');
+      });
     });
 
-    it('renders SecondaryTargetModal for protection from energy target stage', () => {
-      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
-      flow.protectionFromEnergyStage = 'target';
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-      expect(flow.handleProtectionFromEnergyTargetSelect).toHaveBeenCalledWith('Orc');
+    describe('resistance staged flow', () => {
+      it('renders SecondaryTargetModal for resistance target stage', () => {
+        flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+        flow.resistanceStage = 'target';
+        renderWithProps();
+        fireEvent.click(screen.getByTestId('stm-Orc'));
+        expect(flow.handleResistanceTargetSelect).toHaveBeenCalledWith('Orc');
+      });
+
+      it('wires SecondaryTargetModal skip to handleResistanceSkip at target stage', () => {
+        flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+        flow.resistanceStage = 'target';
+        renderWithProps();
+        fireEvent.click(screen.getByTestId('stm-skip'));
+        expect(flow.handleResistanceSkip).toHaveBeenCalled();
+      });
+
+      it('renders SingleResistanceSelectionModal for resistance type stage', () => {
+        flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+        flow.resistanceStage = 'type';
+        renderWithProps();
+        expect(screen.getByTestId('single-resistance-selection-modal')).toBeInTheDocument();
+      });
+
+      it('wires SingleResistanceSelectionModal skip to handleResistanceSkip at type stage', () => {
+        flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
+        flow.resistanceStage = 'type';
+        renderWithProps();
+        fireEvent.click(screen.getByTestId('stm-skip'));
+        expect(flow.handleResistanceSkip).toHaveBeenCalled();
+      });
+
+      it('renders with multiple damage types in the resistance selection modal', () => {
+        flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold', 'acid'] };
+        flow.resistanceStage = 'type';
+        renderWithProps();
+        expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire,cold,acid');
+      });
     });
 
-    it('renders SingleResistanceSelectionModal for protection from energy type stage', () => {
-      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
-      flow.protectionFromEnergyStage = 'type';
-      renderWithProps();
-      expect(screen.getByTestId('single-resistance-selection-modal')).toBeInTheDocument();
-      expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire,cold');
-    });
+    describe('staged flow visibility', () => {
+      it('does not render staged flow modals when enhanceAbilityStage is null', () => {
+        flow.pendingEnhanceAbility = null;
+        flow.enhanceAbilityStage = null;
+        renderWithProps();
+        expect(screen.queryByTestId('hex-ability-modal')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
+      });
 
-    it('renders SecondaryTargetModal for resistance target stage', () => {
-      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
-      flow.resistanceStage = 'target';
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-      expect(flow.handleResistanceTargetSelect).toHaveBeenCalledWith('Orc');
-    });
+      it('does not render staged flow modals when protectionFromEnergyStage is null', () => {
+        flow.pendingProtectionFromEnergy = null;
+        flow.protectionFromEnergyStage = null;
+        renderWithProps();
+        expect(screen.queryByTestId('single-resistance-selection-modal')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
+      });
 
-    it('renders SingleResistanceSelectionModal for resistance type stage', () => {
-      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
-      flow.resistanceStage = 'type';
-      renderWithProps();
-      expect(screen.getByTestId('single-resistance-selection-modal')).toBeInTheDocument();
+      it('does not render staged flow modals when resistanceStage is null', () => {
+        flow.pendingResistance = null;
+        flow.resistanceStage = null;
+        renderWithProps();
+        expect(screen.queryByTestId('single-resistance-selection-modal')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
+      });
     });
   });
 });

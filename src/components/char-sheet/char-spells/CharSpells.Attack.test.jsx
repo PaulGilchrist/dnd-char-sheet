@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -5,20 +6,19 @@ import CharSpells from './CharSpells.jsx';
 import { mockPlayerStats, mockHandleTogglePreparedSpells } from './CharSpells.test.helpers.js';
 
 import useActionPopup from '../../../hooks/combat/useActionPopup.js';
-import useLoggedDiceRoll from '../../../hooks/combat/useLoggedDiceRoll.js';
 
 vi.mock('../../../hooks/combat/useActionPopup.js', () => ({
-  default: vi.fn(),
+  default: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn() })),
 }));
 
+let mockDiceRoll = { rollAttack: vi.fn(), rollDamage: vi.fn(), quickRollPlayerSave: vi.fn() };
+
 vi.mock('../../../hooks/combat/useLoggedDiceRoll.js', () => ({
-  default: vi.fn(() => ({
-    popupHtml: null,
-    setPopupHtml: vi.fn(),
-    rollAttack: vi.fn(),
-    rollDamage: vi.fn(),
-    quickRollPlayerSave: vi.fn(),
-  })),
+  default: vi.fn(() => mockDiceRoll),
+}));
+
+vi.mock('../../../hooks/combat/DiceRollContext.js', () => ({
+  useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
 }));
 
 vi.mock('../../../hooks/combat/useMetamagic.js', () => {
@@ -84,7 +84,7 @@ vi.mock('../../../services/combat/buffs/buffService.js', () => ({
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  useRuntimeValue: vi.fn(() => null),
+  useRuntimeValue: vi.fn(() => []),
   setRuntimeValue: vi.fn(() => Promise.resolve()),
   getRuntimeValue: vi.fn(() => null),
 }));
@@ -110,6 +110,7 @@ function renderCharSpells(props = {}) {
 describe('CharSpells', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockDiceRoll = { rollAttack: vi.fn(), rollDamage: vi.fn(), quickRollPlayerSave: vi.fn() };
     useActionPopup.mockImplementation(() => ({
       showPopup: vi.fn(),
       popupHtml: null,
@@ -117,32 +118,62 @@ describe('CharSpells', () => {
     }));
   });
 
-  describe('Spell attack to-hit', () => {
-    it('should call rollAttack with correct arguments based on props', () => {
-      const rollAttackSpy = vi.fn();
-      useLoggedDiceRoll.mockImplementation(() => ({
-        popupHtml: null,
-        setPopupHtml: vi.fn(),
-        rollAttack: rollAttackSpy,
-        rollDamage: vi.fn(),
-        quickRollPlayerSave: vi.fn(),
-      }));
-
+  describe('spell attack to-hit', () => {
+    it('calls rollAttack with correct arguments based on props', () => {
       renderCharSpells({ exhaustionPenalty: 1, conditionAttackMode: 'disadvantage' });
 
       const attackLabel = screen.getByText(/Attack \(to hit\):/);
       fireEvent.click(attackLabel);
 
-      expect(rollAttackSpy).toHaveBeenCalledWith('Spell Attack', 4, expect.objectContaining({ forcedMode: 'disadvantage' }));
+      expect(mockDiceRoll.rollAttack).toHaveBeenCalledWith('Spell Attack', 4, expect.objectContaining({ forcedMode: 'disadvantage' }));
+    });
+
+    it('applies exhaustionPenalty to the displayed to-hit value', () => {
+      renderCharSpells({ exhaustionPenalty: 2 });
+
+      expect(screen.getByText('+3')).toBeInTheDocument();
+    });
+
+    it('applies exhaustionPenalty styling to the attack label', () => {
+      renderCharSpells({ exhaustionPenalty: 1 });
+
+      const attackLabel = screen.getByText(/Attack \(to hit\):/);
+      expect(attackLabel).toHaveClass('stat--penalized');
+    });
+
+    it('applies stat--penalized class when conditionAttackMode is disadvantage', () => {
+      renderCharSpells({ conditionAttackMode: 'disadvantage' });
+
+      const attackLabel = screen.getByText(/Attack \(to hit\):/);
+      expect(attackLabel).toHaveClass('stat--penalized');
+    });
+
+    it('applies stat--penalized class when cannotAct is true', () => {
+      renderCharSpells({ cannotAct: true });
+
+      const attackLabel = screen.getByText(/Attack \(to hit\):/);
+      expect(attackLabel).toHaveClass('disabled-attack');
+      expect(attackLabel).toHaveClass('stat--penalized');
+    });
+
+    it('does not call rollAttack when cannotAct is true', () => {
+      renderCharSpells({ cannotAct: true });
+
+      const attackLabel = screen.getByText(/Attack \(to hit\):/);
+      fireEvent.click(attackLabel);
+
+      expect(mockDiceRoll.rollAttack).not.toHaveBeenCalled();
     });
   });
 
-  describe('Cantrip damage display', () => {
+  describe('cantrip damage display', () => {
     it.each`
       playerLevel | expectedDamage
       ${0}        | ${'1d10 Fire'}
       ${5}        | ${'2d10 Fire'}
-    `('should use the highest available cantrip damage level at or below player level ($playerLevel)', ({ playerLevel, expectedDamage }) => {
+      ${11}       | ${'3d10 Fire'}
+      ${20}       | ${'3d10 Fire'}
+    `('uses the highest available cantrip damage level at or below player level ($playerLevel)', ({ playerLevel, expectedDamage }) => {
       const statsWithCantripDamage = {
         ...mockPlayerStats,
         level: playerLevel,
@@ -175,7 +206,39 @@ describe('CharSpells', () => {
       expect(screen.getByText(expectedDamage)).toBeInTheDocument();
     });
 
-    it('should use damage_at_character_level when damage_at_slot_level is absent', () => {
+    it('falls back to the first damage_at_slot_level key when player level is below all keys', () => {
+      const stats = {
+        ...mockPlayerStats,
+        level: 0,
+        spellAbilities: {
+          ...mockPlayerStats.spellAbilities,
+          spells: [
+            {
+              name: 'Custom Cantrip',
+              level: 0,
+              casting_time: '1 turn',
+              range: 'Self',
+              duration: 'Instantaneous',
+              components: ['V'],
+              damage: {
+                damage_at_slot_level: {
+                  '5': '2d10',
+                  '11': '3d10',
+                },
+                damage_type: 'Lightning',
+              },
+              prepared: 'Always',
+            },
+          ],
+        },
+      };
+
+      renderCharSpells({ playerStats: stats });
+
+      expect(screen.getByText('2d10 Lightning')).toBeInTheDocument();
+    });
+
+    it('uses damage_at_character_level when damage_at_slot_level is absent', () => {
       const statsWithCharacterLevelDamage = {
         ...mockPlayerStats,
         level: 11,
@@ -211,7 +274,7 @@ describe('CharSpells', () => {
       dc_success | dc_type | level | damageSlot | expectedDisplay
       ${'half'}  | ${'DEX'} | ${2}  | ${'2'}     | ${'3d8 Cold (DEX half)'}
       ${'negates'} | ${'CON'} | ${0}  | ${'1'}     | ${'1d6 Cold (CON negates)'}
-    `('should display damage with save DC info: $dc_success success type', ({ dc_success, dc_type, level, damageSlot, expectedDisplay }) => {
+    `('displays damage with save DC info: $dc_success success type', ({ dc_success, dc_type, level, damageSlot, expectedDisplay }) => {
       const statsWithSaveDc = {
         ...mockPlayerStats,
         spellAbilities: {
@@ -243,6 +306,29 @@ describe('CharSpells', () => {
       renderCharSpells({ playerStats: statsWithSaveDc });
 
       expect(screen.getByText(expectedDisplay)).toBeInTheDocument();
+    });
+  });
+
+  describe('spell modifier display', () => {
+    it('renders the spell modifier with exhaustionPenalty subtraction', () => {
+      renderCharSpells({ exhaustionPenalty: 1 });
+
+      expect(screen.getByText('+2')).toBeInTheDocument();
+    });
+
+    it('applies stat--penalized class to modifier span when exhaustionPenalty is positive', () => {
+      renderCharSpells({ exhaustionPenalty: 1 });
+
+      const modifierSpan = document.querySelectorAll('.spell-abilities span')[1];
+      expect(modifierSpan).toHaveClass('stat--penalized');
+    });
+  });
+
+  describe('save DC display', () => {
+    it('renders the base save DC without modification', () => {
+      renderCharSpells();
+
+      expect(screen.getByText('13')).toBeInTheDocument();
     });
   });
 });
