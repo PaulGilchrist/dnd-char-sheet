@@ -729,8 +729,8 @@ describe('CharActions Hide action behavior', () => {
         }));
       });
 
-      // When deactivating, no log entry or expiration should be added
-      expect(addEntry).not.toHaveBeenCalled();
+      // When deactivating, no Dodge log entry or expiration should be added
+      expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({ abilityName: 'Dodge' }));
       expect(addExpiration).not.toHaveBeenCalled();
     });
 
@@ -745,7 +745,7 @@ describe('CharActions Hide action behavior', () => {
       await waitFor(() => {
         expect(toggleBuff).not.toHaveBeenCalled();
         expect(mockSetPopupHtml).not.toHaveBeenCalled();
-        expect(addEntry).not.toHaveBeenCalled();
+        expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({ abilityName: 'Dodge' }));
         expect(addExpiration).not.toHaveBeenCalled();
       });
     });

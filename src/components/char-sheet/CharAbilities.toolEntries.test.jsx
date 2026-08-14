@@ -195,9 +195,12 @@ describe('CharAbilities tool entries', () => {
         ],
       });
       render(<CharAbilities {...defaultProps} playerStats={stats} />);
-      // Should only appear once despite being in both inventory sections
-      const elements = await screen.findAllByText("Healer's Kit");
-      expect(elements).toHaveLength(1);
+      // Verify tool renders and only appears once (dedup works)
+      await screen.findByText(/Healer's Kit \(\+5\)/);
+      // Use getElementsByTagName to find clickable spans and check for duplicates
+      const clickableSpans = document.querySelectorAll('.clickable');
+      const healerKitSpans = Array.from(clickableSpans).filter(el => el.textContent.includes("Healer's Kit"));
+      expect(healerKitSpans).toHaveLength(1);
     });
 
     it('applies exhaustion penalty to tool bonuses', async () => {

@@ -19,17 +19,6 @@ describe('MagicInitiateModal - SpellDetails', () => {
     vi.mocked(renderMarkdown).mockReturnValue('<p>mocked</p>');
   });
 
-  const setupWithSpell = (classValue, spellSelector) => {
-    const props = createProps();
-    render(<MagicInitiateModal {...props} />);
-    fireEvent.click(screen.getByText('Add Another Instance'));
-    const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-    fireEvent.change(classSelect, { target: { value: classValue } });
-    const spellSelect = findSelectByLabel(spellSelector);
-    fireEvent.change(spellSelect, { target: { value: spellSelect.querySelector('option:not([value=""])')?.value } });
-    return props;
-  };
-
   describe('SpellDetails subcomponent', () => {
     it('should not render spell details toggle when no spell is selected', () => {
       const props = createProps();

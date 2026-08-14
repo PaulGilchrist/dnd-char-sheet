@@ -5,7 +5,6 @@ import {
   makeHookProps,
   makePlayerStats,
   makeNonSorcererStats,
-  makeSpell,
   setupBeforeEach,
 } from './useActionSpellMetamagic.test-helpers.js';
 
