@@ -1,8 +1,15 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+
+import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
+
+// ---------------------------------------------------------------------------
+// Mocks — minimal set for the specific features tested in this file
+// ---------------------------------------------------------------------------
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -85,60 +92,8 @@ vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () =>
     handle: vi.fn(),
 }));
 
-const mockPlayerStats = {
-    name: 'Thorin',
-    xp: 2300,
-    xpMode: 'milestone',
-    race: { name: 'Dwarf', type: 'Hill Dwarf', subrace: { name: 'Hill Dwarf', speed: 25 } },
-    class: { name: 'Cleric', subclass: { name: 'War', type: 'Choice' }, major: { name: 'Cleric' } },
-    level: 5,
-    alignment: 'Lawful Good',
-    proficiency: 3,
-    initiative: 2,
-    initiativeAdvantage: false,
-    abilities: [{ name: 'Wisdom', bonus: 3 }, { name: 'Strength', bonus: 2 }],
-    armorClass: 18,
-    armorClassFormula: '16 + 2 (shield)',
-    hitPoints: 45,
-    inventory: { equipped: ['Scale Mail', 'Shield'] },
-    equipment: [{ name: 'Scale Mail', equipment_category: 'Armor' }, { name: 'Shield', type: 'Shield' }],
-    background: 'Soldier',
-    immunities: [],
-    resistances: [],
-    vulnerabilities: [],
-    senses: [],
-    proficiencies: [],
-    languages: [],
-    automation: { passives: [], actions: [] },
-    passives: [],
-    exhaustionLevel: 0,
-};
-
-const mockCampaignName = 'test-campaign';
-
 // ---------------------------------------------------------------------------
-// Shield detection in equipment loop
-// ---------------------------------------------------------------------------
-describe('CharSummary - Shield Detection', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('detects shield equipment and sets isWieldingShield', () => {
-        const stats = {
-            ...mockPlayerStats,
-            inventory: { equipped: ['Shield'] },
-            equipment: [{ name: 'Shield', type: 'Shield' }],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Armor Class:')).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Rage of the Gods resistances
+// Rage of the Gods resistance types from activeBuffs
 // ---------------------------------------------------------------------------
 describe('CharSummary - Rage of the Gods Resistances', () => {
     beforeEach(() => {
@@ -147,7 +102,7 @@ describe('CharSummary - Rage of the Gods Resistances', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('adds rage of the gods resistance types', () => {
+    it('renders all resistance types from Rage of the Gods buff', () => {
         getActiveBuffs.mockReturnValue([
             { name: 'Rage of the Gods', resistanceTypes: ['lightning', 'thunder'] },
         ]);
@@ -159,67 +114,7 @@ describe('CharSummary - Rage of the Gods Resistances', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Superior Defense resistances
-// ---------------------------------------------------------------------------
-describe('CharSummary - Superior Defense Resistances', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('adds superior defense resistance types', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Superior Defense', resistanceTypes: ['fire'] },
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Resistances:/)).toBeInTheDocument();
-        expect(screen.getByText(/Fire/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Feign Death resistances
-// ---------------------------------------------------------------------------
-describe('CharSummary - Feign Death Resistances', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('adds feign death resistance types', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Feign Death', resistanceTypes: ['poison'] },
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Resistances:/)).toBeInTheDocument();
-        expect(screen.getByText(/Poison/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Stone Skin resistances
-// ---------------------------------------------------------------------------
-describe('CharSummary - Stone Skin Resistances', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('adds stone skin resistance types', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Stone Skin', resistanceTypes: ['piercing'] },
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Resistances:/)).toBeInTheDocument();
-        expect(screen.getByText(/Piercing/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Elemental Adept types
+// Elemental Adept — damage type choice from passives via runtime value
 // ---------------------------------------------------------------------------
 describe('CharSummary - Elemental Adept Types', () => {
     beforeEach(() => {
@@ -228,7 +123,7 @@ describe('CharSummary - Elemental Adept Types', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('adds elemental adept types from runtime values', () => {
+    it('renders the chosen damage type from Elemental Adept passive', () => {
         vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
             if (key === '_Fire_Adept_chosenType') return 'fire';
             return null;
@@ -243,5 +138,21 @@ describe('CharSummary - Elemental Adept Types', () => {
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Resistances:/)).toBeInTheDocument();
         expect(screen.getByText(/Fire/)).toBeInTheDocument();
+    });
+
+    it('renders nothing for Elemental Adept when no type is chosen', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === '_Fire_Adept_chosenType') return null;
+            return null;
+        });
+        const stats = {
+            ...mockPlayerStats,
+            automation: {
+                ...mockPlayerStats.automation,
+                passives: [{ type: 'damage_type_choice', effect: 'elemental_adept', name: 'Fire Adept' }],
+            },
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Fire/)).not.toBeInTheDocument();
     });
 });

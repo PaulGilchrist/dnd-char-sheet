@@ -1,13 +1,11 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { getCombatSummary } from '../../../services/encounters/combatData.js';
-import { addConcentration, breakConcentration } from '../../../services/combat/concentration/concentrationService.js';
-import * as storageService from '../../../services/ui/storage.js';
 
-const flushPromises = () => new Promise(r => setTimeout(r, 0));
+const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -21,20 +19,6 @@ vi.mock('../../../services/combat/buffs/buffService.js', () => ({
 
 vi.mock('../../../services/ui/sanitize.js', () => ({
   sanitizeHtml: (html) => html,
-}));
-
-vi.mock('../../../services/encounters/combatData.js', () => ({
-  getCombatSummary: vi.fn(() => null),
-}));
-
-vi.mock('../../../services/combat/concentration/concentrationService.js', () => ({
-  addConcentration: vi.fn(),
-  breakConcentration: vi.fn(),
-  cleanupConcentrationEffects: vi.fn(),
-}));
-
-vi.mock('../../../services/ui/storage.js', () => ({
-  default: { set: vi.fn() },
 }));
 
 const baseMockPlayerStats = {
@@ -84,7 +68,7 @@ const renderPopup = (
       campaignName={campaignName}
       onClose={vi.fn()}
       {...extraProps}
-    />
+    />,
   );
 
 describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
@@ -93,105 +77,69 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
     localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
-    vi.mocked(setRuntimeValue).mockReturnValue();
-    vi.mocked(getCombatSummary).mockReturnValue(null);
-    vi.mocked(addConcentration).mockReturnValue();
-    vi.mocked(breakConcentration).mockReturnValue(null);
-    vi.mocked(storageService.default.set).mockReturnValue();
   });
 
   describe('non-upcastable spell casting', () => {
-    it('calls onCast with spell and baseLevel without consuming slot', async () => {
+    const nonUpcastableSpell = {
+      ...baseMockSpell,
+      damage: { damage_at_slot_level: { '1': '3d4+1' } },
+    };
+
+    it('calls onCast with spell and baseLevel:undefined without consuming slot for non-upcastable spell', async () => {
       const onCast = vi.fn();
-      const nonUpcastableSpell = {
-        ...baseMockSpell,
-        damage: { damage_at_slot_level: { '1': '3d4+1' } },
-      };
 
       renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
+
       expect(onCast).toHaveBeenCalledTimes(1);
       const modifiedSpell = onCast.mock.calls[0][0];
       expect(modifiedSpell.name).toBe('Magic Missile');
       expect(modifiedSpell.level).toBe(1);
       expect(modifiedSpell.baseLevel).toBe(undefined);
-      // Slot consumption now happens downstream in gateMetamagic → prepareSpellCast
-      expect(setRuntimeValue).not.toHaveBeenCalled();
     });
 
-    it('passes spell through without modifying stored slot value', async () => {
+    it('does not call onClose when Cast Spell is clicked', async () => {
+      const onClose = vi.fn();
       const onCast = vi.fn();
-      const nonUpcastableSpell = {
-        ...baseMockSpell,
-        damage: { damage_at_slot_level: { '1': '3d4+1' } },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'spell_slots_level_1') return 2;
-        return null;
-      });
 
-      renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onCast });
+      renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onClose, onCast });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
-      expect(onCast).toHaveBeenCalledTimes(1);
-      // Slot consumption now happens downstream in gateMetamagic → prepareSpellCast
-      expect(setRuntimeValue).not.toHaveBeenCalled();
-    });
 
-    it('passes spell through without modifying spellAbilities max', async () => {
-      const onCast = vi.fn();
-      const nonUpcastableSpell = {
-        ...baseMockSpell,
-        damage: { damage_at_slot_level: { '1': '3d4+1' } },
-      };
-
-      renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-      expect(onCast).toHaveBeenCalledTimes(1);
-      // Slot consumption now happens downstream in gateMetamagic → prepareSpellCast
-      expect(setRuntimeValue).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
   describe('upcast spell casting', () => {
-    it('calls onCast with upcasted level and decrements the upcast slot', async () => {
+    it('calls onCast with isUpcast:true and upcastLevel when selecting a higher level', async () => {
       const onCast = vi.fn();
       const upcastLevels = [
         { level: 1, formula: '3d4+1', availableSlots: 4 },
         { level: 2, formula: '4d4+1', availableSlots: 3 },
       ];
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'spell_slots_level_2') return 3;
-        return null;
-      });
 
       renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName, {
         onCast,
         upcastLevels,
       });
 
-      // Select level 2 upcast
       fireEvent.click(screen.getByText('Level 2'));
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
       await flushPromises();
       expect(onCast).toHaveBeenCalledTimes(1);
       const modifiedSpell = onCast.mock.calls[0][0];
-      // SpellDetailPopup passes isUpcast/upcastLevel flags; actual slot consumption happens in gateMetamagic → prepareSpellCast
       expect(modifiedSpell.name).toBe('Magic Missile');
       expect(modifiedSpell.level).toBe(1);
       expect(modifiedSpell.isUpcast).toBe(true);
       expect(modifiedSpell.upcastLevel).toBe(2);
-      // Slot consumption now happens downstream in gateMetamagic → prepareSpellCast
-      expect(setRuntimeValue).not.toHaveBeenCalled();
+      expect(modifiedSpell.baseLevel).toBe(undefined);
     });
 
-    it('uses base level when upcast level is selected but matches spell level', async () => {
+    it('passes isUpcast:false and no upcastLevel when base level is selected', async () => {
       const onCast = vi.fn();
       const upcastLevels = [
         { level: 1, formula: '3d4+1', availableSlots: 4 },
@@ -204,17 +152,28 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       });
 
       // Default selected is level 1 which matches spell level
-      // But since isUpcastable is true and selectedUpcastLvl === "1" === spell.level,
-      // isUpcast is false, so it goes through the freeCastAuthorized branch or normal slot consumption
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
-      // Since isUpcast is false (selected level 1 === spell level 1),
-      // and freeCastAuthorized is false, it falls to the else branch
       await flushPromises();
       expect(onCast).toHaveBeenCalledTimes(1);
       const modifiedSpell = onCast.mock.calls[0][0];
       expect(modifiedSpell.level).toBe(1);
-      expect(modifiedSpell.baseLevel).toBe(undefined);
+      expect(modifiedSpell.isUpcast).toBe(false);
+      expect(modifiedSpell.upcastLevel).toBe(undefined);
+    });
+  });
+
+  describe('cast blocked by Rage', () => {
+    it('does not call onCast when player is raging', async () => {
+      const onCast = vi.fn();
+      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
+
+      renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName, { onCast });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,10 +1,11 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
 import { getRuntimeValue, useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 
-const flushPromises = () => new Promise(r => setTimeout(r, 0));
+const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -73,6 +74,7 @@ const renderPopup = (
 describe('SpellDetailPopup - Overchannel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
   });
@@ -86,63 +88,131 @@ describe('SpellDetailPopup - Overchannel', () => {
       },
     };
 
-    it.each([
-      { name: 'applicable spell (level 1-5 with damage)', level: 3, damage: { damage_at_slot_level: { '1': '3d6', '3': '8d6' } }, stats: 'overchannel', shouldShow: true },
-      { name: 'cantrip (level 0)', level: 0, damage: { damage_at_slot_level: { '0': '1d6' } }, stats: 'overchannel', shouldShow: false },
-      { name: 'spell without damage', level: 3, damage: null, stats: 'overchannel', shouldShow: false },
-      { name: 'without the overchannel passive', level: 3, damage: { damage_at_slot_level: { '1': '3d6', '3': '8d6' } }, stats: 'noOverchannel', shouldShow: false },
-    ])('renders Overchannel checkbox when applicable: $name', ({ level, damage, stats, shouldShow }) => {
-      vi.mocked(useRuntimeValue).mockReturnValue(0);
-      const spell = { ...baseMockSpell, level, damage };
-      const playerStats = stats === 'noOverchannel'
-        ? { ...baseMockPlayerStats, automation: { passives: [], actions: [] } }
-        : overchannelStats;
-      renderPopup(spell, playerStats, mockCampaignName);
-      if (shouldShow) {
-        expect(screen.getByText('Overchannel (Maximize Damage)')).toBeInTheDocument();
-      } else {
-        expect(screen.queryByText('Overchannel (Maximize Damage)')).not.toBeInTheDocument();
-      }
+    describe('checkbox visibility', () => {
+      it.each([
+        { name: 'level 1 cantrip', level: 0, hasDamage: true, shouldShow: false },
+        { name: 'level 1 spell with damage', level: 1, hasDamage: true, shouldShow: true },
+        { name: 'level 3 spell with damage', level: 3, hasDamage: true, shouldShow: true },
+        { name: 'level 5 spell with damage (upper boundary)', level: 5, hasDamage: true, shouldShow: true },
+        { name: 'level 6 spell (above range)', level: 6, hasDamage: true, shouldShow: false },
+        { name: 'level 3 spell without damage', level: 3, hasDamage: false, shouldShow: false },
+        { name: 'no overchannel passive', level: 3, hasDamage: true, hasPassive: false, shouldShow: false },
+      ])(
+        'checkbox $shouldShow for $name',
+        ({ level, hasDamage, hasPassive = true, shouldShow }) => {
+          const spell = {
+            ...baseMockSpell,
+            level,
+            damage: hasDamage ? { damage_at_slot_level: { [String(level || 1)]: '3d6' } } : null,
+          };
+          const stats = hasPassive ? overchannelStats : { ...baseMockPlayerStats, automation: { passives: [], actions: [] } };
+          renderPopup(spell, stats, mockCampaignName);
+          if (shouldShow) {
+            expect(screen.getByText('Overchannel (Maximize Damage)')).toBeInTheDocument();
+          } else {
+            expect(screen.queryByText('Overchannel (Maximize Damage)')).not.toBeInTheDocument();
+          }
+        },
+      );
     });
 
-    it.each([
-      { count: 0, expectedText: 'First use: no necrotic damage' },
-      { count: 1, expectedText: /Warning: Using Overchannel/ },
-    ])('shows correct message when overchannel count is $count', ({ count, expectedText }) => {
-      vi.mocked(useRuntimeValue).mockReturnValue(count);
-      const spell = {
-        ...baseMockSpell,
-        level: 1,
-        damage: { damage_at_slot_level: { '1': '1d6' } },
-      };
-      renderPopup(spell, overchannelStats, mockCampaignName);
-      const checkbox = screen.getByRole('checkbox');
-      fireEvent.click(checkbox);
-      expect(screen.getByText(expectedText)).toBeInTheDocument();
+    describe('overchannel warning messages', () => {
+      it('shows first-use-no-damage message when use count is 0 and checkbox is toggled', () => {
+        vi.mocked(useRuntimeValue).mockReturnValue(0);
+        const spell = {
+          ...baseMockSpell,
+          level: 1,
+          damage: { damage_at_slot_level: { '1': '1d6' } },
+        };
+        renderPopup(spell, overchannelStats, mockCampaignName);
+        const checkbox = screen.getByRole('checkbox');
+        expect(checkbox).not.toBeChecked();
+        fireEvent.click(checkbox);
+        expect(checkbox).toBeChecked();
+        expect(screen.getByText('First use: no necrotic damage')).toBeInTheDocument();
+      });
+
+      it('shows damage warning when use count > 1 and checkbox is toggled', () => {
+        vi.mocked(useRuntimeValue).mockReturnValue(1);
+        const spell = {
+          ...baseMockSpell,
+          level: 1,
+          damage: { damage_at_slot_level: { '1': '1d6' } },
+        };
+        renderPopup(spell, overchannelStats, mockCampaignName);
+        const checkbox = screen.getByRole('checkbox');
+        fireEvent.click(checkbox);
+        expect(screen.getByText(/Warning: Using Overchannel/)).toBeInTheDocument();
+      });
+
+      it('does not show warning when use count > 1 but checkbox is not toggled', () => {
+        vi.mocked(useRuntimeValue).mockReturnValue(1);
+        const spell = {
+          ...baseMockSpell,
+          level: 1,
+          damage: { damage_at_slot_level: { '1': '1d6' } },
+        };
+        renderPopup(spell, overchannelStats, mockCampaignName);
+        expect(screen.queryByText(/Warning: Using Overchannel/)).not.toBeInTheDocument();
+      });
     });
 
-    it.each([
-      { toggled: true, expected: true },
-      { toggled: false, expected: false },
-    ])('passes overchannel: $expected in metaCtx when checkbox is $toggled', async ({ toggled, expected }) => {
-      vi.mocked(useRuntimeValue).mockReturnValue(0);
-      const onCast = vi.fn();
-      const spell = {
-        ...baseMockSpell,
-        level: 1,
-        damage: { damage_at_slot_level: { '1': '1d6' } },
-      };
-      renderPopup(spell, overchannelStats, mockCampaignName, { onCast });
+    describe('metaCtx overchannel flag on cast', () => {
+      it('passes overchannel:false in metaCtx when not toggled', async () => {
+        vi.mocked(useRuntimeValue).mockReturnValue(0);
+        const onCast = vi.fn();
+        const spell = {
+          ...baseMockSpell,
+          level: 1,
+          damage: { damage_at_slot_level: { '1': '1d6' } },
+        };
+        renderPopup(spell, overchannelStats, mockCampaignName, { onCast });
 
-      if (toggled) {
+        fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+        await flushPromises();
+
+        expect(onCast).toHaveBeenCalledTimes(1);
+        const metaCtx = onCast.mock.calls[0][1];
+        expect(metaCtx.overchannel).toBe(false);
+      });
+
+      it('passes overchannel:true in metaCtx when toggled', async () => {
+        vi.mocked(useRuntimeValue).mockReturnValue(0);
+        const onCast = vi.fn();
+        const spell = {
+          ...baseMockSpell,
+          level: 1,
+          damage: { damage_at_slot_level: { '1': '1d6' } },
+        };
+        renderPopup(spell, overchannelStats, mockCampaignName, { onCast });
+
         fireEvent.click(screen.getByRole('checkbox'));
-      }
+        fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+        await flushPromises();
 
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-      expect(onCast).toHaveBeenCalledTimes(1);
-      const metaCtx = onCast.mock.calls[0][1];
-      expect(metaCtx.overchannel).toBe(expected);
+        expect(onCast).toHaveBeenCalledTimes(1);
+        const metaCtx = onCast.mock.calls[0][1];
+        expect(metaCtx.overchannel).toBe(true);
+      });
+
+      it('passes spell object with overchannel flag in spell data', async () => {
+        vi.mocked(useRuntimeValue).mockReturnValue(0);
+        const onCast = vi.fn();
+        const spell = {
+          ...baseMockSpell,
+          level: 1,
+          damage: { damage_at_slot_level: { '1': '1d6' } },
+        };
+        renderPopup(spell, overchannelStats, mockCampaignName, { onCast });
+
+        fireEvent.click(screen.getByRole('checkbox'));
+        fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+        await flushPromises();
+
+        const passedSpell = onCast.mock.calls[0][0];
+        expect(passedSpell.name).toBe('Magic Missile');
+        expect(passedSpell.overchannel).toBe(true);
+      });
     });
   });
 });

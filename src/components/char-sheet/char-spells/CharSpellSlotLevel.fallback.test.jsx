@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpellSlotLevel from './CharSpellSlotLevel.jsx';
@@ -15,7 +16,7 @@ describe('CharSpellSlotLevel - Fallback Logic', () => {
   });
 
   describe('fallback logic', () => {
-    it('uses _trackedResources when runtime value is undefined (not just null)', () => {
+    it('uses _trackedResources when runtime value is undefined', () => {
       useRuntimeValue.mockReturnValue(undefined);
 
       const playerStats = helpers.createPlayerStats({
@@ -37,7 +38,29 @@ describe('CharSpellSlotLevel - Fallback Logic', () => {
       expect(activeSlots.length).toBe(2);
     });
 
-    it('uses runtime value over _trackedResources when both exist', () => {
+    it('uses _trackedResources when runtime value is null', () => {
+      useRuntimeValue.mockReturnValue(null);
+
+      const playerStats = helpers.createPlayerStats({
+        _trackedResources: {
+          'spell_slots_level_1': { current: 3 },
+        },
+      });
+
+      const { container } = render(
+        <CharSpellSlotLevel
+          level={1}
+          totalSlots={4}
+          playerStats={playerStats}
+        />
+      );
+
+      const slots = container.querySelectorAll('.slot');
+      const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
+      expect(activeSlots.length).toBe(1);
+    });
+
+    it('prioritizes runtime value over _trackedResources when both exist', () => {
       useRuntimeValue.mockReturnValue(1);
 
       const playerStats = helpers.createPlayerStats({
@@ -59,29 +82,29 @@ describe('CharSpellSlotLevel - Fallback Logic', () => {
       expect(activeSlots.length).toBe(3);
     });
 
-    it('uses totalSlots when _trackedResources key is missing (capped at 4 rendered slots)', () => {
+    it('uses _trackedResources.current when runtime value is null and key exists', () => {
       useRuntimeValue.mockReturnValue(null);
 
       const playerStats = helpers.createPlayerStats({
         _trackedResources: {
-          'spell_slots_level_2': { current: 3 },
+          'spell_slots_level_2': { current: 0 },
         },
       });
 
       const { container } = render(
         <CharSpellSlotLevel
-          level={1}
-          totalSlots={5}
+          level={2}
+          totalSlots={4}
           playerStats={playerStats}
         />
       );
 
       const slots = container.querySelectorAll('.slot');
       const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(0);
+      expect(activeSlots.length).toBe(4);
     });
 
-    it('uses totalSlots when _trackedResources is missing the key for the level', () => {
+    it('falls back to totalSlots when _trackedResources key is missing for the level', () => {
       useRuntimeValue.mockReturnValue(null);
 
       const playerStats = helpers.createPlayerStats({
@@ -94,6 +117,46 @@ describe('CharSpellSlotLevel - Fallback Logic', () => {
         <CharSpellSlotLevel
           level={3}
           totalSlots={4}
+          playerStats={playerStats}
+        />
+      );
+
+      const slots = container.querySelectorAll('.slot');
+      const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
+      expect(activeSlots.length).toBe(0);
+    });
+
+    it('falls back to totalSlots when _trackedResources is empty object', () => {
+      useRuntimeValue.mockReturnValue(null);
+
+      const playerStats = helpers.createPlayerStats({
+        _trackedResources: {},
+      });
+
+      const { container } = render(
+        <CharSpellSlotLevel
+          level={1}
+          totalSlots={3}
+          playerStats={playerStats}
+        />
+      );
+
+      const slots = container.querySelectorAll('.slot');
+      const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
+      expect(activeSlots.length).toBe(0);
+    });
+
+    it('falls back to totalSlots when _trackedResources is undefined', () => {
+      useRuntimeValue.mockReturnValue(null);
+
+      const playerStats = helpers.createPlayerStats({
+        _trackedResources: undefined,
+      });
+
+      const { container } = render(
+        <CharSpellSlotLevel
+          level={1}
+          totalSlots={2}
           playerStats={playerStats}
         />
       );

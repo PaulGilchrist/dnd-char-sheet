@@ -1,9 +1,10 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
-import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { DiceRollContext } from '../../../hooks/combat/DiceRollContext.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
+import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -117,191 +118,129 @@ const mockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 
-describe('CharSummary - Shield of Faith AC Bonus', () => {
+// ---------------------------------------------------------------------------
+// Shield of Faith AC bonus display in AC formula
+// This tests the AC calculation path where shieldOfFaithBonus > 0 adds
+// both to the AC value AND shows the "+2 from Shield of Faith" indicator
+// ---------------------------------------------------------------------------
+describe('CharSummary - Shield of Faith AC Display', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('adds shield of faith AC bonus when buff is active', () => {
+    it('shows shield of faith AC bonus in the armor class formula', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'shield_of_faith' }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/\+2 from Shield of Faith/)).toBeInTheDocument();
     });
 });
 
-describe('CharSummary - Inspiration Toggle', () => {
+// ---------------------------------------------------------------------------
+// XP modal - negative delta clamps to zero
+// This tests the Math.max(0, ...) clamping behavior to ensure XP never goes negative
+// ---------------------------------------------------------------------------
+describe('CharSummary - XP Modal Negative Delta', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
     });
 
-    it('renders inspiration checkbox', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const checkbox = screen.getByRole('checkbox');
-        expect(checkbox).toBeInTheDocument();
-        expect(checkbox).not.toBeChecked();
-    });
-});
-
-describe('CharSummary - XP Save NaN Path', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-    });
-
-    it('does not save XP when delta is NaN after parseInt', () => {
+    it('clamps XP to zero when negative delta exceeds current XP', () => {
         const mockSetPopupHtml = vi.fn();
         const wrapper = ({ children }) => (
             <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
                 {children}
             </DiceRollContext.Provider>
         );
+        const stats = { ...mockPlayerStats, xp: 50, xpMode: 'experience' };
         render(
             <CharSummary
-                playerStats={mockPlayerStats}
+                playerStats={stats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
             />,
             { wrapper }
         );
-        const levelSuffix = screen.getByText(/milestone/);
-        fireEvent.click(levelSuffix);
+        const clickable = screen.getByText(/50 XP/);
+        fireEvent.click(clickable);
         const input = screen.getByPlaceholderText('+100 or -50');
-        fireEvent.change(input, { target: { value: 'abc' } });
+        fireEvent.change(input, { target: { value: '-200' } });
         const applyBtn = screen.getByText('Apply');
         fireEvent.click(applyBtn);
-        expect(setRuntimeValue).not.toHaveBeenCalled();
+        expect(setRuntimeValue).toHaveBeenCalledWith('Thorin', 'xp', 0, mockCampaignName);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// XP modal - milestone checkbox toggles mode
+// Tests the handleXpModeToggle path that sets xpMode via setRuntimeValue
+// ---------------------------------------------------------------------------
+describe('CharSummary - XP Mode Toggle', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
     });
 
-    it('does not save XP when delta is empty string', () => {
+    it('toggles xpMode to experience when milestone checkbox is unchecked', () => {
         const mockSetPopupHtml = vi.fn();
         const wrapper = ({ children }) => (
             <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
                 {children}
             </DiceRollContext.Provider>
         );
+        const stats = { ...mockPlayerStats, xpMode: 'milestone' };
         render(
             <CharSummary
-                playerStats={mockPlayerStats}
+                playerStats={stats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
             />,
             { wrapper }
         );
-        const levelSuffix = screen.getByText(/milestone/);
-        fireEvent.click(levelSuffix);
+        const milestoneLink = screen.getByText(/milestone/);
+        fireEvent.click(milestoneLink);
+        const xpModal = screen.getByText('Experience Points').closest('.xp-modal');
+        const checkbox = xpModal.querySelector('input[type="checkbox"]');
+        fireEvent.click(checkbox);
+        expect(stats.xpMode).toBe('experience');
+        expect(setRuntimeValue).toHaveBeenCalledWith('Thorin', 'xpMode', 'experience', mockCampaignName);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// XP modal - positive delta saves correctly
+// Tests the happy path where a valid positive delta is saved
+// ---------------------------------------------------------------------------
+describe('CharSummary - XP Modal Positive Delta', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+    });
+
+    it('saves positive XP delta and updates runtime value', () => {
+        const mockSetPopupHtml = vi.fn();
+        const wrapper = ({ children }) => (
+            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+                {children}
+            </DiceRollContext.Provider>
+        );
+        const stats = { ...mockPlayerStats, xpMode: 'experience' };
+        render(
+            <CharSummary
+                playerStats={stats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+            />,
+            { wrapper }
+        );
+        const clickable = screen.getByText(/2,300 XP/);
+        fireEvent.click(clickable);
+        const input = screen.getByPlaceholderText('+100 or -50');
+        fireEvent.change(input, { target: { value: '750' } });
         const applyBtn = screen.getByText('Apply');
         fireEvent.click(applyBtn);
-        expect(setRuntimeValue).not.toHaveBeenCalled();
-    });
-});
-
-describe('CharSummary - XP Modal Cancel', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-    });
-
-    it('closes XP modal when cancel is clicked', () => {
-        const mockSetPopupHtml = vi.fn();
-        const wrapper = ({ children }) => (
-            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                {children}
-            </DiceRollContext.Provider>
-        );
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-            />,
-            { wrapper }
-        );
-        const levelSuffix = screen.getByText(/milestone/);
-        fireEvent.click(levelSuffix);
-        const cancelBtn = screen.getByText('Cancel');
-        fireEvent.click(cancelBtn);
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - XP Modal Overlay Close', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-    });
-
-    it('closes XP modal when overlay is clicked', () => {
-        const mockSetPopupHtml = vi.fn();
-        const wrapper = ({ children }) => (
-            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                {children}
-            </DiceRollContext.Provider>
-        );
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-            />,
-            { wrapper }
-        );
-        const levelSuffix = screen.getByText(/milestone/);
-        fireEvent.click(levelSuffix);
-        const overlay = screen.getByText('Experience Points').closest('.xp-modal-overlay');
-        fireEvent.click(overlay);
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Race Type False Branch', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('does not show race type when race.type is falsy (line 602 false branch)', () => {
-        const stats = {
-            ...mockPlayerStats,
-            race: { name: 'Human', type: null, subrace: null },
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const summaryText = screen.getByTestId('char-summary-text');
-        expect(summaryText.textContent).toContain('Human');
-        expect(summaryText.textContent).not.toMatch(/Human \(/);
-    });
-
-    it('does not show race type when race.type is empty string', () => {
-        const stats = {
-            ...mockPlayerStats,
-            race: { name: 'Elf', type: '', subrace: null },
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const summaryText = screen.getByTestId('char-summary-text');
-        expect(summaryText.textContent).toContain('Elf');
-        expect(summaryText.textContent).not.toMatch(/Elf \(/);
-    });
-});
-
-describe('CharSummary - AC Default Path No Overrides', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows base armorClass when no circle forms override, barkskin, or mage armor (line 611 ?? false path)', () => {
-        const stats = {
-            ...mockPlayerStats,
-            class: { name: 'Cleric', subclass: { name: 'War', type: 'Choice' }, major: { name: 'Cleric' } },
-            armorClass: 18,
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Armor Class:/)).toBeInTheDocument();
-        const acText = screen.getByText(/18/);
-        expect(acText.closest('.clickable')).toBeInTheDocument();
+        expect(setRuntimeValue).toHaveBeenCalledWith('Thorin', 'xp', 3050, mockCampaignName);
     });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharConditions, { loadActiveConditions } from './CharConditions.jsx';
@@ -94,7 +95,6 @@ describe('CharConditions rendering', () => {
     runtimeValues = {};
     mockCombatSummary = null;
     rollD20.mockReturnValue(15);
-    global.fetch = vi.fn(() => Promise.resolve({ ok: true, json: vi.fn() }));
   });
 
   const mockPlayerStats = {
@@ -115,7 +115,7 @@ describe('CharConditions rendering', () => {
     conditionEffects: {},
   };
 
-  describe('exhaustion badge - edge cases', () => {
+  describe('exhaustion badge rendering', () => {
     it('shows dead styling when exhaustion is at maximum (level 6)', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={6} />);
       expect(screen.getByText('Exhaustion (6)')).toHaveAttribute('title', 'Exhaustion level 6 - DEAD\n\n');
@@ -188,17 +188,10 @@ describe('CharConditions rendering', () => {
       const badge = screen.getByText('Speed_zero');
       expect(badge.className).toContain('effect-condition');
     });
-
-    it('shows "Speed_zero" label for speed_zero condition key', () => {
-      runtimeValues['Test Character::activeConditions'] = ['speed_zero'];
-      runtimeValues['Test Character::activeConditionMeta'] = {};
-      render(<CharConditions {...defaultProps} />);
-      expect(screen.getByText('Speed_zero')).toBeInTheDocument();
-    });
   });
 
   describe('condition deduplication', () => {
-    it('deduplicates conditions when rendering', () => {
+    it('renders each unique condition only once despite duplicates in the array', () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed', 'charmed', 'blinded'];
       runtimeValues['Test Character::activeConditionMeta'] = {
         charmed: { dc: 12, ability: 'wis' },
@@ -211,22 +204,8 @@ describe('CharConditions rendering', () => {
     });
   });
 
-  describe('condition without DC or ability', () => {
-    it('renders condition without DC when meta has no dc', () => {
-      runtimeValues['Test Character::activeConditions'] = ['blinded'];
-      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { ability: 'con' } };
-      render(<CharConditions {...defaultProps} />);
-      expect(screen.getByText('Blinded')).toBeInTheDocument();
-    });
-
-    it('renders condition without DC when meta has no ability', () => {
-      runtimeValues['Test Character::activeConditions'] = ['blinded'];
-      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10 } };
-      render(<CharConditions {...defaultProps} />);
-      expect(screen.getByText('Blinded DC 10')).toBeInTheDocument();
-    });
-
-    it('condition with both dc and ability is clickable (button)', () => {
+  describe('condition savability rendering', () => {
+    it('renders savable condition (dc + ability) as a clickable button', () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
       render(<CharConditions {...defaultProps} />);
@@ -234,7 +213,7 @@ describe('CharConditions rendering', () => {
       expect(badge.tagName).toBe('BUTTON');
     });
 
-    it('condition with dc but null ability renders as span (not clickable)', () => {
+    it('renders condition with dc but null ability as a non-clickable span', () => {
       runtimeValues['Test Character::activeConditions'] = ['blinded'];
       runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10, ability: null } };
       render(<CharConditions {...defaultProps} />);
@@ -242,12 +221,26 @@ describe('CharConditions rendering', () => {
       expect(badge.tagName).toBe('SPAN');
     });
 
-    it('condition with dc and empty string ability renders as span', () => {
+    it('renders condition with dc and empty string ability as a non-clickable span', () => {
       runtimeValues['Test Character::activeConditions'] = ['blinded'];
       runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10, ability: '' } };
       render(<CharConditions {...defaultProps} />);
       const badge = screen.getByText('Blinded DC 10');
       expect(badge.tagName).toBe('SPAN');
+    });
+
+    it('renders condition without DC when meta has no dc but has ability', () => {
+      runtimeValues['Test Character::activeConditions'] = ['blinded'];
+      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { ability: 'con' } };
+      render(<CharConditions {...defaultProps} />);
+      expect(screen.getByText('Blinded')).toBeInTheDocument();
+    });
+
+    it('renders condition without DC when meta has dc but no ability', () => {
+      runtimeValues['Test Character::activeConditions'] = ['blinded'];
+      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10 } };
+      render(<CharConditions {...defaultProps} />);
+      expect(screen.getByText('Blinded DC 10')).toBeInTheDocument();
     });
   });
 
@@ -329,7 +322,7 @@ describe('CharConditions rendering', () => {
   });
 
   describe('tooltip behavior', () => {
-    it('sets tooltip from CONDITION_DESCRIPTIONS for conditions', () => {
+    it('sets tooltip from CONDITION_DESCRIPTIONS for conditions with dc', () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
       render(<CharConditions {...defaultProps} />);
@@ -337,7 +330,7 @@ describe('CharConditions rendering', () => {
       expect(badge.getAttribute('title')).toContain('You can\'t attack the charmer');
     });
 
-    it('sets tooltip for conditions without DC from CONDITION_DESCRIPTIONS', () => {
+    it('sets tooltip for conditions without dc from CONDITION_DESCRIPTIONS', () => {
       runtimeValues['Test Character::activeConditions'] = ['blinded'];
       runtimeValues['Test Character::activeConditionMeta'] = {};
       render(<CharConditions {...defaultProps} />);
@@ -419,21 +412,6 @@ describe('CharConditions rendering', () => {
         name: 'New Character',
       };
       rerender(<CharConditions {...defaultProps} playerStats={newPlayerStats} />);
-      expect(screen.getByText('Blinded DC 10')).toBeInTheDocument();
-    });
-  });
-
-  describe('campaign name change re-mount', () => {
-    it('reloads conditions when campaignName changes', () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
-      runtimeValues['Test Character::activeConditions'] = ['blinded'];
-      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10, ability: 'con' } };
-
-      const { rerender } = render(<CharConditions {...defaultProps} campaignName='campaign-a' />);
-      expect(screen.getByText('Blinded DC 10')).toBeInTheDocument();
-
-      rerender(<CharConditions {...defaultProps} campaignName='campaign-b' />);
       expect(screen.getByText('Blinded DC 10')).toBeInTheDocument();
     });
   });

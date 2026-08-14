@@ -1,8 +1,11 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
+
+const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -65,7 +68,7 @@ const renderPopup = (
       campaignName={campaignName}
       onClose={vi.fn()}
       {...extraProps}
-    />
+    />,
   );
 
 describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
@@ -98,7 +101,68 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
       };
 
       renderPopup(spell, psionicStats, mockCampaignName);
-      expect(screen.getByText('Use Sorcery Points (1 SP) instead of spell slot')).toBeInTheDocument();
+      expect(
+        screen.getByText('Use Sorcery Points (1 SP) instead of spell slot'),
+      ).toBeInTheDocument();
+    });
+
+    it('shows psionic payment checkbox with correct SP cost for upcast levels', () => {
+      const psionicStats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
+          actions: [],
+        },
+      };
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 5;
+        if (key === 'spell_slots_level_2') return 2;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Magic Missile',
+        level: 2,
+        damage: {
+          damage_at_slot_level: {
+            '2': '4d4+1',
+            '3': '5d4+1',
+          },
+        },
+      };
+
+      renderPopup(spell, psionicStats, mockCampaignName);
+      expect(
+        screen.getByText('Use Sorcery Points (2 SP) instead of spell slot'),
+      ).toBeInTheDocument();
+    });
+
+    it('shows psionic payment checkbox even when player is raging (rage only disables cast button)', () => {
+      const psionicStats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
+          actions: [],
+        },
+      };
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 3;
+        if (key === 'spell_slots_level_1') return 4;
+        return null;
+      });
+      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Magic Missile',
+        level: 1,
+      };
+
+      renderPopup(spell, psionicStats, mockCampaignName);
+      expect(
+        screen.getByText('Use Sorcery Points (1 SP) instead of spell slot'),
+      ).toBeInTheDocument();
     });
 
     it('does not show psionic payment checkbox for non-psionic spell', () => {
@@ -123,7 +187,9 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
       };
 
       renderPopup(spell, psionicStats, mockCampaignName);
-      expect(screen.queryByText('Use Sorcery Points')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Use Sorcery Points/),
+      ).not.toBeInTheDocument();
     });
 
     it('does not show psionic payment checkbox for cantrip', () => {
@@ -148,7 +214,9 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
       };
 
       renderPopup(cantrip, psionicStats, mockCampaignName);
-      expect(screen.queryByText('Use Sorcery Points')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Use Sorcery Points/),
+      ).not.toBeInTheDocument();
     });
 
     it('does not show psionic payment checkbox when free cast authorized', () => {
@@ -173,7 +241,9 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
       };
 
       renderPopup(spell, psionicStats, mockCampaignName);
-      expect(screen.queryByText('Use Sorcery Points')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Use Sorcery Points/),
+      ).not.toBeInTheDocument();
     });
 
     it('does not show psionic payment checkbox when only slots available (no SP)', () => {
@@ -197,7 +267,9 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
       };
 
       renderPopup(spell, psionicStats, mockCampaignName);
-      expect(screen.queryByText('Use Sorcery Points')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Use Sorcery Points/),
+      ).not.toBeInTheDocument();
     });
 
     it('does not show psionic payment checkbox when only SP available (no slots)', () => {
@@ -221,7 +293,9 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
       };
 
       renderPopup(spell, psionicStats, mockCampaignName);
-      expect(screen.queryByText('Use Sorcery Points')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Use Sorcery Points/),
+      ).not.toBeInTheDocument();
     });
 
     it('does not show psionic payment checkbox when player lacks psionic sorcery passive', () => {
@@ -238,7 +312,36 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
       };
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName);
-      expect(screen.queryByText('Use Sorcery Points')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Use Sorcery Points/),
+      ).not.toBeInTheDocument();
+    });
+
+    it('does not show psionic payment checkbox for non-Sorcerer class', () => {
+      const nonSorcererStats = {
+        ...baseMockPlayerStats,
+        class: { name: 'Wizard', major: { name: 'Wizard' } },
+        automation: {
+          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
+          actions: [],
+        },
+      };
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 3;
+        if (key === 'spell_slots_level_1') return 4;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Magic Missile',
+        level: 1,
+      };
+
+      renderPopup(spell, nonSorcererStats, mockCampaignName);
+      expect(
+        screen.queryByText(/Use Sorcery Points/),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -272,6 +375,69 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
 
       fireEvent.click(checkbox);
       expect(checkbox).not.toBeChecked();
+    });
+
+    it('passes usePsionicPayment:true to onCast when checkbox is toggled', async () => {
+      const onCast = vi.fn();
+      const psionicStats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
+          actions: [],
+        },
+      };
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 3;
+        if (key === 'spell_slots_level_1') return 4;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Magic Missile',
+        level: 1,
+      };
+
+      renderPopup(spell, psionicStats, mockCampaignName, { onCast });
+
+      fireEvent.click(screen.getByRole('checkbox'));
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.usePsionicPayment).toBe(true);
+    });
+
+    it('passes usePsionicPayment:false to onCast when checkbox is not toggled', async () => {
+      const onCast = vi.fn();
+      const psionicStats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
+          actions: [],
+        },
+      };
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 3;
+        if (key === 'spell_slots_level_1') return 4;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Magic Missile',
+        level: 1,
+      };
+
+      renderPopup(spell, psionicStats, mockCampaignName, { onCast });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.usePsionicPayment).toBe(false);
     });
   });
 });

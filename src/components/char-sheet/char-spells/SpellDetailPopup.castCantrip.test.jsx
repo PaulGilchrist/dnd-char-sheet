@@ -1,11 +1,11 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { getCombatSummary } from '../../../services/encounters/combatData.js';
-import { addConcentration, breakConcentration } from '../../../services/combat/concentration/concentrationService.js';
-import * as storageService from '../../../services/ui/storage.js';
+
+const flushPromises = () => new Promise(r => setTimeout(r, 0));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -19,20 +19,6 @@ vi.mock('../../../services/combat/buffs/buffService.js', () => ({
 
 vi.mock('../../../services/ui/sanitize.js', () => ({
   sanitizeHtml: (html) => html,
-}));
-
-vi.mock('../../../services/encounters/combatData.js', () => ({
-  getCombatSummary: vi.fn(() => null),
-}));
-
-vi.mock('../../../services/combat/concentration/concentrationService.js', () => ({
-  addConcentration: vi.fn(),
-  breakConcentration: vi.fn(),
-  cleanupConcentrationEffects: vi.fn(),
-}));
-
-vi.mock('../../../services/ui/storage.js', () => ({
-  default: { set: vi.fn() },
 }));
 
 const baseMockPlayerStats = {
@@ -52,25 +38,8 @@ const baseMockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 
-const baseMockSpell = {
-  name: 'Magic Missile',
-  level: 1,
-  description: 'Three darts of force strike a creature.',
-  casting_time: '1 action',
-  range: '120 feet',
-  duration: 'Instantaneous',
-  damage: {
-    damage_at_slot_level: {
-      '1': '3d4+1',
-      '2': '4d4+1',
-      '3': '5d4+1',
-    },
-  },
-  school: 'Evocation',
-};
-
 const renderPopup = (
-  spell = baseMockSpell,
+  spell,
   playerStats = baseMockPlayerStats,
   campaignName = mockCampaignName,
   extraProps = {}
@@ -91,32 +60,10 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
     localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
-    vi.mocked(setRuntimeValue).mockReturnValue();
-    vi.mocked(getCombatSummary).mockReturnValue(null);
-    vi.mocked(addConcentration).mockReturnValue();
-    vi.mocked(breakConcentration).mockReturnValue(null);
-    vi.mocked(storageService.default.set).mockReturnValue();
   });
 
-  it('calls onCast with modified cantrip (baseLevel: 0)', () => {
-    const onCast = vi.fn();
-    const cantrip = {
-      ...baseMockSpell,
-      level: 0,
-      damage: { damage_at_slot_level: { '0': '1d6' } },
-    };
-    renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast });
-
-    fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-    expect(onCast).toHaveBeenCalledTimes(1);
-    const modifiedSpell = onCast.mock.calls[0][0];
-    expect(modifiedSpell.level).toBe(0);
-    expect(modifiedSpell.baseLevel).toBe(0);
-  });
-
-  it('calls onCast with cantrip auto-level when playerLevel prop allows higher damage', () => {
-    const onCast = vi.fn();
-    const cantrip = {
+  describe('cantripAutoLevel with damage_at_character_level', () => {
+    const fireBoltSpell = {
       name: 'Fire Bolt',
       level: 0,
       description: 'A flash of fire.',
@@ -132,39 +79,223 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
         },
       },
     };
-    renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
 
-    fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-    expect(onCast).toHaveBeenCalledTimes(1);
-    const modifiedSpell = onCast.mock.calls[0][0];
-    expect(modifiedSpell.level).toBe(5);
-    expect(modifiedSpell.baseLevel).toBe(0);
+    it('calls onCast with cantrip auto-leveled to player level when applicable', async () => {
+      const onCast = vi.fn();
+      renderPopup(fireBoltSpell, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.level).toBe(5);
+      expect(modifiedSpell.baseLevel).toBe(0);
+    });
+
+    it('calls onCast with cantrip auto-leveled to character level 17 when playerLevel is 20', async () => {
+      const onCast = vi.fn();
+      const highLevelStats = { ...baseMockPlayerStats, level: 20 };
+      renderPopup(fireBoltSpell, highLevelStats, mockCampaignName, { onCast, playerLevel: 20 });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.level).toBe(17);
+      expect(modifiedSpell.baseLevel).toBe(0);
+    });
+
+    it('calls onCast with cantrip at base level when no character level range matches', async () => {
+      const onCast = vi.fn();
+      const cantrip = {
+        ...fireBoltSpell,
+        damage: {
+          damage_at_character_level: {
+            5: '2d10',
+            11: '3d10',
+          },
+        },
+      };
+      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 3 });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.level).toBe(0);
+      expect(modifiedSpell.baseLevel).toBe(0);
+    });
+
+    it('calls onCast with base level when playerLevel exactly matches a threshold', async () => {
+      const onCast = vi.fn();
+      renderPopup(fireBoltSpell, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.level).toBe(5);
+      expect(modifiedSpell.baseLevel).toBe(0);
+    });
   });
 
-  it('calls onCast with cantrip at lowest level when no character level range matches', () => {
-    const onCast = vi.fn();
-    const cantrip = {
-      name: 'Fire Bolt',
-      level: 0,
-      description: 'A flash of fire.',
-      casting_time: '1 action',
-      range: '120 feet',
-      duration: 'Instantaneous',
-      damage: {
-        damage_at_character_level: {
-          5: '2d10',
-          11: '3d10',
+  describe('cantripAutoLevel with damage_at_slot_level fallback', () => {
+    it('calls onCast with slot-based auto-level when damage_at_character_level is absent', async () => {
+      const onCast = vi.fn();
+      const cantrip = {
+        name: 'Ray of Frost',
+        level: 0,
+        description: 'A beam of freezing air.',
+        casting_time: '1 action',
+        range: '60 feet',
+        duration: 'Instantaneous',
+        damage: {
+          damage_at_slot_level: {
+            '0': '1d8',
+            '1': '2d8',
+            '3': '3d8',
+            '5': '4d8',
+          },
         },
-      },
-    };
-    renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 3 });
+      };
+      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
 
-    fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-    expect(onCast).toHaveBeenCalledTimes(1);
-    const modifiedSpell = onCast.mock.calls[0][0];
-    // No applicable levels (all >= 5, playerLevel is 3), so cantripAutoLevel is null
-    // Falls back to { ...spell, baseLevel: 0 }
-    expect(modifiedSpell.level).toBe(0);
-    expect(modifiedSpell.baseLevel).toBe(0);
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.level).toBe(5);
+      expect(modifiedSpell.baseLevel).toBe(0);
+    });
+
+    it('calls onCast with base level when slot-based auto-level has no applicable levels', async () => {
+      const onCast = vi.fn();
+      const cantrip = {
+        name: 'Ray of Frost',
+        level: 0,
+        description: 'A beam of freezing air.',
+        casting_time: '1 action',
+        range: '60 feet',
+        duration: 'Instantaneous',
+        damage: {
+          damage_at_slot_level: {
+            '0': '1d8',
+            '3': '3d8',
+          },
+        },
+      };
+      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 1 });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.level).toBe(0);
+      expect(modifiedSpell.baseLevel).toBe(0);
+    });
+  });
+
+  describe('cantrip with no damage scaling', () => {
+    it('calls onCast with base level when cantrip has no damage_at_character_level or damage_at_slot_level', async () => {
+      const onCast = vi.fn();
+      const cantrip = {
+        name: 'Minor Illusion',
+        level: 0,
+        description: 'A sound or image.',
+        casting_time: '1 action',
+        range: '30 feet',
+        duration: '1 minute',
+        damage: null,
+      };
+      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.level).toBe(0);
+      expect(modifiedSpell.baseLevel).toBe(0);
+    });
+
+    it('calls onCast with empty damage object when cantrip damage exists but is empty', async () => {
+      const onCast = vi.fn();
+      const cantrip = {
+        name: 'Minor Illusion',
+        level: 0,
+        description: 'A sound or image.',
+        casting_time: '1 action',
+        range: '30 feet',
+        duration: '1 minute',
+        damage: {},
+      };
+      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.level).toBe(0);
+      expect(modifiedSpell.baseLevel).toBe(0);
+    });
+  });
+
+  describe('cantrip casting without auto-level', () => {
+    it('calls onCast with base level for cantrips that have only base-level damage', async () => {
+      const onCast = vi.fn();
+      const cantrip = {
+        name: 'Guidance',
+        level: 0,
+        description: 'Add d4 to ability check.',
+        casting_time: '1 action',
+        range: 'Touch',
+        duration: 'Concentration, up to 1 minute',
+        damage: { damage_at_slot_level: { '0': '1d4' } },
+      };
+      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.level).toBe(0);
+      expect(modifiedSpell.baseLevel).toBe(0);
+    });
+  });
+
+  describe('cantrip casting with Rage blocking', () => {
+    it('does not call onCast when player is raging', async () => {
+      const onCast = vi.fn();
+      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
+
+      const cantrip = {
+        name: 'Fire Bolt',
+        level: 0,
+        description: 'A flash of fire.',
+        casting_time: '1 action',
+        range: '120 feet',
+        duration: 'Instantaneous',
+        damage: {
+          damage_at_character_level: {
+            1: '1d10',
+            5: '2d10',
+          },
+        },
+      };
+      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).not.toHaveBeenCalled();
+    });
   });
 });

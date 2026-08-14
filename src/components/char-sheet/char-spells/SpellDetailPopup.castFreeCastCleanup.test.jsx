@@ -1,16 +1,17 @@
+// @improved-by-ai
 // SpellDetailPopup no longer calls prepareSpellCast directly.
 // Slot consumption, free cast cleanup, and concentration management
 // are handled downstream in gateMetamagic → prepareSpellCast.
-// These tests verify that handleCast passes the correct spell to onCast.
+// These tests verify that handleCast passes freeCastAuthorized:true
+// in the spell object when free-cast features are active.
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import * as storageService from '../../../services/ui/storage.js';
 
-const flushPromises = () => new Promise(r => setTimeout(r, 0));
+const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -60,9 +61,9 @@ const baseMockSpell = {
   duration: 'Instantaneous',
   damage: {
     damage_at_slot_level: {
-      '1': '3d4+1',
-      '2': '4d4+1',
-      '3': '5d4+1',
+      1: '3d4+1',
+      2: '4d4+1',
+      3: '5d4+1',
     },
   },
   school: 'Evocation',
@@ -72,7 +73,7 @@ const renderPopup = (
   spell = baseMockSpell,
   playerStats = baseMockPlayerStats,
   campaignName = mockCampaignName,
-  extraProps = {}
+  extraProps = {},
 ) =>
   render(
     <SpellDetailPopup
@@ -81,20 +82,19 @@ const renderPopup = (
       campaignName={campaignName}
       onClose={vi.fn()}
       {...extraProps}
-    />
+    />,
   );
 
-describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
+describe('SpellDetailPopup - handleCast: freeCastAuthorized flag', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
-    vi.mocked(storageService.default.set).mockReturnValue();
   });
 
   describe('Natural Recovery cleanup', () => {
-    it('calls onCast with spell when casting a free cast spell', async () => {
+    it('passes freeCastAuthorized:true when casting a Natural Recovery spell', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'naturalRecoveryFreeCast') return ['Healing Word'];
@@ -106,7 +106,7 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
         ...baseMockSpell,
         name: 'Healing Word',
         level: 1,
-        damage: { damage_at_slot_level: { '1': '1d4+1' } },
+        damage: { damage_at_slot_level: { 1: '1d4+1' } },
       };
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName, { onCast });
@@ -115,13 +115,14 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Healing Word');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.name).toBe('Healing Word');
+      expect(passedSpell.freeCastAuthorized).toBe(true);
     });
   });
 
   describe('Bewitching Magic cleanup', () => {
-    it('calls onCast with spell when casting Misty Step', async () => {
+    it('passes freeCastAuthorized:true when casting Misty Step', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Bewitching_Magic_freeCast') return true;
@@ -133,7 +134,7 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
         ...baseMockSpell,
         name: 'Misty Step',
         level: 2,
-        damage: { damage_at_slot_level: { '2': '3d6' } },
+        damage: { damage_at_slot_level: { 2: '3d6' } },
       };
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName, { onCast });
@@ -142,10 +143,12 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Misty Step');
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.name).toBe('Misty Step');
+      expect(passedSpell.freeCastAuthorized).toBe(true);
     });
 
-    it('calls onCast for non-Misty Step spells', async () => {
+    it('passes freeCastAuthorized:false when Bewitching Magic is active but spell does not match', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Bewitching_Magic_freeCast') return true;
@@ -157,7 +160,7 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
         ...baseMockSpell,
         name: 'Magic Missile',
         level: 1,
-        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+        damage: { damage_at_slot_level: { 1: '3d4+1' } },
       };
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName, { onCast });
@@ -166,11 +169,13 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.freeCastAuthorized).toBe(false);
     });
   });
 
   describe('Signature Spells cleanup', () => {
-    it('calls onCast with Signature Spell', async () => {
+    it('passes freeCastAuthorized:true when casting a Signature Spell', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
         if (key === 'SignatureSpells_selection') return ['Fireball'];
@@ -183,7 +188,7 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
         ...baseMockSpell,
         name: 'Fireball',
         level: 3,
-        damage: { damage_at_slot_level: { '3': '8d6' } },
+        damage: { damage_at_slot_level: { 3: '8d6' } },
       };
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName, { onCast });
@@ -192,10 +197,12 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Fireball');
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.name).toBe('Fireball');
+      expect(passedSpell.freeCastAuthorized).toBe(true);
     });
 
-    it('does not match Signature Spell for wrong level', async () => {
+    it('passes freeCastAuthorized:false for wrong level Signature Spell', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
         if (key === 'SignatureSpells_selection') return ['Fireball'];
@@ -207,7 +214,7 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
         ...baseMockSpell,
         name: 'Magic Missile',
         level: 1,
-        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+        damage: { damage_at_slot_level: { 1: '3d4+1' } },
       };
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName, { onCast });
@@ -216,11 +223,13 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.freeCastAuthorized).toBe(false);
     });
   });
 
   describe('Divination Savant cleanup', () => {
-    it('calls onCast with Divination Savant spell', async () => {
+    it('passes freeCastAuthorized:true when casting a Divination Savant spell', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
         if (key === '_Divination_Savant_selection') return ['Warding Bond'];
@@ -233,7 +242,7 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
         ...baseMockSpell,
         name: 'Warding Bond',
         level: 2,
-        damage: { damage_at_slot_level: { '2': '2d6' } },
+        damage: { damage_at_slot_level: { 2: '2d6' } },
       };
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName, { onCast });
@@ -242,12 +251,14 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Warding Bond');
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.name).toBe('Warding Bond');
+      expect(passedSpell.freeCastAuthorized).toBe(true);
     });
   });
 
   describe('Counter-based free cast count decrement', () => {
-    it('calls onCast for counter-based free_spell action', async () => {
+    it('passes freeCastAuthorized:true for counter-based free_spell action', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Mystic_Arcanum_freeCastCount') return 1;
@@ -259,7 +270,7 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
         ...baseMockSpell,
         name: 'a level 9 Warlock spell (your choice)',
         level: 9,
-        damage: { damage_at_slot_level: { '9': '10d6' } },
+        damage: { damage_at_slot_level: { 9: '10d6' } },
       };
       const stats = {
         ...baseMockPlayerStats,
@@ -287,11 +298,13 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.freeCastAuthorized).toBe(true);
     });
   });
 
   describe('perSpellTracking free cast cleanup', () => {
-    it('calls onCast for perSpellTracking free spell', async () => {
+    it('passes freeCastAuthorized:true for perSpellTracking free spell', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Feature_A_SpellA_freeCast') return true;
@@ -304,7 +317,7 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
         ...baseMockSpell,
         name: 'SpellA',
         level: 1,
-        damage: { damage_at_slot_level: { '1': '1d6' } },
+        damage: { damage_at_slot_level: { 1: '1d6' } },
       };
       const stats = {
         ...baseMockPlayerStats,
@@ -327,7 +340,9 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('SpellA');
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.name).toBe('SpellA');
+      expect(passedSpell.freeCastAuthorized).toBe(true);
     });
   });
 });

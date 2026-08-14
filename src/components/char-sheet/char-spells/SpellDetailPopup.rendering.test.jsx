@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -166,7 +167,10 @@ describe('SpellDetailPopup - canCast and button state', () => {
           spell_slots_level_3: 0,
         },
       };
-      vi.mocked(getRuntimeValue).mockReturnValue(0);
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'spell_slots_level_3') return 0;
+        return null;
+      });
       renderPopup(spell, stats);
       expect(screen.getByText('No spell slots available for this level.')).toBeInTheDocument();
     });
@@ -232,6 +236,90 @@ describe('SpellDetailPopup - canCast and button state', () => {
       ];
       renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { upcastLevels });
       expect(screen.queryByText(/Cast at Level:/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Non-upcastable spell with available slots', () => {
+    it('enables Cast Spell when non-upcastable spell has available slots', () => {
+      const nonUpcastableSpell = {
+        ...baseMockSpell,
+        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+      };
+      renderPopup(nonUpcastableSpell, baseMockPlayerStats);
+      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
+    });
+
+    it('disables Cast Spell when non-upcastable spell has zero slots at runtime', () => {
+      const nonUpcastableSpell = {
+        ...baseMockSpell,
+        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+      };
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'spell_slots_level_1') return 0;
+        return null;
+      });
+      renderPopup(nonUpcastableSpell, baseMockPlayerStats);
+      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeDisabled();
+    });
+
+    it('disables Cast Spell when non-upcastable spell has zero slots in spellAbilities max', () => {
+      const nonUpcastableSpell = {
+        ...baseMockSpell,
+        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+      };
+      const stats = {
+        ...baseMockPlayerStats,
+        spellAbilities: {
+          ...baseMockPlayerStats.spellAbilities,
+          spell_slots_level_1: 0,
+        },
+      };
+      renderPopup(nonUpcastableSpell, stats);
+      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeDisabled();
+    });
+
+    it('shows "No spell slots available" when non-upcastable spell has zero slots', () => {
+      const nonUpcastableSpell = {
+        ...baseMockSpell,
+        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+      };
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'spell_slots_level_1') return 0;
+        return null;
+      });
+      renderPopup(nonUpcastableSpell, baseMockPlayerStats);
+      expect(screen.getByText('No spell slots available for this level.')).toBeInTheDocument();
+    });
+  });
+
+  describe('Slots remaining display for upcastable spells', () => {
+    it('shows slots remaining when upcast selector is hidden (single upcast level)', () => {
+      const upcastLevels = [
+        { level: 1, formula: '3d4+1', availableSlots: 4 },
+      ];
+      renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName, { upcastLevels });
+      expect(screen.getByText(/Slots Remaining:/)).toBeInTheDocument();
+    });
+
+    it('hides slots remaining when upcast selector is shown (multiple upcast levels)', () => {
+      const upcastLevels = [
+        { level: 1, formula: '3d4+1', availableSlots: 4 },
+        { level: 2, formula: '4d4+1', availableSlots: 3 },
+      ];
+      renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName, { upcastLevels });
+      expect(screen.queryByText(/Slots Remaining:/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Close button behavior', () => {
+    it('renders the Close button', () => {
+      renderPopup();
+      expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    });
+
+    it('renders the Cast Spell button', () => {
+      renderPopup();
+      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeInTheDocument();
     });
   });
 });

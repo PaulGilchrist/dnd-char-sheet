@@ -1,29 +1,44 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { setRuntimeValue, useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
+// Shared state for CharFeats mock to capture the showPopup callback
+const charFeatsShowPopupState = { callback: null };
+
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
 vi.mock('./CharClassFeatures.jsx', () => ({ default: () => <div data-testid="char-class-features">Class Features</div> }));
-vi.mock('../char-feats/CharFeats.jsx', () => ({ default: () => <div data-testid="char-feats">Feats</div> }));
+vi.mock('./CharRaceFeatures.jsx', () => ({ default: () => <div data-testid="char-race-features">Race Features</div> }));
+vi.mock('./CharFeatFeatures.jsx', () => ({ default: () => <div data-testid="char-feat-features">Feat Features</div> }));
+vi.mock('../char-feats/CharFeats.jsx', () => ({
+    default: (props) => {
+        charFeatsShowPopupState.callback = props.showPopup;
+        return <div data-testid="char-feats">Feats</div>;
+    },
+}));
 vi.mock('../../common/Popup.jsx', () => ({ default: ({ children, onClick }) => <div data-testid="popup" onClick={onClick}>{children}</div> }));
 vi.mock('../../common/AvatarImage.jsx', () => ({ default: () => <div data-testid="avatar-image">Avatar</div> }));
 vi.mock('../../common/AvatarModal.jsx', () => ({ default: () => null }));
+vi.mock('../../common/AllySelectionModal.jsx', () => ({ default: () => <div data-testid="ally-selection-modal">Ally Selection</div> }));
+vi.mock('./TrackedResourceInput.jsx', () => ({ default: () => <div data-testid="tracked-resource-input">Tracked Resource</div> }));
 vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-rest-btn">Long Rest</div> }));
 vi.mock('../ShortRestButton.jsx', () => ({ default: () => <div data-testid="short-rest-btn">Short Rest</div> }));
 vi.mock('../ShortRestModal.jsx', () => ({ default: () => <div data-testid="short-rest-modal">Short Rest Modal</div> }));
 vi.mock('./CharConditions.jsx', () => ({ default: () => <div data-testid="char-conditions">Conditions</div> }));
+vi.mock('../../common/CreatureBadge.jsx', () => ({ default: ({ label }) => <span data-testid="creature-badge">{label}</span> }));
+vi.mock('../../initiative/ConditionEffectBadges.jsx', () => ({ default: () => <div data-testid="condition-effect-badges">Badges</div> }));
 
 vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
-    default: vi.fn((_key, _name, init, _deps, _campaign) => ({ current: init(), update: vi.fn() })),
+    default: vi.fn((key, name, init, _deps, _campaign) => ({ current: init(), update: vi.fn() })),
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
     useRuntimeValue: vi.fn((_name, _key, _campaign) => null),
-    getRuntimeValue: vi.fn(),
+    getRuntimeValue: vi.fn((_name, _key, _campaign) => null),
     getStore: vi.fn(() => new Map()),
 }));
 
@@ -39,6 +54,8 @@ vi.mock('../../../hooks/combat/useLoggedDiceRoll.js', () => ({
     default: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn(), rollInitiative: vi.fn() })),
 }));
 
+import { DiceRollContext } from '../../../hooks/combat/DiceRollContext.js';
+
 vi.mock('../../../services/combat/buffs/buffService.js', () => ({
     getActiveBuffs: vi.fn(() => []),
 }));
@@ -52,6 +69,34 @@ vi.mock('../../../services/rules/rulesFactory.js', () => ({
 
 vi.mock('../../../services/rules/core/attackCalc.js', () => ({
     parseMagicItemName: (name) => ({ baseName: name }),
+}));
+
+vi.mock('../../../services/encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => ({ creatures: [] })),
+}));
+
+vi.mock('../../../services/automation/common/buffToggle.js', () => ({
+    isBuffActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/combat/auras/unbreakableMajesty.js', () => ({
+    isUnbreakableMajestyActive: vi.fn(() => false),
+    getUnbreakableMajestySaveDc: vi.fn(() => 0),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/auraOfLifeHandler.js', () => ({
+    isAuraOfLifeActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
+    isCircleOfPowerActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
+    isDeathWardActive: vi.fn(() => false),
+    handle: vi.fn(),
 }));
 
 const mockPlayerStats = {
@@ -93,6 +138,7 @@ describe('CharSummary - XP Modal Save Valid', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('saves valid XP delta and updates runtime value', () => {
@@ -158,6 +204,7 @@ describe('CharSummary - XP Mode Toggle', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('toggles to experience mode when milestone checkbox is unchecked', () => {
@@ -167,10 +214,8 @@ describe('CharSummary - XP Mode Toggle', () => {
             return element?.tagName === 'SPAN' && element?.className?.includes('clickable') && content.includes('milestone');
         });
         fireEvent.click(clickable);
-        const xpModal = screen.getByText('Experience Points').closest('.xp-modal');
-        const checkbox = xpModal.querySelector('input[type="checkbox"]');
+        const checkbox = screen.getByRole('checkbox', { name: /milestone/i });
         fireEvent.click(checkbox);
-        expect(stats.xpMode).toBe('experience');
         expect(setRuntimeValue).toHaveBeenCalledWith('Thorin', 'xpMode', 'experience', mockCampaignName);
     });
 });
@@ -183,6 +228,7 @@ describe('CharSummary - Condition Objects Memo', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('builds condition objects from runtime conditions', () => {
@@ -192,7 +238,7 @@ describe('CharSummary - Condition Objects Memo', () => {
             return null;
         });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(true).toBe(true);
+        expect(screen.getByTestId('char-conditions')).toBeInTheDocument();
     });
 });
 
@@ -204,6 +250,7 @@ describe('CharSummary - Climb Speed Defaults', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('uses playerStats climbSpeed when aspect option is not Salmon', () => {
@@ -224,6 +271,7 @@ describe('CharSummary - Swim Speed Defaults', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('uses playerStats swimSpeed when aspect option is not Salmon', () => {
@@ -244,13 +292,10 @@ describe('CharSummary - Stormborn Resistances', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('includes stormborn resistances when wrathOfTheSeaActive and passives have stormborn', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'wrathOfTheSeaActive') return true;
-            return null;
-        });
         vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
             if (key === 'wrathOfTheSeaActive') return true;
             return null;
@@ -275,6 +320,7 @@ describe('CharSummary - Sanctuary Info Memo', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('builds sanctuary info from combat summary creatures', () => {
@@ -289,7 +335,7 @@ describe('CharSummary - Sanctuary Info Memo', () => {
             return null;
         });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(true).toBe(true);
+        expect(screen.getByTestId('char-conditions')).toBeInTheDocument();
     });
 });
 
@@ -301,12 +347,10 @@ describe('CharSummary - Short Rest Modal Rendering', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('renders ShortRestModal when showShortRest state is true', () => {
-        // The ShortRestModal renders conditionally when setShowShortRest(true) is called
-        // which happens when the short rest button is clicked.
-        // Since the component manages this state internally, we verify the button exists.
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByTestId('short-rest-btn')).toBeInTheDocument();
     });
@@ -320,14 +364,13 @@ describe('CharSummary - Avatar Modal Rendering', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('renders AvatarModal when showAvatarModal state is true and imagePath exists', () => {
-        // AvatarModal renders when setShowAvatarModal(true) is called
-        // This happens when the avatar image is clicked
         const stats = { ...mockPlayerStats, imagePath: '/images/char.png' };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(true).toBe(true);
+        expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
     });
 });
 
@@ -339,11 +382,156 @@ describe('CharSummary - CharFeats Popup', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('renders CharFeats component', () => {
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByTestId('char-feats')).toBeInTheDocument();
+    });
+
+    it('renders feat popup with array desc format', () => {
+        const mockSetPopupHtml = vi.fn();
+        const wrapper = ({ children }) => (
+            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+                {children}
+            </DiceRollContext.Provider>
+        );
+        render(
+            <CharSummary
+                playerStats={{
+                    ...mockPlayerStats,
+                    feats: [
+                        {
+                            name: 'Test Feat',
+                            desc: ['First line', 'Second line'],
+                        },
+                    ],
+                }}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+            />,
+            { wrapper }
+        );
+        const showPopup = charFeatsShowPopupState.callback;
+        expect(showPopup).toBeInstanceOf(Function);
+        const testFeat = { name: 'Test Feat', desc: ['First line', 'Second line'] };
+        showPopup(testFeat);
+        expect(mockSetPopupHtml).toHaveBeenCalled();
+    });
+
+    it('renders feat popup with string description format', () => {
+        const mockSetPopupHtml = vi.fn();
+        const wrapper = ({ children }) => (
+            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+                {children}
+            </DiceRollContext.Provider>
+        );
+        render(
+            <CharSummary
+                playerStats={{
+                    ...mockPlayerStats,
+                    feats: [
+                        {
+                            name: 'Test Feat',
+                            description: 'A string description',
+                        },
+                    ],
+                }}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+            />,
+            { wrapper }
+        );
+        const showPopup = charFeatsShowPopupState.callback;
+        expect(showPopup).toBeInstanceOf(Function);
+        const testFeat = { name: 'Test Feat', description: 'A string description' };
+        showPopup(testFeat);
+        expect(mockSetPopupHtml).toHaveBeenCalled();
+    });
+
+    it('renders feat popup with prerequisites', () => {
+        const mockSetPopupHtml = vi.fn();
+        const wrapper = ({ children }) => (
+            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+                {children}
+            </DiceRollContext.Provider>
+        );
+        render(
+            <CharSummary
+                playerStats={{
+                    ...mockPlayerStats,
+                    feats: [
+                        {
+                            name: 'Heavy Armor',
+                            desc: 'Can wear heavy armor',
+                            prerequisites: {
+                                level: 1,
+                                ability_scores: [{ name: 'STR', minimum: 16 }],
+                                proficiency: 'Heavy Armor',
+                            },
+                        },
+                    ],
+                }}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+            />,
+            { wrapper }
+        );
+        const showPopup = charFeatsShowPopupState.callback;
+        expect(showPopup).toBeInstanceOf(Function);
+        const testFeat = {
+            name: 'Heavy Armor',
+            desc: 'Can wear heavy armor',
+            prerequisites: {
+                level: 1,
+                ability_scores: [{ name: 'STR', minimum: 16 }],
+                proficiency: 'Heavy Armor',
+            },
+        };
+        showPopup(testFeat);
+        expect(mockSetPopupHtml).toHaveBeenCalled();
+    });
+
+    it('renders feat popup with benefits array', () => {
+        const mockSetPopupHtml = vi.fn();
+        const wrapper = ({ children }) => (
+            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+                {children}
+            </DiceRollContext.Provider>
+        );
+        render(
+            <CharSummary
+                playerStats={{
+                    ...mockPlayerStats,
+                    feats: [
+                        {
+                            name: 'Tough',
+                            desc: 'Extra hit points',
+                            benefits: [
+                                { description: '+2 HP per level' },
+                                'Bonus durability',
+                            ],
+                        },
+                    ],
+                }}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+            />,
+            { wrapper }
+        );
+        const showPopup = charFeatsShowPopupState.callback;
+        expect(showPopup).toBeInstanceOf(Function);
+        const testFeat = {
+            name: 'Tough',
+            desc: 'Extra hit points',
+            benefits: [
+                { description: '+2 HP per level' },
+                'Bonus durability',
+            ],
+        };
+        showPopup(testFeat);
+        expect(mockSetPopupHtml).toHaveBeenCalled();
     });
 });
 
@@ -355,6 +543,7 @@ describe('CharSummary - Handle Short Rest Complete', () => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
+        charFeatsShowPopupState.callback = null;
     });
 
     it('calls onLongRest callback when short rest completes', () => {

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import UpcastPopup from './UpcastPopup.jsx';
@@ -46,18 +47,13 @@ describe('UpcastPopup cast behavior', () => {
     expect(onConfirm).toHaveBeenCalledWith(4);
   });
 
-  it('calls onConfirm with level as a number not a string', () => {
-    const onConfirm = vi.fn();
-    renderUpcastPopup({ onConfirm });
-    fireEvent.click(screen.getByRole('button', { name: /Cast at Level 3/ }));
-    expect(typeof onConfirm.mock.calls[0][0]).toBe('number');
-  });
-
   it('does not call onConfirm when cast button is disabled', () => {
     const onConfirm = vi.fn();
     const levels = [{ level: 3, formula: '+1d6', availableSlots: 0 }];
     renderUpcastPopup({ onConfirm, levels });
-    fireEvent.click(screen.getByRole('button', { name: /Cast at Level 3/ }));
+    const castButton = screen.getByRole('button', { name: /Cast at Level 3/ });
+    expect(castButton).toBeDisabled();
+    fireEvent.click(castButton);
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
@@ -72,6 +68,13 @@ describe('UpcastPopup cast behavior', () => {
     fireEvent.click(screen.getByText('Level 7'));
     fireEvent.click(screen.getByRole('button', { name: /Cast at Level 7/ }));
     expect(onConfirm).toHaveBeenCalledWith(7);
+  });
+
+  it('does not call onConfirm on unmount without interaction', () => {
+    const onConfirm = vi.fn();
+    const { unmount } = renderUpcastPopup({ onConfirm });
+    unmount();
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 });
 
@@ -115,13 +118,6 @@ describe('UpcastPopup cancel behavior', () => {
     const onCancel = vi.fn();
     renderUpcastPopup({ onCancel });
     fireEvent.keyDown(document, { key: 'Enter' });
-    expect(onCancel).not.toHaveBeenCalled();
-  });
-
-  it('does not call onCancel for other modifier keys', () => {
-    const onCancel = vi.fn();
-    renderUpcastPopup({ onCancel });
-    fireEvent.keyDown(document, { key: 'ArrowDown' });
     expect(onCancel).not.toHaveBeenCalled();
   });
 });

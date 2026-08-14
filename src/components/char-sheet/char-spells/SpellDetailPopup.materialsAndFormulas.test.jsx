@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -18,6 +19,8 @@ vi.mock('../../../services/ui/sanitize.js', () => ({
   sanitizeHtml: (html) => html,
 }));
 
+const mockCampaignName = 'test-campaign';
+
 const baseMockPlayerStats = {
   name: 'Elara',
   level: 5,
@@ -32,8 +35,6 @@ const baseMockPlayerStats = {
   },
   automation: { passives: [], actions: [] },
 };
-
-const mockCampaignName = 'test-campaign';
 
 const baseMockSpell = {
   name: 'Magic Missile',
@@ -91,7 +92,7 @@ describe('SpellDetailPopup - Material components display', () => {
       expect(screen.getByText(/a drop of blood, a piece of flesh, and a pinch of bone dust/)).toBeInTheDocument();
     });
 
-    it('shows material requirement for Create Undead', () => {
+    it('shows material requirement for Create Undead with gp cost', () => {
       const spell = {
         ...baseMockSpell,
         name: 'Create Undead',
@@ -104,7 +105,7 @@ describe('SpellDetailPopup - Material components display', () => {
       expect(screen.getByText(/Black Onyx.*150 gp/)).toBeInTheDocument();
     });
 
-    it('shows material requirement for Revivify', () => {
+    it('shows material requirement for Revivify with null damage', () => {
       const spell = {
         ...baseMockSpell,
         name: 'Revivify',
@@ -131,7 +132,7 @@ describe('SpellDetailPopup - Material components display', () => {
       expect(screen.getByText('(not found in backpack)')).toBeInTheDocument();
     });
 
-    it('does not show missing indicator when player has the material', () => {
+    it('hides missing indicator when player has the exact material in backpack', () => {
       const stats = {
         ...baseMockPlayerStats,
         inventory: {
@@ -152,18 +153,19 @@ describe('SpellDetailPopup - Material components display', () => {
       expect(screen.queryByText('(not found in backpack)')).not.toBeInTheDocument();
     });
 
-    it('does not show missing indicator when player has partial match with string item', () => {
+    it('hides missing indicator when player has the material as an object item', () => {
       const stats = {
         ...baseMockPlayerStats,
         inventory: {
           backpack: [
-            'Drop of Blood, Piece of Flesh, Pinch of Bone Dust',
+            { name: 'Diamond (300 gp)', quantity: 1 },
+            { name: 'Potion of Healing', quantity: 3 },
           ],
         },
       };
       const spell = {
         ...baseMockSpell,
-        name: 'Animate Dead',
+        name: 'Revivify',
         level: 3,
       };
 
@@ -188,28 +190,6 @@ describe('SpellDetailPopup - Material components display', () => {
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName);
       expect(screen.queryByText(/Material:/)).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Material display with object inventory items', () => {
-    it('checks object inventory items by name property', () => {
-      const stats = {
-        ...baseMockPlayerStats,
-        inventory: {
-          backpack: [
-            { name: 'Diamond (300 gp)', quantity: 1 },
-            { name: 'Potion of Healing', quantity: 3 },
-          ],
-        },
-      };
-      const spell = {
-        ...baseMockSpell,
-        name: 'Revivify',
-        level: 3,
-      };
-
-      renderPopup(spell, stats, mockCampaignName);
-      expect(screen.queryByText('(not found in backpack)')).not.toBeInTheDocument();
     });
   });
 });
@@ -301,5 +281,59 @@ describe('SpellDetailPopup - Upcast formula resolution', () => {
     renderPopup(spell, stats, mockCampaignName, { upcastLevels });
     expect(screen.getByText(/1d8\+-1/)).toBeInTheDocument();
     expect(screen.getByText(/2d8\+-1/)).toBeInTheDocument();
+  });
+
+  it('handles MOD appearing multiple times in the same formula', () => {
+    const stats = {
+      ...baseMockPlayerStats,
+      spellAbilities: {
+        ...baseMockPlayerStats.spellAbilities,
+        modifier: 2,
+      },
+    };
+    const spell = {
+      ...baseMockSpell,
+      damage: {
+        damage_at_slot_level: {
+          '1': '2d6+MOD+MOD',
+          '2': '3d6+MOD+MOD',
+        },
+      },
+    };
+    const upcastLevels = [
+      { level: 1, formula: '2d6+MOD+MOD', availableSlots: 4 },
+      { level: 2, formula: '3d6+MOD+MOD', availableSlots: 3 },
+    ];
+
+    renderPopup(spell, stats, mockCampaignName, { upcastLevels });
+    expect(screen.getByText(/2d6\+2\+2/)).toBeInTheDocument();
+    expect(screen.getByText(/3d6\+2\+2/)).toBeInTheDocument();
+  });
+
+  it('handles MOD at the start of a formula', () => {
+    const stats = {
+      ...baseMockPlayerStats,
+      spellAbilities: {
+        ...baseMockPlayerStats.spellAbilities,
+        modifier: 5,
+      },
+    };
+    const spell = {
+      ...baseMockSpell,
+      damage: {
+        damage_at_slot_level: {
+          '1': 'MOD+2d6',
+          '2': 'MOD+3d6',
+        },
+      },
+    };
+    const upcastLevels = [
+      { level: 1, formula: 'MOD+2d6', availableSlots: 4 },
+      { level: 2, formula: 'MOD+3d6', availableSlots: 3 },
+    ];
+
+    renderPopup(spell, stats, mockCampaignName, { upcastLevels });
+    expect(screen.getByText(/5\+2d6/)).toBeInTheDocument();
+    expect(screen.getByText(/5\+3d6/)).toBeInTheDocument();
   });
 });

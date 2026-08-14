@@ -1,9 +1,12 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
+
+const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -78,21 +81,23 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
     vi.clearAllMocks();
     localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
+    vi.mocked(setRuntimeValue).mockReturnValue();
     vi.mocked(getActiveBuffs).mockReturnValue([]);
     vi.mocked(getCombatSummary).mockReturnValue(null);
   });
 
-  describe('casting a concentration spell', () => {
-    it('calls onCast with the concentration spell and baseLevel=0', () => {
+  describe('concentration spell casting', () => {
+    const concentrationSpell = {
+      ...baseMockSpell,
+      name: 'Bane',
+      level: 1,
+      concentration: true,
+      damage: null,
+      dc: { dc_type: 'CHA', dc_success: 'half' },
+    };
+
+    it('calls onCast with the concentration spell name and baseLevel:undefined', async () => {
       const onCast = vi.fn();
-      const concentrationSpell = {
-        ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
-        concentration: true,
-        damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
-      };
       const cs = {
         creatures: [{ name: 'Elara', concentration: null }],
       };
@@ -101,54 +106,93 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
       renderPopup(concentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Bane');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.name).toBe('Bane');
+      expect(passedSpell.baseLevel).toBe(undefined);
     });
 
-    it('calls onCast even when combat summary is null', () => {
+    it('calls onCast even when combat summary is null', async () => {
       const onCast = vi.fn();
-      const concentrationSpell = {
-        ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
-        concentration: true,
-        damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
-      };
       vi.mocked(getCombatSummary).mockReturnValue(null);
 
       renderPopup(concentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Bane');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.name).toBe('Bane');
+      expect(passedSpell.baseLevel).toBe(undefined);
     });
 
-    it('calls onCast for a non-concentration spell with baseLevel=0', () => {
+    it('passes isUpcast:undefined and freeCastAuthorized:false for concentration spell without upcast', async () => {
       const onCast = vi.fn();
-      const noConcentrationSpell = {
-        ...baseMockSpell,
-        name: 'Fireball',
-        level: 3,
-        concentration: false,
-        damage: { damage_at_slot_level: { '3': '8d6' } },
-      };
+
+      renderPopup(concentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).toHaveBeenCalledTimes(1);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.isUpcast).toBe(undefined);
+      expect(passedSpell.freeCastAuthorized).toBe(false);
+    });
+
+    it('does not call onCast when player is raging', async () => {
+      const onCast = vi.fn();
+      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
+
+      renderPopup(concentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('non-concentration spell casting', () => {
+    const nonConcentrationSpell = {
+      ...baseMockSpell,
+      name: 'Fireball',
+      level: 3,
+      concentration: false,
+      damage: { damage_at_slot_level: { '3': '8d6' } },
+    };
+
+    it('calls onCast with the non-concentration spell name and baseLevel:undefined', async () => {
+      const onCast = vi.fn();
       const cs = {
         creatures: [{ name: 'Elara', concentration: null }],
       };
       vi.mocked(getCombatSummary).mockReturnValue(cs);
 
-      renderPopup(noConcentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
+      renderPopup(nonConcentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Fireball');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
+      const passedSpell = onCast.mock.calls[0][0];
+      expect(passedSpell.name).toBe('Fireball');
+      expect(passedSpell.baseLevel).toBe(undefined);
+    });
+
+    it('does not call onCast when player is raging', async () => {
+      const onCast = vi.fn();
+      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
+
+      renderPopup(nonConcentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
+
+      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
+
+      expect(onCast).not.toHaveBeenCalled();
     });
   });
 });

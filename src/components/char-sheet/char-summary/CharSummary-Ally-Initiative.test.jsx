@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
-import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
+import { DiceRollContext } from '../../../hooks/combat/DiceRollContext.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
-
+import useLoggedDiceRoll from '../../../hooks/combat/useLoggedDiceRoll.js';
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
 vi.mock('./CharClassFeatures.jsx', () => ({ default: () => <div data-testid="char-class-features">Class Features</div> }));
@@ -14,6 +16,15 @@ vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-
 vi.mock('../ShortRestButton.jsx', () => ({ default: () => <div data-testid="short-rest-btn">Short Rest</div> }));
 vi.mock('../ShortRestModal.jsx', () => ({ default: () => <div data-testid="short-rest-modal">Short Rest Modal</div> }));
 vi.mock('./CharConditions.jsx', () => ({ default: () => <div data-testid="char-conditions">Conditions</div> }));
+vi.mock('../../common/AllySelectionModal.jsx', () => ({
+    default: vi.fn(({ onConfirm, onCancel, currentAllies }) => (
+        <div data-testid="ally-selection-modal">
+            Select Allies
+            <button data-testid="ally-confirm" onClick={() => onConfirm(currentAllies || ['Thorin'])}>Confirm</button>
+            <button data-testid="ally-cancel" onClick={onCancel}>Cancel</button>
+        </div>
+    )),
+}));
 
 vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
     default: vi.fn((key, name, init, _deps, _campaign) => ({ current: init(), update: vi.fn() })),
@@ -57,10 +68,6 @@ vi.mock('../../../services/ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../../services/encounters/combatData.js', () => ({
-    getCombatSummary: vi.fn(() => ({ creatures: [] })),
-}));
-
 vi.mock('../../../services/automation/common/buffToggle.js', () => ({
     isBuffActive: vi.fn(() => false),
 }));
@@ -83,6 +90,10 @@ vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', (
 vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
     isDeathWardActive: vi.fn(() => false),
     handle: vi.fn(),
+}));
+
+vi.mock('../../../services/encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => ({ creatures: [] })),
 }));
 
 const mockPlayerStats = {
@@ -116,111 +127,119 @@ const mockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 
-describe('CharSummary - Ally Modal Confirm', () => {
+// ---------------------------------------------------------------------------
+// Ally Modal Open — verifies getCombatSummary is called and creatures are set
+// ---------------------------------------------------------------------------
+describe('CharSummary - Ally Modal Open', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
     });
 
-    it('saves selected allies and logs entry on confirm', async () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
-            return null;
-        });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Conditions/)).toBeInTheDocument();
-    });
-
-    it('uses characters fallback when getCombatSummary returns no creatures', () => {
-        vi.mocked(getCombatSummary).mockReturnValue({ creatures: null });
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
-            return null;
-        });
-        const characters = [
-            { name: 'Ally1', type: 'player' },
-            { name: 'Ally2', type: 'player' },
+    it('opens ally modal and populates creatures from combatSummary', () => {
+        const mockSetPopupHtml = vi.fn();
+        const wrapper = ({ children }) => (
+            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+                {children}
+            </DiceRollContext.Provider>
+        );
+        const combatCreatures = [
+            { name: 'Ally1', type: 'player', currentHp: 30, maxHp: 45 },
+            { name: 'Ally2', type: 'enemy', currentHp: 10, maxHp: 20 },
         ];
-        const stats = { ...mockPlayerStats };
+        vi.mocked(getCombatSummary).mockReturnValue({ creatures: combatCreatures });
+
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />, { wrapper });
+
+        const allyBadge = screen.getByText(/Allies/);
+        act(() => {
+            fireEvent.click(allyBadge);
+        });
+
+        expect(getCombatSummary).toHaveBeenCalledWith(mockCampaignName);
+        expect(screen.getByTestId('ally-selection-modal')).toBeInTheDocument();
+    });
+
+    it('falls back to characters prop when combatSummary has no creatures', () => {
+        const mockSetPopupHtml = vi.fn();
+        const wrapper = ({ children }) => (
+            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+                {children}
+            </DiceRollContext.Provider>
+        );
+        const characters = [
+            { name: 'Character1', type: 'player' },
+            { name: 'Character2', type: 'npc' },
+        ];
+        vi.mocked(getCombatSummary).mockReturnValue({ creatures: null });
+
         render(
             <CharSummary
-                playerStats={stats}
+                playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
                 characters={characters}
-            />
+            />,
+            { wrapper }
         );
-        expect(screen.getByText(/Conditions/)).toBeInTheDocument();
-    });
-});
 
-describe('CharSummary - Ally Modal Cancel', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-    });
-
-    it('closes ally modal when cancel is clicked', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
-            return null;
+        const allyBadge = screen.getByText(/Allies/);
+        act(() => {
+            fireEvent.click(allyBadge);
         });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Conditions/)).toBeInTheDocument();
+
+        expect(getCombatSummary).toHaveBeenCalledWith(mockCampaignName);
+        expect(screen.getByTestId('ally-selection-modal')).toBeInTheDocument();
     });
 });
 
-describe('CharSummary - Short Rest Complete Handler', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-    });
-
-    it('calls onLongRest when short rest completes', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
-            return null;
-        });
-        const mockOnLongRest = vi.fn();
-        const stats = { ...mockPlayerStats };
-        render(
-            <CharSummary
-                playerStats={stats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-                onLongRest={mockOnLongRest}
-            />
-        );
-        expect(screen.getByText(/Conditions/)).toBeInTheDocument();
-    });
-});
-
+// ---------------------------------------------------------------------------
+// Initiative handler — verifies rollInitiative is called on click
+// ---------------------------------------------------------------------------
 describe('CharSummary - Initiative Handler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
     });
 
-    it('renders initiative element that triggers rollInitiative on click', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
-            return null;
+    it('calls rollInitiative with effective initiative value when initiative is clicked', () => {
+        let capturedArgs = null;
+        const mockRollInitiative = vi.fn((eff, opts) => { capturedArgs = { eff, opts }; });
+        vi.mocked(useLoggedDiceRoll).mockReturnValue({
+            popupHtml: null,
+            setPopupHtml: vi.fn(),
+            rollInitiative: mockRollInitiative,
         });
+
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+
+        const initiativeEl = screen.getByText(/\+2/);
+        fireEvent.click(initiativeEl);
+
+        expect(capturedArgs).not.toBeNull();
+        expect(capturedArgs.eff).toBe(2);
+        expect(capturedArgs.opts).toBeUndefined();
+    });
+
+    it('passes opts when initiativeAdvantage is true', () => {
+        let capturedArgs = null;
+        const mockRollInitiative = vi.fn((eff, opts) => { capturedArgs = { eff, opts }; });
+        vi.mocked(useLoggedDiceRoll).mockReturnValue({
+            popupHtml: null,
+            setPopupHtml: vi.fn(),
+            rollInitiative: mockRollInitiative,
+        });
+
         const stats = { ...mockPlayerStats, initiativeAdvantage: true };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const initiativeSpan = screen.getByText(/Initiative:/).parentElement;
-        expect(initiativeSpan).toHaveClass('clickable');
+
+        const initiativeEl = screen.getByText(/\+2/);
+        fireEvent.click(initiativeEl);
+
+        expect(capturedArgs).not.toBeNull();
+        expect(capturedArgs.eff).toBe(2);
+        expect(capturedArgs.opts).toEqual({ forcedMode: 'advantage' });
     });
 });
