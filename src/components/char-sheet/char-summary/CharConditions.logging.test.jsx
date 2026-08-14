@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharConditions from './CharConditions.jsx';
@@ -87,7 +88,10 @@ vi.mock('../../../services/automation/handlers/buffs/auraOfPurityHandler.js', ()
 }));
 
 import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { addEntry } from '../../../services/ui/logService.js';
+import { logConditionSave } from '../../../services/encounters/combatLoggingService.js';
 import { rollD20 } from '../../../services/dice/diceRoller.js';
+import { computeAuraBonus } from '../../../services/combat/auras/auraOfProtection.js';
 
 describe('CharConditions logging', () => {
   beforeEach(() => {
@@ -116,11 +120,8 @@ describe('CharConditions logging', () => {
     conditionEffects: {},
   };
 
-  describe('save logging', () => {
+  describe('condition save logging', () => {
     it('calls addEntry with correct roll data on condition save', async () => {
-      const { addEntry } = await import('../../../services/ui/logService.js');
-      addEntry.mockResolvedValue();
-
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
       render(<CharConditions {...defaultProps} />);
@@ -136,14 +137,56 @@ describe('CharConditions logging', () => {
             characterName: 'Test Character',
             rollType: 'save',
             dc: 14,
+            success: true,
+            condition: 'Charmed',
           })
         );
       });
     });
 
     it('calls logConditionSave with correct data on condition save', async () => {
-      const { logConditionSave } = await import('../../../services/encounters/combatLoggingService.js');
-      logConditionSave.mockResolvedValue();
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
+      render(<CharConditions {...defaultProps} />);
+
+      const charmedBtn = screen.getByText('Charmed DC 14');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(logConditionSave).toHaveBeenCalledWith(
+          'test-campaign',
+          'Test Character',
+          15,
+          2,
+          undefined,
+          'Charmed',
+          expect.any(String),
+          14,
+          true
+        );
+      });
+    });
+
+    it('logs condition name with capitalized first letter', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
+      render(<CharConditions {...defaultProps} />);
+
+      const charmedBtn = screen.getByText('Charmed DC 14');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(addEntry).toHaveBeenCalledWith(
+          'test-campaign',
+          expect.objectContaining({
+            condition: 'Charmed',
+          })
+        );
+      });
+    });
+
+    it('logs save bonus including aura bonus', async () => {
+      vi.mocked(computeAuraBonus).mockResolvedValue({ bonus: 3, sourceName: 'Paladin' });
 
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
@@ -153,7 +196,12 @@ describe('CharConditions logging', () => {
       fireEvent.click(charmedBtn);
 
       await waitFor(() => {
-        expect(logConditionSave).toHaveBeenCalled();
+        expect(addEntry).toHaveBeenCalledWith(
+          'test-campaign',
+          expect.objectContaining({
+            bonus: 5, // saveBonus(2) + auraBonus(3)
+          })
+        );
       });
     });
   });
@@ -254,12 +302,10 @@ describe('CharConditions logging', () => {
       const charmedBtn = screen.getByText('Charmed DC 14');
       fireEvent.click(charmedBtn);
 
-      await waitFor(() => {
-        expect(defaultProps.onConditionsChange).not.toHaveBeenCalled();
-      });
+      expect(defaultProps.onConditionsChange).not.toHaveBeenCalled();
     });
 
-    it('does not call onConditionsChange when onConditionsChange is not provided', async () => {
+    it('does not throw when onConditionsChange is not provided', async () => {
       const propsWithoutCallback = {
         ...defaultProps,
         onConditionsChange: undefined,
@@ -272,13 +318,13 @@ describe('CharConditions logging', () => {
       fireEvent.click(charmedBtn);
 
       await waitFor(() => {
-        // Should not throw even without callback
+        expect(mockSetPopupHtml).toHaveBeenCalled();
       });
     });
   });
 
-  describe('condition save - remove meta on success', () => {
-    it('removes meta key from conditionMeta on successful save', async () => {
+  describe('condition removal on success', () => {
+    it('removes condition from activeConditions on successful save', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
       render(<CharConditions {...defaultProps} />);
@@ -287,17 +333,18 @@ describe('CharConditions logging', () => {
       fireEvent.click(charmedBtn);
 
       await waitFor(() => {
-        // The setRuntimeValue for activeConditions should be called
-        expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', 'activeConditions', [], 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'Test Character',
+          'activeConditions',
+          [],
+          'test-campaign'
+        );
       });
     });
   });
 
-  describe('save with advantage - mode field', () => {
-    it('sets mode to advantage in logEntry when hasAdvantage is true', async () => {
-      const { addEntry } = await import('../../../services/ui/logService.js');
-      addEntry.mockResolvedValue();
-
+  describe('save with advantage', () => {
+    it('logs mode as advantage when hasAdvantage is true', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
       render(
@@ -320,10 +367,7 @@ describe('CharConditions logging', () => {
       });
     });
 
-    it('sets mode to normal in logEntry when no advantage', async () => {
-      const { addEntry } = await import('../../../services/ui/logService.js');
-      addEntry.mockResolvedValue();
-
+    it('logs mode as normal when no advantage', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
       render(<CharConditions {...defaultProps} />);
@@ -340,13 +384,8 @@ describe('CharConditions logging', () => {
         );
       });
     });
-  });
 
-  describe('roll array in logEntry', () => {
-    it('includes two rolls in logEntry when advantage', async () => {
-      const { addEntry } = await import('../../../services/ui/logService.js');
-      addEntry.mockResolvedValue();
-
+    it('logs two rolls in logEntry when advantage', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
       render(
@@ -363,16 +402,13 @@ describe('CharConditions logging', () => {
         expect(addEntry).toHaveBeenCalledWith(
           'test-campaign',
           expect.objectContaining({
-            rolls: expect.arrayContaining([expect.any(Number), expect.any(Number)]),
+            rolls: [expect.any(Number), expect.any(Number)],
           })
         );
       });
     });
 
-    it('includes single roll in logEntry when no advantage', async () => {
-      const { addEntry } = await import('../../../services/ui/logService.js');
-      addEntry.mockResolvedValue();
-
+    it('logs single roll in logEntry when no advantage', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
       render(<CharConditions {...defaultProps} />);
@@ -384,14 +420,12 @@ describe('CharConditions logging', () => {
         expect(addEntry).toHaveBeenCalledWith(
           'test-campaign',
           expect.objectContaining({
-            rolls: expect.arrayContaining([expect.any(Number)]),
+            rolls: [expect.any(Number)],
           })
         );
       });
     });
-  });
 
-  describe('popup rolls display', () => {
     it('shows two rolls in popup when advantage', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
@@ -408,7 +442,7 @@ describe('CharConditions logging', () => {
       await waitFor(() => {
         expect(mockSetPopupHtml).toHaveBeenCalledWith(
           expect.objectContaining({
-            rolls: expect.arrayContaining([expect.any(Number), expect.any(Number)]),
+            rolls: [expect.any(Number), expect.any(Number)],
           })
         );
       });
@@ -425,7 +459,7 @@ describe('CharConditions logging', () => {
       await waitFor(() => {
         expect(mockSetPopupHtml).toHaveBeenCalledWith(
           expect.objectContaining({
-            rolls: expect.arrayContaining([expect.any(Number)]),
+            rolls: [expect.any(Number)],
           })
         );
       });

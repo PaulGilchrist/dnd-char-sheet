@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharConditions from './CharConditions.jsx';
@@ -121,9 +122,8 @@ describe('CharConditions condition saves', () => {
     conditionEffects: {},
   };
 
-  describe('condition save with advantage from aura of purity', () => {
-    it('applies aura of purity advantage for matching conditions', async () => {
-      vi.mocked(isAuraOfPurityActive).mockReturnValue(true);
+  describe('aura of purity advantage', () => {
+    it('rolls two d20s when condition matches aura of purity list', async () => {
       vi.mocked(isAuraOfPurityActive).mockReturnValue(true);
       vi.mocked(getAuraOfPuritySaveAdvantageConditions).mockReturnValue(['charmed']);
 
@@ -139,7 +139,7 @@ describe('CharConditions condition saves', () => {
       });
     });
 
-    it('does not apply aura of purity advantage for non-matching conditions', async () => {
+    it('rolls one d20 when condition does not match aura of purity list', async () => {
       vi.mocked(isAuraOfPurityActive).mockReturnValue(true);
       vi.mocked(getAuraOfPuritySaveAdvantageConditions).mockReturnValue(['charmed']);
 
@@ -156,8 +156,218 @@ describe('CharConditions condition saves', () => {
     });
   });
 
-  describe('grappled save advantage', () => {
-    it('applies advantage from conditionEffects.strCheckAdvantage for grappled', async () => {
+  describe('saveAdvantage array', () => {
+    it('rolls two d20s when condition is in saveAdvantage array', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantage: ['charmed'] }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it('does not apply advantage for condition not in saveAdvantage array', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['blinded'];
+      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10, ability: 'con' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantage: ['charmed'] }}
+        />
+      );
+
+      const blindedBtn = screen.getByText('Blinded DC 10');
+      fireEvent.click(blindedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('sets forcedMode to advantage in popup when condition is in saveAdvantage array', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantage: ['charmed'] }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.objectContaining({
+            forcedMode: 'advantage',
+          })
+        );
+      });
+    });
+  });
+
+  describe('saveAdvantageAbilities', () => {
+    it('rolls two d20s when condition key prefix matches saveAdvantageAbilities', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantageAbilities: ['CHA'] }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it('rolls one d20 when condition key prefix does not match saveAdvantageAbilities', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantageAbilities: ['WIS'] }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe('saveAdvantageCount', () => {
+    it('rolls two d20s when saveAdvantageCount > 0', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantageCount: 2 }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it('rolls one d20 when saveAdvantageCount is 0', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantageCount: 0 }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('rolls two d20s when saveAdvantageCount > restoreBalance reduction', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantageCount: 3, restoreBalance: true }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it('rolls one d20 when saveAdvantageCount equals restoreBalance reduction', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantageCount: 1, restoreBalance: true }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe('saveAdvantage against_spell with restoreBalance', () => {
+    it('does not apply advantage when saveAdvantage includes against_spell and restoreBalance is true', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantage: ['against_spell'], restoreBalance: true }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('applies advantage when saveAdvantage includes against_spell and restoreBalance is false', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantage: ['against_spell'], restoreBalance: false }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 12');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(2);
+      });
+    });
+  });
+
+  describe('grappled condition advantage', () => {
+    it('rolls two d20s when strCheckAdvantage is true and condition is grappled', async () => {
       runtimeValues['Test Character::activeConditions'] = ['grappled'];
       runtimeValues['Test Character::activeConditionMeta'] = { grappled: { dc: 12, ability: 'str' } };
       render(
@@ -175,15 +385,13 @@ describe('CharConditions condition saves', () => {
       });
     });
 
-    it('applies advantage from abilityCheckAdvantageAbilities for grappled STR', async () => {
+    it('rolls two d20s when abilityCheckAdvantageAbilities includes STR and condition is grappled', async () => {
       runtimeValues['Test Character::activeConditions'] = ['grappled'];
       runtimeValues['Test Character::activeConditionMeta'] = { grappled: { dc: 12, ability: 'str' } };
       render(
         <CharConditions
           {...defaultProps}
-          conditionEffects={{
-            abilityCheckAdvantageAbilities: ['STR'],
-          }}
+          conditionEffects={{ abilityCheckAdvantageAbilities: ['STR'] }}
         />
       );
 
@@ -195,15 +403,13 @@ describe('CharConditions condition saves', () => {
       });
     });
 
-    it('does not apply advantage from abilityCheckAdvantageAbilities for non-matching ability', async () => {
+    it('rolls one d20 when abilityCheckAdvantageAbilities does not include STR for grappled', async () => {
       runtimeValues['Test Character::activeConditions'] = ['grappled'];
       runtimeValues['Test Character::activeConditionMeta'] = { grappled: { dc: 12, ability: 'str' } };
       render(
         <CharConditions
           {...defaultProps}
-          conditionEffects={{
-            abilityCheckAdvantageAbilities: ['DEX'],
-          }}
+          conditionEffects={{ abilityCheckAdvantageAbilities: ['DEX'] }}
         />
       );
 
@@ -214,9 +420,7 @@ describe('CharConditions condition saves', () => {
         expect(rollD20).toHaveBeenCalledTimes(1);
       });
     });
-  });
 
-  describe('saveModifiers for grappled', () => {
     it('applies advantage from Powerful Build saveModifier for grappled', async () => {
       const playerStatsWithPowerfulBuild = {
         ...mockPlayerStats,
@@ -286,9 +490,7 @@ describe('CharConditions condition saves', () => {
         expect(rollD20).toHaveBeenCalledTimes(1);
       });
     });
-  });
 
-  describe('saveModifiers from computedStats', () => {
     it('applies advantage from computedStats.saveModifiers for grappled', async () => {
       const playerStatsWithComputed = {
         ...mockPlayerStats,
@@ -395,8 +597,8 @@ describe('CharConditions condition saves', () => {
     });
   });
 
-  describe('save mode (advantage vs normal)', () => {
-    it('sets mode to advantage when hasSaveAdvantage returns true', async () => {
+  describe('save mode in popup', () => {
+    it('sets forcedMode to advantage when hasSaveAdvantage returns true', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
       render(
@@ -418,7 +620,7 @@ describe('CharConditions condition saves', () => {
       });
     });
 
-    it('sets mode to normal when no advantage', async () => {
+    it('sets forcedMode to undefined when no advantage', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
       render(<CharConditions {...defaultProps} />);
@@ -436,83 +638,6 @@ describe('CharConditions condition saves', () => {
     });
   });
 
-  describe('condition save with advantage from saveAdvantage array', () => {
-    it('rolls two d20s when condition is in saveAdvantage array', async () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
-      render(
-        <CharConditions
-          {...defaultProps}
-          conditionEffects={{ saveAdvantage: ['charmed'] }}
-        />
-      );
-
-      const charmedBtn = screen.getByText('Charmed DC 12');
-      fireEvent.click(charmedBtn);
-
-      await waitFor(() => {
-        expect(rollD20).toHaveBeenCalledTimes(2);
-      });
-    });
-
-    it('rolls two d20s when condition is in saveAdvantageCount > 0', async () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
-      render(
-        <CharConditions
-          {...defaultProps}
-          conditionEffects={{ saveAdvantageCount: 2 }}
-        />
-      );
-
-      const charmedBtn = screen.getByText('Charmed DC 12');
-      fireEvent.click(charmedBtn);
-
-      await waitFor(() => {
-        expect(rollD20).toHaveBeenCalledTimes(2);
-      });
-    });
-  });
-
-  describe('condition save with restoreBalance', () => {
-    it('reduces saveAdvantageCount by 1 when restoreBalance is true', async () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
-      render(
-        <CharConditions
-          {...defaultProps}
-          conditionEffects={{ saveAdvantageCount: 1, restoreBalance: true }}
-        />
-      );
-
-      const charmedBtn = screen.getByText('Charmed DC 12');
-      fireEvent.click(charmedBtn);
-
-      // With saveAdvantageCount=1 and restoreBalance=true, the effective count becomes 0, so no advantage
-      await waitFor(() => {
-        expect(rollD20).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it('still has advantage when saveAdvantageCount > restoreBalance reduction', async () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
-      render(
-        <CharConditions
-          {...defaultProps}
-          conditionEffects={{ saveAdvantageCount: 3, restoreBalance: true }}
-        />
-      );
-
-      const charmedBtn = screen.getByText('Charmed DC 12');
-      fireEvent.click(charmedBtn);
-
-      await waitFor(() => {
-        expect(rollD20).toHaveBeenCalledTimes(2);
-      });
-    });
-  });
-
   describe('condition without meta dc', () => {
     it('does not attempt save when meta has no dc', async () => {
       runtimeValues['Test Character::activeConditions'] = ['blinded'];
@@ -522,7 +647,6 @@ describe('CharConditions condition saves', () => {
       const blindedBtn = screen.getByText('Blinded');
       fireEvent.click(blindedBtn);
 
-      // Should not call rollD20 because there's no meta.dc
       expect(rollD20).not.toHaveBeenCalled();
       expect(mockSetPopupHtml).not.toHaveBeenCalled();
     });
@@ -539,7 +663,7 @@ describe('CharConditions condition saves', () => {
     });
   });
 
-  describe('save bonus calculation', () => {
+  describe('save bonus and label', () => {
     it('uses getAbilitySaveBonus for the save ability', async () => {
       const { getAbilitySaveBonus } = await import('../../../services/combat/conditions/conditionUtils.js');
       getAbilitySaveBonus.mockReturnValue(5);
@@ -559,9 +683,7 @@ describe('CharConditions condition saves', () => {
         );
       });
     });
-  });
 
-  describe('ability label display', () => {
     it('uses getAbilityLabel to display save ability name', async () => {
       const { getAbilityLabel } = await import('../../../services/combat/conditions/conditionUtils.js');
       getAbilityLabel.mockReturnValue('Constitution');
@@ -579,27 +701,6 @@ describe('CharConditions condition saves', () => {
             name: 'Constitution (DC 14)',
           })
         );
-      });
-    });
-  });
-
-  describe('conditionEffects restoreBalance interaction', () => {
-    it('passes restoreBalance to hasSaveAdvantage', async () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
-      render(
-        <CharConditions
-          {...defaultProps}
-          conditionEffects={{ saveAdvantageCount: 1, restoreBalance: true }}
-        />
-      );
-
-      const charmedBtn = screen.getByText('Charmed DC 12');
-      fireEvent.click(charmedBtn);
-
-      // restoreBalance reduces effective saveAdvantageCount by 1, so no advantage
-      await waitFor(() => {
-        expect(rollD20).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -668,6 +769,66 @@ describe('CharConditions condition saves', () => {
         expect(mockSetPopupHtml).toHaveBeenCalledWith(
           expect.objectContaining({
             success: false,
+          })
+        );
+      });
+    });
+
+    it('calculates total correctly with advantage using max of two rolls', async () => {
+      rollD20.mockReturnValueOnce(8).mockReturnValueOnce(14);
+      const { getAbilitySaveBonus } = await import('../../../services/combat/conditions/conditionUtils.js');
+      getAbilitySaveBonus.mockReturnValue(3);
+
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantage: ['charmed'] }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 14');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        // max(8, 14) = 14, bonus = 3, total = 17
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.objectContaining({
+            total: 17,
+          })
+        );
+      });
+    });
+  });
+
+  describe('combined advantage + aura bonus', () => {
+    it('calculates total with both advantage rolls and aura bonus', async () => {
+      vi.mocked(computeAuraBonus).mockResolvedValue({
+        bonus: 4,
+        sourceName: 'Paladin',
+      });
+      const { getAbilitySaveBonus } = await import('../../../services/combat/conditions/conditionUtils.js');
+      getAbilitySaveBonus.mockReturnValue(3);
+      rollD20.mockReturnValueOnce(7).mockReturnValueOnce(12);
+
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
+      render(
+        <CharConditions
+          {...defaultProps}
+          conditionEffects={{ saveAdvantage: ['charmed'] }}
+        />
+      );
+
+      const charmedBtn = screen.getByText('Charmed DC 14');
+      fireEvent.click(charmedBtn);
+
+      await waitFor(() => {
+        // max(7, 12) = 12, bonus = 3, aura = 4, total = 19
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.objectContaining({
+            total: 19,
           })
         );
       });
