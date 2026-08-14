@@ -1,4 +1,13 @@
-// Handler callback tests for clockwork/other choice modals in CharActionModals
+// @improved-by-ai
+// Handler callback tests for clockwork/other choice modals in CharActionModals.
+// Covers: Clockwork Cavalcade choice routing, handler callbacks, and edge cases.
+// Rendering is covered in CharActionModals.rendering.test.jsx;
+// close behavior is covered in CharActionModals.modal-closes.test.jsx and
+// CharActionModals.modal-closes-3.test.jsx;
+// inline-choice modals (including clockworkCavalcadeRepairModal) are covered
+// in CharActionModals.inline-choice-modals.test.jsx and
+// CharActionModals.inline-modals.test.jsx.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -6,42 +15,71 @@ import { createBaseProps } from './CharActionModals.test-utils.jsx';
 
 // ── Mocks ──
 
+// Modals used by clockwork cavalcade sub-flows
 vi.mock('./modals/divine/HealingPoolModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="healing-pool-modal"><button data-testid="healing-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="healing-pool-modal">
+        <button data-testid="healing-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/shared/HandOfHealingModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="hand-of-healing-modal">HandOfHealingModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="hand-of-healing-modal">HandOfHealingModal</div>;
+  },
 }));
 vi.mock('./modals/FontOfMagicModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="font-of-magic-modal">FontOfMagicModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="font-of-magic-modal">FontOfMagicModal</div>;
+  },
 }));
 vi.mock('./modals/ResourcePoolModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="resource-pool-modal">ResourcePoolModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="resource-pool-modal">ResourcePoolModal</div>;
+  },
 }));
 vi.mock('./modals/WildCompanionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="wild-companion-modal">WildCompanionModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="wild-companion-modal">WildCompanionModal</div>;
+  },
 }));
 vi.mock('./modals/shared/SetConditionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="set-condition-modal">SetConditionModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="set-condition-modal">SetConditionModal</div>;
+  },
 }));
 vi.mock('./modals/EyebiteEffectModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="eyebite-effect-modal">EyebiteEffectModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="eyebite-effect-modal">EyebiteEffectModal</div>;
+  },
 }));
 vi.mock('./modals/shared/AttackRiderModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="attack-rider-modal"><button data-testid="attack-rider-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="attack-rider-modal">
+        <button data-testid="attack-rider-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/OpenHandTechniqueModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="open-hand-technique-modal"><button data-testid="open-hand-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="open-hand-technique-modal">
+        <button data-testid="open-hand-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/WeaponMasteryModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="weapon-mastery-modal"><button data-testid="weapon-mastery-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="weapon-mastery-modal">
+        <button data-testid="weapon-mastery-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({
@@ -56,22 +94,38 @@ vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({
 }));
 vi.mock('./modals/WeaponKindMasteryModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="weapon-kind-mastery-modal"><button data-testid="weapon-kind-mastery-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="weapon-kind-mastery-modal">
+        <button data-testid="weapon-kind-mastery-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/shared/CombatStanceModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="combat-stance-modal"><button data-testid="combat-stance-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="combat-stance-modal">
+        <button data-testid="combat-stance-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/TeleportModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="teleport-modal"><button data-testid="teleport-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="teleport-modal">
+        <button data-testid="teleport-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/shared/HealingIllusionModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="healing-illusion-modal"><button data-testid="healing-illusion-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="healing-illusion-modal">
+        <button data-testid="healing-illusion-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
@@ -91,131 +145,219 @@ vi.mock('../../services/ui/logService.js', () => ({
   addEntry: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('./modals/shared/SaveAttackHealModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="save-attack-heal-modal">SaveAttackHealModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="save-attack-heal-modal">SaveAttackHealModal</div>;
+  },
 }));
 vi.mock('./modals/shared/SaveAttackAoeModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="save-attack-aoe-modal">SaveAttackAoeModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="save-attack-aoe-modal">SaveAttackAoeModal</div>;
+  },
 }));
 vi.mock('./modals/shared/AOEConditionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="aoe-condition-modal">AOEConditionModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="aoe-condition-modal">AOEConditionModal</div>;
+  },
 }));
 vi.mock('./modals/shared/FearModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="fear-modal">FearModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="fear-modal">FearModal</div>;
+  },
 }));
 vi.mock('./modals/shared/HypnoticPatternModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="hypnotic-pattern-modal">HypnoticPatternModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="hypnotic-pattern-modal">HypnoticPatternModal</div>;
+  },
 }));
 vi.mock('./modals/shared/MassSuggestionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="mass-suggestion-modal">MassSuggestionModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="mass-suggestion-modal">MassSuggestionModal</div>;
+  },
 }));
 vi.mock('./modals/shared/CalmEmotionsModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="calm-emotions-modal">CalmEmotionsModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="calm-emotions-modal">CalmEmotionsModal</div>;
+  },
 }));
 vi.mock('./modals/shared/TashasLaughterModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="tashas-laughter-modal">TashasLaughterModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="tashas-laughter-modal">TashasLaughterModal</div>;
+  },
 }));
 vi.mock('./modals/SilenceModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="silence-modal">SilenceModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="silence-modal">SilenceModal</div>;
+  },
 }));
 vi.mock('./modals/ElementalAttunementModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="elemental-attunement-modal">ElementalAttunementModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="elemental-attunement-modal">ElementalAttunementModal</div>;
+  },
 }));
 vi.mock('./modals/ElementalBurstModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="elemental-burst-modal">ElementalBurstModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="elemental-burst-modal">ElementalBurstModal</div>;
+  },
 }));
 vi.mock('./modals/divine/DivineSparkModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="divine-spark-modal">DivineSparkModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="divine-spark-modal">DivineSparkModal</div>;
+  },
 }));
 vi.mock('./modals/divine/DivineInterventionModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="divine-intervention-modal"><button data-testid="divine-intervention-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="divine-intervention-modal">
+        <button data-testid="divine-intervention-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/arcane/ArcaneChargeModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="arcane-charge-modal">ArcaneChargeModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="arcane-charge-modal">ArcaneChargeModal</div>;
+  },
 }));
 vi.mock('./modals/WarMagicCantripModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="war-magic-cantrip-modal">WarMagicCantripModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="war-magic-cantrip-modal">WarMagicCantripModal</div>;
+  },
 }));
 vi.mock('./modals/WarMagicSpellModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="war-magic-spell-modal">WarMagicSpellModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="war-magic-spell-modal">WarMagicSpellModal</div>;
+  },
 }));
 vi.mock('./modals/divine/SacredWeaponModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="sacred-weapon-modal">SacredWeaponModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="sacred-weapon-modal">SacredWeaponModal</div>;
+  },
 }));
 vi.mock('./modals/PrimalCompanionBonusActionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="primal-companion-bonus-action-modal">PrimalCompanionBonusActionModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="primal-companion-bonus-action-modal">PrimalCompanionBonusActionModal</div>;
+  },
 }));
 vi.mock('./modals/PrimalCompanionSummonModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="primal-companion-summon-modal">PrimalCompanionSummonModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="primal-companion-summon-modal">PrimalCompanionSummonModal</div>;
+  },
 }));
 vi.mock('./modals/MistyWandererModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="misty-wanderer-modal">MistyWandererModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="misty-wanderer-modal">MistyWandererModal</div>;
+  },
 }));
 vi.mock('./modals/FeyReinforcementsModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="fey-reinforcements-modal">FeyReinforcementsModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="fey-reinforcements-modal">FeyReinforcementsModal</div>;
+  },
 }));
 vi.mock('./modals/StepsOfTheFeyTauntModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="steps-of-the-fey-taunt-modal">StepsOfTheFeyTauntModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="steps-of-the-fey-taunt-modal">StepsOfTheFeyTauntModal</div>;
+  },
 }));
 vi.mock('./modals/shared/BonusActionChoiceModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="bonus-action-choice-modal">BonusActionChoiceModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="bonus-action-choice-modal">BonusActionChoiceModal</div>;
+  },
 }));
 vi.mock('./modals/shared/StealthAttackModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="stealth-attack-modal">StealthAttackModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="stealth-attack-modal">StealthAttackModal</div>;
+  },
 }));
 vi.mock('./modals/CelestialRevelationModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="celestial-revelation-modal">CelestialRevelationModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="celestial-revelation-modal">CelestialRevelationModal</div>;
+  },
 }));
 vi.mock('./modals/RevelationInFleshModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="revelation-in-flesh-modal"><button data-testid="revelation-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="revelation-in-flesh-modal">
+        <button data-testid="revelation-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/ElementalAffinityModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="elemental-affinity-modal">ElementalAffinityModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="elemental-affinity-modal">ElementalAffinityModal</div>;
+  },
 }));
 vi.mock('./modals/SingleResistanceSelectionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="single-resistance-selection-modal">SingleResistanceSelectionModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="single-resistance-selection-modal">SingleResistanceSelectionModal</div>;
+  },
 }));
 vi.mock('./modals/shared/ChoiceListModal.jsx', () => ({
-  ChoiceListModal: function TestModal() { return <div data-testid="choice-list-modal">ChoiceListModal</div>; },
+  ChoiceListModal: function TestModal() {
+    return <div data-testid="choice-list-modal">ChoiceListModal</div>;
+  },
 }));
 vi.mock('./modals/DragonCompanionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="dragon-companion-modal">DragonCompanionModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="dragon-companion-modal">DragonCompanionModal</div>;
+  },
 }));
 vi.mock('./modals/WildMagicDoubleRollModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="wild-magic-double-roll-modal">WildMagicDoubleRollModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="wild-magic-double-roll-modal">WildMagicDoubleRollModal</div>;
+  },
 }));
 vi.mock('./modals/WildMagicTamedModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="wild-magic-tamed-modal">WildMagicTamedModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="wild-magic-tamed-modal">WildMagicTamedModal</div>;
+  },
 }));
 vi.mock('./modals/arcane/ThirdEyeModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="third-eye-modal">ThirdEyeModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="third-eye-modal">ThirdEyeModal</div>;
+  },
 }));
 vi.mock('./modals/arcane/SoulstitchSpellsModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="soulstitch-spells-modal">SoulstitchSpellsModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="soulstitch-spells-modal">SoulstitchSpellsModal</div>;
+  },
 }));
 vi.mock('./modals/arcane/IllusoryRealityModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="illusory-reality-modal">IllusoryRealityModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="illusory-reality-modal">IllusoryRealityModal</div>;
+  },
 }));
 vi.mock('./modals/FiendishLegacyModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="fiendish-legacy-modal"><button data-testid="fiendish-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="fiendish-legacy-modal">
+        <button data-testid="fiendish-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/racial/BreathWeaponShapeModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="breath-weapon-shape-modal"><button data-testid="breath-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="breath-weapon-shape-modal">
+        <button data-testid="breath-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/shared/HypnoticPatternShakeModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="hypnotic-pattern-shake-modal"><button data-testid="hypnotic-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="hypnotic-pattern-shake-modal">
+        <button data-testid="hypnotic-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/arcane/ArcaneWardRestoreModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="arcane-ward-restore-modal">ArcaneWardRestoreModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="arcane-ward-restore-modal">ArcaneWardRestoreModal</div>;
+  },
 }));
 vi.mock('./modals/ConstellationSelectionModal.jsx', () => ({
   default: function TestModal({ onConfirm, onClose }) {
@@ -238,7 +380,9 @@ vi.mock('./modals/divine/BastionOfLawModal.jsx', () => ({
   },
 }));
 vi.mock('./modals/MoonlightStepResourceModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="moonlight-step-resource-modal">MoonlightStepResourceModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="moonlight-step-resource-modal">MoonlightStepResourceModal</div>;
+  },
 }));
 vi.mock('./modals/BulwarkOfForceModal.jsx', () => ({
   default: function TestModal({ onSkip, onConfirm }) {
@@ -367,12 +511,20 @@ vi.mock('./popups/FlurryOfBlowsTargetPopup.jsx', () => ({
 }));
 vi.mock('./modals/ShieldBashChoiceModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="shield-bash-modal"><button data-testid="shield-bash-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="shield-bash-modal">
+        <button data-testid="shield-bash-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/QuiveringPalmModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="quivering-palm-modal"><button data-testid="quivering-palm-close" onClick={onClose}>Close</button></div>;
+    return (
+      <div data-testid="quivering-palm-modal">
+        <button data-testid="quivering-palm-close" onClick={onClose}>Close</button>
+      </div>
+    );
   },
 }));
 vi.mock('./modals/ElementalEpitomeModal.jsx', () => ({
@@ -518,13 +670,19 @@ vi.mock('./modals/AttackRiderManeuverPrompt.jsx', () => ({
   },
 }));
 vi.mock('./modals/BlindnessDeafnessModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="blindness-deafness-modal">BlindnessDeafnessModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="blindness-deafness-modal">BlindnessDeafnessModal</div>;
+  },
 }));
 vi.mock('./modals/SaveAttackHealModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="save-attack-heal-modal">SaveAttackHealModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="save-attack-heal-modal">SaveAttackHealModal</div>;
+  },
 }));
 vi.mock('./modals/shared/AttackRiderOptionsModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="attack-rider-options-modal">AttackRiderOptionsModal</div>; },
+  default: function TestModal() {
+    return <div data-testid="attack-rider-options-modal">AttackRiderOptionsModal</div>;
+  },
 }));
 vi.mock('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js', () => ({
   handle: vi.fn().mockResolvedValue(undefined),
@@ -535,136 +693,159 @@ vi.mock('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHan
 
 // ── Tests ──
 
-describe('CharActionModals — remaining choice modal handlers', () => {
+describe('CharActionModals — clockwork choice routing and handler callbacks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   // ── Clockwork Cavalcade choice handler ──
+  // The handler (handleClockworkCavalcadeChoice) reads mergedModalState to find
+  // the clockworkCavalcadeModal, clears it, then sets a sub-modal for the chosen
+  // action. Each sub-path is tested below.
 
-  describe('Clockwork Cavalcade choice handler', () => {
-    it('calls setModalState with heal modal when heal is chosen', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ clockworkCavalcadeModal: {} }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('clockwork-choose-heal'));
-      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeHealModal: expect.anything() });
-    });
+  describe('Clockwork Cavalcade choice routing', () => {
+    const choiceCases = [
+      { choice: 'heal', expectedModal: 'clockworkCavalcadeHealModal' },
+      { choice: 'dispel', expectedModal: 'clockworkCavalcadeDispelModal' },
+      { choice: 'repair', expectedModal: 'clockworkCavalcadeRepairModal' },
+    ];
 
-    it('calls setModalState with dispel modal when dispel is chosen', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ clockworkCavalcadeModal: {} }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('clockwork-choose-dispel'));
-      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeDispelModal: expect.anything() });
-    });
+    for (const { choice, expectedModal } of choiceCases) {
+      it(`routes '${choice}' to ${expectedModal}`, () => {
+        const setModalState = vi.fn();
+        const clockworkModalData = { creatureTargets: [{ name: 'Goblin' }], campaignName: 'test' };
+        render(
+          <CharActionModals
+            {...createBaseProps({ setModalState })}
+            modalState={{ clockworkCavalcadeModal: clockworkModalData }}
+            setModalState={setModalState}
+          />
+        );
+        fireEvent.click(screen.getByTestId(`clockwork-choose-${choice}`));
+        // First call clears the parent modal, second call sets the sub-modal.
+        expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeModal: null });
+        expect(setModalState).toHaveBeenCalledWith({ [expectedModal]: clockworkModalData });
+      });
+    }
 
-    it('calls setModalState with repair modal when repair is chosen', () => {
+    it('does nothing when clockworkCavalcadeModal is absent from merged state', () => {
       const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ clockworkCavalcadeModal: {} }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('clockwork-choose-repair'));
-      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeRepairModal: expect.anything() });
-    });
-
-    it('does nothing when clockworkCavalcadeModal is not in merged state', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{}}
-        setModalState={setModalState}
-      />);
-      // No clockwork modal to click, so no action
+      render(
+        <CharActionModals
+          {...createBaseProps({ setModalState })}
+          modalState={{}}
+          setModalState={setModalState}
+        />
+      );
+      // No clockwork modal button is rendered, so no clicks are possible.
       expect(setModalState).not.toHaveBeenCalled();
     });
   });
 
-  // ── Clockwork Cavalcade handlers ──
+  // ── Clockwork Cavalcade sub-modal handlers ──
+  // These test the handler callbacks wired through HealingModals / InlineChoiceModals.
+  // The modal rendering is covered in CharActionModals.rendering.test.jsx.
 
-  describe('Clockwork Cavalcade handlers', () => {
+  describe('Clockwork Cavalcade sub-modal handlers', () => {
     it('calls handleClockworkCavalcadeHealConfirm on heal confirm', () => {
       const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleClockworkCavalcadeHealConfirm: handler })}
-        modalState={{ clockworkCavalcadeHealModal: { creatureTargets: [{ name: 'Ally1' }], maxHeal: 100, campaignName: 'test', combatSummary: {} } }}
-        setModalState={vi.fn()}
-      />);
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleClockworkCavalcadeHealConfirm: handler })}
+          modalState={{
+            clockworkCavalcadeHealModal: {
+              creatureTargets: [{ name: 'Ally1' }],
+              maxHeal: 100,
+              campaignName: 'test',
+              combatSummary: {},
+            },
+          }}
+          setModalState={vi.fn()}
+        />
+      );
       fireEvent.click(screen.getByTestId('mass-heal-confirm'));
       expect(handler).toHaveBeenCalledWith(['Target1']);
     });
 
     it('calls handleClockworkCavalcadeDispelConfirm on dispel confirm', () => {
       const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleClockworkCavalcadeDispelConfirm: handler })}
-        modalState={{ clockworkCavalcadeDispelModal: { creatureTargets: [{ name: 'Goblin' }] } }}
-        setModalState={vi.fn()}
-      />);
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleClockworkCavalcadeDispelConfirm: handler })}
+          modalState={{
+            clockworkCavalcadeDispelModal: { creatureTargets: [{ name: 'Goblin' }] },
+          }}
+          setModalState={vi.fn()}
+        />
+      );
       fireEvent.click(screen.getByTestId('creature-confirm'));
       expect(handler).toHaveBeenCalledWith(['Goblin']);
     });
 
     it('calls handleClockworkCavalcadeRepairConfirm on repair button click', () => {
       const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleClockworkCavalcadeRepairConfirm: handler })}
-        modalState={{ clockworkCavalcadeRepairModal: {} }}
-        setModalState={vi.fn()}
-      />);
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleClockworkCavalcadeRepairConfirm: handler })}
+          modalState={{ clockworkCavalcadeRepairModal: {} }}
+          setModalState={vi.fn()}
+        />
+      );
       fireEvent.click(screen.getByText('Repair'));
       expect(handler).toHaveBeenCalled();
     });
   });
 
   // ── Cleave handlers ──
+  // These handlers are passed through from the parent component.
+  // The actual handler logic is tested elsewhere; these verify the props are wired.
 
-  describe('Cleave handlers', () => {
-    it('handleCleaveAttack is available as a prop', () => {
+  describe('Cleave handlers wiring', () => {
+    it('passes handleCleaveAttack to the component', () => {
       const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleCleaveAttack: handler })}
-        setModalState={vi.fn()}
-      />);
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleCleaveAttack: handler })}
+          setModalState={vi.fn()}
+        />
+      );
       expect(handler).toBeDefined();
     });
 
-    it('handleCleaveSkip is available as a prop', () => {
+    it('passes handleCleaveSkip to the component', () => {
       const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleCleaveSkip: handler })}
-        setModalState={vi.fn()}
-      />);
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleCleaveSkip: handler })}
+          setModalState={vi.fn()}
+        />
+      );
       expect(handler).toBeDefined();
     });
   });
 
   // ── Divination Savant / Illusion Savant handlers ──
 
-  describe('Divination Savant / Illusion Savant handlers', () => {
-    it('handleDivinationSavantConfirm is available as a prop', () => {
+  describe('Divination Savant / Illusion Savant handlers wiring', () => {
+    it('passes handleDivinationSavantConfirm to the component', () => {
       const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleDivinationSavantConfirm: handler })}
-        setModalState={vi.fn()}
-      />);
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleDivinationSavantConfirm: handler })}
+          setModalState={vi.fn()}
+        />
+      );
       expect(handler).toBeDefined();
     });
 
-    it('handleIllusionSavantConfirm is available as a prop', () => {
+    it('passes handleIllusionSavantConfirm to the component', () => {
       const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleIllusionSavantConfirm: handler })}
-        setModalState={vi.fn()}
-      />);
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleIllusionSavantConfirm: handler })}
+          setModalState={vi.fn()}
+        />
+      );
       expect(handler).toBeDefined();
     });
   });
@@ -673,11 +854,13 @@ describe('CharActionModals — remaining choice modal handlers', () => {
 
   describe('Teleport Modal with Moonlight Step', () => {
     it('passes isMoonlightStep=true when automation effect is moonlight_step_teleport', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ teleportModal: { action: { automation: { effect: 'moonlight_step_teleport' } } } }}
-        setModalState={vi.fn()}
-      />);
+      render(
+        <CharActionModals
+          {...createBaseProps()}
+          modalState={{ teleportModal: { action: { automation: { effect: 'moonlight_step_teleport' } } } }}
+          setModalState={vi.fn()}
+        />
+      );
       expect(screen.getByTestId('teleport-modal')).toBeInTheDocument();
     });
   });
@@ -687,11 +870,13 @@ describe('CharActionModals — remaining choice modal handlers', () => {
   describe('Reckless Attack default mode', () => {
     it('defaults to full mode when mode is not specified', () => {
       const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleRecklessAttackConfirm: handler })}
-        modalState={{ recklessAttackModal: { attack: { name: 'Test' } } }}
-        setModalState={vi.fn()}
-      />);
+      render(
+        <CharActionModals
+          {...createBaseProps({ handleRecklessAttackConfirm: handler })}
+          modalState={{ recklessAttackModal: { attack: { name: 'Test' } } }}
+          setModalState={vi.fn()}
+        />
+      );
       fireEvent.click(screen.getByTestId('reckless-confirm'));
       expect(handler).toHaveBeenCalled();
     });

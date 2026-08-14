@@ -1,3 +1,4 @@
+// @improved-by-ai
 // Tests for async confirm handlers with setPopupHtml in CharActionModals.jsx:
 // - AnimateDeadModal onConfirm with setPopupHtml
 // - CreateUndeadModal onConfirm with setPopupHtml
@@ -7,6 +8,10 @@
 // - handleDestructiveStrideConfirm with setPopupHtml
 // - handleDestructiveStrideTargetConfirm with setPopupHtml
 // - handleDestructiveStrideTargetSkip with setPopupHtml
+//
+// Each handler test covers: successful payload path, null/undefined result path,
+// and modal state clearing. Modal rendering is tested in CharActionModals.rendering.test.jsx.
+// Modal state clearing is tested in CharActionModals.handler-callbacks.test.jsx.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -389,13 +394,13 @@ vi.mock('../../services/rules/spells/postCastHealService.js', () => ({
 vi.mock('../../services/automation/handlers/combat/elementalEpitomeHandler.js', () => ({
   handle: vi.fn(),
   handleElementalEpitome: vi.fn(),
-  applyResistanceChoice: vi.fn().mockResolvedValue(undefined),
+  applyResistanceChoice: vi.fn(),
 }));
 vi.mock('../../services/automation/handlers/combat/destructiveStrideHandler.js', () => ({
   handle: vi.fn(),
-  applyDamageTypeChoice: vi.fn().mockResolvedValue(undefined),
-  applyTargetChoice: vi.fn().mockResolvedValue(undefined),
-  skipTargetChoice: vi.fn().mockResolvedValue(undefined),
+  applyDamageTypeChoice: vi.fn(),
+  applyTargetChoice: vi.fn(),
+  skipTargetChoice: vi.fn(),
 }));
 vi.mock('../../services/automation/common/oncePerTurn.js', () => ({
   setSkipFlag: vi.fn().mockResolvedValue(undefined),
@@ -498,11 +503,14 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
     vi.clearAllMocks();
   });
 
-  describe('AnimateDeadModal onConfirm with setPopupHtml', () => {
-    it('calls confirmAnimateDead and sets popupHtml on result', async () => {
+  // ── AnimateDeadModal onConfirm ──
+
+  describe('AnimateDeadModal onConfirm', () => {
+    it('calls confirmAnimateDead and sets popupHtml when result has payload', async () => {
       const setPopupHtml = vi.fn();
       const mockResult = { payload: '<b>Animate Dead</b><br/>Created 2 zombies' };
-      vi.mocked((await import('../../services/automation/handlers/spells/animateDeadHandler.js')).confirmAnimateDead).mockResolvedValue(mockResult);
+      const { confirmAnimateDead } = await import('../../services/automation/handlers/spells/animateDeadHandler.js');
+      confirmAnimateDead.mockResolvedValue(mockResult);
 
       render(<CharActionModals
         {...createBaseProps({ setPopupHtml })}
@@ -513,16 +521,39 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
       fireEvent.click(screen.getByTestId('animate-dead-confirm'));
 
       await waitFor(() => {
+        expect(confirmAnimateDead).toHaveBeenCalled();
         expect(setPopupHtml).toHaveBeenCalledWith(mockResult.payload);
+      });
+    });
+
+    it('does not call setPopupHtml when confirmAnimateDead returns undefined', async () => {
+      const setPopupHtml = vi.fn();
+      const { confirmAnimateDead } = await import('../../services/automation/handlers/spells/animateDeadHandler.js');
+      confirmAnimateDead.mockResolvedValue(undefined);
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml })}
+        modalState={{ animateDeadModal: { maxTargets: 3, action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
+        setModalState={vi.fn()}
+      />);
+
+      fireEvent.click(screen.getByTestId('animate-dead-confirm'));
+
+      await waitFor(() => {
+        expect(confirmAnimateDead).toHaveBeenCalled();
+        expect(setPopupHtml).not.toHaveBeenCalled();
       });
     });
   });
 
-  describe('CreateUndeadModal onConfirm with setPopupHtml', () => {
-    it('calls confirmCreateUndead and sets popupHtml on result', async () => {
+  // ── CreateUndeadModal onConfirm ──
+
+  describe('CreateUndeadModal onConfirm', () => {
+    it('calls confirmCreateUndead and sets popupHtml when result has payload', async () => {
       const setPopupHtml = vi.fn();
       const mockResult = { payload: '<b>Create Undead</b><br/>Created 1 ghoul' };
-      vi.mocked((await import('../../services/automation/handlers/spells/createUndeadHandler.js')).confirmCreateUndead).mockResolvedValue(mockResult);
+      const { confirmCreateUndead } = await import('../../services/automation/handlers/spells/createUndeadHandler.js');
+      confirmCreateUndead.mockResolvedValue(mockResult);
 
       render(<CharActionModals
         {...createBaseProps({ setPopupHtml })}
@@ -533,16 +564,39 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
       fireEvent.click(screen.getByTestId('create-undead-confirm'));
 
       await waitFor(() => {
+        expect(confirmCreateUndead).toHaveBeenCalled();
         expect(setPopupHtml).toHaveBeenCalledWith(mockResult.payload);
+      });
+    });
+
+    it('does not call setPopupHtml when confirmCreateUndead returns undefined', async () => {
+      const setPopupHtml = vi.fn();
+      const { confirmCreateUndead } = await import('../../services/automation/handlers/spells/createUndeadHandler.js');
+      confirmCreateUndead.mockResolvedValue(undefined);
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml })}
+        modalState={{ createUndeadModal: { maxTargets: 3, action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
+        setModalState={vi.fn()}
+      />);
+
+      fireEvent.click(screen.getByTestId('create-undead-confirm'));
+
+      await waitFor(() => {
+        expect(confirmCreateUndead).toHaveBeenCalled();
+        expect(setPopupHtml).not.toHaveBeenCalled();
       });
     });
   });
 
-  describe('SummonSpiritModal onConfirm with setPopupHtml', () => {
-    it('calls confirmSummonSpirit and sets popupHtml on result', async () => {
+  // ── SummonSpiritModal onConfirm ──
+
+  describe('SummonSpiritModal onConfirm', () => {
+    it('calls confirmSummonSpirit and sets popupHtml when result has payload', async () => {
       const setPopupHtml = vi.fn();
       const mockResult = { payload: '<b>Summon Spirit</b><br/>Air spirit summoned' };
-      vi.mocked((await import('../../services/automation/handlers/spells/summonSpiritHandler.js')).confirmSummonSpirit).mockResolvedValue(mockResult);
+      const { confirmSummonSpirit } = await import('../../services/automation/handlers/spells/summonSpiritHandler.js');
+      confirmSummonSpirit.mockResolvedValue(mockResult);
 
       render(<CharActionModals
         {...createBaseProps({ setPopupHtml })}
@@ -553,16 +607,39 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
       fireEvent.click(screen.getByTestId('summon-spirit-confirm'));
 
       await waitFor(() => {
+        expect(confirmSummonSpirit).toHaveBeenCalled();
         expect(setPopupHtml).toHaveBeenCalledWith(mockResult.payload);
+      });
+    });
+
+    it('does not call setPopupHtml when confirmSummonSpirit returns undefined', async () => {
+      const setPopupHtml = vi.fn();
+      const { confirmSummonSpirit } = await import('../../services/automation/handlers/spells/summonSpiritHandler.js');
+      confirmSummonSpirit.mockResolvedValue(undefined);
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml })}
+        modalState={{ summonSpiritModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
+        setModalState={vi.fn()}
+      />);
+
+      fireEvent.click(screen.getByTestId('summon-spirit-confirm'));
+
+      await waitFor(() => {
+        expect(confirmSummonSpirit).toHaveBeenCalled();
+        expect(setPopupHtml).not.toHaveBeenCalled();
       });
     });
   });
 
-  describe('handleStarryChaliceConfirm with setPopupHtml', () => {
-    it('sets popupHtml when applyStarryChaliceHeal returns data', async () => {
+  // ── handleStarryChaliceConfirm ──
+
+  describe('handleStarryChaliceConfirm', () => {
+    it('sets popupHtml with full heal result when applyStarryChaliceHeal returns data', async () => {
       const setPopupHtml = vi.fn();
       const { applyStarryChaliceHeal } = await import('../../services/rules/spells/postCastHealService.js');
-      vi.mocked(applyStarryChaliceHeal).mockResolvedValue({ targetName: 'Ally1', actualHeal: 5 });
+      const mockResult = { targetName: 'Ally1', actualHeal: 5 };
+      applyStarryChaliceHeal.mockResolvedValue(mockResult);
 
       render(<CharActionModals
         {...createBaseProps({ setPopupHtml, campaignName: 'test-campaign' })}
@@ -573,19 +650,67 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
       fireEvent.click(screen.getByTestId('secondary-confirm'));
 
       await waitFor(() => {
-        expect(setPopupHtml).toHaveBeenCalled();
+        expect(applyStarryChaliceHeal).toHaveBeenCalledWith('Ally1', 'test-campaign');
+        expect(setPopupHtml).toHaveBeenCalledWith({
+          type: 'heal',
+          name: 'Starry Form: Chalice',
+          formula: '10 HP',
+          rolls: [],
+          total: 10,
+          targetName: 'Ally1',
+          finalHeal: 5,
+        });
+      });
+    });
+
+    it('does not call setPopupHtml when applyStarryChaliceHeal returns null', async () => {
+      const setPopupHtml = vi.fn();
+      const { applyStarryChaliceHeal } = await import('../../services/rules/spells/postCastHealService.js');
+      applyStarryChaliceHeal.mockResolvedValue(null);
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml, campaignName: 'test-campaign' })}
+        modalState={{ starryChaliceHealModal: { targetNames: ['Ally1'], amount: 10 } }}
+        setModalState={vi.fn()}
+      />);
+
+      fireEvent.click(screen.getByTestId('secondary-confirm'));
+
+      await waitFor(() => {
+        expect(applyStarryChaliceHeal).toHaveBeenCalled();
+        expect(setPopupHtml).not.toHaveBeenCalled();
+      });
+    });
+
+    it('does not call setPopupHtml when applyStarryChaliceHeal returns undefined', async () => {
+      const setPopupHtml = vi.fn();
+      const { applyStarryChaliceHeal } = await import('../../services/rules/spells/postCastHealService.js');
+      applyStarryChaliceHeal.mockResolvedValue(undefined);
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml, campaignName: 'test-campaign' })}
+        modalState={{ starryChaliceHealModal: { targetNames: ['Ally1'], amount: 10 } }}
+        setModalState={vi.fn()}
+      />);
+
+      fireEvent.click(screen.getByTestId('secondary-confirm'));
+
+      await waitFor(() => {
+        expect(setPopupHtml).not.toHaveBeenCalled();
       });
     });
   });
 
-  describe('handleEpitomeConfirm with setPopupHtml', () => {
+  // ── handleEpitomeConfirm ──
+
+  describe('handleEpitomeConfirm', () => {
     it('sets popupHtml when applyResistanceChoice returns payload', async () => {
       const setPopupHtml = vi.fn();
       const { applyResistanceChoice } = await import('../../services/automation/handlers/combat/elementalEpitomeHandler.js');
-      vi.mocked(applyResistanceChoice).mockResolvedValue({ payload: 'Resistance applied' });
+      applyResistanceChoice.mockResolvedValue({ payload: 'Resistance applied' });
 
       render(<CharActionModals
-        {...createBaseProps({ setPopupHtml, handleEpitomeConfirm: vi.fn() })}
+        {...createBaseProps({ setPopupHtml })}
         modalState={{ epitomeModal: { action: {}, playerStats: {}, campaignName: 'test-campaign', currentResistance: 'cold' } }}
         setModalState={vi.fn()}
       />);
@@ -593,19 +718,59 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
       fireEvent.click(screen.getByTestId('epitome-confirm'));
 
       await waitFor(() => {
+        expect(applyResistanceChoice).toHaveBeenCalled();
         expect(setPopupHtml).toHaveBeenCalledWith('Resistance applied');
+      });
+    });
+
+    it('does not call setPopupHtml when applyResistanceChoice returns result without payload', async () => {
+      const setPopupHtml = vi.fn();
+      const { applyResistanceChoice } = await import('../../services/automation/handlers/combat/elementalEpitomeHandler.js');
+      applyResistanceChoice.mockResolvedValue({ success: true });
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml })}
+        modalState={{ epitomeModal: { action: {}, playerStats: {}, campaignName: 'test-campaign', currentResistance: 'cold' } }}
+        setModalState={vi.fn()}
+      />);
+
+      fireEvent.click(screen.getByTestId('epitome-confirm'));
+
+      await waitFor(() => {
+        expect(applyResistanceChoice).toHaveBeenCalled();
+        expect(setPopupHtml).not.toHaveBeenCalled();
+      });
+    });
+
+    it('does not call setPopupHtml when applyResistanceChoice returns undefined', async () => {
+      const setPopupHtml = vi.fn();
+      const { applyResistanceChoice } = await import('../../services/automation/handlers/combat/elementalEpitomeHandler.js');
+      applyResistanceChoice.mockResolvedValue(undefined);
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml })}
+        modalState={{ epitomeModal: { action: {}, playerStats: {}, campaignName: 'test-campaign', currentResistance: 'cold' } }}
+        setModalState={vi.fn()}
+      />);
+
+      fireEvent.click(screen.getByTestId('epitome-confirm'));
+
+      await waitFor(() => {
+        expect(setPopupHtml).not.toHaveBeenCalled();
       });
     });
   });
 
-  describe('handleDestructiveStrideConfirm with setPopupHtml', () => {
-    it('sets popupHtml when result has payload', async () => {
+  // ── handleDestructiveStrideConfirm ──
+
+  describe('handleDestructiveStrideConfirm', () => {
+    it('sets popupHtml when applyDamageTypeChoice returns payload without modal type', async () => {
       const setPopupHtml = vi.fn();
       const { applyDamageTypeChoice } = await import('../../services/automation/handlers/combat/destructiveStrideHandler.js');
-      vi.mocked(applyDamageTypeChoice).mockResolvedValue({ payload: 'Damage applied' });
+      applyDamageTypeChoice.mockResolvedValue({ payload: 'Damage applied' });
 
       render(<CharActionModals
-        {...createBaseProps({ setPopupHtml, handleDestructiveStrideConfirm: vi.fn() })}
+        {...createBaseProps({ setPopupHtml })}
         modalState={{ destructiveStrideModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
         setModalState={vi.fn()}
       />);
@@ -613,6 +778,7 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
       fireEvent.click(screen.getByTestId('stride-confirm'));
 
       await waitFor(() => {
+        expect(applyDamageTypeChoice).toHaveBeenCalled();
         expect(setPopupHtml).toHaveBeenCalledWith('Damage applied');
       });
     });
@@ -620,10 +786,11 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
     it('sets destructiveStrideTargetModal when result has modal type', async () => {
       const setModalState = vi.fn();
       const { applyDamageTypeChoice } = await import('../../services/automation/handlers/combat/destructiveStrideHandler.js');
-      vi.mocked(applyDamageTypeChoice).mockResolvedValue({ type: 'modal', payload: { action: {}, chosenType: 'fire' } });
+      const modalPayload = { action: {}, chosenType: 'fire' };
+      applyDamageTypeChoice.mockResolvedValue({ type: 'modal', payload: modalPayload });
 
       render(<CharActionModals
-        {...createBaseProps({ handleDestructiveStrideConfirm: vi.fn() })}
+        {...createBaseProps()}
         modalState={{ destructiveStrideModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
         setModalState={setModalState}
       />);
@@ -631,19 +798,42 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
       fireEvent.click(screen.getByTestId('stride-confirm'));
 
       await waitFor(() => {
-        expect(setModalState).toHaveBeenCalledWith({ destructiveStrideTargetModal: { action: {}, chosenType: 'fire' } });
+        expect(setModalState).toHaveBeenCalledWith({ destructiveStrideTargetModal: modalPayload });
+      });
+    });
+
+    it('does not call setPopupHtml or setModalState when result has neither payload nor type', async () => {
+      const setPopupHtml = vi.fn();
+      const setModalState = vi.fn();
+      const { applyDamageTypeChoice } = await import('../../services/automation/handlers/combat/destructiveStrideHandler.js');
+      applyDamageTypeChoice.mockResolvedValue(undefined);
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml })}
+        modalState={{ destructiveStrideModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
+        setModalState={setModalState}
+      />);
+
+      fireEvent.click(screen.getByTestId('stride-confirm'));
+
+      await waitFor(() => {
+        expect(applyDamageTypeChoice).toHaveBeenCalled();
+        expect(setPopupHtml).not.toHaveBeenCalled();
+        expect(setModalState).not.toHaveBeenCalledWith(expect.objectContaining({ destructiveStrideTargetModal: expect.anything() }));
       });
     });
   });
 
-  describe('handleDestructiveStrideTargetConfirm with setPopupHtml', () => {
+  // ── handleDestructiveStrideTargetConfirm ──
+
+  describe('handleDestructiveStrideTargetConfirm', () => {
     it('sets popupHtml when applyTargetChoice returns payload', async () => {
       const setPopupHtml = vi.fn();
       const { applyTargetChoice } = await import('../../services/automation/handlers/combat/destructiveStrideHandler.js');
-      vi.mocked(applyTargetChoice).mockResolvedValue({ payload: 'Target damage applied' });
+      applyTargetChoice.mockResolvedValue({ payload: 'Target damage applied' });
 
       render(<CharActionModals
-        {...createBaseProps({ setPopupHtml, handleDestructiveStrideTargetConfirm: vi.fn(), handleDestructiveStrideTargetSkip: vi.fn() })}
+        {...createBaseProps({ setPopupHtml })}
         modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }], action: {}, chosenType: 'fire', martialArtsDie: 4 } }}
         setModalState={vi.fn()}
       />);
@@ -651,19 +841,41 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
       fireEvent.click(screen.getByTestId('secondary-confirm'));
 
       await waitFor(() => {
+        expect(applyTargetChoice).toHaveBeenCalled();
         expect(setPopupHtml).toHaveBeenCalledWith('Target damage applied');
+      });
+    });
+
+    it('does not call setPopupHtml when applyTargetChoice returns undefined', async () => {
+      const setPopupHtml = vi.fn();
+      const { applyTargetChoice } = await import('../../services/automation/handlers/combat/destructiveStrideHandler.js');
+      applyTargetChoice.mockResolvedValue(undefined);
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml })}
+        modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }], action: {}, chosenType: 'fire', martialArtsDie: 4 } }}
+        setModalState={vi.fn()}
+      />);
+
+      fireEvent.click(screen.getByTestId('secondary-confirm'));
+
+      await waitFor(() => {
+        expect(applyTargetChoice).toHaveBeenCalled();
+        expect(setPopupHtml).not.toHaveBeenCalled();
       });
     });
   });
 
-  describe('handleDestructiveStrideTargetSkip with setPopupHtml', () => {
+  // ── handleDestructiveStrideTargetSkip ──
+
+  describe('handleDestructiveStrideTargetSkip', () => {
     it('sets popupHtml when skipTargetChoice returns payload', async () => {
       const setPopupHtml = vi.fn();
       const { skipTargetChoice } = await import('../../services/automation/handlers/combat/destructiveStrideHandler.js');
-      vi.mocked(skipTargetChoice).mockResolvedValue({ payload: 'Skipped' });
+      skipTargetChoice.mockResolvedValue({ payload: 'Skipped' });
 
       render(<CharActionModals
-        {...createBaseProps({ setPopupHtml, handleDestructiveStrideTargetConfirm: vi.fn(), handleDestructiveStrideTargetSkip: vi.fn() })}
+        {...createBaseProps({ setPopupHtml })}
         modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }], action: {}, chosenType: 'fire', martialArtsDie: 4 } }}
         setModalState={vi.fn()}
       />);
@@ -671,7 +883,27 @@ describe('CharActionModals — async confirm handlers with setPopupHtml', () => 
       fireEvent.click(screen.getByTestId('secondary-skip'));
 
       await waitFor(() => {
+        expect(skipTargetChoice).toHaveBeenCalled();
         expect(setPopupHtml).toHaveBeenCalledWith('Skipped');
+      });
+    });
+
+    it('does not call setPopupHtml when skipTargetChoice returns undefined', async () => {
+      const setPopupHtml = vi.fn();
+      const { skipTargetChoice } = await import('../../services/automation/handlers/combat/destructiveStrideHandler.js');
+      skipTargetChoice.mockResolvedValue(undefined);
+
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml })}
+        modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }], action: {}, chosenType: 'fire', martialArtsDie: 4 } }}
+        setModalState={vi.fn()}
+      />);
+
+      fireEvent.click(screen.getByTestId('secondary-skip'));
+
+      await waitFor(() => {
+        expect(skipTargetChoice).toHaveBeenCalled();
+        expect(setPopupHtml).not.toHaveBeenCalled();
       });
     });
   });

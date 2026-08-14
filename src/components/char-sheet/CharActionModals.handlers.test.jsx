@@ -253,7 +253,7 @@ describe('CharActionModals handlers', () => {
   // Tests verify the handler callback receives the correct payload — the
   // behavioral contract between CharActionModals and its parent.
   // Rendering is covered in CharActionModals.rendering.test.jsx.
-  // Close behavior is covered in CharActionModals.handler-callbacks-2.test.jsx.
+  // Close behavior is covered in CharActionModals.modal-closes.test.jsx.
 
   describe('Constellation Selection modal confirm handler', () => {
     const constellationCases = [

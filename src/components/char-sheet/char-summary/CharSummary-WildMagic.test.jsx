@@ -1,7 +1,20 @@
+// @improved-by-ai
+//
+// Improvements:
+//   - Replaced giant inline useSyncedState mock overrides with a small helper function
+//   - Added missing mocks that CharSummary.jsx depends on (DiceRollContext, getCombatSummary,
+//     isBuffActive, isUnbreakableMajesty, buffToggle, handlers, logService, etc.)
+//   - Added edge-case tests: empty array, single item, surge without duration
+//   - Strengthened assertions to verify component behavior, not just presence
+//   - Removed redundant pattern duplication across tests
+
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { useSyncedState } from '../../../hooks/runtime/useSyncedState.js';
+import { getCombatSummary } from '../../../services/encounters/combatData.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { DiceRollContext } from '../../../hooks/combat/DiceRollContext.js';
 import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
@@ -15,6 +28,8 @@ vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-
 vi.mock('../ShortRestButton.jsx', () => ({ default: () => <div data-testid="short-rest-btn">Short Rest</div> }));
 vi.mock('../ShortRestModal.jsx', () => ({ default: () => <div data-testid="short-rest-modal">Short Rest Modal</div> }));
 vi.mock('./CharConditions.jsx', () => ({ default: () => <div data-testid="char-conditions">Conditions</div> }));
+vi.mock('../../common/CreatureBadge.jsx', () => ({ default: ({ label }) => <span data-testid="creature-badge">{label}</span> }));
+vi.mock('../../initiative/ConditionEffectBadges.jsx', () => ({ default: () => <div data-testid="condition-effect-badges">Badges</div> }));
 
 vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
     default: vi.fn((key, name, init, _deps, _campaign) => ({ current: init(), update: vi.fn() })),
@@ -36,7 +51,7 @@ vi.mock('../../../hooks/combat/useActionPopup.js', () => ({
 }));
 
 vi.mock('../../../hooks/combat/useLoggedDiceRoll.js', () => ({
-  default: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn(), rollInitiative: vi.fn() })),
+    default: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn(), rollInitiative: vi.fn() })),
 }));
 
 vi.mock('../../../services/ui/sanitize.js', () => ({
@@ -58,165 +73,146 @@ vi.mock('../../../services/rules/core/attackCalc.js', () => ({
     parseMagicItemName: (name) => ({ baseName: name }),
 }));
 
+vi.mock('../../../services/encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => ({ creatures: [] })),
+}));
+
+vi.mock('../../../services/automation/common/buffToggle.js', () => ({
+    isBuffActive: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/combat/auras/unbreakableMajesty.js', () => ({
+    isUnbreakableMajestyActive: vi.fn(() => false),
+    getUnbreakableMajestySaveDc: vi.fn(() => 0),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/auraOfLifeHandler.js', () => ({
+    isAuraOfLifeActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
+    isCircleOfPowerActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
+    isDeathWardActive: vi.fn(() => false),
+    handle: vi.fn(),
+}));
+
+vi.mock('../../../services/ui/logService.js', () => ({
+    addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+const defaultSyncedStateKeys = [
+    'wildMagicSurgeEffects',
+    'smiteOfProtectionActive',
+    'bulwarkOfForceActive',
+    'naturesSanctuaryActive',
+    'bulwarkOfForceTargets',
+    'naturesSanctuaryCreatures',
+    'wrathOfTheSeaActive',
+    'mantleOfMajestyActive',
+    'innerRadianceActive',
+    'unbreakableMajestyActive',
+    'baitAndSwitchActive',
+    'baitAndSwitchBonus',
+    'activeBuffs',
+    'coverRefresh',
+];
+
+function createUseSyncedStateMock(overrides) {
+    return vi.fn((_name, key, defaultValue) => {
+        if (key === 'wildMagicSurgeEffects' && overrides.surgeEffects !== undefined) {
+            return [overrides.surgeEffects, vi.fn()];
+        }
+        if (defaultSyncedStateKeys.includes(key)) {
+            return [defaultValue, vi.fn()];
+        }
+        return [defaultValue, vi.fn()];
+    });
+}
+
+function renderWithDiceContext(ui) {
+    return render(
+        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: vi.fn() }}>
+            {ui}
+        </DiceRollContext.Provider>
+    );
+}
+
 describe('CharSummary - Wild Magic Surge Effects', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
+        vi.mocked(useSyncedState).mockImplementation(createUseSyncedStateMock({}));
+        vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
+        vi.mocked(getRuntimeValue).mockReturnValue(null);
     });
 
-    it('renders surge effects list when surgeEffects is present', () => {
-        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
-            if (key === 'wildMagicSurgeEffects') {
-                return [
-                    [{ timestamp: 1000, roll: 5, effect: 'Fireball', duration: '1 round' }, { timestamp: 2000, roll: 12, effect: 'Healing' }],
-                    vi.fn(),
-                ];
-            }
-            if (key === 'smiteOfProtectionActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'bulwarkOfForceActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'naturesSanctuaryActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'bulwarkOfForceTargets') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'naturesSanctuaryCreatures') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'wrathOfTheSeaActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'mantleOfMajestyActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'innerRadianceActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'unbreakableMajestyActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'baitAndSwitchActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'baitAndSwitchBonus') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'activeBuffs') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'coverRefresh') {
-                return [defaultValue, vi.fn()];
-            }
-            return [defaultValue, vi.fn()];
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+    it('renders surge effects list when surgeEffects array has entries', () => {
+        vi.mocked(useSyncedState).mockImplementation(
+            createUseSyncedStateMock({
+                surgeEffects: [
+                    { timestamp: 1000, roll: 5, effect: 'Fireball', duration: '1 round' },
+                    { timestamp: 2000, roll: 12, effect: 'Healing' },
+                ],
+            })
+        );
+        renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Surge Effects:/)).toBeInTheDocument();
         expect(screen.getByText(/#5 — Fireball/)).toBeInTheDocument();
         expect(screen.getByText(/#12 — Healing/)).toBeInTheDocument();
+    });
+
+    it('renders duration tooltip on hourglass icon when surge has duration', () => {
+        vi.mocked(useSyncedState).mockImplementation(
+            createUseSyncedStateMock({
+                surgeEffects: [{ timestamp: 1000, roll: 5, effect: 'Fireball', duration: '1 round' }],
+            })
+        );
+        renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByTitle('1 round')).toBeInTheDocument();
     });
 
-    it('shows "Tamed" when roll is "tamed"', () => {
-        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
-            if (key === 'wildMagicSurgeEffects') {
-                return [[{ timestamp: 3000, roll: 'tamed', effect: 'Wild Surge' }], vi.fn()];
-            }
-            if (key === 'smiteOfProtectionActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'bulwarkOfForceActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'naturesSanctuaryActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'bulwarkOfForceTargets') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'naturesSanctuaryCreatures') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'wrathOfTheSeaActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'mantleOfMajestyActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'innerRadianceActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'unbreakableMajestyActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'baitAndSwitchActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'baitAndSwitchBonus') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'activeBuffs') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'coverRefresh') {
-                return [defaultValue, vi.fn()];
-            }
-            return [defaultValue, vi.fn()];
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+    it('shows "Tamed" text when roll value is "tamed"', () => {
+        vi.mocked(useSyncedState).mockImplementation(
+            createUseSyncedStateMock({
+                surgeEffects: [{ timestamp: 3000, roll: 'tamed', effect: 'Wild Surge' }],
+            })
+        );
+        renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Tamed/)).toBeInTheDocument();
+        expect(screen.queryByText(/#\d+/)).not.toBeInTheDocument();
     });
 
-    it('does not render surge effects when surgeEffects is null', () => {
-        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
-            if (key === 'wildMagicSurgeEffects') {
-                return [null, vi.fn()];
-            }
-            if (key === 'smiteOfProtectionActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'bulwarkOfForceActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'naturesSanctuaryActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'bulwarkOfForceTargets') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'naturesSanctuaryCreatures') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'wrathOfTheSeaActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'mantleOfMajestyActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'innerRadianceActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'unbreakableMajestyActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'baitAndSwitchActive') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'baitAndSwitchBonus') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'activeBuffs') {
-                return [defaultValue, vi.fn()];
-            }
-            if (key === 'coverRefresh') {
-                return [defaultValue, vi.fn()];
-            }
-            return [defaultValue, vi.fn()];
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+    it('does not render surge effects section when surgeEffects is null', () => {
+        vi.mocked(useSyncedState).mockImplementation(
+            createUseSyncedStateMock({ surgeEffects: null })
+        );
+        renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.queryByText(/Surge Effects:/)).not.toBeInTheDocument();
+    });
+
+    it('does not render surge effects section when surgeEffects is empty array', () => {
+        vi.mocked(useSyncedState).mockImplementation(
+            createUseSyncedStateMock({ surgeEffects: [] })
+        );
+        renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Surge Effects:/)).not.toBeInTheDocument();
+    });
+
+    it('renders single surge effect without duration', () => {
+        vi.mocked(useSyncedState).mockImplementation(
+            createUseSyncedStateMock({
+                surgeEffects: [{ timestamp: 4000, roll: 7, effect: 'Teleport' }],
+            })
+        );
+        renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Surge Effects:/)).toBeInTheDocument();
+        expect(screen.getByText(/#7 — Teleport/)).toBeInTheDocument();
+        const surgeLi = screen.getByText(/#7 — Teleport/).parentElement;
+        expect(surgeLi.querySelector('i.fa-solid.fa-hourglass-end')).not.toBeInTheDocument();
     });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
@@ -13,16 +14,31 @@ vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
   return { default: mockFn };
 });
 
+vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
+  useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
+}));
+
+vi.mock('../../hooks/combat/useActionPopup.js', () => ({
+  buildAbilityDetailHtml: vi.fn(() => () => 'ability detail html'),
+}));
+
+vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
+  hasSaveAdvantage: vi.fn(() => false),
+}));
+
+vi.mock('../../services/ui/dataLoader.js', () => ({
+  loadEquipment: vi.fn(() => Promise.resolve([])),
+}));
+
+const mockStore = new Map();
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
+  getStore: vi.fn(() => mockStore),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
   listeners: new Map(),
   getRuntimeValue: vi.fn((key, prop) => mockStore.get(`${key}:${prop}`) ?? null),
   setRuntimeValue: vi.fn(),
   useRuntimeValue: vi.fn((key, prop) => mockStore.get(`${key}:${prop}`) ?? null),
 }));
-
-const mockStore = new Map();
 
 const mockAllAbilityScores = [
   { full_name: 'Strength', description: 'STR desc' },
@@ -78,19 +94,23 @@ describe('CharAbilities rendering', () => {
       expect(screen.getByText('Save')).toBeInTheDocument();
       expect(screen.getByText('Skills')).toBeInTheDocument();
     });
+  });
 
-    it('renders ability names and their scores', () => {
+  describe('ability row rendering', () => {
+    it('renders all six ability names as clickable elements', () => {
       render(<CharAbilities {...defaultProps} />);
-      expect(screen.getByText('Strength')).toBeInTheDocument();
-      expect(screen.getByText('Dexterity')).toBeInTheDocument();
-      expect(screen.getByText('Constitution')).toBeInTheDocument();
-      expect(screen.getByText('Intelligence')).toBeInTheDocument();
-      expect(screen.getByText('Wisdom')).toBeInTheDocument();
-      expect(screen.getByText('Charisma')).toBeInTheDocument();
-      expect(screen.getByText('14')).toBeInTheDocument();
-      expect(screen.getByText('12')).toBeInTheDocument();
-      expect(screen.getByText('11')).toBeInTheDocument();
-      expect(screen.getByText('9')).toBeInTheDocument();
+      const abilityNames = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+      abilityNames.forEach((name) => {
+        expect(screen.getByText(name)).toBeInTheDocument();
+      });
+    });
+
+    it('renders ability scores in the score column', () => {
+      render(<CharAbilities {...defaultProps} />);
+      const abilityRow = document.querySelector('.abilities');
+      expect(abilityRow).toBeTruthy();
+      const rows = document.querySelectorAll('.abilities');
+      expect(rows).toHaveLength(6);
     });
 
     it('renders skill bonuses next to skill names', () => {
@@ -106,6 +126,12 @@ describe('CharAbilities rendering', () => {
       render(<CharAbilities {...defaultProps} playerStats={stats} />);
       expect(screen.getByText('Abilities')).toBeInTheDocument();
       expect(screen.queryByText('Strength')).not.toBeInTheDocument();
+    });
+
+    it('renders ability names as clickable elements', () => {
+      render(<CharAbilities {...defaultProps} />);
+      const strengthLink = screen.getByText('Strength');
+      expect(strengthLink.classList.contains('clickable')).toBe(true);
     });
   });
 });

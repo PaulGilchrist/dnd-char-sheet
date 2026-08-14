@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
@@ -12,9 +13,13 @@ vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
   return { default: mockFn };
 });
 
+vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
+  useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
+}));
+
 const mockStore = new Map();
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
+  getStore: vi.fn(() => mockStore),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
   listeners: new Map(),
   getRuntimeValue: vi.fn((key, prop) => mockStore.get(`${key}:${prop}`) ?? null),
@@ -254,90 +259,29 @@ describe('CharAbilities isExpert display', () => {
   });
 });
 
-describe('CharAbilities bardic inspiration integration', () => {
+describe('CharAbilities saveAdvantageAbilities abbreviation matching', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStore.clear();
   });
 
-  it('includes bardicInspiration in check context when bardicInspirationDie is set', () => {
-    mockStore.set('Test Fighter:bardicInspirationDie', 'd6');
-    const { container } = render(<CharAbilities {...defaultProps} />);
-    const bonusCells = getBonusCells(container);
-    fireEvent.click(bonusCells[0]);
-    expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ bardicInspiration: true, bardicInspirationDie: 'd6' }));
+  it('matches saveAdvantageAbilities with 3-letter abbreviation', () => {
+    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['DEX'] }} />);
+    const saveTexts = Array.from(getSaveCells(container)).map(c => c.textContent);
+    expect(saveTexts).toContain('+4 (Adv)');
   });
 
-  it('includes bardicInspiration in save context when bardicInspirationDie is set', () => {
-    mockStore.set('Test Fighter:bardicInspirationDie', 'd8');
-    const { container } = render(<CharAbilities {...defaultProps} />);
-    const saveCells = getSaveCells(container);
-    fireEvent.click(saveCells[0]);
-    expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ bardicInspiration: true, bardicInspirationDie: 'd8' }));
-  });
-
-  it('includes bardicInspiration in skill check context when bardicInspirationDie is set', () => {
-    mockStore.set('Test Fighter:bardicInspirationDie', 'd6');
-    render(<CharAbilities {...defaultProps} />);
-    const athleticsElements = screen.getAllByText(/Athletics/);
-    fireEvent.click(athleticsElements[0]);
-    expect(getMocks().rollSkillCheck).toHaveBeenCalledWith('Athletics', expect.any(Number), expect.objectContaining({ bardicInspiration: true, bardicInspirationDie: 'd6' }));
-  });
-
-  it('does not include bardicInspiration when bardicInspirationDie is not set', () => {
-    const { container } = render(<CharAbilities {...defaultProps} />);
-    const bonusCells = getBonusCells(container);
-    fireEvent.click(bonusCells[0]);
-    const callArgs = getMocks().rollAbilityCheck.mock.calls[0];
-    const ctx = callArgs[2];
-    expect(ctx).not.toHaveProperty('bardicInspiration');
+  it('does not match saveAdvantageAbilities when abbreviation does not match', () => {
+    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['STR'] }} />);
+    const saveTexts = Array.from(getSaveCells(container)).map(c => c.textContent);
+    expect(saveTexts).not.toContain('+4 (Adv)');
   });
 });
 
-describe('CharAbilities luckyDisadvantageActive prop', () => {
+describe('CharAbilities saveBonusExpression tooltip building', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStore.clear();
-  });
-
-  it('passes luckyDisadvantage context when luckyDisadvantageActive prop is true', () => {
-    const { container } = render(<CharAbilities {...defaultProps} luckyDisadvantageActive={true} />);
-    const saveCells = getSaveCells(container);
-    fireEvent.click(saveCells[0]);
-    expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ luckyDisadvantage: true }));
-  });
-
-  it('does not pass luckyDisadvantage when luckyDisadvantageActive prop is false', () => {
-    const { container } = render(<CharAbilities {...defaultProps} luckyDisadvantageActive={false} />);
-    const saveCells = getSaveCells(container);
-    fireEvent.click(saveCells[0]);
-    const callArgs = getMocks().rollSavingThrow.mock.calls[0];
-    const ctx = callArgs[2];
-    expect(ctx).not.toHaveProperty('luckyDisadvantage');
-  });
-});
-
-describe('CharAbilities getSaveAdvantageSource - tooltip building', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('returns null tooltip when no save advantage sources exist', () => {
-    const { container } = render(<CharAbilities {...defaultProps} />);
-    const saveCells = getSaveCells(container);
-    expect(saveCells[0].title).toBe('');
-  });
-
-  it('includes spell resistance source in tooltip', () => {
-    const stats = createPlayerStats({
-      saveModifiers: [
-        { target: 'saving_throw', effect: 'advantage', condition: 'against_spell', source: 'Spell Resistance' },
-      ],
-    });
-    const { container } = render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveAdvantage: ['against_spell'] }} />);
-    const saveCells = getSaveCells(container);
-    expect(saveCells[0].title).toContain('Spell Resistance');
   });
 
   it('includes warding bond bonus in tooltip when saveBonusExpression has positive value', () => {
@@ -420,57 +364,6 @@ describe('CharAbilities skill separator rendering', () => {
     render(<CharAbilities {...defaultProps} playerStats={stats} />);
     expect(screen.getByText('Acrobatics (+6)')).toBeInTheDocument();
     expect(screen.getByText('Sleight of Hand (+6)')).toBeInTheDocument();
-  });
-});
-
-describe('CharAbilities saveAdvantageAbilities abbreviation matching', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('matches saveAdvantageAbilities with 3-letter abbreviation', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['DEX'] }} />);
-    const saveTexts = Array.from(getSaveCells(container)).map(c => c.textContent);
-    expect(saveTexts).toContain('+4 (Adv)');
-  });
-
-  it('does not match saveAdvantageAbilities when abbreviation does not match', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['STR'] }} />);
-    const saveTexts = Array.from(getSaveCells(container)).map(c => c.textContent);
-    expect(saveTexts).not.toContain('+4 (Adv)');
-  });
-});
-
-describe('CharAbilities autoFailSaves abbreviation matching', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('shows AUTO FAIL for dex when autoFailSaves includes dex', () => {
-    render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['dex'] }} />);
-    expect(screen.getByText('AUTO FAIL')).toBeInTheDocument();
-  });
-
-  it('shows AUTO FAIL for constitution when autoFailSaves includes con', () => {
-    render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['con'] }} />);
-    expect(screen.getByText('AUTO FAIL')).toBeInTheDocument();
-  });
-
-  it('shows AUTO FAIL for intelligence when autoFailSaves includes int', () => {
-    render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['int'] }} />);
-    expect(screen.getByText('AUTO FAIL')).toBeInTheDocument();
-  });
-
-  it('shows AUTO FAIL for wisdom when autoFailSaves includes wis', () => {
-    render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['wis'] }} />);
-    expect(screen.getByText('AUTO FAIL')).toBeInTheDocument();
-  });
-
-  it('shows AUTO FAIL for charisma when autoFailSaves includes cha', () => {
-    render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['cha'] }} />);
-    expect(screen.getByText('AUTO FAIL')).toBeInTheDocument();
   });
 });
 

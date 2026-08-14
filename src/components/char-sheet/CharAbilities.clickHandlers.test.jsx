@@ -1,8 +1,9 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
 import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
-import { DiceRollContext } from '../../hooks/combat/DiceRollContext.js';
+import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
   const mockFn = vi.fn(() => ({
@@ -13,11 +14,17 @@ vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
   return { default: mockFn };
 });
 
+vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
+  useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
+}));
+
+vi.mock('../../services/ui/dataLoader.js', () => ({
+  loadEquipment: vi.fn(() => Promise.resolve([])),
+}));
+
 const mockStore = new Map();
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
   getRuntimeValue: vi.fn((key, prop) => mockStore.get(`${key}:${prop}`) ?? null),
   setRuntimeValue: vi.fn(),
   useRuntimeValue: vi.fn((key, prop) => mockStore.get(`${key}:${prop}`) ?? null),
@@ -85,42 +92,37 @@ describe('CharAbilities click handlers', () => {
   describe('basic click handlers', () => {
     it('calls setPopupHtml when an ability name is clicked', () => {
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-      render(<CharAbilities {...defaultProps} />, { wrapper });
+      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
+      render(<CharAbilities {...defaultProps} />);
       fireEvent.click(screen.getByText('Strength'));
-      expect(mockSetPopupHtml).toHaveBeenCalled();
+      expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.stringContaining('STR desc'));
     });
 
-    it('calls rollAbilityCheck when an ability bonus is clicked', () => {
+    it('calls rollAbilityCheck with the correct ability name and bonus when an ability bonus is clicked', () => {
       render(<CharAbilities {...defaultProps} />);
       const bonusCell = findClickableByText('+4');
-      if (bonusCell) {
-        fireEvent.click(bonusCell);
-      }
-      expect(getMocks().rollAbilityCheck).toHaveBeenCalled();
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
+      expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', 4, {});
     });
 
-    it('calls rollSavingThrow when a save value is clicked', () => {
+    it('calls rollSavingThrow with the correct ability name and save value when a save is clicked', () => {
       render(<CharAbilities {...defaultProps} />);
       const saveCell = findClickableByText('+6');
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
-      expect(getMocks().rollSavingThrow).toHaveBeenCalled();
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
+      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', 6, expect.objectContaining({ forcedMode: undefined, autoFail: undefined }));
     });
 
     it('calls rollSkillCheck when a skill name is clicked', () => {
       render(<CharAbilities {...defaultProps} />);
       const athleticsElements = screen.getAllByText(/Athletics/);
       fireEvent.click(athleticsElements[0]);
-      expect(getMocks().rollSkillCheck).toHaveBeenCalled();
+      expect(getMocks().rollSkillCheck).toHaveBeenCalledWith('Athletics', 8, {});
     });
 
-    it('does not call rollSavingThrow when autoFailSave ability is clicked', () => {
+    it('does not call rollSavingThrow when autoFailSaves includes the ability', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['str'] }} />);
       const autoFailEl = screen.getByText('AUTO FAIL');
       fireEvent.click(autoFailEl);
@@ -132,20 +134,20 @@ describe('CharAbilities click handlers', () => {
     const checkEffectTests = [
       { name: 'strokeOfLuck', effect: { strokeOfLuck: true }, expected: { strokeOfLuck: true } },
       { name: 'luckyAdvantage', effect: { luckyAdvantage: true }, expected: { luckyAdvantage: true, luckyAdvantageType: 'advantage' } },
-      { name: 'luckyDisadvantage', effect: { luckyDisadvantage: true }, expected: { luckyDisadvantage: true } },
+      { name: 'luckyDisadvantage', effect: { luckyDisadvantage: true }, expected: { luckyDisadvantage: true, luckyDisadvantageType: 'disadvantage' } },
       { name: 'd20Floor10', effect: { d20Floor10: true }, expected: { d20Floor10: true } },
       { name: 'reliableTalent', effect: { reliableTalent: true }, expected: { reliableTalent: true } },
       { name: 'tacticalMind', effect: { tacticalMind: true, tacticalMindBonus: 5 }, expected: { tacticalMind: true, tacticalMindBonus: 5 } },
       { name: 'autoReroll', effect: { autoRerollForChecks: true, autoRerollCondition: 'roll_equals_1', autoRerollBonus: null }, expected: { autoReroll: true, autoRerollCondition: 'roll_equals_1', autoRerollBonus: null } },
+      { name: 'darkOnesLuck', effect: { darkOnesLuck: true }, expected: { darkOnesLuck: true } },
     ];
 
     for (const { name, effect, expected } of checkEffectTests) {
       it(`passes ${name} context when ability check is clicked`, () => {
         render(<CharAbilities {...defaultProps} conditionEffects={effect} />);
         const bonusCell = findClickableByText('+4');
-        if (bonusCell) {
-          fireEvent.click(bonusCell);
-        }
+        expect(bonusCell).toBeTruthy();
+        fireEvent.click(bonusCell);
         expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining(expected));
       });
     }
@@ -163,36 +165,32 @@ describe('CharAbilities click handlers', () => {
       });
       render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ strCheckReplace: true }} />);
       const bonusCell = findClickableByText('+2');
-      if (bonusCell) {
-        fireEvent.click(bonusCell);
-      }
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
       expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ strCheckReplace: true, strScore: 14 }));
     });
 
     it('passes forcedMode disadvantage when strCheckDisadvantage is set for Strength check', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ strCheckDisadvantage: true }} />);
       const bonusCell = findClickableByText('+4');
-      if (bonusCell) {
-        fireEvent.click(bonusCell);
-      }
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
       expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'disadvantage' }));
     });
 
     it('passes forcedMode advantage when abilityCheckAdvantageAbilities abbreviation matches', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckAdvantageAbilities: ['STR'] }} />);
       const bonusCell = findClickableByText('+4');
-      if (bonusCell) {
-        fireEvent.click(bonusCell);
-      }
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
       expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'advantage' }));
     });
 
     it('passes forcedMode advantage when abilityCheckAdvantageSkill matches the ability name', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckAdvantage: true, abilityCheckAdvantageSkill: 'Strength' }} />);
       const bonusCell = findClickableByText('+4');
-      if (bonusCell) {
-        fireEvent.click(bonusCell);
-      }
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
       expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'advantage' }));
     });
 
@@ -209,29 +207,42 @@ describe('CharAbilities click handlers', () => {
       });
       render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ wisCheckReplace: true }} />);
       const wisBonusCell = findClickableByText('-3');
-      if (wisBonusCell) {
-        fireEvent.click(wisBonusCell);
-      }
+      expect(wisBonusCell).toBeTruthy();
+      fireEvent.click(wisBonusCell);
       expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Wisdom', expect.any(Number), expect.objectContaining({ wisCheckReplace: true, wisCheckMinBonus: 1 }));
+    });
+
+    it('returns empty context object when no condition effects apply', () => {
+      render(<CharAbilities {...defaultProps} />);
+      const bonusCell = findClickableByText('+4');
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
+      expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', 4, {});
     });
   });
 
-  describe('makeCheckContext - forcedMode combines with other effects', () => {
+  describe('makeCheckContext - forcedMode priority and combinations', () => {
+    it('resets forcedMode to undefined when abilityCheckAdvantage is true without skill filter (overrides disadvantage)', () => {
+      render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckDisadvantage: true, abilityCheckAdvantage: true }} />);
+      const bonusCell = findClickableByText('+4');
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
+      expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', 4, {});
+    });
+
     it('combines forcedMode disadvantage with strokeOfLuck when both are set', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckDisadvantage: true, strokeOfLuck: true }} />);
       const bonusCell = findClickableByText('+4');
-      if (bonusCell) {
-        fireEvent.click(bonusCell);
-      }
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
       expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'disadvantage', strokeOfLuck: true }));
     });
 
     it('combines forcedMode advantage with strokeOfLuck when both are set', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckAdvantageAbilities: ['STR'], strokeOfLuck: true }} />);
       const bonusCell = findClickableByText('+4');
-      if (bonusCell) {
-        fireEvent.click(bonusCell);
-      }
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
       expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'advantage', strokeOfLuck: true }));
     });
 
@@ -248,9 +259,8 @@ describe('CharAbilities click handlers', () => {
       });
       render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ abilityCheckDisadvantage: true, strCheckReplace: true }} />);
       const bonusCell = findClickableByText('+2');
-      if (bonusCell) {
-        fireEvent.click(bonusCell);
-      }
+      expect(bonusCell).toBeTruthy();
+      fireEvent.click(bonusCell);
       expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'disadvantage', strCheckReplace: true, strScore: 14 }));
     });
   });
@@ -259,9 +269,8 @@ describe('CharAbilities click handlers', () => {
     it('passes autoReroll context when save is clicked', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ autoRerollForSaves: true, autoRerollCondition: 'frightened', autoRerollBonus: 3 }} />);
       const saveCell = findClickableByText('+6');
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
       expect(getMocks().rollSavingThrow).toHaveBeenCalledWith(expect.any(String), expect.any(Number), expect.objectContaining({ autoReroll: true, autoRerollCondition: 'frightened', autoRerollBonus: 3 }));
     });
 
@@ -278,46 +287,81 @@ describe('CharAbilities click handlers', () => {
       });
       render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ strSaveReplace: true }} />);
       const saveCell = findClickableByText('+4');
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
       expect(getMocks().rollSavingThrow).toHaveBeenCalledWith(expect.any(String), expect.any(Number), expect.objectContaining({ strSaveReplace: true, strScore: 14 }));
     });
 
     it('passes d20Floor10 context when save is clicked', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ d20Floor10: true }} />);
       const saveCell = findClickableByText('+6');
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
       expect(getMocks().rollSavingThrow).toHaveBeenCalledWith(expect.any(String), expect.any(Number), expect.objectContaining({ d20Floor10: true }));
     });
 
     it('passes forcedMode disadvantage when ability is in saveDisadvantage', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ saveDisadvantage: ['str'] }} />);
       const saveCell = findClickableByText('+6');
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
       expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'disadvantage' }));
     });
 
     it('passes forcedMode advantage when saveAdvantageCount is greater than zero', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageCount: 2 }} />);
       const saveCell = findClickableByStartText('+6');
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
       expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'advantage' }));
     });
 
     it('passes forcedMode advantage when ability is in saveAdvantageAbilities', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['STR'] }} />);
       const saveCell = findClickableByStartText('+6');
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
       expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'advantage' }));
+    });
+
+    it('passes strokeOfLuck context in save', () => {
+      render(<CharAbilities {...defaultProps} conditionEffects={{ strokeOfLuck: true }} />);
+      const saveCell = findClickableByText('+6');
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
+      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith(expect.any(String), expect.any(Number), expect.objectContaining({ strokeOfLuck: true }));
+    });
+
+    it('passes luckyAdvantage context in save', () => {
+      render(<CharAbilities {...defaultProps} conditionEffects={{ luckyAdvantage: true }} />);
+      const saveCell = findClickableByText('+6');
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
+      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith(expect.any(String), expect.any(Number), expect.objectContaining({ luckyAdvantage: true }));
+    });
+
+    it('passes luckyDisadvantage context in save', () => {
+      render(<CharAbilities {...defaultProps} conditionEffects={{ luckyDisadvantage: true }} />);
+      const saveCell = findClickableByText('+6');
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
+      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith(expect.any(String), expect.any(Number), expect.objectContaining({ luckyDisadvantage: true }));
+    });
+
+    it('passes darkOnesLuck context in save', () => {
+      render(<CharAbilities {...defaultProps} conditionEffects={{ darkOnesLuck: true }} />);
+      const saveCell = findClickableByText('+6');
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
+      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith(expect.any(String), expect.any(Number), expect.objectContaining({ darkOnesLuck: true }));
+    });
+
+    it('returns forcedMode and autoFail both undefined when no condition effects apply', () => {
+      render(<CharAbilities {...defaultProps} />);
+      const saveCell = findClickableByText('+6');
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
+      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', 6, expect.objectContaining({ forcedMode: undefined, autoFail: undefined }));
     });
   });
 
@@ -325,18 +369,16 @@ describe('CharAbilities click handlers', () => {
     it('combines forcedMode with strokeOfLuck when both are set', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ saveDisadvantage: ['str'], strokeOfLuck: true }} />);
       const saveCell = findClickableByText('+6');
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
       expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'disadvantage', strokeOfLuck: true }));
     });
 
     it('combines forcedMode with autoReroll when both are set', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ saveDisadvantage: ['str'], autoRerollForSaves: true, autoRerollCondition: 'frightened', autoRerollBonus: 2 }} />);
       const saveCell = findClickableByText('+6');
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
       expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'disadvantage', autoReroll: true, autoRerollCondition: 'frightened', autoRerollBonus: 2 }));
     });
 
@@ -351,9 +393,8 @@ describe('CharAbilities click handlers', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['str'], strokeOfLuck: true }} />);
       const dexRow = Array.from(document.querySelectorAll('.abilities')).find(el => el.querySelector('.left')?.textContent === 'Dexterity');
       const saveCell = dexRow ? Array.from(dexRow.querySelectorAll('.clickable')).find(el => el.textContent.startsWith('+4')) : null;
-      if (saveCell) {
-        fireEvent.click(saveCell);
-      }
+      expect(saveCell).toBeTruthy();
+      fireEvent.click(saveCell);
       expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Dexterity', expect.any(Number), expect.objectContaining({ strokeOfLuck: true }));
     });
   });

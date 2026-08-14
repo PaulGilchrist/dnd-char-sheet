@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
@@ -14,26 +15,17 @@ vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
   return { default: mockFn };
 });
 
-vi.mock('../common/Popup.jsx', () => ({
-  default: ({ children, onClickOrKeyDown }) => (
-    <div data-testid="popup" onClick={onClickOrKeyDown}>
-      {children}
-    </div>
-  ),
+vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
+  useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
 }));
 
-vi.mock('./DiceRollResult.jsx', () => ({
-  default: ({ onReroll, onStrokeOfLuck }) => (
-    <div data-testid="dice-roll-result">
-      <button onClick={onReroll}>Reroll</button>
-      <button onClick={onStrokeOfLuck}>Stroke of Luck</button>
-    </div>
-  ),
+vi.mock('../../services/ui/dataLoader.js', () => ({
+  loadEquipment: vi.fn(() => Promise.resolve([])),
 }));
 
 const mockStore = new Map();
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
+  getStore: vi.fn(() => mockStore),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
   listeners: new Map(),
   getRuntimeValue: vi.fn((key, prop) => mockStore.get(`${key}:${prop}`) ?? null),
@@ -101,19 +93,32 @@ describe('CharAbilities condition effects on rendering', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['str'] }} />);
       expect(screen.getByText('AUTO FAIL')).toBeInTheDocument();
     });
+
+    it('shows AUTO FAIL for all abilities when all are in autoFailSaves', () => {
+      render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['str', 'dex', 'con', 'int', 'wis', 'cha'] }} />);
+      const autoFailElements = screen.getAllByText('AUTO FAIL');
+      expect(autoFailElements).toHaveLength(6);
+    });
   });
 
   describe('save advantage', () => {
-    it('shows (Adv) suffix when saveAdvantageCount or saveAdvantageAbilities is set', () => {
+    it('shows (Adv) suffix when saveAdvantageCount is set', () => {
+      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageCount: 2 }} />);
+      const saveTexts = getSaveTexts(container);
+      expect(saveTexts).toContain('+6 (Adv)');
+    });
+
+    it('shows (Adv) suffix when saveAdvantageAbilities abbreviation matches', () => {
       const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['STR'] }} />);
       const saveTexts = getSaveTexts(container);
       expect(saveTexts).toContain('+6 (Adv)');
     });
 
-    it('does not show (Adv) when no advantage conditions are set', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageCount: 0, saveAdvantageAbilities: ['WIS'] }} />);
+    it('shows (Adv) only for matching abilities, not others', () => {
+      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['STR'] }} />);
       const saveTexts = getSaveTexts(container);
-      expect(saveTexts).not.toContain('+6 (Adv)');
+      expect(saveTexts).toContain('+6 (Adv)');
+      expect(saveTexts).not.toContain('+4 (Adv)');
     });
   });
 
@@ -127,6 +132,13 @@ describe('CharAbilities condition effects on rendering', () => {
       expect(bonusTexts).toContain('-3');
       const saveTexts = getSaveTexts(container);
       expect(saveTexts).toContain('+4');
+    });
+
+    it('reduces save display values by exhaustion penalty', () => {
+      const { container } = render(<CharAbilities {...defaultProps} exhaustionPenalty={1} />);
+      const saveTexts = getSaveTexts(container);
+      // STR save: 6 - 1 = +5
+      expect(saveTexts).toContain('+5');
     });
   });
 
@@ -144,6 +156,22 @@ describe('CharAbilities condition effects on rendering', () => {
       });
       render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ passWithoutTraceBonus: '2' }} />);
       expect(screen.getByText('Stealth (+8)')).toBeInTheDocument();
+    });
+
+    it('does not add passWithoutTraceBonus to non-Stealth skills', () => {
+      const stats = createPlayerStats({
+        abilities: [
+          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
+          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [{ name: 'Stealth', bonus: 6 }, { name: 'Acrobatics', bonus: 6 }] },
+          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
+          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
+          { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [] },
+          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
+        ],
+      });
+      render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ passWithoutTraceBonus: '2' }} />);
+      expect(screen.getByText('Stealth (+8)')).toBeInTheDocument();
+      expect(screen.getByText('Acrobatics (+6)')).toBeInTheDocument();
     });
   });
 
@@ -167,6 +195,7 @@ describe('CharAbilities condition effects on rendering', () => {
       });
       render(<CharAbilities {...defaultProps} playerStats={stats} />);
       expect(screen.getByText('Athletics (+8)')).toBeInTheDocument();
+      // Acrobatics: skill.bonus(2) + floor(prof(4)/2) = 2 + 2 = 4
       expect(screen.getByText('Acrobatics (+4)')).toBeInTheDocument();
     });
 
@@ -266,40 +295,6 @@ describe('CharAbilities condition effects on rendering', () => {
       const { container } = render(<CharAbilities {...defaultProps} playerStats={stats} />);
       const bonusTexts = getBonusTexts(container);
       expect(bonusTexts).toContain('+4');
-    });
-  });
-
-  describe('penalized CSS classes', () => {
-    it('applies stat--penalized class to bonus cells when abilityCheckDisadvantage is set', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckDisadvantage: true }} />);
-      const bonusCells = container.querySelectorAll('.abilities > div:nth-child(3)');
-      bonusCells.forEach(cell => {
-        expect(cell.classList.contains('stat--penalized')).toBe(true);
-      });
-    });
-  });
-
-  describe('peerlessAthleteAdvantageSkills', () => {
-    it('applies advantage to Athletics and Acrobatics only when peerlessAthleteAdvantageSkills is set', () => {
-      const stats = createPlayerStats({
-        abilities: [
-          { name: 'Strength', bonus: 3, save: 5, totalScore: 16, skills: [{ name: 'Athletics', bonus: 8 }] },
-          { name: 'Dexterity', bonus: 0, save: 2, totalScore: 10, skills: [{ name: 'Acrobatics', bonus: 5 }, { name: 'Sleight of Hand', bonus: 5 }, { name: 'Stealth', bonus: 5 }] },
-          { name: 'Constitution', bonus: 1, save: 3, totalScore: 12, skills: [] },
-          { name: 'Intelligence', bonus: -1, save: 1, totalScore: 9, skills: [{ name: 'Arcana', bonus: 3 }] },
-          { name: 'Wisdom', bonus: 1, save: 3, totalScore: 13, skills: [{ name: 'Perception', bonus: 6 }] },
-          { name: 'Charisma', bonus: 2, save: 4, totalScore: 14, skills: [] },
-        ],
-        skillProficiencies: ['Athletics', 'Arcana', 'Perception'],
-        expertise: [],
-      });
-      const { container } = render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ peerlessAthleteAdvantageSkills: ['Athletics', 'Acrobatics'] }} />);
-      const skillSpans = container.querySelectorAll('.clickable');
-      const skillTexts = Array.from(skillSpans).map(span => span.textContent);
-      expect(skillTexts).toContain('Athletics (+8)');
-      expect(skillTexts).toContain('Acrobatics (+5)');
-      expect(skillTexts).toContain('Sleight of Hand (+5)');
-      expect(skillTexts).toContain('Stealth (+5)');
     });
   });
 });

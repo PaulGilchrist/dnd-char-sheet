@@ -1,4 +1,14 @@
-// Comprehensive rendering tests for remaining modals not covered in rendering.test.jsx
+// @improved-by-ai
+// Comprehensive rendering tests for modals and inline overlays not covered
+// in CharActionModals.rendering.test.jsx or the other dedicated test files.
+//
+// This file tests ONLY behaviors that are unique to it. Modal rendering
+// for individual modals is covered in rendering.test.jsx; handler callbacks
+// are covered in handlers.test.jsx, inline-modals.test.jsx, and related files.
+//
+// Note: vi.mock() is hoisted to the top of the file by Vitest, so all mock
+// factories must be defined inline (no references to top-level variables).
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -382,7 +392,7 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.getByText('Test Maneuver — Choose Effect')).toBeInTheDocument();
     });
 
-    it('renders attackRiderOptionsModal with effect descriptions', () => {
+    it('renders attackRiderOptionsModal with effect descriptions for each rider option', () => {
       const riderOptions = [
         { name: 'Option 1', effect: 'disadvantage_on_next_save' },
         { name: 'Option 2', effect: 'next_attack_bonus' },
@@ -394,8 +404,6 @@ describe('CharActionModals — additional modal rendering', () => {
         modalState={{ attackRiderOptionsModal: { maneuver: { name: 'Test' }, riderOptions } }}
         setModalState={vi.fn()}
       />);
-      // Effect descriptions are rendered inside span elements with inline styles
-      // Use query methods to check for presence of text content
       const container = screen.getByText('Test — Choose Effect').closest('.sp-modal');
       expect(container).toBeTruthy();
       expect(container.textContent).toContain('Disadvantage on next saving throw');
@@ -413,7 +421,7 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.getByText('Skip')).toBeInTheDocument();
     });
 
-    it('renders clockworkCavalcadeRepairModal inline with hammer icon', () => {
+    it('renders clockworkCavalcadeRepairModal inline with hammer icon and action buttons', () => {
       render(<CharActionModals
         {...createBaseProps()}
         modalState={{ clockworkCavalcadeRepairModal: {} }}
@@ -433,7 +441,7 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.getByText(/Damaged objects within the Cube/)).toBeInTheDocument();
     });
 
-    it('renders moonlightStepFallbackModal inline with slot level info', () => {
+    it('renders moonlightStepFallbackModal inline with slot level info and action buttons', () => {
       render(<CharActionModals
         {...createBaseProps()}
         modalState={{ moonlightStepFallbackModal: { action: { name: 'Moonlight Step' }, slotLevel: 3 } }}
@@ -445,103 +453,7 @@ describe('CharActionModals — additional modal rendering', () => {
     });
   });
 
-  // ── Additional modals not covered in rendering.test.jsx ──
-
-  describe('additional modals', () => {
-    const additionalModals = [
-      { name: 'shield-bash', prop: 'shieldBashModal', testid: 'shield-bash-modal' },
-      { name: 'quivering-palm', prop: 'quiveringPalmModal', testid: 'quivering-palm-modal' },
-      { name: 'save-attack-aoe', prop: 'saveAttackAoeModal', testid: 'save-attack-aoe-modal' },
-      { name: 'aoe-condition', prop: 'aoeConditionModal', testid: 'aoe-condition-modal' },
-      { name: 'fear', prop: 'fearModal', testid: 'fear-modal' },
-      { name: 'hypnotic-pattern', prop: 'hypnoticPatternModal', testid: 'hypnotic-pattern-modal' },
-      { name: 'mass-suggestion', prop: 'massSuggestionModal', testid: 'mass-suggestion-modal' },
-      { name: 'calm-emotions', prop: 'calmEmotionsModal', testid: 'calm-emotions-modal' },
-      { name: 'silence', prop: 'silenceModal', testid: 'silence-modal' },
-      { name: 'tashas-laughter', prop: 'tashasLaughterModal', testid: 'tashas-laughter-modal' },
-      { name: 'elemental-attunement', prop: 'elementalAttunementModal', testid: 'elemental-attunement-modal' },
-      { name: 'elemental-burst', prop: 'elementalBurstModal', payload: {}, testid: 'elemental-burst-modal' },
-      { name: 'primal-companion-summon', prop: 'primalCompanionSummonModal', testid: 'primal-companion-summon-modal' },
-      { name: 'stealth-attack', prop: 'stealthAttackModal', testid: 'stealth-attack-modal' },
-      { name: 'fey-reinforcements', prop: 'feyReinforcementsModal', testid: 'fey-reinforcements-modal' },
-      { name: 'steps-of-the-fey-taunt', prop: 'stepsOfTheFeyTauntModal', testid: 'steps-of-the-fey-taunt-modal' },
-      { name: 'blindness-deafness', prop: 'blindnessDeafnessModal', payload: {}, testid: 'blindness-deafness-modal' },
-      { name: 'set-condition', prop: 'setConditionModal', payload: {}, testid: 'set-condition-modal' },
-      { name: 'eyebite-effect', prop: 'eyebiteEffectModal', payload: {}, testid: 'eyebite-effect-modal' },
-      { name: 'arcane-ward-restore', prop: 'arcaneWardRestoreModal', payload: {}, testid: 'arcane-ward-restore-modal' },
-      { name: 'elemental-epitome', prop: 'epitomeModal', payload: { action: {}, playerStats: {}, campaignName: 'test', currentResistance: 'fire' }, testid: 'elemental-epitome-modal' },
-      { name: 'destructive-stride', prop: 'destructiveStrideModal', payload: { action: {}, playerStats: {}, campaignName: 'test' }, testid: 'destructive-stride-modal' },
-      { name: 'reckless-attack', prop: 'recklessAttackModal', payload: { attack: {}, mode: 'full', hasBrutalStrike: false }, testid: 'reckless-attack-modal' },
-      { name: 'reckless-attack-brutal-only', prop: 'recklessAttackModal', payload: { attack: {}, mode: 'brutalOnly', hasBrutalStrike: true, brutalStrikeOptions: ['Option A'] }, testid: 'reckless-attack-modal' },
-      { name: 'mass-heal', prop: 'massHealModal', payload: { creatureTargets: [], maxTargets: 5 }, testid: 'mass-heal-modal' },
-      { name: 'clockwork-cavalcade', prop: 'clockworkCavalcadeModal', payload: {}, testid: 'clockwork-cavalcade-modal' },
-      { name: 'mass-cure-wounds', prop: 'massCureWoundsModal', payload: { creatureTargets: [], maxTargets: 5 }, testid: 'mass-cure-wounds-modal' },
-      { name: 'prayer-of-healing', prop: 'prayerOfHealingModal', payload: { creatureTargets: [], maxTargets: 5 }, testid: 'prayer-of-healing-modal' },
-      { name: 'power-word-fortify', prop: 'powerWordFortifyModal', payload: { creatureTargets: [], totalTempHp: 10 }, testid: 'power-word-fortify-modal' },
-      { name: 'mass-healing-word', prop: 'massHealingWordModal', payload: { creatureTargets: [], maxTargets: 5 }, testid: 'mass-healing-word-modal' },
-      { name: 'animate-dead', prop: 'animateDeadModal', payload: { maxTargets: 3 }, testid: 'animate-dead-modal' },
-      { name: 'create-undead', prop: 'createUndeadModal', payload: { maxTargets: 3 }, testid: 'create-undead-modal' },
-      { name: 'summon-spirit', prop: 'summonSpiritModal', payload: { action: {} }, testid: 'summon-spirit-modal' },
-      { name: 'flurry-of-blows', prop: 'flurryOfBlowsModal', payload: { numAttacks: 3, creatureTargets: [], currentTargetName: 'Goblin' }, testid: 'flurry-of-blows-popup' },
-      { name: 'celestial-resilience', prop: 'celestialResilienceModal', payload: { creatureTargets: [], allyTempHp: 5, selfTempHp: 10, maxTargets: 3 }, testid: 'celestial-resilience-modal' },
-      { name: 'vitality-of-the-tree', prop: 'vitalityOfTheTreeTarget', payload: { creatureTargets: [], tempHp: 5, maxTargets: 3 }, testid: 'vitality-of-the-tree-modal' },
-      { name: 'inspiring-smite', prop: 'inspiringSmiteModal', payload: { creatureTargets: [], tempHp: 5, roll: 3 }, testid: 'inspiring-smite-modal' },
-      { name: 'zealous-presence', prop: 'zealousPresenceModal', payload: { creatureTargets: [], maxTargets: 5 }, testid: 'zealous-presence-modal' },
-      { name: 'natures-sanctuary', prop: 'naturesSanctuaryCreaturesModal', payload: { creatureTargets: [], defaultSelected: [] }, testid: 'creature-selection-modal' },
-      { name: 'natures-sanctuary-move', prop: 'naturesSanctuaryCreaturesModal', payload: { creatureTargets: [], defaultSelected: [], isMove: true }, testid: 'creature-selection-modal' },
-      { name: 'oceanic-gift', prop: 'oceanicGiftTargetModal', payload: { creatureTargets: [], doubleEmanation: false }, testid: 'secondary-target-modal' },
-      { name: 'oceanic-gift-double', prop: 'oceanicGiftTargetModal', payload: { creatureTargets: [], doubleEmanation: true }, testid: 'secondary-target-modal' },
-      { name: 'destructive-stride-target', prop: 'destructiveStrideTargetModal', payload: { targets: [{ name: 'Goblin' }] }, testid: 'secondary-target-modal' },
-      { name: 'clockwork-cavalcade-heal', prop: 'clockworkCavalcadeHealModal', payload: { creatureTargets: [], maxHeal: 100 }, testid: 'mass-heal-modal' },
-      { name: 'clockwork-cavalcade-dispel', prop: 'clockworkCavalcadeDispelModal', payload: { creatureTargets: [] }, testid: 'creature-selection-modal' },
-      { name: 'starry-chalice-heal', prop: 'starryChaliceHealModal', payload: { targetNames: ['Ally1'], amount: 10 }, testid: 'secondary-target-modal' },
-    ];
-
-    for (const { name, prop, payload, testid } of additionalModals) {
-      it(`renders ${name} modal when ${prop} is truthy`, () => {
-        const modalPayload = payload || {};
-        render(<CharActionModals
-          {...createBaseProps()}
-          modalState={{ [prop]: modalPayload }}
-          setModalState={vi.fn()}
-        />);
-        expect(screen.getByTestId(testid)).toBeInTheDocument();
-      });
-    }
-
-    it('renders wildMagicSurgeModal with spellModalState merge', () => {
-      const setSpellModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps()}
-        spellModalState={{ wildMagicSurgeModal: { surgeTable: [], mode: 'roll' } }}
-        setModalState={vi.fn()}
-        setSpellModalState={setSpellModalState}
-      />);
-      expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
-    });
-
-    it('renders resourcePoolModal with automation prop', () => {
-      const automation = { type: 'test', damage: '1d6' };
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ resourcePoolModal: { automation } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByTestId('resource-pool-modal')).toBeInTheDocument();
-    });
-
-    it('renders moonlightStepResourceModal with automation prop', () => {
-      const automation = { type: 'moonlight_step' };
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ moonlightStepResourceModal: { automation } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByTestId('moonlight-step-resource-modal')).toBeInTheDocument();
-    });
-  });
-
-  // ── Special rendering scenarios ──
+  // ── Special rendering scenarios with custom titles/descriptions ──
 
   describe('special rendering scenarios', () => {
     it('renders openHandFromFlurry with target data from currentIndex', () => {
@@ -556,7 +468,7 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.getByTestId('open-hand-technique-modal')).toBeInTheDocument();
     });
 
-    it('renders naturesSanctuaryCreaturesModal with isMove title', () => {
+    it('renders naturesSanctuaryCreaturesModal with "Move" in title when isMove is true', () => {
       render(<CharActionModals
         {...createBaseProps()}
         modalState={{ naturesSanctuaryCreaturesModal: { creatureTargets: [], defaultSelected: [], isMove: true } }}
@@ -565,7 +477,7 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.getByText("Nature's Sanctuary (Move) — Choose Creatures")).toBeInTheDocument();
     });
 
-    it('renders naturesSanctuaryCreaturesModal without isMove title', () => {
+    it('renders naturesSanctuaryCreaturesModal without "Move" in title when isMove is false', () => {
       render(<CharActionModals
         {...createBaseProps()}
         modalState={{ naturesSanctuaryCreaturesModal: { creatureTargets: [], defaultSelected: [], isMove: false } }}
@@ -574,7 +486,7 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.getByText("Nature's Sanctuary — Choose Creatures")).toBeInTheDocument();
     });
 
-    it('renders oceanicGiftTargetModal with doubleEmanation title', () => {
+    it('renders oceanicGiftTargetModal with doubleEmanation title showing Wild Shape cost', () => {
       render(<CharActionModals
         {...createBaseProps()}
         modalState={{ oceanicGiftTargetModal: { creatureTargets: [], doubleEmanation: true } }}
@@ -583,7 +495,7 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.getByText(/Self \+ Ally, 2 Wild Shape/)).toBeInTheDocument();
     });
 
-    it('renders oceanicGiftTargetModal without doubleEmanation title', () => {
+    it('renders oceanicGiftTargetModal without doubleEmanation showing simple ally prompt', () => {
       render(<CharActionModals
         {...createBaseProps()}
         modalState={{ oceanicGiftTargetModal: { creatureTargets: [], doubleEmanation: false } }}
@@ -599,11 +511,10 @@ describe('CharActionModals — additional modal rendering', () => {
         modalState={{ clockworkCavalcadeHealModal: { creatureTargets: [], maxHeal: 100, campaignName: 'test', combatSummary: {} } }}
         setModalState={vi.fn()}
       />);
-      // The MassHealModal is mocked - verify it renders
       expect(screen.getByTestId('mass-heal-modal')).toBeInTheDocument();
     });
 
-    it('renders clockworkCavalcadeDispelModal with creature selection', () => {
+    it('renders clockworkCavalcadeDispelModal with creature selection title', () => {
       render(<CharActionModals
         {...createBaseProps()}
         modalState={{ clockworkCavalcadeDispelModal: { creatureTargets: [{ name: 'Goblin' }] } }}
@@ -612,7 +523,7 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.getByText('Clockwork Cavalcade: Dispel')).toBeInTheDocument();
     });
 
-    it('renders starryChaliceHealModal with target names mapped to targets', () => {
+    it('renders starryChaliceHealModal with target names mapped to targets and correct title', () => {
       render(<CharActionModals
         {...createBaseProps()}
         modalState={{ starryChaliceHealModal: { targetNames: ['Ally1', 'Ally2'], amount: 10 } }}

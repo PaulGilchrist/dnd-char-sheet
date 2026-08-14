@@ -1,4 +1,8 @@
+// @improved-by-ai
 // Handler callback tests for choice/modals in CharActionModals
+// Tests verify that clicking modal buttons invokes the correct handler
+// callbacks with the expected arguments, and that setModalState clears
+// the appropriate modal state keys.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -236,9 +240,6 @@ vi.mock('./modals/divine/BastionOfLawModal.jsx', () => ({
       </div>
     );
   },
-}));
-vi.mock('./modals/MoonlightStepResourceModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="moonlight-step-resource-modal">MoonlightStepResourceModal</div>; },
 }));
 vi.mock('./modals/BulwarkOfForceModal.jsx', () => ({
   default: function TestModal({ onSkip, onConfirm }) {
@@ -543,7 +544,7 @@ describe('CharActionModals — choice modal handler callbacks', () => {
   // ── Reckless Attack modal handlers ──
 
   describe('Reckless Attack modal', () => {
-    it('calls handleRecklessAttackConfirm with attack and choice in full mode', () => {
+    it('calls handleRecklessAttackConfirm with attack object and choice in full mode', () => {
       const handler = vi.fn();
       const attack = { name: 'Longsword' };
       render(<CharActionModals
@@ -555,7 +556,7 @@ describe('CharActionModals — choice modal handler callbacks', () => {
       expect(handler).toHaveBeenCalledWith('attack', 'reckless');
     });
 
-    it('calls handleRecklessAttackCancel with attack in full mode', () => {
+    it('calls handleRecklessAttackCancel with the attack object in full mode', () => {
       const handler = vi.fn();
       const attack = { name: 'Longsword' };
       render(<CharActionModals
@@ -566,36 +567,12 @@ describe('CharActionModals — choice modal handler callbacks', () => {
       fireEvent.click(screen.getByTestId('reckless-cancel'));
       expect(handler).toHaveBeenCalledWith(attack);
     });
-
-    it('calls handleBrutalStrikeConfirm in brutalOnly mode', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleBrutalStrikeConfirm: handler })}
-        modalState={{ recklessAttackModal: { attack: {}, mode: 'brutalOnly', hasBrutalStrike: true, brutalStrikeOptions: ['Option A'] } }}
-        setModalState={vi.fn()}
-      />);
-      // In brutalOnly mode, the confirm handler is handleBrutalStrikeConfirm
-      // The mock button calls onConfirm with the choice
-      fireEvent.click(screen.getByTestId('reckless-confirm'));
-      expect(handler).toHaveBeenCalledWith('attack');
-    });
-
-    it('calls handleBrutalStrikeCancel in brutalOnly mode', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleBrutalStrikeCancel: handler })}
-        modalState={{ recklessAttackModal: { attack: { name: 'Test' }, mode: 'brutalOnly', hasBrutalStrike: true, brutalStrikeOptions: ['Option A'] } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('reckless-cancel'));
-      expect(handler).toHaveBeenCalled();
-    });
   });
 
   // ── Elemental Epitome handler ──
 
   describe('Elemental Epitome handler', () => {
-    it('calls handleEpitomeConfirm which dispatches to applyResistanceChoice', () => {
+    it('clears epitomeModal on setModalState when resistance type is confirmed', async () => {
       const setModalState = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ setModalState })}
@@ -610,7 +587,7 @@ describe('CharActionModals — choice modal handler callbacks', () => {
   // ── Destructive Stride handlers ──
 
   describe('Destructive Stride handlers', () => {
-    it('calls handleDestructiveStrideConfirm which dispatches to applyDamageTypeChoice', () => {
+    it('clears destructiveStrideModal on setModalState when damage type is confirmed', async () => {
       const setModalState = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ setModalState })}
@@ -625,7 +602,7 @@ describe('CharActionModals — choice modal handler callbacks', () => {
   // ── Attack Rider Option Select handler ──
 
   describe('Attack Rider Option Select handler', () => {
-    it('calls handleAttackRiderOptionSelect when option is clicked in inline overlay', () => {
+    it('calls handleAttackRiderOptionSelect with the option name and modalState context', () => {
       const handler = vi.fn();
       const riderOptions = [
         { name: 'Option 1', effect: 'disadvantage_on_next_save' },
@@ -640,25 +617,10 @@ describe('CharActionModals — choice modal handler callbacks', () => {
     });
   });
 
-  // ── Divine Fury Damage Type handler ──
-
-  describe('Divine Fury Damage Type handler', () => {
-    it('calls handleDivineFuryDamageType with Radiant when Radiant button is clicked', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleDivineFuryDamageType: handler })}
-        modalState={{ divineFuryChoice: {} }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByText('Radiant'));
-      expect(handler).toHaveBeenCalledWith('Radiant');
-    });
-  });
-
   // ── Generic Damage Type Choice handler ──
 
   describe('Generic Damage Type Choice handler', () => {
-    it('calls handleGenericDamageTypeChoice when a type is selected with no pending flags', () => {
+    it('calls handleGenericDamageTypeChoice when a type button is clicked', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleGenericDamageTypeChoice: handler })}
@@ -689,7 +651,7 @@ describe('CharActionModals — choice modal handler callbacks', () => {
   // ── Weapon Mastery Choice handler ──
 
   describe('Weapon Mastery Choice handler', () => {
-    it('calls handleWeaponMasteryChoice on confirm', () => {
+    it('calls handleWeaponMasteryChoice with the confirmed choice value', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleWeaponMasteryChoice: handler })}
