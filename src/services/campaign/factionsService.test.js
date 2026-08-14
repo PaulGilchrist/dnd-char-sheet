@@ -1,7 +1,3 @@
-// Removed redundant error handling tests: three identical error pattern tests
-// ("custom error", "generic message", "network failure") were duplicated across
-// every function. Consolidated into a single combined error test per function.
-// Removed brittle URL-encoding tests that duplicate behavior verified by UI integration.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadFactions, saveFactions, loadFaction, deleteFaction } from './factionsService.js';
 
@@ -15,6 +11,7 @@ describe('factionsService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('loadFactions', () => {
@@ -44,8 +41,24 @@ describe('factionsService', () => {
       expect(result).toEqual([]);
     });
 
-    it('throws with custom error message on API error, generic fallback on network failure', async () => {
-      // API error with error field
+    it('URL-encodes the campaign name and includes GET options', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([]),
+      });
+
+      await loadFactions('my campaign/1');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/campaigns/my%20campaign%2F1/factions',
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    });
+
+    it('throws with custom error message on API error', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
@@ -53,8 +66,9 @@ describe('factionsService', () => {
       });
 
       await expect(loadFactions('campaign1')).rejects.toThrow('Campaign not found');
+    });
 
-      // API error without error field
+    it('throws generic error when API error response has no error field', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -62,8 +76,9 @@ describe('factionsService', () => {
       });
 
       await expect(loadFactions('campaign1')).rejects.toThrow('Failed to load Factions');
+    });
 
-      // Network failure
+    it('throws with original error message on network failure', async () => {
       mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(loadFactions('campaign1')).rejects.toThrow('ENOTFOUND');
@@ -110,7 +125,21 @@ describe('factionsService', () => {
       );
     });
 
-    it('throws with custom error on API error, generic fallback on network failure', async () => {
+    it('URL-encodes the campaign name', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+
+      await saveFactions('my campaign/1', []);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/campaigns/my%20campaign%2F1/factions',
+        expect.any(Object)
+      );
+    });
+
+    it('throws with custom error message on API error', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Bad Request',
@@ -118,7 +147,9 @@ describe('factionsService', () => {
       });
 
       await expect(saveFactions('campaign1', [])).rejects.toThrow('Invalid factions data');
+    });
 
+    it('throws generic error when API error response has no error field', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -126,7 +157,9 @@ describe('factionsService', () => {
       });
 
       await expect(saveFactions('campaign1', [])).rejects.toThrow('Failed to save Factions');
+    });
 
+    it('throws with original error message on network failure', async () => {
       mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(saveFactions('campaign1', [])).rejects.toThrow('ENOTFOUND');
@@ -146,7 +179,25 @@ describe('factionsService', () => {
       expect(result).toEqual(mockFaction);
     });
 
-    it('throws with custom error on API error, generic fallback on network failure', async () => {
+    it('URL-encodes both campaign name and faction ID', async () => {
+      const mockFaction = { id: 'faction-1', name: 'Test' };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockFaction),
+      });
+
+      await loadFaction('my campaign/1', 'faction%2Fwith%2Fslashes');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/campaigns/my%20campaign%2F1/factions/faction%252Fwith%252Fslashes',
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    });
+
+    it('throws with custom error message on API error', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
@@ -154,7 +205,9 @@ describe('factionsService', () => {
       });
 
       await expect(loadFaction('campaign1', 'faction-1')).rejects.toThrow('Faction not found');
+    });
 
+    it('throws generic error when API error response has no error field', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -162,7 +215,9 @@ describe('factionsService', () => {
       });
 
       await expect(loadFaction('campaign1', 'faction-1')).rejects.toThrow('Failed to load Faction');
+    });
 
+    it('throws with original error message on network failure', async () => {
       mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(loadFaction('campaign1', 'faction-1')).rejects.toThrow('ENOTFOUND');
@@ -186,7 +241,21 @@ describe('factionsService', () => {
       );
     });
 
-    it('throws with custom error on API error, generic fallback on network failure', async () => {
+    it('URL-encodes both campaign name and faction ID', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+
+      await deleteFaction('my campaign/1', 'faction%2Fwith%2Fslashes');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/campaigns/my%20campaign%2F1/factions/faction%252Fwith%252Fslashes',
+        { method: 'DELETE' }
+      );
+    });
+
+    it('throws with custom error message on API error', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
@@ -194,7 +263,9 @@ describe('factionsService', () => {
       });
 
       await expect(deleteFaction('campaign1', 'faction-1')).rejects.toThrow('Faction not found');
+    });
 
+    it('throws generic error when API error response has no error field', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -202,7 +273,9 @@ describe('factionsService', () => {
       });
 
       await expect(deleteFaction('campaign1', 'faction-1')).rejects.toThrow('Failed to delete Faction');
+    });
 
+    it('throws with original error message on network failure', async () => {
       mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(deleteFaction('campaign1', 'faction-1')).rejects.toThrow('ENOTFOUND');

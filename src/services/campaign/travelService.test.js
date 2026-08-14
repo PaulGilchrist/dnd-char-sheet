@@ -1,6 +1,4 @@
-// Removed redundant tests: duplicate constant enumeration, overlapping monotonicity checks,
-// duplicate passability/road edge cases, overlapping terrain pace tests, and redundant A* pathfinding tests.
-// Consolidated edge-case assertions into single tests where behavior is identical.
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 import {
   TERRAIN_MOVE_COST,
@@ -26,7 +24,7 @@ import {
 
 describe('travelService', () => {
   describe('constants', () => {
-    it('should export TERRAIN_MOVE_COST with correct values for all terrain types', () => {
+    it('should export TERRAIN_MOVE_COST with all defined terrain types', () => {
       expect(TERRAIN_MOVE_COST).toEqual({
         plains: 0.75,
         hills: 1,
@@ -40,32 +38,15 @@ describe('travelService', () => {
       });
     });
 
-    it('should export TRAVEL_PACES with slow, normal, and fast configurations', () => {
+    it('should export TRAVEL_PACES with correct properties for each pace', () => {
       expect(TRAVEL_PACES).toHaveLength(3);
 
-      const slow = TRAVEL_PACES.find(p => p.id === 'slow');
-      expect(slow).toBeDefined();
-      expect(slow.hexesPerHour).toBe(1 / 3);
-      expect(slow.hoursPerHex).toBe(3);
-      expect(slow.perception).toBe(5);
-      expect(slow.stealthAdvantage).toBe(true);
-      expect(slow.encounterMod).toBe(-2);
-
-      const normal = TRAVEL_PACES.find(p => p.id === 'normal');
-      expect(normal).toBeDefined();
-      expect(normal.hexesPerHour).toBe(1 / 2);
-      expect(normal.hoursPerHex).toBe(2);
-      expect(normal.perception).toBe(0);
-      expect(normal.stealthAdvantage).toBe(false);
-      expect(normal.encounterMod).toBe(0);
-
-      const fast = TRAVEL_PACES.find(p => p.id === 'fast');
-      expect(fast).toBeDefined();
-      expect(fast.hexesPerHour).toBe(2 / 3);
-      expect(fast.hoursPerHex).toBe(1.5);
-      expect(fast.perception).toBe(-5);
-      expect(fast.stealthAdvantage).toBe(false);
-      expect(fast.encounterMod).toBe(2);
+      const byId = Object.fromEntries(TRAVEL_PACES.map(p => [p.id, p]));
+      expect(byId).toMatchObject({
+        slow: { hexesPerHour: 1 / 3, hoursPerHex: 3, perception: 5, stealthAdvantage: true, encounterMod: -2 },
+        normal: { hexesPerHour: 1 / 2, hoursPerHex: 2, perception: 0, stealthAdvantage: false, encounterMod: 0 },
+        fast: { hexesPerHour: 2 / 3, hoursPerHex: 1.5, perception: -5, stealthAdvantage: false, encounterMod: 2 },
+      });
     });
 
     it('should export movement constants with correct values', () => {
@@ -78,14 +59,16 @@ describe('travelService', () => {
   });
 
   describe('applyExhaustionSpeedPenalty', () => {
-    it('should return base cost when exhaustion stacks is zero or negative', () => {
+    it('should return base cost unchanged when exhaustion stacks is zero or negative', () => {
       expect(applyExhaustionSpeedPenalty(10, 0)).toBe(10);
       expect(applyExhaustionSpeedPenalty(10, -1)).toBe(10);
+      expect(applyExhaustionSpeedPenalty(0, -5)).toBe(0);
     });
 
-    it('should increase cost with exhaustion stacks', () => {
+    it('should increase cost as exhaustion stacks grow', () => {
       expect(applyExhaustionSpeedPenalty(10, 1)).toBe(10 / (5 / 6));
       expect(applyExhaustionSpeedPenalty(10, 3)).toBe(10 / Math.pow(5 / 6, 3));
+      expect(applyExhaustionSpeedPenalty(10, 6)).toBe(10 / Math.pow(5 / 6, 6));
     });
 
     it('should return 0 when base cost is 0 regardless of exhaustion', () => {
@@ -94,9 +77,10 @@ describe('travelService', () => {
   });
 
   describe('applyExhaustionSpeedPenaltyToBudget', () => {
-    it('should return base budget when exhaustion stacks is zero or negative', () => {
+    it('should return base budget unchanged when exhaustion stacks is zero or negative', () => {
       expect(applyExhaustionSpeedPenaltyToBudget(10, 0)).toBe(10);
       expect(applyExhaustionSpeedPenaltyToBudget(10, -1)).toBe(10);
+      expect(applyExhaustionSpeedPenaltyToBudget(0, -5)).toBe(0);
     });
 
     it('should decrease budget with exhaustion stacks (floored)', () => {
@@ -122,7 +106,7 @@ describe('travelService', () => {
   });
 
   describe('isTerrainPassable', () => {
-    it('should return true for all defined terrain types and unknown/undefined terrain', () => {
+    it('should return true for all defined and undefined terrain types', () => {
       for (const terrain of Object.keys(TERRAIN_MOVE_COST)) {
         expect(isTerrainPassable(terrain)).toBe(true);
       }
@@ -227,7 +211,7 @@ describe('travelService', () => {
       expect(getHexMoveCostWithRoad('water', 1, 2, roads)).toBe(3.5);
     });
 
-    it('should return null for unknown terrain even on road', () => {
+    it('should return NaN for unknown terrain even on road', () => {
       const roads = [{ hexes: ['1,2'] }];
       expect(Number.isNaN(getHexMoveCostWithRoad('unknown', 1, 2, roads))).toBe(true);
     });

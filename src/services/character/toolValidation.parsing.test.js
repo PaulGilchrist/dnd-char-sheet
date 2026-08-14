@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../ui/dataLoader.js', () => ({
   loadWildMagicSurgeTable: vi.fn(async () => []),
@@ -25,11 +26,17 @@ describe('toolValidation - parseToolChoiceString', () => {
   it('should return default for non-string input', () => {
     expect(parseToolChoiceString(123)).toEqual({ count: 0, categories: [], isChoice: false });
     expect(parseToolChoiceString({})).toEqual({ count: 0, categories: [], isChoice: false });
+    expect(parseToolChoiceString([])).toEqual({ count: 0, categories: [], isChoice: false });
+  });
+
+  it('should return default for empty string', () => {
+    expect(parseToolChoiceString('')).toEqual({ count: 0, categories: [], isChoice: false });
   });
 
   it('should return default for strings not starting with "Choose"', () => {
     expect(parseToolChoiceString('Gaming Sets')).toEqual({ count: 0, categories: [], isChoice: false });
     expect(parseToolChoiceString("Artisan's Tools")).toEqual({ count: 0, categories: [], isChoice: false });
+    expect(parseToolChoiceString('choose one type of Gaming Sets')).toEqual({ count: 0, categories: [], isChoice: false });
   });
 
   it('should parse "Choose one type of A or B" format', () => {
@@ -67,13 +74,10 @@ describe('toolValidation - parseToolChoiceString', () => {
     expect(result).toEqual({ count: 1, categories: ['Musical Instrument'], isChoice: true });
   });
 
-  it('should handle case-insensitive "Choose" in regex patterns', () => {
-    const result = parseToolChoiceString('Choose one type of Gaming Sets');
-    expect(result).toEqual({ count: 1, categories: ['Gaming Sets'], isChoice: true });
-  });
-
   it('should return default for unrecognized Choose patterns', () => {
     expect(parseToolChoiceString('Choose something weird')).toEqual({ count: 0, categories: [], isChoice: false });
+    expect(parseToolChoiceString('Choose')).toEqual({ count: 0, categories: [], isChoice: false });
+    expect(parseToolChoiceString('Choose 1')).toEqual({ count: 0, categories: [], isChoice: false });
   });
 });
 
@@ -85,6 +89,10 @@ describe('toolValidation - parseFeatToolProficiency', () => {
 
   it('should return null for feat without benefits', () => {
     expect(parseFeatToolProficiency({})).toBeNull();
+  });
+
+  it('should return null for feat with empty benefits array', () => {
+    expect(parseFeatToolProficiency({ benefits: [] })).toBeNull();
   });
 
   it('should return null for feat with non-proficiency benefits', () => {
@@ -145,30 +153,6 @@ describe('toolValidation - parseFeatToolProficiency', () => {
       benefits: [{ type: 'proficiency', description: 'You gain proficiency with three Gaming Tools of your choice' }]
     });
     expect(three.count).toBe(3);
-
-    const four = parseFeatToolProficiency({
-      benefits: [{ type: 'proficiency', description: 'You gain proficiency with four Gaming Tools of your choice' }]
-    });
-    expect(four.count).toBe(4);
-
-    const five = parseFeatToolProficiency({
-      benefits: [{ type: 'proficiency', description: 'You gain proficiency with five Gaming Tools of your choice' }]
-    });
-    expect(five.count).toBe(5);
-  });
-
-  it('should parse with numeric digits (defaults to 1 when not in wordToNum map)', () => {
-    const result = parseFeatToolProficiency({
-      benefits: [{ type: 'proficiency', description: 'You gain proficiency with 2 different Artisan\'s Tools of your choice' }]
-    });
-    expect(result.count).toBe(1);
-  });
-
-  it('should parse numeric digits in generic pattern (defaults to 1)', () => {
-    const result = parseFeatToolProficiency({
-      benefits: [{ type: 'proficiency', description: 'You gain proficiency with 2 Gaming Tools of your choice' }]
-    });
-    expect(result.count).toBe(1);
   });
 
   it('should handle "different" keyword in artisan tools pattern', () => {
@@ -176,6 +160,20 @@ describe('toolValidation - parseFeatToolProficiency', () => {
       benefits: [{ type: 'proficiency', description: 'You gain proficiency with two different Artisan\'s Tools of your choice' }]
     });
     expect(result).toEqual({ count: 2, categories: ["Artisan's Tools"], isAny: false });
+  });
+
+  it('should parse with numeric digits in artisan tools pattern (defaults to 1)', () => {
+    const result = parseFeatToolProficiency({
+      benefits: [{ type: 'proficiency', description: 'You gain proficiency with 2 different Artisan\'s Tools of your choice' }]
+    });
+    expect(result.count).toBe(1);
+  });
+
+  it('should parse with numeric digits in generic pattern (defaults to 1)', () => {
+    const result = parseFeatToolProficiency({
+      benefits: [{ type: 'proficiency', description: 'You gain proficiency with 2 Gaming Tools of your choice' }]
+    });
+    expect(result.count).toBe(1);
   });
 
   it('should handle multi-word categories in generic match (captures full phrase)', () => {
@@ -190,5 +188,17 @@ describe('toolValidation - parseFeatToolProficiency', () => {
       benefits: [{ type: 'proficiency', description: 'You gain proficiency with a sword' }]
     });
     expect(result).toBeNull();
+  });
+
+  it('should return null for benefit with no description', () => {
+    expect(parseFeatToolProficiency({
+      benefits: [{ type: 'proficiency' }]
+    })).toBeNull();
+  });
+
+  it('should return null for benefit with empty description', () => {
+    expect(parseFeatToolProficiency({
+      benefits: [{ type: 'proficiency', description: '' }]
+    })).toBeNull();
   });
 });

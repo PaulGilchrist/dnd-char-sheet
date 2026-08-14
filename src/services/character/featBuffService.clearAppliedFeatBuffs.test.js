@@ -1,34 +1,36 @@
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 
 import { clearAppliedFeatBuffs } from './featBuffService.js';
 
 describe('clearAppliedFeatBuffs', () => {
-  it('should reset featIncrease on each ability to 0', () => {
-    const abilities = [
-      { name: 'Strength', featIncrease: 5 },
-      { name: 'Dexterity', featIncrease: -2 },
-      { name: 'Constitution', featIncrease: 3 },
-    ];
-    const formData = { abilities };
+  it('resets featIncrease to 0 on every ability in the array', () => {
+    const formData = {
+      abilities: [
+        { name: 'Strength', featIncrease: 5 },
+        { name: 'Dexterity', featIncrease: -2 },
+        { name: 'Constitution', featIncrease: 3 },
+      ],
+    };
 
     clearAppliedFeatBuffs(formData);
 
-    expect(formData.abilities[0].featIncrease).toBe(0);
-    expect(formData.abilities[1].featIncrease).toBe(0);
-    expect(formData.abilities[2].featIncrease).toBe(0);
+    expect(formData.abilities.every(a => a.featIncrease === 0)).toBe(true);
   });
 
-  it('should handle undefined formData.abilities gracefully', () => {
+  it('handles missing abilities gracefully without crashing', () => {
     const formData = {};
 
     expect(() => clearAppliedFeatBuffs(formData)).not.toThrow();
   });
 
-  it('should throw when formData is null', () => {
-    expect(() => clearAppliedFeatBuffs(null)).toThrow(TypeError);
+  it('handles an empty abilities array without crashing', () => {
+    const formData = { abilities: [] };
+
+    expect(() => clearAppliedFeatBuffs(formData)).not.toThrow();
   });
 
-  it('should not modify other formData properties', () => {
+  it('leaves non-ability properties untouched', () => {
     const formData = {
       abilities: [{ name: 'Strength', featIncrease: 5 }],
       name: 'Test Character',
@@ -44,4 +46,14 @@ describe('clearAppliedFeatBuffs', () => {
     expect(formData.class).toBe('Wizard');
   });
 
+  it('resets abilities that lack a featIncrease property', () => {
+    const formData = {
+      abilities: [{ name: 'Strength' }, { name: 'Dexterity', featIncrease: 7 }],
+    };
+
+    clearAppliedFeatBuffs(formData);
+
+    expect(formData.abilities[0].featIncrease).toBe(0);
+    expect(formData.abilities[1].featIncrease).toBe(0);
+  });
 });

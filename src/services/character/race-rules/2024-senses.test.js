@@ -1,3 +1,4 @@
+// // @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import raceRules from './2024.js';
 
@@ -175,6 +176,14 @@ describe('raceRules 2024 - getSenses', () => {
       expect(raceRules.getSenses({ senses: [], race: {} })).toEqual([]);
     });
 
+    it('handles null race', () => {
+      expect(raceRules.getSenses({ senses: [], race: null })).toEqual([]);
+    });
+
+    it('handles undefined abilities array', () => {
+      expect(raceRules.getSenses({ senses: [], race: { traits: [] }, abilities: undefined })).toEqual([]);
+    });
+
     it('adds Blindsight 30 ft. when Feral Senses class feature exists', () => {
       const input = {
         senses: [],
@@ -291,6 +300,183 @@ describe('raceRules 2024 - getSenses', () => {
       };
       const result = raceRules.getSenses(input);
       expect(result).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
+    });
+
+    it('overrides Darkvision to 120 ft. for Drow lineage', () => {
+      const input = {
+        senses: [],
+        race: {
+          traits: [{ description: 'You have darkvision with a range of 60 feet.' }],
+          lineage: 'Drow'
+        }
+      };
+      const result = raceRules.getSenses(input);
+      const dv = result.find((s) => s.name === 'Darkvision');
+      expect(dv.value).toBe('120 ft.');
+    });
+
+    it('overrides Darkvision to 120 ft. for Drow subrace name', () => {
+      const input = {
+        senses: [],
+        race: {
+          traits: [{ description: 'You have darkvision with a range of 60 feet.' }],
+          subrace: { name: 'Drow' }
+        }
+      };
+      const result = raceRules.getSenses(input);
+      const dv = result.find((s) => s.name === 'Darkvision');
+      expect(dv.value).toBe('120 ft.');
+    });
+
+    it('overrides Darkvision to 120 ft. for Deep Gnome lineage', () => {
+      const input = {
+        senses: [],
+        race: {
+          traits: [{ description: 'You have darkvision with a range of 60 feet.' }],
+          lineage: 'Deep Gnome'
+        }
+      };
+      const result = raceRules.getSenses(input);
+      const dv = result.find((s) => s.name === 'Darkvision');
+      expect(dv.value).toBe('120 ft.');
+    });
+
+    it('does not override Darkvision for non-Drow/Deep Gnome lineage', () => {
+      const input = {
+        senses: [],
+        race: {
+          traits: [{ description: 'You have darkvision with a range of 60 feet.' }],
+          lineage: 'Wood Elf'
+        }
+      };
+      const result = raceRules.getSenses(input);
+      const dv = result.find((s) => s.name === 'Darkvision');
+      expect(dv.value).toBe('60 ft.');
+    });
+
+    it('adds Darkvision 120 ft. for Drow when no darkvision trait exists', () => {
+      const input = {
+        senses: [],
+        race: {
+          traits: [],
+          lineage: 'Drow'
+        }
+      };
+      const result = raceRules.getSenses(input);
+      const dv = result.find((s) => s.name === 'Darkvision');
+      expect(dv).toBeDefined();
+      expect(dv.value).toBe('120 ft.');
+    });
+
+    it('combines Drow lineage with existing darkvision override', () => {
+      const input = {
+        senses: [{ name: 'Darkvision', value: '60 ft.' }],
+        race: {
+          traits: [],
+          lineage: 'Drow'
+        }
+      };
+      const result = raceRules.getSenses(input);
+      const dv = result.find((s) => s.name === 'Darkvision');
+      expect(dv.value).toBe('120 ft.');
+    });
+
+    it('does not add Blindsight when already in senses', () => {
+      const input = {
+        senses: [{ name: 'Blindsight', value: '60 ft.' }],
+        race: { traits: [] },
+        class: { class_levels: [{ features: [{ name: 'Feral Senses' }] }] }
+      };
+      const result = raceRules.getSenses(input);
+      expect(result.filter((s) => s.name === 'Blindsight').length).toBe(1);
+      expect(result.find((s) => s.name === 'Blindsight').value).toBe('60 ft.');
+    });
+
+    it('does not add Blindvision when class is missing', () => {
+      const input = { senses: [], race: { traits: [] } };
+      const result = raceRules.getSenses(input);
+      expect(result).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
+    });
+
+    it('does not add Blindvision when class exists without fightingStyles', () => {
+      const input = {
+        senses: [],
+        race: { traits: [] },
+        class: {}
+      };
+      const result = raceRules.getSenses(input);
+      expect(result).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
+    });
+
+    it('handles undefined class property', () => {
+      const input = { senses: [], race: { traits: [] }, class: undefined };
+      const result = raceRules.getSenses(input);
+      expect(result).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
+    });
+
+    it('handles missing class_levels gracefully', () => {
+      const input = {
+        senses: [],
+        race: { traits: [] },
+        class: { class_levels: undefined }
+      };
+      const result = raceRules.getSenses(input);
+      expect(result).not.toContainEqual({ name: 'Blindsight', value: '30 ft.' });
+    });
+
+    it('does not add passive skills when abilities is null', () => {
+      const input = { senses: [], race: { traits: [] }, abilities: null };
+      const result = raceRules.getSenses(input);
+      expect(result).not.toContainEqual({ name: 'Passive Perception', value: '10' });
+    });
+
+    it('handles abilities with missing skills array', () => {
+      const input = {
+        senses: [],
+        race: { traits: [] },
+        abilities: [{ name: 'Wisdom', bonus: 5 }]
+      };
+      const result = raceRules.getSenses(input);
+      expect(result).toContainEqual({ name: 'Passive Perception', value: '15' });
+    });
+
+    it('handles multiple traits with darkvision (only one added)', () => {
+      const input = {
+        senses: [],
+        race: {
+          traits: [
+            { description: 'You have darkvision with a range of 60 feet.' },
+            { description: 'You have darkvision with a range of 120 feet.' }
+          ]
+        }
+      };
+      const result = raceRules.getSenses(input);
+      expect(result.filter((s) => s.name === 'Darkvision').length).toBe(1);
+    });
+
+    it('handles multiple traits with tremorsense (only one added)', () => {
+      const input = {
+        senses: [],
+        race: {
+          traits: [
+            { description: 'You have tremorsense with a range of 30 feet.' },
+            { description: 'You have tremorsense with a range of 60 feet.' }
+          ]
+        }
+      };
+      const result = raceRules.getSenses(input);
+      expect(result.filter((s) => s.name === 'Tremorsense').length).toBe(1);
+    });
+
+    it('returns all senses sorted together', () => {
+      const input = {
+        senses: [{ name: 'Zebra Vision', value: '10 ft.' }],
+        race: { traits: [{ description: 'You have darkvision with a range of 60 feet.' }] },
+        abilities: [{ name: 'Wisdom', bonus: 2, skills: [{ name: 'Perception', bonus: 5 }] }]
+      };
+      const result = raceRules.getSenses(input);
+      const names = result.map((s) => s.name);
+      expect(names).toEqual([...new Set(names)].sort());
     });
   });
 });

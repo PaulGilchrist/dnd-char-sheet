@@ -1,3 +1,4 @@
+// // @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import raceRules from './2024.js';
 
@@ -128,6 +129,53 @@ describe('raceRules 2024 - getRace', () => {
       const playerSummary = { race: { name: 'Human' } };
       const result = raceRules.getRace(allRaces, playerSummary);
       expect(result.ability_bonuses).toBeUndefined();
+    });
+
+    it('handles empty allRaces array', () => {
+      const allRaces = [];
+      const playerSummary = { race: { name: 'Unknown' } };
+      const result = raceRules.getRace(allRaces, playerSummary);
+      expect(result).toEqual({ name: 'Unknown' });
+    });
+
+    it('handles subrace with ability_bonuses', () => {
+      const allRaces = [
+        {
+          name: 'Elf',
+          subraces: [{ name: 'High Elf', ability_bonuses: [{ ability_score: 'INT', bonus: 1 }] }]
+        }
+      ];
+      const playerSummary = { race: { name: 'Elf', subrace: { name: 'High Elf' } } };
+      const result = raceRules.getRace(allRaces, playerSummary);
+      expect(result.subrace.ability_bonuses[0].ability_score).toBe('INT');
+    });
+
+    it('handles null subrace in playerSummary', () => {
+      const allRaces = [
+        {
+          name: 'Elf',
+          subraces: [{ name: 'High Elf', damage_resistance: 'Fire' }]
+        }
+      ];
+      const playerSummary = { race: { name: 'Elf', subrace: null } };
+      const result = raceRules.getRace(allRaces, playerSummary);
+      expect(result.name).toBe('Elf');
+    });
+
+    it('handles race with no subraces property', () => {
+      const allRaces = [{ name: 'Human' }];
+      const playerSummary = { race: { name: 'Human' } };
+      const result = raceRules.getRace(allRaces, playerSummary);
+      expect(result.name).toBe('Human');
+    });
+
+    it('preserves clone independence from source', () => {
+      const sourceRace = { name: 'Human', traits: [] };
+      const allRaces = [sourceRace];
+      const playerSummary = { race: { name: 'Human' } };
+      const result = raceRules.getRace(allRaces, playerSummary);
+      result.customProp = 'added';
+      expect(sourceRace.customProp).toBeUndefined();
     });
   });
 });

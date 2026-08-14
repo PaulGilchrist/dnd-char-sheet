@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -21,7 +22,7 @@ describe('skillValidation — validateSkills', () => {
     vi.clearAllMocks();
   });
 
-  it('should return warning when too many skills selected', async () => {
+  it('should return warnings when too many skills selected', async () => {
     vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
       skill_proficiencies: 'Choose 2 from Arcana, History',
     });
@@ -73,7 +74,7 @@ describe('skillValidation — validateSkills', () => {
     expect(warnings).toEqual([]);
   });
 
-  it('should warn when expertise selected but not allowed', async () => {
+  it('should warn when expertise selected but not allowed for class', async () => {
     vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
       skill_proficiencies: 'Choose 2 from Arcana, History',
       class_levels: [{ level: 1, features: [] }],
@@ -121,7 +122,7 @@ describe('skillValidation — validateSkills', () => {
     ).toBe(true);
   });
 
-  it('should warn about duplicate skills', async () => {
+  it('should warn about duplicate skills in selection', async () => {
     vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
       skill_proficiencies: 'Choose 2 from Arcana, History',
     });

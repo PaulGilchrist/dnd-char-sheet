@@ -1,13 +1,5 @@
+// @improved-by-ai
 import { describe, it, expect, vi, afterEach } from 'vitest';
-
-vi.mock('../shared/featFinder.js', () => ({
-  findFeat: vi.fn(),
-}));
-
-vi.mock('../shared/buffApplier.js', () => ({
-  resetFeatIncreases: vi.fn(),
-  mergeDeduplicated: vi.fn(),
-}));
 
 import { findFeat } from '../shared/featFinder.js';
 import {
@@ -16,39 +8,79 @@ import {
 
 import { applyFeatBuffsToFormData } from './featBuffService.js';
 
+vi.mock('../shared/featFinder.js', () => ({
+  findFeat: vi.fn(),
+}));
+
+vi.mock('../shared/buffApplier.js', () => ({
+  mergeDeduplicated: vi.fn(),
+}));
+
 afterEach(() => {
   vi.clearAllMocks();
 });
 
 describe('applyFeatBuffsToFormData', () => {
-  const baseFormData = (overrides = {}) => ({
+  const makeFormData = (overrides = {}) => ({
     rules: '5e',
     feats: ['Tough'],
-    abilities: [{ name: 'Strength', featIncrease: 0 }],
+    abilities: [
+      { name: 'Strength', featIncrease: 0 },
+      { name: 'Dexterity', featIncrease: 0 },
+      { name: 'Constitution', featIncrease: 0 },
+    ],
     ...overrides,
   });
 
   describe('side effects on formData', () => {
-    it('should apply non-choice ability score increases to formData abilities', () => {
-      const formData = {
-        rules: '5e',
-        feats: ['Tough'],
-        abilities: [
-          { name: 'Strength', featIncrease: 0 },
-          { name: 'Dexterity', featIncrease: 0 },
-        ],
-      };
+    it('applies non-choice ability score increases to matching abilities in formData', () => {
+      const formData = makeFormData();
 
-      findFeat.mockReturnValue({ benefits: ['Increase your Strength score by 2'] });
+      findFeat.mockReturnValue({
+        benefits: ['Increase your Strength score by 2'],
+      });
 
       applyFeatBuffsToFormData(formData, []);
 
       expect(formData.abilities[0].featIncrease).toBe(2);
       expect(formData.abilities[1].featIncrease).toBe(0);
+      expect(formData.abilities[2].featIncrease).toBe(0);
     });
 
-    it('should merge resistances from feat parsing into formData', () => {
-      const formData = baseFormData({ resistances: ['cold'] });
+    it('accumulates ability score increases when multiple feats affect the same ability', () => {
+      const formData = makeFormData({
+        feats: ['Feat1', 'Feat2'],
+      });
+
+      findFeat
+        .mockReturnValueOnce({
+          benefits: ['Increase your Strength score by 2'],
+        })
+        .mockReturnValueOnce({
+          benefits: ['Increase your Strength score by 1'],
+        });
+
+      applyFeatBuffsToFormData(formData, []);
+
+      expect(formData.abilities[0].featIncrease).toBe(3);
+    });
+
+    it('matches ability names case-insensitively', () => {
+      const formData = makeFormData({
+        abilities: [{ name: 'strength', featIncrease: 0 }],
+      });
+
+      findFeat.mockReturnValue({
+        benefits: ['Increase your Strength score by 2'],
+      });
+
+      applyFeatBuffsToFormData(formData, []);
+
+      expect(formData.abilities[0].featIncrease).toBe(2);
+    });
+
+    it('merges resistances from feat parsing into formData via mergeDeduplicated', () => {
+      const formData = makeFormData({ resistances: ['cold'] });
 
       findFeat.mockReturnValue({
         benefits: ['You have resistance to fire'],
@@ -63,11 +95,23 @@ describe('applyFeatBuffsToFormData', () => {
       );
     });
 
+    it('does not crash when formData has no abilities array', () => {
+      const formData = {
+        rules: '5e',
+        feats: ['Tough'],
+      };
+
+      findFeat.mockReturnValue({
+        benefits: ['Increase your Strength score by 2'],
+      });
+
+      expect(() => applyFeatBuffsToFormData(formData, [])).not.toThrow();
+    });
   });
 
   describe('return value structure', () => {
-    it('should return an object with abilityScoreIncreases populated from feat benefits', () => {
-      const formData = baseFormData();
+    it('returns abilityScoreIncreases parsed from 5e benefit text', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['Increase your Strength score by 2'],
@@ -80,8 +124,8 @@ describe('applyFeatBuffsToFormData', () => {
       ]);
     });
 
-    it('should return an object with proficiencies populated from feat benefits', () => {
-      const formData = baseFormData();
+    it('returns proficiencies parsed from 5e benefit text', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['You gain proficiency with heavy armor'],
@@ -94,8 +138,8 @@ describe('applyFeatBuffsToFormData', () => {
       ]);
     });
 
-    it('should return an object with resistances populated from feat benefits', () => {
-      const formData = baseFormData();
+    it('returns resistances parsed from 5e benefit text', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['You have resistance to fire'],
@@ -106,8 +150,8 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.resistances).toEqual(['fire']);
     });
 
-    it('should return an object with features populated from speed/initiative/hp/language benefits', () => {
-      const formData = baseFormData();
+    it('returns features with type "speed" for speed benefit text', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['Your speed increases by 10 feet'],
@@ -119,8 +163,8 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.features[0].type).toBe('speed');
     });
 
-    it('should return features with type "passive" for unrecognized benefit text', () => {
-      const formData = baseFormData();
+    it('returns features with type "passive" for unrecognized benefit text', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['You can cast detect magic at will'],
@@ -132,8 +176,8 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.features[0].type).toBe('passive');
     });
 
-    it('should return all four buff categories when a feat produces mixed benefits', () => {
-      const formData = baseFormData();
+    it('returns all four buff categories when a feat produces mixed benefits', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: [
@@ -152,8 +196,8 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.features).toHaveLength(1);
     });
 
-    it('should return empty arrays for all categories when no feats are selected', () => {
-      const formData = baseFormData({ feats: [] });
+    it('returns empty arrays for all categories when no feats are selected', () => {
+      const formData = makeFormData({ feats: [] });
 
       const result = applyFeatBuffsToFormData(formData, []);
 
@@ -162,12 +206,11 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.resistances).toEqual([]);
       expect(result.features).toEqual([]);
     });
-
-    });
+  });
 
   describe('ability score increase parsing', () => {
-    it('should mark isChoice true when benefit text contains "or" (dual ability selection)', () => {
-      const formData = baseFormData();
+    it('marks isChoice true when benefit text contains "or" (dual ability selection)', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['Increase your Strength or Dexterity score by 2'],
@@ -182,8 +225,8 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.abilityScoreIncreases[1].isChoice).toBe(true);
     });
 
-    it('should mark isChoice true and name "any" for choose-one ability score benefits', () => {
-      const formData = baseFormData();
+    it('marks isChoice true and name "any" for choose-one ability score benefits', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['Choose one ability score. Increase the chosen ability score by 1'],
@@ -199,8 +242,8 @@ describe('applyFeatBuffsToFormData', () => {
       );
     });
 
-    it('should set isChoice false for single-ability increases without "or"', () => {
-      const formData = baseFormData();
+    it('sets isChoice false for single-ability increases without "or"', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['Increase your Constitution score by 1'],
@@ -210,11 +253,23 @@ describe('applyFeatBuffsToFormData', () => {
 
       expect(result.abilityScoreIncreases[0].isChoice).toBe(false);
     });
+
+    it('sets max_value to 30 when benefit text mentions "maximum of 30"', () => {
+      const formData = makeFormData();
+
+      findFeat.mockReturnValue({
+        benefits: ['Increase your Strength score by 2, to a maximum of 30.'],
+      });
+
+      const result = applyFeatBuffsToFormData(formData, []);
+
+      expect(result.abilityScoreIncreases[0].max_value).toBe(30);
+    });
   });
 
   describe('features parsing', () => {
-    it('should create speed feature with parsed numeric value', () => {
-      const formData = baseFormData();
+    it('creates speed feature with parsed numeric value', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['Your speed increases by 15 feet'],
@@ -227,8 +282,8 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.features[0].value).toBe(15);
     });
 
-    it('should create initiative feature with parsed numeric value', () => {
-      const formData = baseFormData();
+    it('creates initiative feature with parsed numeric value', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['You gain a +2 bonus to initiative'],
@@ -241,8 +296,8 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.features[0].value).toBe(2);
     });
 
-    it('should create hp_per_level feature when benefit mentions "additional" hit points', () => {
-      const formData = baseFormData();
+    it('creates hp_per_level feature when benefit mentions "additional" hit points', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['your hit point maximum increases by an additional 4 hit points'],
@@ -255,8 +310,8 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.features[0].value).toBe(4);
     });
 
-    it('should create hp_flat feature for flat hit point increases', () => {
-      const formData = baseFormData();
+    it('creates hp_flat feature for flat hit point increases', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['Your hit point maximum increases by 10'],
@@ -269,8 +324,8 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.features[0].value).toBe(10);
     });
 
-    it('should create language feature with parsed numeric value', () => {
-      const formData = baseFormData();
+    it('creates language feature with parsed numeric value', () => {
+      const formData = makeFormData();
 
       findFeat.mockReturnValue({
         benefits: ['You learn 2 languages of your choice'],
@@ -285,7 +340,7 @@ describe('applyFeatBuffsToFormData', () => {
   });
 
   describe('ruleset handling', () => {
-    it('should default to "5e" ruleset when not specified', () => {
+    it('defaults to "5e" ruleset when not specified', () => {
       const formData = {
         feats: ['Tough'],
         abilities: [{ name: 'Strength', featIncrease: 0 }],
@@ -302,8 +357,8 @@ describe('applyFeatBuffsToFormData', () => {
       ]);
     });
 
-    it('should use "2024" ruleset when specified', () => {
-      const formData = baseFormData({ rules: '2024' });
+    it('uses "2024" ruleset when specified', () => {
+      const formData = makeFormData({ rules: '2024' });
 
       findFeat.mockReturnValue({
         benefits: [
@@ -321,7 +376,7 @@ describe('applyFeatBuffsToFormData', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle multiple feats by aggregating their buffs', () => {
+    it('aggregates buffs from multiple feats', () => {
       findFeat
         .mockReturnValueOnce({
           benefits: ['Increase your Strength score by 2'],
@@ -330,7 +385,7 @@ describe('applyFeatBuffsToFormData', () => {
           benefits: ['Increase your Dexterity score by 1'],
         });
 
-      const formData = baseFormData({ feats: ['Tough', 'Alert'] });
+      const formData = makeFormData({ feats: ['Tough', 'Alert'] });
 
       const result = applyFeatBuffsToFormData(formData, []);
 
@@ -341,10 +396,10 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.abilityScoreIncreases[1].amount).toBe(1);
     });
 
-    it('should skip feats that are not found in the allFeats list', () => {
+    it('skips feats that are not found (findFeat returns null)', () => {
       findFeat.mockReturnValue(null);
 
-      const formData = baseFormData({ feats: ['Nonexistent'] });
+      const formData = makeFormData({ feats: ['Nonexistent'] });
 
       const result = applyFeatBuffsToFormData(formData, []);
 
@@ -354,5 +409,33 @@ describe('applyFeatBuffsToFormData', () => {
       expect(result.features).toEqual([]);
     });
 
+    it('skips choice/any ability score increases when applying side effects to formData', () => {
+      const formData = makeFormData();
+
+      findFeat.mockReturnValue({
+        benefits: ['Choose one ability score. Increase the chosen ability score by 2'],
+      });
+
+      applyFeatBuffsToFormData(formData, []);
+
+      // "any" name should be filtered out; no ability should be modified
+      expect(formData.abilities.every(a => a.featIncrease === 0)).toBe(true);
+    });
+
+    it('aggregates ability score increases from multiple feats into the same ability', () => {
+      const formData = makeFormData({ feats: ['FeatA', 'FeatB'] });
+
+      findFeat
+        .mockReturnValueOnce({
+          benefits: ['Increase your Strength score by 2'],
+        })
+        .mockReturnValueOnce({
+          benefits: ['Increase your Strength score by 1'],
+        });
+
+      applyFeatBuffsToFormData(formData, []);
+
+      expect(formData.abilities[0].featIncrease).toBe(3);
+    });
   });
 });

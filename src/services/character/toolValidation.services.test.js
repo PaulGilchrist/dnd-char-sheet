@@ -1,5 +1,5 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as dataLoader from '../ui/dataLoader.js';
 
 vi.mock('../ui/dataLoader.js', () => ({
   loadWildMagicSurgeTable: vi.fn(async () => []),
@@ -8,6 +8,8 @@ vi.mock('../ui/dataLoader.js', () => ({
   fetchClassData: vi.fn(),
   loadFeatData: vi.fn(),
 }));
+
+import * as dataLoader from '../ui/dataLoader.js';
 
 import {
   getToolsByCategory,
@@ -26,6 +28,11 @@ describe('toolValidation - getToolsByCategory', () => {
 
   it('should return empty array for undefined category', async () => {
     const result = await getToolsByCategory(undefined);
+    expect(result).toEqual([]);
+  });
+
+  it('should return empty array for empty string category', async () => {
+    const result = await getToolsByCategory('');
     expect(result).toEqual([]);
   });
 
@@ -51,7 +58,7 @@ describe('toolValidation - getToolsByCategory', () => {
     expect(result).toHaveLength(2);
   });
 
-  it('should exclude non-tools', async () => {
+  it('should exclude non-tools by equipment_category', async () => {
     vi.mocked(dataLoader.loadEquipment).mockResolvedValue([
       { name: "Alchemist's Supplies", equipment_category: 'Tools', tool_category: "Artisan's Tools" },
       { name: 'Longsword', equipment_category: 'Weapons', tool_category: null },
@@ -60,6 +67,17 @@ describe('toolValidation - getToolsByCategory', () => {
 
     const result = await getToolsByCategory("Artisan's Tools");
     expect(result).toHaveLength(1);
+  });
+
+  it('should exclude items with tool_category not matching normalized value', async () => {
+    vi.mocked(dataLoader.loadEquipment).mockResolvedValue([
+      { name: "Alchemist's Supplies", equipment_category: 'Tools', tool_category: "Artisan's Tools" },
+      { name: 'Flute', equipment_category: 'Tools', tool_category: 'Musical Instrument' },
+    ]);
+
+    const result = await getToolsByCategory("Artisan's Tools");
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("Alchemist's Supplies");
   });
 });
 
@@ -76,6 +94,11 @@ describe('toolValidation - computeSkilledToolUsage', () => {
   it('should return 0 for null selectedTools', () => {
     const limits = new Map([["Artisan's Tools", 2]]);
     expect(computeSkilledToolUsage(limits, null, [], [])).toBe(0);
+  });
+
+  it('should return 0 for undefined selectedTools', () => {
+    const limits = new Map([["Artisan's Tools", 2]]);
+    expect(computeSkilledToolUsage(limits, undefined, [], [])).toBe(0);
   });
 
   it('should return 0 for empty selectedTools', () => {
@@ -150,6 +173,59 @@ describe('toolValidation - computeSkilledToolUsage', () => {
     const result = computeSkilledToolUsage(limits, selectedTools, allTools, toolCategories);
     // Unknown Tool is in Other Tools which has no limit in the map
     // userSelectedTools = 1, categoryCovered = 0, result = max(0, 1-0) = 1
+    expect(result).toBe(1);
+  });
+
+  it('should cap categoryCovered at the limit per category', () => {
+    const limits = new Map([["Artisan's Tools", 2]]);
+    const selectedTools = ["Alchemist's Supplies", "Brewer's Supplies", "Carver's Tools"];
+    const allTools = [
+      { name: "Alchemist's Supplies", _category: "Artisan's Tools" },
+      { name: "Brewer's Supplies", _category: "Artisan's Tools" },
+      { name: "Carver's Tools", _category: "Artisan's Tools" },
+    ];
+    const toolCategories = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
+
+    const result = computeSkilledToolUsage(limits, selectedTools, allTools, toolCategories);
+    // Artisan's Tools: 3 selected in limit of 2 => categoryCovered = min(3, 2) = 2
+    // userSelectedTools = 3, categoryCovered = 2, result = max(0, 3-2) = 1
+    expect(result).toBe(1);
+  });
+
+  it('should handle multiple categories with partial overflow', () => {
+    const limits = new Map([
+      ["Artisan's Tools", 1],
+      ['Gaming Sets', 1],
+    ]);
+    const selectedTools = ["Alchemist's Supplies", "Brewer's Supplies", 'Dice', 'Cards', 'Flute'];
+    const allTools = [
+      { name: "Alchemist's Supplies", _category: "Artisan's Tools" },
+      { name: "Brewer's Supplies", _category: "Artisan's Tools" },
+      { name: 'Dice', _category: 'Gaming Sets' },
+      { name: 'Cards', _category: 'Gaming Sets' },
+      { name: 'Flute', _category: 'Musical Instrument' },
+    ];
+    const toolCategories = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
+
+    const result = computeSkilledToolUsage(limits, selectedTools, allTools, toolCategories);
+    // Artisan's Tools: 2 selected in limit of 1 => categoryCovered += 1
+    // Gaming Sets: 2 selected in limit of 1 => categoryCovered += 1
+    // Musical Instrument: 1 selected, no limit => not categoryCovered
+    // userSelectedTools = 5, categoryCovered = 2, result = max(0, 5-2) = 3
+    expect(result).toBe(3);
+  });
+
+  it('should handle selected tools that reference items not in allTools', () => {
+    const limits = new Map([["Artisan's Tools", 2]]);
+    const selectedTools = ['NonExistent Tool'];
+    const allTools = [
+      { name: "Alchemist's Supplies", _category: "Artisan's Tools" },
+    ];
+    const toolCategories = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
+
+    const result = computeSkilledToolUsage(limits, selectedTools, allTools, toolCategories);
+    // NonExistent Tool is not in any category set
+    // userSelectedTools = 1, categoryCovered = 0, result = 1
     expect(result).toBe(1);
   });
 });

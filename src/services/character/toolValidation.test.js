@@ -1,8 +1,9 @@
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 import { normalizeCategory } from './toolValidation.js';
 
 describe('toolValidation - normalizeCategory', () => {
-  it('should normalize "Gaming Set" to "Gaming Sets"', () => {
+  it('should normalize singular "Gaming Set" to "Gaming Sets"', () => {
     expect(normalizeCategory('Gaming Set')).toBe('Gaming Sets');
   });
 
@@ -37,5 +38,13 @@ describe('toolValidation - normalizeCategory', () => {
   it('should return null/undefined unchanged', () => {
     expect(normalizeCategory(null)).toBeNull();
     expect(normalizeCategory(undefined)).toBeUndefined();
+  });
+
+  it('should handle empty string', () => {
+    expect(normalizeCategory('')).toBe('');
+  });
+
+  it('should handle whitespace-only string', () => {
+    expect(normalizeCategory('   ')).toBe('');
   });
 });

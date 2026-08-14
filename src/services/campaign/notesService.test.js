@@ -11,6 +11,7 @@ describe('notesService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('loadNotes', () => {
@@ -58,7 +59,7 @@ describe('notesService', () => {
       );
     });
 
-    it('throws with custom error message on API error, generic fallback on network failure', async () => {
+    it('throws with custom error message when API returns an error', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
@@ -66,7 +67,9 @@ describe('notesService', () => {
       });
 
       await expect(loadNotes('campaign1')).rejects.toThrow('Campaign not found');
+    });
 
+    it('throws generic error when API error response has no error field', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -74,7 +77,9 @@ describe('notesService', () => {
       });
 
       await expect(loadNotes('campaign1')).rejects.toThrow('Failed to load notes');
+    });
 
+    it('throws with original error message on network failure', async () => {
       mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(loadNotes('campaign1')).rejects.toThrow('ENOTFOUND');
@@ -82,19 +87,21 @@ describe('notesService', () => {
   });
 
   describe('saveNotes', () => {
-    it('sends POST with notes array on success', async () => {
+    it('sends POST with notes array and returns response on success', async () => {
       const notes = [
         { id: 'note-1', description: 'First note', isPrivate: false },
         { id: 'note-2', description: 'GM secret', isPrivate: true },
       ];
+      const responseData = { success: true, savedCount: 2 };
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ success: true }),
+        json: () => Promise.resolve(responseData),
       });
 
-      await saveNotes('campaign1', notes);
+      const result = await saveNotes('campaign1', notes);
 
+      expect(result).toEqual(responseData);
       expect(mockFetch).toHaveBeenCalledWith(
         '/api/campaigns/campaign1/notes',
         {
@@ -136,7 +143,7 @@ describe('notesService', () => {
       );
     });
 
-    it('throws with custom error message on API error, generic fallback on network failure', async () => {
+    it('throws with custom error message when API returns an error', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Bad Request',
@@ -144,7 +151,9 @@ describe('notesService', () => {
       });
 
       await expect(saveNotes('campaign1', [])).rejects.toThrow('Invalid notes data');
+    });
 
+    it('throws generic error when API error response has no error field', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -152,7 +161,9 @@ describe('notesService', () => {
       });
 
       await expect(saveNotes('campaign1', [])).rejects.toThrow('Failed to save notes');
+    });
 
+    it('throws with original error message on network failure', async () => {
       mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(saveNotes('campaign1', [])).rejects.toThrow('ENOTFOUND');
@@ -191,7 +202,7 @@ describe('notesService', () => {
       );
     });
 
-    it('throws with custom error message on API error, generic fallback on network failure', async () => {
+    it('throws with custom error message when API returns an error', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
@@ -199,7 +210,9 @@ describe('notesService', () => {
       });
 
       await expect(loadNote('campaign1', 'note-1')).rejects.toThrow('Note not found');
+    });
 
+    it('throws generic error when API error response has no error field', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -207,7 +220,9 @@ describe('notesService', () => {
       });
 
       await expect(loadNote('campaign1', 'note-1')).rejects.toThrow('Failed to load note');
+    });
 
+    it('throws with original error message on network failure', async () => {
       mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(loadNote('campaign1', 'note-1')).rejects.toThrow('ENOTFOUND');
@@ -215,14 +230,16 @@ describe('notesService', () => {
   });
 
   describe('deleteNote', () => {
-    it('sends DELETE request on success', async () => {
+    it('sends DELETE request and returns response on success', async () => {
+      const responseData = { success: true, deleted: 'note-1' };
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ success: true }),
+        json: () => Promise.resolve(responseData),
       });
 
-      await deleteNote('campaign1', 'note-1');
+      const result = await deleteNote('campaign1', 'note-1');
 
+      expect(result).toEqual(responseData);
       expect(mockFetch).toHaveBeenCalledWith(
         '/api/campaigns/campaign1/notes/note-1',
         { method: 'DELETE' }
@@ -243,7 +260,7 @@ describe('notesService', () => {
       );
     });
 
-    it('throws with custom error message on API error, generic fallback on network failure', async () => {
+    it('throws with custom error message when API returns an error', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
@@ -251,7 +268,9 @@ describe('notesService', () => {
       });
 
       await expect(deleteNote('campaign1', 'note-1')).rejects.toThrow('Note not found');
+    });
 
+    it('throws generic error when API error response has no error field', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -259,7 +278,9 @@ describe('notesService', () => {
       });
 
       await expect(deleteNote('campaign1', 'note-1')).rejects.toThrow('Failed to delete note');
+    });
 
+    it('throws with original error message on network failure', async () => {
       mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(deleteNote('campaign1', 'note-1')).rejects.toThrow('ENOTFOUND');

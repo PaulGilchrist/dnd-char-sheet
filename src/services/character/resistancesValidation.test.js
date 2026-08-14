@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -124,6 +125,18 @@ describe('resistancesValidation', () => {
       expectWarning(warnings, 'warning', 'immunities are not granted');
     });
 
+    it('warns about both ungranted resistances and immunities together', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
+
+      const warnings = await validateResistances(
+        baseArgs({ resistances: ['Fire'], immunities: ['Cold'] }),
+      );
+
+      expectWarning(warnings, 'warning', 'resistances are not granted');
+      expectWarning(warnings, 'warning', 'immunities are not granted');
+    });
+
     it('warns about duplicate resistances', async () => {
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
@@ -143,8 +156,8 @@ describe('resistancesValidation', () => {
         baseArgs({ resistances: [], immunities: ['Fire', 'Fire'] }),
       );
 
-      expectWarning(warnings, 'warning', 'immunities') &&
-        expectWarning(warnings, 'warning', 'multiple times');
+      expectWarning(warnings, 'warning', 'immunities');
+      expectWarning(warnings, 'warning', 'multiple times');
     });
 
     it('returns info when no resistances or immunities selected and none granted', async () => {
@@ -286,6 +299,51 @@ describe('resistancesValidation', () => {
       );
 
       expectNoWarning(warnings, 'warning', 'immunities are not granted');
+    });
+
+    it('does not warn when selected resistances partially overlap with granted', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
+        name: 'Tiefling',
+        traits: [
+          {
+            name: 'Hellish Resistance',
+            description: ['You have resistance to fire damage.'],
+          },
+        ],
+      });
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
+
+      const warnings = await validateResistances(
+        baseArgs({ race: { name: 'Tiefling' }, resistances: ['Fire', 'Cold'], immunities: [] }),
+      );
+
+      // Fire is granted, Cold is not — should still warn about Cold
+      expectWarning(warnings, 'warning', 'not granted');
+    });
+
+    it('warns about each ungranted type individually in the message', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
+
+      const warnings = await validateResistances(
+        baseArgs({ resistances: ['Fire', 'Cold'], immunities: [] }),
+      );
+
+      const match = warnings.find((w) => w.type === 'warning' && w.message.includes('not granted'));
+      expect(match.message).toContain('Fire');
+      expect(match.message).toContain('Cold');
+    });
+
+    it('returns exactly one warning per issue category', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
+
+      const warnings = await validateResistances(
+        baseArgs({ resistances: ['Fire', 'Fire', 'Cold'], immunities: [] }),
+      );
+
+      const warningWarnings = warnings.filter((w) => w.type === 'warning');
+      expect(warningWarnings.length).toBe(2); // one for ungranted, one for duplicates
     });
   });
 });

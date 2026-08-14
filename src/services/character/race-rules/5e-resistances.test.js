@@ -1,15 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect } from 'vitest';
 import raceRules from './5e.js';
-
-vi.mock('../../ui/utils.js', () => ({
-  default: {
-    getAbilityLongName: vi.fn((name) => name)
-  }
-}));
 
 describe('raceRules 5e - getResistances', () => {
   describe('getResistances', () => {
-    it('returns empty array when playerSummary has no race', () => {
+    it('returns empty array when race has no name', () => {
       const playerSummary = { race: {} };
       const result = raceRules.getResistances(playerSummary);
       expect(result).toEqual([]);
@@ -18,13 +13,13 @@ describe('raceRules 5e - getResistances', () => {
     it('adds Poison resistance for Dwarf race', () => {
       const playerSummary = { race: { name: 'Dwarf' } };
       const result = raceRules.getResistances(playerSummary);
-      expect(result).toContain('Poison');
+      expect(result).toEqual(['Poison']);
     });
 
     it('does not add Poison resistance for non-Dwarf race', () => {
       const playerSummary = { race: { name: 'Human' } };
       const result = raceRules.getResistances(playerSummary);
-      expect(result).not.toContain('Poison');
+      expect(result).toEqual([]);
     });
 
     it('adds subrace damage_resistance for non-Dwarf races', () => {
@@ -35,7 +30,7 @@ describe('raceRules 5e - getResistances', () => {
         }
       };
       const result = raceRules.getResistances(playerSummary);
-      expect(result).toContain('Fire');
+      expect(result).toEqual(['Fire']);
     });
 
     it('does not add subrace damage_resistance for Dwarf', () => {
@@ -46,19 +41,19 @@ describe('raceRules 5e - getResistances', () => {
         }
       };
       const result = raceRules.getResistances(playerSummary);
-      expect(result).not.toContain('Fire');
+      expect(result).toEqual(['Poison']);
     });
 
     it('adds Charm resistance for Elf race', () => {
       const playerSummary = { race: { name: 'Elf' } };
       const result = raceRules.getResistances(playerSummary);
-      expect(result).toContain('Charm');
+      expect(result).toEqual(['Charm']);
     });
 
     it('adds Frightened resistance for Halfling race', () => {
       const playerSummary = { race: { name: 'Halfling' } };
       const result = raceRules.getResistances(playerSummary);
-      expect(result).toContain('Frightened');
+      expect(result).toEqual(['Frightened']);
     });
 
     it('adds Poison resistance for Scout Halfling subrace in addition to Frightened', () => {
@@ -69,8 +64,7 @@ describe('raceRules 5e - getResistances', () => {
         }
       };
       const result = raceRules.getResistances(playerSummary);
-      expect(result).toContain('Frightened');
-      expect(result).toContain('Poison');
+      expect(result).toEqual(['Frightened', 'Poison']);
     });
 
     it('does not add extra Poison for non-Scout Halfling subrace', () => {
@@ -81,14 +75,13 @@ describe('raceRules 5e - getResistances', () => {
         }
       };
       const result = raceRules.getResistances(playerSummary);
-      expect(result).toContain('Frightened');
-      expect(result).not.toContain('Poison');
+      expect(result).toEqual(['Frightened']);
     });
 
     it('adds Fire resistance for Tiefling race', () => {
       const playerSummary = { race: { name: 'Tiefling' } };
       const result = raceRules.getResistances(playerSummary);
-      expect(result).toContain('Fire');
+      expect(result).toEqual(['Fire']);
     });
 
     it('includes and deduplicates resistances from playerSummary', () => {
@@ -108,6 +101,46 @@ describe('raceRules 5e - getResistances', () => {
       };
       const result = raceRules.getResistances(playerSummary);
       expect(result).toEqual(['Alpha', 'Charm', 'Middle', 'Zebra']);
+    });
+
+    it('handles null subrace gracefully', () => {
+      const playerSummary = {
+        race: {
+          name: 'Human',
+          subrace: null
+        }
+      };
+      const result = raceRules.getResistances(playerSummary);
+      expect(result).toEqual([]);
+    });
+
+    it('handles empty resistances array', () => {
+      const playerSummary = {
+        race: { name: 'Elf' },
+        resistances: []
+      };
+      const result = raceRules.getResistances(playerSummary);
+      expect(result).toEqual(['Charm']);
+    });
+
+    it('handles undefined resistances', () => {
+      const playerSummary = {
+        race: { name: 'Elf' },
+        resistances: undefined
+      };
+      const result = raceRules.getResistances(playerSummary);
+      expect(result).toEqual(['Charm']);
+    });
+
+    it('handles subrace without damage_resistance', () => {
+      const playerSummary = {
+        race: {
+          name: 'Human',
+          subrace: { name: 'Variant' }
+        }
+      };
+      const result = raceRules.getResistances(playerSummary);
+      expect(result).toEqual([]);
     });
   });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -31,6 +32,8 @@ describe('computeAuraComboEffects', () => {
     vi.clearAllMocks();
     getAllyList.mockReturnValue(['Cleric']);
   });
+
+  // ── Early returns / edge cases ────────────────────────────────
 
   it('returns all-zero/null defaults when characters is empty', async () => {
     const result = await computeAuraComboEffects({ targetName: 'Cleric', characters: [] });
@@ -100,6 +103,8 @@ describe('computeAuraComboEffects', () => {
     });
     expect(result.speedBonus).toBe(0);
   });
+
+  // ── Speed bonus (Aura of Alacrity) ────────────────────────────
 
   describe('speed bonus (Aura of Alacrity)', () => {
     it('returns speed bonus when Aura of Alacrity with speed_bonus effect is present', async () => {
@@ -185,6 +190,8 @@ describe('computeAuraComboEffects', () => {
     });
   });
 
+  // ── Condition immunity (Aura of Courage) ──────────────────────
+
   describe('condition immunity (Aura of Courage)', () => {
     it('adds frightened immunity when Aura of Courage passive is present', async () => {
       getRuntimeValue.mockReturnValue([]);
@@ -242,6 +249,8 @@ describe('computeAuraComboEffects', () => {
     });
   });
 
+  // ── Condition immunity (Aura of Devotion) ─────────────────────
+
   describe('condition immunity (Aura of Devotion)', () => {
     it('adds charmed immunity when Aura of Devotion passive is present', async () => {
       getRuntimeValue.mockReturnValue([]);
@@ -297,6 +306,8 @@ describe('computeAuraComboEffects', () => {
       expect(result.immunitySources.charmed).toBe('Paladin2');
     });
   });
+
+  // ── Damage resistances (Aura of Warding) ──────────────────────
 
   describe('damage resistances (Aura of Warding)', () => {
     it('adds damage resistances when Aura of Warding passive is present with resistances array', async () => {
@@ -388,6 +399,8 @@ describe('computeAuraComboEffects', () => {
     });
   });
 
+  // ── Combined effects ──────────────────────────────────────────
+
   describe('combined effects', () => {
     it('applies all aura effects from a single source simultaneously', async () => {
       getRuntimeValue.mockReturnValue([]);
@@ -443,6 +456,8 @@ describe('computeAuraComboEffects', () => {
     });
   });
 
+  // ── Ally filtering ────────────────────────────────────────────
+
   describe('ally filtering', () => {
     it('uses getAllyList to filter candidates', async () => {
       getRuntimeValue.mockReturnValue([]);
@@ -484,6 +499,8 @@ describe('computeAuraComboEffects', () => {
     });
   });
 
+  // ── Range checking ────────────────────────────────────────────
+
   describe('range checking', () => {
     it('calls isWithinRange with default 10 ft range', async () => {
       getRuntimeValue.mockReturnValue([]);
@@ -509,6 +526,8 @@ describe('computeAuraComboEffects', () => {
       expect(isWithinRange).toHaveBeenCalledWith('Paladin', 'Cleric', 30);
     });
   });
+
+  // ── Return value structure ────────────────────────────────────
 
   describe('return value structure', () => {
     it('returns an object with all expected keys', async () => {

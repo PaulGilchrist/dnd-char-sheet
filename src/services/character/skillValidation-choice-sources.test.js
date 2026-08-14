@@ -1,3 +1,4 @@
+// // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -21,7 +22,7 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
     vi.clearAllMocks();
   });
 
-  describe('Skill choice sources with restricted pools', () => {
+  describe('getSkillLimits with feat skill pools', () => {
     const keenMindFeat = {
       name: 'Keen Mind',
       index: 'keen-mind',
@@ -56,7 +57,7 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
       ],
     };
 
-    it('should parse "Choose X: A, B or C" format correctly', async () => {
+    it('should parse "Choose X: A, B or C" format from class skill_proficiencies', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
       });
@@ -72,7 +73,7 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
       expect(result.fromClass.skills).toEqual(['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Nature', 'Religion']);
     });
 
-    it('should build skillChoiceSources for Wizard with Keen Mind and Observant feats', async () => {
+    it('should build skillChoiceSources for class and feat pools', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
       });
@@ -107,7 +108,7 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
       expect(result.skillChoiceSources[3].featName).toBe('Observant');
     });
 
-    it('should warn when selecting skills outside allowed pools', async () => {
+    it('should warn when selecting skills outside all allowed pools', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
       });
@@ -146,7 +147,7 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
       expect(warnings.some((w) => w.message.includes('not available'))).toBe(false);
     });
 
-    it('should handle overlapping skill pools (Investigation in both Keen Mind and Observant)', async () => {
+    it('should warn when overlapping skill pools require more selections than available', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
       });
@@ -154,7 +155,9 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
       vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
       vi.mocked(dataLoader.loadFeatData).mockResolvedValue([keenMindFeat, observantFeat]);
 
-      // Select Investigation once - it can satisfy either Keen Mind or Observant, but not both
+      // Investigation appears in both Keen Mind and Observant pools, but only counts once
+      // Class allows 2, Keen Mind allows 1, Observant allows 1 = 4 total allowed
+      // But selecting only Investigation means we need 2 more from class pool
       const warnings = await validateSkills({
         rules: '2024',
         class: { name: 'Wizard' },
@@ -163,7 +166,6 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
         skillProficiencies: ['Investigation'],
       }, [keenMindFeat, observantFeat]);
 
-      // Should get a warning about too few skills selected (need 4 total but only have 1)
       expect(warnings.some((w) => w.type === 'info')).toBe(true);
     });
 
@@ -173,18 +175,7 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
       });
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({});
       vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
-      vi.mocked(dataLoader.loadFeatData).mockResolvedValue([keenMindFeat]);
-
-      // Select 3 unique skills from Keen Mind's pool that don't overlap with class
-      // Since Keen Mind skills all overlap with class, we need to select 3 skills
-      // that the class can only take 2 of. The algorithm will try to assign them
-      // to class first, then feat. If class is full (2), feat gets 1 which is valid.
-      // So we need a case where a source has NO overlap with class.
-      // Use a skill that's ONLY in the feat pool (not in class pool).
-      // But all Keen Mind skills are in the class pool too.
-      // Let's test with a different scenario: class allows 2, feat allows 1,
-      // user selects 2 from class pool + 1 from feat-only pool = 4 total, but allowed is 3
-      const featWithLimitedSkills = {
+      vi.mocked(dataLoader.loadFeatData).mockResolvedValue([{
         name: 'Test Feat',
         index: 'test-feat',
         benefits: [
@@ -194,17 +185,27 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
             type: 'proficiency',
           },
         ],
-      };
+      }]);
 
+      // Class allows 2, feat allows 1 = 3 total. Selecting 4 should trigger "too many" warning.
       const warnings = await validateSkills({
         rules: '2024',
         class: { name: 'Wizard' },
         race: { name: 'Human' },
         feats: ['Test Feat'],
         skillProficiencies: ['Arcana', 'History', 'Insight', 'Nature'],
-      }, [featWithLimitedSkills]);
+      }, [{
+        name: 'Test Feat',
+        index: 'test-feat',
+        benefits: [
+          {
+            name: 'Test',
+            description: 'Choose one of the following skills: Arcana, History, or Religion. If you lack proficiency in the chosen skill, you gain proficiency in it.',
+            type: 'proficiency',
+          },
+        ],
+      }]);
 
-      // 4 skills selected, allowed is 3 (2 class + 1 feat), so should get "too many" warning
       expect(warnings.some((w) => w.message.includes('Rules allow'))).toBe(true);
     });
   });

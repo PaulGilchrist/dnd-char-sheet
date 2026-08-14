@@ -1,8 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getPreSelectedSpells } from './getPreSelectedSpells.js';
 
 vi.mock('../ui/dataLoader.js', () => ({
-  loadWildMagicSurgeTable: vi.fn(async () => []),
   loadClassData: vi.fn(),
   loadRaceData: vi.fn(),
   loadFeatData: vi.fn(),
@@ -11,14 +10,51 @@ vi.mock('../ui/dataLoader.js', () => ({
 import { loadClassData, loadRaceData, loadFeatData } from '../ui/dataLoader.js';
 
 describe('getPreSelectedSpells', () => {
-  const mockClasses = [
-    { name: 'Wizard', index: 'wizard', subclasses: [{ name: 'School of Evocation', index: 'school_of_evocation', spells: [{ spell: { name: 'Magic Missile' }, prerequisites: [{ type: 'level', name: '2nd-level spell slot' }] }] }] },
-    { name: 'Cleric', index: 'cleric', subclasses: [{ name: 'Light Domain', index: 'light_domain', spells: [{ spell: { name: 'Burning Hands' }, prerequisites: [] }] }] },
+  const mockWizardClass = [
+    {
+      name: 'Wizard',
+      index: 'wizard',
+      subclasses: [
+        {
+          name: 'School of Evocation',
+          index: 'school_of_evocation',
+          spells: [
+            { spell: { name: 'Magic Missile' }, prerequisites: [{ type: 'level', name: '2nd-level spell slot' }] },
+          ],
+        },
+      ],
+    },
   ];
 
-  const mockRaces = [
-    { name: 'High Elf', index: 'high-elf', traits: [{ description: '<em>Fire Bolt</em> cantrip' }], subraces: [{ name: 'Grey Elf', racial_traits: [{ description: '<em>Light</em> cantrip' }], description: 'Learn <em>Guidance</em>' }] },
-    { name: 'Human', index: 'human', traits: [], subraces: [] },
+  const mockClericClass = [
+    {
+      name: 'Cleric',
+      index: 'cleric',
+      subclasses: [
+        {
+          name: 'Light Domain',
+          index: 'light_domain',
+          spells: [
+            { spell: { name: 'Burning Hands' }, prerequisites: [] },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const mockHighElfRace = [
+    {
+      name: 'High Elf',
+      index: 'high-elf',
+      traits: [{ description: '<em>Fire Bolt</em> cantrip' }],
+      subraces: [
+        {
+          name: 'Grey Elf',
+          racial_traits: [{ description: '<em>Light</em> cantrip' }],
+          description: 'Learn <em>Guidance</em>',
+        },
+      ],
+    },
   ];
 
   const mockFeats = [
@@ -30,8 +66,8 @@ describe('getPreSelectedSpells', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(loadClassData).mockResolvedValue(mockClasses);
-    vi.mocked(loadRaceData).mockResolvedValue(mockRaces);
+    vi.mocked(loadClassData).mockResolvedValue(mockWizardClass);
+    vi.mocked(loadRaceData).mockResolvedValue(mockHighElfRace);
     vi.mocked(loadFeatData).mockResolvedValue(mockFeats);
   });
 
@@ -40,6 +76,7 @@ describe('getPreSelectedSpells', () => {
       [null, 'null formData'],
       [undefined, 'undefined formData'],
       [{}, 'empty object formData'],
+      [{ rules: '5e' }, 'formData with only rules'],
     ])('returns empty array for %s (%s)', async (input) => {
       const result = await getPreSelectedSpells(input);
       expect(result).toEqual([]);
@@ -54,7 +91,7 @@ describe('getPreSelectedSpells', () => {
         class: { name: 'Wizard', subclass: { name: 'School of Evocation' } },
       };
       const result = await getPreSelectedSpells(formData);
-      expect(result).toContain('Magic Missile');
+      expect(result).toEqual(['Magic Missile']);
     });
 
     it('does not extract subclass spells when only class is provided', async () => {
@@ -64,26 +101,28 @@ describe('getPreSelectedSpells', () => {
         class: { name: 'Wizard' },
       };
       const result = await getPreSelectedSpells(formData);
-      expect(result).not.toContain('Magic Missile');
+      expect(result).toEqual([]);
     });
 
-    it('filters subclass spells by character level', async () => {
+    it('filters subclass spells by character level using prerequisites', async () => {
       const formData = {
         rules: '5e',
         level: 1,
         class: { name: 'Wizard', subclass: { name: 'School of Evocation' } },
       };
       const result = await getPreSelectedSpells(formData);
-      expect(result).not.toContain('Magic Missile');
+      expect(result).toEqual([]);
     });
 
     it('uses default level 1 when level is missing', async () => {
+      // Light Domain's Burning Hands has no prerequisites (empty array), so it's available at level 1
       const formData = {
         rules: '5e',
         class: { name: 'Cleric', subclass: { name: 'Light Domain' } },
       };
+      vi.mocked(loadClassData).mockResolvedValue(mockClericClass);
       const result = await getPreSelectedSpells(formData);
-      expect(result).toContain('Burning Hands');
+      expect(result).toEqual(['Burning Hands']);
     });
 
     it('handles invalid class name gracefully', async () => {
@@ -103,15 +142,13 @@ describe('getPreSelectedSpells', () => {
         class: { name: 'wizard', subclass: { name: 'School of Evocation' } },
       };
       const result = await getPreSelectedSpells(formData);
-      expect(result).toContain('Magic Missile');
+      expect(result).toEqual(['Magic Missile']);
     });
 
-    it('handles missing class or subclass properties gracefully', async () => {
-      const noClass = { rules: '5e', level: 3 };
-      expect(await getPreSelectedSpells(noClass)).toEqual([]);
-
-      const noSubclass = { rules: '5e', level: 3, class: { name: 'Wizard' } };
-      expect(await getPreSelectedSpells(noSubclass)).toEqual([]);
+    it('handles missing class property gracefully', async () => {
+      const formData = { rules: '5e', level: 3 };
+      const result = await getPreSelectedSpells(formData);
+      expect(result).toEqual([]);
     });
   });
 
@@ -137,12 +174,16 @@ describe('getPreSelectedSpells', () => {
       expect(result).toContain('Guidance');
     });
 
-    it('handles missing race data or property gracefully', async () => {
-      const noRace = { rules: '5e', level: 1 };
-      expect(await getPreSelectedSpells(noRace)).toEqual([]);
+    it('handles missing race property gracefully', async () => {
+      const formData = { rules: '5e', level: 1 };
+      const result = await getPreSelectedSpells(formData);
+      expect(result).toEqual([]);
+    });
 
-      const missingRaceData = { rules: '5e', level: 1, race: { name: 'NonExistentRace' } };
-      expect(await getPreSelectedSpells(missingRaceData)).toEqual([]);
+    it('handles missing race data gracefully', async () => {
+      const formData = { rules: '5e', level: 1, race: { name: 'NonExistentRace' } };
+      const result = await getPreSelectedSpells(formData);
+      expect(result).toEqual([]);
     });
 
     it('finds subrace in 2024 from parent race subraces', async () => {
@@ -157,7 +198,7 @@ describe('getPreSelectedSpells', () => {
 
     it('finds subrace as separate race entry in 5e', async () => {
       const extendedRaces = [
-        ...mockRaces,
+        ...mockHighElfRace,
         { name: 'Grey Elf', index: 'grey-elf', traits: [{ description: '<em>Acid Splash</em>' }], subraces: [] },
       ];
       vi.mocked(loadRaceData).mockResolvedValue(extendedRaces);
@@ -180,7 +221,6 @@ describe('getPreSelectedSpells', () => {
         feats: ['Magic Initiate'],
       };
       const result = await getPreSelectedSpells(formData);
-      expect(result).not.toContain('Guidance');
       expect(result).toEqual([]);
     });
 
@@ -191,7 +231,7 @@ describe('getPreSelectedSpells', () => {
         feats: ['Fey Touched'],
       };
       const result = await getPreSelectedSpells(formData);
-      expect(result).toContain('Misty Step');
+      expect(result).toEqual(['Misty Step']);
     });
 
     it('extracts Invisibility from Shadow Touched', async () => {
@@ -201,17 +241,17 @@ describe('getPreSelectedSpells', () => {
         feats: ['Shadow Touched'],
       };
       const result = await getPreSelectedSpells(formData);
-      expect(result).toContain('Invisibility');
+      expect(result).toEqual(['Invisibility']);
     });
 
-    it('extracts spells from War Caster feat benefits', async () => {
+    it('extracts spells from War Caster feat benefits and description', async () => {
       const formData = {
         rules: '5e',
         level: 1,
         feats: ['War Caster'],
       };
       const result = await getPreSelectedSpells(formData);
-      expect(result).toContain('Burning Hands');
+      expect(result).toEqual(['Burning Hands']);
     });
 
     it('combines spells from multiple feats', async () => {
@@ -221,20 +261,18 @@ describe('getPreSelectedSpells', () => {
         feats: ['Magic Initiate', 'Fey Touched'],
       };
       const result = await getPreSelectedSpells(formData);
-      // Magic Initiate no longer contributes auto-extracted spells
-      expect(result).not.toContain('Guidance');
-      expect(result).toContain('Misty Step');
+      expect(result).toEqual(['Misty Step']);
     });
 
     it('handles missing, null, or empty feats gracefully', async () => {
-      const noFeats = { rules: '5e', level: 1 };
-      expect(await getPreSelectedSpells(noFeats)).toEqual([]);
+      const noFeats = await getPreSelectedSpells({ rules: '5e', level: 1 });
+      expect(noFeats).toEqual([]);
 
-      const nullFeats = { rules: '5e', level: 1, feats: null };
-      expect(await getPreSelectedSpells(nullFeats)).toEqual([]);
+      const nullFeats = await getPreSelectedSpells({ rules: '5e', level: 1, feats: null });
+      expect(nullFeats).toEqual([]);
 
-      const emptyFeats = { rules: '5e', level: 1, feats: [] };
-      expect(await getPreSelectedSpells(emptyFeats)).toEqual([]);
+      const emptyFeats = await getPreSelectedSpells({ rules: '5e', level: 1, feats: [] });
+      expect(emptyFeats).toEqual([]);
     });
 
     it('handles non-existent feat gracefully', async () => {
@@ -252,11 +290,12 @@ describe('getPreSelectedSpells', () => {
     it('deduplicates spells that appear from multiple sources', async () => {
       const formData = {
         rules: '5e',
-        level: 1,
+        level: 3,
         class: { name: 'Cleric', subclass: { name: 'Light Domain' } },
         race: { name: 'High Elf' },
         feats: ['War Caster'],
       };
+      vi.mocked(loadClassData).mockResolvedValue(mockClericClass);
       const result = await getPreSelectedSpells(formData);
       const burningHandsCount = result.filter(s => s === 'Burning Hands').length;
       expect(burningHandsCount).toBe(1);
@@ -277,9 +316,9 @@ describe('getPreSelectedSpells', () => {
       expect(new Set(result).size).toBe(result.length);
     });
 
-    it('deduplicates cantrips from race and feats', async () => {
+    it('deduplicates cantrips from race and subrace', async () => {
       const extendedRaces = [
-        ...mockRaces,
+        ...mockHighElfRace,
         { name: 'Half-Elf', index: 'half-elf', traits: [{ description: '<em>Guidance</em> cantrip' }], subraces: [] },
       ];
       vi.mocked(loadRaceData).mockResolvedValue(extendedRaces);
@@ -291,7 +330,6 @@ describe('getPreSelectedSpells', () => {
         feats: ['Magic Initiate'],
       };
       const result = await getPreSelectedSpells(formData);
-      // Guidance comes from Half-Elf race trait only (Magic Initiate no longer contributes)
       expect(result).toContain('Guidance');
       const guidanceCount = result.filter(s => s === 'Guidance').length;
       expect(guidanceCount).toBe(1);
@@ -327,7 +365,7 @@ describe('getPreSelectedSpells', () => {
       expect(loadRaceData).toHaveBeenCalledWith('5e');
     });
 
-    it('uses 2024 rules when specified for race, class, and feats', async () => {
+    it('uses 2024 rules when specified for all data loaders', async () => {
       await getPreSelectedSpells({ rules: '2024', level: 1, race: { name: 'High Elf' } });
       expect(loadRaceData).toHaveBeenCalledWith('2024');
 

@@ -1,3 +1,4 @@
+// // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -23,7 +24,7 @@ describe('skillValidation - Boon of Skill feat integration', () => {
     vi.clearAllMocks();
   });
 
-  describe('Boon of Skill feat integration', () => {
+  describe('Boon of Skill feat', () => {
     const boonOfSkillFeat = {
       name: 'Boon Of Skill',
       index: 'boon-of-skill',
@@ -132,7 +133,7 @@ describe('skillValidation - Boon of Skill feat integration', () => {
       expect(warnings).toEqual([]);
     });
 
-    it('should not match feat when Boon of Skill is not selected', async () => {
+    it('should not match feat when Boon of Skill is not in the feats list', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2 from Arcana, History',
       });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import raceRules from './5e.js';
 import utils from '../../ui/utils.js';
@@ -10,7 +11,7 @@ vi.mock('../../ui/utils.js', () => ({
 
 describe('raceRules 5e - getRace', () => {
   describe('getRace', () => {
-    it('returns undefined when race is not found in allRaces', () => {
+    it('returns undefined when allRaces is empty', () => {
       const allRaces = [];
       const playerSummary = { race: { name: 'Custom Race' } };
       const result = raceRules.getRace(allRaces, playerSummary);
@@ -170,6 +171,46 @@ describe('raceRules 5e - getRace', () => {
         }
       };
       const result = raceRules.getRace(allRaces, playerSummary);
+      expect(result.subrace).toBeNull();
+    });
+
+    it('handles playerSummary.race without name', () => {
+      const allRaces = [{ name: 'Human' }];
+      const playerSummary = { race: {} };
+      const result = raceRules.getRace(allRaces, playerSummary);
+      expect(result).toBeUndefined();
+    });
+
+    it('handles race with empty subraces array and no subrace selected', () => {
+      const allRaces = [
+        {
+          name: 'Elf',
+          subraces: []
+        }
+      ];
+      const playerSummary = { race: { name: 'Elf' } };
+      const result = raceRules.getRace(allRaces, playerSummary);
+      expect(result.subrace).toBeNull();
+    });
+
+    it('merges both race and subrace custom properties', () => {
+      const allRaces = [
+        {
+          name: 'Human',
+          traits: [{ name: 'Variant' }],
+          ability_bonuses: [{ ability_score: 'STR', bonus: 1 }]
+        }
+      ];
+      const playerSummary = {
+        race: {
+          name: 'Human',
+          variantChoice: 'War Caster'
+        },
+        subrace: { flavorText: 'Custom flavor' }
+      };
+      const result = raceRules.getRace(allRaces, playerSummary);
+      expect(result.name).toBe('Human');
+      expect(result.variantChoice).toBe('War Caster');
       expect(result.subrace).toBeNull();
     });
   });

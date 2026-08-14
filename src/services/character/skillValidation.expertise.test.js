@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -119,7 +120,7 @@ describe('skillValidation — getExpertiseLimits', () => {
     expect(result.count).toBe(0);
   });
 
-  it('should handle subclass expertise for 2024', async () => {
+  it('should handle subclass expertise for 2024 majors', async () => {
     vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
       class_levels: [{ level: 1, features: [] }],
       majors: [
@@ -142,7 +143,7 @@ describe('skillValidation — getExpertiseLimits', () => {
     expect(result.count).toBe(2);
   });
 
-  it('should handle subclass expertise for 5e', async () => {
+  it('should handle subclass expertise for 5e subclasses', async () => {
     vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
       class_levels: [{ level: 1, features: [] }],
       subclasses: [

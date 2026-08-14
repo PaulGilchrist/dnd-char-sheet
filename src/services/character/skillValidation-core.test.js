@@ -1,3 +1,4 @@
+// // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -22,7 +23,7 @@ describe('skillValidation', () => {
   });
 
   describe('getSkillLimits', () => {
-    it('should return skill limits for 2024 ruleset', async () => {
+    it('should return skill limits for 2024 ruleset with class, race, and background', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2 from Arcana, History',
       });
@@ -47,7 +48,7 @@ describe('skillValidation', () => {
       expect(result.fromBackground.skills).toEqual(['Deception', 'Persuasion']);
     });
 
-    it('should return skill limits for 5e ruleset', async () => {
+    it('should return skill limits for 5e ruleset with class and background', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2 from Arcana, History',
       });
@@ -67,7 +68,7 @@ describe('skillValidation', () => {
       expect(result.fromBackground.count).toBe(2);
     });
 
-    it('should return defaults when all data is null', async () => {
+    it('should return 5e defaults when all data is null and no ruleset specified', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(null);
       vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue(null);
@@ -78,6 +79,19 @@ describe('skillValidation', () => {
       expect(result.fromClass).toEqual({ count: 0, skills: [], isChoice: true });
       expect(result.fromRace).toEqual({ count: 0, skills: [], isChoice: false });
       expect(result.fromBackground).toEqual({ count: 2, skills: [], isChoice: true });
+    });
+
+    it('should return zero when all data is null in 2024 ruleset', async () => {
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(null);
+      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue(null);
+
+      const result = await getSkillLimits({ rules: '2024' });
+
+      expect(result.allowed).toBe(0);
+      expect(result.fromClass.count).toBe(0);
+      expect(result.fromRace.count).toBe(0);
+      expect(result.fromBackground.count).toBe(0);
     });
 
     it('should handle race with no skill_proficiencies field', async () => {
@@ -127,19 +141,6 @@ describe('skillValidation', () => {
       expect(result.fromRace.skills).toEqual(['Insight', 'Perception', 'Survival']);
     });
 
-    it('should return zero when no class, race, or background provided in 2024', async () => {
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(null);
-      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue(null);
-
-      const result = await getSkillLimits({ rules: '2024' });
-
-      expect(result.allowed).toBe(0);
-      expect(result.fromClass.count).toBe(0);
-      expect(result.fromRace.count).toBe(0);
-      expect(result.fromBackground.count).toBe(0);
-    });
-
     it('should handle 5e background count override', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2 from Arcana, History',
@@ -153,6 +154,18 @@ describe('skillValidation', () => {
       expect(result.allowed).toBe(4);
       expect(result.fromBackground.count).toBe(2);
       expect(result.fromBackground.isChoice).toBe(true);
+    });
+
+    it('should default to 2 skill choices when no class, race, or background provided in 5e', async () => {
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(null);
+      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue(null);
+
+      const result = await getSkillLimits({ rules: '5e' });
+
+      expect(result.allowed).toBe(2);
+      expect(result.fromClass.count).toBe(0);
+      expect(result.fromBackground.count).toBe(2);
     });
   });
 

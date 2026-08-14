@@ -1,41 +1,47 @@
-import { describe, it, expect, vi } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect } from 'vitest';
 import raceRules from './5e.js';
-
-vi.mock('../../ui/utils.js', () => ({
-  default: {
-    getAbilityLongName: vi.fn((name) => name)
-  }
-}));
 
 describe('raceRules 5e - getImmunities', () => {
   describe('getImmunities', () => {
-    it('returns empty array when playerSummary has no race or class', () => {
+    it('returns empty array when race and class are empty objects', () => {
       const playerSummary = { race: {}, class: {} };
       const result = raceRules.getImmunities(playerSummary);
       expect(result).toEqual([]);
     });
 
+    it('does not add Monk immunities when race name is empty string', () => {
+      const playerSummary = { race: {}, class: { name: 'Monk' }, level: 10 };
+      const result = raceRules.getImmunities(playerSummary);
+      expect(result).toEqual(['Disease', 'Poison']);
+    });
+
+    it('returns empty array when class name is missing', () => {
+      const playerSummary = { race: { name: 'Elf' }, class: {}, level: 10 };
+      const result = raceRules.getImmunities(playerSummary);
+      expect(result).toEqual(['Magical Sleep']);
+    });
+
     it('adds Magical Sleep immunity for Elf race', () => {
       const playerSummary = { race: { name: 'Elf' }, class: {} };
       const result = raceRules.getImmunities(playerSummary);
-      expect(result).toContain('Magical Sleep');
+      expect(result).toEqual(['Magical Sleep']);
     });
 
     it('does not add Magical Sleep for non-Elf race', () => {
       const playerSummary = { race: { name: 'Human' }, class: {} };
       const result = raceRules.getImmunities(playerSummary);
-      expect(result).not.toContain('Magical Sleep');
+      expect(result).toEqual([]);
     });
 
-    it('adds Disease and Poison immunity for Monk level > 9', () => {
+    it('adds Disease and Poison immunity for Monk level 10', () => {
       const playerSummary = {
         race: { name: 'Human' },
         class: { name: 'Monk' },
         level: 10
       };
       const result = raceRules.getImmunities(playerSummary);
-      expect(result).toContain('Disease');
-      expect(result).toContain('Poison');
+      expect(result).toEqual(['Disease', 'Poison']);
     });
 
     it('does not add Disease/Poison for Monk at level 9 (boundary)', () => {
@@ -45,18 +51,26 @@ describe('raceRules 5e - getImmunities', () => {
         level: 9
       };
       const result = raceRules.getImmunities(playerSummary);
-      expect(result).not.toContain('Disease');
-      expect(result).not.toContain('Poison');
+      expect(result).toEqual([]);
     });
 
-    it('adds Disease immunity for Paladin level > 2', () => {
+    it('does not add Disease/Poison for Monk at level 10 with undefined level', () => {
+      const playerSummary = {
+        race: { name: 'Human' },
+        class: { name: 'Monk' }
+      };
+      const result = raceRules.getImmunities(playerSummary);
+      expect(result).toEqual([]);
+    });
+
+    it('adds Disease immunity for Paladin level 3', () => {
       const playerSummary = {
         race: { name: 'Human' },
         class: { name: 'Paladin' },
         level: 3
       };
       const result = raceRules.getImmunities(playerSummary);
-      expect(result).toContain('Disease');
+      expect(result).toEqual(['Disease']);
     });
 
     it('does not add Disease for Paladin at level 2 (boundary)', () => {
@@ -66,7 +80,19 @@ describe('raceRules 5e - getImmunities', () => {
         level: 2
       };
       const result = raceRules.getImmunities(playerSummary);
-      expect(result).not.toContain('Disease');
+      expect(result).toEqual([]);
+    });
+
+    it('deduplicates Disease when Monk and playerSummary both provide it', () => {
+      const playerSummary = {
+        race: { name: 'Human' },
+        class: { name: 'Monk' },
+        level: 10,
+        immunities: ['Disease']
+      };
+      const result = raceRules.getImmunities(playerSummary);
+      expect(result.filter((i) => i === 'Disease').length).toBe(1);
+      expect(result).toContain('Poison');
     });
 
     it('includes and deduplicates immunities from playerSummary', () => {
@@ -88,6 +114,27 @@ describe('raceRules 5e - getImmunities', () => {
       };
       const result = raceRules.getImmunities(playerSummary);
       expect(result).toEqual(['Alpha', 'Magical Sleep', 'Middle', 'Zebra']);
+    });
+
+    it('combines Elf Magical Sleep with Paladin Disease', () => {
+      const playerSummary = {
+        race: { name: 'Elf' },
+        class: { name: 'Paladin' },
+        level: 3
+      };
+      const result = raceRules.getImmunities(playerSummary);
+      expect(result).toEqual(['Disease', 'Magical Sleep']);
+    });
+
+    it('combines Elf Magical Sleep, Monk Disease/Poison, and custom immunities', () => {
+      const playerSummary = {
+        race: { name: 'Elf' },
+        class: { name: 'Monk' },
+        level: 10,
+        immunities: ['Fire']
+      };
+      const result = raceRules.getImmunities(playerSummary);
+      expect(result).toEqual(['Disease', 'Fire', 'Magical Sleep', 'Poison']);
     });
   });
 });

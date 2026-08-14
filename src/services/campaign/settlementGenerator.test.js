@@ -1,19 +1,7 @@
-// Removed brittle tests that assert specific string content from JSON data files
-// (description, atmosphere, government, threat, rumors) — these break when data
-// files change. Removed "uses guild names for guild-type services" which only
-// checked string type/length (low value). Removed "generates service descriptions
-// that are non-empty strings" which was redundant with the service count test.
-// Kept behavioral tests that verify structure, uniqueness, and range constraints.
-import { describe, it, expect, vi } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { generateSettlement } from './settlementGenerator.js';
-
-function makeFetchMock(dataMap) {
-  return vi.fn().mockImplementation(async (url) => {
-    const data = dataMap[url];
-    return { ok: true, json: () => Promise.resolve(data) };
-  });
-}
 
 function minimalMockData() {
   return {
@@ -95,16 +83,23 @@ function minimalMockData() {
   };
 }
 
-function setupFetch(fetchMock) {
-  global.fetch = fetchMock;
-}
-
 describe('settlementGenerator', () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const dataMap = minimalMockData();
+      const data = dataMap[url];
+      return { ok: true, json: () => Promise.resolve(data) };
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    // Clear module-level caches so each test starts fresh
+    vi.resetModules();
+  });
+
   describe('generateSettlement', () => {
     it('returns a settlement with all required fields', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
-
       const result = await generateSettlement();
 
       expect(result).toMatchObject({
@@ -124,30 +119,33 @@ describe('settlementGenerator', () => {
     });
 
     it('uses the size from options when provided', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
-
       const result = await generateSettlement([], { size: 'village' });
 
       expect(result.size).toBe('village');
     });
 
-    it('resolves name conflicts by appending incrementing numbers', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
+    it('defaults to a random size when no options provided', async () => {
+      const sizes = new Set();
+      for (let i = 0; i < 50; i++) {
+        const result = await generateSettlement();
+        sizes.add(result.size);
+      }
+      expect(sizes.size).toBeGreaterThan(1);
+      for (const size of sizes) {
+        expect(['village', 'town', 'city', 'metropolis']).toContain(size);
+      }
+    });
 
+    it('resolves name conflicts by appending incrementing numbers', async () => {
       const existing = [{ name: 'Ashford' }, { name: 'Ashford 2' }];
       const result = await generateSettlement(existing, { size: 'village' });
 
       expect(result.name).not.toBe('Ashford');
       expect(result.name).not.toBe('Ashford 2');
-      expect(existing.map((s) => s.name).includes(result.name)).toBe(false);
+      expect(['Ashford', 'Ashford 2'].includes(result.name)).toBe(false);
     });
 
     it('resolves NPC name conflicts by appending incrementing numbers', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
-
       const result = await generateSettlement([], { size: 'metropolis' });
 
       const npcNames = result.notableNPCs.map((n) => n.name);
@@ -155,9 +153,6 @@ describe('settlementGenerator', () => {
     });
 
     it('keeps service names unique within a settlement', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
-
       const result = await generateSettlement([], { size: 'metropolis' });
 
       const serviceNames = result.services.map((s) => s.name);
@@ -165,9 +160,6 @@ describe('settlementGenerator', () => {
     });
 
     it('generates services within expected count per size category', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
-
       const serviceRanges = {
         village: { min: 1, max: 3 },
         town: { min: 3, max: 5 },
@@ -189,9 +181,6 @@ describe('settlementGenerator', () => {
     });
 
     it('includes population matching the size category', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
-
       const village = await generateSettlement([], { size: 'village' });
       const town = await generateSettlement([], { size: 'town' });
       const city = await generateSettlement([], { size: 'city' });
@@ -205,9 +194,6 @@ describe('settlementGenerator', () => {
     });
 
     it('includes tags with size and culture', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
-
       const result = await generateSettlement([], { size: 'village' });
 
       const tags = result.tags.split(', ');
@@ -215,43 +201,24 @@ describe('settlementGenerator', () => {
       expect(tags.some((t) => /-culture$/.test(t))).toBe(true);
     });
 
-    it('includes many-services tag when services exceed 3', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
+    it('includes first service type as a tag', async () => {
+      const result = await generateSettlement([], { size: 'village' });
 
+      const tags = result.tags.split(', ');
+      const firstServiceType = result.services[0].type;
+      expect(tags).toContain(firstServiceType);
+    });
+
+    it('includes many-services tag when services exceed 3', async () => {
       const result = await generateSettlement([], { size: 'metropolis' });
 
       expect(result.tags).toContain('many-services');
     });
 
-    it('generates rumors from the rumor pool', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
-
-      const result = await generateSettlement([], { size: 'town' });
-
-      const allRumors = [
-        'A merchant caravan went missing on the northern road.',
-        'A local farmer claims his livestock is being stolen.',
-        "The mayor's daughter ran away with a traveling performer.",
-        'An old woman says a ghost walks the riverbank every new moon.',
-        "The town's grain reserves are lower than the steward admits.",
-      ];
-      const rumorSet = new Set(allRumors);
-
-      expect(result.rumors.length).toBeGreaterThanOrEqual(1);
-      expect(result.rumors.length).toBeLessThanOrEqual(3);
-      for (const rumor of result.rumors) {
-        expect(rumorSet.has(rumor)).toBe(true);
-      }
-    });
-
     it('generates notable NPCs with valid roles for each service', async () => {
-      const fetchMock = makeFetchMock(minimalMockData());
-      setupFetch(fetchMock);
-
       const result = await generateSettlement([], { size: 'village' });
 
+      expect(result.notableNPCs.length).toBe(result.services.length);
       for (const npc of result.notableNPCs) {
         expect(typeof npc.role).toBe('string');
         expect(npc.role.length).toBeGreaterThan(0);
@@ -264,13 +231,85 @@ describe('settlementGenerator', () => {
       const data = minimalMockData();
       data['/data/settlement-names.json'].Dwarven.city = [];
 
-      const fetchMock = makeFetchMock(data);
-      setupFetch(fetchMock);
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+        const d = minimalMockData();
+        // Apply the mutation to the fetched data
+        if (url === '/data/settlement-names.json') {
+          return { ok: true, json: () => Promise.resolve(data) };
+        }
+        return { ok: true, json: () => Promise.resolve(d[url]) };
+      });
 
       const result = await generateSettlement([], { size: 'city' });
 
       expect(typeof result.name).toBe('string');
       expect(result.name.length).toBeGreaterThan(0);
+    });
+
+    it('builds description from base description plus features', async () => {
+      const result = await generateSettlement([], { size: 'village' });
+
+      expect(result.description).toContain('A cluster of cottages.');
+      expect(result.description).toContain('A mossy stone well');
+    });
+
+    it('generates rumors from the rumor pool', async () => {
+      const result = await generateSettlement([], { size: 'town' });
+
+      const allRumorValues = [
+        'A merchant caravan went missing on the northern road.',
+        'A local farmer claims his livestock is being stolen.',
+        "The mayor's daughter ran away with a traveling performer.",
+        'An old woman says a ghost walks the riverbank every new moon.',
+        "The town's grain reserves are lower than the steward admits.",
+      ];
+      const rumorSet = new Set(allRumorValues);
+
+      expect(result.rumors.length).toBeGreaterThanOrEqual(1);
+      expect(result.rumors.length).toBeLessThanOrEqual(3);
+      for (const rumor of result.rumors) {
+        expect(rumorSet.has(rumor)).toBe(true);
+      }
+    });
+
+    it('returns empty notes string by default', async () => {
+      const result = await generateSettlement();
+
+      expect(result.notes).toBe('');
+    });
+
+    it('returns a non-empty threat string', async () => {
+      const result = await generateSettlement([], { size: 'village' });
+
+      expect(typeof result.threat).toBe('string');
+      expect(result.threat.length).toBeGreaterThan(0);
+    });
+
+    it('returns a non-empty government string', async () => {
+      const result = await generateSettlement([], { size: 'town' });
+
+      expect(typeof result.government).toBe('string');
+      expect(result.government.length).toBeGreaterThan(0);
+    });
+
+    it('returns a non-empty atmosphere string', async () => {
+      const result = await generateSettlement([], { size: 'city' });
+
+      expect(typeof result.atmosphere).toBe('string');
+      expect(result.atmosphere.length).toBeGreaterThan(0);
+    });
+
+    it('uses guild names for guild-type services when a guild is generated', async () => {
+      let guildService = null;
+      for (let i = 0; i < 20; i++) {
+        const result = await generateSettlement([], { size: 'metropolis' });
+        guildService = result.services.find((s) => s.type === 'guild');
+        if (guildService) break;
+      }
+
+      expect(guildService).toBeDefined();
+      expect(typeof guildService.name).toBe('string');
+      expect(guildService.name.length).toBeGreaterThan(0);
     });
   });
 });

@@ -1,11 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect } from 'vitest';
 import raceRules from './5e.js';
-
-vi.mock('../../ui/utils.js', () => ({
-  default: {
-    getAbilityLongName: vi.fn((name) => name)
-  }
-}));
 
 describe('raceRules 5e - getTraits', () => {
   describe('addTraits', () => {
@@ -50,12 +45,18 @@ describe('raceRules 5e - getTraits', () => {
       const result = raceRules.addTraits(null);
       expect(result.actions).toEqual([]);
       expect(result.specialActions).toEqual([]);
+      expect(result.bonusActions).toEqual([]);
+      expect(result.reactions).toEqual([]);
+      expect(result.characterAdvancement).toEqual([]);
     });
 
     it('returns empty category arrays for undefined input', () => {
       const result = raceRules.addTraits(undefined);
       expect(result.actions).toEqual([]);
       expect(result.specialActions).toEqual([]);
+      expect(result.bonusActions).toEqual([]);
+      expect(result.reactions).toEqual([]);
+      expect(result.characterAdvancement).toEqual([]);
     });
 
     it('places traits not in any category into specialActions', () => {
@@ -64,6 +65,24 @@ describe('raceRules 5e - getTraits', () => {
       ];
       const result = raceRules.addTraits(traits);
       expect(result.specialActions.find((t) => t.name === 'Custom Trait')).toBeDefined();
+    });
+
+    it('deduplicates traits by name', () => {
+      const traits = [
+        { name: 'Darkvision', description: 'First' },
+        { name: 'Darkvision', description: 'Second' }
+      ];
+      const result = raceRules.addTraits(traits);
+      expect(result.specialActions.filter((t) => t.name === 'Darkvision').length).toBe(1);
+      expect(result.specialActions[0].description).toBe('First');
+    });
+
+    it('handles traits without description field', () => {
+      const traits = [{ name: 'Trait Without Description' }];
+      const result = raceRules.addTraits(traits);
+      const trait = result.specialActions.find((t) => t.name === 'Trait Without Description');
+      expect(trait).toBeDefined();
+      expect(trait.description).toBeUndefined();
     });
   });
 
@@ -175,6 +194,27 @@ describe('raceRules 5e - getTraits', () => {
         specialActions: [],
         characterAdvancement: []
       });
+    });
+
+    it('merges multiple subrace racial_traits with base traits', () => {
+      const playerStats = {
+        race: {
+          traits: [
+            { name: 'Darkvision', description: 'Can see in the dark' }
+          ],
+          subrace: {
+            racial_traits: [
+              { name: 'Elven Weapon Training', description: 'Weapon proficiency' },
+              { name: 'Fey Ancestry', description: 'Charm resistance' }
+            ]
+          }
+        }
+      };
+      const result = raceRules.getTraits(playerStats);
+      const names = result.specialActions.map((t) => t.name);
+      expect(names).toContain('Darkvision');
+      expect(names).toContain('Elven Weapon Training');
+      expect(names).toContain('Fey Ancestry');
     });
   });
 });

@@ -1,11 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect } from 'vitest';
 import raceRules from './5e.js';
-
-vi.mock('../../ui/utils.js', () => ({
-  default: {
-    getAbilityLongName: vi.fn((name) => name)
-  }
-}));
 
 describe('raceRules 5e - getSenses', () => {
   describe('getSenses', () => {
@@ -54,6 +49,15 @@ describe('raceRules 5e - getSenses', () => {
         race: {
           traits: [{ name: 'Other Trait' }]
         }
+      };
+      const result = raceRules.getSenses(playerStats);
+      expect(result).not.toContainEqual({ name: 'Darkvision', value: '60 ft.' });
+    });
+
+    it('does not add Darkvision when race has empty traits', () => {
+      const playerStats = {
+        senses: [],
+        race: { traits: [] }
       };
       const result = raceRules.getSenses(playerStats);
       expect(result).not.toContainEqual({ name: 'Darkvision', value: '60 ft.' });
@@ -233,6 +237,15 @@ describe('raceRules 5e - getSenses', () => {
       expect(result).not.toContainEqual({ name: 'Feral Senses', value: '' });
     });
 
+    it('handles undefined class gracefully', () => {
+      const playerStats = {
+        senses: [],
+        race: { traits: [] }
+      };
+      const result = raceRules.getSenses(playerStats);
+      expect(result).not.toContainEqual({ name: 'Feral Senses', value: '' });
+    });
+
     it('adds Blindvision 10 ft. when Blind Fighting fighting style is selected', () => {
       const playerStats = {
         senses: [],
@@ -290,6 +303,103 @@ describe('raceRules 5e - getSenses', () => {
       };
       const result = raceRules.getSenses(playerStats);
       expect(result).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
+    });
+
+    it('handles null abilities gracefully', () => {
+      const playerStats = {
+        senses: [],
+        race: { traits: [] },
+        abilities: null
+      };
+      const result = raceRules.getSenses(playerStats);
+      expect(result).not.toContainEqual({ name: 'Passive Perception', value: '10' });
+    });
+
+    it('handles empty abilities array', () => {
+      const playerStats = {
+        senses: [],
+        race: { traits: [] },
+        abilities: []
+      };
+      const result = raceRules.getSenses(playerStats);
+      expect(result).not.toContainEqual({ name: 'Passive Perception', value: '10' });
+    });
+
+    it('handles abilities with missing skills array', () => {
+      const playerStats = {
+        senses: [],
+        race: { traits: [] },
+        abilities: [
+          {
+            name: 'Wisdom',
+            bonus: 2
+          }
+        ]
+      };
+      const result = raceRules.getSenses(playerStats);
+      expect(result).toContainEqual({ name: 'Passive Perception', value: '12' });
+    });
+
+    it('handles abilities with undefined bonus', () => {
+      const playerStats = {
+        senses: [],
+        race: { traits: [] },
+        abilities: [
+          {
+            name: 'Wisdom',
+            skills: [{ name: 'Perception', bonus: 3 }]
+          }
+        ]
+      };
+      const result = raceRules.getSenses(playerStats);
+      expect(result).toContainEqual({ name: 'Passive Perception', value: '13' });
+    });
+
+    it('combines Darkvision, passive skills, and Feral Senses together', () => {
+      const playerStats = {
+        senses: [],
+        race: {
+          traits: [{ name: 'Darkvision' }]
+        },
+        abilities: [
+          {
+            name: 'Wisdom',
+            bonus: 2,
+            skills: [{ name: 'Perception', bonus: 5 }]
+          }
+        ],
+        class: {
+          class_levels: [
+            { features: [{ name: 'Feral Senses' }] }
+          ]
+        }
+      };
+      const result = raceRules.getSenses(playerStats);
+      const names = result.map((s) => s.name);
+      expect(names).toContain('Darkvision');
+      expect(names).toContain('Feral Senses');
+      expect(names).toContain('Passive Perception');
+    });
+
+    it('combines existing senses with derived senses', () => {
+      const playerStats = {
+        senses: [{ name: 'Normal Vision', value: '60 ft.' }],
+        race: {
+          traits: [{ name: 'Darkvision' }]
+        },
+        abilities: [
+          {
+            name: 'Wisdom',
+            bonus: 0,
+            skills: []
+          }
+        ]
+      };
+      const result = raceRules.getSenses(playerStats);
+      const names = result.map((s) => s.name);
+      expect(names).toContain('Darkvision');
+      expect(names).toContain('Normal Vision');
+      expect(names).toContain('Passive Perception');
     });
   });
 });

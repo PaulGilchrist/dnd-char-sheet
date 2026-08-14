@@ -1,11 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect } from 'vitest';
 import raceRules from './5e.js';
-
-vi.mock('../../ui/utils.js', () => ({
-  default: {
-    getAbilityLongName: vi.fn((name) => name)
-  }
-}));
 
 describe('raceRules 5e - getRacialBonus', () => {
   describe('getRacialBonus', () => {
@@ -81,6 +76,42 @@ describe('raceRules 5e - getRacialBonus', () => {
       };
       const result = raceRules.getRacialBonus(playerStats, 'Strength');
       expect(result).toBe(2);
+    });
+
+    it('returns 0 when subrace has no matching ability', () => {
+      const playerStats = {
+        race: {
+          ability_bonuses: [{ ability_score: 'Strength', bonus: 2 }],
+          subrace: {
+            ability_bonuses: [{ ability_score: 'Constitution', bonus: 1 }]
+          }
+        }
+      };
+      const result = raceRules.getRacialBonus(playerStats, 'Dexterity');
+      expect(result).toBe(0);
+    });
+
+    it('returns 0 when ability_bonuses is empty array', () => {
+      const playerStats = {
+        race: {
+          ability_bonuses: []
+        }
+      };
+      const result = raceRules.getRacialBonus(playerStats, 'Strength');
+      expect(result).toBe(0);
+    });
+
+    it('returns race bonus only when subrace has no ability_bonuses key', () => {
+      const playerStats = {
+        race: {
+          ability_bonuses: [{ ability_score: 'Constitution', bonus: 3 }],
+          subrace: {
+            name: 'High Elf'
+          }
+        }
+      };
+      const result = raceRules.getRacialBonus(playerStats, 'Constitution');
+      expect(result).toBe(3);
     });
   });
 });

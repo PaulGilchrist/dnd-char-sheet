@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleRestoreRage } from './rageUtils.js';
 import * as runtimeState from '../../hooks/runtime/useRuntimeState.js';
@@ -24,8 +25,8 @@ describe('handleRestoreRage', () => {
         vi.clearAllMocks();
     });
 
-    describe('rage points === 0 (no rage remaining)', () => {
-        it('returns false and shows popup when ragePoints is 0', async () => {
+    describe('when ragePoints is depleted (<= 0)', () => {
+        it('returns false, shows popup, and does not update runtime state when ragePoints is 0', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(0);
 
             const popup = makePopupCallback();
@@ -38,12 +39,12 @@ describe('handleRestoreRage', () => {
             );
 
             expect(result).toBe(false);
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
             expect(popup.calls).toHaveLength(1);
             expect(popup.calls[0]).toBe('<b>Rage Feature</b><br/>No Rage remaining to restore this feature.');
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('returns false and shows popup when ragePoints is null (defaults to 0)', async () => {
+        it('treats null ragePoints as 0 and returns false', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(null);
 
             const popup = makePopupCallback();
@@ -56,11 +57,11 @@ describe('handleRestoreRage', () => {
             );
 
             expect(result).toBe(false);
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
             expect(popup.calls).toHaveLength(1);
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('returns false and shows popup when ragePoints is negative', async () => {
+        it('treats negative ragePoints as 0 and returns false', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(-1);
 
             const popup = makePopupCallback();
@@ -73,12 +74,13 @@ describe('handleRestoreRage', () => {
             );
 
             expect(result).toBe(false);
+            expect(popup.calls).toHaveLength(1);
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
         });
     });
 
-    describe('rage points > 0 (rage available)', () => {
-        it('returns true and decrements ragePoints by 1', async () => {
+    describe('when ragePoints > 0', () => {
+        it('decrements ragePoints by 1 and sets resourceUses to 1', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(3);
 
             const popup = makePopupCallback();
@@ -91,89 +93,20 @@ describe('handleRestoreRage', () => {
             );
 
             expect(result).toBe(true);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                1,
                 'TestBarbarian',
                 'ragePoints',
                 2,
                 'test-campaign'
             );
-        });
-
-        it('sets the resourceUses key to 1 when auto is false', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(3);
-
-            const popup = makePopupCallback();
-            await handleRestoreRage(
-                makePlayerStats(),
-                'test-campaign',
-                'Rage Feature',
-                false,
-                popup
-            );
-
-            // actionName is 'Rage Feature' -> key is 'ragefeatureUses'
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
                 'TestBarbarian',
                 'ragefeatureUses',
                 1,
                 'test-campaign'
             );
-        });
-
-        it('uses auto.resourceKey when provided', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(3);
-
-            const popup = makePopupCallback();
-            await handleRestoreRage(
-                makePlayerStats(),
-                'test-campaign',
-                'Rage Feature',
-                { resourceKey: 'customRageUses' },
-                popup
-            );
-
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestBarbarian',
-                'customRageUses',
-                1,
-                'test-campaign'
-            );
-        });
-
-        it('uses auto.resourceKey even when auto is true', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(3);
-
-            const popup = makePopupCallback();
-            await handleRestoreRage(
-                makePlayerStats(),
-                'test-campaign',
-                'Rage Feature',
-                { resourceKey: 'autoRageUses' },
-                popup
-            );
-
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestBarbarian',
-                'autoRageUses',
-                1,
-                'test-campaign'
-            );
-        });
-
-        it('dispatches combat-summary-updated event', async () => {
-            const popup = makePopupCallback();
-            const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-
-            await handleRestoreRage(
-                makePlayerStats(),
-                'test-campaign',
-                'Rage Feature',
-                false,
-                popup
-            );
-
-            expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
-            dispatchSpy.mockRestore();
         });
 
         it('sets ragePoints to 0 when current is 1', async () => {
@@ -188,7 +121,8 @@ describe('handleRestoreRage', () => {
                 popup
             );
 
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                1,
                 'TestBarbarian',
                 'ragePoints',
                 0,
@@ -196,7 +130,27 @@ describe('handleRestoreRage', () => {
             );
         });
 
-        it('calls setPopupHtml with success message', async () => {
+        it('dispatches a combat-summary-updated CustomEvent', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(2);
+
+            const popup = makePopupCallback();
+            const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+            await handleRestoreRage(
+                makePlayerStats(),
+                'test-campaign',
+                'Rage Feature',
+                false,
+                popup
+            );
+
+            expect(dispatchSpy).toHaveBeenCalledWith(expect.any(CustomEvent));
+            const eventArg = dispatchSpy.mock.calls[0][0];
+            expect(eventArg.type).toBe('combat-summary-updated');
+            dispatchSpy.mockRestore();
+        });
+
+        it('shows success popup message', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(5);
 
             const popupCalls = [];
@@ -214,7 +168,7 @@ describe('handleRestoreRage', () => {
     });
 
     describe('rageKey construction', () => {
-        it('builds rageKey from actionName with spaces removed for single word', async () => {
+        it('builds rageKey from actionName when auto is false (single word)', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(2);
 
             const popup = makePopupCallback();
@@ -226,8 +180,8 @@ describe('handleRestoreRage', () => {
                 popup
             );
 
-            // 'Rage'.toLowerCase().replace(/\s+/g, '') + 'Uses' = 'rageUses'
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
                 'TestBarbarian',
                 'rageUses',
                 1,
@@ -235,7 +189,7 @@ describe('handleRestoreRage', () => {
             );
         });
 
-        it('builds rageKey from actionName with multiple spaces', async () => {
+        it('builds rageKey from actionName when auto is false (multiple words, spaces collapsed)', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(2);
 
             const popup = makePopupCallback();
@@ -247,31 +201,76 @@ describe('handleRestoreRage', () => {
                 popup
             );
 
-            // 'Rage   Feature   Power'.toLowerCase().replace(/\s+/g, '') + 'Uses' = 'ragefeaturepowerUses'
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
                 'TestBarbarian',
                 'ragefeaturepowerUses',
                 1,
                 'test-campaign'
             );
         });
-    });
 
-    describe('setPopupHtml for no rage', () => {
-        it('calls setPopupHtml with no rage message', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(0);
+        it('uses auto.resourceKey when auto is an object with resourceKey', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(3);
 
             const popup = makePopupCallback();
             await handleRestoreRage(
                 makePlayerStats(),
                 'test-campaign',
                 'Rage Feature',
-                false,
+                { resourceKey: 'customRageUses' },
                 popup
             );
 
-            expect(popup.calls).toHaveLength(1);
-            expect(popup.calls[0]).toBe('<b>Rage Feature</b><br/>No Rage remaining to restore this feature.');
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
+                'TestBarbarian',
+                'customRageUses',
+                1,
+                'test-campaign'
+            );
+        });
+
+        it('uses auto.resourceKey even when auto is truthy (true)', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(3);
+
+            const popup = makePopupCallback();
+            await handleRestoreRage(
+                makePlayerStats(),
+                'test-campaign',
+                'Rage Feature',
+                { resourceKey: 'autoRageUses' },
+                popup
+            );
+
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
+                'TestBarbarian',
+                'autoRageUses',
+                1,
+                'test-campaign'
+            );
+        });
+
+        it('builds rageKey from actionName when auto is true boolean with no resourceKey', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(2);
+
+            const popup = makePopupCallback();
+            await handleRestoreRage(
+                makePlayerStats(),
+                'test-campaign',
+                'Rage Feature',
+                true,
+                popup
+            );
+
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
+                'TestBarbarian',
+                'ragefeatureUses',
+                1,
+                'test-campaign'
+            );
         });
     });
 });

@@ -11,11 +11,7 @@ const {
 
 describe('featureCategories2024', () => {
   describe('featuresToIgnore', () => {
-    it('should be an array', () => {
-      expect(Array.isArray(featuresToIgnore)).toBe(true);
-    });
-
-    it('should contain key class feature categories to ignore', () => {
+    it('should contain core 2024 class feature categories to ignore', () => {
       const expectedItems = [
         'Ability Score Improvement',
         'Channel Divinity',
@@ -31,8 +27,34 @@ describe('featureCategories2024', () => {
       }
     });
 
-    it('should not contain items that are not meant to be ignored', () => {
-      const notIgnored = [
+    it('should contain 2024-specific ignore entries', () => {
+      const expectedItems = [
+        '(capstone - depends on subclass)',
+        'Barbarian Subclass',
+        'Bard Subclass',
+        'Cleric Subclass',
+        'Fighter Subclass',
+        'Monk Subclass',
+        'Paladin Subclass',
+        'Ranger Subclass',
+        'Rogue Subclass',
+        'Sorcerer Subclass',
+        'Warlock Subclass',
+        'Wizard Subclass',
+      ];
+
+      for (const item of expectedItems) {
+        expect(featuresToIgnore).toContain(item);
+      }
+    });
+
+    it('should have no duplicates', () => {
+      const unique = new Set(featuresToIgnore);
+      expect(featuresToIgnore).toHaveLength(unique.size);
+    });
+
+    it('should not contain active class features', () => {
+      const activeFeatures = [
         'Sneak Attack',
         'Evasion',
         'Uncanny Dodge',
@@ -42,36 +64,32 @@ describe('featureCategories2024', () => {
         'Martial Archetype',
       ];
 
-      for (const item of notIgnored) {
+      for (const item of activeFeatures) {
         expect(featuresToIgnore).not.toContain(item);
       }
     });
   });
 
   describe('actions', () => {
-    it('should be an array with expected entries', () => {
-      expect(Array.isArray(actions)).toBe(true);
+    it('should list 2024-specific action features', () => {
       expect(actions).toContain('Naturally Stealthy');
     });
   });
 
   describe('bonusActions', () => {
-    it('should be an array with expected entries', () => {
-      expect(Array.isArray(bonusActions)).toBe(true);
+    it('should list 2024-specific bonus action features', () => {
       expect(bonusActions).toContain("Nature's Veil");
     });
   });
 
   describe('reactions', () => {
-    it('should be an array with expected entries', () => {
-      expect(Array.isArray(reactions)).toBe(true);
+    it('should list 2024-specific reaction features', () => {
       expect(reactions).toContain('Protection');
     });
   });
 
   describe('characterAdvancement', () => {
-    it('should be an array with expected entries', () => {
-      expect(Array.isArray(characterAdvancement)).toBe(true);
+    it('should contain key 2024 character advancement entries', () => {
       const expectedItems = [
         'Deft Explorer',
         'Draconic Ancestry',
@@ -79,9 +97,15 @@ describe('featureCategories2024', () => {
         'Magical Secrets',
         'Pact Magic',
       ];
+
       for (const item of expectedItems) {
         expect(characterAdvancement).toContain(item);
       }
+    });
+
+    it('should have no duplicates', () => {
+      const unique = new Set(characterAdvancement);
+      expect(characterAdvancement).toHaveLength(unique.size);
     });
   });
 
@@ -101,6 +125,18 @@ describe('featureCategories2024', () => {
       ];
       const unique = new Set(allItems);
       expect(allItems).toHaveLength(unique.size);
+    });
+
+    it('should not have empty categories', () => {
+      expect(actions.length).toBeGreaterThan(0);
+      expect(bonusActions.length).toBeGreaterThan(0);
+      expect(reactions.length).toBeGreaterThan(0);
+      expect(characterAdvancement.length).toBeGreaterThan(0);
+    });
+
+    it('should have more ignore entries than 5e', () => {
+      // 2024 ruleset has subclass-based categorization, so more items to ignore
+      expect(featuresToIgnore.length).toBeGreaterThan(30);
     });
   });
 });

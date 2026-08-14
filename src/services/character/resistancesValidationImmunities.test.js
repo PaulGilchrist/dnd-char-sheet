@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -24,10 +25,10 @@ const baseArgs = (overrides = {}) => ({
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Assert that `result.immunities` contains exactly the given types.
- * Also asserts that `result.resistances` is empty (class-only test).
+ * Assert that `result.resistances` is empty and `result.immunities` contains
+ * exactly the given types (ignoring order).
  */
-function expectImmunities(result, expected) {
+function expectImmunitiesOnly(result, expected) {
   expect(result.resistances).toEqual([]);
   expect(result.immunities.sort()).toEqual(expected.sort());
 }
@@ -61,7 +62,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         baseArgs({ level: 10, race: { name: 'Human' }, class: { name: 'Fighter' } }),
       );
 
-      expectImmunities(result, ['Fire']);
+      expectImmunitiesOnly(result, ['Fire']);
     });
 
     it('excludes immunities from levels above character level', async () => {
@@ -85,7 +86,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         baseArgs({ level: 5, race: { name: 'Human' }, class: { name: 'Fighter' } }),
       );
 
-      expectImmunities(result, []);
+      expectImmunitiesOnly(result, []);
     });
 
     it('filters out non-damage immunity types (e.g. Charmed)', async () => {
@@ -108,7 +109,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         baseArgs({ level: 6, race: { name: 'Human' }, class: { name: 'Mystic' } }),
       );
 
-      expectImmunities(result, ['Fire']);
+      expectImmunitiesOnly(result, ['Fire']);
     });
 
     it('extracts Psychic immunity (valid damage type)', async () => {
@@ -131,7 +132,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         baseArgs({ level: 10, race: { name: 'Human' }, class: { name: 'Fighter' } }),
       );
 
-      expectImmunities(result, ['Psychic']);
+      expectImmunitiesOnly(result, ['Psychic']);
     });
 
     it('returns empty immunities when classData is null', async () => {
@@ -142,7 +143,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         baseArgs({ race: { name: 'Human' }, class: { name: 'Nonexistent' } }),
       );
 
-      expectImmunities(result, []);
+      expectImmunitiesOnly(result, []);
     });
 
     it('returns empty immunities when classData has no class_levels', async () => {
@@ -153,7 +154,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         baseArgs({ race: { name: 'Human' }, class: { name: 'WeirdClass' } }),
       );
 
-      expectImmunities(result, []);
+      expectImmunitiesOnly(result, []);
     });
 
     it('extracts immunities from 5e subclass features at or below level', async () => {
@@ -183,7 +184,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         baseArgs({ level: 7, race: { name: 'Human' }, class: { name: 'Fighter' } }),
       );
 
-      expectImmunities(result, ['Lightning']);
+      expectImmunitiesOnly(result, ['Lightning']);
     });
 
     it('excludes 5e subclass immunities above character level', async () => {
@@ -213,7 +214,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         baseArgs({ level: 7, race: { name: 'Human' }, class: { name: 'Fighter' } }),
       );
 
-      expectImmunities(result, []);
+      expectImmunitiesOnly(result, []);
     });
 
     it('extracts immunities from 2024 subclass majors at or below level', async () => {
@@ -238,7 +239,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         baseArgs({ rules: '2024', level: 3, race: { name: 'Human' }, class: { name: 'Barbarian' } }),
       );
 
-      expectImmunities(result, ['Fire']);
+      expectImmunitiesOnly(result, ['Fire']);
     });
 
     it('excludes 2024 major immunities above character level', async () => {
@@ -268,7 +269,7 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
         }),
       );
 
-      expectImmunities(result, []);
+      expectImmunitiesOnly(result, []);
     });
 
     it('ignores condition immunities like "Immunity to Charmed" in Mindless Rage', async () => {
@@ -292,7 +293,91 @@ describe('resistancesValidation getResistanceLimits - class immunities', () => {
       );
 
       // Charmed and Frightened are conditions, not damage types
-      expectImmunities(result, []);
+      expectImmunitiesOnly(result, []);
+    });
+
+    it('extracts multiple immunities from a single feature description', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        class_levels: [
+          {
+            level: 1,
+            features: [
+              {
+                name: 'Multi Immunity',
+                description: 'You gain Immunity to Fire damage and Immunity to Cold damage.',
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await getResistanceLimits(
+        baseArgs({ level: 1, race: { name: 'Human' }, class: { name: 'Fighter' } }),
+      );
+
+      expectImmunitiesOnly(result, ['Fire', 'Cold']);
+    });
+
+    it('extracts immunity from feature with array description', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        class_levels: [
+          {
+            level: 1,
+            features: [
+              {
+                name: 'Damage Immunity',
+                description: ['You gain', 'Immunity to', 'Radiant damage.'],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await getResistanceLimits(
+        baseArgs({ level: 1, race: { name: 'Human' }, class: { name: 'Fighter' } }),
+      );
+
+      expectImmunitiesOnly(result, ['Radiant']);
+    });
+
+    it('rejects invalid damage types from immunity descriptions', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        class_levels: [
+          {
+            level: 1,
+            features: [
+              {
+                name: 'Fake Immunity',
+                description: 'You gain Immunity to Magic and Sneaky.',
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await getResistanceLimits(
+        baseArgs({ level: 1, race: { name: 'Human' }, class: { name: 'Fighter' } }),
+      );
+
+      expectImmunitiesOnly(result, []);
+    });
+
+    it('handles class with empty features array', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        class_levels: [
+          { level: 1, features: [] },
+        ],
+      });
+
+      const result = await getResistanceLimits(
+        baseArgs({ level: 1, race: { name: 'Human' }, class: { name: 'Wizard' } }),
+      );
+
+      expectImmunitiesOnly(result, []);
     });
   });
 });

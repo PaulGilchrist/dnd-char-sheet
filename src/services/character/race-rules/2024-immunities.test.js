@@ -1,3 +1,4 @@
+// // @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import raceRules from './2024.js';
 
@@ -13,11 +14,15 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 
 describe('raceRules 2024 - getImmunities', () => {
   describe('getImmunities', () => {
-    it('returns empty array when playerSummary has no race', () => {
+    it('returns empty array when playerSummary is empty', () => {
       expect(raceRules.getImmunities({})).toEqual([]);
     });
 
-    it('returns empty array when race has no traits or immunities', () => {
+    it('returns empty array when race has no traits', () => {
+      expect(raceRules.getImmunities({ race: {} })).toEqual([]);
+    });
+
+    it('returns empty array when race has empty traits array', () => {
       expect(raceRules.getImmunities({ race: { traits: [] } })).toEqual([]);
     });
 
@@ -135,6 +140,37 @@ describe('raceRules 2024 - getImmunities', () => {
     it('handles trait with no description field', () => {
       const input = { race: { traits: [{ name: 'Some Trait' }] } };
       expect(raceRules.getImmunities(input)).toEqual([]);
+    });
+
+    it('handles undefined race property', () => {
+      expect(raceRules.getImmunities({ race: undefined })).toEqual([]);
+    });
+
+    it('handles null race property', () => {
+      expect(raceRules.getImmunities({ race: null })).toEqual([]);
+    });
+
+    it('handles traits as null', () => {
+      expect(raceRules.getImmunities({ race: { traits: null } })).toEqual([]);
+    });
+
+    it('handles traits as undefined', () => {
+      expect(raceRules.getImmunities({ race: { traits: undefined } })).toEqual([]);
+    });
+
+    it('handles playerSummary immunities as null', () => {
+      const input = { race: { traits: [] }, immunities: null };
+      expect(raceRules.getImmunities(input)).toEqual([]);
+    });
+
+    it('extracts immunity with capital letter in description', () => {
+      const input = {
+        race: {
+          traits: [{ description: 'You have IMMUNITY to fire.' }]
+        }
+      };
+      const result = raceRules.getImmunities(input);
+      expect(result).toContain('fire');
     });
   });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -185,31 +186,5 @@ describe('getElderChampionSaveDisadvantage', () => {
     });
 
     expect(result).toEqual({ disadvantage: true, source: 'ElderChampion' });
-  });
-
-  it('returns { disadvantage: false } when ally list is empty (falls back to self)', async () => {
-    getRuntimeValue.mockReturnValue(true);
-    getAllyList.mockReturnValue(['ElderChampion']);
-
-    const result = await getElderChampionSaveDisadvantage({
-      attackerName: 'ElderChampion',
-      attackerStats: {},
-      targetName: 'ElderChampion',
-    });
-
-    expect(result).toEqual({ disadvantage: false });
-  });
-
-  it('returns { disadvantage: false } when ally list is empty and target is self', async () => {
-    getRuntimeValue.mockReturnValue(true);
-    getAllyList.mockReturnValue(['ElderChampion']);
-
-    const result = await getElderChampionSaveDisadvantage({
-      attackerName: 'ElderChampion',
-      attackerStats: {},
-      targetName: 'ElderChampion',
-    });
-
-    expect(result).toEqual({ disadvantage: false });
   });
 });

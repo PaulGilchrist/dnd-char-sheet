@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import raceRules from './2024.js';
 
@@ -76,6 +77,27 @@ describe('raceRules 2024 - getTraits', () => {
       ];
       const result = raceRules.addTraits(traits);
       expect(result.specialActions.filter((t) => t.name === 'Darkvision').length).toBe(1);
+    });
+
+    it('preserves trait properties beyond name and description', () => {
+      const traits = [{ name: 'Trait1', description: 'Desc', details: 'Detail info', automation: { type: 'test' } }];
+      const result = raceRules.addTraits(traits);
+      const trait1 = result.specialActions.find((t) => t.name === 'Trait1');
+      expect(trait1.details).toBe('Detail info');
+      expect(trait1.automation).toEqual({ type: 'test' });
+    });
+
+    it('skips null entries in traits array', () => {
+      const traits = [null, { name: 'Trait1', description: 'Desc' }, null];
+      const result = raceRules.addTraits(traits);
+      expect(result.specialActions.length).toBe(1);
+      expect(result.specialActions[0].name).toBe('Trait1');
+    });
+
+    it('skips undefined entries in traits array', () => {
+      const traits = [undefined, { name: 'Trait1', description: 'Desc' }];
+      const result = raceRules.addTraits(traits);
+      expect(result.specialActions.length).toBe(1);
     });
   });
 
@@ -199,6 +221,143 @@ describe('raceRules 2024 - getTraits', () => {
       expect(names).toContain('Darkvision');
       expect(names).toContain('Fey Ancestry');
       expect(names).toContain('Ancestry (High Elf)');
+    });
+
+    it('merges subrace traits with base traits', () => {
+      const input = {
+        race: {
+          traits: [{ name: 'Darkvision', description: 'Base trait' }],
+          subrace: {
+            traits: [{ name: 'Subrace Trait', description: 'Subrace-specific trait' }]
+          }
+        }
+      };
+      const result = raceRules.getTraits(input);
+      const names = result.specialActions.map((t) => t.name);
+      expect(names).toContain('Darkvision');
+      expect(names).toContain('Subrace Trait');
+    });
+
+    it('deduplicates traits when base and subrace have the same trait', () => {
+      const input = {
+        race: {
+          traits: [{ name: 'Darkvision', description: 'Base darkvision' }],
+          subrace: {
+            traits: [{ name: 'Darkvision', description: 'Subrace darkvision' }]
+          }
+        }
+      };
+      const result = raceRules.getTraits(input);
+      expect(result.specialActions.filter((t) => t.name === 'Darkvision').length).toBe(1);
+    });
+
+    it('handles null subrace', () => {
+      const input = {
+        race: {
+          lineage: null,
+          subrace: null,
+          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }]
+        }
+      };
+      const result = raceRules.getTraits(input);
+      const names = result.specialActions.map((t) => t.name);
+      expect(names).toContain('Darkvision');
+    });
+
+    it('handles undefined subrace', () => {
+      const input = {
+        race: {
+          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }],
+          subrace: undefined
+        }
+      };
+      const result = raceRules.getTraits(input);
+      const names = result.specialActions.map((t) => t.name);
+      expect(names).toContain('Darkvision');
+    });
+
+    it('handles subrace without traits', () => {
+      const input = {
+        race: {
+          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }],
+          subrace: {}
+        }
+      };
+      const result = raceRules.getTraits(input);
+      const names = result.specialActions.map((t) => t.name);
+      expect(names).toContain('Darkvision');
+    });
+
+    it('handles race with no traits property', () => {
+      const input = { race: { lineage: 'High Elf' } };
+      const result = raceRules.getTraits(input);
+      expect(Object.keys(result)).toEqual([
+        'actions',
+        'bonusActions',
+        'reactions',
+        'specialActions',
+        'characterAdvancement'
+      ]);
+    });
+
+    it('handles lineage with no sub_traits', () => {
+      const input = {
+        race: {
+          lineage: 'High Elf',
+          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }]
+        }
+      };
+      const result = raceRules.getTraits(input);
+      const names = result.specialActions.map((t) => t.name);
+      expect(names).toContain('Darkvision');
+      expect(names).not.toContain('Ancestry (High Elf)');
+    });
+
+    it('combines lineage and subrace traits together', () => {
+      const input = {
+        race: {
+          lineage: 'High Elf',
+          traits: [
+            { name: 'Darkvision', description: 'Base trait' },
+            {
+              name: 'Ancestry',
+              sub_traits: [{ name: 'High Elf', description: 'Lineage trait' }]
+            }
+          ],
+          subrace: {
+            traits: [{ name: 'Subrace Trait', description: 'Subrace trait' }]
+          }
+        }
+      };
+      const result = raceRules.getTraits(input);
+      const allTraitNames = [
+        ...result.actions.map((t) => t.name),
+        ...result.bonusActions.map((t) => t.name),
+        ...result.reactions.map((t) => t.name),
+        ...result.specialActions.map((t) => t.name),
+        ...result.characterAdvancement.map((t) => t.name)
+      ];
+      expect(allTraitNames).toContain('Darkvision');
+      expect(allTraitNames).toContain('Ancestry (High Elf)');
+      expect(allTraitNames).toContain('Subrace Trait');
+    });
+
+    it('preserves trait names with lineage suffix format', () => {
+      const input = {
+        race: {
+          lineage: 'High Elf',
+          traits: [
+            {
+              name: 'Ancestry',
+              sub_traits: [{ name: 'High Elf', description: 'Lineage description' }]
+            }
+          ]
+        }
+      };
+      const result = raceRules.getTraits(input);
+      const lineageTrait = result.specialActions.find((t) => t.name === 'Ancestry (High Elf)');
+      expect(lineageTrait).toBeDefined();
+      expect(lineageTrait.description).toBe('Lineage description');
     });
   });
 });

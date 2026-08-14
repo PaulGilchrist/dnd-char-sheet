@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ───────────────────────────────────────────────────────
@@ -80,7 +81,6 @@ describe('hasBardicInspirationDefense', () => {
   });
 
   it('returns false when hasBardicInspiration returns false and playerStats is null', () => {
-    // hasBardicInspiration calls getRuntimeValue once, then defense path checks bardicInspirationUses
     getRuntimeValue
       .mockReturnValueOnce(null)   // hasBardicInspiration check (die = null => false)
       .mockReturnValueOnce(null);  // bardicInspirationUses
