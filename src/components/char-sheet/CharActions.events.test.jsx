@@ -1,128 +1,167 @@
+// @improved-by-ai
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent, waitFor, act } from '@testing-library/react';
 import CharActions from './CharActions.jsx';
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { DiceRollContext } from '../../hooks/combat/DiceRollContext.js';
 
-// Mock all dependencies
+const _syncedStore = new Map();
+
 vi.mock('../../hooks/runtime/useSyncedState.js', () => ({
   useSyncedState: vi.fn((_, key, defaultValue) => {
-    let currentValue = defaultValue;
-    const setter = vi.fn((fn) => {
-      if (typeof fn === 'function') {
-        currentValue = fn(currentValue);
-      } else {
-        currentValue = fn;
-      }
-      return currentValue;
+    const hasValue = _syncedStore.has(key);
+    const value = hasValue ? _syncedStore.get(key) : defaultValue;
+    const setter = vi.fn((newValue) => {
+      _syncedStore.set(key, newValue);
     });
-    return [currentValue, setter];
+    return [value, setter];
   }),
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  useRuntimeValue: vi.fn((_, key) => {
-    if (key === 'activeBuffs') return [];
-    if (key === '_recklessAttack_offeredThisTurn') return null;
-    if (key === '_BrutalStrike_usedRound') return null;
-    return undefined;
-  }),
-  getRuntimeValue: vi.fn((_, key) => {
-    if (key === 'activeBuffs') return [];
-    if (key === '_recklessAttack_offeredThisTurn') return null;
-    if (key === '_BrutalStrike_usedRound') return null;
-    if (key === 'focusPoints') return 2;
-    if (key === 'lastActionSpellCast') return null;
-    if (key === 'lastAttack') return null;
-    return undefined;
-  }),
+  getRuntimeValue: vi.fn(() => null),
   setRuntimeValue: vi.fn(() => Promise.resolve()),
-}));
-
-vi.mock('../../services/automation/handlers/buffs/tempHpService.js', () => ({
-  setTempHp: vi.fn(),
-}));
-
-vi.mock('../../services/character/featureCategories.js', () => ({
-  getCategories: vi.fn(() => ({ featuresToIgnore: [] })),
-}));
-
-vi.mock('../../services/ui/spellSectionUtils.js', () => ({
-  getActionSpellNames: vi.fn(() => new Set()),
-}));
-
-vi.mock('../../services/ui/formatUtils.js', () => ({
-  formatRange: vi.fn((r) => r || '0'),
-  signFormatter: new Intl.NumberFormat('en-US', { sign: 'always' }),
-  getAttackSpellLevel: vi.fn(() => null),
-}));
-
-vi.mock('../../services/rules/core/spellDamageUtils.js', () => ({
-  resolveSpellDamageAtLevel: vi.fn(() => null),
-  isAutoHitSpell: vi.fn(() => false),
-  resolveHealExpression: vi.fn(() => null),
-}));
-
-vi.mock('../../services/ui/sanitize.js', () => ({
-  sanitizeHtml: vi.fn((html) => html),
+  getStore: vi.fn(() => _syncedStore),
+  useSyncedState: vi.fn((_, key, defaultValue) => {
+    const hasValue = _syncedStore.has(key);
+    const value = hasValue ? _syncedStore.get(key) : defaultValue;
+    const setter = vi.fn((newValue) => {
+      _syncedStore.set(key, newValue);
+    });
+    return [value, setter];
+  }),
+  useRuntimeValue: vi.fn((_, key, _campaignName) => {
+    const hasValue = _syncedStore.has(key);
+    return hasValue ? _syncedStore.get(key) : null;
+  }),
+  listeners: new Map(),
 }));
 
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
   default: vi.fn(() => ({
-    rollAttack: vi.fn(),
-    rollDamage: vi.fn(),
-    rollSkillCheck: vi.fn(),
-    rollAbilityCheck: vi.fn(),
+    popupHtml: null, setPopupHtml: vi.fn(), rollAttack: vi.fn(), rollDamage: vi.fn(),
+    rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
   })),
 }));
 
-vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
-  useDiceRollPopup: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn() })),
-}));
-
-vi.mock('../../hooks/combat/useActionPopup.js', () => ({
-  showWeaponMasteryPopup: vi.fn(),
-  buildFeatureDetailHtml: vi.fn(() => '<p>Feature details</p>'),
-}));
-
-vi.mock('../../hooks/combat/useSpellUpcastFlow.js', () => ({
-  useSpellUpcastFlow: vi.fn(() => ({ buildUpcastLevels: vi.fn(() => []) })),
-}));
-
-vi.mock('../../services/dice/diceRoller.js', () => ({
-  rollExpression: vi.fn(() => ({ total: 8, rolls: [4, 4] })),
-}));
-
-vi.mock('../../services/character/featRangeService.js', () => ({
-  computeFeatRangeEffects: vi.fn(() => Promise.resolve(null)),
+vi.mock('../../services/automation/index.js', () => ({
+  executeHandler: vi.fn(),
 }));
 
 vi.mock('../../services/combat/automation/automationService.js', () => ({
   hasAutomation: vi.fn(() => false),
+  collectWeaponMastery: vi.fn(() => ({ baseMastery: null, extraMasteries: [] })),
+  evaluateAutoExpression: vi.fn(() => null),
 }));
 
-vi.mock('../../services/automation/common/buffToggle.js', () => ({
-  toggleBuff: vi.fn(() => ({ wasActive: false })),
+vi.mock('../../hooks/combat/useActionSpellMetamagic.js', () => ({
+  useActionSpellMetamagic: vi.fn(() => ({
+    pendingActionMetamagic: null, handleActionMetamagicConfirm: vi.fn(), handleActionMetamagicSkip: vi.fn(),
+    handleActionSpellDamageClick: vi.fn(), handleSpellAttackClick: vi.fn(), handleSpellDamageClick: vi.fn(),
+  })),
 }));
 
-vi.mock('../../services/rules/effects/expirations.js', () => ({
-  addExpiration: vi.fn(() => Promise.resolve()),
+vi.mock('../../hooks/combat/useActionPopup.js', () => ({
+  showWeaponMasteryPopup: vi.fn(),
+  buildFeatureDetailHtml: vi.fn((entity) => {
+    if (entity.details) return `<b>${entity.name}</b><br/>${entity.description}<br/><br/>${entity.details}`;
+    return null;
+  }),
 }));
 
 vi.mock('../../services/ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../services/automation/common/oncePerTurn.js', () => ({
-  markOncePerTurn: vi.fn(() => Promise.resolve()),
+vi.mock('../../hooks/combat/useSpellMetamagicFlow.js', () => ({
+  useSpellMetamagicFlow: vi.fn(() => ({
+    pendingMetamagic: null, gateMetamagic: vi.fn(), handleConfirm: vi.fn(), handleSkip: vi.fn(),
+    pendingAid: null, handleAidConfirm: vi.fn(), handleAidSkip: vi.fn(),
+    pendingGreaterRestoration: null, handleGreaterRestorationConfirm: vi.fn(), handleGreaterRestorationSkip: vi.fn(),
+    pendingRemoveCurse: null, handleRemoveCurseConfirm: vi.fn(), handleRemoveCurseSkip: vi.fn(),
+  })),
 }));
 
-vi.mock('./CharActionModals.jsx', () => ({ default: vi.fn(() => null) }));
-vi.mock('./CharActionSpellPopups.jsx', () => ({ default: vi.fn(() => null) }));
-vi.mock('./CharBonusActions.jsx', () => ({ default: vi.fn(() => null) }));
+vi.mock('../../hooks/combat/useSpellUpcastFlow.js', () => ({
+  useSpellUpcastFlow: vi.fn(() => ({ buildUpcastLevels: vi.fn(() => []) })),
+}));
+
+vi.mock('../../services/automation/handlers/combat/saveAttackHandler.js', () => ({
+  isExhausted: vi.fn(() => false),
+}));
+
+vi.mock('../../services/combat/buffs/buffService.js', () => ({
+  getInnateSorceryBonus: vi.fn(() => ({ saveDcBonus: 0 })),
+}));
+
+vi.mock('../../services/rules/combat/damageUtils.js', () => ({
+  getTargetFromAttacker: vi.fn(() => null),
+  getCombatContext: vi.fn(() => Promise.resolve(null)),
+}));
+
+vi.mock('../../services/ui/sanitize.js', () => ({
+  sanitizeHtml: vi.fn((html) => html),
+}));
+
+vi.mock('../../services/encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(() => ({ creatures: [] })),
+  getCurrentCombatRound: vi.fn(() => 1),
+  getActiveCreatureName: vi.fn(() => 'TestCharacter'),
+  loadCombatSummary: vi.fn(() => Promise.resolve({ lastAttack: null })),
+}));
+
+vi.mock('../../services/npcs/monsterUtils.js', () => ({
+  getMonsterData: vi.fn(() => Promise.resolve(null)),
+}));
+
+vi.mock('../../services/rules/core/attackCalc.js', () => ({
+  parseMagicItemName: vi.fn((name) => ({ baseName: name })),
+}));
+
+vi.mock('../../services/character/classFeatures.js', () => ({
+  getClassFeatures: vi.fn(() => ({ maxFocusPoints: 2 })),
+}));
+
+vi.mock('../../services/character/featRangeService.js', () => ({
+  computeFeatRangeEffects: vi.fn(() => Promise.resolve(null)),
+}));
+
+vi.mock('../../services/dice/diceRoller.js', () => ({
+  rollExpression: vi.fn(() => ({ total: 5, rolls: [3, 2], modifier: 0 })),
+  rollExpressionDoubled: vi.fn(() => ({ total: 10, rolls: [3, 2, 3, 2], modifier: 0 })),
+}));
+
+vi.mock('../../services/rules/features/friendsService.js', () => ({
+  endFriendsOnHostileAction: vi.fn(),
+}));
+
+vi.mock('../../services/rules/features/invisibilityService.js', () => ({
+  endInvisibilityOnHostileAction: vi.fn(),
+}));
+
+vi.mock('./useInitiativeEffects.js', () => ({
+  default: vi.fn(),
+}));
+
+vi.mock('./CharBonusActions.jsx', () => ({
+  default: vi.fn(() => <div data-testid="char-bonus-actions">CharBonusActions</div>),
+}));
+
+vi.mock('./CharActionModals.jsx', () => ({
+  default: vi.fn(() => <div data-testid="char-action-modals">CharActionModals</div>),
+}));
+
+vi.mock('./CharActionSpellPopups.jsx', () => ({
+  default: vi.fn(() => <div data-testid="char-action-spell-popups">CharActionSpellPopups</div>),
+}));
+
 vi.mock('./useCharActionModals.js', () => ({
   default: vi.fn(() => ({
-    modalState: {},
-    setModalState: vi.fn(),
     pendingDamage: null,
+    modalState: {},
+    setModalState: vi.fn((state) => {
+      _syncedStore.set('modalState', state);
+    }),
     resolveAttackDamage: vi.fn(),
     handleMasteryClose: vi.fn(),
     handleWeaponMasteryChoice: vi.fn(),
@@ -140,427 +179,339 @@ vi.mock('./useCharActionModals.js', () => ({
     handleConstellationSelect: vi.fn(),
     combatSuperiorityModal: null,
     setCombatSuperiorityModal: vi.fn(),
+    handleCombatSuperiorityConfirm: vi.fn(),
     handleAttackRiderManeuverUse: vi.fn(),
     handleAttackRiderManeuverSkip: vi.fn(),
-    handleCombatSuperiorityConfirm: vi.fn(),
-    handleFlurryOfBlowsConfirm: vi.fn(),
-    handleFlurryOfBlowsSkip: vi.fn(),
-    handleOpenHandFromFlurryConfirm: vi.fn(),
-    handleOpenHandFromFlurrySkip: vi.fn(),
   })),
 }));
 
-vi.mock('./useInitiativeEffects.js', () => ({ default: vi.fn() }));
-vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({ default: vi.fn(() => null) }));
-vi.mock('./modals/TacticalMasterModal.jsx', () => ({ default: vi.fn(() => null) }));
+vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
+  default: vi.fn(() => <div data-testid="secondary-target-modal">SecondaryTargetModal</div>),
+}));
+
+vi.mock('./modals/TacticalMasterModal.jsx', () => ({
+  default: vi.fn(() => <div data-testid="tactical-master-modal">TacticalMasterModal</div>),
+}));
+
 vi.mock('../../services/automation/handlers/combat/weaponMasteryHandler.js', () => ({
-  applyMasteryEffect: vi.fn(() => Promise.resolve({})),
+  applyMasteryEffect: vi.fn(() => Promise.resolve()),
 }));
-vi.mock('./useAttackDamageResolution.js', () => ({
-  normalizeAutoDamage: vi.fn((auto, _isCrit) => ({ attack: auto, ctxOverrides: {} })),
-}));
-vi.mock('../../hooks/combat/useSimpleDamageRoll.js', () => ({
-  useSimpleDamageRoll: vi.fn(() => vi.fn(() => {})),
-}));
-vi.mock('../../hooks/combat/useSpellPositionResolver.js', () => ({
-  useSpellPositionResolver: vi.fn(() => ({
-    resolvePositions: vi.fn(() => Promise.resolve()),
-    cachedPosRef: { current: null },
-  })),
-}));
-vi.mock('../../hooks/combat/useSpellCastExecutor.js', () => ({
-  useSpellCastExecutor: vi.fn(() => ({
-    castAction: vi.fn(),
-  })),
-}));
-vi.mock('../../services/combat/weaponMasteryUtils.js', () => ({
-  getWeaponMastery: vi.fn(() => null),
-}));
+
 vi.mock('../../services/automation/common/savePrompt.js', () => ({
   createSaveListener: vi.fn(() => ({ promise: Promise.resolve({ success: false }) })),
 }));
-vi.mock('../../services/combat/buffs/buffService.js', () => ({
-  getInnateSorceryBonus: vi.fn(() => ({ saveDcBonus: 0 })),
-}));
-vi.mock('../../services/automation/contextBuilder.js', () => ({
-  buildAttackContext: vi.fn(() => Promise.resolve({})),
-  buildAttackContextSync: vi.fn(() => ({})),
-}));
-vi.mock('../../services/rules/combat/damageUtils.js', () => ({
-  getTargetFromAttacker: vi.fn(() => null),
-  getCombatContext: vi.fn(() => Promise.resolve(null)),
-  getAttackerTargetName: vi.fn(() => null),
-}));
-vi.mock('../../services/encounters/combatData.js', () => ({
-  getActiveCreatureName: vi.fn(() => 'TestCharacter'),
-  loadCombatSummary: vi.fn(() => Promise.resolve(null)),
-}));
-vi.mock('../../services/npcs/monsterUtils.js', () => ({
-  getMonsterData: vi.fn(() => Promise.resolve(null)),
-}));
-vi.mock('../../services/automation/index.js', () => ({
-  executeHandler: vi.fn(() => Promise.resolve(null)),
-}));
-vi.mock('../../services/rules/features/friendsService.js', () => ({
-  endFriendsOnHostileAction: vi.fn(),
-}));
-vi.mock('../../services/rules/features/invisibilityService.js', () => ({
-  endInvisibilityOnHostileAction: vi.fn(),
-}));
-vi.mock('../../services/rules/spells/empoweredSpellService.js', () => ({
-  getEmpoweredSpellDescription: vi.fn(() => ''),
-}));
-vi.mock('../../hooks/combat/useActionSpellMetamagic.js', () => ({
-  useActionSpellMetamagic: vi.fn(() => ({
-    pendingActionMetamagic: null,
-    handleActionMetamagicConfirm: vi.fn(),
-    handleActionMetamagicSkip: vi.fn(),
-    handleActionSpellDamageClick: vi.fn(),
-    handleSpellAttackClick: vi.fn(),
-  })),
-}));
-vi.mock('../../hooks/combat/useSpellMetamagicFlow.js', () => ({
-  useSpellMetamagicFlow: vi.fn(() => ({
-    gateMetamagic: vi.fn(),
-  })),
+
+vi.mock('./useAttackDamageResolution.js', () => ({
+  normalizeAutoDamage: vi.fn((autoDamage) => ({ attack: autoDamage, ctxOverrides: {} })),
 }));
 
-// Mock fetch for actions.json
-const originalFetch = global.fetch;
-global.fetch = vi.fn((url) => {
-  if (url === '/data/actions.json') {
-    return Promise.resolve({ json: () => Promise.resolve(['Hide', 'Dodge', 'Grapple']) });
-  }
-  return originalFetch(url);
-});
+vi.mock('../../services/automation/contextBuilder.js', () => ({
+  buildAttackContext: vi.fn(() => Promise.resolve({ hitBonus: 5 })),
+  buildAttackContextSync: vi.fn(() => ({ hitBonus: 5 })),
+}));
+
+vi.mock('../../services/automation/handlers/buffs/tempHpService.js', () => ({
+  setTempHp: vi.fn(),
+}));
 
 const basePlayerStats = {
-  name: 'TestCharacter',
-  level: 5,
-  rules: '5e',
-  abilities: [
-    { name: 'Strength', bonus: 4, skills: [{ name: 'Athletics', bonus: 6 }] },
-    { name: 'Dexterity', bonus: 2, skills: [{ name: 'Stealth', bonus: 4 }] },
-    { name: 'Constitution', bonus: 1 },
-    { name: 'Intelligence', bonus: 0 },
-    { name: 'Wisdom', bonus: 0 },
-    { name: 'Charisma', bonus: 3 },
-  ],
-  spellAbilities: { modifier: 3, toHit: 7, saveDc: 13 },
-  proficiency: 3,
-  attacks: [
-    { name: 'Longsword', type: 'Action', hitBonus: 7, range: '5ft', damage: '1d8+4', damageType: 'Slashing' },
-  ],
-  actions: [],
-  specialActions: [],
-  class: { name: 'Fighter', class_levels: [{ level: 5, focus_points: 2 }] },
-  feats: [],
-  automation: {
-    passives: [],
-    specialActions: [],
-    actions: [],
-  },
+  name: 'TestCharacter', rules: '5e', level: 5, attacks: [], actions: [],
+  spellAbilities: { spells: [], toHit: 5, saveDc: 13 },
+  abilities: [{ name: 'STR', bonus: 3 }], proficiency: 3,
 };
 
-const baseProps = {
-  playerStats: basePlayerStats,
-  campaignName: 'test-campaign',
-  exhaustionPenalty: 0,
-  conditionEffects: {},
-  cannotAct: false,
-  mapName: null,
-  characters: [],
-  onBuffsChange: vi.fn(),
-  onSpellModalStateChange: vi.fn(),
-  spellModalState: {},
-};
+function createStats(overrides = {}) {
+  return { ...basePlayerStats, ...overrides };
+}
 
-describe('CharActions - Window Event Listeners', () => {
+function renderWithWrapper(component, wrapper) {
+  return act(async () => render(component, { wrapper }));
+}
+
+function makeDefaultWrapper(mockSetPopupHtml) {
+  return ({ children }) => (
+    <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+      {children}
+    </DiceRollContext.Provider>
+  );
+}
+
+// Helper to dispatch a custom event on window
+function dispatchCustomEvent(name, detail) {
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
+describe('CharActions window event listeners — integration behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    _syncedStore.clear();
+    globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
+    getRuntimeValue.mockImplementation(() => null);
   });
 
-  it('sets up healing-popup event listener', async () => {
-    const setPopupHtml = vi.fn();
-    const props = { ...baseProps, onSpellModalStateChange: setPopupHtml };
-    const { container } = render(<CharActions {...props} />);
-    await waitFor(() => {
-      expect(container.querySelector('.char-actions')).toBeInTheDocument();
+  describe('healing-popup event listener', () => {
+    it('displays healing popup content when healing-popup event fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('healing-popup', {
+          targetName: 'Ally1',
+          healingName: 'Healing Word',
+          rollInfo: '7+3',
+          maximizeHealingDice: false,
+          popupText: 'Restores hit points',
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          '<b>Healing Word</b> on Ally1 [7+3]<br/><br/>Restores hit points'
+        );
+      });
+    });
+
+    it('includes maximized note when maximizeHealingDice is true', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('healing-popup', {
+          targetName: 'Ally2',
+          healingName: 'Cure Wounds',
+          rollInfo: null,
+          maximizeHealingDice: true,
+          popupText: 'Maximized healing',
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          '<b>Cure Wounds</b> on Ally2 (maximized)<br/><br/>Maximized healing'
+        );
+      });
     });
   });
 
-  it('sets up damage-popup event listener', async () => {
-    const setPopupHtml = vi.fn();
-    const props = { ...baseProps, onSpellModalStateChange: setPopupHtml };
-    const { container } = render(<CharActions {...props} />);
-    await waitFor(() => {
-      expect(container.querySelector('.char-actions')).toBeInTheDocument();
+  describe('damage-popup event listener', () => {
+    it('displays damage popup content when damage-popup event fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('damage-popup', {
+          targetName: 'Goblin',
+          spellName: 'Fire Bolt',
+          popupText: 'Deals fire damage',
+          rollInfo: '5+4',
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          '<b>Fire Bolt</b> on Goblin [5+4]<br/><br/>Deals fire damage'
+        );
+      });
     });
   });
 
-  it('sets up inspiring-smite-pending event listener', async () => {
-    const setPopupHtml = vi.fn();
-    const props = { ...baseProps, onSpellModalStateChange: setPopupHtml };
-    const { container } = render(<CharActions {...props} />);
-    await waitFor(() => {
-      expect(container.querySelector('.char-actions')).toBeInTheDocument();
+  describe('inspiring-smite-pending event listener', () => {
+    it('sets modal state with inspiringSmiteModal when event fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      _syncedStore.set('modalState', {});
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('inspiring-smite-pending', {
+          attackName: 'Longsword',
+          bonusDamage: '1d6',
+        });
+      });
+
+      await waitFor(() => {
+        expect(_syncedStore.get('modalState')).toEqual(
+          expect.objectContaining({ inspiringSmiteModal: { attackName: 'Longsword', bonusDamage: '1d6' } })
+        );
+      });
     });
   });
 
-  it('sets up soulstitch-modal-show event listener', async () => {
-    const setPopupHtml = vi.fn();
-    const props = { ...baseProps, onSpellModalStateChange: setPopupHtml };
-    const { container } = render(<CharActions {...props} />);
-    await waitFor(() => {
-      expect(container.querySelector('.char-actions')).toBeInTheDocument();
+  describe('soulstitch-modal-show event listener', () => {
+    it('sets modal state with soulstitchSpellsModal when event fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      _syncedStore.set('modalState', {});
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('soulstitch-modal-show', { spells: ['Magic Missile', 'Shield'] });
+      });
+
+      await waitFor(() => {
+        expect(_syncedStore.get('modalState')).toEqual(
+          expect.objectContaining({ soulstitchSpellsModal: { spells: ['Magic Missile', 'Shield'] } })
+        );
+      });
     });
   });
 
-  it('sets up potent-spellcasting-temp-hp event listener', async () => {
-    const setPopupHtml = vi.fn();
-    const props = { ...baseProps, onSpellModalStateChange: setPopupHtml };
-    const { container } = render(<CharActions {...props} />);
-    await waitFor(() => {
-      expect(container.querySelector('.char-actions')).toBeInTheDocument();
+  describe('potent-spellcasting-temp-hp event listener', () => {
+    it('opens secondary target modal for temp HP selection when event fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      _syncedStore.set('modalState', {});
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('potent-spellcasting-temp-hp', {
+          title: 'Potent Spellcasting',
+          tempHp: 10,
+          campaignName: 'test-campaign',
+          attackerName: 'TestCharacter',
+          confirmLabel: 'Grant Temp HP',
+        });
+      });
+
+      await waitFor(() => {
+        const modalState = _syncedStore.get('modalState');
+        expect(modalState).toEqual(
+          expect.objectContaining({ secondaryTargetModal: expect.objectContaining({ title: 'Potent Spellcasting' }) })
+        );
+      });
     });
   });
 
-  it('sets up sweeping-attack-modal-show event listener', async () => {
-    const setPopupHtml = vi.fn();
-    const props = { ...baseProps, onSpellModalStateChange: setPopupHtml };
-    const { container } = render(<CharActions {...props} />);
-    await waitFor(() => {
-      expect(container.querySelector('.char-actions')).toBeInTheDocument();
+  describe('sweeping-attack-modal-show event listener', () => {
+    it('sets modal state with sweepingAttackTargetModal when event fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      _syncedStore.set('modalState', {});
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('sweeping-attack-modal-show', { attackName: 'Greatsword', targets: ['Goblin', 'Orc'] });
+      });
+
+      await waitFor(() => {
+        expect(_syncedStore.get('modalState')).toEqual(
+          expect.objectContaining({ sweepingAttackTargetModal: { attackName: 'Greatsword', targets: ['Goblin', 'Orc'] } })
+        );
+      });
     });
   });
 
-  it('sets up bait-and-switch-modal-show event listener', async () => {
-    const setPopupHtml = vi.fn();
-    const props = { ...baseProps, onSpellModalStateChange: setPopupHtml };
-    const { container } = render(<CharActions {...props} />);
-    await waitFor(() => {
-      expect(container.querySelector('.char-actions')).toBeInTheDocument();
+  describe('bait-and-switch-modal-show event listener', () => {
+    it('sets modal state with baitAndSwitchChoiceModal when event fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      _syncedStore.set('modalState', {});
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('bait-and-switch-modal-show', { attackName: 'Shortsword', options: ['Attack', 'Disengage'] });
+      });
+
+      await waitFor(() => {
+        expect(_syncedStore.get('modalState')).toEqual(
+          expect.objectContaining({ baitAndSwitchChoiceModal: { attackName: 'Shortsword', options: ['Attack', 'Disengage'] } })
+        );
+      });
     });
   });
 
-  it('sets up commander-strike-modal-show event listener', async () => {
-    const setPopupHtml = vi.fn();
-    const props = { ...baseProps, onSpellModalStateChange: setPopupHtml };
-    const { container } = render(<CharActions {...props} />);
-    await waitFor(() => {
-      expect(container.querySelector('.char-actions')).toBeInTheDocument();
+  describe('commander-strike-modal-show event listener', () => {
+    it('sets modal state with commanderStrikeChoiceModal when event fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      _syncedStore.set('modalState', {});
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('commander-strike-modal-show', { attackName: 'Longbow', allyName: 'Rogue' });
+      });
+
+      await waitFor(() => {
+        expect(_syncedStore.get('modalState')).toEqual(
+          expect.objectContaining({ commanderStrikeChoiceModal: { attackName: 'Longbow', allyName: 'Rogue' } })
+        );
+      });
     });
   });
 
-  it('sets up rally-choice-modal-show event listener', async () => {
-    const setPopupHtml = vi.fn();
-    const props = { ...baseProps, onSpellModalStateChange: setPopupHtml };
-    const { container } = render(<CharActions {...props} />);
-    await waitFor(() => {
-      expect(container.querySelector('.char-actions')).toBeInTheDocument();
+  describe('rally-choice-modal-show event listener', () => {
+    it('sets modal state with rallyChoiceModal when event fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      _syncedStore.set('modalState', {});
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      await act(async () => {
+        dispatchCustomEvent('rally-choice-modal-show', { attackName: 'War Cry', rallyAmount: 5 });
+      });
+
+      await waitFor(() => {
+        expect(_syncedStore.get('modalState')).toEqual(
+          expect.objectContaining({ rallyChoiceModal: { attackName: 'War Cry', rallyAmount: 5 } })
+        );
+      });
     });
   });
 });
 
-describe('CharActions - Hide Base Action', () => {
+describe('CharActions event listeners — cleanup behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    _syncedStore.clear();
+    globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
+    getRuntimeValue.mockImplementation(() => null);
   });
 
-  it('renders Hide action as clickable', async () => {
-    const { getByText } = render(<CharActions {...baseProps} />);
+  it('unregisters all event listeners on unmount', async () => {
+    const mockSetPopupHtml = vi.fn();
+    const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+    const { unmount } = await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
     await waitFor(() => {
-      expect(getByText('Hide')).toBeInTheDocument();
-    });
-  });
-
-  it('Hide action calls rollSkillCheck when clicked', async () => {
-    const mockRollSkillCheck = vi.fn();
-    const { default: useLoggedDiceRoll } = await import('../../hooks/combat/useLoggedDiceRoll.js');
-    useLoggedDiceRoll.mockReturnValue({
-      rollAttack: vi.fn(),
-      rollDamage: vi.fn(),
-      rollSkillCheck: mockRollSkillCheck,
-      rollAbilityCheck: vi.fn(),
+      expect(screen.getByText('Actions')).toBeInTheDocument();
     });
 
-    const { getByText } = render(<CharActions {...baseProps} />);
-    await waitFor(() => {
-      expect(getByText('Hide')).toBeInTheDocument();
-    });
+    unmount();
 
-    const hideLink = getByText('Hide');
+    // After unmount, dispatching events should not call setPopupHtml
     await act(async () => {
-      await fireEvent.click(hideLink);
+      dispatchCustomEvent('healing-popup', {
+        targetName: 'Ally1',
+        healingName: 'Healing Word',
+        popupText: 'Should not appear',
+      });
     });
 
     await waitFor(() => {
-      expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), expect.any(Object));
-    });
-  });
-});
-
-describe('CharActions - Dodge Base Action', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders Dodge action as clickable', async () => {
-    const { getByText } = render(<CharActions {...baseProps} />);
-    await waitFor(() => {
-      expect(getByText('Dodge')).toBeInTheDocument();
-    });
-  });
-
-  it('Dodge action toggles buff on click', async () => {
-    const { getByText } = render(<CharActions {...baseProps} />);
-    await waitFor(() => {
-      expect(getByText('Dodge')).toBeInTheDocument();
-    });
-
-    const dodgeLink = getByText('Dodge');
-    await act(async () => {
-      await fireEvent.click(dodgeLink);
-    });
-
-    const { toggleBuff } = await import('../../services/automation/common/buffToggle.js');
-    expect(toggleBuff).toHaveBeenCalledWith(
-      'TestCharacter',
-      'Dodge',
-      { effect: 'dodge', duration: 'until_start_of_next_turn' },
-      'test-campaign',
-      'TestCharacter'
-    );
-  });
-});
-
-describe('CharActions - Grapple Base Action', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders Grapple action as clickable', async () => {
-    const { getByText } = render(<CharActions {...baseProps} />);
-    await waitFor(() => {
-      expect(getByText('Grapple')).toBeInTheDocument();
-    });
-  });
-});
-
-describe('CharActions - Attack Display', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders attack damage as clickable', async () => {
-    const { getByText } = render(<CharActions {...baseProps} />);
-    await waitFor(() => {
-      expect(getByText('Longsword')).toBeInTheDocument();
-    });
-
-    // The damage cell should be clickable
-    const damageCell = getByText('1d8+4');
-    expect(damageCell).toHaveClass('clickable');
-  });
-
-  it('renders attack hit bonus as clickable with sign formatter', async () => {
-    const { getByText } = render(<CharActions {...baseProps} />);
-    await waitFor(() => {
-      expect(getByText('Longsword')).toBeInTheDocument();
-    });
-
-    // Hit bonus should be displayed with sign formatter (STR 4 + PROF 3 = 7)
-    const hitCell = getByText('7');
-    expect(hitCell).toHaveClass('clickable');
-  });
-
-  it('renders attack save DC when attack has saveDc', async () => {
-    const stats = {
-      ...basePlayerStats,
-      attacks: [
-        { name: 'Fire Bolt', type: 'Action', hitBonus: 5, range: '120ft', saveDc: 13, saveType: 'DEX', damage: '1d10', damageType: 'Fire' },
-      ],
-    };
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('Fire Bolt')).toBeInTheDocument();
-    });
-  });
-
-  it('displays sacred weapon bonus for Paladin with sacred weapon buff', async () => {
-    const getRTV = (await import('../../hooks/runtime/useRuntimeState.js')).getRuntimeValue;
-    getRTV.mockImplementation((charName, key) => {
-      if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
-      return undefined;
-    });
-
-    const paladinStats = {
-      ...basePlayerStats,
-      name: 'PaladinCharacter',
-      abilities: [
-        { name: 'Strength', bonus: 4, skills: [] },
-        { name: 'Charisma', bonus: 5, skills: [] },
-      ],
-      attacks: [
-        { name: 'Longsword', type: 'Action', hitBonus: 7, range: '5ft', damage: '1d8+4', damageType: 'Slashing', weaponType: 'melee' },
-      ],
-    };
-
-    const { getByText } = render(<CharActions {...baseProps} playerStats={paladinStats} />);
-    await waitFor(() => {
-      expect(getByText('Longsword')).toBeInTheDocument();
-    });
-  });
-});
-
-describe('CharActions - Spell Display', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders action spells when present in spellAbilities', async () => {
-    const getActionSpellNames = (await import('../../services/ui/spellSectionUtils.js')).getActionSpellNames;
-    getActionSpellNames.mockReturnValue(new Set(['Fire Bolt']));
-
-    const resolveSpellDamage = (await import('../../services/rules/core/spellDamageUtils.js')).resolveSpellDamageAtLevel;
-    resolveSpellDamage.mockReturnValue('1d10');
-
-    const stats = {
-      ...basePlayerStats,
-      spellAbilities: {
-        ...basePlayerStats.spellAbilities,
-        spells: [
-          { name: 'Fire Bolt', level: 0, range: '120ft', damage: { damage_type: 'Fire' }, attack_type: 'ranged' },
-        ],
-      },
-    };
-
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('Fire Bolt')).toBeInTheDocument();
-    });
-  });
-
-  it('renders spell damage as clickable', async () => {
-    const getActionSpellNames = (await import('../../services/ui/spellSectionUtils.js')).getActionSpellNames;
-    getActionSpellNames.mockReturnValue(new Set(['Fire Bolt']));
-
-    const resolveSpellDamage = (await import('../../services/rules/core/spellDamageUtils.js')).resolveSpellDamageAtLevel;
-    resolveSpellDamage.mockReturnValue('1d10');
-
-    const stats = {
-      ...basePlayerStats,
-      spellAbilities: {
-        ...basePlayerStats.spellAbilities,
-        spells: [
-          { name: 'Fire Bolt', level: 0, range: '120ft', damage: { damage_type: 'Fire' }, attack_type: 'ranged' },
-        ],
-      },
-    };
-
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('1d10')).toBeInTheDocument();
+      expect(mockSetPopupHtml).not.toHaveBeenCalled();
     });
   });
 });

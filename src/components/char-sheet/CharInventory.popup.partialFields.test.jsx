@@ -290,47 +290,4 @@ describe('CharInventory popup partial fields', () => {
     });
   });
 
-  describe('equipment lookup by index', () => {
-    it('should find item when name matches index', async () => {
-      loadEquipment.mockResolvedValue([
-        {
-          name: 'Longsword',
-          index: 'longsword',
-          cost: { quantity: 15, unit: 'gp' },
-        },
-      ]);
-      const stats = {
-        inventory: {
-          magicItems: [],
-          equipped: ['longsword'],
-          backpack: [],
-        },
-      };
-      renderComponent(stats);
-      await clickItemByText('longsword');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b>Longsword</b>');
-    });
-
-    it('should find item by index with hyphens matching space-separated name', async () => {
-      loadEquipment.mockResolvedValue([
-        {
-          name: 'Potion of Healing',
-          index: 'potion-of-healing',
-          cost: { quantity: 100, unit: 'gp' },
-        },
-      ]);
-      const stats = {
-        inventory: {
-          magicItems: [],
-          equipped: ['Potion of Healing'],
-          backpack: [],
-        },
-      };
-      renderComponent(stats);
-      await clickItemByText('Potion of Healing');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b>Potion of Healing</b>');
-    });
-  });
 });

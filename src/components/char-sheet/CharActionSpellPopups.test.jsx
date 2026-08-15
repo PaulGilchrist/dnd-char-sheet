@@ -1,14 +1,11 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CharActionSpellPopups from './CharActionSpellPopups.jsx';
 
 vi.mock('../common/popup.jsx', () => ({
-  default: function TestPopup({ children, onClickOrKeyDown }) {
-    return (
-      <div data-testid="popup" onClick={onClickOrKeyDown}>
-        {children}
-      </div>
-    );
+  default: function TestPopup({ children }) {
+    return <div data-testid="popup">{children}</div>;
   },
 }));
 
@@ -28,30 +25,18 @@ vi.mock('./popups/MetamagicPopup.jsx', () => ({
 vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
   default: function TestCreatureSelectionModal({ title, icon, targets, maxTargets, description, confirmLabel, confirmIcon: _, onConfirm, onSkip }) {
     return (
-      <div data-testid="aid-target-popup">
-        <span data-testid="aid-title">{title}</span>
-        <span data-testid="aid-icon">{icon}</span>
-        <span data-testid="aid-description">{description}</span>
-        <span data-testid="aid-creature-count">{targets?.length}</span>
-        <span data-testid="aid-max-targets">{maxTargets}</span>
-        <span data-testid="aid-confirm-label">{confirmLabel}</span>
-        {onConfirm && <button data-testid="aid-confirm" onClick={() => onConfirm(targets?.map(t => t.name || t))}>Confirm</button>}
-        {onSkip && <button data-testid="aid-skip" onClick={onSkip}>Skip</button>}
-      </div>
-    );
-  },
-}));
-
-vi.mock('./popups/TargetWithCheckboxesPopup.jsx', () => ({
-  default: function TestTargetWithCheckboxesPopup({ spell, creatureTargets, range, onConfirm, onSkip }) {
-    return (
-      <div data-testid="checkbox-popup">
-        <span data-testid="checkbox-spell-name">{spell?.name}</span>
-        <span data-testid="checkbox-spell-level">{spell?.level}</span>
-        <span data-testid="checkbox-creature-count">{creatureTargets?.length}</span>
-        <span data-testid="checkbox-range">{range}</span>
-        {onConfirm && <button data-testid="checkbox-confirm" onClick={onConfirm}>Confirm</button>}
-        {onSkip && <button data-testid="checkbox-skip" onClick={onSkip}>Skip</button>}
+      <div data-testid={`creature-selection-${title}`}>
+        <span data-testid="title">{title}</span>
+        <span data-testid="icon">{icon}</span>
+        <span data-testid="description">{description}</span>
+        <span data-testid="creature-count">{targets?.length}</span>
+        <span data-testid="max-targets">{maxTargets}</span>
+        <span data-testid="confirm-label">{confirmLabel}</span>
+        {onConfirm && <button data-testid="confirm" onClick={() => onConfirm(targets?.map(t => t.name || t))}>Confirm</button>}
+        {onSkip && <button data-testid="skip" onClick={onSkip}>Skip</button>}
+        {targets?.map((t, i) => (
+          <span key={i} data-testid={`target-${i}`}>{typeof t === 'string' ? t : t.name}</span>
+        ))}
       </div>
     );
   },
@@ -94,6 +79,24 @@ vi.mock('./popups/MagicMissileTargetPopup.jsx', () => ({
   },
 }));
 
+vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
+  default: function TestSecondaryTargetModal({ title, targets, onTargetSelected, onSkip, description, confirmLabel }) {
+    return (
+      <div data-testid={`secondary-modal-${title}`}>
+        <span data-testid="title">{title}</span>
+        <span data-testid="description">{description}</span>
+        <span data-testid="confirm-label">{confirmLabel}</span>
+        {targets?.map((t, i) => (
+          <span key={i} data-testid={`target-${i}`} onClick={() => onTargetSelected(t.value !== undefined ? t.value : t.name)}>
+            {t.value !== undefined ? t.label : t.name}
+          </span>
+        ))}
+        <button data-testid="skip" onClick={onSkip}>Skip</button>
+      </div>
+    );
+  },
+}));
+
 const mockedDamageUtils = vi.hoisted(() => ({
   getTargetFromAttacker: vi.fn(() => null),
 }));
@@ -120,6 +123,30 @@ function createBaseProps(overrides) {
     actionPendingAid: null,
     actionHandleAidConfirm: vi.fn(),
     actionHandleAidSkip: vi.fn(),
+    actionPendingBane: null,
+    actionHandleBaneConfirm: vi.fn(),
+    actionHandleBaneSkip: vi.fn(),
+    actionPendingBless: null,
+    actionHandleBlessConfirm: vi.fn(),
+    actionHandleBlessSkip: vi.fn(),
+    actionPendingFaerieFire: null,
+    actionHandleFaerieFireConfirm: vi.fn(),
+    actionHandleFaerieFireSkip: vi.fn(),
+    actionPendingBeaconOfHope: null,
+    actionHandleBeaconOfHopeConfirm: vi.fn(),
+    actionHandleBeaconOfHopeSkip: vi.fn(),
+    actionPendingPassWithoutTrace: null,
+    actionHandlePassWithoutTraceConfirm: vi.fn(),
+    actionHandlePassWithoutTraceSkip: vi.fn(),
+    actionPendingHaste: null,
+    actionHandleHasteConfirm: vi.fn(),
+    actionHandleHasteSkip: vi.fn(),
+    actionPendingBarkskin: null,
+    actionHandleBarkskinConfirm: vi.fn(),
+    actionHandleBarkskinSkip: vi.fn(),
+    actionPendingHeal: null,
+    actionHandleHealConfirm: vi.fn(),
+    actionHandleHealSkip: vi.fn(),
     actionPendingGreaterRestoration: null,
     actionHandleGreaterRestorationConfirm: vi.fn(),
     actionHandleGreaterRestorationSkip: vi.fn(),
@@ -127,12 +154,21 @@ function createBaseProps(overrides) {
     actionPendingRemoveCurse: null,
     actionHandleRemoveCurseConfirm: vi.fn(),
     actionHandleRemoveCurseSkip: vi.fn(),
-    pendingActionMetamagic: null,
-    handleActionMetamagicConfirm: vi.fn(),
-    handleActionMetamagicSkip: vi.fn(),
     actionPendingMagicMissile: null,
     actionHandleMagicMissileConfirm: vi.fn(),
     actionHandleMagicMissileSkip: vi.fn(),
+    actionPendingMageArmor: null,
+    actionHandleMageArmorConfirm: vi.fn(),
+    actionHandleMageArmorSkip: vi.fn(),
+    actionPendingCureWounds: null,
+    actionHandleCureWoundsConfirm: vi.fn(),
+    actionHandleCureWoundsSkip: vi.fn(),
+    actionPendingRevivify: null,
+    actionHandleRevivifyConfirm: vi.fn(),
+    actionHandleRevivifySkip: vi.fn(),
+    pendingActionMetamagic: null,
+    handleActionMetamagicConfirm: vi.fn(),
+    handleActionMetamagicSkip: vi.fn(),
     ...overrides,
   };
 }
@@ -166,7 +202,7 @@ describe('CharActionSpellPopups', () => {
       expect(screen.getByTestId('detail-player-level')).toHaveTextContent('12');
     });
 
-    it('calls buildUpcastLevels with the selected spell and passes the result as upcastLevels', () => {
+    it('calls buildUpcastLevels with the selected spell and passes the result length as upcastLevels', () => {
       const buildUpcastLevels = vi.fn(() => [3, 4, 5]);
       render(
         <CharActionSpellPopups
@@ -196,6 +232,17 @@ describe('CharActionSpellPopups', () => {
     it('renders when actionPendingMetamagic is truthy', () => {
       render(<CharActionSpellPopups {...createBaseProps()} actionPendingMetamagic={{ spellName: 'Empowered Spell', spellLevel: 3 }} />);
       expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
+    });
+
+    it('passes spell name and level to the popup', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps()}
+          actionPendingMetamagic={{ spellName: 'Empowered Spell', spellLevel: 3 }}
+        />
+      );
+      expect(screen.getByTestId('metamagic-spell-name')).toHaveTextContent('Empowered Spell');
+      expect(screen.getByTestId('metamagic-spell-level')).toHaveTextContent('3');
     });
 
     it('calls actionHandleConfirm on confirm', () => {
@@ -229,6 +276,17 @@ describe('CharActionSpellPopups', () => {
       expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
     });
 
+    it('passes spell name and level to the popup', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps()}
+          pendingActionMetamagic={{ spellName: 'Quickened Spell', spellLevel: 0 }}
+        />
+      );
+      expect(screen.getByTestId('metamagic-spell-name')).toHaveTextContent('Quickened Spell');
+      expect(screen.getByTestId('metamagic-spell-level')).toHaveTextContent('0');
+    });
+
     it('calls handleActionMetamagicConfirm on confirm', () => {
       const handleActionMetamagicConfirm = vi.fn();
       render(
@@ -255,16 +313,30 @@ describe('CharActionSpellPopups', () => {
   });
 
   describe('CreatureSelectionModal (Aid)', () => {
-    it('calls actionHandleAidConfirm on confirm', () => {
+    it('renders with correct metadata', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({
+            actionPendingAid: { creatureTargets: ['Ally'], maxTargets: 3 },
+          })}
+        />
+      );
+      expect(screen.getByTestId('title')).toHaveTextContent('Aid');
+      expect(screen.getByTestId('icon')).toHaveTextContent('fa-hand-holding-heart');
+      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Aid');
+      expect(screen.getByTestId('creature-count')).toHaveTextContent('1');
+    });
+
+    it('calls actionHandleAidConfirm on confirm with target names', () => {
       const actionHandleAidConfirm = vi.fn();
       render(
         <CharActionSpellPopups
           {...createBaseProps({ actionHandleAidConfirm })}
-          actionPendingAid={{ spellName: 'Aid', spellLevel: 2, creatureTargets: ['Ally'] }}
+          actionPendingAid={{ creatureTargets: ['Ally1', 'Ally2'], maxTargets: 3 }}
         />
       );
-      screen.getByTestId('aid-confirm').click();
-      expect(actionHandleAidConfirm).toHaveBeenCalled();
+      screen.getByTestId('confirm').click();
+      expect(actionHandleAidConfirm).toHaveBeenCalledWith(['Ally1', 'Ally2']);
     });
 
     it('calls actionHandleAidSkip on skip', () => {
@@ -272,37 +344,114 @@ describe('CharActionSpellPopups', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({ actionHandleAidSkip })}
-          actionPendingAid={{ spellName: 'Aid', spellLevel: 2, creatureTargets: ['Ally'] }}
+          actionPendingAid={{ creatureTargets: ['Ally'], maxTargets: 3 }}
         />
       );
-      screen.getByTestId('aid-skip').click();
+      screen.getByTestId('skip').click();
       expect(actionHandleAidSkip).toHaveBeenCalled();
     });
   });
 
-  describe('Greater Restoration Modal', () => {
-    it('renders SecondaryTargetModal when actionPendingGreaterRestoration is truthy', () => {
+  describe('SecondaryTargetModal (Haste)', () => {
+    it('renders with correct metadata', () => {
       render(
         <CharActionSpellPopups
-          {...createBaseProps()}
-          actionPendingGreaterRestoration={{ spellName: 'Greater Restoration', spellLevel: 5, creatureTargets: ['Ally'], range: 'Touch' }}
+          {...createBaseProps({
+            actionPendingHaste: { creatureTargets: ['Ally1', 'Ally2'] },
+          })}
         />
       );
-      expect(screen.getByText('Greater Restoration')).toBeInTheDocument();
-      expect(screen.getByText(/Choose a creature within/)).toBeInTheDocument();
-      expect(screen.getByText('Cast Greater Restoration')).toBeInTheDocument();
+      expect(screen.getByTestId('title')).toHaveTextContent('Haste');
+      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Haste');
+      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
+      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
     });
 
-    it('renders SecondaryTargetModal when actionPendingRemoveCurse is truthy', () => {
+    it('calls actionHandleHasteConfirm with single-element array on target select', () => {
+      const actionHandleHasteConfirm = vi.fn();
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({ actionHandleHasteConfirm })}
+          actionPendingHaste={{ creatureTargets: ['Ally1'] }}
+        />
+      );
+      screen.getByTestId('target-0').click();
+      expect(actionHandleHasteConfirm).toHaveBeenCalledWith(['Ally1']);
+    });
+
+    it('calls actionHandleHasteSkip on skip', () => {
+      const actionHandleHasteSkip = vi.fn();
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({ actionHandleHasteSkip })}
+          actionPendingHaste={{ creatureTargets: ['Ally1'] }}
+        />
+      );
+      screen.getByTestId('skip').click();
+      expect(actionHandleHasteSkip).toHaveBeenCalled();
+    });
+  });
+
+  describe('SecondaryTargetModal (Greater Restoration)', () => {
+    it('renders with correct metadata when actionPendingGreaterRestoration is truthy', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps()}
-          actionPendingRemoveCurse={{ spellName: 'Remove Curse', spellLevel: 3, creatureTargets: ['Ally'] }}
+          actionPendingGreaterRestoration={{ creatureTargets: ['Ally1'], range: 'Touch' }}
         />
       );
-      expect(screen.getByText('Remove Curse')).toBeInTheDocument();
-      expect(screen.getByText(/Choose a creature within/)).toBeInTheDocument();
-      expect(screen.getByText('Cast Remove Curse')).toBeInTheDocument();
+      expect(screen.getByTestId('title')).toHaveTextContent('Greater Restoration');
+      expect(screen.getByTestId('description')).toHaveTextContent('Touch');
+      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Greater Restoration');
+    });
+
+    it('renders creature targets from the pending action', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps()}
+          actionPendingGreaterRestoration={{ creatureTargets: ['Ally1', 'Ally2'], range: '60 feet' }}
+        />
+      );
+      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
+      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
+    });
+
+    it('calls actionHandleGreaterRestorationSkip when skip is clicked', () => {
+      const actionHandleGreaterRestorationSkip = vi.fn();
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({ actionHandleGreaterRestorationSkip })}
+          actionPendingGreaterRestoration={{ creatureTargets: ['Ally1'], range: 'Touch' }}
+        />
+      );
+      screen.getByTestId('skip').click();
+      expect(actionHandleGreaterRestorationSkip).toHaveBeenCalled();
+    });
+  });
+
+  describe('SecondaryTargetModal (Remove Curse)', () => {
+    it('renders with correct metadata when actionPendingRemoveCurse is truthy', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps()}
+          actionPendingRemoveCurse={{ creatureTargets: ['Ally1'], range: 'Touch' }}
+        />
+      );
+      expect(screen.getByTestId('title')).toHaveTextContent('Remove Curse');
+      expect(screen.getByTestId('description')).toHaveTextContent('Touch');
+      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Remove Curse');
+    });
+
+    it('calls actionHandleRemoveCurseSkip when skip is clicked', () => {
+      const actionHandleRemoveCurseSkip = vi.fn();
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({ actionHandleRemoveCurseSkip })}
+          actionPendingRemoveCurse={{ creatureTargets: ['Ally1'], range: 'Touch' }}
+        />
+      );
+      screen.getByTestId('skip').click();
+      expect(actionHandleRemoveCurseSkip).toHaveBeenCalled();
     });
   });
 
@@ -320,6 +469,24 @@ describe('CharActionSpellPopups', () => {
         />
       );
       expect(screen.getByTestId('magic-missile-popup')).toBeInTheDocument();
+    });
+
+    it('passes spell, missile count, and damage data to the popup', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps()}
+          actionPendingMagicMissile={{
+            spell: { name: 'Magic Missile', level: 1 },
+            totalMissiles: 3,
+            missileDamage: '1d4+1',
+            creatureTargets: ['Goblin'],
+          }}
+        />
+      );
+      expect(screen.getByTestId('mm-spell-name')).toHaveTextContent('Magic Missile');
+      expect(screen.getByTestId('mm-spell-level')).toHaveTextContent('1');
+      expect(screen.getByTestId('mm-total-missiles')).toHaveTextContent('3');
+      expect(screen.getByTestId('mm-missile-damage')).toHaveTextContent('1d4+1');
     });
 
     it('calls actionHandleMagicMissileConfirm on confirm', () => {
@@ -358,18 +525,30 @@ describe('CharActionSpellPopups', () => {
   });
 
   describe('multiple popups simultaneously', () => {
-    it('renders all popup types simultaneously', () => {
+    it('renders spell detail and metamagic popups together', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps()}
           selectedActionSpell={{ name: 'Fireball', level: 3 }}
           actionPendingMetamagic={{ spellName: 'Empowered Spell', spellLevel: 0 }}
-          actionPendingAid={{ spellName: 'Aid', spellLevel: 2, creatureTargets: ['Ally'] }}
         />
       );
       expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
       expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
-      expect(screen.getByTestId('aid-target-popup')).toBeInTheDocument();
+    });
+
+    it('renders spell detail, metamagic, and creature selection together', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps()}
+          selectedActionSpell={{ name: 'Fireball', level: 3 }}
+          actionPendingMetamagic={{ spellName: 'Empowered Spell', spellLevel: 0 }}
+          actionPendingAid={{ creatureTargets: ['Ally'], maxTargets: 3 }}
+        />
+      );
+      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
+      expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
+      expect(screen.getByTestId('creature-selection-Aid')).toBeInTheDocument();
     });
 
     it('renders both MetamagicPopup variants simultaneously', () => {

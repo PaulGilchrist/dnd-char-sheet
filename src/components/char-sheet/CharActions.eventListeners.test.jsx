@@ -1,10 +1,12 @@
+// @improved-by-ai
 import { render, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
-import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { DiceRollContext } from '../../hooks/combat/DiceRollContext.js';
 import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 import { hasAutomation } from '../../services/combat/automation/automationService.js';
+import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 
 const _syncedStore = new Map();
 
@@ -26,10 +28,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
 }));
 
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
-  default: vi.fn(() => ({
-    popupHtml: null, setPopupHtml: vi.fn(), rollAttack: vi.fn(), rollDamage: vi.fn(),
-    rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
-  })),
+  default: vi.fn(),
 }));
 
 vi.mock('../../services/automation/index.js', () => ({
@@ -189,6 +188,18 @@ function createStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
 
+function renderWithDiceRollContext(ui) {
+  const mockSetPopupHtml = vi.fn();
+  const rendered = render(ui, {
+    wrapper: ({ children }) => (
+      <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+        {children}
+      </DiceRollContext.Provider>
+    ),
+  });
+  return { ...rendered, mockSetPopupHtml };
+}
+
 describe('CharActions event listeners', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -197,18 +208,19 @@ describe('CharActions event listeners', () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
     getRuntimeValue.mockImplementation(() => null);
     hasAutomation.mockImplementation(() => false);
+    useLoggedDiceRoll.mockReturnValue({
+      popupHtml: null, setPopupHtml: vi.fn(), rollAttack: vi.fn(), rollDamage: vi.fn(),
+      rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
+    });
   });
 
   describe('healing-popup event', () => {
-    it('sets popupHtml with healing info when healing-popup event fires', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
+    it('sets popupHtml with healing name, target, and roll info', async () => {
+      const { mockSetPopupHtml } = renderWithDiceRollContext(
+        <CharActions playerStats={createStats()} campaignName="test-campaign" />
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      
 
       window.dispatchEvent(new CustomEvent('healing-popup', {
         detail: {
@@ -221,20 +233,24 @@ describe('CharActions event listeners', () => {
       }));
 
       await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Cure Wounds'));
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Ally'));
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.stringContaining('Cure Wounds')
+        );
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.stringContaining('Ally')
+        );
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.stringContaining('2d4+3')
+        );
       });
     });
 
     it('includes maximized note when maximizeHealingDice is true', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
+      const { mockSetPopupHtml } = renderWithDiceRollContext(
+        <CharActions playerStats={createStats()} campaignName="test-campaign" />
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      
 
       window.dispatchEvent(new CustomEvent('healing-popup', {
         detail: {
@@ -247,21 +263,44 @@ describe('CharActions event listeners', () => {
       }));
 
       await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.stringContaining('(maximized)'));
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.stringContaining('(maximized)')
+        );
+      });
+    });
+
+    it('omits roll info bracket when rollInfo is absent', async () => {
+      const { mockSetPopupHtml } = renderWithDiceRollContext(
+        <CharActions playerStats={createStats()} campaignName="test-campaign" />
+      );
+
+      
+
+      window.dispatchEvent(new CustomEvent('healing-popup', {
+        detail: {
+          targetName: 'Ally',
+          healingName: 'Cure Wounds',
+          maximizeHealingDice: false,
+          popupText: 'Heal an ally',
+        },
+      }));
+
+      await waitFor(() => {
+        const call = mockSetPopupHtml.mock.calls[0][0];
+        expect(call).toContain('Cure Wounds');
+        expect(call).toContain('Ally');
+        expect(call).not.toContain('[');
       });
     });
   });
 
   describe('damage-popup event', () => {
-    it('sets popupHtml with damage info when damage-popup event fires', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
+    it('sets popupHtml with spell name, target, and roll info', async () => {
+      const { mockSetPopupHtml } = renderWithDiceRollContext(
+        <CharActions playerStats={createStats()} campaignName="test-campaign" />
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      
 
       window.dispatchEvent(new CustomEvent('damage-popup', {
         detail: {
@@ -273,48 +312,89 @@ describe('CharActions event listeners', () => {
       }));
 
       await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Burning Hands'));
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Goblin'));
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.stringContaining('Burning Hands')
+        );
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.stringContaining('Goblin')
+        );
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          expect.stringContaining('3d4')
+        );
+      });
+    });
+
+    it('omits roll info bracket when rollInfo is absent', async () => {
+      const { mockSetPopupHtml } = renderWithDiceRollContext(
+        <CharActions playerStats={createStats()} campaignName="test-campaign" />
+      );
+
+      
+
+      window.dispatchEvent(new CustomEvent('damage-popup', {
+        detail: {
+          targetName: 'Goblin',
+          spellName: 'Burning Hands',
+          popupText: 'Fire damage',
+        },
+      }));
+
+      await waitFor(() => {
+        const call = mockSetPopupHtml.mock.calls[0][0];
+        expect(call).toContain('Burning Hands');
+        expect(call).toContain('Goblin');
+        expect(call).not.toContain('[');
       });
     });
   });
 
   describe('inspiring-smite-pending event', () => {
-    it('sets inspiringSmiteModal when inspiring-smite-pending event fires', async () => {
+    it('sets inspiringSmiteModal in modal state with event detail', async () => {
+      const mockSetModalState = vi.fn();
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
+
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: mockSetModalState,
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
+
+      const container = document.createElement('div'); document.body.appendChild(container); render(
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      
 
       window.dispatchEvent(new CustomEvent('inspiring-smite-pending', {
-        detail: { test: 'data' },
+        detail: { smiteName: 'Divine Smite', damage: '4d8' },
       }));
 
       await waitFor(() => {
-        // The modal state should be set via setModalState from useCharActionModals
-        // which we can't directly inspect, but the event handler exists
+        expect(mockSetModalState).toHaveBeenCalledWith(
+          expect.objectContaining({ inspiringSmiteModal: { smiteName: 'Divine Smite', damage: '4d8' } })
+        );
       });
     });
   });
 
   describe('damage-type-choice event', () => {
-    it('handles damage-type-choice when popupHtml is damage_type_choice', async () => {
+    it('calls rollDamage with chosen type and clears popup', async () => {
       const mockSetPopupHtml = vi.fn();
       const mockRollDamage = vi.fn();
+
       useLoggedDiceRoll.mockReturnValue({
         popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: mockRollDamage,
         rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
       });
-
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: { type: 'damage_type_choice' }, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
 
       getRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [];
@@ -323,32 +403,96 @@ describe('CharActions event listeners', () => {
         return null;
       });
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: vi.fn(),
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
 
-      // Dispatch the damage-type-choice event
+      const container = document.createElement('div'); document.body.appendChild(container); render(
+        <DiceRollContext.Provider value={{ popupHtml: { type: 'damage_type_choice' }, setPopupHtml: mockSetPopupHtml }}>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
+      );
+
+      
+
       window.dispatchEvent(new CustomEvent('damage-type-choice', {
         detail: { chosenType: 'Radiant' },
       }));
 
       await waitFor(() => {
-        // The handler should have called rollDamage
         expect(mockRollDamage).toHaveBeenCalled();
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(null);
       });
     });
 
-    it('handles damage-type-skip to clear popup', async () => {
+    it('calls setRuntimeValue with usedKey when present in popupHtml', async () => {
+      const mockSetPopupHtml = vi.fn();
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'activeBuffs') return [];
+        if (key === 'hasteExtraActionUsed') return false;
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: vi.fn(),
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
+
+      const container = document.createElement('div'); document.body.appendChild(container); render(
+        <DiceRollContext.Provider value={{ popupHtml: {
+          type: 'damage_type_choice',
+          bonusFormula: '2d6',
+          bonusRolls: [3, 3],
+          bonusTotal: 8,
+          usedKey: '_blessedStrikes_round',
+          currentRound: 3,
+          targetName: 'Goblin',
+          attackerName: 'TestCharacter',
+          name: 'Blessed Strikes',
+        }, setPopupHtml: mockSetPopupHtml }}>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
+      );
+
+      
+
+      window.dispatchEvent(new CustomEvent('damage-type-choice', {
+        detail: { chosenType: 'Necrotic' },
+      }));
+
+      await waitFor(() => {
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'TestCharacter', '_blessedStrikes_round', 3, 'test-campaign'
+        );
+      });
+    });
+
+    it('clears popup without calling rollDamage on skip', async () => {
       const mockSetPopupHtml = vi.fn();
       const mockRollDamage = vi.fn();
+
       useLoggedDiceRoll.mockReturnValue({
         popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: mockRollDamage,
         rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
       });
-
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: { type: 'damage_type_choice' }, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
 
       getRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [];
@@ -357,136 +501,326 @@ describe('CharActions event listeners', () => {
         return null;
       });
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: vi.fn(),
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
+
+      const container = document.createElement('div'); document.body.appendChild(container); render(
+        <DiceRollContext.Provider value={{ popupHtml: { type: 'damage_type_choice' }, setPopupHtml: mockSetPopupHtml }}>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
+      );
+
+      
 
       window.dispatchEvent(new CustomEvent('damage-type-skip'));
 
       await waitFor(() => {
         expect(mockSetPopupHtml).toHaveBeenCalledWith(null);
+        expect(mockRollDamage).not.toHaveBeenCalled();
       });
     });
   });
 
   describe('soulstitch-modal-show event', () => {
-    it('sets soulstitchSpellsModal when event fires', async () => {
+    it('sets soulstitchSpellsModal in modal state with event detail', async () => {
+      const mockSetModalState = vi.fn();
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
+
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: mockSetModalState,
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
+
+      const container = document.createElement('div'); document.body.appendChild(container); render(
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      
 
       window.dispatchEvent(new CustomEvent('soulstitch-modal-show', {
         detail: { spells: ['Magic Missile', 'Burning Hands'] },
       }));
 
       await waitFor(() => {
-        // Modal state should be set
+        expect(mockSetModalState).toHaveBeenCalledWith(
+          expect.objectContaining({ soulstitchSpellsModal: { spells: ['Magic Missile', 'Burning Hands'] } })
+        );
       });
     });
   });
 
   describe('potent-spellcasting-temp-hp event', () => {
-    it('sets secondaryTargetModal for potent spellcasting temp HP', async () => {
+    it('sets secondaryTargetModal with ally targets from combat context', async () => {
+      const mockSetModalState = vi.fn();
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
 
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
+      const mockCs = {
+        creatures: [
+          { name: 'Ally1', type: 'player', currentHp: 15, maxHp: 20, size: 'Medium' },
+          { name: 'Ally2', type: 'npc', currentHp: 8, maxHp: 10, size: 'Small' },
+          { name: 'Enemy', type: 'monster', currentHp: 5, maxHp: 15, size: 'Medium' },
+        ],
+      };
+      vi.mocked(getCombatContext).mockResolvedValue(mockCs);
+
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: mockSetModalState,
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
       });
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      const container = document.createElement('div'); document.body.appendChild(container); render(
+        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
+      );
 
-      // The handler listens for this event and sets secondaryTargetModal
-      // We verify the handler exists by checking no errors are thrown
-      expect(() => {
+      
+
+      await act(async () => {
         window.dispatchEvent(new CustomEvent('potent-spellcasting-temp-hp', {
           detail: { title: 'Potent Spellcasting', tempHp: 10, campaignName: 'test-campaign', attackerName: 'TestCharacter' },
         }));
-      }).not.toThrow();
+      });
+
+      await waitFor(() => {
+        expect(mockSetModalState).toHaveBeenCalledWith(
+          expect.objectContaining({
+            secondaryTargetModal: expect.objectContaining({
+              title: 'Potent Spellcasting',
+              confirmLabel: 'Grant Temp HP',
+            }),
+          })
+        );
+        const modal = mockSetModalState.mock.calls[0][0].secondaryTargetModal;
+        expect(modal.targets).toHaveLength(3);
+        expect(modal.targets[0].name).toBe('Ally1');
+        expect(modal.targets[2].name).toBe('Enemy');
+      });
     });
   });
 
   describe('sweeping-attack-modal-show event', () => {
-    it('sets sweepingAttackTargetModal when event fires', async () => {
+    it('sets sweepingAttackTargetModal in modal state with event detail', async () => {
+      const mockSetModalState = vi.fn();
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
+
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: mockSetModalState,
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
+
+      const container = document.createElement('div'); document.body.appendChild(container); render(
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      
 
-      expect(() => {
-        window.dispatchEvent(new CustomEvent('sweeping-attack-modal-show', {
-          detail: { targets: ['Goblin', 'Orc'] },
-        }));
-      }).not.toThrow();
+      window.dispatchEvent(new CustomEvent('sweeping-attack-modal-show', {
+        detail: { targets: ['Goblin', 'Orc'] },
+      }));
+
+      await waitFor(() => {
+        expect(mockSetModalState).toHaveBeenCalledWith(
+          expect.objectContaining({ sweepingAttackTargetModal: { targets: ['Goblin', 'Orc'] } })
+        );
+      });
     });
   });
 
   describe('bait-and-switch-modal-show event', () => {
-    it('sets baitAndSwitchChoiceModal when event fires', async () => {
+    it('sets baitAndSwitchChoiceModal in modal state with event detail', async () => {
+      const mockSetModalState = vi.fn();
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
+
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: mockSetModalState,
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
+
+      const container = document.createElement('div'); document.body.appendChild(container); render(
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      
 
-      expect(() => {
-        window.dispatchEvent(new CustomEvent('bait-and-switch-modal-show', {
-          detail: { targets: ['Goblin'] },
-        }));
-      }).not.toThrow();
+      window.dispatchEvent(new CustomEvent('bait-and-switch-modal-show', {
+        detail: { targets: ['Goblin'] },
+      }));
+
+      await waitFor(() => {
+        expect(mockSetModalState).toHaveBeenCalledWith(
+          expect.objectContaining({ baitAndSwitchChoiceModal: { targets: ['Goblin'] } })
+        );
+      });
     });
   });
 
   describe('commander-strike-modal-show event', () => {
-    it('sets commanderStrikeChoiceModal when event fires', async () => {
+    it('sets commanderStrikeChoiceModal in modal state with event detail', async () => {
+      const mockSetModalState = vi.fn();
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
+
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: mockSetModalState,
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
+
+      const container = document.createElement('div'); document.body.appendChild(container); render(
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      
 
-      expect(() => {
-        window.dispatchEvent(new CustomEvent('commander-strike-modal-show', {
-          detail: { targets: ['Ally'] },
-        }));
-      }).not.toThrow();
+      window.dispatchEvent(new CustomEvent('commander-strike-modal-show', {
+        detail: { targets: ['Ally'] },
+      }));
+
+      await waitFor(() => {
+        expect(mockSetModalState).toHaveBeenCalledWith(
+          expect.objectContaining({ commanderStrikeChoiceModal: { targets: ['Ally'] } })
+        );
+      });
     });
   });
 
   describe('rally-choice-modal-show event', () => {
-    it('sets rallyChoiceModal when event fires', async () => {
+    it('sets rallyChoiceModal in modal state with event detail', async () => {
+      const mockSetModalState = vi.fn();
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
+
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: mockSetModalState,
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
+
+      const container = document.createElement('div'); document.body.appendChild(container); render(
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
+      
 
+      window.dispatchEvent(new CustomEvent('rally-choice-modal-show', {
+        detail: { targets: ['Ally'] },
+      }));
+
+      await waitFor(() => {
+        expect(mockSetModalState).toHaveBeenCalledWith(
+          expect.objectContaining({ rallyChoiceModal: { targets: ['Ally'] } })
+        );
+      });
+    });
+  });
+
+  describe('event listener cleanup', () => {
+    it('removes event listeners on unmount', async () => {
+      const mockSetModalState = vi.fn();
+      const mockSetPopupHtml = vi.fn();
+
+      vi.mocked((await import('./useCharActionModals.js')).default).mockReturnValue({
+        pendingDamage: null, modalState: {}, setModalState: mockSetModalState,
+        resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+        handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+        handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+        handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+        handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+        handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+        handleConstellationSelect: vi.fn(),
+        combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+        handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+      });
+
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const { unmount } = render(
+        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+          <CharActions playerStats={createStats()} campaignName="test-campaign" />
+        </DiceRollContext.Provider>,
+        { container }
+      );
+
+      
+
+      unmount();
+
+      // After unmount, the listeners should be removed — dispatching should not cause errors
+      // and should not call the (now-unmounted) handlers.
       expect(() => {
-        window.dispatchEvent(new CustomEvent('rally-choice-modal-show', {
-          detail: { targets: ['Ally'] },
+        window.dispatchEvent(new CustomEvent('healing-popup', {
+          detail: { targetName: 'Ally', healingName: 'Cure Wounds', popupText: 'Heal' },
+        }));
+        window.dispatchEvent(new CustomEvent('damage-popup', {
+          detail: { targetName: 'Goblin', spellName: 'Burning Hands', popupText: 'Damage' },
+        }));
+        window.dispatchEvent(new CustomEvent('inspiring-smite-pending', {
+          detail: { test: 'data' },
         }));
       }).not.toThrow();
     });

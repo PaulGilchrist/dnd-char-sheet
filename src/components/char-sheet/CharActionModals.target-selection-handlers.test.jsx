@@ -1,4 +1,17 @@
-// Handler callback tests for target selection modals in CharActionModals
+// @improved-by-ai
+// Handler callback tests for target selection modals in CharActionModals.
+//
+// This file tests the handler callback wiring between CharActionModals and
+// the SecondaryModals/HealingModals sub-components. Each test verifies that
+// clicking the expected button in a mocked modal invokes the correct handler
+// prop with the correct arguments.
+//
+// Modal rendering is covered in CharActionModals.rendering.test.jsx.
+// Skip handlers are covered in CharActionModals.mass-healing-skips.test.jsx
+// and CharActionModals.secondary-target-skips.test.jsx.
+// Multi-target confirmations (Bulwark, Radiance, Mantle) are covered in
+// CharActionModals.secondary-targets.test.jsx.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -314,8 +327,8 @@ vi.mock('./modals/InspiringSmiteModal.jsx', () => ({
   default: function TestModal({ onSkip, onConfirm }) {
     return (
       <div data-testid="inspiring-smite-modal">
-        <button data-testid="inspiring-smite-confirm" onClick={() => onConfirm(['Ally1'])}>Confirm</button>
         <button data-testid="inspiring-smite-skip" onClick={onSkip}>Skip</button>
+        <button data-testid="inspiring-smite-confirm" onClick={() => onConfirm(['Goblin'])}>Confirm</button>
       </div>
     );
   },
@@ -543,7 +556,7 @@ describe('CharActionModals — target selection handler callbacks', () => {
   // ── Celestial Resilience handlers ──
 
   describe('Celestial Resilience handlers', () => {
-    it('calls handleCelestialResilienceConfirm with selected targets', () => {
+    it('calls handleCelestialResilienceConfirm with selected targets on confirm', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleCelestialResilienceConfirm: handler })}
@@ -569,7 +582,7 @@ describe('CharActionModals — target selection handler callbacks', () => {
   // ── Vitality of the Tree handler ──
 
   describe('Vitality of the Tree handler', () => {
-    it('calls handleVitalityOfTheTreeConfirm with selected targets', () => {
+    it('calls handleVitalityOfTheTreeConfirm with selected targets on confirm', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleVitalityOfTheTreeConfirm: handler })}
@@ -579,12 +592,23 @@ describe('CharActionModals — target selection handler callbacks', () => {
       fireEvent.click(screen.getByTestId('vitality-confirm'));
       expect(handler).toHaveBeenCalledWith(['Ally1']);
     });
+
+    it('closes modal on skip via setModalState', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleVitalityOfTheTreeConfirm: vi.fn() })}
+        modalState={{ vitalityOfTheTreeTarget: { creatureTargets: [{ name: 'Ally1' }], tempHp: 5, maxTargets: 3 } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('vitality-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ vitalityOfTheTreeTarget: null });
+    });
   });
 
   // ── Inspiring Smite handler ──
 
   describe('Inspiring Smite handler', () => {
-    it('calls handleInspiringSmiteConfirm with selected targets', () => {
+    it('calls handleInspiringSmiteConfirm with selected targets on confirm', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleInspiringSmiteConfirm: handler })}
@@ -592,14 +616,25 @@ describe('CharActionModals — target selection handler callbacks', () => {
         setModalState={vi.fn()}
       />);
       fireEvent.click(screen.getByTestId('inspiring-smite-confirm'));
-      expect(handler).toHaveBeenCalledWith(['Ally1']);
+      expect(handler).toHaveBeenCalledWith(['Goblin']);
+    });
+
+    it('closes modal on skip via setModalState', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleInspiringSmiteConfirm: vi.fn() })}
+        modalState={{ inspiringSmiteModal: { creatureTargets: [{ name: 'Goblin' }], tempHp: 5, roll: 3 } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('inspiring-smite-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ inspiringSmiteModal: null });
     });
   });
 
   // ── Zealous Presence handler ──
 
   describe('Zealous Presence handler', () => {
-    it('calls handleZealousPresenceConfirm with selected targets', () => {
+    it('calls handleZealousPresenceConfirm with selected targets on confirm', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleZealousPresenceConfirm: handler })}
@@ -625,7 +660,7 @@ describe('CharActionModals — target selection handler callbacks', () => {
   // ── Flurry of Blows handler ──
 
   describe('Flurry of Blows handler', () => {
-    it('calls handleFlurryOfBlowsConfirm with selected targets', () => {
+    it('calls handleFlurryOfBlowsConfirm with selected targets on confirm', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleFlurryOfBlowsConfirm: handler })}
@@ -651,7 +686,7 @@ describe('CharActionModals — target selection handler callbacks', () => {
   // ── Natures Sanctuary handler ──
 
   describe('Natures Sanctuary handler', () => {
-    it('calls handleNaturesSanctuaryConfirm with selected creature names', () => {
+    it('calls handleNaturesSanctuaryConfirm with selected creature names on confirm', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleNaturesSanctuaryConfirm: handler })}
@@ -661,12 +696,23 @@ describe('CharActionModals — target selection handler callbacks', () => {
       fireEvent.click(screen.getByTestId('creature-confirm'));
       expect(handler).toHaveBeenCalledWith(['Goblin']);
     });
+
+    it('closes modal on skip via setModalState', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleNaturesSanctuaryConfirm: vi.fn() })}
+        modalState={{ naturesSanctuaryCreaturesModal: { creatureTargets: [{ name: 'Goblin' }], defaultSelected: [] } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('creature-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ naturesSanctuaryCreaturesModal: null });
+    });
   });
 
   // ── Oceanic Gift handler ──
 
   describe('Oceanic Gift handler', () => {
-    it('calls handleOceanicGiftConfirm with selected target', () => {
+    it('calls handleOceanicGiftConfirm with selected target on target click', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleOceanicGiftConfirm: handler })}
@@ -694,8 +740,8 @@ describe('CharActionModals — target selection handler callbacks', () => {
   // that the modal renders with the correct structure rather than
   // verifying handler invocation directly.
 
-  describe('Destructive Stride Target modal rendering', () => {
-    it('renders secondary target modal with correct title', () => {
+  describe('DestructiveStrideTargetModal rendering', () => {
+    it('renders SecondaryTargetModal with correct title for destructive stride', () => {
       render(<CharActionModals
         {...createBaseProps()}
         modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }], action: { name: 'Destructive Stride' } } }}
@@ -711,6 +757,15 @@ describe('CharActionModals — target selection handler callbacks', () => {
         setModalState={vi.fn()}
       />);
       expect(screen.getByText('Goblin')).toBeInTheDocument();
+    });
+
+    it('does not render secondary target modal when destructiveStrideTargetModal is null', () => {
+      render(<CharActionModals
+        {...createBaseProps()}
+        modalState={{ destructiveStrideTargetModal: null }}
+        setModalState={vi.fn()}
+      />);
+      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
     });
   });
 });

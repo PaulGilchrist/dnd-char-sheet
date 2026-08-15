@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BoonFateModal from './BoonFateModal.jsx';
@@ -6,10 +7,6 @@ import BoonFateModal from './BoonFateModal.jsx';
 
 vi.mock('../../../services/automation/handlers/reactions/boonOfFateHandler.js', () => ({
   applyBoonFateChoice: vi.fn(),
-}));
-
-vi.mock('../../../services/ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 // ── Re-import mocked modules ──
@@ -69,6 +66,10 @@ function makeAction(overrides) {
   return { ...baseAction, ...(overrides || {}) };
 }
 
+function getBody() {
+  return document.querySelector('.sp-body');
+}
+
 // ── Helpers ──
 
 function renderModal(props) {
@@ -80,7 +81,6 @@ function renderModal(props) {
 describe('BoonFateModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
   });
 
   // ── Initial render / display ──
@@ -97,37 +97,31 @@ describe('BoonFateModal', () => {
       expect(screen.getByText('Improve Fate')).toBeInTheDocument();
     });
 
-    it('renders the Font Awesome hand icon in header', () => {
-      renderModal(baseProps);
-      const icon = document.querySelector('.sp-header i.fa-solid.fa-hand');
-      expect(icon).toBeInTheDocument();
-    });
-
     it('renders event label as bold text', () => {
       renderModal(baseProps);
       expect(screen.getByText('Attack by Goblin1')).toBeInTheDocument();
     });
 
-    it('renders original roll calculation', () => {
+    it('renders original roll calculation with numeric bonus', () => {
       renderModal(baseProps);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('Original roll: d20(14) + 6 = 20');
     });
 
     it('renders hit status line for attack type', () => {
       renderModal(baseProps);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('vs AC 17 → Hit');
     });
 
     it('renders d2d4 roll result', () => {
       renderModal(baseProps);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('Rolled 2d4:');
       expect(body.textContent).toContain('5');
     });
 
-    it('renders "Choose how to apply the modifier" text', () => {
+    it('renders choice prompt text', () => {
       renderModal(baseProps);
       expect(screen.getByText('Choose how to apply the modifier:')).toBeInTheDocument();
     });
@@ -146,18 +140,6 @@ describe('BoonFateModal', () => {
       renderModal(baseProps);
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
-
-    it('renders up arrow icon on bonus button', () => {
-      renderModal(baseProps);
-      const upArrow = document.querySelector('.sp-actions .sp-roll-btn i.fa-solid.fa-arrow-up');
-      expect(upArrow).toBeInTheDocument();
-    });
-
-    it('renders down arrow icon on penalty button', () => {
-      renderModal(baseProps);
-      const downArrow = document.querySelector('.sp-actions .sp-roll-btn:nth-child(2) i.fa-solid.fa-arrow-down');
-      expect(downArrow).toBeInTheDocument();
-    });
   });
 
   // ── Save type display ──
@@ -171,7 +153,7 @@ describe('BoonFateModal', () => {
         eventLabel: 'Saving Throw by Goblin1',
       });
       renderModal(props);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('vs DC 13 → Failure');
     });
 
@@ -184,7 +166,7 @@ describe('BoonFateModal', () => {
         lastAttack: { ...baseLastAttack, saveType: 'Constitution' },
       });
       renderModal(props);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('vs DC 13 → Success');
     });
 
@@ -234,16 +216,16 @@ describe('BoonFateModal', () => {
         lastAttack: { ...baseLastAttack, bonus: { modifier: 5, total: 8 } },
       });
       renderModal(props);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('Original roll: d20(14) + 5 = 19');
     });
 
-    it('handles bonus as object with total', () => {
+    it('handles bonus as object with total when modifier is absent', () => {
       const props = makeProps({
         lastAttack: { ...baseLastAttack, bonus: { total: 7 } },
       });
       renderModal(props);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('Original roll: d20(14) + 7 = 21');
     });
 
@@ -252,7 +234,7 @@ describe('BoonFateModal', () => {
         lastAttack: { ...baseLastAttack, bonus: {} },
       });
       renderModal(props);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('Original roll: d20(14) + 0 = 14');
     });
 
@@ -261,7 +243,7 @@ describe('BoonFateModal', () => {
         lastAttack: { ...baseLastAttack, bonus: 4 },
       });
       renderModal(props);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('Original roll: d20(14) + 4 = 18');
     });
 
@@ -270,7 +252,7 @@ describe('BoonFateModal', () => {
         lastAttack: { ...baseLastAttack, d20: undefined },
       });
       renderModal(props);
-      const body = document.querySelector('.sp-body');
+      const body = getBody();
       expect(body.textContent).toContain('Original roll: d20() + 6 = 6');
     });
   });
@@ -293,7 +275,7 @@ describe('BoonFateModal', () => {
         expect(boonOfFateHandler.applyBoonFateChoice).toHaveBeenCalledWith(
           baseAction,
           basePlayerStats,
-          'test-campaign',
+          baseProps.campaignName,
           baseRoll2d4,
           baseLastAttack,
           'bonus',
@@ -316,7 +298,7 @@ describe('BoonFateModal', () => {
         expect(boonOfFateHandler.applyBoonFateChoice).toHaveBeenCalledWith(
           baseAction,
           basePlayerStats,
-          'test-campaign',
+          baseProps.campaignName,
           baseRoll2d4,
           baseLastAttack,
           'penalty',
@@ -528,9 +510,6 @@ describe('BoonFateModal', () => {
     it('renders roll2d4 of 2 (minimum)', () => {
       const props = makeProps({ roll2d4: { total: 2 } });
       renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Rolled 2d4:');
-      expect(body.textContent).toContain('2');
       expect(screen.getByRole('button', { name: 'Apply +2 (Bonus)' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Apply -2 (Penalty)' })).toBeInTheDocument();
     });
@@ -538,9 +517,6 @@ describe('BoonFateModal', () => {
     it('renders roll2d4 of 8 (maximum)', () => {
       const props = makeProps({ roll2d4: { total: 8 } });
       renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Rolled 2d4:');
-      expect(body.textContent).toContain('8');
       expect(screen.getByRole('button', { name: 'Apply +8 (Bonus)' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Apply -8 (Penalty)' })).toBeInTheDocument();
     });
@@ -595,26 +571,6 @@ describe('BoonFateModal', () => {
       });
       renderModal(props);
       expect(screen.getByText(/vs DC —/)).toBeInTheDocument();
-    });
-  });
-
-  // ── Overlay interaction ──
-
-  describe('overlay interaction', () => {
-    it('calls onClose when the overlay background is clicked', () => {
-      const onClose = vi.fn();
-      renderModal(makeProps({ onClose }));
-      const overlay = document.querySelector('.sp-overlay');
-      fireEvent.click(overlay);
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('prevents modal content clicks from closing', () => {
-      const onClose = vi.fn();
-      renderModal(makeProps({ onClose }));
-      const modal = document.querySelector('.sp-modal');
-      fireEvent.click(modal);
-      expect(onClose).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 
 import {
@@ -15,20 +16,13 @@ import {
 // ---------------------------------------------------------------------------
 
 describe('createMockStore', () => {
-  it('returns a new Map instance', () => {
-    const store = createMockStore();
-    expect(store).toBeInstanceOf(Map);
-  });
-
-  it('returns different Map instances on each call', () => {
+  it('returns a fresh empty Map on each call', () => {
     const store1 = createMockStore();
     const store2 = createMockStore();
+    expect(store1).toBeInstanceOf(Map);
+    expect(store2).toBeInstanceOf(Map);
     expect(store1).not.toBe(store2);
-  });
-
-  it('returns an empty Map with no entries', () => {
-    const store = createMockStore();
-    expect(store.size).toBe(0);
+    expect(store1.size).toBe(0);
   });
 });
 
@@ -37,12 +31,11 @@ describe('createMockStore', () => {
 // ---------------------------------------------------------------------------
 
 describe('mockPlayerSummary', () => {
-  it('has a name property set to "Test Character"', () => {
-    expect(mockPlayerSummary.name).toBe('Test Character');
-  });
-
-  it('has a rules property set to "5e"', () => {
-    expect(mockPlayerSummary.rules).toBe('5e');
+  it('exposes the expected default character metadata', () => {
+    expect(mockPlayerSummary).toEqual({
+      name: 'Test Character',
+      rules: '5e',
+    });
   });
 });
 
@@ -51,46 +44,60 @@ describe('mockPlayerSummary', () => {
 // ---------------------------------------------------------------------------
 
 describe('createDefaultProps', () => {
-  it('returns an object with all expected default properties', () => {
+  const defaultKeys = [
+    'allAbilityScores',
+    'allClasses',
+    'allClasses2024',
+    'allEquipment',
+    'allMagicItems',
+    'allRaces',
+    'allSpells',
+    'allSpells2024',
+    'playerSummary',
+    'allRaces2024',
+    'allMagicItems2024',
+    'campaignName',
+    'activeMapName',
+    'characters',
+    'onDeleteCharacter',
+    'onEditCharacter',
+    'onUploadClick',
+    'onSaveClick',
+  ];
+
+  it('returns an object with all expected default keys', () => {
     const props = createDefaultProps();
-    expect(props).toHaveProperty('allAbilityScores', []);
-    expect(props).toHaveProperty('allClasses', []);
-    expect(props).toHaveProperty('allClasses2024', []);
-    expect(props).toHaveProperty('allEquipment', []);
-    expect(props).toHaveProperty('allMagicItems', []);
-    expect(props).toHaveProperty('allRaces', []);
-    expect(props).toHaveProperty('allSpells', []);
-    expect(props).toHaveProperty('allSpells2024', []);
-    expect(props).toHaveProperty('playerSummary', mockPlayerSummary);
-    expect(props).toHaveProperty('allRaces2024', []);
-    expect(props).toHaveProperty('allMagicItems2024', []);
-    expect(props).toHaveProperty('campaignName', 'test-campaign');
-    expect(props).toHaveProperty('activeMapName', null);
-    expect(props).toHaveProperty('characters', []);
-    expect(props).toHaveProperty('onDeleteCharacter');
-    expect(props).toHaveProperty('onEditCharacter');
-    expect(props).toHaveProperty('onUploadClick');
-    expect(props).toHaveProperty('onSaveClick');
+    defaultKeys.forEach((key) => {
+      expect(props).toHaveProperty(key);
+    });
   });
 
-  it('merges override properties into defaults', () => {
-    const props = createDefaultProps({ campaignName: 'my-campaign', level: 10 });
+  it('provides empty arrays for collection defaults and vi.fn() for callbacks', () => {
+    const props = createDefaultProps();
+    expect(Array.isArray(props.allAbilityScores)).toBe(true);
+    expect(Array.isArray(props.characters)).toBe(true);
+    expect(typeof props.onDeleteCharacter).toBe('function');
+    expect(typeof props.onSaveClick).toBe('function');
+  });
+
+  it('applies override properties to the returned object', () => {
+    const customFn = vi.fn();
+    const props = createDefaultProps({
+      campaignName: 'my-campaign',
+      level: 10,
+      onDeleteCharacter: customFn,
+    });
     expect(props.campaignName).toBe('my-campaign');
     expect(props.level).toBe(10);
-  });
-
-  it('overrides default vi.fn() callbacks with provided ones', () => {
-    const customFn = vi.fn();
-    const props = createDefaultProps({ onDeleteCharacter: customFn });
     expect(props.onDeleteCharacter).toBe(customFn);
   });
 
-  it('returns vi.fn() for callbacks when no overrides given', () => {
+  it('uses default vi.fn() callbacks when no overrides are provided', () => {
     const props = createDefaultProps();
-    expect(typeof props.onDeleteCharacter).toBe('function');
-    expect(typeof props.onEditCharacter).toBe('function');
-    expect(typeof props.onUploadClick).toBe('function');
-    expect(typeof props.onSaveClick).toBe('function');
+    expect(props.onDeleteCharacter).not.toHaveBeenCalled();
+    expect(props.onEditCharacter).not.toHaveBeenCalled();
+    expect(props.onUploadClick).not.toHaveBeenCalled();
+    expect(props.onSaveClick).not.toHaveBeenCalled();
   });
 });
 
@@ -99,60 +106,54 @@ describe('createDefaultProps', () => {
 // ---------------------------------------------------------------------------
 
 describe('createMockPlayerStats', () => {
-  it('returns an object with all expected default properties', () => {
+  it('returns an object with the expected default structure', () => {
     const stats = createMockPlayerStats();
-    expect(stats).toHaveProperty('name', 'Test Character');
-    expect(stats).toHaveProperty('level', 5);
-    expect(stats.hitPoints.current).toBe(40);
-    expect(stats.hitPoints.max).toBe(40);
-    expect(stats).toHaveProperty('abilities');
-    expect(stats).toHaveProperty('spellAbilities');
-    expect(stats).toHaveProperty('rules', '5e');
-    expect(stats).toHaveProperty('automation');
+    expect(stats.name).toBe('Test Character');
+    expect(stats.level).toBe(5);
+    expect(stats.hitPoints).toEqual({ current: 40, max: 40 });
+    expect(stats.abilities[0]).toEqual({
+      name: 'Strength',
+      bonus: 2,
+      save: 4,
+      skills: [],
+    });
+    expect(stats.spellAbilities).toEqual({
+      spells: [],
+      maxPreparedSpells: 5,
+    });
+    expect(stats.rules).toBe('5e');
+    expect(stats.class).toEqual({ name: 'Fighter' });
+    expect(stats.speed).toBe(30);
+    expect(stats.race).toEqual({ speed: 30, traits: [] });
     expect(stats.automation.passives).toEqual([]);
-    expect(stats).toHaveProperty('class', { name: 'Fighter' });
-    expect(stats).toHaveProperty('speed', 30);
-    expect(stats).toHaveProperty('race', { speed: 30, traits: [] });
-    expect(stats).toHaveProperty('actions', []);
-    expect(stats).toHaveProperty('bonusActions', []);
-    expect(stats).toHaveProperty('reactions', []);
-    expect(stats).toHaveProperty('specialActions', []);
-    expect(stats).toHaveProperty('characterAdvancement', []);
-    expect(stats).toHaveProperty('skillProficiencies', []);
-    expect(stats).toHaveProperty('saveModifiers', []);
+    expect(Array.isArray(stats.actions)).toBe(true);
+    expect(Array.isArray(stats.bonusActions)).toBe(true);
+    expect(Array.isArray(stats.reactions)).toBe(true);
+    expect(Array.isArray(stats.specialActions)).toBe(true);
   });
 
-  it('has abilities with correct default structure', () => {
-    const stats = createMockPlayerStats();
-    expect(stats.abilities[0].name).toBe('Strength');
-    expect(stats.abilities[0].bonus).toBe(2);
-    expect(stats.abilities[0].save).toBe(4);
-    expect(stats.abilities[0].skills).toEqual([]);
-  });
-
-  it('has spellAbilities with correct default structure', () => {
-    const stats = createMockPlayerStats();
-    expect(stats.spellAbilities.spells).toEqual([]);
-    expect(stats.spellAbilities.maxPreparedSpells).toBe(5);
-  });
-
-  it('merges override properties into defaults', () => {
+  it('applies override properties to the returned object', () => {
+    const customFn = vi.fn();
     const stats = createMockPlayerStats({
       name: 'Custom Character',
       level: 10,
       rules: '2024',
       speed: 40,
+      onTest: customFn,
     });
     expect(stats.name).toBe('Custom Character');
     expect(stats.level).toBe(10);
     expect(stats.rules).toBe('2024');
     expect(stats.speed).toBe(40);
+    expect(stats.onTest).toBe(customFn);
   });
 
-  it('overrides default vi.fn() callbacks with provided ones', () => {
-    const customFn = vi.fn();
-    const stats = createMockPlayerStats({ onTest: customFn });
-    expect(stats.onTest).toBe(customFn);
+  it('overrides nested objects via spread', () => {
+    const stats = createMockPlayerStats({
+      hitPoints: { current: 100, max: 100 },
+    });
+    expect(stats.hitPoints.current).toBe(100);
+    expect(stats.hitPoints.max).toBe(100);
   });
 });
 
@@ -165,20 +166,19 @@ describe('createSharedPopupReturnValue', () => {
     const returnValue = createSharedPopupReturnValue();
     expect(returnValue).toHaveProperty('popupHtml', null);
     expect(returnValue).toHaveProperty('setPopupHtml');
-    expect(returnValue).toHaveProperty('value', {});
+    expect(returnValue).toHaveProperty('value');
     expect(returnValue).toHaveProperty('Provider');
   });
 
-  it('setPopupHtml is a vi.fn() mock', () => {
-    const returnValue = createSharedPopupReturnValue();
-    expect(typeof returnValue.setPopupHtml).toBe('function');
+  it('provides a fresh setPopupHtml mock on each call', () => {
+    const returnValue1 = createSharedPopupReturnValue();
+    const returnValue2 = createSharedPopupReturnValue();
+    expect(returnValue1.setPopupHtml).not.toBe(returnValue2.setPopupHtml);
   });
 
-  it('Provider renders children', () => {
+  it('Provider renders children unchanged', () => {
     const returnValue = createSharedPopupReturnValue();
-    const Provider = returnValue.Provider;
-    // Provider is a function that takes children and returns them
-    const result = Provider({ children: 'test-children' });
+    const result = returnValue.Provider({ children: 'test-children' });
     expect(result).toBe('test-children');
   });
 
@@ -195,22 +195,21 @@ describe('createSharedPopupReturnValue', () => {
 // ---------------------------------------------------------------------------
 
 describe('setPopup', () => {
-  it('sets popupHtml on the return value object', () => {
+  it('sets popupHtml to the provided value', () => {
     const returnValue = createSharedPopupReturnValue();
     const testHtml = { type: 'wild_shape_select', name: 'Test' };
     setPopup(returnValue, testHtml);
     expect(returnValue.popupHtml).toBe(testHtml);
   });
 
-  it('overwrites previous popupHtml value', () => {
+  it('overwrites the previous popupHtml value', () => {
     const returnValue = createSharedPopupReturnValue();
     setPopup(returnValue, { type: 'first' });
-    expect(returnValue.popupHtml).toEqual({ type: 'first' });
     setPopup(returnValue, { type: 'second' });
     expect(returnValue.popupHtml).toEqual({ type: 'second' });
   });
 
-  it('accepts null as html to clear popup', () => {
+  it('accepts null to clear the popup', () => {
     const returnValue = createSharedPopupReturnValue();
     returnValue.popupHtml = { type: 'something' };
     setPopup(returnValue, null);
@@ -223,14 +222,12 @@ describe('setPopup', () => {
 // ---------------------------------------------------------------------------
 
 describe('resetTestState', () => {
-  it('clears all mocks via vi.clearAllMocks', () => {
+  it('clears all mock call history via vi.clearAllMocks', () => {
     const returnValue = createSharedPopupReturnValue();
-    const mockFn = vi.fn().mockReturnValue('original');
-    returnValue.setPopupHtml = mockFn;
-    mockFn('called');
-    expect(mockFn).toHaveBeenCalledTimes(1);
+    returnValue.setPopupHtml('called');
+    expect(returnValue.setPopupHtml).toHaveBeenCalledTimes(1);
     resetTestState(returnValue);
-    expect(mockFn).toHaveBeenCalledTimes(0);
+    expect(returnValue.setPopupHtml).toHaveBeenCalledTimes(0);
   });
 
   it('resets popupHtml to null', () => {
@@ -240,7 +237,7 @@ describe('resetTestState', () => {
     expect(returnValue.popupHtml).toBeNull();
   });
 
-  it('replaces setPopupHtml with a fresh vi.fn()', () => {
+  it('replaces setPopupHtml with a fresh mock', () => {
     const returnValue = createSharedPopupReturnValue();
     const oldFn = returnValue.setPopupHtml;
     resetTestState(returnValue);
@@ -248,14 +245,14 @@ describe('resetTestState', () => {
     expect(typeof returnValue.setPopupHtml).toBe('function');
   });
 
-  it('resets value to empty object', () => {
+  it('resets value to an empty object', () => {
     const returnValue = createSharedPopupReturnValue();
     returnValue.value = { old: 'data' };
     resetTestState(returnValue);
     expect(returnValue.value).toEqual({});
   });
 
-  it('does not reset Provider', () => {
+  it('leaves Provider unchanged', () => {
     const returnValue = createSharedPopupReturnValue();
     const oldProvider = returnValue.Provider;
     resetTestState(returnValue);

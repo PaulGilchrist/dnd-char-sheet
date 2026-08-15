@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CharActionSpellPopups from './CharActionSpellPopups.jsx';
@@ -83,34 +84,6 @@ function createBaseProps(overrides) {
     actionPendingPassWithoutTrace: null,
     actionHandlePassWithoutTraceConfirm: vi.fn(),
     actionHandlePassWithoutTraceSkip: vi.fn(),
-    actionPendingHaste: null,
-    actionHandleHasteConfirm: vi.fn(),
-    actionHandleHasteSkip: vi.fn(),
-    actionPendingBarkskin: null,
-    actionHandleBarkskinConfirm: vi.fn(),
-    actionHandleBarkskinSkip: vi.fn(),
-    actionPendingHeal: null,
-    actionHandleHealConfirm: vi.fn(),
-    actionHandleHealSkip: vi.fn(),
-    actionPendingGreaterRestoration: null,
-    actionHandleGreaterRestorationConfirm: vi.fn(),
-    actionHandleGreaterRestorationSkip: vi.fn(),
-    actionHandleGreaterRestorationNoEffects: vi.fn(),
-    actionPendingRemoveCurse: null,
-    actionHandleRemoveCurseConfirm: vi.fn(),
-    actionHandleRemoveCurseSkip: vi.fn(),
-    actionPendingMagicMissile: null,
-    actionHandleMagicMissileConfirm: vi.fn(),
-    actionHandleMagicMissileSkip: vi.fn(),
-    actionPendingMageArmor: null,
-    actionHandleMageArmorConfirm: vi.fn(),
-    actionHandleMageArmorSkip: vi.fn(),
-    actionPendingCureWounds: null,
-    actionHandleCureWoundsConfirm: vi.fn(),
-    actionHandleCureWoundsSkip: vi.fn(),
-    actionPendingRevivify: null,
-    actionHandleRevivifyConfirm: vi.fn(),
-    actionHandleRevivifySkip: vi.fn(),
     pendingActionMetamagic: null,
     handleActionMetamagicConfirm: vi.fn(),
     handleActionMetamagicSkip: vi.fn(),
@@ -124,7 +97,7 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
   });
 
   describe('Aid spell', () => {
-    it('renders with correct title, icon, and description', () => {
+    it('renders with correct title, icon, description, maxTargets, and confirmLabel', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({
@@ -154,6 +127,49 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
       expect(screen.getByTestId('creature-count')).toHaveTextContent('3');
     });
 
+    it('renders creature targets from string array', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({
+            actionPendingAid: { creatureTargets: ['Ally1', 'Ally2'], maxTargets: 3 },
+            actionHandleAidConfirm: vi.fn(),
+            actionHandleAidSkip: vi.fn(),
+          })}
+        />
+      );
+      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
+      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
+    });
+
+    it('renders creature targets from object array with name property', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({
+            actionPendingAid: { creatureTargets: [{ name: 'Ally1' }, { name: 'Ally2' }], maxTargets: 3 },
+            actionHandleAidConfirm: vi.fn(),
+            actionHandleAidSkip: vi.fn(),
+          })}
+        />
+      );
+      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
+      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
+    });
+
+    it('renders no targets when creatureTargets is empty', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({
+            actionPendingAid: { creatureTargets: [], maxTargets: 3 },
+            actionHandleAidConfirm: vi.fn(),
+            actionHandleAidSkip: vi.fn(),
+          })}
+        />
+      );
+      expect(screen.getByTestId('title')).toHaveTextContent('Aid');
+      expect(screen.getByTestId('creature-count')).toHaveTextContent('0');
+      expect(screen.queryByTestId('target-0')).not.toBeInTheDocument();
+    });
+
     it('calls actionHandleAidConfirm on confirm with target names', () => {
       const actionHandleAidConfirm = vi.fn();
       render(
@@ -177,17 +193,10 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
       screen.getByTestId('skip').click();
       expect(actionHandleAidSkip).toHaveBeenCalled();
     });
-
-    it('does not render when actionPendingAid is null', () => {
-      const { container } = render(
-        <CharActionSpellPopups {...createBaseProps()} />
-      );
-      expect(container).toBeEmptyDOMElement();
-    });
   });
 
   describe('Bane spell', () => {
-    it('renders with correct title, icon, and description', () => {
+    it('renders with correct title, icon, description, maxTargets, and confirmLabel', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({
@@ -200,10 +209,11 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
       expect(screen.getByTestId('title')).toHaveTextContent('Bane');
       expect(screen.getByTestId('icon')).toHaveTextContent('fa-shield-halved');
       expect(screen.getByTestId('description')).toHaveTextContent('Curse up to three creatures');
+      expect(screen.getByTestId('max-targets')).toHaveTextContent('3');
       expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Bane');
     });
 
-    it('calls actionHandleBaneConfirm on confirm', () => {
+    it('calls actionHandleBaneConfirm on confirm with target names', () => {
       const actionHandleBaneConfirm = vi.fn();
       render(
         <CharActionSpellPopups
@@ -229,7 +239,7 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
   });
 
   describe('Bless spell', () => {
-    it('renders with correct title, icon, and description', () => {
+    it('renders with correct title, icon, description, maxTargets, and confirmLabel', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({
@@ -242,10 +252,11 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
       expect(screen.getByTestId('title')).toHaveTextContent('Bless');
       expect(screen.getByTestId('icon')).toHaveTextContent('fa-hands');
       expect(screen.getByTestId('description')).toHaveTextContent('You bless up to three creatures');
+      expect(screen.getByTestId('max-targets')).toHaveTextContent('3');
       expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Bless');
     });
 
-    it('calls actionHandleBlessConfirm on confirm', () => {
+    it('calls actionHandleBlessConfirm on confirm with target names', () => {
       const actionHandleBlessConfirm = vi.fn();
       render(
         <CharActionSpellPopups
@@ -271,7 +282,7 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
   });
 
   describe('Faerie Fire spell', () => {
-    it('renders with correct title, icon, and description', () => {
+    it('renders with correct title, icon, description, and confirmLabel (no maxTargets)', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({
@@ -285,9 +296,10 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
       expect(screen.getByTestId('icon')).toHaveTextContent('fa-fire');
       expect(screen.getByTestId('description')).toHaveTextContent('20-foot Cube');
       expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Faerie Fire');
+      expect(screen.getByTestId('max-targets')).toHaveTextContent('');
     });
 
-    it('renders with confirmIcon', () => {
+    it('renders with confirmIcon passed to modal', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({
@@ -297,11 +309,10 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
           })}
         />
       );
-      // The mock doesn't render confirmIcon but we verify the modal renders
       expect(screen.getByTestId('title')).toHaveTextContent('Faerie Fire');
     });
 
-    it('calls actionHandleFaerieFireConfirm on confirm', () => {
+    it('calls actionHandleFaerieFireConfirm on confirm with target names', () => {
       const actionHandleFaerieFireConfirm = vi.fn();
       render(
         <CharActionSpellPopups
@@ -327,7 +338,7 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
   });
 
   describe('Beacon of Hope spell', () => {
-    it('renders with correct title, icon, and description', () => {
+    it('renders with correct title, icon, description, and confirmLabel (no maxTargets)', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({
@@ -341,9 +352,25 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
       expect(screen.getByTestId('icon')).toHaveTextContent('fa-heart-pulse');
       expect(screen.getByTestId('description')).toHaveTextContent('bestows hope and vitality');
       expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Beacon of Hope');
+      expect(screen.getByTestId('max-targets')).toHaveTextContent('');
     });
 
-    it('calls actionHandleBeaconOfHopeConfirm on confirm', () => {
+    it('renders all targets when no maxTargets is specified', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({
+            actionPendingBeaconOfHope: { creatureTargets: ['Ally1', 'Ally2', 'Ally3'] },
+            actionHandleBeaconOfHopeConfirm: vi.fn(),
+            actionHandleBeaconOfHopeSkip: vi.fn(),
+          })}
+        />
+      );
+      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
+      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
+      expect(screen.getByTestId('target-2')).toHaveTextContent('Ally3');
+    });
+
+    it('calls actionHandleBeaconOfHopeConfirm on confirm with target names', () => {
       const actionHandleBeaconOfHopeConfirm = vi.fn();
       render(
         <CharActionSpellPopups
@@ -369,7 +396,7 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
   });
 
   describe('Pass Without Trace spell', () => {
-    it('renders with correct title, icon, and description', () => {
+    it('renders with correct title, icon, description, and confirmLabel (no maxTargets)', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({
@@ -383,9 +410,10 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
       expect(screen.getByTestId('icon')).toHaveTextContent('fa-ghost');
       expect(screen.getByTestId('description')).toHaveTextContent('veil of shadows and silence');
       expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Pass Without Trace');
+      expect(screen.getByTestId('max-targets')).toHaveTextContent('');
     });
 
-    it('calls actionHandlePassWithoutTraceConfirm on confirm', () => {
+    it('calls actionHandlePassWithoutTraceConfirm on confirm with target names', () => {
       const actionHandlePassWithoutTraceConfirm = vi.fn();
       render(
         <CharActionSpellPopups
@@ -407,6 +435,15 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
       );
       screen.getByTestId('skip').click();
       expect(actionHandlePassWithoutTraceSkip).toHaveBeenCalled();
+    });
+  });
+
+  describe('no CreatureSelectionModal spells pending', () => {
+    it('does not render any creature selection modal when all pending flags are null', () => {
+      const { container } = render(
+        <CharActionSpellPopups {...createBaseProps()} />
+      );
+      expect(container).toBeEmptyDOMElement();
     });
   });
 });

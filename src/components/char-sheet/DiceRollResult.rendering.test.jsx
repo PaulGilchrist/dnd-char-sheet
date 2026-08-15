@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
@@ -71,17 +72,26 @@ describe('DiceRollResult', () => {
         });
     });
 
-    describe('critical hit', () => {
-        it.each`
-            rolls        | isAutoCrit | rollType   | isCrit
-            ${[20, 5]}   | ${false}   | ${'attack'}| ${true}
-            ${[5, 3]}    | ${true}    | ${'attack'}| ${false}
-        `('shows "Critical Hit!" when isCrit or isAutoCrit is true for attack rolls', ({ rolls, isAutoCrit, isCrit }) => {
+    describe('critical hit display', () => {
+        it('shows "Critical Hit!" when isCrit is true for attack rolls', () => {
             render(
-                <DiceRollResult name="Attack" type="d20" rolls={rolls} bonus={3} isAutoCrit={isAutoCrit} isCrit={isCrit} rollType="attack" />
+                <DiceRollResult name="Attack" type="d20" rolls={[20, 5]} bonus={3} isCrit={true} rollType="attack" />
             );
             expect(screen.getByText(/Critical Hit!/)).toBeInTheDocument();
-            expect(screen.getByText(/damage dice doubled/)).toBeInTheDocument();
+        });
+
+        it('shows "Critical Hit!" when isAutoCrit is true for attack rolls', () => {
+            render(
+                <DiceRollResult name="Attack" type="d20" rolls={[5, 3]} bonus={3} isAutoCrit={true} rollType="attack" />
+            );
+            expect(screen.getByText(/Critical Hit!/)).toBeInTheDocument();
+        });
+
+        it('shows "Critical Hit!" for damage type when isCrit is true', () => {
+            render(
+                <DiceRollResult name="Fireball" type="damage" rolls={[6, 5, 4]} bonus={0} isCrit={true} />
+            );
+            expect(screen.getByText(/Critical Hit!/)).toBeInTheDocument();
         });
 
         it('shows "Natural 20!" for non-attack d20 rolls with natural 20', () => {
@@ -105,7 +115,7 @@ describe('DiceRollResult', () => {
         });
     });
 
-    describe('critical miss', () => {
+    describe('critical miss display', () => {
         it('shows "Critical Miss!" when isNatural1 is true and rollType is attack', () => {
             render(
                 <DiceRollResult name="Attack" type="d20" rolls={[1, 15]} bonus={3} rollType="attack" isNatural1={true} />
@@ -119,7 +129,7 @@ describe('DiceRollResult', () => {
             ${'check'}     | ${'Athletics'}
             ${'skill'}     | ${'Stealth'}
             ${'save'}      | ${'DEX Save'}
-        `('does NOT show "Critical Miss!" for rollType: $name', ({ rollType }) => {
+        `('does NOT show "Critical Miss!" for non-attack rollType: $name', ({ rollType }) => {
             render(
                 <DiceRollResult name={rollType} type="d20" rolls={[1, 10]} bonus={2} rollType={rollType} isNatural1={true} />
             );

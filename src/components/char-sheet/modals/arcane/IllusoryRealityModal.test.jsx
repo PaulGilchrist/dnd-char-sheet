@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import IllusoryRealityModal from './IllusoryRealityModal.jsx';
@@ -9,13 +10,13 @@ vi.mock('../../../../services/automation/handlers/class-wizard/illusoryRealityHa
 }));
 
 vi.mock('../../../../services/ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
+  addEntry: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn(() => Promise.resolve()),
-  setRuntimeBatch: vi.fn(() => Promise.resolve()),
+  setRuntimeValue: vi.fn().mockResolvedValue(undefined),
+  setRuntimeBatch: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ── Re-import mocked modules ──
@@ -46,14 +47,17 @@ function makeProps(overrides) {
   return { ...baseProps, ...(overrides || {}) };
 }
 
-const mockConfirmResult = {
-  type: 'popup',
-  payload: {
-    type: 'automation_info',
-    name: 'Illusory Reality',
-    description: '<b>Illusory Reality</b><br/>You make the object "stone" real.',
-  },
-};
+function makePopupResult(featureName) {
+  const name = featureName || 'Illusory Reality';
+  return {
+    type: 'popup',
+    payload: {
+      type: 'automation_info',
+      name,
+      description: `<b>${name}</b><br/><br/>You use your Bonus Action to make the object <b>"stone"</b> real.<br/><br/>The object cannot deal damage or impose any conditions.<br/><br/><em>The object persists until you roll initiative, finish a short rest, or finish a long rest. It disappears if you use this feature again.</em>`,
+    },
+  };
+}
 
 // ── Helpers ──
 
@@ -63,8 +67,8 @@ function renderModal(props) {
 
 async function fillAndConfirm(objectValue) {
   const input = screen.getByRole('textbox');
-  fireEvent.change(input, { target: { value: objectValue } });
   await act(async () => {
+    fireEvent.change(input, { target: { value: objectValue } });
     fireEvent.click(screen.getByRole('button', { name: /Make Object Real/ }));
   });
 }
@@ -140,11 +144,31 @@ describe('IllusoryRealityModal', () => {
     });
   });
 
-  // ── Confirm flow ──
+  // ── Overlay close behavior ──
+
+  describe('overlay close behavior', () => {
+    it('calls onClose when the overlay background is clicked', () => {
+      const onClose = vi.fn();
+      renderModal({ onClose });
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onClose when the modal content is clicked', () => {
+      const onClose = vi.fn();
+      renderModal({ onClose });
+      const modal = document.querySelector('.sp-modal');
+      fireEvent.click(modal);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Confirmation flow ──
 
   describe('confirmation flow', () => {
     beforeEach(() => {
-      confirmIllusoryReality.mockResolvedValue(mockConfirmResult);
+      confirmIllusoryReality.mockResolvedValue(makePopupResult('Illusory Reality'));
     });
 
     it('calls confirmIllusoryReality with correct parameters', async () => {
@@ -180,8 +204,16 @@ describe('IllusoryRealityModal', () => {
       renderModal();
       await fillAndConfirm('stone');
       await waitFor(() => {
-        const body = document.querySelector('.sp-body');
-        expect(body.innerHTML).toContain('<b>Illusory Reality</b>');
+        expect(screen.getByText(/You use your Bonus Action to make the object/)).toBeInTheDocument();
+      });
+    });
+
+    it('renders the feature name in the result header', async () => {
+      renderModal();
+      await fillAndConfirm('stone');
+      await waitFor(() => {
+        const header = document.querySelector('.sp-header');
+        expect(header.textContent).toContain('Illusory Reality');
       });
     });
 
@@ -193,6 +225,58 @@ describe('IllusoryRealityModal', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
       });
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the modal when clicking the overlay in result state', async () => {
+      const onClose = vi.fn();
+      renderModal({ onClose });
+      await fillAndConfirm('stone');
+      await waitFor(() => {
+        fireEvent.click(document.querySelector('.sp-overlay'));
+      });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close when clicking modal content in result state', async () => {
+      const onClose = vi.fn();
+      renderModal({ onClose });
+      await fillAndConfirm('stone');
+      await waitFor(() => {
+        fireEvent.click(document.querySelector('.sp-modal'));
+      });
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('uses custom featureName in the result header when provided', async () => {
+      renderModal({ action: { featureName: 'Custom Feature', automation: {} } });
+      confirmIllusoryReality.mockResolvedValue(makePopupResult('Custom Feature'));
+      await fillAndConfirm('stone');
+      await waitFor(() => {
+        const header = document.querySelector('.sp-header');
+        expect(header.textContent).toContain('Custom Feature');
+      });
+    });
+  });
+
+  // ── Handler returns error popup ──
+
+  describe('handler returns error popup', () => {
+    it('displays the error message when handler returns a popup result', async () => {
+      const onClose = vi.fn();
+      renderModal({ onClose });
+      confirmIllusoryReality.mockResolvedValue({
+        type: 'popup',
+        payload: {
+          type: 'automation_info',
+          name: 'Illusory Reality',
+          description: 'Illusory Reality: You must specify an inanimate, nonmagical object.',
+        },
+      });
+      await fillAndConfirm('stone');
+      await waitFor(() => {
+        expect(screen.getByText(/Illusory Reality: You must specify/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+      });
     });
   });
 

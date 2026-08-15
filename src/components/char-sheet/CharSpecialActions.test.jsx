@@ -1,86 +1,24 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import './CharSpecialActions.modalMocks.jsx';
 import CharSpecialActions from './CharSpecialActions.jsx';
 
-// Mock executeHandler
-vi.mock('../../services/automation/index.js', () => ({
-  executeHandler: vi.fn(),
-}));
-
-// Mock automation service
-vi.mock('../../services/combat/automation/automationService.js', () => ({
-  hasAutomation: vi.fn((action) => !!(action?.automation)),
-  isInteractiveAutomation: vi.fn((action) => {
-    if (!action?.automation) return false;
-    const auto = Array.isArray(action.automation) ? action.automation[0] : action.automation;
-    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice'];
-    if (auto.type === 'passive_rule') {
-      const interactiveEffects = ['abjuration_savant', 'divination_savant', 'evocation_savant', 'illusion_savant'];
-      return interactiveEffects.includes(auto.effect);
-    }
-    return interactiveTypes.includes(auto.type);
-  }),
-}));
-
-// Mock TeleportModal
-vi.mock('./modals/TeleportModal.jsx', () => ({
-  default: ({ action, onClose }) => (
-    <div data-testid="teleport-modal">
-      <span>{action?.name || 'Teleport'}</span>
-      <button onClick={onClose}>Close</button>
-    </div>
-  ),
-}));
-
-// Mock SignatureSpellsModal
-vi.mock('./modals/arcane/SignatureSpellsModal.jsx', () => ({
-  default: ({ payload: _payload, onConfirm, onClose }) => (
-    <div data-testid="signature-spells-modal" role="presentation" onClick={onClose}>
-      <h3>Signature Spells</h3>
-      <button onClick={() => onConfirm('Fireball', 'Haste')}>Confirm</button>
-      <button onClick={onClose}>Close</button>
-    </div>
-  ),
-}));
-
-// Mock SpellMasteryModal
-vi.mock('./modals/arcane/SpellMasteryModal.jsx', () => ({
-  default: ({ payload: _payload, onConfirm, onClose }) => (
-    <div data-testid="spell-mastery-modal" role="presentation" onClick={onClose}>
-      <h3>Spell Mastery</h3>
-      <button onClick={() => onConfirm('Mage Armor', 'Shield')}>Confirm</button>
-      <button onClick={onClose}>Close</button>
-    </div>
-  ),
-}));
-
-// Mock SavantModal
-vi.mock('./modals/arcane/SavantModal.jsx', () => ({
-  default: ({ payload, onConfirm, onClose }) => (
-    <div data-testid={`${payload?.school?.toLowerCase() || 'savant'}-savant-modal`} role="presentation" onClick={onClose}>
-      <span>{payload?.school || 'Savant'} Savant</span>
-      <button onClick={() => onConfirm(payload?.spellOptions?.[0] || 'Shield', payload?.spellOptions?.[1] || 'Mage Armor')}>Confirm</button>
-      <button onClick={onClose}>Close</button>
-    </div>
-  ),
-}));
-
-// Mock renderMarkdownInline
-vi.mock('../../services/ui/sanitize.js', () => ({
-  sanitizeHtml: vi.fn((html) => html),
-  renderMarkdown: vi.fn((md) => md),
-  renderMarkdownInline: vi.fn((md) => md),
-}));
-
-// Mock fighting styles
+// Reuse the shared modal mocks for all modals, automation, runtime, etc.
+// The only thing we customize here is the fighting styles mock to include
+// all four styles the component checks for (Great Weapon Fighting,
+// Interception, Protection, Two-Weapon Fighting).
 vi.mock('../../services/ui/dataLoader.js', () => ({
   loadFightingStyles: vi.fn(() => Promise.resolve([
     { name: 'Great Weapon Fighting', description: 'When you roll damage for an attack you make with a Melee weapon that you are holding with two hands, you can treat any 1 or 2 on a damage die as a 3. The weapon must have the Two-Handed or Versatile property to gain this benefit.' },
-    { name: 'Protection', description: 'When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield.' },
+    { name: 'Interception', description: 'When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to reduce the damage by 1d10 + your proficiency bonus.' },
+    { name: 'Protection', description: 'When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll.' },
+    { name: 'Two-Weapon Fighting', description: 'When you engage in two-weapon fighting, you can add your ability modifier to the damage of the bonus attack.' },
   ])),
 }));
 
 const basePlayerStats = {
+  name: 'TestCharacter',
   specialActions: [],
   class: {
     fightingStyles: [],
@@ -96,10 +34,6 @@ function createPlayerStats(overrides = {}) {
 }
 
 describe('CharSpecialActions - Rendering & Filtering', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe('rendering', () => {
     it('renders the Special Actions header and special actions with names and descriptions', () => {
       const playerStats = createPlayerStats({
@@ -144,11 +78,12 @@ describe('CharSpecialActions - Rendering & Filtering', () => {
   describe('fighting styles', () => {
     it('adds fighting styles from class.fightingStyles when not already in specialActions', async () => {
       const playerStats = createPlayerStats({
-        class: { fightingStyles: ['Great Weapon Fighting', 'Protection'] },
+        class: { fightingStyles: ['Great Weapon Fighting'] },
       });
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-      await waitFor(() => expect(screen.queryByText(/Great Weapon Fighting/)).toBeInTheDocument());
-      expect(screen.queryByText(/Protection/)).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText(/Great Weapon Fighting/)).toBeInTheDocument();
+      });
     });
 
     it('does not duplicate a fighting style already in specialActions', async () => {
@@ -159,8 +94,10 @@ describe('CharSpecialActions - Rendering & Filtering', () => {
         class: { fightingStyles: ['Great Weapon Fighting'] },
       });
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-      const elements = screen.getAllByText(/Great Weapon Fighting/);
-      expect(elements).toHaveLength(1);
+      await waitFor(() => {
+        const elements = screen.getAllByText(/Great Weapon Fighting/);
+        expect(elements).toHaveLength(1);
+      });
     });
   });
 
@@ -176,8 +113,8 @@ describe('CharSpecialActions - Rendering & Filtering', () => {
   });
 
   describe('ruleset filtering', () => {
-    it('filters out featuresToIgnore and keeps other features for 5e ruleset', async () => {
-      const { container } = render(
+    it('filters out featuresToIgnore and keeps other features for 5e ruleset', () => {
+      render(
         <CharSpecialActions playerStats={createPlayerStats({
           specialActions: [
             { name: 'Spellcasting', description: 'Cast spells.' },
@@ -189,16 +126,14 @@ describe('CharSpecialActions - Rendering & Filtering', () => {
         })} campaignName="test" />
       );
 
-      await waitFor(() => {
-        expect(within(container).queryByText(/Spellcasting/)).not.toBeInTheDocument();
-        expect(within(container).queryByText(/Extra Attack/)).not.toBeInTheDocument();
-        expect(within(container).getByText(/Bardic Inspiration/)).toBeInTheDocument();
-        expect(within(container).getByText(/Test Feature/)).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/Spellcasting/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Extra Attack/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Bardic Inspiration/)).toBeInTheDocument();
+      expect(screen.getByText(/Test Feature/)).toBeInTheDocument();
     });
 
-    it('filters out featuresToIgnore and keeps other features for 2024 ruleset', async () => {
-      const { container } = render(
+    it('filters out featuresToIgnore and keeps other features for 2024 ruleset', () => {
+      render(
         <CharSpecialActions playerStats={createPlayerStats({
           specialActions: [
             { name: 'Spellcasting', description: 'Cast spells.' },
@@ -210,12 +145,10 @@ describe('CharSpecialActions - Rendering & Filtering', () => {
         })} campaignName="test" />
       );
 
-      await waitFor(() => {
-        expect(within(container).queryByText(/Spellcasting/)).not.toBeInTheDocument();
-        expect(within(container).queryByText(/(^|\s)Feat($|\s)/)).not.toBeInTheDocument();
-        expect(within(container).queryByText(/Fighting Style/)).not.toBeInTheDocument();
-        expect(within(container).getByText(/Test Feature/)).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/Spellcasting/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/(^|\s)Feat($|\s)/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Fighting Style/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Test Feature/)).toBeInTheDocument();
     });
   });
 });

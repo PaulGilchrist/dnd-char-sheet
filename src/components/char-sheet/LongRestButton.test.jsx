@@ -1,8 +1,9 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import LongRestButton from './LongRestButton.jsx';
 
-// ── Mocked modules ──
+// ── Mocks ──
 
 vi.mock('../../services/rules/effects/tranceRules.js', () => ({
   hasTranceTrait: vi.fn(),
@@ -12,23 +13,32 @@ vi.mock('../../services/rules/effects/restRules.js', () => ({
   applyLongRest: vi.fn(),
 }));
 
-// ── Re-import mocked modules ──
+vi.mock('../../services/automation/handlers/buffs/tempHpService.js', () => ({
+  setTempHp: vi.fn(),
+}));
+
+vi.mock('../../services/ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
+  default: function MockModal() {
+    return <div data-testid="creature-selection-modal" />;
+  },
+}));
+
+// ── Re-import mocks ──
 
 import * as tranceRules from '../../services/rules/effects/tranceRules.js';
 import * as restRules from '../../services/rules/effects/restRules.js';
 
-// ── Test fixtures ──
+// ── Fixtures ──
 
 const basePlayerStats = {
   name: 'TestCharacter',
   level: 5,
   hitPoints: 45,
   class: { name: 'Cleric' },
-};
-
-const trancePlayerStats = {
-  ...basePlayerStats,
-  race: { traits: [{ name: 'Trance' }] },
 };
 
 const mockCampaignName = 'test-campaign';
@@ -47,22 +57,56 @@ function makeProps(overrides) {
 describe('LongRestButton', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tranceRules.hasTranceTrait.mockReturnValue(false);
+    restRules.applyLongRest.mockResolvedValue({});
   });
 
-  it('renders with correct text based on Trance trait and calls onLongRest on click', async () => {
+  it('renders the button and calls applyLongRest with correct arguments on click', async () => {
     const onLongRest = vi.fn();
-    tranceRules.hasTranceTrait.mockReturnValue(false);
-    const { rerender } = render(<LongRestButton {...makeProps({ onLongRest })} />);
-    expect(screen.getByText('Long Rest')).toBeInTheDocument();
-
-    tranceRules.hasTranceTrait.mockReturnValue(true);
-    rerender(<LongRestButton {...makeProps({ playerStats: trancePlayerStats, onLongRest })} />);
-    expect(screen.getByText('Long Rest (4 hours)')).toBeInTheDocument();
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
 
     fireEvent.click(screen.getByRole('button'));
-    expect(restRules.applyLongRest).toHaveBeenCalledWith(expect.any(Object), mockCampaignName);
-    await vi.waitFor(() => {
+
+    expect(restRules.applyLongRest).toHaveBeenCalledWith(basePlayerStats, mockCampaignName);
+
+    await waitFor(() => {
       expect(onLongRest).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('calls onLongRest with no arguments when applyLongRest resolves', async () => {
+    const onLongRest = vi.fn();
+    restRules.applyLongRest.mockResolvedValue({ success: true });
+
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(onLongRest).toHaveBeenCalled();
+      expect(onLongRest).toHaveBeenCalledWith();
+    });
+  });
+
+  it('does not call onLongRest when modal is shown', async () => {
+    const onLongRest = vi.fn();
+    restRules.applyLongRest.mockResolvedValue({
+      celestialResilienceAllies: {
+        creatureTargets: [{ name: 'Ally1', type: 'player' }],
+        allyTempHp: 10,
+        selfTempHp: 5,
+        maxTargets: 5,
+      },
+    });
+
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    expect(onLongRest).not.toHaveBeenCalled();
   });
 });

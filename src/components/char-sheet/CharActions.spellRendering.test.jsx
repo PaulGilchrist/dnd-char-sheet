@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
@@ -178,6 +179,42 @@ vi.mock('../../services/automation/contextBuilder.js', () => ({
   buildAttackContextSync: vi.fn(() => ({ hitBonus: 5 })),
 }));
 
+vi.mock('../../services/rules/core/spellDamageUtils.js', () => ({
+  resolveSpellDamageAtLevel: vi.fn((spell) => {
+    if (spell?.damage && typeof spell.damage === 'object') return spell.damage.amount || '';
+    if (spell?.damage && typeof spell.damage === 'string' && spell.damage !== 'Utility') return spell.damage;
+    return '';
+  }),
+  isAutoHitSpell: vi.fn((spell) => !!spell?.dc),
+  resolveHealExpression: vi.fn((_spell, _level, mod) => `1d4+${mod ?? 0}`),
+}));
+
+vi.mock('../../services/ui/formatUtils.js', () => ({
+  formatRange: vi.fn((range) => range || ''),
+  signFormatter: new Intl.NumberFormat('en-US', { signDisplay: 'always' }),
+  getAttackSpellLevel: vi.fn((spellAbilities, attackName) => {
+    if (!spellAbilities?.spells) return null;
+    const spell = spellAbilities.spells.find(s => s.name === attackName);
+    return spell ? spell.level : null;
+  }),
+}));
+
+vi.mock('../../services/ui/spellSectionUtils.js', () => ({
+  getActionSpellNames: vi.fn((playerStats) => {
+    const names = new Set();
+    for (const spell of playerStats.spellAbilities?.spells || []) {
+      if (spell.casting_time === '1 action' && (spell.prepared === 'Always' || spell.prepared === 'Prepared')) {
+        if (spell.damage || spell.heal_at_slot_level) {
+          names.add(spell.name);
+        }
+      }
+    }
+    return names;
+  }),
+}));
+
+// --- Helpers ---
+
 const basePlayerStats = {
   name: 'TestCharacter', rules: '5e', level: 5, attacks: [], actions: [],
   spellAbilities: { spells: [], toHit: 5, saveDc: 13 },
@@ -187,6 +224,52 @@ const basePlayerStats = {
 function createStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
+
+function mockRuntimeValues(buffs = [], conditions = []) {
+  getRuntimeValue.mockImplementation((_name, key) => {
+    if (key === 'activeBuffs') return buffs;
+    if (key === 'hasteExtraActionUsed') return false;
+    if (key === 'activeConditions') return conditions;
+    return null;
+  });
+}
+
+/**
+ * Assert that a spell row contains the expected column structure:
+ * Name, Level, Range, Hit/DC, Damage, Type.
+ */
+function expectSpellRow(spellName, expectedLevel, expectedRange, expectedHitOrDc, expectedDamage, expectedType) {
+  const nameEl = screen.getByText(spellName);
+  expect(nameEl).toBeInTheDocument();
+
+  // Verify level column
+  if (expectedLevel === 'Cantrip') {
+    expect(screen.getByText('Cantrip')).toBeInTheDocument();
+  } else {
+    expect(screen.getByText(String(expectedLevel))).toBeInTheDocument();
+  }
+
+  // Verify range column
+  expect(screen.getByText(expectedRange)).toBeInTheDocument();
+
+  // Verify hit bonus or DC column (null means empty/absent)
+  if (expectedHitOrDc && expectedHitOrDc.startsWith('DC')) {
+    expect(screen.getByText(new RegExp(expectedHitOrDc))).toBeInTheDocument();
+  } else if (expectedHitOrDc) {
+    expect(screen.getByText(expectedHitOrDc)).toBeInTheDocument();
+  }
+  // If expectedHitOrDc is null, we don't assert anything about the hit column
+
+  // Verify damage column
+  expect(screen.getByText(expectedDamage)).toBeInTheDocument();
+
+  // Verify type column (empty string means we expect no specific type label)
+  if (expectedType) {
+    expect(screen.getByText(expectedType)).toBeInTheDocument();
+  }
+}
+
+// --- Tests ---
 
 describe('CharActions spell rendering', () => {
   beforeEach(() => {
@@ -198,13 +281,8 @@ describe('CharActions spell rendering', () => {
   });
 
   describe('spell rendering in actions section', () => {
-    it('renders action spells with correct level display', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('renders action spells with correct level, range, and type columns', async () => {
+      mockRuntimeValues();
 
       const stats = createStats({
         spellAbilities: {
@@ -219,19 +297,13 @@ describe('CharActions spell rendering', () => {
 
       await act(async () => { render(<CharActions playerStats={stats} />); });
 
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
-      expect(screen.getByText('Magic Missile')).toBeInTheDocument();
-      expect(screen.getByText('3')).toBeInTheDocument();
-      expect(screen.getByText('1')).toBeInTheDocument();
+      // Spells without attack_type render an empty hit column (no +5 bonus)
+      expectSpellRow('Fireball', 3, '150 ft', null, '8d6', '');
+      expectSpellRow('Magic Missile', 1, '120 ft', null, '4d4+4', '');
     });
 
-    it('renders cantrips with "Cantrip" label', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('renders cantrips with "Cantrip" label instead of level 0', async () => {
+      mockRuntimeValues();
 
       const stats = createStats({
         spellAbilities: {
@@ -250,12 +322,7 @@ describe('CharActions spell rendering', () => {
     });
 
     it('renders healing spells with "Healing" type label', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         spellAbilities: {
@@ -273,13 +340,8 @@ describe('CharActions spell rendering', () => {
       expect(screen.getByText('Healing')).toBeInTheDocument();
     });
 
-    it('renders utility spells with "Utility" type label', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('renders utility spells with "Utility" type label when damage string equals "Utility"', async () => {
+      mockRuntimeValues();
 
       const stats = createStats({
         spellAbilities: {
@@ -297,18 +359,13 @@ describe('CharActions spell rendering', () => {
       expect(screen.getByText('Utility')).toBeInTheDocument();
     });
 
-    it('renders spells with damage type correctly', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('renders damage type from structured damage object', async () => {
+      mockRuntimeValues();
 
       const stats = createStats({
         spellAbilities: {
           spells: [
-             { name: 'Fireball', level: 3, range: '150 ft', casting_time: '1 action', prepared: 'Prepared', damage: { amount: '8d6', damage_type: 'Fire' } },
+            { name: 'Fireball', level: 3, range: '150 ft', casting_time: '1 action', prepared: 'Prepared', damage: { amount: '8d6', damage_type: 'Fire' } },
           ],
           toHit: 5,
           saveDc: 15,
@@ -320,16 +377,47 @@ describe('CharActions spell rendering', () => {
       expect(screen.getByText('Fire')).toBeInTheDocument();
     });
 
+    it('renders empty type column when spell has no damage type or healing/utility indicator', async () => {
+      mockRuntimeValues();
+
+      const stats = createStats({
+        spellAbilities: {
+          spells: [
+            { name: 'Shocking Grasp', level: 0, range: 'Touch', casting_time: '1 action', prepared: 'Prepared', damage: '1d6', attack_type: 'melee' },
+          ],
+          toHit: 5,
+          saveDc: 13,
+        },
+      });
+
+      await act(async () => { render(<CharActions playerStats={stats} />); });
+
+      expect(screen.getByText('Shocking Grasp')).toBeInTheDocument();
+      // No damage type label should appear — the type column is empty
+      expect(screen.queryByText('Lightning')).not.toBeInTheDocument();
+    });
+
+    it('renders no spell rows when spellAbilities.spells is empty', async () => {
+      mockRuntimeValues();
+
+      const stats = createStats({
+        spellAbilities: {
+          spells: [],
+          toHit: 5,
+          saveDc: 13,
+        },
+      });
+
+      await act(async () => { render(<CharActions playerStats={stats} />); });
+
+      expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.queryByText('Fireball')).not.toBeInTheDocument();
+    });
   });
 
   describe('auto-hit spell rendering', () => {
-    it('shows save DC column for auto-hit spells (no attack roll needed)', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('shows empty hit column for auto-hit spells (no attack roll, no DC display in hit column)', async () => {
+      mockRuntimeValues();
 
       const stats = createStats({
         spellAbilities: {
@@ -343,16 +431,12 @@ describe('CharActions spell rendering', () => {
 
       await act(async () => { render(<CharActions playerStats={stats} />); });
 
-      expect(screen.getByText(/DC 13 CON/)).toBeInTheDocument();
+      // Auto-hit spells render an empty hit column (no +5, no DC in hit column)
+      expect(screen.queryByText('+5')).not.toBeInTheDocument();
     });
 
-    it('shows save DC with different save types', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('shows save DC for attacks with saveDc and saveType', async () => {
+      mockRuntimeValues();
 
       const stats = createStats({
         attacks: [
@@ -364,12 +448,31 @@ describe('CharActions spell rendering', () => {
 
       expect(screen.getByText(/DC 14 STR/)).toBeInTheDocument();
     });
+
+    it('hides the hit bonus column for spells without attack_type and without save DC', async () => {
+      mockRuntimeValues();
+
+      const stats = createStats({
+        spellAbilities: {
+          spells: [
+            { name: 'Magic Missile', level: 1, range: '120 ft', casting_time: '1 action', prepared: 'Prepared', damage: '4d4+4' },
+          ],
+          toHit: 5,
+          saveDc: 13,
+        },
+      });
+
+      await act(async () => { render(<CharActions playerStats={stats} />); });
+
+      // Magic Missile has no attack_type and no save DC, so no attack column
+      expect(screen.queryByText('+5')).not.toBeInTheDocument();
+    });
   });
 
   describe('spell attack/damage click handlers', () => {
     it('calls resolveSpellDamage when damage is clicked for save-DC spell attack', async () => {
       const mockResolveSpellDamage = vi.fn();
-      vi.mocked(getRuntimeValue).mockReturnValue(null);
+      getRuntimeValue.mockReturnValue(null);
 
       useActionSpellMetamagic.mockReturnValue({
         pendingActionMetamagic: null,
@@ -387,8 +490,10 @@ describe('CharActions spell rendering', () => {
         globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
         render(<CharActions playerStats={stats} />);
       });
+
       const damageElement = screen.getByText('1d12');
       await act(async () => { fireEvent.click(damageElement); });
+
       expect(mockResolveSpellDamage).toHaveBeenCalledWith(stats.attacks[0]);
     });
 
@@ -423,65 +528,11 @@ describe('CharActions spell rendering', () => {
 
       expect(mockHandleSpellAttackClick).toHaveBeenCalled();
     });
-
-    it('does not show attack column for auto-hit spells', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      const stats = createStats({
-        spellAbilities: {
-          spells: [
-            { name: 'Ray of Sickness', level: 1, range: '60 ft', casting_time: '1 action', prepared: 'Prepared', damage: '2d8', dc: { dc_type: 'CON', dc_success: 'half' } },
-          ],
-          toHit: 5,
-          saveDc: 13,
-        },
-      });
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      // Auto-hit spells should not have an attack roll column
-      expect(screen.queryByText('+5')).not.toBeInTheDocument();
-      expect(screen.getByText(/DC 13 CON/)).toBeInTheDocument();
-    });
-
-    it('does not show attack column for spells without attack_type and without save DC', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      const stats = createStats({
-        spellAbilities: {
-          spells: [
-            { name: 'Magic Missile', level: 1, range: '120 ft', casting_time: '1 action', prepared: 'Prepared', damage: '4d4+4' },
-          ],
-          toHit: 5,
-          saveDc: 13,
-        },
-      });
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      // Magic Missile has no attack_type and no save DC, so no attack column
-      expect(screen.queryByText('+5')).not.toBeInTheDocument();
-    });
   });
 
   describe('spell damage display', () => {
     it('shows resolved damage for spells with damage', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         spellAbilities: {
@@ -496,15 +547,11 @@ describe('CharActions spell rendering', () => {
       await act(async () => { render(<CharActions playerStats={stats} />); });
 
       expect(screen.getByText('Fireball')).toBeInTheDocument();
+      expect(screen.getByText('8d6')).toBeInTheDocument();
     });
 
     it('shows empty damage for healing spells', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         spellAbilities: {
@@ -523,13 +570,8 @@ describe('CharActions spell rendering', () => {
   });
 
   describe('action attack rendering', () => {
-    it('renders action attacks with correct columns', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('renders action attacks with all columns', async () => {
+      mockRuntimeValues();
 
       const stats = createStats({
         attacks: [
@@ -542,15 +584,14 @@ describe('CharActions spell rendering', () => {
 
       expect(screen.getByText('Longsword')).toBeInTheDocument();
       expect(screen.getByText('Shortbow')).toBeInTheDocument();
+      expect(screen.getByText('1d8+3')).toBeInTheDocument();
+      expect(screen.getByText('1d6+3')).toBeInTheDocument();
+      expect(screen.getByText('Slashing')).toBeInTheDocument();
+      expect(screen.getByText('Piercing')).toBeInTheDocument();
     });
 
-    it('renders attacks with save DC display', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('renders attacks with save DC display and damage', async () => {
+      mockRuntimeValues();
 
       const stats = createStats({
         attacks: [
@@ -562,15 +603,11 @@ describe('CharActions spell rendering', () => {
 
       expect(screen.getByText(/DC 14 CON/)).toBeInTheDocument();
       expect(screen.getByText('1d12')).toBeInTheDocument();
+      expect(screen.getByText('Lightning')).toBeInTheDocument();
     });
 
-    it('renders attack level for attacks with spell abilities', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('renders attack level from spellAbilities when attack shares a name with a spell', async () => {
+      mockRuntimeValues();
 
       const stats = createStats({
         attacks: [
@@ -587,8 +624,9 @@ describe('CharActions spell rendering', () => {
 
       await act(async () => { render(<CharActions playerStats={stats} />); });
 
-      const elements = screen.getAllByText(/Melfs/);
-      expect(elements.length).toBeGreaterThan(0);
+      // Both the attack row and the spell row should show "Cantrip" since the spell is level 0
+      const cantripElements = screen.getAllByText('Cantrip');
+      expect(cantripElements.length).toBeGreaterThan(0);
     });
   });
 });

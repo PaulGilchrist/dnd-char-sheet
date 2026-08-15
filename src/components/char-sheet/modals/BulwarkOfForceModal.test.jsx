@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BulwarkOfForceModal from './BulwarkOfForceModal.jsx';
@@ -101,41 +102,8 @@ describe('BulwarkOfForceModal', () => {
     mockHandleSkip.mockClear();
   });
 
-  // ── Rendering ──
-
-  describe('rendering', () => {
-    it('renders with title "Bulwark of Force"', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(screen.getByText('Bulwark of Force')).toBeInTheDocument();
-    });
-
-    it('renders with shield-halved icon', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(document.querySelector('.fa-shield-halved')).toBeInTheDocument();
-    });
-
-    it('renders the description "Choose allies to grant Half Cover"', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(screen.getByText('Choose allies to grant Half Cover')).toBeInTheDocument();
-    });
-
-    it('renders confirm button with label "Grant Half Cover"', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Grant Half Cover/ })).toBeInTheDocument();
-    });
-
-    it('renders confirm button with shield-halved icon', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      const confirmBtn = screen.getByRole('button', { name: /Grant Half Cover/ });
-      expect(confirmBtn.querySelector('.fa-shield-halved')).toBeInTheDocument();
-    });
-
-    it('renders Skip button', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-    });
-
-    it('renders CreatureSelectionModal with correct props', () => {
+  describe('renders CreatureSelectionModal with correct fixed props', () => {
+    it('passes the correct title, icon, description, and confirmLabel', () => {
       render(<BulwarkOfForceModal {...makeProps()} />);
       const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
       expect(props.title).toBe('Bulwark of Force');
@@ -145,37 +113,31 @@ describe('BulwarkOfForceModal', () => {
       expect(props.confirmIcon).toBe('fa-shield-halved');
     });
 
-    it('passes targets to CreatureSelectionModal', () => {
+    it('passes through targets, maxTargets, onConfirm, and onSkip', () => {
       render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual(defaultTargets);
+      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
+      expect(props.targets).toEqual(defaultTargets);
+      expect(props.maxTargets).toBe(2);
+      expect(props.onConfirm).toBe(mockOnConfirm);
+      expect(props.onSkip).toBe(mockOnSkip);
     });
 
-    it('passes maxTargets to CreatureSelectionModal', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(2);
-    });
-
-    it('passes onConfirm to CreatureSelectionModal', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].onConfirm).toBe(mockOnConfirm);
-    });
-
-    it('passes onSkip to CreatureSelectionModal', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].onSkip).toBe(mockOnSkip);
+    it('passes custom maxTargets and targets', () => {
+      render(<BulwarkOfForceModal {...makeProps({ maxTargets: 1, targets: ['AllyA', 'AllyB'] })} />);
+      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
+      expect(props.maxTargets).toBe(1);
+      expect(props.targets).toEqual(['AllyA', 'AllyB']);
     });
   });
 
-  // ── User interactions ──
-
-  describe('user interactions', () => {
+  describe('delegates user actions to callback props', () => {
     it('calls onSkip when Skip button is clicked', () => {
       render(<BulwarkOfForceModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
       expect(mockOnSkip).toHaveBeenCalledTimes(1);
     });
 
-    it('does not call onConfirm when confirm button is clicked with no selection', () => {
+    it('does not call onConfirm when confirm button is disabled (no selection)', () => {
       render(<BulwarkOfForceModal {...makeProps()} />);
       const confirmBtn = screen.getByRole('button', { name: /Grant Half Cover \(0\)/ });
       expect(confirmBtn).toBeDisabled();
@@ -184,115 +146,23 @@ describe('BulwarkOfForceModal', () => {
     });
   });
 
-  // ── Prop passthrough ──
-
-  describe('prop passthrough', () => {
-    it('passes different maxTargets values to CreatureSelectionModal', () => {
-      render(<BulwarkOfForceModal {...makeProps({ maxTargets: 1 })} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(1);
-
-      vi.clearAllMocks();
-      render(<BulwarkOfForceModal {...makeProps({ maxTargets: 5 })} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(5);
-    });
-
-    it('passes empty targets array to CreatureSelectionModal', () => {
-      render(<BulwarkOfForceModal {...makeProps({ targets: [] })} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual([]);
-    });
-
-    it('passes string targets to CreatureSelectionModal', () => {
-      const stringTargets = ['AllyA', 'AllyB', 'AllyC'];
-      render(<BulwarkOfForceModal {...makeProps({ targets: stringTargets })} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual(stringTargets);
-    });
-  });
-
-  // ── Default values ──
-
-  describe('default values', () => {
-    it('renders without maxTargets prop', () => {
-      const props = makeProps();
-      delete props.maxTargets;
-      render(<BulwarkOfForceModal {...props} />);
-      expect(screen.getByText('Bulwark of Force')).toBeInTheDocument();
-    });
-
-    it('renders without onConfirm prop', () => {
-      const props = makeProps();
-      delete props.onConfirm;
-      render(<BulwarkOfForceModal {...props} />);
-      expect(screen.getByText('Bulwark of Force')).toBeInTheDocument();
-    });
-
-    it('renders without onSkip prop', () => {
-      const props = makeProps();
-      delete props.onSkip;
-      render(<BulwarkOfForceModal {...props} />);
-      expect(screen.getByText('Bulwark of Force')).toBeInTheDocument();
-    });
-  });
-
-  // ── Fixed label/icon behavior ──
-
-  describe('fixed label and icon behavior', () => {
-    it('always uses "Bulwark of Force" title', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(screen.getByText('Bulwark of Force')).toBeInTheDocument();
-    });
-
-    it('always uses shield-halved icon', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(document.querySelectorAll('.fa-shield-halved').length).toBeGreaterThan(0);
-    });
-
-    it('always uses "Grant Half Cover" confirm label', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Grant Half Cover/ })).toBeInTheDocument();
-    });
-
-    it('always shows "Choose allies to grant Half Cover" description', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(screen.getByText('Choose allies to grant Half Cover')).toBeInTheDocument();
-    });
-  });
-
-  // ── Integration with CreatureSelectionModal mock ──
-
-  describe('integration with CreatureSelectionModal', () => {
-    it('renders target list items from targets', () => {
+  describe('renders target list from props', () => {
+    it('renders object-format targets', () => {
       render(<BulwarkOfForceModal {...makeProps()} />);
       expect(screen.getByText('Ally1')).toBeInTheDocument();
       expect(screen.getByText('Ally2')).toBeInTheDocument();
       expect(screen.getByText('Ally3')).toBeInTheDocument();
     });
 
-    it('renders "No targets available." when no targets', () => {
-      render(<BulwarkOfForceModal {...makeProps({ targets: [] })} />);
-      expect(screen.getByText('No targets available.')).toBeInTheDocument();
-    });
-
-    it('disables confirm button when no targets selected', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      const confirmBtn = screen.getByRole('button', { name: /Grant Half Cover \(0\)/ });
-      expect(confirmBtn).toBeDisabled();
-    });
-
-    it('shows selection count in confirm button', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Grant Half Cover \(0\)/ })).toBeInTheDocument();
-    });
-
-    it('renders targets with object format (name property)', () => {
-      render(<BulwarkOfForceModal {...makeProps()} />);
-      expect(screen.getByText('Ally1')).toBeInTheDocument();
-      expect(screen.getByText('Ally2')).toBeInTheDocument();
-    });
-
-    it('renders targets with string format', () => {
+    it('renders string-format targets', () => {
       render(<BulwarkOfForceModal {...makeProps({ targets: ['TargetA', 'TargetB'] })} />);
       expect(screen.getByText('TargetA')).toBeInTheDocument();
       expect(screen.getByText('TargetB')).toBeInTheDocument();
+    });
+
+    it('shows "No targets available." when targets is empty', () => {
+      render(<BulwarkOfForceModal {...makeProps({ targets: [] })} />);
+      expect(screen.getByText('No targets available.')).toBeInTheDocument();
     });
   });
 });

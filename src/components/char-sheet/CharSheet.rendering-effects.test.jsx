@@ -1,28 +1,49 @@
+// @improved-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import CharSheet from './CharSheet';
 import rulesFactory from '../../services/rules/rulesFactory.js';
+import {
+  createMockStore,
+  createDefaultProps,
+  createMockPlayerStats,
+  createSharedPopupReturnValue,
+  resetTestState,
+} from './CharSheet.test-utils.jsx';
 
 // ---------------------------------------------------------------------------
 // Mocks — child components
 // ---------------------------------------------------------------------------
 
 vi.mock('./char-summary/CharSummary.jsx', () => ({
-  default: vi.fn(({ playerStats }) => (
-    <div data-testid="char-summary"><span>{playerStats?.name || 'none'}</span></div>
+  default: vi.fn(({ playerStats, conditionEffects }) => (
+    <div data-testid="char-summary">
+      <span>{playerStats?.name || 'none'}</span>
+      {conditionEffects && <span data-testid="condition-effects">{JSON.stringify(conditionEffects)}</span>}
+    </div>
   )),
 }));
 
 vi.mock('./CharAbilities.jsx', () => ({
-  default: vi.fn(({ playerStats }) => (
-    <div data-testid="char-abilities"><span>{playerStats?.name || 'none'}</span></div>
+  default: vi.fn(({ playerStats, conditionEffects, isRaging, exhaustionPenalty }) => (
+    <div data-testid="char-abilities">
+      <span>{playerStats?.name || 'none'}</span>
+      {conditionEffects && <span data-testid="abilities-condition-effects">{JSON.stringify(conditionEffects)}</span>}
+      <span data-testid="is-raging">{String(isRaging)}</span>
+      <span data-testid="exhaustion-penalty">{exhaustionPenalty}</span>
+    </div>
   )),
 }));
 
 vi.mock('./CharActions.jsx', () => ({
-  default: vi.fn(({ playerStats }) => (
-    <div data-testid="char-actions"><span>{playerStats?.name || 'none'}</span></div>
+  default: vi.fn(({ playerStats, cannotAct, conditionAttackMode, conditionEffects }) => (
+    <div data-testid="char-actions">
+      <span>{playerStats?.name || 'none'}</span>
+      <span data-testid="cannot-act">{String(cannotAct)}</span>
+      <span data-testid="attack-mode">{conditionAttackMode}</span>
+      {conditionEffects && <span data-testid="actions-condition-effects">{JSON.stringify(conditionEffects)}</span>}
+    </div>
   )),
 }));
 
@@ -33,14 +54,20 @@ vi.mock('./CharInventory.jsx', () => ({
 }));
 
 vi.mock('./CharReactions.jsx', () => ({
-  default: vi.fn(({ playerStats }) => (
-    <div data-testid="char-reactions"><span>{playerStats?.name || 'none'}</span></div>
+  default: vi.fn(({ playerStats, cannotAct }) => (
+    <div data-testid="char-reactions">
+      <span>{playerStats?.name || 'none'}</span>
+      <span data-testid="reactions-cannot-act">{String(cannotAct)}</span>
+    </div>
   )),
 }));
 
 vi.mock('./CharSpecialActions.jsx', () => ({
-  default: vi.fn(({ playerStats }) => (
-    <div data-testid="char-special-actions"><span>{playerStats?.name || 'none'}</span></div>
+  default: vi.fn(({ playerStats, cannotAct }) => (
+    <div data-testid="char-special-actions">
+      <span>{playerStats?.name || 'none'}</span>
+      <span data-testid="special-actions-cannot-act">{String(cannotAct)}</span>
+    </div>
   )),
 }));
 
@@ -51,8 +78,12 @@ vi.mock('./CharCharacterAdvancement.jsx', () => ({
 }));
 
 vi.mock('./char-spells/CharSpells.jsx', () => ({
-  default: vi.fn(({ playerStats }) => (
-    <div data-testid="char-spells"><span>{playerStats?.name || 'none'}</span></div>
+  default: vi.fn(({ playerStats, cannotAct, conditionAttackMode }) => (
+    <div data-testid="char-spells">
+      <span>{playerStats?.name || 'none'}</span>
+      <span data-testid="spells-cannot-act">{String(cannotAct)}</span>
+      <span data-testid="spells-attack-mode">{conditionAttackMode}</span>
+    </div>
   )),
 }));
 
@@ -69,14 +100,14 @@ vi.mock('../../services/combat/auras/auraComboEffects.js', () => ({
 }));
 
 vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
-  computeConditionEffects: vi.fn().mockReturnValue({
+  computeConditionEffects: vi.fn().mockImplementation(() => ({
     attackAdvantageCount: 0,
     attackDisadvantageCount: 0,
     autoReroll: false,
     autoRerollCondition: null,
     autoRerollBonus: null,
     cannotAct: false,
-  }),
+  })),
   getNetAttackMode: vi.fn().mockReturnValue('normal'),
   CONDITIONS_THAT_CANNOT_ACT: new Set(['incapacitated', 'paralyzed', 'petrified', 'stunned', 'unconscious']),
 }));
@@ -92,6 +123,10 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
 
 vi.mock('../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js', () => ({
   isCreatureWarded: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../../services/automation/handlers/buffs/holyAuraHandler.js', () => ({
+  getHolyAuraTargets: vi.fn().mockReturnValue(false),
 }));
 
 vi.mock('../../services/ui/logService.js', () => ({
@@ -118,12 +153,6 @@ vi.mock('../../services/ui/storage.js', () => ({
 
 vi.mock('../../services/ui/sanitize.js', () => ({
   sanitizeHtml: vi.fn((html) => html),
-}));
-
-vi.mock('./DiceRollResult.jsx', () => ({
-  default: vi.fn(({ name }) => (
-    <div data-testid="dice-roll-result"><span>{name || 'dice'}</span></div>
-  )),
 }));
 
 vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
@@ -154,12 +183,13 @@ vi.mock('../common/AttackResultPopup.jsx', () => ({
   )),
 }));
 
-let sharedPopupReturnVal = {
-  popupHtml: null,
-  setPopupHtml: vi.fn(),
-  value: {},
-  Provider: ({ children }) => children,
-};
+// ---------------------------------------------------------------------------
+// Mocks — hooks
+// ---------------------------------------------------------------------------
+
+const mockStore = createMockStore();
+
+let sharedPopupReturnVal = createSharedPopupReturnValue();
 
 vi.mock('../../hooks/combat/useSharedPopup.js', () => {
   const mockFn = vi.fn();
@@ -169,14 +199,8 @@ vi.mock('../../hooks/combat/useSharedPopup.js', () => {
   return { default: mockFn };
 });
 
-// ---------------------------------------------------------------------------
-// Mocks — hooks
-// ---------------------------------------------------------------------------
-
-const mockStore = new Map();
-
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
+  getStore: vi.fn(() => mockStore),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
   listeners: new Map(),
   getRuntimeValue: vi.fn((key, prop, _camp) => mockStore.get(`${key}:${prop}`) ?? null),
@@ -185,9 +209,9 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
     if (prop === 'exhaustionLevel') return 0;
     if (prop === 'bardicInspirationDie') return mockStore.get(`${key}:bardicInspirationDie`) ?? null;
     if (prop === 'bardicInspirationCombatOptions') return mockStore.get(`${key}:bardicInspirationCombatOptions`) ?? null;
-    if (prop === 'activeConditions') return [];
-    if (prop === 'activeBuffs') return [];
-    if (prop === 'targetEffects') return [];
+    if (prop === 'activeConditions') return mockStore.get(`${key}:activeConditions`) ?? [];
+    if (prop === 'activeBuffs') return mockStore.get(`${key}:activeBuffs`) ?? [];
+    if (prop === 'targetEffects') return mockStore.get(`${key}:targetEffects`) ?? [];
     if (prop === 'preparedSpells') return mockStore.get(`${key}:preparedSpells`) ?? null;
     if (prop === 'aspectOfTheWildsOption') return mockStore.get(`${key}:aspectOfTheWildsOption`) ?? null;
     if (prop === 'bardicInspirationGrantedBy') return mockStore.get(`${key}:bardicInspirationGrantedBy`) ?? 'unknown';
@@ -223,373 +247,274 @@ vi.mock('../../services/rules/rulesFactory.js', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Tests — condition effects rendering through child components
 // ---------------------------------------------------------------------------
 
-const createMockPlayerStats = (overrides = {}) => ({
-  name: 'Test Character',
-  level: 5,
-  hitPoints: { current: 40, max: 40 },
-  abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
-  spellAbilities: { spells: [], maxPreparedSpells: 5 },
-  rules: '5e',
-  automation: { passives: [] },
-  class: { name: 'Fighter' },
-  speed: 30,
-  race: { speed: 30 },
-  actions: [],
-  bonusActions: [],
-  reactions: [],
-  specialActions: [],
-  characterAdvancement: [],
-  skillProficiencies: [],
-  saveModifiers: [],
-  ...overrides,
-});
-
-const mockPlayerSummary = {
-  name: 'Test Character',
-  rules: '5e',
-};
-
-const defaultProps = {
-  allAbilityScores: [],
-  allClasses: [],
-  allClasses2024: [],
-  allEquipment: [],
-  allMagicItems: [],
-  allRaces: [],
-  allSpells: [],
-  allSpells2024: [],
-  playerSummary: mockPlayerSummary,
-  allRaces2024: [],
-  allMagicItems2024: [],
-  campaignName: 'test-campaign',
-  activeMapName: null,
-  characters: [],
-  onDeleteCharacter: vi.fn(),
-  onEditCharacter: vi.fn(),
-  onUploadClick: vi.fn(),
-  onSaveClick: vi.fn(),
-};
-
-// ---------------------------------------------------------------------------
-// Tests — condition effects & buffs
-// ---------------------------------------------------------------------------
-
-describe('condition effects & buffs', () => {
+describe('condition effects rendering through child components', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnVal);
     mockStore.clear();
   });
 
-  it('sets shieldAcBonus when shield buff is active', async () => {
+  it('passes shieldAcBonus to CharSummary when shield buff is active', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'shield' }]));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ shieldAcBonus: 5 });
+    computeConditionEffects.mockImplementation(() => ({ shieldAcBonus: 5, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
-    expect(computeConditionEffects).toHaveBeenCalled();
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.shieldAcBonus).toBe(5);
   });
 
-  it('sets magicMissileImmune when shield buff is active', async () => {
+  it('passes magicMissileImmune to CharSummary when shield buff is active', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'shield' }]));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ magicMissileImmune: true });
+    computeConditionEffects.mockImplementation(() => ({ magicMissileImmune: true, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.magicMissileImmune).toBe(true);
   });
 
-  it('sets shieldOfFaithAcBonus when shield_of_faith buff is active', async () => {
+  it('passes shieldOfFaithAcBonus when shield_of_faith buff is active', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'shield_of_faith' }]));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ shieldOfFaithAcBonus: 2 });
+    computeConditionEffects.mockImplementation(() => ({ shieldOfFaithAcBonus: 2, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.shieldOfFaithAcBonus).toBe(2);
   });
 
-  it('sets noAdvantageAgainst when unseenAttackerAdvantageNegate is true', async () => {
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({ unseenAttackerAdvantageNegate: true })));
+  it('passes noAdvantageAgainst when Alert feat negates unseen attacker advantage', async () => {
+    const stats = createMockPlayerStats({ unseenAttackerAdvantageNegate: true });
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ noAdvantageAgainst: true });
+    computeConditionEffects.mockImplementation(() => ({ noAdvantageAgainst: true, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('sets noAdvantageAgainst when Elusive feature exists and not incapacitated', async () => {
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({ actions: [{ name: 'Elusive' }] })));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ noAdvantageAgainst: true });
-
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.noAdvantageAgainst).toBe(true);
   });
 
-  it('does not set noAdvantageAgainst when Elusive present but incapacitated', async () => {
-    mockStore.set('Test Character:activeConditions', JSON.stringify(['incapacitated']));
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({ actions: [{ name: 'Elusive' }] })));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('sets attackAdvantageCount when buffAllyActive is true', async () => {
+  it('passes attackAdvantageCount when buffAllyActive is true', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'advantage_attacks_and_saves' }]));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ attackAdvantageCount: 1 });
+    computeConditionEffects.mockImplementation(() => ({ attackAdvantageCount: 1, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.attackAdvantageCount).toBe(1);
   });
 
-  it('sets saveAdvantageCount when buffAllyActive is true', async () => {
+  it('passes saveAdvantageCount when buffAllyActive is true', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'advantage_attacks_and_saves' }]));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ saveAdvantageCount: 1 });
+    computeConditionEffects.mockImplementation(() => ({ saveAdvantageCount: 1, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.saveAdvantageCount).toBe(1);
   });
 
-  it('sets cloakOfShadows attack advantage and target disadvantage', async () => {
+  it('passes attackAdvantageCount and targetDisadvantageCount when Cloak of Shadows is active', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'cloak_of_shadows' }]));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ attackAdvantageCount: 1, targetDisadvantageCount: 1 });
+    computeConditionEffects.mockImplementation(() => ({ attackAdvantageCount: 1, targetDisadvantageCount: 1, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.attackAdvantageCount).toBe(1);
+    expect(effects.targetDisadvantageCount).toBe(1);
   });
 
-  it('sets saveAdvantageAbilities with DEX when haste is active', async () => {
+  it('passes saveAdvantageAbilities with DEX when haste is active', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'haste' }]));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ saveAdvantageAbilities: ['DEX'] });
+    computeConditionEffects.mockImplementation(() => ({ saveAdvantageAbilities: ['DEX'], cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.saveAdvantageAbilities).toContain('DEX');
   });
 
-  it('sets abilityCheckAdvantage with Stealth when trickster blessing active', async () => {
+  it('passes abilityCheckAdvantage with Stealth when trickster blessing active', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'advantage_on_stealth' }]));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ abilityCheckAdvantage: true, abilityCheckAdvantageSkill: 'Stealth' });
+    computeConditionEffects.mockImplementation(() => ({
+      abilityCheckAdvantage: true,
+      abilityCheckAdvantageSkill: 'Stealth',
+      cannotAct: false,
+    }));
 
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('sets pfeagSaveAdvantage when charmed and pfeag active', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'protection_from_evil_and_good' }]));
-    mockStore.set('Test Character:activeConditions', JSON.stringify(['charmed']));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.abilityCheckAdvantage).toBe(true);
+    expect(effects.abilityCheckAdvantageSkill).toBe('Stealth');
   });
 
-  it('sets pfeagSaveAdvantage when frightened and pfeag active', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'protection_from_evil_and_good' }]));
-    mockStore.set('Test Character:activeConditions', JSON.stringify(['frightened']));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does not set pfeagSaveAdvantage when not charmed or frightened', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'protection_from_evil_and_good' }]));
-    mockStore.set('Test Character:activeConditions', JSON.stringify([]));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('sets targetAdvantageCount when advantage_attacks_advantage_against buff exists', async () => {
+  it('passes targetAdvantageCount when advantage_attacks_advantage_against buff exists', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'advantage_attacks_advantage_against' }]));
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ targetAdvantageCount: 1 });
+    computeConditionEffects.mockImplementation(() => ({ targetAdvantageCount: 1, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.targetAdvantageCount).toBe(1);
   });
 
   it('adds saveAdvantageCount when luckyAdvantageActive is true', async () => {
     mockStore.set('Test Character:luckyAdvantageActive', true);
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ saveAdvantageCount: 1 });
+    computeConditionEffects.mockImplementation(() => ({ saveAdvantageCount: 1, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.saveAdvantageCount).toBe(2);
   });
 
   it('sets luckyDisadvantage when luckyDisadvantageActive is true', async () => {
     mockStore.set('Test Character:luckyDisadvantageActive', true);
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ luckyDisadvantage: true });
+    computeConditionEffects.mockImplementation(() => ({ luckyDisadvantage: true, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.luckyDisadvantage).toBe(true);
   });
 
   it('sets speedHalved when stunned_speedHalved is set', async () => {
     mockStore.set('Test Character:stunned_speedHalved', true);
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ speedHalved: true });
+    computeConditionEffects.mockImplementation(() => ({ speedHalved: true, cannotAct: false }));
 
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('clears autoRerollForSaves when fanaticalFocusUsed is true', async () => {
-    mockStore.set('Test Character:fanaticalFocusUsed', true);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ autoRerollForSaves: true });
-
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
-  });
 
-  it('clears autoRerollForSaves when indomitable uses are maxed (level 17+)', async () => {
-    mockStore.set('Test Character:indomitableUses', 3);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ autoRerollForSaves: true });
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('clears autoRerollForSaves when indomitable uses are maxed (level 13-16)', async () => {
-    mockStore.set('Test Character:indomitableUses', 2);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ autoRerollForSaves: true });
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('clears autoRerollForSaves when indomitable uses are maxed (level 1-12)', async () => {
-    mockStore.set('Test Character:indomitableUses', 1);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ autoRerollForSaves: true });
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('clears strokeOfLuck when strokeOfLuckUsed is true', async () => {
-    mockStore.set('Test Character:strokeOfLuckUsed', true);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ strokeOfLuck: true });
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const effects = CharSummary.mock.calls[0][0].conditionEffects;
+    expect(effects.speedHalved).toBe(true);
   });
 
   it('evaluates autoRerollBonus when present in conditionEffects', async () => {
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ autoRerollBonus: '1d4+2' });
+    computeConditionEffects.mockImplementation(() => ({ autoRerollBonus: '1d4+2', cannotAct: false }));
 
     const { evaluateAutoExpression } = await import('../../services/combat/automation/automationService.js');
     evaluateAutoExpression.mockReturnValue('7');
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
     expect(evaluateAutoExpression).toHaveBeenCalledWith('1d4+2', expect.any(Object));
   });
 
-  it('does not evaluate autoRerollBonus when playerStats is null', async () => {
+  it('passes isRaging=true when damageBonusExpression buff is present', async () => {
+    mockStore.set('Test Character:activeBuffs', [{ damageBonusExpression: '2d6' }]);
     const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({ autoRerollBonus: '1d4+2' });
+    computeConditionEffects.mockImplementation(() => ({}));
 
-    const { evaluateAutoExpression } = await import('../../services/combat/automation/automationService.js');
-    evaluateAutoExpression.mockReturnValue('7');
-
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId('char-sheet')).not.toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharAbilities } = await import('./CharAbilities.jsx');
+    expect(CharAbilities.mock.calls[0][0].isRaging).toBe(true);
+  });
+
+  it('passes effectiveAttackMode to CharActions when luckyAdvantageActive overrides conditionAttackMode', async () => {
+    mockStore.set('Test Character:luckyAdvantageActive', true);
+    const { computeConditionEffects, getNetAttackMode } = await import('../../services/combat/conditions/conditionEffects.js');
+    computeConditionEffects.mockImplementation(() => ({ attackAdvantageCount: 0, attackDisadvantageCount: 1, cannotAct: false }));
+    getNetAttackMode.mockReturnValue('disadvantage');
+
+    render(<CharSheet {...createDefaultProps()} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    const { default: CharActions } = await import('./CharActions.jsx');
+    expect(CharActions.mock.calls[0][0].conditionAttackMode).toBe('advantage');
   });
 });

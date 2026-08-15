@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -136,9 +137,12 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn((_key, runtimeKey) => mockRuntimeStore[runtimeKey] ?? null),
 }));
 
-// Mock DiceRollContext
+// Mock DiceRollContext — capture popup content for assertion
+let capturedPopup = null;
 vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
-  useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
+  useDiceRollPopup: vi.fn(() => ({
+    setPopupHtml: (html) => { capturedPopup = html; },
+  })),
 }));
 
 // Mock useCombatSuperiorityModal
@@ -188,7 +192,8 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
 }));
 
 // Import mocked modules
-import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
+import { setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { addEntry } from '../../services/ui/logService.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -210,11 +215,12 @@ function createPlayerStats(overrides = {}) {
 describe('CharSpecialActions - Replenishing Meal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedPopup = null;
     Object.keys(mockRuntimeStore).forEach(k => delete mockRuntimeStore[k]);
   });
 
   describe('handleReplenishingMealClick', () => {
-    it('opens modal when hasReplenishingMeal is true and meals remain', async () => {
+    it('opens creature selection modal when meals remain', async () => {
       mockRuntimeStore.replenishingMeals = 2;
 
       const playerStats = createPlayerStats({
@@ -240,10 +246,6 @@ describe('CharSpecialActions - Replenishing Meal', () => {
     it('shows popup when no meals remaining', async () => {
       mockRuntimeStore.replenishingMeals = 0;
 
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
       const playerStats = createPlayerStats({
         specialActions: [
           { name: 'Replenishing Meal', description: 'Distribute meals.', automation: { type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' } },
@@ -263,7 +265,7 @@ describe('CharSpecialActions - Replenishing Meal', () => {
       });
     });
 
-    it('does nothing when hasReplenishingMeal is false', async () => {
+    it('does nothing when the feature is absent', async () => {
       const playerStats = createPlayerStats({
         specialActions: [
           { name: 'Replenishing Meal', description: 'Distribute meals.', automation: { type: 'passive_rule', effect: 'bonus_healing' } },
@@ -277,13 +279,14 @@ describe('CharSpecialActions - Replenishing Meal', () => {
       fireEvent.click(screen.getByText(/Replenishing Meal/));
 
       await waitFor(() => {
-        expect(screen.queryByLabelText('Choose creatures to receive a replenishing meal.')).not.toBeInTheDocument();
+        expect(capturedPopup).toBeNull();
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
       });
     });
   });
 
   describe('handleReplenishingMealConfirm', () => {
-    it('distributes meals to selected targets and decrements counter', async () => {
+    it('distributes meals to targets, decrements counter, logs, and shows popup', async () => {
       mockRuntimeStore.replenishingMeals = 2;
 
       const playerStats = createPlayerStats({
@@ -307,8 +310,104 @@ describe('CharSpecialActions - Replenishing Meal', () => {
       fireEvent.click(screen.getByText('Distribute Meals'));
 
       await waitFor(() => {
-        expect(screen.queryByLabelText('Choose creatures to receive a replenishing meal.')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
       });
+
+      // Verify setRuntimeValue was called to give Ally1 a meal
+      expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'replenishingMeals', 1, 'test');
+
+      // Verify the counter was decremented (2 - 1 = 1)
+      expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'replenishingMeals', 1, 'test');
+
+      // Verify the log entry was created
+      expect(addEntry).toHaveBeenCalledWith('test', expect.objectContaining({
+        type: 'ability_use',
+        characterName: 'TestCharacter',
+        abilityName: 'Replenishing Meal',
+        description: expect.stringContaining('distributed 1 replenishing meal to Ally1'),
+      }));
+
+      // Verify the popup was shown
+      expect(capturedPopup).toContain('Replenishing Meal');
+      expect(capturedPopup).toContain('1 meal');
+      expect(capturedPopup).toContain('Ally1');
+    });
+
+    it('grants meals to multiple targets and decrements by the count', async () => {
+      mockRuntimeStore.replenishingMeals = 3;
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Replenishing Meal', description: 'Distribute meals.', automation: { type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' } },
+        ],
+        automation: {
+          passives: [
+            { type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' },
+          ],
+        },
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" characters={[{ name: 'Ally1' }, { name: 'Ally2' }]} />);
+
+      fireEvent.click(screen.getByText(/Replenishing Meal/));
+
+      await waitFor(() => {
+        expect(screen.getByText('Distribute Meals')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Distribute Meals'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+      });
+
+      // Verify setRuntimeValue was called for both targets
+      expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'replenishingMeals', 1, 'test');
+      expect(setRuntimeValue).toHaveBeenCalledWith('Ally2', 'replenishingMeals', 1, 'test');
+
+      // Verify the counter was decremented by 2 (3 - 2 = 1)
+      expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'replenishingMeals', 1, 'test');
+
+      // Verify plural in log and popup
+      expect(addEntry).toHaveBeenCalledWith('test', expect.objectContaining({
+        description: expect.stringContaining('distributed 2 replenishing meals'),
+      }));
+      expect(capturedPopup).toContain('2 meals');
+    });
+
+    it('caps distribution at maxTargets when more targets are selected', async () => {
+      mockRuntimeStore.replenishingMeals = 1;
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Replenishing Meal', description: 'Distribute meals.', automation: { type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' } },
+        ],
+        automation: {
+          passives: [
+            { type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' },
+          ],
+        },
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" characters={[{ name: 'Ally1' }, { name: 'Ally2' }]} />);
+
+      fireEvent.click(screen.getByText(/Replenishing Meal/));
+
+      await waitFor(() => {
+        expect(screen.getByText('Distribute Meals')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Distribute Meals'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+      });
+
+      // Only one meal available, so only one target should receive it
+      expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'replenishingMeals', 1, 'test');
+      // Ally2 should NOT have received a meal call (only 1 meal available)
+      expect(setRuntimeValue).not.toHaveBeenCalledWith('Ally2', 'replenishingMeals', 1, 'test');
+
+      // Counter decremented by 1 (1 - 1 = 0)
+      expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'replenishingMeals', 0, 'test');
     });
   });
 });
@@ -316,11 +415,12 @@ describe('CharSpecialActions - Replenishing Meal', () => {
 describe('CharSpecialActions - Bolstering Treats', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedPopup = null;
     Object.keys(mockRuntimeStore).forEach(k => delete mockRuntimeStore[k]);
   });
 
   describe('handleBolsteringTreatsClick', () => {
-    it('opens modal when hasBolsteringTreats is true and treats remain', async () => {
+    it('opens creature selection modal when treats remain', async () => {
       mockRuntimeStore.chefBolsteringTreats = 2;
 
       const playerStats = createPlayerStats({
@@ -346,10 +446,6 @@ describe('CharSpecialActions - Bolstering Treats', () => {
     it('shows popup when no treats remaining', async () => {
       mockRuntimeStore.chefBolsteringTreats = 0;
 
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
       const playerStats = createPlayerStats({
         specialActions: [
           { name: 'Bolstering Treats', description: 'Distribute treats.', automation: { type: 'temp_hp_buff', craftCount: true } },
@@ -368,10 +464,29 @@ describe('CharSpecialActions - Bolstering Treats', () => {
         expect(capturedPopup).toContain('No treats remaining');
       });
     });
+
+    it('does nothing when the feature is absent', async () => {
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Bolstering Treats', description: 'Distribute treats.', automation: { type: 'temp_hp_buff', craftCount: true } },
+        ],
+        automation: {
+          specialActions: [],
+        },
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Bolstering Treats/));
+
+      await waitFor(() => {
+        expect(capturedPopup).toBeNull();
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+      });
+    });
   });
 
   describe('handleBolsteringTreatsConfirm', () => {
-    it('sets bolsteringTreat on targets and decrements counter', async () => {
+    it('sets bolsteringTreat on targets, decrements counter, logs, and shows popup', async () => {
       mockRuntimeStore.chefBolsteringTreats = 2;
 
       const playerStats = createPlayerStats({
@@ -395,8 +510,104 @@ describe('CharSpecialActions - Bolstering Treats', () => {
       fireEvent.click(screen.getByText('Distribute Treats'));
 
       await waitFor(() => {
-        expect(screen.queryByLabelText('Choose creatures to receive a bolstering treat.')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
       });
+
+      // Verify setRuntimeValue was called to give Ally1 a bolsteringTreat
+      expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'bolsteringTreat', 1, 'test');
+
+      // Verify the counter was decremented (2 - 1 = 1)
+      expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'chefBolsteringTreats', 1, 'test');
+
+      // Verify the log entry was created
+      expect(addEntry).toHaveBeenCalledWith('test', expect.objectContaining({
+        type: 'ability_use',
+        characterName: 'TestCharacter',
+        abilityName: 'Bolstering Treats',
+        description: expect.stringContaining('distributed 1 bolstering treat to Ally1'),
+      }));
+
+      // Verify the popup was shown
+      expect(capturedPopup).toContain('Bolstering Treats');
+      expect(capturedPopup).toContain('1 treat');
+      expect(capturedPopup).toContain('Ally1');
+    });
+
+    it('grants treats to multiple targets and decrements by the count', async () => {
+      mockRuntimeStore.chefBolsteringTreats = 3;
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Bolstering Treats', description: 'Distribute treats.', automation: { type: 'temp_hp_buff', craftCount: true } },
+        ],
+        automation: {
+          specialActions: [
+            { type: 'temp_hp_buff', name: 'Bolstering Treats' },
+          ],
+        },
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" characters={[{ name: 'Ally1' }, { name: 'Ally2' }]} />);
+
+      fireEvent.click(screen.getByText(/Bolstering Treats/));
+
+      await waitFor(() => {
+        expect(screen.getByText('Distribute Treats')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Distribute Treats'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+      });
+
+      // Verify setRuntimeValue was called for both targets
+      expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'bolsteringTreat', 1, 'test');
+      expect(setRuntimeValue).toHaveBeenCalledWith('Ally2', 'bolsteringTreat', 1, 'test');
+
+      // Verify the counter was decremented by 2 (3 - 2 = 1)
+      expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'chefBolsteringTreats', 1, 'test');
+
+      // Verify plural in log and popup
+      expect(addEntry).toHaveBeenCalledWith('test', expect.objectContaining({
+        description: expect.stringContaining('distributed 2 bolstering treats'),
+      }));
+      expect(capturedPopup).toContain('2 treats');
+    });
+
+    it('caps distribution at maxTargets when more targets are selected', async () => {
+      mockRuntimeStore.chefBolsteringTreats = 1;
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Bolstering Treats', description: 'Distribute treats.', automation: { type: 'temp_hp_buff', craftCount: true } },
+        ],
+        automation: {
+          specialActions: [
+            { type: 'temp_hp_buff', name: 'Bolstering Treats' },
+          ],
+        },
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" characters={[{ name: 'Ally1' }, { name: 'Ally2' }]} />);
+
+      fireEvent.click(screen.getByText(/Bolstering Treats/));
+
+      await waitFor(() => {
+        expect(screen.getByText('Distribute Treats')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Distribute Treats'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+      });
+
+      // Only one treat available, so only one target should receive it
+      expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'bolsteringTreat', 1, 'test');
+      // Ally2 should NOT have received a treat
+      expect(setRuntimeValue).not.toHaveBeenCalledWith('Ally2', 'bolsteringTreat', 1, 'test');
+
+      // Counter decremented by 1 (1 - 1 = 0)
+      expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'chefBolsteringTreats', 0, 'test');
     });
   });
 });

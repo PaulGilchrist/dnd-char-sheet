@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -7,15 +8,15 @@ vi.mock('../../services/automation/index.js', () => ({
   executeHandler: vi.fn(),
 }));
 
-// Mock automation service
+// Mock automation service — comprehensive list matching the real implementation
 vi.mock('../../services/combat/automation/automationService.js', () => ({
   hasAutomation: vi.fn((action) => !!(action?.automation)),
   isInteractiveAutomation: vi.fn((action) => {
     if (!action?.automation) return false;
     const auto = Array.isArray(action.automation) ? action.automation[0] : action.automation;
-    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice', 'resource_pool', 'natural_recovery', 'circle_of_the_land', 'elemental_affinity', 'wild_magic_surge', 'stride_of_elements', 'elemental_epitome', 'destructive_stride', 'quivering_palm', 'steps_of_the_fey_taunt', 'hurl_through_hell', 'clairvoyant_combatant', 'passive_rule'];
+    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice', 'defensive_tactics', 'hunter_prey', 'animal_aspect', 'passive_rule', 'temp_hp_buff', 'brew_poison', 'stride_of_the_elements', 'elemental_epitome', 'destructive_stride', 'quivering_palm', 'steps_of_the_fey_taunt', 'hurl_through_hell', 'clairvoyant_combatant', 'portent', 'boon_of_energy_resistance', 'generic', 'silent', 'resource_pool', 'natural_recovery', 'circle_of_the_land', 'elemental_affinity', 'wild_magic_surge', 'stride_of_elements', 'celestial_resilience', 'fiendish_resilience', 'heroic_inspiration_buff', 'magical_cunning', 'tactical_mind', 'concentration_bonus_attack', 'font_of_inspiration', 'combat_stance', 'damage_type_choice', 'wild_magic_tamed', 'feats_of_chaos', 'initiative_action', 'magical_cunning', 'bewitching_magic', 'lucky_point', 'telekinetic_shove'];
     if (auto.type === 'passive_rule') {
-      const interactiveEffects = ['abjuration_savant', 'divination_savant', 'evocation_savant', 'illusion_savant'];
+      const interactiveEffects = ['abjuration_savant', 'divination_savant', 'evocation_savant', 'illusion_savant', 'bonus_healing'];
       return interactiveEffects.includes(auto.effect);
     }
     return interactiveTypes.includes(auto.type);
@@ -88,10 +89,11 @@ vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({
 
 // Mock CombatSuperiorityModal
 vi.mock('./modals/CombatSuperiorityModal.jsx', () => ({
-  default: ({ _payload, onConfirm, _onReopenSelection, _onClose }) => (
+  default: ({ _payload, onConfirm, _onReopenSelection, onClose }) => (
     <div data-testid="combat-superiority-modal">
       <span>Combat Superiority</span>
-      <button onClick={() => onConfirm([], null)}>Close</button>
+      <button onClick={() => onConfirm([], null)}>Confirm</button>
+      <button onClick={onClose}>Close</button>
     </div>
   ),
 }));
@@ -234,10 +236,10 @@ vi.mock('./modals/ClairvoyantCombatantModal.jsx', () => ({
 
 // Mock CreatureSelectionModal
 vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
-  default: ({ title, onConfirm, onSkip, targets, confirmLabel, description, note }) => (
-    <div data-testid={`creature-selection-modal`}>
+  default: ({ title, confirmLabel, description, onConfirm, onSkip, targets, note }) => (
+    <div data-testid="creature-selection-modal">
       <span>{title}</span>
-      <p>{description}</p>
+      {description && <p>{description}</p>}
       {note && <p>{note}</p>}
       <button onClick={() => onConfirm && onConfirm(targets.map(t => t.name))}>{confirmLabel}</button>
       <button onClick={onSkip}>Skip</button>
@@ -249,7 +251,7 @@ vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
 vi.mock('./modals/SingleResistanceSelectionModal.jsx', () => ({
   default: ({ onClose }) => (
     <div data-testid="single-resistance-modal">
-      <span>Resistance Selection</span>
+      <span>Single Resistance</span>
       <button onClick={onClose}>Close</button>
     </div>
   ),
@@ -261,6 +263,26 @@ vi.mock('./modals/MultiResistanceSelectionModal.jsx', () => ({
     <div data-testid="multi-resistance-modal">
       <span>Multi Resistance</span>
       <button onClick={() => onConfirm && onConfirm(['Fire'])}>Confirm</button>
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}));
+
+// Mock CelestialResilienceModal
+vi.mock('./modals/CelestialResilienceModal.jsx', () => ({
+  default: ({ onClose }) => (
+    <div data-testid="celestial-resilience-modal">
+      <span>Celestial Resilience</span>
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}));
+
+// Mock FiendishResilienceModal
+vi.mock('./modals/FiendishResilienceModal.jsx', () => ({
+  default: ({ onClose }) => (
+    <div data-testid="fiendish-resilience-modal">
+      <span>Fiendish Resilience</span>
       <button onClick={onClose}>Close</button>
     </div>
   ),
@@ -376,6 +398,8 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
 
 // Import mocked modules
 import { executeHandler } from '../../services/automation/index.js';
+import { isInteractiveAutomation } from '../../services/combat/automation/automationService.js';
+import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -504,6 +528,14 @@ const modalTests = [
     testId: 'elemental-epitome-modal',
   },
   {
+    name: 'DestructiveStrideModal',
+    modalName: 'destructiveStride',
+    actionName: 'Destructive Stride',
+    automation: { type: 'destructive_stride' },
+    payload: { action: { name: 'Destructive Stride' } },
+    testId: 'destructive-stride-modal',
+  },
+  {
     name: 'QuiveringPalmModal',
     modalName: 'quiveringPalm',
     actionName: 'Quivering Palm',
@@ -535,16 +567,99 @@ const modalTests = [
     payload: {},
     testId: 'clairvoyant-combatant-modal',
   },
+  {
+    name: 'FiendishResilienceModal',
+    modalName: 'fiendishResilience',
+    actionName: 'Fiendish Resilience',
+    automation: { type: 'fiendish_resilience' },
+    payload: { action: { name: 'Fiendish Resilience' }, playerStats: basePlayerStats, campaignName: 'test' },
+    testId: 'single-resistance-modal',
+  },
+  {
+    name: 'MultiResistanceSelectionModal',
+    modalName: 'boonOfEnergyResistance',
+    actionName: 'Boon of Energy',
+    automation: { type: 'boon_of_energy_resistance' },
+    payload: { action: { name: 'Boon of Energy' }, damageTypes: ['Fire', 'Cold', 'Lightning'], existingTypes: [], maxSelections: 2, playerStats: basePlayerStats, campaignName: 'test' },
+    testId: 'multi-resistance-modal',
+  },
 ];
 
-describe('CharSpecialActions - Modal Rendering via executeHandler', () => {
+describe('CharSpecialActions - Modal Rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetAllMocks();
+  });
+
+  describe('executeHandler invocation', () => {
+    it.each(modalTests)(
+      'calls executeHandler with the action object when clicking $name',
+      async ({ actionName, automation, testId: _testId }) => {
+        executeHandler.mockResolvedValue({
+          type: 'modal',
+          modalName: automation.type === 'passive_rule' ? `${automation.effect}Savant` : `${automation.type}s`,
+          payload: {},
+        });
+
+        const playerStats = createPlayerStats({
+          specialActions: [
+            createSpecialAction(actionName, automation),
+          ],
+        });
+        render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+        fireEvent.click(screen.getAllByText(new RegExp(actionName))[0]);
+
+        await waitFor(() => {
+          expect(executeHandler).toHaveBeenCalledWith(
+            expect.objectContaining({ name: actionName, automation }),
+            expect.any(Object),
+            'test',
+            undefined,
+            undefined
+          );
+        });
+      },
+    );
+
+    it('does not call executeHandler when cannotAct is true', async () => {
+      executeHandler.mockResolvedValue({ type: 'popup', payload: { name: 'Should not fire' } });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Blocked Action', { type: 'teleport' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
+
+      fireEvent.click(screen.getAllByText(/Blocked Action/)[0]);
+
+      await waitFor(() => {
+        expect(executeHandler).not.toHaveBeenCalled();
+      });
+    });
+
+    it('does not call executeHandler when action has no automation', async () => {
+      executeHandler.mockResolvedValue({ type: 'popup', payload: { name: 'Should not fire' } });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Plain Action', description: 'No automation here.' },
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Plain Action/)[0]);
+
+      await waitFor(() => {
+        expect(executeHandler).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('modal rendering from executeHandler results', () => {
     it.each(modalTests)(
-      'renders $name when executeHandler returns $modalName modal',
+      'renders $name modal when executeHandler returns $modalName',
       async ({ modalName, actionName, automation, payload, testId }) => {
         executeHandler.mockResolvedValue({
           type: 'modal',
@@ -566,5 +681,146 @@ describe('CharSpecialActions - Modal Rendering via executeHandler', () => {
         });
       },
     );
+  });
+
+  describe('popup result handling', () => {
+    it('displays a popup when executeHandler returns a popup result', async () => {
+      let capturedPopup = null;
+      const mockSetPopupHtml = (html) => { capturedPopup = html; };
+      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
+      executeHandler.mockResolvedValue({
+        type: 'popup',
+        payload: { name: 'Test Popup', description: 'Action completed.' },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Popup Action', { type: 'generic' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Popup Action/)[0]);
+
+      await waitFor(() => {
+        expect(capturedPopup).toContain('Test Popup');
+        expect(capturedPopup).toContain('Action completed.');
+      });
+    });
+
+    it('displays a popup with fallback name when payload has no name', async () => {
+      let capturedPopup = null;
+      const mockSetPopupHtml = (html) => { capturedPopup = html; };
+      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
+      executeHandler.mockResolvedValue({
+        type: 'popup',
+        payload: { description: 'No name here.' },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Fallback Name Action', { type: 'generic' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Fallback Name Action/)[0]);
+
+      await waitFor(() => {
+        expect(capturedPopup).toContain('Fallback Name Action');
+      });
+    });
+  });
+
+  describe('null result handling', () => {
+    it('handles executeHandler returning null without errors', async () => {
+      executeHandler.mockResolvedValue(null);
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Silent Action', { type: 'generic' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Silent Action/)[0]);
+
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalled();
+        expect(screen.queryByTestId('teleport-modal')).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('action interactivity', () => {
+    it.each([
+      { automation: { type: 'teleport' }, label: 'teleport type' },
+      { automation: { type: 'signature_spells' }, label: 'signature_spells type' },
+      { automation: { type: 'spell_mastery' }, label: 'spell_mastery type' },
+      { automation: { type: 'combat_superiority' }, label: 'combat_superiority type' },
+      { automation: { type: 'weapon_kind_mastery' }, label: 'weapon_kind_mastery type' },
+      { automation: { type: 'weapon_mastery_choice' }, label: 'weapon_mastery_choice type' },
+      { automation: { type: 'resource_pool' }, label: 'resource_pool type' },
+      { automation: { type: 'natural_recovery' }, label: 'natural_recovery type' },
+      { automation: { type: 'circle_of_the_land' }, label: 'circle_of_the_land type' },
+      { automation: { type: 'elemental_affinity' }, label: 'elemental_affinity type' },
+      { automation: { type: 'wild_magic_surge' }, label: 'wild_magic_surge type' },
+      { automation: { type: 'stride_of_elements' }, label: 'stride_of_elements type' },
+      { automation: { type: 'elemental_epitome' }, label: 'elemental_epitome type' },
+      { automation: { type: 'destructive_stride' }, label: 'destructive_stride type' },
+      { automation: { type: 'quivering_palm' }, label: 'quivering_palm type' },
+      { automation: { type: 'steps_of_the_fey_taunt' }, label: 'steps_of_the_fey_taunt type' },
+      { automation: { type: 'hurl_through_hell' }, label: 'hurl_through_hell type' },
+      { automation: { type: 'clairvoyant_combatant' }, label: 'clairvoyant_combatant type' },
+      { automation: { type: 'passive_rule', effect: 'evocation_savant' }, label: 'evocation_savant passive_rule' },
+      { automation: { type: 'passive_rule', effect: 'abjuration_savant' }, label: 'abjuration_savant passive_rule' },
+      { automation: { type: 'passive_rule', effect: 'divination_savant' }, label: 'divination_savant passive_rule' },
+      { automation: { type: 'passive_rule', effect: 'illusion_savant' }, label: 'illusion_savant passive_rule' },
+      { automation: { type: 'boon_of_energy_resistance' }, label: 'boon_of_energy_resistance type' },
+      { automation: { type: 'celestial_resilience' }, label: 'celestial_resilience type' },
+      { automation: { type: 'fiendish_resilience' }, label: 'fiendish_resilience type' },
+    ])('marks action as clickable for $label automation', async ({ automation }) => {
+      const isInteractive = isInteractiveAutomation(createSpecialAction('Test Action', automation));
+      expect(isInteractive).toBe(true);
+    });
+
+    it.each([
+      { automation: undefined, label: 'no automation' },
+      { automation: null, label: 'null automation' },
+      { automation: { type: 'damage_bonus' }, label: 'non-interactive damage_bonus' },
+    ])('does not mark action as clickable for $label', async ({ automation }) => {
+      const isInteractive = isInteractiveAutomation(createSpecialAction('Test Action', automation));
+      expect(isInteractive).toBe(false);
+    });
+  });
+
+  describe('Savant modal fuzzy matching', () => {
+    it.each([
+      { school: 'Evocation', modalName: 'EvocationSavant', testId: 'evocation-savant-modal' },
+      { school: 'Abjuration', modalName: 'AbjurationSavant', testId: 'abjuration-savant-modal' },
+      { school: 'Divination', modalName: 'DivinationSavant', testId: 'divination-savant-modal' },
+      { school: 'Illusion', modalName: 'IllusionSavant', testId: 'illusion-savant-modal' },
+    ])('renders savant modal for $school when modalName is $modalName', async ({ school, modalName }) => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName,
+        payload: { action: { name: `${school} Savant` }, playerStats: basePlayerStats, campaignName: 'test', school, spellOptions: ['Shield', 'Mage Armor'] },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction(`${school} Savant`, { type: 'passive_rule', effect: `${school.toLowerCase()}_savant` }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(new RegExp(`${school} Savant`))[0]);
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`${school.toLowerCase()}-savant-modal`)).toBeInTheDocument();
+      });
+    });
   });
 });

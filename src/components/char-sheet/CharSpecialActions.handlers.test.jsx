@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -13,7 +14,7 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
   isInteractiveAutomation: vi.fn((action) => {
     if (!action?.automation) return false;
     const auto = Array.isArray(action.automation) ? action.automation[0] : action.automation;
-    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice', 'defensive_tactics', 'hunter_prey', 'animal_aspect', 'passive_rule', 'temp_hp_buff', 'brew_poison', 'stride_of_the_elements', 'elemental_epitome', 'destructive_stride', 'quivering_palm', 'steps_of_the_fey_taunt', 'hurl_through_hell', 'clairvoyant_combatant', 'portent', 'boon_of_energy_resistance'];
+    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice', 'defensive_tactics', 'hunter_prey', 'animal_aspect', 'passive_rule', 'temp_hp_buff', 'brew_poison', 'heroic_inspiration_buff'];
     if (auto.type === 'passive_rule') {
       const interactiveEffects = ['abjuration_savant', 'divination_savant', 'evocation_savant', 'illusion_savant', 'bonus_healing'];
       return interactiveEffects.includes(auto.effect);
@@ -237,11 +238,11 @@ vi.mock('./modals/ClairvoyantCombatantModal.jsx', () => ({
 
 // Mock CreatureSelectionModal
 vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
-  default: ({ title, confirmLabel, description, onConfirm, onSkip, targets }) => (
+  default: ({ title, confirmLabel, description, onConfirm, onSkip, targets, creatureTargets }) => (
     <div data-testid="creature-selection-modal">
       <span>{title}</span>
       {description && <p>{description}</p>}
-      <button onClick={() => onConfirm && onConfirm(targets.map(t => t.name))}>{confirmLabel}</button>
+      <button onClick={() => onConfirm && onConfirm((targets || creatureTargets || []).map(t => t.name))}>{confirmLabel}</button>
       <button onClick={onSkip}>Skip</button>
     </div>
   ),
@@ -385,10 +386,12 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
 }));
 
 // Import mocked modules for use with vi.mocked()
+import { executeHandler } from '../../services/automation/index.js';
 import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 import { setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { confirmBolsteringPerformance } from '../../services/automation/handlers/buffs/tempHpBuffHandler.js';
 import { skipEncouragingSong } from '../../services/automation/handlers/buffs/encouragingSongHandler.js';
+import { addEntry } from '../../services/ui/logService.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -425,7 +428,7 @@ describe('CharSpecialActions - Aspect of the Wilds Confirm', () => {
       });
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getAllByText(/Aspect of the Wilds/)[0]);
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
 
       await waitFor(() => {
         expect(screen.getByText('Choose an animal aspect:')).toBeInTheDocument();
@@ -456,7 +459,7 @@ describe('CharSpecialActions - Aspect of the Wilds Confirm', () => {
       });
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getAllByText(/Aspect of the Wilds/)[0]);
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
 
       await waitFor(() => {
         expect(screen.getByText('Choose an animal aspect:')).toBeInTheDocument();
@@ -482,7 +485,7 @@ describe('CharSpecialActions - Aspect of the Wilds Confirm', () => {
       });
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getAllByText(/Aspect of the Wilds/)[0]);
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
 
       await waitFor(() => {
         expect(screen.getByText('Choose an animal aspect:')).toBeInTheDocument();
@@ -510,7 +513,7 @@ describe('CharSpecialActions - Aspect of the Wilds Confirm', () => {
       });
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getAllByText(/Aspect of the Wilds/)[0]);
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
 
       await waitFor(() => {
         expect(screen.getByText('Choose an animal aspect:')).toBeInTheDocument();
@@ -540,7 +543,7 @@ describe('CharSpecialActions - Aspect of the Wilds Confirm', () => {
       });
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getAllByText(/Aspect of the Wilds/)[0]);
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
 
       await waitFor(() => {
         expect(screen.getByText('Choose an animal aspect:')).toBeInTheDocument();
@@ -553,11 +556,14 @@ describe('CharSpecialActions - Aspect of the Wilds Confirm', () => {
         expect(capturedPopup).toContain('Darkvision 60 ft.');
       });
     });
-  });
 
-  describe('handleAspectOfTheWildsSkip', () => {
-    it('closes the aspect modal when cancel is clicked', async () => {
+    it('shows popup with Panther effect description', async () => {
+      let capturedPopup = null;
+      const mockSetPopupHtml = (html) => { capturedPopup = html; };
+      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
       mockRuntimeStore.aspectOfTheWildsUsedThisRest = false;
+      mockRuntimeStore.activeBuffs = [];
 
       const playerStats = createPlayerStats({
         specialActions: [
@@ -566,7 +572,92 @@ describe('CharSpecialActions - Aspect of the Wilds Confirm', () => {
       });
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getAllByText(/Aspect of the Wilds/)[0]);
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose an animal aspect:')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Panther'));
+
+      await waitFor(() => {
+        expect(capturedPopup).toContain('Panther');
+        expect(capturedPopup).toContain('Climb speed');
+      });
+    });
+
+    it('shows popup with Salmon effect description', async () => {
+      let capturedPopup = null;
+      const mockSetPopupHtml = (html) => { capturedPopup = html; };
+      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
+      mockRuntimeStore.aspectOfTheWildsUsedThisRest = false;
+      mockRuntimeStore.activeBuffs = [];
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Aspect of the Wilds', description: 'Choose an animal aspect.', automation: { type: 'animal_aspect' } },
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose an animal aspect:')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Salmon'));
+
+      await waitFor(() => {
+        expect(capturedPopup).toContain('Salmon');
+        expect(capturedPopup).toContain('Swim speed');
+      });
+    });
+
+    it('logs aspect choice via addEntry', async () => {
+      mockRuntimeStore.aspectOfTheWildsUsedThisRest = false;
+      mockRuntimeStore.activeBuffs = [];
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Aspect of the Wilds', description: 'Choose an animal aspect.', automation: { type: 'animal_aspect' } },
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose an animal aspect:')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Owl'));
+
+      await waitFor(() => {
+        expect(addEntry).toHaveBeenCalledWith('test', expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'TestCharacter',
+          abilityName: 'Aspect of the Wilds',
+          description: expect.stringContaining('Chose Owl aspect'),
+        }));
+      });
+    });
+  });
+
+  describe('handleAspectOfTheWildsSkip', () => {
+    it('closes the aspect modal when cancel is clicked without modifying state', async () => {
+      mockRuntimeStore.aspectOfTheWildsUsedThisRest = false;
+      mockRuntimeStore.activeBuffs = [];
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Aspect of the Wilds', description: 'Choose an animal aspect.', automation: { type: 'animal_aspect' } },
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
 
       await waitFor(() => {
         expect(screen.getByText('Choose an animal aspect:')).toBeInTheDocument();
@@ -577,6 +668,57 @@ describe('CharSpecialActions - Aspect of the Wilds Confirm', () => {
       await waitFor(() => {
         expect(screen.queryByText('Choose an animal aspect:')).not.toBeInTheDocument();
       });
+
+      // Verify aspectOfTheWildsUsedThisRest was NOT set to true
+      expect(setRuntimeValue).not.toHaveBeenCalledWith('TestCharacter', 'aspectOfTheWildsUsedThisRest', true, 'test');
+    });
+  });
+
+  describe('cannotAct guard for Aspect of the Wilds', () => {
+    it('does not open aspect modal when cannotAct is true', async () => {
+      mockRuntimeStore.aspectOfTheWildsUsedThisRest = false;
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Aspect of the Wilds', description: 'Choose an animal aspect.', automation: { type: 'animal_aspect' } },
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
+
+      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Choose an animal aspect:')).not.toBeInTheDocument();
+      });
+    });
+  });
+});
+
+describe('CharSpecialActions - Aspect of the Wilds already used this rest', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(mockRuntimeStore).forEach(k => delete mockRuntimeStore[k]);
+  });
+
+  it('shows popup when already used this rest', async () => {
+    let capturedPopup = null;
+    const mockSetPopupHtml = (html) => { capturedPopup = html; };
+    vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
+    mockRuntimeStore.aspectOfTheWildsUsedThisRest = true;
+
+    const playerStats = createPlayerStats({
+      specialActions: [
+        { name: 'Aspect of the Wilds', description: 'Choose an animal aspect.', automation: { type: 'animal_aspect' } },
+      ],
+    });
+    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+    fireEvent.click(screen.getByText('Aspect of the Wilds:'));
+
+    await waitFor(() => {
+      expect(capturedPopup).toContain('Already chosen this rest');
+      expect(capturedPopup).toContain('Long Rest');
     });
   });
 });
@@ -587,10 +729,26 @@ describe('CharSpecialActions - Bolstering Performance', () => {
   });
 
   describe('handleBolsteringPerformanceConfirm', () => {
-    it('calls confirmBolsteringPerformance and shows popup on result', async () => {
+    it('calls confirmBolsteringPerformance, shows popup on result, and closes modal', async () => {
+      let capturedPopup = null;
+      const mockSetPopupHtml = (html) => { capturedPopup = html; };
+      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
       vi.mocked(confirmBolsteringPerformance).mockResolvedValue({
         type: 'popup',
         payload: { name: 'Bolstering Performance', description: 'Allies inspired.' }
+      });
+
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'bolsteringPerformanceTarget',
+        payload: {
+          action: { name: 'Bolstering Performance' },
+          playerStats: createPlayerStats(),
+          campaignName: 'test',
+          targets: [{ name: 'Ally1' }],
+          tempHp: 5,
+        },
       });
 
       const playerStats = createPlayerStats({
@@ -600,9 +758,42 @@ describe('CharSpecialActions - Bolstering Performance', () => {
       });
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      // Trigger the automation click which opens the creature selection modal
+      fireEvent.click(screen.getByText('Bolstering Performance:'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Bolstering Performance')).toBeInTheDocument();
+      });
+
+      // Click the confirm button in the mock creature selection modal
+      fireEvent.click(screen.getByText('Inspire'));
+
+      await waitFor(() => {
+        expect(confirmBolsteringPerformance).toHaveBeenCalled();
+      });
+
+      // Verify popup was shown with the result
+      expect(capturedPopup).toContain('Bolstering Performance');
+      expect(capturedPopup).toContain('Allies inspired.');
+
+      // Verify modal was closed
+      expect(screen.queryByText('Bolstering Performance')).not.toBeInTheDocument();
     });
 
-    it('closes modal after confirm regardless of result', async () => {
+    it('closes modal even when confirm returns no payload', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'bolsteringPerformanceTarget',
+        payload: {
+          action: { name: 'Bolstering Performance' },
+          playerStats: createPlayerStats(),
+          campaignName: 'test',
+          targets: [{ name: 'Ally1' }],
+          tempHp: 5,
+        },
+      });
+
       vi.mocked(confirmBolsteringPerformance).mockResolvedValue(null);
 
       const playerStats = createPlayerStats({
@@ -612,20 +803,50 @@ describe('CharSpecialActions - Bolstering Performance', () => {
       });
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText('Bolstering Performance:'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Bolstering Performance')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Inspire'));
+
+      await waitFor(() => {
+        expect(confirmBolsteringPerformance).toHaveBeenCalled();
+      });
+
+      // Modal should close regardless of result
+      expect(screen.queryByText('Bolstering Performance')).not.toBeInTheDocument();
     });
   });
 });
 
-describe('CharSpecialActions - Encouraging Song Skip', () => {
+describe('CharSpecialActions - Encouraging Song', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('handleEncouragingSongSkip', () => {
-    it('calls skipEncouragingSong and shows popup on result', async () => {
+    it('calls skipEncouragingSong, shows popup on result, and closes modal', async () => {
+      let capturedPopup = null;
+      const mockSetPopupHtml = (html) => { capturedPopup = html; };
+      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
       vi.mocked(skipEncouragingSong).mockResolvedValue({
         type: 'popup',
         payload: { name: 'Encouraging Song', description: 'Skipped.' }
+      });
+
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'encouragingSongTarget',
+        payload: {
+          action: { name: 'Encouraging Song' },
+          playerStats: createPlayerStats(),
+          campaignName: 'test',
+          targets: [{ name: 'Ally1' }],
+        },
       });
 
       const playerStats = createPlayerStats({
@@ -635,9 +856,40 @@ describe('CharSpecialActions - Encouraging Song Skip', () => {
       });
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText('Encouraging Song:'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Encouraging Song')).toBeInTheDocument();
+      });
+
+      // Click skip in the mock creature selection modal
+      fireEvent.click(screen.getByText('Skip'));
+
+      await waitFor(() => {
+        expect(skipEncouragingSong).toHaveBeenCalled();
+      });
+
+      // Verify popup was shown
+      expect(capturedPopup).toContain('Encouraging Song');
+      expect(capturedPopup).toContain('Skipped.');
+
+      // Verify modal was closed
+      expect(screen.queryByText('Encouraging Song')).not.toBeInTheDocument();
     });
 
-    it('closes modal after skip', async () => {
+    it('closes modal even when skip returns no payload', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'encouragingSongTarget',
+        payload: {
+          action: { name: 'Encouraging Song' },
+          playerStats: createPlayerStats(),
+          campaignName: 'test',
+          targets: [{ name: 'Ally1' }],
+        },
+      });
+
       vi.mocked(skipEncouragingSong).mockResolvedValue(null);
 
       const playerStats = createPlayerStats({
@@ -647,6 +899,21 @@ describe('CharSpecialActions - Encouraging Song Skip', () => {
       });
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText('Encouraging Song:'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Encouraging Song')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Skip'));
+
+      await waitFor(() => {
+        expect(skipEncouragingSong).toHaveBeenCalled();
+      });
+
+      // Modal should close regardless of result
+      expect(screen.queryByText('Encouraging Song')).not.toBeInTheDocument();
     });
   });
 });

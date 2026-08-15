@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
@@ -187,6 +188,15 @@ function createStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
 
+function mockRuntimeValues(buffs = [], conditions = []) {
+  getRuntimeValue.mockImplementation((_name, key) => {
+    if (key === 'activeBuffs') return buffs;
+    if (key === 'hasteExtraActionUsed') return false;
+    if (key === 'activeConditions') return conditions;
+    return null;
+  });
+}
+
 describe('CharActions sacred weapon and 2024 mastery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -199,12 +209,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
 
   describe('sacred weapon hit bonus calculation', () => {
     it('adds Charisma bonus to melee attack hit bonus when sacred weapon buff is active', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues([{ effect: 'sacred_weapon' }]);
 
       const stats = createStats({
         attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action', weaponType: 'melee' }],
@@ -216,17 +221,27 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
 
       await act(async () => { render(<CharActions playerStats={stats} />); });
 
-      // Attack hitBonus is 5, sacred weapon adds +4 (Cha bonus), effective = +9
+      expect(screen.getByText('+9')).toBeInTheDocument();
+    });
+
+    it('adds Charisma bonus to unarmed attack hit bonus when sacred weapon buff is active', async () => {
+      mockRuntimeValues([{ effect: 'sacred_weapon' }]);
+
+      const stats = createStats({
+        attacks: [{ name: 'Unarmed Strike', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Bludgeoning', type: 'Action', weaponType: 'unarmed' }],
+        abilities: [
+          { name: 'STR', bonus: 3 },
+          { name: 'Charisma', bonus: 4 },
+        ],
+      });
+
+      await act(async () => { render(<CharActions playerStats={stats} />); });
+
       expect(screen.getByText('+9')).toBeInTheDocument();
     });
 
     it('does not add sacred weapon bonus for ranged attacks', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues([{ effect: 'sacred_weapon' }]);
 
       const stats = createStats({
         attacks: [{ name: 'Shortbow', range: 80, hitBonus: 5, damage: '1d6+3', damageType: 'Piercing', type: 'Action', weaponType: 'ranged' }],
@@ -238,17 +253,11 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
 
       await act(async () => { render(<CharActions playerStats={stats} />); });
 
-      // Only base hit bonus (5), no sacred weapon for ranged
       expect(screen.getByText('+5')).toBeInTheDocument();
     });
 
     it('does not add sacred weapon bonus when buff not active', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues([], []);
 
       const stats = createStats({
         attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action', weaponType: 'melee' }],
@@ -264,12 +273,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
     });
 
     it('shows hit bonus title with sacred weapon breakdown when applicable', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues([{ effect: 'sacred_weapon' }]);
 
       const stats = createStats({
         attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action', weaponType: 'melee' }],
@@ -286,12 +290,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
     });
 
     it('uses minimum 1 for Charisma bonus in sacred weapon', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues([{ effect: 'sacred_weapon' }]);
 
       const stats = createStats({
         attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action', weaponType: 'melee' }],
@@ -303,19 +302,44 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
 
       await act(async () => { render(<CharActions playerStats={stats} />); });
 
-      // Attack hitBonus is 5, sacred weapon adds +1 (Math.max(1, -2)), effective = +6
       expect(screen.getByText('+6')).toBeInTheDocument();
+    });
+
+    it('uses 0 when no Charisma ability is defined', async () => {
+      mockRuntimeValues([{ effect: 'sacred_weapon' }]);
+
+      const stats = createStats({
+        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action', weaponType: 'melee' }],
+        abilities: [{ name: 'STR', bonus: 3 }],
+      });
+
+      await act(async () => { render(<CharActions playerStats={stats} />); });
+
+      // Math.max(1, 0) = 1, so effective = 5 + 1 = +6
+      expect(screen.getByText('+6')).toBeInTheDocument();
+    });
+
+    it('computes effective hit with both sacred weapon and exhaustion penalty', async () => {
+      mockRuntimeValues([{ effect: 'sacred_weapon' }]);
+
+      const stats = createStats({
+        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action', weaponType: 'melee' }],
+        abilities: [
+          { name: 'STR', bonus: 3 },
+          { name: 'Charisma', bonus: 4 },
+        ],
+      });
+
+      await act(async () => { render(<CharActions playerStats={stats} exhaustionPenalty={2} />); });
+
+      // Base 5 + sacred weapon 4 = 9, minus exhaustion 2 = 7
+      expect(screen.getByText('+7')).toBeInTheDocument();
     });
   });
 
   describe('2024 rules mastery column', () => {
     it('renders mastery column for 2024 rules attacks', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         rules: '2024',
@@ -329,12 +353,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
     });
 
     it('renders empty mastery cell for 5e rules attacks', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         rules: '5e',
@@ -347,12 +366,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
     });
 
     it('renders empty mastery cell for 2024 rules spells', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         rules: '2024',
@@ -374,12 +388,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
 
   describe('ability check for attacks with save DC', () => {
     it('shows save DC column instead of hit bonus for attacks with saveDc', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         attacks: [{ name: 'Witch Bolt', range: 60, saveDc: 14, saveType: 'CON', damage: '1d12', damageType: 'Lightning', type: 'Action' }],
@@ -390,33 +399,11 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
       expect(screen.getByText(/DC 14 CON/)).toBeInTheDocument();
       expect(screen.queryByText('+5')).not.toBeInTheDocument();
     });
-
-    it('shows save DC with innate sorcery bonus', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      const stats = createStats({
-        attacks: [{ name: 'Witch Bolt', range: 60, saveDc: 14, saveType: 'CON', damage: '1d12', damageType: 'Lightning', type: 'Action' }],
-      });
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      expect(screen.getByText(/DC 14 CON/)).toBeInTheDocument();
-    });
   });
 
   describe('penalized stat classes', () => {
     it('applies stat--penalized class when exhaustionPenalty > 0', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
@@ -428,12 +415,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
     });
 
     it('applies stat--penalized class when conditionAttackMode is disadvantage', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
@@ -445,12 +427,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
     });
 
     it('applies disabled-attack class when cannotAct is true', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+      mockRuntimeValues();
 
       const stats = createStats({
         attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
@@ -459,6 +436,32 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
       await act(async () => { render(<CharActions playerStats={stats} cannotAct={true} />); });
 
       expect(screen.getByText('+5')).toHaveClass('disabled-attack');
+    });
+
+    it('applies both stat--penalized and disabled-attack classes when cannotAct and exhaustionPenalty', async () => {
+      mockRuntimeValues();
+
+      const stats = createStats({
+        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
+      });
+
+      await act(async () => { render(<CharActions playerStats={stats} cannotAct={true} exhaustionPenalty={2} />); });
+
+      const cell = screen.getByText('+3');
+      expect(cell).toHaveClass('stat--penalized');
+      expect(cell).toHaveClass('disabled-attack');
+    });
+
+    it('applies stat--penalized when both exhaustionPenalty and conditionAttackMode are set', async () => {
+      mockRuntimeValues();
+
+      const stats = createStats({
+        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
+      });
+
+      await act(async () => { render(<CharActions playerStats={stats} exhaustionPenalty={1} conditionAttackMode="disadvantage" />); });
+
+      expect(screen.getByText('+4')).toHaveClass('stat--penalized');
     });
   });
 });

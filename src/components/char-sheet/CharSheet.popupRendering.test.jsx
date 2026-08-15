@@ -1,7 +1,15 @@
+// @improved-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import CharSheet from './CharSheet';
+import {
+  createDefaultProps,
+  createMockPlayerStats,
+  createMockStore,
+  createSharedPopupReturnValue,
+  resetTestState,
+} from './CharSheet.test-utils.jsx';
 
 // ---------------------------------------------------------------------------
 // Mocks — child components
@@ -159,19 +167,13 @@ vi.mock('../common/AttackResultPopup.jsx', () => ({
 // Mocks — hooks
 // ---------------------------------------------------------------------------
 
-const mockStore = new Map();
-
-let sharedPopupReturnVal = {
-  popupHtml: null,
-  setPopupHtml: vi.fn(),
-  value: {},
-  Provider: ({ children }) => children,
-};
+const mockStore = createMockStore();
+const sharedPopupReturnValue = createSharedPopupReturnValue();
 
 vi.mock('../../hooks/combat/useSharedPopup.js', () => {
   const mockFn = vi.fn();
   mockFn.mockImplementation(() => {
-    return { ...sharedPopupReturnVal, Provider: ({ children }) => children };
+    return { ...sharedPopupReturnValue, Provider: ({ children }) => children };
   });
   return { default: mockFn };
 });
@@ -227,480 +229,303 @@ vi.mock('../../services/rules/rulesFactory.js', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const createMockPlayerStats = (overrides = {}) => ({
-  name: 'Test Character',
-  level: 5,
-  hitPoints: { current: 40, max: 40 },
-  abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
-  spellAbilities: { spells: [], maxPreparedSpells: 5 },
-  rules: '5e',
-  automation: { passives: [] },
-  class: { name: 'Fighter' },
-  speed: 30,
-  race: { speed: 30 },
-  actions: [],
-  bonusActions: [],
-  reactions: [],
-  specialActions: [],
-  characterAdvancement: [],
-  skillProficiencies: [],
-  saveModifiers: [],
-  ...overrides,
-});
-
-const mockPlayerSummary = {
-  name: 'Test Character',
-  rules: '5e',
-};
-
-const defaultProps = {
-  allAbilityScores: [],
-  allClasses: [],
-  allClasses2024: [],
-  allEquipment: [],
-  allMagicItems: [],
-  allRaces: [],
-  allSpells: [],
-  allSpells2024: [],
-  playerSummary: mockPlayerSummary,
-  allRaces2024: [],
-  allMagicItems2024: [],
-  campaignName: 'test-campaign',
-  activeMapName: null,
-  characters: [],
-  onDeleteCharacter: vi.fn(),
-  onEditCharacter: vi.fn(),
-  onUploadClick: vi.fn(),
-  onSaveClick: vi.fn(),
-};
-
-// ---------------------------------------------------------------------------
 // Tests — popup rendering paths
 // ---------------------------------------------------------------------------
 
 describe('CharSheet popup rendering', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal = {
-      popupHtml: null,
-      setPopupHtml: vi.fn(),
-      value: {},
-      Provider: ({ children }) => children,
-    };
-  });
+  const defaultProps = createDefaultProps();
 
-  function setPopup(html) {
-    sharedPopupReturnVal.popupHtml = html;
-  }
+  beforeEach(() => {
+    resetTestState(sharedPopupReturnValue);
+    mockStore.clear();
+  });
 
   function getRenderedComponent() {
     return render(<CharSheet {...defaultProps} />);
   }
 
-  it('renders string popup with sanitizeHtml', async () => {
-    setPopup('<p>Some HTML content</p>');
-    getRenderedComponent();
+  describe('null/absent popup', () => {
+    it('renders char-sheet without a popup when popupHtml is null', async () => {
+      sharedPopupReturnValue.popupHtml = null;
+      getRenderedComponent();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('popup')).toBeInTheDocument();
-    });
-  });
-
-  it('renders html-type popup with dice-roll-result class', async () => {
-    setPopup({ html: '<span>dice roll result</span>' });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('popup')).toBeInTheDocument();
+      expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
     });
   });
 
-  it('renders automation_info popup with info icon', async () => {
-    setPopup({
-      type: 'automation_info',
-      name: 'Test Feature',
-      description: '<p>Feature description</p>',
-    });
-    getRenderedComponent();
+  describe('string popup', () => {
+    it('renders a popup with sanitized string content', async () => {
+      sharedPopupReturnValue.popupHtml = '<p>Some HTML content</p>';
+      getRenderedComponent();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('popup')).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('popup')).toBeInTheDocument();
+      expect(screen.getByText('Some HTML content')).toBeInTheDocument();
     });
   });
 
-  it('returns null for shield_of_faith_target_selection popup type', async () => {
-    setPopup({ type: 'shield_of_faith_target_selection' });
-    getRenderedComponent();
+  describe('html-type popup', () => {
+    it('renders a popup with dice-roll-result class for html-type content', async () => {
+      sharedPopupReturnValue.popupHtml = { html: '<span>dice roll result</span>' };
+      getRenderedComponent();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('popup')).toBeInTheDocument();
+      });
 
-    // Should not render a popup for this type
-    expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
-  });
-
-  it('returns null for barkskin_target_selection popup type', async () => {
-    setPopup({ type: 'barkskin_target_selection' });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
-  });
-
-  it('renders wild_shape_select with PolymorphSelectionModal', async () => {
-    setPopup({
-      type: 'wild_shape_select',
-      playerStats: createMockPlayerStats(),
-      campaignName: 'test-campaign',
-      action: { name: 'Wild Shape' },
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+      expect(screen.getByText('dice roll result')).toBeInTheDocument();
     });
   });
 
-  it('renders polymorph_select with PolymorphSelectionModal', async () => {
-    setPopup({
-      type: 'polymorph_select',
-      maxCR: 4,
-      campaignName: 'test-campaign',
-    });
-    getRenderedComponent();
+  describe('automation_info popup', () => {
+    it('renders an automation_info popup with info icon and description', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'automation_info',
+        name: 'Test Feature',
+        description: '<p>Feature description</p>',
+      };
+      getRenderedComponent();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('popup')).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
-    });
-  });
-
-  it('renders shapechange_select with PolymorphSelectionModal', async () => {
-    setPopup({
-      type: 'shapechange_select',
-      maxCR: 8,
-      campaignName: 'test-campaign',
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+      expect(screen.getByText('Test Feature')).toBeInTheDocument();
+      expect(screen.getByText('Feature description')).toBeInTheDocument();
     });
   });
 
-  it('renders animal_shapes_target_selection with AnimalShapesSelectionModal', async () => {
-    setPopup({
-      type: 'animal_shapes_target_selection',
-      targets: [{ name: 'Goblin', type: 'creature' }],
-      maxCR: 4,
-      campaignName: 'test-campaign',
-    });
-    getRenderedComponent();
+  describe('target selection popups (no renderPopup output)', () => {
+    it('returns null for shield_of_faith_target_selection popup type', async () => {
+      sharedPopupReturnValue.popupHtml = { type: 'shield_of_faith_target_selection' };
+      getRenderedComponent();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('animal-shapes-selection-modal')).toBeInTheDocument();
-    });
-  });
-
-  it('renders true_polymorph_select with PolymorphSelectionModal', async () => {
-    setPopup({
-      type: 'true_polymorph_select',
-      maxCR: 8,
-      campaignName: 'test-campaign',
-      mode: 'creature_to_creature',
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+    it('returns null for barkskin_target_selection popup type', async () => {
+      sharedPopupReturnValue.popupHtml = { type: 'barkskin_target_selection' };
+      getRenderedComponent();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
     });
   });
 
-  it('renders true_polymorph_object with ObjectTransformModal', async () => {
-    setPopup({
-      type: 'true_polymorph_object',
-      campaignName: 'test-campaign',
-    });
-    getRenderedComponent();
+  describe('heal_multi popup', () => {
+    it('renders a heal_multi popup with multi-target healing breakdown', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'heal_multi',
+        name: 'Healing Word',
+        formula: '1d4+2',
+        rolls: [3, 1],
+        bonusHeal: 2,
+        bonusHealDetail: 'Spell Focus',
+        results: [
+          { targetName: 'Ally1', healAmount: 5, rolls: [3] },
+          { targetName: 'Ally2', healAmount: 3, rolls: [1] },
+        ],
+      };
+      getRenderedComponent();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('popup')).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('object-transform-modal')).toBeInTheDocument();
-    });
-  });
-
-  it('renders heal_multi popup with multi-target healing display', async () => {
-    setPopup({
-      type: 'heal_multi',
-      name: 'Healing Word',
-      formula: '1d4+2',
-      rolls: [3, 1],
-      bonusHeal: 2,
-      bonusHealDetail: 'Spell Focus',
-      results: [
-        { targetName: 'Ally1', healAmount: 5, rolls: [3] },
-        { targetName: 'Ally2', healAmount: 3, rolls: [1] },
-      ],
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      expect(screen.getByText('Healing Word')).toBeInTheDocument();
+      expect(screen.getByText(/1d4\+2/)).toBeInTheDocument();
+      expect(screen.getByText('8')).toBeInTheDocument();
+      expect(screen.getByText(/Bonus: \+2 \(Spell Focus\)/)).toBeInTheDocument();
+      expect(screen.getByText('Ally1')).toBeInTheDocument();
+      expect(screen.getByText('Ally2')).toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('popup')).toBeInTheDocument();
-    });
-  });
+    it('renders heal_multi popup without bonus when bonusHeal is zero', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'heal_multi',
+        name: 'Cure Wounds',
+        formula: '1d8+1',
+        rolls: [6],
+        bonusHeal: 0,
+        bonusHealDetail: '',
+        results: [
+          { targetName: 'Ally1', healAmount: 7, rolls: [6] },
+        ],
+      };
+      getRenderedComponent();
 
-  it('renders AttackResultPopup for unknown popup types', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Longsword Attack',
-      hit: true,
-      damage: 8,
-    });
-    getRenderedComponent();
+      await waitFor(() => {
+        expect(screen.getByTestId('popup')).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      expect(screen.getByText('Cure Wounds')).toBeInTheDocument();
+      expect(screen.getByText('7')).toBeInTheDocument();
+      expect(screen.queryByText(/Bonus:/)).not.toBeInTheDocument();
     });
   });
 
-  it('renders AttackResultPopup with superiority maneuver callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Longsword Attack',
-      availableSuperiorityManeuvers: ['Trip Attack'],
-    });
-    getRenderedComponent();
+  describe('AttackResultPopup fallback', () => {
+    it('renders AttackResultPopup for unknown popup types', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Longsword Attack',
+        hit: true,
+        damage: 8,
+      };
+      getRenderedComponent();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
-
-  it('renders AttackResultPopup with bardic inspiration callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Ability Check',
-      bardicInspiration: true,
-      rolls: [15],
-      bonus: 3,
-      modifier: 2,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      expect(screen.getByText('Longsword Attack')).toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
+    it('renders AttackResultPopup with superiority maneuver callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Longsword Attack',
+        availableSuperiorityManeuvers: ['Trip Attack'],
+      };
+      getRenderedComponent();
 
-  it('renders AttackResultPopup with empowered spell callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Magic Missile',
-      empoweredSpell: true,
-      empoweredSpellChaMod: 3,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
+    it('renders AttackResultPopup with bardic inspiration callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Ability Check',
+        bardicInspiration: true,
+        rolls: [15],
+        bonus: 3,
+        modifier: 2,
+      };
+      getRenderedComponent();
 
-  it('renders AttackResultPopup with piercer puncture callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Rapier Attack',
-      piercerPuncture: true,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
-
-  it('renders AttackResultPopup with savage attacker callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Greatsword Attack',
-      savageAttacker: true,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
+    it('renders AttackResultPopup with empowered spell callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Magic Missile',
+        empoweredSpell: true,
+        empoweredSpellChaMod: 3,
+      };
+      getRenderedComponent();
 
-  it('renders AttackResultPopup with tactical mind callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Stealth Check',
-      tacticalMind: true,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
+    it('renders AttackResultPopup with piercer puncture callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Rapier Attack',
+        piercerPuncture: true,
+      };
+      getRenderedComponent();
 
-  it('renders AttackResultPopup with dark ones luck callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Persuasion Check',
-      darkOnesLuck: true,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
+    it('renders AttackResultPopup with savage attacker callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Greatsword Attack',
+        savageAttacker: true,
+      };
+      getRenderedComponent();
 
-  it('renders AttackResultPopup with psi bolstered knack callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Arcana Check',
-      psiBolsteredKnack: true,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
+    it('renders AttackResultPopup with tactical mind callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Stealth Check',
+        tacticalMind: true,
+      };
+      getRenderedComponent();
 
-  it('renders AttackResultPopup with bardic inspiration offense callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Attack Roll',
-      bardicInspirationOffense: true,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
+    it('renders AttackResultPopup with dark ones luck callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Persuasion Check',
+        darkOnesLuck: true,
+      };
+      getRenderedComponent();
 
-  it('renders AttackResultPopup with stroke of luck callback', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Attack Roll',
-      strokeOfLuck: true,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-    });
-  });
+    it('renders AttackResultPopup with psi bolstered knack callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Arcana Check',
+        psiBolsteredKnack: true,
+      };
+      getRenderedComponent();
 
-  it('renders AttackResultPopup with stroke of luck for boon of combat prowess', async () => {
-    setPopup({
-      type: 'attack',
-      name: 'Attack Roll',
-      strokeOfLuck: true,
-    });
-    getRenderedComponent();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+    it('renders AttackResultPopup with bardic inspiration offense callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Attack Roll',
+        bardicInspirationOffense: true,
+      };
+      getRenderedComponent();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
+    });
+
+    it('renders AttackResultPopup with stroke of luck callback', async () => {
+      sharedPopupReturnValue.popupHtml = {
+        type: 'attack',
+        name: 'Attack Roll',
+        strokeOfLuck: true,
+      };
+      getRenderedComponent();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+      });
     });
   });
 });

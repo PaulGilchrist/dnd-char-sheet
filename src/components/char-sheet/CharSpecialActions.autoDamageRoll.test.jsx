@@ -1,3 +1,4 @@
+// @improved-by-ai
 import React from 'react';
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -29,7 +30,7 @@ vi.mock('../../services/automation/index.js', () => ({
   executeHandler: vi.fn(),
 }));
 
-// Mock automation service
+// Mock automation service (single definition)
 vi.mock('../../services/combat/automation/automationService.js', () => ({
   hasAutomation: vi.fn((action) => !!(action?.automation)),
   isInteractiveAutomation: vi.fn((action) => {
@@ -42,6 +43,7 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
     }
     return interactiveTypes.includes(auto.type);
   }),
+  hasTwoWeaponFighting: vi.fn(() => false),
 }));
 
 // Mock TeleportModal
@@ -172,22 +174,6 @@ vi.mock('../../../services/ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-// Mock automation service (used by pipeline steps)
-vi.mock('../../../services/combat/automation/automationService.js', () => ({
-  hasAutomation: vi.fn((action) => !!(action?.automation)),
-  isInteractiveAutomation: vi.fn((action) => {
-    if (!action?.automation) return false;
-    const auto = Array.isArray(action.automation) ? action.automation[0] : action.automation;
-    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice'];
-    if (auto.type === 'passive_rule') {
-      const interactiveEffects = ['abjuration_savant', 'divination_savant', 'evocation_savant', 'illusion_savant'];
-      return interactiveEffects.includes(auto.effect);
-    }
-    return interactiveTypes.includes(auto.type);
-  }),
-  hasTwoWeaponFighting: vi.fn(() => false),
-}));
-
 // Mock combat automation data
 vi.mock('../../../services/encounters/combatData.js', () => ({
   getCurrentCombatRound: vi.fn(() => 1),
@@ -251,18 +237,21 @@ vi.mock('../../../services/ui/utils.js', () => ({
 let capturedAutoDamageRoll = null;
 let capturedRollDamageFn = null;
 
-vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
-  default: vi.fn((characterName, campaignName, options) => {
-    capturedAutoDamageRoll = options?.autoDamageRoll || null;
-    const mockRollDamage = vi.fn();
-    capturedRollDamageFn = mockRollDamage;
-    return {
-      rollAttack: vi.fn(),
-      rollDamage: mockRollDamage,
-      autoDamageRoll: options?.autoDamageRoll,
-    };
-  }),
-}));
+vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
+  return {
+    __esModule: true,
+    default: vi.fn((characterName, campaignName, options) => {
+      capturedAutoDamageRoll = options?.autoDamageRoll || null;
+      const mockRollDamage = vi.fn();
+      capturedRollDamageFn = mockRollDamage;
+      return {
+        rollAttack: vi.fn(),
+        rollDamage: mockRollDamage,
+        autoDamageRoll: options?.autoDamageRoll,
+      };
+    }),
+  };
+});
 
 // Mock useCombatSuperiorityModal
 vi.mock('../../hooks/combat/useCombatSuperiorityModal.js', () => ({

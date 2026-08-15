@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ArcaneChargeModal from './ArcaneChargeModal.jsx';
@@ -104,15 +105,15 @@ describe('ArcaneChargeModal', () => {
 
     it('calls onClose when the overlay background is clicked', () => {
       const onClose = vi.fn();
-      render(<ArcaneChargeModal {...makeProps({ onClose })} />);
-      fireEvent.click(document.querySelector('.sp-overlay'));
+      const { container } = render(<ArcaneChargeModal {...makeProps({ onClose })} />);
+      fireEvent.click(container.querySelector('.sp-overlay'));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('does not call onClose when the modal content is clicked', () => {
       const onClose = vi.fn();
-      render(<ArcaneChargeModal {...makeProps({ onClose })} />);
-      fireEvent.click(document.querySelector('.sp-modal'));
+      const { container } = render(<ArcaneChargeModal {...makeProps({ onClose })} />);
+      fireEvent.click(container.querySelector('.sp-modal'));
       expect(onClose).not.toHaveBeenCalled();
     });
   });
@@ -120,8 +121,11 @@ describe('ArcaneChargeModal', () => {
   // ── Confirm / teleport flow ──
 
   describe('teleport confirm', () => {
-    it('calls confirmArcaneCharge with action, playerStats, and campaignName', async () => {
+    beforeEach(() => {
       confirmArcaneCharge.mockResolvedValue(defaultConfirmResponse());
+    });
+
+    it('calls confirmArcaneCharge with action, playerStats, and campaignName', async () => {
       const playerStats = { name: 'CustomSorcerer', level: 10 };
       const campaignName = 'test-campaign';
       render(<ArcaneChargeModal {...makeProps({ playerStats, campaignName })} />);
@@ -165,9 +169,12 @@ describe('ArcaneChargeModal', () => {
   // ── Done button and post-confirm close behavior ──
 
   describe('post-confirm close', () => {
+    beforeEach(() => {
+      confirmArcaneCharge.mockResolvedValue(defaultConfirmResponse());
+    });
+
     it('calls onClose when the Done button is clicked', async () => {
       const onClose = vi.fn();
-      confirmArcaneCharge.mockResolvedValue(defaultConfirmResponse());
       render(<ArcaneChargeModal {...makeProps({ onClose })} />);
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));
@@ -180,14 +187,14 @@ describe('ArcaneChargeModal', () => {
 
     it('calls onClose when the overlay is clicked after confirm', async () => {
       const onClose = vi.fn();
-      confirmArcaneCharge.mockResolvedValue(defaultConfirmResponse());
-      render(<ArcaneChargeModal {...makeProps({ onClose })} />);
+      const { container } = render(<ArcaneChargeModal {...makeProps({ onClose })} />);
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));
       });
       await waitFor(() => {
-        fireEvent.click(document.querySelector('.sp-overlay'));
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
       });
+      fireEvent.click(container.querySelector('.sp-overlay'));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
@@ -195,7 +202,7 @@ describe('ArcaneChargeModal', () => {
   // ── Edge cases ──
 
   describe('edge cases', () => {
-    it('renders with undefined props without throwing', () => {
+    it('renders with null action falling back to defaults without throwing', () => {
       render(<ArcaneChargeModal {...makeProps({ action: null, playerStats: undefined, campaignName: undefined, onClose: undefined })} />);
       expect(screen.getByText('Arcane Charge')).toBeInTheDocument();
     });

@@ -1,15 +1,20 @@
-// Tests for secondary target modal skip handlers in CharActionModals.jsx:
-// - TricksterBlessingModal onSkip (null confirm)
-// - BardicInspirationTargetModal onSkip (null confirm)
-// - InspiringMovementAllyModal onSkip (null confirm)
-// - OceanicGiftTargetModal onSkip (null confirm)
+// @improved-by-ai
+// Tests for secondary target modal skip handlers in CharActionModals.
+//
+// Skip behavior for TricksterBlessing, BardicInspiration, InspiringMovement,
+// and OceanicGift modals is tested here. These modals all use SecondaryTargetModal
+// and pass `onSkip={() => handleXxxConfirm(null)}` — the skip button invokes the
+// confirm handler with null to cancel the action.
+//
+// Target selection (confirm) paths for these same modals are covered in
+// CharActionModals.secondary-targets.test.jsx.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
 import { createBaseProps } from './CharActionModals.test-utils.jsx';
 
-// ── Mocks ──
+// ── Minimal mocks — only what skip tests need ──
 
 vi.mock('./modals/divine/HealingPoolModal.jsx', () => ({
   default: function TestModal({ onClose }) {
@@ -40,13 +45,8 @@ vi.mock('./modals/shared/AttackRiderModal.jsx', () => ({
   },
 }));
 vi.mock('./modals/OpenHandTechniqueModal.jsx', () => ({
-  default: function TestModal({ onClose, onConfirm }) {
-    return (
-      <div data-testid="open-hand-technique-modal">
-        <button data-testid="open-hand-close" onClick={onClose}>Close</button>
-        <button data-testid="open-hand-confirm" onClick={() => onConfirm('grappled')}>Grapple</button>
-      </div>
-    );
+  default: function TestModal({ onClose }) {
+    return <div data-testid="open-hand-technique-modal"><button data-testid="open-hand-close" onClick={onClose}>Close</button></div>;
   },
 }));
 vi.mock('./modals/WeaponMasteryModal.jsx', () => ({
@@ -66,7 +66,7 @@ vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({
 }));
 vi.mock('./modals/WeaponKindMasteryModal.jsx', () => ({
   default: function TestModal({ onClose }) {
-    return <div data-testid="weapon-kind-mastery-modal"><button data-testid="weapon-kind-mastery-close" onClick={onClose}>Close</button></div>;
+    return <div data-testid="weapon-kind-mastery-close"><button data-testid="weapon-kind-mastery-close" onClick={onClose}>Close</button></div>;
   },
 }));
 vi.mock('./modals/shared/CombatStanceModal.jsx', () => ({
@@ -144,11 +144,11 @@ vi.mock('./modals/divine/DivineSparkModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="divine-spark-modal">DivineSparkModal</div>; },
 }));
 vi.mock('./modals/divine/DivineInterventionModal.jsx', () => ({
-  default: function TestModal({ onClose, onSelect }) {
+  default: function TestModal({ onClose }) {
     return (
       <div data-testid="divine-intervention-modal">
         <button data-testid="divine-intervention-close" onClick={onClose}>Close</button>
-        {onSelect && <button data-testid="divine-intervention-cast" onClick={() => onSelect('cast')}>Cast</button>}
+        {onClose && <button data-testid="divine-intervention-cast" onClick={() => onClose('cast')}>Cast</button>}
       </div>
     );
   },
@@ -438,13 +438,13 @@ describe('CharActionModals — secondary target modal skip handlers', () => {
       expect(handler).toHaveBeenCalledWith(null);
     });
 
-    it('renders with doubleEmanation text', () => {
+    it('renders doubleEmanation title variant', () => {
       render(<CharActionModals
         {...createBaseProps({ handleOceanicGiftConfirm: vi.fn() })}
         modalState={{ oceanicGiftTargetModal: { creatureTargets: [{ name: 'Goblin' }], doubleEmanation: true } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByTestId('secondary-title').textContent).toContain('Oceanic Gift');
+      expect(screen.getByTestId('secondary-title').textContent).toContain('Self + Ally');
     });
   });
 });

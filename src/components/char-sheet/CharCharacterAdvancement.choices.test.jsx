@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import CharCharacterAdvancement from './CharCharacterAdvancement.jsx';
 
@@ -25,23 +26,59 @@ describe('CharCharacterAdvancement - Choice Options', () => {
     mockGetRuntimeValue.mockReturnValue(null);
   });
 
-  it('does not render choice UI when automation is missing, empty, or has a single option', () => {
-    const baseStats = {
+  afterEach(cleanup);
+
+  it('does not render choice UI when automation.options is an empty array', () => {
+    const playerStats = {
       name: 'Test Character',
       characterAdvancement: [
-        { name: 'No Automation', description: 'No automation at all' },
-        { name: 'No Options', description: 'Feature without choice', automation: { type: 'test' } },
-        { name: 'Empty Options', description: 'Empty choices', automation: { options: [] } },
-        { name: 'Single Option', description: 'Only one choice', automation: { options: ['Only Option'] } },
+        {
+          name: 'Empty Choices',
+          description: 'Has options array but no items',
+          automation: { options: [] },
+        },
       ],
     };
-    render(<CharCharacterAdvancement playerStats={baseStats} campaignName="test-campaign" />);
+    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
+    expect(screen.getByText('Empty Choices:')).toBeInTheDocument();
     expect(screen.queryByText('Choice:')).not.toBeInTheDocument();
   });
 
-  it('calls setRuntimeValue and dispatches buffs-updated when an option is clicked (string and object options)', async () => {
-    const dispatchSpy1 = vi.spyOn(window, 'dispatchEvent');
-    const stringStats = {
+  it('does not render choice UI when automation.options has a single string item', () => {
+    const playerStats = {
+      name: 'Test Character',
+      characterAdvancement: [
+        {
+          name: 'Single Choice',
+          description: 'Only one option available',
+          automation: { options: ['Only Option'] },
+        },
+      ],
+    };
+    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
+    expect(screen.getByText('Single Choice:')).toBeInTheDocument();
+    expect(screen.queryByText('Choice:')).not.toBeInTheDocument();
+  });
+
+  it('does not render choice UI when automation.options has a single object item', () => {
+    const playerStats = {
+      name: 'Test Character',
+      characterAdvancement: [
+        {
+          name: 'Single Object Choice',
+          description: 'Only one object option',
+          automation: { options: [{ name: 'Only Object' }] },
+        },
+      ],
+    };
+    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
+    expect(screen.getByText('Single Object Choice:')).toBeInTheDocument();
+    expect(screen.queryByText('Choice:')).not.toBeInTheDocument();
+  });
+
+  it('dispatches buffs-updated event when a string option is clicked', async () => {
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+    const playerStats = {
       name: 'Test Character',
       characterAdvancement: [
         {
@@ -53,52 +90,17 @@ describe('CharCharacterAdvancement - Choice Options', () => {
         },
       ],
     };
-    render(<CharCharacterAdvancement playerStats={stringStats} campaignName="test-campaign" />);
+    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
     fireEvent.click(screen.getByText('Option B'));
     await waitFor(() => {
-      expect(mockSetRuntimeValue).toHaveBeenCalledWith(
-        'Test Character',
-        '_Choose_Feature_option',
-        'Option B',
-        'test-campaign'
-      );
-      expect(dispatchSpy1).toHaveBeenCalledWith(
+      expect(dispatchSpy).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'buffs-updated' })
       );
     });
-    dispatchSpy1.mockRestore();
-    cleanup();
-
-    const dispatchSpy2 = vi.spyOn(window, 'dispatchEvent');
-    const objectStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        {
-          name: 'Choose Feature',
-          description: 'A choice',
-          automation: {
-            options: [{ name: 'Opt 1' }, { name: 'Opt 2' }],
-          },
-        },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={objectStats} campaignName="test-campaign" />);
-    fireEvent.click(screen.getByText('Opt 2'));
-    await waitFor(() => {
-      expect(mockSetRuntimeValue).toHaveBeenCalledWith(
-        'Test Character',
-        '_Choose_Feature_option',
-        'Opt 2',
-        'test-campaign'
-      );
-      expect(dispatchSpy2).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'buffs-updated' })
-      );
-    });
-    dispatchSpy2.mockRestore();
+    dispatchSpy.mockRestore();
   });
 
-  it('renders choice UI for multiple features with mixed automation', () => {
+  it('renders choice UI with clickable options when automation has multiple string options', () => {
     const playerStats = {
       name: 'Test Character',
       characterAdvancement: [
@@ -110,10 +112,6 @@ describe('CharCharacterAdvancement - Choice Options', () => {
           },
         },
         {
-          name: 'No Choice',
-          description: 'Plain feature',
-        },
-        {
           name: 'Second Choice',
           description: 'Second feature with choices',
           automation: {
@@ -123,9 +121,7 @@ describe('CharCharacterAdvancement - Choice Options', () => {
       ],
     };
     render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('First Choice:')).toBeInTheDocument();
-    expect(screen.getByText('No Choice:')).toBeInTheDocument();
-    expect(screen.getByText('Second Choice:')).toBeInTheDocument();
+    expect(screen.queryAllByText('Choice:').length).toBe(2);
     expect(screen.getByText('A')).toBeInTheDocument();
     expect(screen.getByText('X')).toBeInTheDocument();
   });

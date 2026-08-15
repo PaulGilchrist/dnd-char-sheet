@@ -1,9 +1,10 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
 describe('DiceRollResult', () => {
     describe('advantage/disadvantage toggles', () => {
-        it('toggles advantage mode on when clicking the advantage checkbox', () => {
+        it('toggles advantage mode on when clicking the advantage checkbox, updating the total', () => {
             const { container } = render(
                 <DiceRollResult
                     name="Attack"
@@ -13,12 +14,15 @@ describe('DiceRollResult', () => {
                 />
             );
             const advCheckbox = screen.getByLabelText(/Advantage/);
+            expect(advCheckbox.checked).toBe(false);
+
             fireEvent.click(advCheckbox);
-            // After clicking, mode should be 'advantage', so finalRoll = max(8, 15) = 15
+            expect(advCheckbox.checked).toBe(true);
+            // advantage mode: max(8, 15) = 15, total = 15 + 3 = 18
             expect(container.querySelector('.dice-roll-total').textContent).toBe('18');
         });
 
-        it('toggles advantage mode off when clicking again', () => {
+        it('toggles advantage mode off when clicking again, reverting to normal mode', () => {
             const { container } = render(
                 <DiceRollResult
                     name="Attack"
@@ -28,13 +32,17 @@ describe('DiceRollResult', () => {
                 />
             );
             const advCheckbox = screen.getByLabelText(/Advantage/);
+
             fireEvent.click(advCheckbox);
+            expect(advCheckbox.checked).toBe(true);
+
             fireEvent.click(advCheckbox);
-            // Back to normal mode, finalRoll = 8
+            expect(advCheckbox.checked).toBe(false);
+            // normal mode: first roll = 8, total = 8 + 3 = 11
             expect(container.querySelector('.dice-roll-total').textContent).toBe('11');
         });
 
-        it('toggles disadvantage mode on when clicking the disadvantage checkbox', () => {
+        it('toggles disadvantage mode on when clicking the disadvantage checkbox, updating the total', () => {
             const { container } = render(
                 <DiceRollResult
                     name="Attack"
@@ -44,12 +52,15 @@ describe('DiceRollResult', () => {
                 />
             );
             const disCheckbox = screen.getByLabelText(/Disadvantage/);
+            expect(disCheckbox.checked).toBe(false);
+
             fireEvent.click(disCheckbox);
-            // After clicking, mode should be 'disadvantage', so finalRoll = min(8, 15) = 8
+            expect(disCheckbox.checked).toBe(true);
+            // disadvantage mode: min(8, 15) = 8, total = 8 + 3 = 11
             expect(container.querySelector('.dice-roll-total').textContent).toBe('11');
         });
 
-        it('toggles disadvantage mode off when clicking again', () => {
+        it('toggles disadvantage mode off when clicking again, reverting to normal mode', () => {
             const { container } = render(
                 <DiceRollResult
                     name="Attack"
@@ -59,13 +70,17 @@ describe('DiceRollResult', () => {
                 />
             );
             const disCheckbox = screen.getByLabelText(/Disadvantage/);
+
             fireEvent.click(disCheckbox);
+            expect(disCheckbox.checked).toBe(true);
+
             fireEvent.click(disCheckbox);
-            // Back to normal mode, finalRoll = 8
+            expect(disCheckbox.checked).toBe(false);
+            // normal mode: first roll = 8, total = 8 + 3 = 11
             expect(container.querySelector('.dice-roll-total').textContent).toBe('11');
         });
 
-        it('does not show toggle checkboxes for non-d20 types', () => {
+        it('does not show advantage/disadvantage checkboxes for non-d20 types', () => {
             render(
                 <DiceRollResult
                     name="Fireball"
@@ -74,11 +89,11 @@ describe('DiceRollResult', () => {
                     bonus={0}
                 />
             );
-            expect(screen.queryByLabelText(/Advantage/)).not.toBeInTheDocument();
-            expect(screen.queryByLabelText(/Disadvantage/)).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: /Advantage/ })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: /Disadvantage/ })).not.toBeInTheDocument();
         });
 
-        it('shows advantage toggle as active when forcedMode is advantage', () => {
+        it('marks the advantage toggle as active when forcedMode is advantage', () => {
             const { container } = render(
                 <DiceRollResult
                     name="Attack"
@@ -88,11 +103,13 @@ describe('DiceRollResult', () => {
                     forcedMode="advantage"
                 />
             );
+            const advCheckbox = container.querySelector('input[type="checkbox"]');
+            expect(advCheckbox.checked).toBe(true);
             const advLabel = container.querySelector('.badge-toggle.active');
-            expect(advLabel).toBeInTheDocument();
+            expect(advLabel).toHaveTextContent('Advantage');
         });
 
-        it('shows disadvantage toggle as active when forcedMode is disadvantage', () => {
+        it('marks the disadvantage toggle as active when forcedMode is disadvantage', () => {
             const { container } = render(
                 <DiceRollResult
                     name="Attack"
@@ -102,13 +119,14 @@ describe('DiceRollResult', () => {
                     forcedMode="disadvantage"
                 />
             );
-            const disLabel = container.querySelector('.badge-toggle.active');
-            expect(disLabel).toBeInTheDocument();
+            const labels = container.querySelectorAll('label.badge-toggle');
+            const activeLabel = Array.from(labels).find(l => l.classList.contains('active'));
+            expect(activeLabel).toHaveTextContent('Disadvantage');
         });
     });
 
     describe('psi-bolstered knack still failed path', () => {
-        it('calls onPsiBolsteredKnack with success: false when still failed button is clicked', () => {
+        it('calls onPsiBolsteredKnack with success: false when still failed button is clicked', async () => {
             const onPsiBolsteredKnack = vi.fn();
             render(
                 <DiceRollResult
@@ -122,18 +140,17 @@ describe('DiceRollResult', () => {
                     onPsiBolsteredKnack={onPsiBolsteredKnack}
                 />
             );
-            // First click the Psi-Bolstered Knack button
             fireEvent.click(screen.getByText(/Psi-Bolstered Knack/));
-            // Then click the Still Failed button
             fireEvent.click(screen.getByText(/Still Failed/));
-            expect(onPsiBolsteredKnack).toHaveBeenCalledWith({
-                dieValue: expect.any(Number),
-                dieSize: 6,
-                success: false,
-            });
+            expect(onPsiBolsteredKnack).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    dieSize: 6,
+                    success: false,
+                })
+            );
         });
 
-        it('shows consumed state after clicking still failed', () => {
+        it('shows consumed state with reroll result div after clicking still failed', () => {
             const { container } = render(
                 <DiceRollResult
                     name="Insight"
@@ -147,14 +164,12 @@ describe('DiceRollResult', () => {
             );
             fireEvent.click(screen.getByText(/Psi-Bolstered Knack/));
             fireEvent.click(screen.getByText(/Still Failed/));
-            // After consuming, the result should still be visible
-            const rerollResults = container.querySelectorAll('.dice-roll-reroll-result');
-            expect(rerollResults.length).toBeGreaterThanOrEqual(1);
+            expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
         });
     });
 
     describe('onReroll callback', () => {
-        it('calls onReroll callback when provided and reroll button is clicked', () => {
+        it('calls onReroll callback and shows reroll result div when reroll button is clicked', () => {
             const onReroll = vi.fn();
             const { container } = render(
                 <DiceRollResult
@@ -173,9 +188,9 @@ describe('DiceRollResult', () => {
     });
 
     describe('error paths', () => {
-        it('logs console.error when onBardicInspirationDefense is falsy', () => {
+        it('logs console.error when onBardicInspirationDefense is falsy after clicking the defense button', () => {
             const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
-            render(
+            const { container } = render(
                 <DiceRollResult
                     name="Longsword"
                     type="attack"
@@ -190,13 +205,14 @@ describe('DiceRollResult', () => {
             );
             fireEvent.click(screen.getByText(/Bardic Inspiration - Defense/));
             expect(consoleSpy).toHaveBeenCalledWith('[BI Defense] onBardicInspirationDefense is falsy!');
+            expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
             consoleSpy.mockRestore();
         });
 
-        it('logs console.error when superiority maneuver throws', async () => {
+        it('logs console.error when superiority maneuver callback throws', async () => {
             const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
             const onSuperiorityManeuver = vi.fn().mockRejectedValue(new Error('test error'));
-            render(
+            const { container } = render(
                 <DiceRollResult
                     name="Sword"
                     type="attack"
@@ -209,6 +225,7 @@ describe('DiceRollResult', () => {
             fireEvent.click(screen.getByText(/Pushing Attack/));
             await new Promise(r => setTimeout(r, 0));
             expect(consoleSpy).toHaveBeenCalledWith('[DiceRollResult] Superiority maneuver failed:', expect.any(Error));
+            expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
             consoleSpy.mockRestore();
         });
     });

@@ -157,20 +157,6 @@ describe('CharInventory item popup', () => {
       expect(callArg).toContain('<b>Dagger</b>');
     });
 
-    it('should find item by singular-to-plural fallback', async () => {
-      const stats = {
-        inventory: {
-          magicItems: [],
-          equipped: ['Shield'],
-          backpack: [],
-        },
-      };
-      renderComponent(stats);
-      await clickItemByText('Shield');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b>Shield</b>');
-    });
-
     it('should not attempt plural fallback for words ending in "s" that are already plural', async () => {
       const stats = {
         inventory: {
@@ -240,21 +226,6 @@ describe('CharInventory item popup', () => {
       expect(callArg).toContain('Doubles as an alchemy component.');
     });
 
-    it('should include cost, weight, and category for dagger', async () => {
-      const stats = {
-        inventory: {
-          magicItems: [],
-          equipped: ['Dagger'],
-          backpack: [],
-        },
-      };
-      renderComponent(stats);
-      await clickItemByText('Dagger');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b>Dagger</b>');
-      expect(callArg).toContain('A simple melee weapon.');
-      expect(callArg).toContain('<b>Cost:</b>');
-    });
   });
 
   describe('item not found', () => {

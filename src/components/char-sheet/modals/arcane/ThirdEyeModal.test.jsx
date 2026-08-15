@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ThirdEyeModal from './ThirdEyeModal.jsx';
@@ -77,6 +78,18 @@ describe('ThirdEyeModal', () => {
       expect(radios[1]).toBeChecked();
       expect(radios[0]).not.toBeChecked();
     });
+
+    it('deselects the previously selected option when another is chosen', () => {
+      render(<ThirdEyeModal {...makeProps()} />);
+      const radios = document.querySelectorAll('input[name="thirdEye"]');
+      // Select the second option
+      fireEvent.click(radios[1]);
+      expect(radios[1]).toBeChecked();
+      // Then select the third option
+      fireEvent.click(radios[2]);
+      expect(radios[2]).toBeChecked();
+      expect(radios[1]).not.toBeChecked();
+    });
   });
 
   // ── Cancel button ──
@@ -87,6 +100,23 @@ describe('ThirdEyeModal', () => {
       render(<ThirdEyeModal {...makeProps({ onClose })} />);
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onClose when overlay outside the modal is clicked', () => {
+      const onClose = vi.fn();
+      render(<ThirdEyeModal {...makeProps({ onClose })} />);
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close when clicking inside the modal content', () => {
+      const onClose = vi.fn();
+      render(<ThirdEyeModal {...makeProps({ onClose })} />);
+      const header = document.querySelector('.sp-header');
+      // Clicking inside the modal (e.g., on the header) should not close it
+      fireEvent.click(header);
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
@@ -164,6 +194,45 @@ describe('ThirdEyeModal', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
       });
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows Done button instead of action buttons after apply', async () => {
+      render(<ThirdEyeModal {...makeProps()} />);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Use Bonus Action/ }));
+      });
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Use Bonus Action/ })).not.toBeInTheDocument();
+    });
+
+    it('retains the modal header in the result state', async () => {
+      render(<ThirdEyeModal {...makeProps()} />);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Use Bonus Action/ }));
+      });
+      await waitFor(() => {
+        expect(screen.getByText('Third Eye')).toBeInTheDocument();
+      });
+    });
+
+    it('calls applyThirdEye with Greater Comprehension when that option is selected', async () => {
+      render(<ThirdEyeModal {...makeProps()} />);
+      const radios = document.querySelectorAll('input[name="thirdEye"]');
+      await act(async () => {
+        fireEvent.click(radios[1]);
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Use Bonus Action/ }));
+      });
+      expect(thirdEyeHandler.applyThirdEye).toHaveBeenCalledWith(
+        baseProps.action,
+        baseProps.playerStats,
+        baseProps.campaignName,
+        'Greater Comprehension'
+      );
     });
   });
 });

@@ -1,6 +1,7 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import CharReactions from './CharReactions.jsx';
 
 vi.mock('../common/popup.jsx', () => ({
@@ -75,7 +76,7 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
     getTargetFromAttacker: vi.fn(),
 }));
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-    useRuntimeValue: vi.fn(() => []),
+    useRuntimeValue: vi.fn(),
     getRuntimeValue: vi.fn(),
     setRuntimeValue: vi.fn(),
 }));
@@ -186,7 +187,13 @@ function createProps(overrides = {}) {
 describe('CharReactions - Basic Rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        useRuntimeValue.mockReturnValue([]);
+        useRuntimeValue.mockImplementation((_charKey, key) => {
+            if (key === 'activeBuffs') return [];
+            if (key === 'powerWordHealStandPermission') return false;
+            if (key === 'bastionOfLawActive') return false;
+            if (key === 'bastionOfLawWardDice') return [];
+            return [];
+        });
         getRuntimeValue.mockReturnValue(null);
         setRuntimeValue.mockReturnValue(undefined);
         hasAutomation.mockReturnValue(false);
@@ -203,39 +210,42 @@ describe('CharReactions - Basic Rendering', () => {
         useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
     });
 
+    afterEach(cleanup);
+
     it('renders the reactions section header', () => {
         render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Reactions')).toBeInTheDocument();
     });
 
-    it('renders the opportunity attack reaction', () => {
+    it('renders the opportunity attack reaction with its label', () => {
         render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Opportunity Attack:')).toBeInTheDocument();
     });
 
-    it('renders reaction descriptions', () => {
+    it('renders the opportunity attack description', () => {
         render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Can attack creature that moves out of your reach')).toBeInTheDocument();
     });
 
-    it('renders reaction spells when available', () => {
+    it('renders reaction spells from getReactionSpellNames', () => {
         render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Shield')).toBeInTheDocument();
         expect(screen.getByText('Hellish Rebuke')).toBeInTheDocument();
     });
 
-    it('renders spell level column', () => {
+    it('renders spell level column for each reaction spell', () => {
         render(<CharReactions {...createProps()} />);
-        expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1);
+        const levelElements = screen.getAllByText('1');
+        expect(levelElements.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('renders spell range column', () => {
+    it('renders spell range column for each reaction spell', () => {
         render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Self')).toBeInTheDocument();
         expect(screen.getByText('60 ft.')).toBeInTheDocument();
     });
 
-    it('renders save DC for spells with DC', () => {
+    it('renders save DC for spells with dc property', () => {
         const spellWithDc = {
             ...basePlayerStats.spellAbilities.spells[0],
             name: 'Bane',
@@ -251,11 +261,11 @@ describe('CharReactions - Basic Rendering', () => {
             },
         });
         getReactionSpellNames.mockReturnValue(new Set(['Bane']));
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText('DC 13 WIS')).toBeInTheDocument();
     });
 
-    it('renders heal expression for healing spells', () => {
+    it('renders heal expression and "Healing" label for healing spells', () => {
         const healingSpell = {
             name: 'Lesser Restoration',
             casting_time: '1 reaction',
@@ -276,17 +286,17 @@ describe('CharReactions - Basic Rendering', () => {
         });
         getReactionSpellNames.mockReturnValue(new Set(['Lesser Restoration']));
         resolveHealExpression.mockReturnValue('2d8+3');
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText('2d8+3')).toBeInTheDocument();
         expect(screen.getByText('Healing')).toBeInTheDocument();
     });
 
-    it('renders damage type column', () => {
+    it('renders damage type for spells with damage_type', () => {
         render(<CharReactions {...createProps()} />);
-        expect(document.body.textContent).toContain('fire');
+        expect(screen.getByText('fire')).toBeInTheDocument();
     });
 
-    it('renders "Utility" when no damage type and not healing', () => {
+    it('renders "Utility" for spells without damage type and not healing', () => {
         const utilitySpell = {
             name: 'Counterspell',
             casting_time: '1 reaction',
@@ -307,7 +317,7 @@ describe('CharReactions - Basic Rendering', () => {
         });
         getReactionSpellNames.mockReturnValue(new Set(['Counterspell']));
         resolveSpellDamageAtLevel.mockReturnValue(null);
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText('Utility')).toBeInTheDocument();
     });
 
@@ -332,7 +342,7 @@ describe('CharReactions - Basic Rendering', () => {
         });
         getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
         resolveSpellDamageAtLevel.mockReturnValue('1d8+3 thunder');
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText('Cantrip')).toBeInTheDocument();
     });
 
@@ -359,38 +369,38 @@ describe('CharReactions - Basic Rendering', () => {
         });
         getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
         resolveSpellDamageAtLevel.mockReturnValue('1d8+3 thunder');
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText('+5')).toBeInTheDocument();
     });
 
-    it('does not render spell section when no reaction spells', () => {
+    it('does not render spell section when no reaction spells are configured', () => {
         getReactionSpellNames.mockReturnValue(new Set());
         render(<CharReactions {...createProps()} />);
         expect(screen.queryByText('Shield')).not.toBeInTheDocument();
     });
 
-    it('does not render spells section when spellAbilities is missing', () => {
+    it('does not render spells section when spellAbilities is null', () => {
         const props = createProps({
             playerStats: {
                 ...basePlayerStats,
                 spellAbilities: null,
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.queryByText('Shield')).not.toBeInTheDocument();
     });
 
-    it('does not render spells section when no spells array', () => {
+    it('does not render spells section when spellAbilities.spells is missing', () => {
         const props = createProps({
             playerStats: {
                 ...basePlayerStats,
                 spellAbilities: {},
             },
         });
-        expect(() => render(<CharReactions {...createProps(props)} />)).toThrow();
+        expect(() => render(<CharReactions {...props} />)).toThrow();
     });
 
-    it('renders clickable spell name to open popup', () => {
+    it('opens spell detail popup when clicking a spell name', () => {
         render(<CharReactions {...createProps()} />);
         const spellLink = screen.getByText('Shield');
         fireEvent.click(spellLink);
@@ -398,13 +408,13 @@ describe('CharReactions - Basic Rendering', () => {
         expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
     });
 
-    it('renders clickable damage for non-healing spells', () => {
+    it('renders damage cells as clickable for non-healing spells', () => {
         render(<CharReactions {...createProps()} />);
         const damageCells = screen.getAllByText('1d10');
         expect(damageCells[0]).toHaveClass('clickable');
     });
 
-    it('renders auto-hit spells without attack bonus column', () => {
+    it('renders auto-hit spells without an attack bonus column', () => {
         isAutoHitSpell.mockReturnValue(true);
         const autoHitSpell = {
             name: 'Guiding Bolt',
@@ -426,7 +436,7 @@ describe('CharReactions - Basic Rendering', () => {
         });
         getReactionSpellNames.mockReturnValue(new Set(['Guiding Bolt']));
         resolveSpellDamageAtLevel.mockReturnValue('4d6+3 radiant');
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText('Guiding Bolt')).toBeInTheDocument();
     });
 });

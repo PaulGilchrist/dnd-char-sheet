@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
@@ -8,13 +9,13 @@ import TrackedResourceInput from './TrackedResourceInput.jsx';
 const stores = new Map();
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  useRuntimeValue: vi.fn((_characterKey, key) => {
+  useRuntimeValue: vi.fn((_characterKey, key, _campaignName) => {
     const store = stores.get('TestCharacter');
     return store?.has(key) ? store.get(key) : 0;
   }),
 }));
 
-// TrackedResourceInput mock that actually invokes getMax so data-max assertions work
+// TrackedResourceInput mock that exposes getMax so data-max assertions work
 vi.mock('./TrackedResourceInput.jsx', () => {
   const mock = vi.fn((props) => {
     const max = props.getMax ? props.getMax() : 0;
@@ -66,7 +67,7 @@ describe('CharFeatFeatures', () => {
     TrackedResourceInput.mockClear();
   });
 
-  describe('null rendering', () => {
+  describe('null rendering when no features are active', () => {
     it('renders nothing when there are no features and no runtime values', () => {
       const { container } = render(<CharFeatFeatures {...defaultProps} />);
       expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
@@ -75,21 +76,6 @@ describe('CharFeatFeatures', () => {
     it('renders nothing when only bolsteringTreat is zero and no features exist', () => {
       setStore('bolsteringTreat', 0);
       const { container } = render(<CharFeatFeatures {...defaultProps} />);
-      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
-    });
-
-    it('renders nothing when lucky feat exists but proficiency is 0', () => {
-      const stats = { ...basePlayerStats, feats: ['Lucky'], proficiency: 0 };
-      setStore('luckyPoints', 5);
-      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
-    });
-
-    it('renders nothing when proficiency is missing and only lucky feat exists', () => {
-      const stats = { ...basePlayerStats, feats: ['Lucky'] };
-      delete stats.proficiency;
-      setStore('luckyPoints', 5);
-      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
     });
 
@@ -105,10 +91,40 @@ describe('CharFeatFeatures', () => {
       const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
     });
+
+    it('renders nothing when feats field is missing but no other resources exist', () => {
+      const stats = { ...basePlayerStats };
+      delete stats.feats;
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
+    });
   });
 
-  describe('feature detection', () => {
-    it('renders when poisoner feat is detected via specialActions', () => {
+  describe('lucky feat — visibility gating', () => {
+    it('does not render when lucky feat exists but proficiency is 0', () => {
+      const stats = { ...basePlayerStats, feats: ['Lucky'], proficiency: 0 };
+      setStore('luckyPoints', 5);
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
+    });
+
+    it('does not render when proficiency is missing and only lucky feat exists', () => {
+      const stats = { ...basePlayerStats, feats: ['Lucky'] };
+      delete stats.proficiency;
+      setStore('luckyPoints', 5);
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
+    });
+
+    it('does not render when feats array is empty even with luckyPoints set', () => {
+      setStore('luckyPoints', 5);
+      const { container } = render(<CharFeatFeatures {...defaultProps} />);
+      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
+    });
+  });
+
+  describe('poisoner feat detection', () => {
+    it('renders when poisoner is detected via matching special action', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -121,7 +137,7 @@ describe('CharFeatFeatures', () => {
       expect(screen.getByTestId('tracked-poisonDoses')).toBeInTheDocument();
     });
 
-    it('does not render for poisoner when special action has wrong type', () => {
+    it('does not render when special action type does not match', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -134,7 +150,7 @@ describe('CharFeatFeatures', () => {
       expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
     });
 
-    it('does not render for poisoner when special action has wrong name', () => {
+    it('does not render when special action name does not match', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -146,8 +162,10 @@ describe('CharFeatFeatures', () => {
       const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
     });
+  });
 
-    it('renders when chef feat is detected via matching special action', () => {
+  describe('chef feat detection', () => {
+    it('renders when chef is detected via matching special action', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -160,7 +178,7 @@ describe('CharFeatFeatures', () => {
       expect(screen.getByTestId('tracked-chefBolsteringTreats')).toBeInTheDocument();
     });
 
-    it('does not render for chef when special action has wrong name', () => {
+    it('does not render when chef special action has wrong name', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -173,7 +191,7 @@ describe('CharFeatFeatures', () => {
       expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
     });
 
-    it('does not render for chef when special action has wrong type', () => {
+    it('does not render when chef special action has wrong type', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -186,6 +204,21 @@ describe('CharFeatFeatures', () => {
       expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
     });
 
+    it('does not render when chef has treats but value is 0', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          specialActions: [{ type: 'temp_hp_buff', name: 'Bolstering Treats' }],
+        },
+      };
+      setStore('chefBolsteringTreats', 0);
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
+    });
+  });
+
+  describe('replenishing meal detection', () => {
     it('renders when replenishing meal passive exists and runtime value > 0', () => {
       const stats = {
         ...basePlayerStats,
@@ -199,7 +232,7 @@ describe('CharFeatFeatures', () => {
       expect(screen.getByTestId('tracked-replenishingMeals')).toBeInTheDocument();
     });
 
-    it('renders replenishing meals based on runtime value alone (no matching passive required)', () => {
+    it('renders when runtime value > 0 regardless of matching passive', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -211,42 +244,48 @@ describe('CharFeatFeatures', () => {
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(screen.getByTestId('tracked-replenishingMeals')).toBeInTheDocument();
     });
+
+    it('does not render when runtime value is 0 even with matching passive', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }],
+        },
+      };
+      setStore('replenishingMeals', 0);
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
+    });
   });
 
-  describe('lucky feat detection', () => {
-    it('detects lucky feat when name is exactly "Lucky"', () => {
+  describe('lucky feat — rendering', () => {
+    it('renders when lucky feat name is exact match "Lucky"', () => {
       const stats = { ...basePlayerStats, feats: ['Lucky'] };
       setStore('luckyPoints', 5);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(screen.getByTestId('tracked-luckyPoints')).toBeInTheDocument();
     });
 
-    it('detects lucky feat with lowercase name', () => {
+    it('renders when lucky feat name is lowercase "lucky"', () => {
       const stats = { ...basePlayerStats, feats: ['lucky'] };
       setStore('luckyPoints', 5);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(screen.getByTestId('tracked-luckyPoints')).toBeInTheDocument();
     });
 
-    it('detects lucky feat when "lucky" appears in the middle of the name', () => {
+    it('renders when lucky feat name contains "lucky" as a substring', () => {
       const stats = { ...basePlayerStats, feats: ['Some Lucky Trait'] };
       setStore('luckyPoints', 5);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(screen.getByTestId('tracked-luckyPoints')).toBeInTheDocument();
     });
 
-    it('renders luckyPoints input when the value is 0 (lpMax drives visibility, not the value)', () => {
+    it('renders when luckyPoints value is 0 (lpMax drives visibility, not the value)', () => {
       const stats = { ...basePlayerStats, feats: ['Lucky'] };
       setStore('luckyPoints', 0);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(screen.getByTestId('tracked-luckyPoints')).toBeInTheDocument();
-    });
-
-    it('does not render lucky points when proficiency is 0 even with a matching feat', () => {
-      const stats = { ...basePlayerStats, feats: ['Lucky'], proficiency: 0 };
-      setStore('luckyPoints', 5);
-      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
     });
   });
 
@@ -277,6 +316,22 @@ describe('CharFeatFeatures', () => {
       setStore('poisonedWeaponsActive', false);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(screen.queryByText('Poisoned Weapons active')).not.toBeInTheDocument();
+    });
+
+    it('renders the automation-badge class and Font Awesome icon on the badge', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          specialActions: [{ type: 'brew_poison', name: 'Brew Poison' }],
+        },
+      };
+      setStore('poisonDoses', 2);
+      setStore('poisonedWeaponsActive', true);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      const badge = screen.getByText('Poisoned Weapons active');
+      expect(badge).toHaveClass('automation-badge');
+      expect(badge.querySelector('i.fa-solid.fa-vial')).toBeInTheDocument();
     });
   });
 
@@ -356,24 +411,7 @@ describe('CharFeatFeatures', () => {
     });
   });
 
-  describe('proficiency handling', () => {
-    it('uses proficiency for lpMax calculation', () => {
-      const stats = { ...basePlayerStats, feats: ['Lucky'], proficiency: 5 };
-      setStore('luckyPoints', 3);
-      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(screen.getByTestId('tracked-luckyPoints')).toBeInTheDocument();
-    });
-
-    it('defaults lpMax to 0 when proficiency is missing entirely', () => {
-      const stats = { ...basePlayerStats, feats: ['Lucky'] };
-      delete stats.proficiency;
-      setStore('luckyPoints', 5);
-      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
-    });
-  });
-
-  describe('getMax function behavior', () => {
+  describe('TrackedResourceInput getMax behavior', () => {
     it('luckyPoints getMax returns proficiency', () => {
       const stats = { ...basePlayerStats, feats: ['Lucky'], proficiency: 5 };
       setStore('luckyPoints', 3);
@@ -418,7 +456,6 @@ describe('CharFeatFeatures', () => {
       };
       setStore('replenishingMeals', 2);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      // Math.max(2, 4+3) = 7
       expect(screen.getByTestId('tracked-replenishingMeals')).toHaveAttribute('data-max', '7');
     });
 
@@ -439,11 +476,10 @@ describe('CharFeatFeatures', () => {
       };
       setStore('replenishingMeals', 10);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      // Math.max(10, 4+3) = 10
       expect(screen.getByTestId('tracked-replenishingMeals')).toHaveAttribute('data-max', '10');
     });
 
-    it('chefBolsteringTreats getMax returns proficiency', () => {
+    it('chefBolsteringTreats getMax returns proficiency when present', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -456,7 +492,7 @@ describe('CharFeatFeatures', () => {
       expect(screen.getByTestId('tracked-chefBolsteringTreats')).toHaveAttribute('data-max', '3');
     });
 
-    it('chefBolsteringTreats getMax returns Math.max(runtime, proficiency fallback of 1) when proficiency is missing', () => {
+    it('chefBolsteringTreats getMax returns Math.max(runtime, 1) when proficiency is missing', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -467,7 +503,6 @@ describe('CharFeatFeatures', () => {
       delete stats.proficiency;
       setStore('chefBolsteringTreats', 2);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      // Math.max(2, 1) = 2
       expect(screen.getByTestId('tracked-chefBolsteringTreats')).toHaveAttribute('data-max', '2');
     });
 
@@ -475,6 +510,80 @@ describe('CharFeatFeatures', () => {
       setStore('bolsteringTreat', 1);
       render(<CharFeatFeatures {...defaultProps} />);
       expect(screen.getByTestId('tracked-bolsteringTreat')).toHaveAttribute('data-max', '1');
+    });
+  });
+
+  describe('TrackedResourceInput props passed correctly', () => {
+    it('passes correct props to luckyPoints TrackedResourceInput', () => {
+      const stats = { ...basePlayerStats, feats: ['Lucky'] };
+      setStore('luckyPoints', 3);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      const call = TrackedResourceInput.mock.calls[0][0];
+      expect(call.label).toBe('Luck Points');
+      expect(call.resourceKey).toBe('luckyPoints');
+      expect(call.playerName).toBe('TestCharacter');
+      expect(call.campaignName).toBe('test-campaign');
+    });
+
+    it('passes correct props to poisonDoses TrackedResourceInput', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          specialActions: [{ type: 'brew_poison', name: 'Brew Poison' }],
+        },
+      };
+      setStore('poisonDoses', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      const call = TrackedResourceInput.mock.calls[0][0];
+      expect(call.label).toBe('Poison Doses');
+      expect(call.resourceKey).toBe('poisonDoses');
+      expect(call.playerName).toBe('TestCharacter');
+      expect(call.campaignName).toBe('test-campaign');
+    });
+
+    it('passes correct props to replenishingMeals TrackedResourceInput', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }],
+        },
+      };
+      setStore('replenishingMeals', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      const call = TrackedResourceInput.mock.calls[0][0];
+      expect(call.label).toBe('Replenishing Meals');
+      expect(call.resourceKey).toBe('replenishingMeals');
+      expect(call.playerName).toBe('TestCharacter');
+      expect(call.campaignName).toBe('test-campaign');
+    });
+
+    it('passes correct props to chefBolsteringTreats TrackedResourceInput', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          specialActions: [{ type: 'temp_hp_buff', name: 'Bolstering Treats' }],
+        },
+      };
+      setStore('chefBolsteringTreats', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      const call = TrackedResourceInput.mock.calls[0][0];
+      expect(call.label).toBe('Bolstering Treats');
+      expect(call.resourceKey).toBe('chefBolsteringTreats');
+      expect(call.playerName).toBe('TestCharacter');
+      expect(call.campaignName).toBe('test-campaign');
+    });
+
+    it('passes correct props to bolsteringTreat TrackedResourceInput', () => {
+      setStore('bolsteringTreat', 1);
+      render(<CharFeatFeatures {...defaultProps} />);
+      const call = TrackedResourceInput.mock.calls[0][0];
+      expect(call.label).toBe('Bolstering Treat');
+      expect(call.resourceKey).toBe('bolsteringTreat');
+      expect(call.playerName).toBe('TestCharacter');
+      expect(call.campaignName).toBe('test-campaign');
     });
   });
 });

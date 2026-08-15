@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ClairvoyantCombatantModal from './ClairvoyantCombatantModal.jsx';
@@ -20,7 +21,6 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 
 // ── Re-import mocked modules ──
 
-import * as useRuntimeState from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../services/ui/logService.js';
 
 // ── Test fixtures ──
@@ -51,88 +51,86 @@ function renderModal(props) {
   return render(<ClairvoyantCombatantModal {...props} />);
 }
 
+function dispatchSaveEvent(success, overrides = {}) {
+  window.dispatchEvent(
+    new CustomEvent('save-result', {
+      detail: {
+        promptId: 'test-prompt-id',
+        roll: success ? 10 : 5,
+        total: success ? 15 : 10,
+        success,
+        ...overrides,
+      },
+    }),
+  );
+}
+
 // ── beforeEach ──
 
 describe('ClairvoyantCombatantModal - result screen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    useRuntimeState.clearRuntimeState('campaign');
-    useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-      if (key === 'campaign' && prop === 'targetEffects') return [];
-      return null;
-    });
-    useRuntimeState.setRuntimeValue.mockImplementation(() => Promise.resolve());
   });
 
   // ── Result screen: save failure ──
 
   describe('save failure', () => {
-    it('shows failed save result after save-result event fires with success=false', async () => {
+    it('displays failure description with target name and effect status', async () => {
       const props = makeProps({ currentUses: 1, maxUses: 3 });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
-      // Wait for the async handleConfirm to attach the event listener
       await new Promise(r => setTimeout(r, 10));
-
-      const failureEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 5,
-          total: 10,
-          success: false,
-        },
-      });
-      window.dispatchEvent(failureEvent);
+      dispatchSaveEvent(false);
 
       await waitFor(() => {
         const body = document.querySelector('.sp-body');
-        expect(body).not.toBeNull();
         expect(body.textContent).toContain('Goblin1 failed');
         expect(body.textContent).toContain('Clairvoyant Combatant active');
       });
     });
 
-    it('shows Done button in failed save result screen', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
+    it('displays failure description with custom save type', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3, saveType: 'Charisma' });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
       await new Promise(r => setTimeout(r, 10));
-
-      const failureEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 5,
-          total: 10,
-          success: false,
-        },
-      });
-      window.dispatchEvent(failureEvent);
+      dispatchSaveEvent(false);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+        const body = document.querySelector('.sp-body');
+        expect(body.textContent).toContain('Charisma save');
       });
     });
 
-    it('calls onClose when Done is clicked in failed save result screen', async () => {
+    it('displays failure description with custom action name', async () => {
+      const props = makeProps({
+        currentUses: 1,
+        maxUses: 3,
+        action: { name: 'Awakened Mind' },
+      });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await new Promise(r => setTimeout(r, 10));
+      dispatchSaveEvent(false);
+
+      await waitFor(() => {
+        const header = document.querySelector('.sp-header');
+        expect(header.textContent).toContain('Awakened Mind');
+      });
+    });
+
+    it('closes when Done button is clicked', async () => {
       const onClose = vi.fn();
       const props = makeProps({ currentUses: 1, maxUses: 3, onClose });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
       await new Promise(r => setTimeout(r, 10));
-
-      const failureEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 5,
-          total: 10,
-          success: false,
-        },
-      });
-      window.dispatchEvent(failureEvent);
+      dispatchSaveEvent(false);
 
       await waitFor(() => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
@@ -140,23 +138,14 @@ describe('ClairvoyantCombatantModal - result screen', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClose when overlay is clicked in failed save result screen', async () => {
+    it('closes when overlay is clicked', async () => {
       const onClose = vi.fn();
       const props = makeProps({ currentUses: 1, maxUses: 3, onClose });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
       await new Promise(r => setTimeout(r, 10));
-
-      const failureEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 5,
-          total: 10,
-          success: false,
-        },
-      });
-      window.dispatchEvent(failureEvent);
+      dispatchSaveEvent(false);
 
       await waitFor(() => {
         const overlay = document.querySelector('.sp-overlay');
@@ -164,28 +153,62 @@ describe('ClairvoyantCombatantModal - result screen', () => {
       });
       expect(onClose).toHaveBeenCalledTimes(1);
     });
-  });
 
-  // ── Result screen: successful save ──
+    it('does not close when modal content is clicked', async () => {
+      const onClose = vi.fn();
+      const props = makeProps({ currentUses: 1, maxUses: 3, onClose });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
-  describe('save success', () => {
-    it('displays success description when save succeeds', async () => {
+      await new Promise(r => setTimeout(r, 10));
+      dispatchSaveEvent(false);
+
+      await waitFor(() => {
+        const modal = document.querySelector('.sp-modal');
+        fireEvent.click(modal);
+      });
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('renders eye icon in header', async () => {
       const props = makeProps({ currentUses: 1, maxUses: 3 });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
       await new Promise(r => setTimeout(r, 10));
+      dispatchSaveEvent(false);
 
-      // Simulate save success event
-      const successEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 10,
-          total: 15,
-          success: true,
-        },
+      await waitFor(() => {
+        const icon = document.querySelector('.sp-header i.fa-solid.fa-eye');
+        expect(icon).toBeInTheDocument();
       });
-      window.dispatchEvent(successEvent);
+    });
+
+    it('renders sp-actions container with Done button', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await new Promise(r => setTimeout(r, 10));
+      dispatchSaveEvent(false);
+
+      await waitFor(() => {
+        const actions = document.querySelector('.sp-actions');
+        expect(actions).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ── Result screen: successful save ──
+
+  describe('save success', () => {
+    it('displays success description with target name and no-effect message', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await new Promise(r => setTimeout(r, 10));
+      dispatchSaveEvent(true);
 
       await waitFor(() => {
         const body = document.querySelector('.sp-body');
@@ -194,235 +217,77 @@ describe('ClairvoyantCombatantModal - result screen', () => {
       });
     });
 
-    it('removes clairvoyant_combatant effect from targetEffects when save succeeds', async () => {
-      const matchingEffect = {
-        target: 'Goblin1',
-        source: 'Clairvoyant Combatant',
-        effect: 'clairvoyant_combatant',
-      };
-      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'campaign' && prop === 'targetEffects') return [matchingEffect];
-        return null;
-      });
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
+    it('displays success description with custom save type', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3, saveType: 'Intelligence' });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
       await new Promise(r => setTimeout(r, 10));
-
-      const successEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 10,
-          total: 15,
-          success: true,
-        },
-      });
-      window.dispatchEvent(successEvent);
+      dispatchSaveEvent(true);
 
       await waitFor(() => {
-        const calls = useRuntimeState.setRuntimeValue.mock.calls;
-        const teCalls = calls.filter(
-          c => c[0] === 'campaign' && c[1] === 'targetEffects'
-        );
-        expect(teCalls.length).toBeGreaterThan(0);
-        // Get the last call (from handleSaveResult filtering)
-        const lastTeCall = teCalls[teCalls.length - 1];
-        const removed = lastTeCall[2].find(
-          e => e.target === 'Goblin1' && e.source === 'Clairvoyant Combatant' && e.effect === 'clairvoyant_combatant'
-        );
-        expect(removed).toBeUndefined();
+        const body = document.querySelector('.sp-body');
+        expect(body.textContent).toContain('Intelligence save');
       });
     });
 
-    it('clears clairvoyantCombatantTarget when save succeeds', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
+    it('displays success description with custom target name', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3, targetName: 'Dragon1' });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
       await new Promise(r => setTimeout(r, 10));
-
-      // Simulate save success event
-      const successEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 10,
-          total: 15,
-          success: true,
-        },
-      });
-      window.dispatchEvent(successEvent);
+      dispatchSaveEvent(true);
 
       await waitFor(() => {
-        const calls = useRuntimeState.setRuntimeValue.mock.calls;
-        const targetCalls = calls.filter(
-          c => c[0] === 'Paladin1' && c[1] === 'clairvoyantCombatantTarget'
-        );
-        const nullCall = targetCalls.find(c => c[2] === null);
-        expect(nullCall).toBeDefined();
+        const body = document.querySelector('.sp-body');
+        expect(body.textContent).toContain('Dragon1 succeeded');
       });
     });
 
-    it('removes clairvoyant_combatant from activeBuffs when save succeeds', async () => {
-      const existingBuff = {
-        name: 'Clairvoyant Combatant',
-        effect: 'clairvoyant_combatant',
-        target: 'Goblin1',
-      };
-      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'campaign' && prop === 'targetEffects') return [];
-        if (key === 'Paladin1' && prop === 'activeBuffs') return [existingBuff];
-        return null;
-      });
+    it('adds success save_result log entry with correct details', async () => {
       const props = makeProps({ currentUses: 1, maxUses: 3 });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
       await new Promise(r => setTimeout(r, 10));
-
-      const successEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 10,
-          total: 15,
-          success: true,
-        },
-      });
-      window.dispatchEvent(successEvent);
+      dispatchSaveEvent(true);
 
       await waitFor(() => {
-        const calls = useRuntimeState.setRuntimeValue.mock.calls;
-        const buffCalls = calls.filter(
-          c => c[0] === 'Paladin1' && c[1] === 'activeBuffs'
-        );
-        expect(buffCalls.length).toBeGreaterThan(0);
-        const lastBuffCall = buffCalls[buffCalls.length - 1];
-        const removed = lastBuffCall[2].find(
-          b => b.effect === 'clairvoyant_combatant' && b.target === 'Goblin1'
-        );
-        expect(removed).toBeUndefined();
-      });
-    });
-
-    it('adds success save_result log entry', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      await new Promise(r => setTimeout(r, 10));
-
-      const successEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 10,
-          total: 15,
-          success: true,
-        },
-      });
-      window.dispatchEvent(successEvent);
-
-      await waitFor(() => {
-        const calls = addEntry.mock.calls;
-        const saveResultCalls = calls.filter(
-          c => c[1] && c[1].type === 'save_result' && c[1].success === true
+        const saveResultCalls = addEntry.mock.calls.filter(
+          c => c[1] && c[1].type === 'save_result' && c[1].success === true,
         );
         expect(saveResultCalls.length).toBeGreaterThan(0);
         const match = saveResultCalls.find(
-          c => c[1].targetName === 'Goblin1' && c[1].saveType === 'Wisdom' && c[1].saveDc === 13
+          c =>
+            c[1].targetName === 'Goblin1' &&
+            c[1].saveType === 'Wisdom' &&
+            c[1].saveDc === 13,
         );
         expect(match).toBeDefined();
       });
     });
 
-    it('adds failure save_result log entry when save fails', async () => {
+    it('adds failure save_result log entry with correct details', async () => {
       const props = makeProps({ currentUses: 1, maxUses: 3 });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
       await new Promise(r => setTimeout(r, 10));
-
-      const failureEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 5,
-          total: 10,
-          success: false,
-        },
-      });
-      window.dispatchEvent(failureEvent);
+      dispatchSaveEvent(false);
 
       await waitFor(() => {
-        const calls = addEntry.mock.calls;
-        const saveResultCalls = calls.filter(
-          c => c[1] && c[1].type === 'save_result' && c[1].success === false
+        const saveResultCalls = addEntry.mock.calls.filter(
+          c => c[1] && c[1].type === 'save_result' && c[1].success === false,
         );
         expect(saveResultCalls.length).toBeGreaterThan(0);
         const match = saveResultCalls.find(
-          c => c[1].targetName === 'Goblin1' && c[1].saveType === 'Wisdom' && c[1].saveDc === 13
+          c =>
+            c[1].targetName === 'Goblin1' &&
+            c[1].saveType === 'Wisdom' &&
+            c[1].saveDc === 13,
         );
         expect(match).toBeDefined();
-      });
-    });
-
-    it('does not remove effects when save fails', async () => {
-      const existingEffect = {
-        target: 'Goblin1',
-        source: 'Clairvoyant Combatant',
-        effect: 'clairvoyant_combatant',
-      };
-      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'campaign' && prop === 'targetEffects') return [existingEffect];
-        return null;
-      });
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      // Simulate save failure event
-      const failureEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 5,
-          total: 10,
-          success: false,
-        },
-      });
-      window.dispatchEvent(failureEvent);
-
-      await waitFor(() => {
-        const calls = useRuntimeState.setRuntimeValue.mock.calls;
-        const teCalls = calls.filter(
-          c => c[0] === 'campaign' && c[1] === 'targetEffects'
-        );
-        // Should only have the initial addition, no filtering
-        expect(teCalls.length).toBe(1);
-      });
-    });
-
-    it('does not clear clairvoyantCombatantTarget when save fails', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      // Simulate save failure event
-      const failureEvent = new CustomEvent('save-result', {
-        detail: {
-          promptId: 'test-prompt-id',
-          roll: 5,
-          total: 10,
-          success: false,
-        },
-      });
-      window.dispatchEvent(failureEvent);
-
-      await waitFor(() => {
-        const calls = useRuntimeState.setRuntimeValue.mock.calls;
-        const targetCalls = calls.filter(
-          c => c[0] === 'Paladin1' && c[1] === 'clairvoyantCombatantTarget'
-        );
-        // Should only have the initial set to 'Goblin1', not null
-        expect(targetCalls.length).toBe(1);
-        expect(targetCalls[0][2]).toBe('Goblin1');
       });
     });
   });

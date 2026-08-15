@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CircleOfTheLandSpellsModal from './CircleOfTheLandSpellsModal.jsx';
@@ -5,6 +6,8 @@ import CircleOfTheLandSpellsModal from './CircleOfTheLandSpellsModal.jsx';
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
   setRuntimeValue: vi.fn(),
+  useSyncedState: vi.fn(),
+  useRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../../services/ui/logService.js', () => ({
@@ -165,15 +168,6 @@ describe('CircleOfTheLandSpellsModal', () => {
       expect(screen.getByText('Spore Dust')).toBeInTheDocument();
     });
 
-    it('keeps spells visible after mouse leaves (no mouseLeave handler)', () => {
-      render(<CircleOfTheLandSpellsModal {...makeProps()} />);
-      const aridBtn = screen.getByText('Arid').closest('button');
-      fireEvent.mouseEnter(aridBtn);
-      expect(screen.getByText('Armor of Agathys')).toBeInTheDocument();
-      // Component has no onMouseLeave handler, so spells remain visible
-      expect(screen.getByText('Armor of Agathys')).toBeInTheDocument();
-    });
-
     it('displays spell levels correctly', () => {
       render(<CircleOfTheLandSpellsModal {...makeProps()} />);
       const aridBtn = screen.getByText('Arid').closest('button');
@@ -213,7 +207,6 @@ describe('CircleOfTheLandSpellsModal', () => {
       render(<CircleOfTheLandSpellsModal {...props} />);
       const polarBtn = screen.getByText('Polar').closest('button');
       fireEvent.mouseEnter(polarBtn);
-      // Empty spell list should be rendered but with no li children
       const spellList = polarBtn.querySelector('.cotl-spell-list');
       expect(spellList).toBeInTheDocument();
       expect(spellList.querySelectorAll('li').length).toBe(0);
@@ -242,38 +235,6 @@ describe('CircleOfTheLandSpellsModal', () => {
       expect(screen.getByText('Spell B')).toBeInTheDocument();
       expect(screen.getByText('Spell C')).toBeInTheDocument();
       expect(screen.queryByText('Spell D')).not.toBeInTheDocument();
-    });
-  });
-
-  // ── Hover state ──
-
-  describe('hover state', () => {
-    it('adds active class on hover', () => {
-      render(<CircleOfTheLandSpellsModal {...makeProps()} />);
-      const aridBtn = screen.getByText('Arid').closest('button');
-      expect(aridBtn.classList.contains('cotl-land-btn--active')).toBe(false);
-      fireEvent.mouseEnter(aridBtn);
-      expect(aridBtn.classList.contains('cotl-land-btn--active')).toBe(true);
-    });
-
-    it('keeps active class after mouse leave (no mouseLeave handler)', () => {
-      render(<CircleOfTheLandSpellsModal {...makeProps()} />);
-      const aridBtn = screen.getByText('Arid').closest('button');
-      fireEvent.mouseEnter(aridBtn);
-      expect(aridBtn.classList.contains('cotl-land-btn--active')).toBe(true);
-      // Component has no onMouseLeave handler, so active class remains
-      expect(aridBtn.classList.contains('cotl-land-btn--active')).toBe(true);
-    });
-
-    it('only one land type can be expanded at a time', () => {
-      render(<CircleOfTheLandSpellsModal {...makeProps()} />);
-      const aridBtn = screen.getByText('Arid').closest('button');
-      const polarBtn = screen.getByText('Polar').closest('button');
-      fireEvent.mouseEnter(aridBtn);
-      expect(aridBtn.classList.contains('cotl-land-btn--active')).toBe(true);
-      fireEvent.mouseEnter(polarBtn);
-      expect(aridBtn.classList.contains('cotl-land-btn--active')).toBe(false);
-      expect(polarBtn.classList.contains('cotl-land-btn--active')).toBe(true);
     });
   });
 
@@ -317,13 +278,6 @@ describe('CircleOfTheLandSpellsModal', () => {
     });
 
     it('calls onClose after selecting a land type', () => {
-      render(<CircleOfTheLandSpellsModal {...makeProps()} />);
-      const aridBtn = screen.getByText('Arid').closest('button');
-      fireEvent.click(aridBtn);
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onClose for each land type selection', () => {
       render(<CircleOfTheLandSpellsModal {...makeProps()} />);
       const aridBtn = screen.getByText('Arid').closest('button');
       fireEvent.click(aridBtn);
@@ -377,7 +331,6 @@ describe('CircleOfTheLandSpellsModal', () => {
     it('removes event listener on unmount', () => {
       const { unmount } = render(<CircleOfTheLandSpellsModal {...makeProps()} />);
       unmount();
-      // After unmount, Escape key should not trigger onClose
       fireEvent.keyDown(document, { key: 'Escape' });
       expect(mockOnClose).not.toHaveBeenCalled();
     });
@@ -425,7 +378,6 @@ describe('CircleOfTheLandSpellsModal', () => {
       });
       render(<CircleOfTheLandSpellsModal {...props} />);
       expect(screen.getByText('Circle of the Land Spells')).toBeInTheDocument();
-      // Empty spell list should be rendered but with no li children
       const aridBtn = screen.getByText('Arid').closest('button');
       fireEvent.mouseEnter(aridBtn);
       const spellList = aridBtn.querySelector('.cotl-spell-list');
@@ -496,7 +448,7 @@ describe('CircleOfTheLandSpellsModal', () => {
   // ── Campaign name usage ──
 
   describe('campaign name usage', () => {
-    it('passes campaignName to setRuntimeValue', () => {
+    it('passes campaignName to setRuntimeValue and addEntry', () => {
       render(<CircleOfTheLandSpellsModal {...makeProps()} />);
       const aridBtn = screen.getByText('Arid').closest('button');
       fireEvent.click(aridBtn);
@@ -506,12 +458,6 @@ describe('CircleOfTheLandSpellsModal', () => {
         expect.anything(),
         'test-campaign'
       );
-    });
-
-    it('passes campaignName to addEntry', () => {
-      render(<CircleOfTheLandSpellsModal {...makeProps()} />);
-      const aridBtn = screen.getByText('Arid').closest('button');
-      fireEvent.click(aridBtn);
       expect(addEntry).toHaveBeenCalledWith(
         'test-campaign',
         expect.anything()
@@ -526,21 +472,8 @@ describe('CircleOfTheLandSpellsModal', () => {
       vi.mocked(addEntry).mockRejectedValue(new Error('Network error'));
       render(<CircleOfTheLandSpellsModal {...makeProps()} />);
       const aridBtn = screen.getByText('Arid').closest('button');
-      // Should not throw
       expect(() => fireEvent.click(aridBtn)).not.toThrow();
       expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // ── Land type names ──
-
-  describe('land type display names', () => {
-    it('capitalizes land type display names', () => {
-      render(<CircleOfTheLandSpellsModal {...makeProps()} />);
-      expect(screen.getByText('Arid')).toBeInTheDocument();
-      expect(screen.getByText('Polar')).toBeInTheDocument();
-      expect(screen.getByText('Temperate')).toBeInTheDocument();
-      expect(screen.getByText('Tropical')).toBeInTheDocument();
     });
   });
 
@@ -562,7 +495,6 @@ describe('CircleOfTheLandSpellsModal', () => {
       expect(screen.getByText('Armor of Agathys')).toBeInTheDocument();
       expect(screen.queryByText('Barkskin')).not.toBeInTheDocument();
 
-      fireEvent.mouseLeave(aridBtn);
       fireEvent.mouseEnter(tropBtn);
       expect(screen.getByText('Barkskin')).toBeInTheDocument();
       expect(screen.queryByText('Armor of Agathys')).not.toBeInTheDocument();

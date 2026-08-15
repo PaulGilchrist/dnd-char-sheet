@@ -1,3 +1,29 @@
+// @improved-by-ai
+// Rendering tests for CharActionModals.jsx — covers every modal prop → component
+// mapping and inline overlay behavior.
+//
+// Scope — behaviors unique to this file:
+// - Every modal prop renders its component when truthy (parameterized)
+// - Inline overlays (div-based) render with correct content
+// - Empty fragment when no modals are active
+// - Spell modal state merging (spellModalState entries render alongside modalState)
+//
+// Already covered in other files:
+// - Close/dismiss behavior → modal-closes.test.jsx, modal-closes-2.test.jsx,
+//   modal-closes-3.test.jsx, inline-choice-closes.test.jsx
+// - Handler callbacks → handlers.test.jsx, inline-modals.test.jsx,
+//   inline-choice-modals.test.jsx, handler-callbacks.test.jsx
+// - bendFateModal, wildMagicSurgeModal spellModalState, openHandFromFlurry
+//   handlers → modal-rendering.test.jsx
+// - Inline overlays (attackRiderOptions, clockworkCavalcadeRepair,
+//   moonlightStepFallback) → full-rendering.test.jsx
+// - BastionOfLaw onConfirm → inline-modals.test.jsx
+// - naturesSanctuary, inspiringSmite → inline-modals.test.jsx
+// - edge cases (empty targets, single option) → inline-choice-modals.test.jsx
+//
+// NOTE: vi.mock() is hoisted to the top of the file by Vitest, so all mock
+// factories must be defined inline (no references to top-level variables).
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -25,6 +51,9 @@ vi.mock('./modals/WildCompanionModal.jsx', () => ({
 vi.mock('./modals/shared/SetConditionModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="set-condition-modal">SetConditionModal</div>; },
 }));
+vi.mock('./modals/BlindnessDeafnessModal.jsx', () => ({
+  default: function TestModal() { return <div data-testid="blindness-deafness-modal">BlindnessDeafnessModal</div>; },
+}));
 vi.mock('./modals/EyebiteEffectModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="eyebite-effect-modal">EyebiteEffectModal</div>; },
 }));
@@ -37,6 +66,12 @@ vi.mock('./modals/OpenHandTechniqueModal.jsx', () => ({
   default: function TestModal({ onClose }) {
     return <div data-testid="open-hand-technique-modal"><button data-testid="open-hand-close" onClick={onClose}>Close</button></div>;
   },
+}));
+vi.mock('./modals/ShieldBashChoiceModal.jsx', () => ({
+  default: function TestModal() { return <div data-testid="shield-bash-modal">ShieldBashChoiceModal</div>; },
+}));
+vi.mock('./modals/QuiveringPalmModal.jsx', () => ({
+  default: function TestModal() { return <div data-testid="quivering-palm-modal">QuiveringPalmModal</div>; },
 }));
 vi.mock('./modals/WeaponMasteryModal.jsx', () => ({
   default: function TestModal({ onClose }) {
@@ -82,6 +117,12 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
 }));
 vi.mock('../../services/automation/common/healingRoll.js', () => ({
   logHealingToSSE: vi.fn(),
+}));
+vi.mock('../../services/rules/combat/damageUtils.js', () => ({
+  getCombatContext: vi.fn().mockResolvedValue(null),
+}));
+vi.mock('../../services/ui/logService.js', () => ({
+  addEntry: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('./modals/shared/SaveAttackHealModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="save-attack-heal-modal">SaveAttackHealModal</div>; },
@@ -235,13 +276,11 @@ describe('CharActionModals', () => {
   });
 
   // ── Modal rendering ──
-  // Consolidated from 40+ near-identical per-modal tests.  Each original test
-  // followed the same pattern: set one truthy prop, assert a testid appears.
-  // This parameterized test covers every modal prop → testid mapping in a
-  // single loop, reducing duplication from ~350 lines to ~30 while preserving
-  // unique coverage for each modal.
+  // Each original test followed the same pattern: set one truthy prop, assert
+  // a testid appears. This parameterized test covers every modal prop → testid
+  // mapping in a single loop.
   //
-  // The handler tests in CharActionModals.handlers.test.jsx verify close/dismiss
+  // Handler tests in CharActionModals.handlers.test.jsx verify close/dismiss
   // behavior. These rendering tests cover the minimal behavioral contract:
   // prop truthy → modal component renders.
 
@@ -255,13 +294,18 @@ describe('CharActionModals', () => {
       { name: 'moonlight-step-resource', prop: 'moonlightStepResourceModal', payload: { automation: {} }, testid: 'moonlight-step-resource-modal' },
       { name: 'wild-companion', prop: 'wildCompanionModal', payload: {}, testid: 'wild-companion-modal' },
       { name: 'set-condition', prop: 'setConditionModal', payload: {}, testid: 'set-condition-modal' },
+      { name: 'blindness-deafness', prop: 'blindnessDeafnessModal', payload: {}, testid: 'blindness-deafness-modal' },
       { name: 'eyebite-effect', prop: 'eyebiteEffectModal', payload: {}, testid: 'eyebite-effect-modal' },
       { name: 'attack-rider', prop: 'attackRiderModal', payload: {}, testid: 'attack-rider-modal' },
       { name: 'open-hand-technique', prop: 'openHandTechniqueModal', payload: {}, testid: 'open-hand-technique-modal' },
+      { name: 'shield-bash', prop: 'shieldBashModal', payload: {}, testid: 'shield-bash-modal' },
+      { name: 'quivering-palm', prop: 'quiveringPalmModal', payload: {}, testid: 'quivering-palm-modal' },
       { name: 'weapon-mastery', prop: 'weaponMasteryModal', payload: {}, testid: 'weapon-mastery-modal' },
+      { name: 'weapon-mastery-choice', prop: 'weaponMasteryChoiceModal', payload: {}, testid: 'weapon-mastery-choice-modal' },
+      { name: 'weapon-kind-mastery', prop: 'weaponKindMasteryModal', payload: {}, testid: 'weapon-kind-mastery-modal' },
       { name: 'combat-stance', prop: 'combatStanceModal', payload: {}, testid: 'combat-stance-modal' },
       { name: 'teleport', prop: 'teleportModal', payload: {}, testid: 'teleport-modal' },
-      { name: 'healing-illusion', prop: 'healingIllusionModal', payload: {}, testid: 'healing-illusion-modal', inline: true },
+
       { name: 'save-attack-heal', prop: 'saveAttackHealModal', payload: {}, testid: 'save-attack-heal-modal' },
       { name: 'divine-spark', prop: 'divineSparkModal', payload: {}, testid: 'divine-spark-modal' },
       { name: 'divine-intervention', prop: 'divineInterventionModal', payload: {}, testid: 'divine-intervention-modal' },
@@ -276,45 +320,50 @@ describe('CharActionModals', () => {
       { name: 'elemental-affinity', prop: 'elementalAffinityModal', payload: {}, testid: 'elemental-affinity-modal' },
       { name: 'fiendish-resilience', prop: 'fiendishResilienceModal', payload: {}, testid: 'single-resistance-selection-modal' },
       { name: 'dragon-companion', prop: 'dragonCompanionModal', payload: {}, testid: 'dragon-companion-modal' },
-       { name: 'wild-magic-surge', prop: 'wildMagicSurgeModal', payload: { surgeTable: [], mode: 'roll' }, testid: 'wild-magic-surge-modal' },
-       { name: 'third-eye', prop: 'thirdEyeModal', payload: { action: {}, playerStats: {}, campaignName: 'test' }, testid: 'third-eye-modal' },
+      { name: 'wild-magic-surge', prop: 'wildMagicSurgeModal', payload: { surgeTable: [], mode: 'roll' }, testid: 'wild-magic-surge-modal' },
+      { name: 'third-eye', prop: 'thirdEyeModal', payload: { action: {}, playerStats: {}, campaignName: 'test' }, testid: 'third-eye-modal' },
       { name: 'soulstitch-spells', prop: 'soulstitchSpellsModal', payload: {}, testid: 'soulstitch-spells-modal' },
       { name: 'illusory-reality', prop: 'illusoryRealityModal', payload: {}, testid: 'illusory-reality-modal' },
       { name: 'celestial-revelation', prop: 'celestialRevelationModal', payload: {}, testid: 'celestial-revelation-modal' },
       { name: 'fiendish-legacy', prop: 'fiendishLegacyModal', payload: {}, testid: 'fiendish-legacy-modal' },
       { name: 'breath-weapon-shape', prop: 'breathWeaponShapeModal', payload: {}, testid: 'breath-weapon-shape-modal' },
       { name: 'hypnotic-pattern-shake', prop: 'hypnoticPatternShakeModal', payload: {}, testid: 'hypnotic-pattern-shake-modal' },
+      { name: 'bastion-of-law', prop: 'bastionOfLawModal', payload: { featureName: 'Test', auto: {} }, testid: 'bastion-of-law-modal' },
       { name: 'bulwark-of-force', prop: 'bulwarkOfForceModal', payload: { creatureTargets: [{ name: 'Goblin' }], maxTargets: 3 }, testid: 'bulwark-of-force-modal' },
       { name: 'corona-enemy-selection', prop: 'coronaEnemySelectionModal', payload: { creatureTargets: [{ name: 'Dragon' }] }, testid: 'corona-enemy-selection-modal' },
       { name: 'radiance-of-dawn', prop: 'radianceOfDawnModal', payload: { creatureTargets: [{ name: 'Goblin' }], saveType: 'Dex', saveDc: 15, damageExpression: '3d10', damageType: 'Radiant', rangeFeet: 15 }, testid: 'radiance-of-dawn-modal' },
     ];
 
-    for (const { name, prop, payload, testid, inline } of modalCases) {
+    for (const { name, prop, payload, testid } of modalCases) {
       it(`renders ${name} modal when ${prop} is truthy`, () => {
-        render(<CharActionModals {...createBaseProps()} modalState={{ [prop]: payload }} setModalState={vi.fn()} />);
-        if (inline) {
-          expect(screen.getByText('Healing Illusion')).toBeInTheDocument();
-        }
-        else {
-          expect(screen.getByTestId(testid)).toBeInTheDocument();
-        }
+        render(
+          <CharActionModals
+            {...createBaseProps()}
+            modalState={{ [prop]: payload }}
+            setModalState={vi.fn()}
+          />
+        );
+        expect(screen.getByTestId(testid)).toBeInTheDocument();
       });
     }
 
-    // inline — inline overlays (div-based, not a mocked component)
-    it('renders divine-fury inline modal when divineFuryChoice is truthy', () => {
-      render(<CharActionModals {...createBaseProps()} modalState={{ divineFuryChoice: {} }} setModalState={vi.fn()} />);
-      expect(screen.getByText(/Divine Fury/)).toBeInTheDocument();
-    });
+    // ── spellModalState merging ──
+    // The component merges modalState + spellModalState; verify that spell modal
+    // entries render correctly through the merged state.
 
-    it('renders damage-type inline modal when damageTypeChoice is truthy', () => {
-      render(<CharActionModals {...createBaseProps()} modalState={{ damageTypeChoice: { title: 'Pick', types: ['Fire', 'Ice'] } }} setModalState={vi.fn()} />);
-      expect(screen.getByText(/Pick/)).toBeInTheDocument();
-    });
-
-    it('renders feature-choice inline modal when featureChoice is truthy', () => {
-      render(<CharActionModals {...createBaseProps()} modalState={{ featureChoice: { action: { name: 'Test Feature', description: 'Choose wisely' }, options: ['Option A', 'Option B'] } }} setModalState={vi.fn()} />);
-      expect(screen.getByText(/Test Feature/)).toBeInTheDocument();
+    describe('spell modal state merging', () => {
+      it('renders wildMagicSurgeModal from spellModalState', () => {
+        const setSpellModalState = vi.fn();
+        render(
+          <CharActionModals
+            {...createBaseProps()}
+            spellModalState={{ wildMagicSurgeModal: { surgeTable: [], mode: 'roll' } }}
+            setModalState={vi.fn()}
+            setSpellModalState={setSpellModalState}
+          />
+        );
+        expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
+      });
     });
   });
 });

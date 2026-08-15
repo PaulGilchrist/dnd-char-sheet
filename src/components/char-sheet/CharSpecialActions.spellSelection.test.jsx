@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -7,13 +8,13 @@ vi.mock('../../services/automation/index.js', () => ({
   executeHandler: vi.fn(),
 }));
 
-// Mock automation service
+// Mock automation service — includes ALL automation types used across CharSpecialActions test files
 vi.mock('../../services/combat/automation/automationService.js', () => ({
   hasAutomation: vi.fn((action) => !!(action?.automation)),
   isInteractiveAutomation: vi.fn((action) => {
     if (!action?.automation) return false;
     const auto = Array.isArray(action.automation) ? action.automation[0] : action.automation;
-    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice', 'stride_of_the_elements', 'elemental_epitome', 'destructive_stride', 'quivering_palm', 'steps_of_the_fey_taunt', 'hurl_through_hell', 'clairvoyant_combatant', 'portent', 'boon_of_energy_resistance', 'defensive_tactics', 'hunter_prey', 'animal_aspect', 'passive_rule', 'temp_hp_buff', 'brew_poison'];
+    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice', 'defensive_tactics', 'hunter_prey', 'animal_aspect', 'passive_rule', 'temp_hp_buff', 'brew_poison', 'stride_of_the_elements', 'elemental_epitome', 'destructive_stride', 'quivering_palm', 'steps_of_the_fey_taunt', 'hurl_through_hell', 'clairvoyant_combatant', 'portent', 'boon_of_energy_resistance', 'generic', 'silent', 'resource_pool', 'natural_recovery', 'circle_of_the_land', 'elemental_affinity', 'wild_magic_surge', 'stride_of_elements', 'celestial_resilience', 'fiendish_resilience', 'heroic_inspiration_buff', 'magical_cunning', 'tactical_mind', 'concentration_bonus_attack', 'font_of_inspiration', 'combat_stance', 'damage_type_choice', 'wild_magic_tamed', 'feats_of_chaos', 'initiative_action', 'bewitching_magic', 'lucky_point', 'telekinetic_shove'];
     if (auto.type === 'passive_rule') {
       const interactiveEffects = ['abjuration_savant', 'divination_savant', 'evocation_savant', 'illusion_savant', 'bonus_healing'];
       return interactiveEffects.includes(auto.effect);
@@ -88,10 +89,11 @@ vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({
 
 // Mock CombatSuperiorityModal
 vi.mock('./modals/CombatSuperiorityModal.jsx', () => ({
-  default: ({ _payload, onConfirm, _onReopenSelection, _onClose }) => (
+  default: ({ _payload, onConfirm, _onReopenSelection, onClose }) => (
     <div data-testid="combat-superiority-modal">
       <span>Combat Superiority</span>
-      <button onClick={() => onConfirm([], null)}>Close</button>
+      <button onClick={() => onConfirm([], null)}>Confirm</button>
+      <button onClick={onClose}>Close</button>
     </div>
   ),
 }));
@@ -235,13 +237,14 @@ vi.mock('./modals/ClairvoyantCombatantModal.jsx', () => ({
   ),
 }));
 
-// Mock CreatureSelectionModal
+// Mock CreatureSelectionModal — includes creatureTargets and note props used by other modals
 vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
-  default: ({ title, confirmLabel, description, onConfirm, onSkip, targets }) => (
+  default: ({ title, confirmLabel, description, note, onConfirm, onSkip, targets, creatureTargets }) => (
     <div data-testid="creature-selection-modal">
       <span>{title}</span>
       {description && <p>{description}</p>}
-      <button onClick={() => onConfirm && onConfirm(targets.map(t => t.name))}>{confirmLabel}</button>
+      {note && <p>{note}</p>}
+      <button onClick={() => onConfirm && onConfirm((targets || creatureTargets || []).map(t => t.name))}>{confirmLabel}</button>
       <button onClick={onSkip}>Skip</button>
     </div>
   ),
@@ -333,7 +336,7 @@ vi.mock('../../services/automation/handlers/combat/destructiveStrideHandler.js',
   applyTargetChoice: vi.fn(() => Promise.resolve({ type: 'popup', payload: { name: 'Destructive Stride', description: 'Struck target.' } })),
 }));
 
-// Mock runtime state
+// Mock runtime state — shared mutable store for tests that need runtime values
 const mockRuntimeStore = {};
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
@@ -410,6 +413,7 @@ function createPlayerStats(overrides = {}) {
 describe('CharSpecialActions - SpellMastery Confirm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.keys(mockRuntimeStore).forEach(k => delete mockRuntimeStore[k]);
   });
 
   describe('handleSpellMasteryConfirm', () => {
@@ -442,7 +446,7 @@ describe('CharSpecialActions - SpellMastery Confirm', () => {
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getByText(/Spell Mastery/));
+      fireEvent.click(screen.getByText('Spell Mastery:'));
 
       await waitFor(() => {
         expect(screen.getByTestId('spell-mastery-modal')).toBeInTheDocument();
@@ -460,7 +464,7 @@ describe('CharSpecialActions - SpellMastery Confirm', () => {
       expect(screen.queryByTestId('spell-mastery-modal')).not.toBeInTheDocument();
     });
 
-    it('shows popup without name when result payload lacks name', async () => {
+    it('shows popup without name when result payload lacks name, falling back to action name', async () => {
       const mockSetPopupHtml = vi.fn();
       const playerStats = createPlayerStats({
         specialActions: [
@@ -488,7 +492,7 @@ describe('CharSpecialActions - SpellMastery Confirm', () => {
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getByText(/Spell Mastery/));
+      fireEvent.click(screen.getByText('Spell Mastery:'));
 
       await waitFor(() => {
         expect(screen.getByTestId('spell-mastery-modal')).toBeInTheDocument();
@@ -530,7 +534,7 @@ describe('CharSpecialActions - SpellMastery Confirm', () => {
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getByText(/Spell Mastery/));
+      fireEvent.click(screen.getByText('Spell Mastery:'));
 
       await waitFor(() => {
         expect(screen.getByTestId('spell-mastery-modal')).toBeInTheDocument();
@@ -544,12 +548,31 @@ describe('CharSpecialActions - SpellMastery Confirm', () => {
 
       expect(mockSetPopupHtml).not.toHaveBeenCalled();
     });
+
+    it('does not open modal when cannotAct is true', async () => {
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Spell Mastery', description: 'Choose two spells.', automation: { type: 'spell_mastery' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
+
+      fireEvent.click(screen.getByText('Spell Mastery:'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('spell-mastery-modal')).not.toBeInTheDocument();
+      });
+
+      expect(executeHandler).not.toHaveBeenCalled();
+    });
   });
 });
 
 describe('CharSpecialActions - Savant Confirm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.keys(mockRuntimeStore).forEach(k => delete mockRuntimeStore[k]);
   });
 
   describe('handleSavantConfirm', () => {
@@ -582,7 +605,7 @@ describe('CharSpecialActions - Savant Confirm', () => {
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getByText(/Evocation Savant/));
+      fireEvent.click(screen.getByText('Evocation Savant:'));
 
       await waitFor(() => {
         expect(screen.getByTestId('evocation-savant-modal')).toBeInTheDocument();
@@ -629,7 +652,7 @@ describe('CharSpecialActions - Savant Confirm', () => {
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getByText(/Abjuration Savant/));
+      fireEvent.click(screen.getByText('Abjuration Savant:'));
 
       await waitFor(() => {
         expect(screen.getByTestId('abjuration-savant-modal')).toBeInTheDocument();
@@ -675,7 +698,7 @@ describe('CharSpecialActions - Savant Confirm', () => {
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getByText(/Divination Savant/));
+      fireEvent.click(screen.getByText('Divination Savant:'));
 
       await waitFor(() => {
         expect(screen.getByTestId('divination-savant-modal')).toBeInTheDocument();
@@ -689,5 +712,208 @@ describe('CharSpecialActions - Savant Confirm', () => {
 
       expect(mockSetPopupHtml.mock.calls[0][0]).toBe('<b>Custom HTML popup</b>');
     });
+
+    it('closes modal without showing popup when result is null', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Illusion Savant', description: 'Choose two illusion spells.', automation: { type: 'passive_rule', effect: 'illusion_savant' } },
+        ],
+      });
+
+      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'IllusionSavant',
+        payload: {
+          action: { name: 'Illusion Savant' },
+          playerStats: basePlayerStats,
+          campaignName: 'test',
+          school: 'Illusion',
+          spellOptions: ['Minor Illusion', 'Disguise Self'],
+        },
+      });
+
+      onSavantSelected.mockResolvedValue(null);
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText('Illusion Savant:'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('illusion-savant-modal')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Confirm'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('illusion-savant-modal')).not.toBeInTheDocument();
+      });
+
+      expect(mockSetPopupHtml).not.toHaveBeenCalled();
+    });
+
+    it('does not open modal when cannotAct is true', async () => {
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Evocation Savant', description: 'Choose two evocation spells.', automation: { type: 'passive_rule', effect: 'evocation_savant' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
+
+      fireEvent.click(screen.getByText('Evocation Savant:'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('evocation-savant-modal')).not.toBeInTheDocument();
+      });
+
+      expect(executeHandler).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('CharSpecialActions - executeHandler null/undefined handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(mockRuntimeStore).forEach(k => delete mockRuntimeStore[k]);
+  });
+
+  it('handles executeHandler returning null silently without opening modal', async () => {
+    executeHandler.mockResolvedValue(null);
+
+    const playerStats = createPlayerStats({
+      specialActions: [
+        { name: 'Spell Mastery', description: 'Choose two spells.', automation: { type: 'spell_mastery' } },
+      ],
+    });
+
+    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+    fireEvent.click(screen.getByText('Spell Mastery:'));
+
+    await waitFor(() => {
+      expect(executeHandler).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByTestId('spell-mastery-modal')).not.toBeInTheDocument();
+  });
+
+  it('handles executeHandler returning undefined silently', async () => {
+    executeHandler.mockResolvedValue(undefined);
+
+    const playerStats = createPlayerStats({
+      specialActions: [
+        { name: 'Spell Mastery', description: 'Choose two spells.', automation: { type: 'spell_mastery' } },
+      ],
+    });
+
+    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+    fireEvent.click(screen.getByText('Spell Mastery:'));
+
+    await waitFor(() => {
+      expect(executeHandler).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByTestId('spell-mastery-modal')).not.toBeInTheDocument();
+  });
+});
+
+describe('CharSpecialActions - non-interactive actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(mockRuntimeStore).forEach(k => delete mockRuntimeStore[k]);
+  });
+
+  it('renders action without automation but does not make it clickable', async () => {
+    const playerStats = createPlayerStats({
+      specialActions: [
+        { name: 'Arcane Recovery', description: 'Recover spell slots.', automation: null },
+      ],
+    });
+
+    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+    expect(screen.getByText('Arcane Recovery:')).toBeInTheDocument();
+    expect(screen.getByText('Recover spell slots.')).toBeInTheDocument();
+
+    // The action text should not be clickable (no automation = not interactive)
+    const actionElement = screen.getByText('Arcane Recovery:');
+    expect(actionElement).not.toHaveClass('clickable');
+  });
+});
+
+describe('CharSpecialActions - SignatureSpells Confirm', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(mockRuntimeStore).forEach(k => delete mockRuntimeStore[k]);
+  });
+
+  it('shows popup and closes modal on signature spells confirm', async () => {
+    const mockSetPopupHtml = vi.fn();
+    const { onSignatureSpellsSelected } = await import('../../services/automation/handlers/class-wizard/signatureSpellsHandler.js');
+
+    vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
+    const playerStats = createPlayerStats({
+      specialActions: [
+        { name: 'Signature Spells', description: 'Choose two signature spells.', automation: { type: 'signature_spells' } },
+      ],
+    });
+
+    executeHandler.mockResolvedValue({
+      type: 'modal',
+      modalName: 'signatureSpells',
+      payload: {
+        action: { name: 'Signature Spells', automation: { type: 'signature_spells' } },
+        playerStats: basePlayerStats,
+        campaignName: 'test',
+        spellOptions: ['Fireball', 'Haste', 'Detect Magic'],
+      },
+    });
+
+    onSignatureSpellsSelected.mockResolvedValue({
+      type: 'popup',
+      payload: { name: 'Signature Spells', description: 'Spells added to signature list.' },
+    });
+
+    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+    fireEvent.click(screen.getByText('Signature Spells:'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('signature-spells-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(mockSetPopupHtml).toHaveBeenCalled();
+    });
+
+    const popupCall = mockSetPopupHtml.mock.calls[0][0];
+    expect(popupCall).toContain('Signature Spells');
+    expect(popupCall).toContain('Spells added to signature list.');
+    expect(screen.queryByTestId('signature-spells-modal')).not.toBeInTheDocument();
+  });
+
+  it('does not open modal when cannotAct is true', async () => {
+    const playerStats = createPlayerStats({
+      specialActions: [
+        { name: 'Signature Spells', description: 'Choose two signature spells.', automation: { type: 'signature_spells' } },
+      ],
+    });
+
+    render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
+
+    fireEvent.click(screen.getByText('Signature Spells:'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('signature-spells-modal')).not.toBeInTheDocument();
+    });
+
+    expect(executeHandler).not.toHaveBeenCalled();
   });
 });

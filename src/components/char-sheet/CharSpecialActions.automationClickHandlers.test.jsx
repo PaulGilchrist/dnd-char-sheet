@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -7,15 +8,26 @@ vi.mock('../../services/automation/index.js', () => ({
   executeHandler: vi.fn(),
 }));
 
-// Mock automation service
+// Mock automation service — keep in sync with other CharSpecialActions test files
 vi.mock('../../services/combat/automation/automationService.js', () => ({
   hasAutomation: vi.fn((action) => !!(action?.automation)),
   isInteractiveAutomation: vi.fn((action) => {
     if (!action?.automation) return false;
     const auto = Array.isArray(action.automation) ? action.automation[0] : action.automation;
-    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice', 'generic', 'silent', 'animal_aspect', 'passive_rule', 'temp_hp_buff', 'brew_poison'];
+    const interactiveTypes = [
+      'teleport', 'signature_spells', 'spell_mastery', 'combat_superiority',
+      'weapon_kind_mastery', 'weapon_mastery_choice', 'defensive_tactics',
+      'hunter_prey', 'animal_aspect', 'passive_rule', 'temp_hp_buff',
+      'brew_poison', 'stride_of_the_elements', 'elemental_epitome',
+      'destructive_stride', 'quivering_palm', 'steps_of_the_fey_taunt',
+      'hurl_through_hell', 'clairvoyant_combatant', 'boon_of_energy_resistance',
+      'generic', 'silent',
+    ];
     if (auto.type === 'passive_rule') {
-      const interactiveEffects = ['abjuration_savant', 'divination_savant', 'evocation_savant', 'illusion_savant'];
+      const interactiveEffects = [
+        'abjuration_savant', 'divination_savant', 'evocation_savant',
+        'illusion_savant', 'bonus_healing',
+      ];
       return interactiveEffects.includes(auto.effect);
     }
     return interactiveTypes.includes(auto.type);
@@ -124,7 +136,7 @@ vi.mock('../../services/automation/handlers/class-wizard/SavantHandler.js', () =
   onSavantSelected: vi.fn(),
 }));
 
-// Mock runtime state - use a store that can be configured per-test
+// Mock runtime state — use a shared store with configurable per-test values
 const runtimeStore = {};
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
@@ -133,9 +145,12 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn((_key, runtimeKey) => runtimeStore[runtimeKey] ?? null),
 }));
 
-// Mock DiceRollContext
+// Mock DiceRollContext — default returns a no-op setPopupHtml; tests can override
+let _capturedPopup = null;
 vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
-  useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
+  useDiceRollPopup: vi.fn(() => ({
+    setPopupHtml: (html) => { _capturedPopup = html; },
+  })),
 }));
 
 // Mock useCombatSuperiorityModal
@@ -174,7 +189,6 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
 
 // Import mocked modules
 import { executeHandler } from '../../services/automation/index.js';
-import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -200,6 +214,7 @@ function createSpecialAction(name, automation) {
 describe('CharSpecialActions - handleAutomationClick branches', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    _capturedPopup = null;
     Object.keys(runtimeStore).forEach(k => delete runtimeStore[k]);
   });
 
@@ -225,10 +240,6 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
     });
 
     it('shows popup when already used this rest', async () => {
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
       runtimeStore.aspectOfTheWildsUsedThisRest = true;
 
       const playerStats = createPlayerStats({
@@ -241,16 +252,16 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
       fireEvent.click(screen.getAllByText(/Aspect of the Wilds/)[0]);
 
       await waitFor(() => {
-        expect(capturedPopup).toContain('Already chosen this rest');
-        expect(capturedPopup).toContain('Long Rest');
+        expect(_capturedPopup).toContain('Already chosen this rest');
+        expect(_capturedPopup).toContain('Long Rest');
       });
     });
   });
 
-  // Replenishing Meal modal testing is covered in CharSpecialActions.featureChoice.test.jsx
+  // Replenishing Meal modal testing is covered in CharSpecialActions.craftingHandlers.test.jsx
 
   describe('temp_hp_buff (Bolstering Treats)', () => {
-    it('opens bolstering treats modal when craftCount is set', async () => {
+    it('opens bolstering treats modal when craftCount is set and treats remain', async () => {
       runtimeStore.chefBolsteringTreats = 2;
 
       const playerStats = createPlayerStats({
@@ -272,16 +283,34 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
         expect(screen.getByText('Choose creatures to receive a bolstering treat.')).toBeInTheDocument();
       });
     });
+
+    it('shows popup when no treats remaining', async () => {
+      runtimeStore.chefBolsteringTreats = 0;
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Bolstering Treats', { type: 'temp_hp_buff', craftCount: true }),
+        ],
+        automation: {
+          specialActions: [
+            { type: 'temp_hp_buff', name: 'Bolstering Treats' },
+          ],
+        },
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Bolstering Treats/)[0]);
+
+      await waitFor(() => {
+        expect(_capturedPopup).toContain('No treats remaining');
+      });
+    });
   });
 
   describe('brew_poison', () => {
     it('brews poison when under max, has kit, and has gold', async () => {
       runtimeStore.poisonDoses = 0;
       runtimeStore.gold = 100;
-
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
 
       const playerStats = createPlayerStats({
         specialActions: [
@@ -303,17 +332,13 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
       fireEvent.click(screen.getAllByText(/Brew Poison/)[0]);
 
       await waitFor(() => {
-        expect(capturedPopup).toContain('Brewed');
-        expect(capturedPopup).toContain('Poisoner\'s Kit');
+        expect(_capturedPopup).toContain('Brewed');
+        expect(_capturedPopup).toContain('Poisoner\'s Kit');
       });
     });
 
     it('shows error when at max poison doses', async () => {
       runtimeStore.poisonDoses = 2;
-
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
 
       const playerStats = createPlayerStats({
         specialActions: [
@@ -326,7 +351,7 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
         },
         inventory: {
           equipped: [],
-          backpack: [],
+          backpack: ["Poisoner's Kit"],
           gold: 100,
         },
       });
@@ -335,7 +360,7 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
       fireEvent.click(screen.getAllByText(/Brew Poison/)[0]);
 
       await waitFor(() => {
-        expect(capturedPopup).toContain('already at maximum');
+        expect(_capturedPopup).toContain('already at maximum');
       });
     });
 
@@ -343,10 +368,6 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
       runtimeStore.poisonDoses = 0;
       runtimeStore.gold = 100;
 
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
       const playerStats = createPlayerStats({
         specialActions: [
           createSpecialAction('Brew Poison', { type: 'brew_poison' }),
@@ -367,17 +388,13 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
       fireEvent.click(screen.getAllByText(/Brew Poison/)[0]);
 
       await waitFor(() => {
-        expect(capturedPopup).toContain("Poisoner's Kit");
+        expect(_capturedPopup).toContain("Poisoner's Kit");
       });
     });
 
     it('shows error when insufficient gold', async () => {
       runtimeStore.poisonDoses = 0;
       runtimeStore.gold = 30;
-
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
 
       const playerStats = createPlayerStats({
         specialActions: [
@@ -399,8 +416,8 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
       fireEvent.click(screen.getAllByText(/Brew Poison/)[0]);
 
       await waitFor(() => {
-        expect(capturedPopup).toContain('50 GP');
-        expect(capturedPopup).toContain('30 GP');
+        expect(_capturedPopup).toContain('50 GP');
+        expect(_capturedPopup).toContain('30 GP');
       });
     });
   });
@@ -428,10 +445,6 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
     });
 
     it('handles executeHandler returning popup result', async () => {
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
       executeHandler.mockResolvedValue({
         type: 'popup',
         payload: { name: 'Test Action', description: 'Action completed.' },
@@ -447,12 +460,12 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
       fireEvent.click(screen.getAllByText(/Test Action/)[0]);
 
       await waitFor(() => {
-        expect(capturedPopup).toContain('Test Action');
-        expect(capturedPopup).toContain('Action completed.');
+        expect(_capturedPopup).toContain('Test Action');
+        expect(_capturedPopup).toContain('Action completed.');
       });
     });
 
-    it('handles executeHandler returning null silently', async () => {
+    it('handles executeHandler returning null silently without popup or modal', async () => {
       executeHandler.mockResolvedValue(null);
 
       const playerStats = createPlayerStats({
@@ -467,7 +480,81 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
       await waitFor(() => {
         expect(executeHandler).toHaveBeenCalled();
       });
+
+      // Verify no popup was shown and no modal appeared
+      expect(_capturedPopup).toBeNull();
+      expect(screen.queryByTestId('teleport-modal')).not.toBeInTheDocument();
     });
+
+    it('handles executeHandler returning popup with fallback name', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'popup',
+        payload: { description: 'No name provided.' },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Fallback Action', { type: 'generic' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Fallback Action/)[0]);
+
+      await waitFor(() => {
+        // When payload.name is missing, the popup should use action.name
+        expect(_capturedPopup).toContain('Fallback Action');
+        expect(_capturedPopup).toContain('No name provided.');
+      });
+    });
+  });
+
+  describe('modal rendering from executeHandler results', () => {
+    it('renders weaponKindMastery modal when executeHandler returns it', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'weaponKindMastery',
+        payload: { action: { name: 'Weapon Kind Mastery' } },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Weapon Kind Mastery', { type: 'weapon_kind_mastery' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Weapon Kind Mastery/)[0]);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('weapon-kind-mastery-modal')).toBeInTheDocument();
+      });
+    });
+
+    it('renders weaponMasteryChoice modal when executeHandler returns it', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'weaponMasteryChoice',
+        payload: { action: { name: 'Weapon Mastery' } },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Weapon Mastery', { type: 'weapon_mastery_choice' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Weapon Mastery/)[0]);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('weapon-mastery-choice-modal')).toBeInTheDocument();
+      });
+    });
+
+    // Note: combatSuperiority modal rendering is handled through the
+    // useCombatSuperiorityModal hook, not local useState. Tests for that
+    // flow live in CharSpecialActions.modals.test.jsx which mocks the hook.
   });
 
   describe('cannotAct guard', () => {
@@ -485,6 +572,29 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
 
       await waitFor(() => {
         expect(executeHandler).not.toHaveBeenCalled();
+      });
+
+      // Verify no popup was shown either
+      expect(_capturedPopup).toBeNull();
+    });
+
+    it('allows automation execution when cannotAct is false', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'popup',
+        payload: { name: 'Executed Action', description: 'Action completed.' },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Executed Action', { type: 'generic' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={false} />);
+
+      fireEvent.click(screen.getAllByText(/Executed Action/)[0]);
+
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalled();
       });
     });
   });

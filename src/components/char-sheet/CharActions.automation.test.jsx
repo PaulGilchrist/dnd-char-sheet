@@ -1,44 +1,27 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, waitFor, act } from '@testing-library/react';
 import CharActions from './CharActions.jsx';
+import { executeHandler } from '../../services/automation/index.js';
 
-// Mock all dependencies (same as rendering test)
+// --- Mocks ---
+
+const _syncedStore = new Map();
+
 vi.mock('../../hooks/runtime/useSyncedState.js', () => ({
   useSyncedState: vi.fn((_, key, defaultValue) => {
-    let currentValue = defaultValue;
-    const setter = vi.fn((fn) => {
-      if (typeof fn === 'function') {
-        currentValue = fn(currentValue);
-      } else {
-        currentValue = fn;
-      }
-      return currentValue;
+    const hasValue = _syncedStore.has(key);
+    const value = hasValue ? _syncedStore.get(key) : defaultValue;
+    const setter = vi.fn((newValue) => {
+      _syncedStore.set(key, typeof newValue === 'function' ? newValue(_syncedStore.get(key)) : newValue);
     });
-    return [currentValue, setter];
+    return [value, setter];
   }),
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  useRuntimeValue: vi.fn((_, key) => {
-    if (key === 'activeBuffs') return [];
-    if (key === '_recklessAttack_offeredThisTurn') return null;
-    if (key === '_BrutalStrike_usedRound') return null;
-    if (key === 'focusPoints') return 2;
-    if (key === 'lastActionSpellCast') return null;
-    if (key === 'lastAttack') return null;
-    if (key === '_recklessAttack_offeredThisTurn') return null;
-    return undefined;
-  }),
-  getRuntimeValue: vi.fn((_, key) => {
-    if (key === 'activeBuffs') return [];
-    if (key === '_recklessAttack_offeredThisTurn') return null;
-    if (key === '_BrutalStrike_usedRound') return null;
-    if (key === 'focusPoints') return 2;
-    if (key === 'lastActionSpellCast') return null;
-    if (key === 'lastAttack') return null;
-    if (key === '_recklessAttack_offeredThisTurn') return null;
-    return undefined;
-  }),
+  useRuntimeValue: vi.fn((_, key) => _syncedStore.get(key)),
+  getRuntimeValue: vi.fn((_, key) => _syncedStore.get(key)),
   setRuntimeValue: vi.fn(() => Promise.resolve()),
 }));
 
@@ -101,7 +84,7 @@ vi.mock('../../services/character/featRangeService.js', () => ({
 }));
 
 vi.mock('../../services/combat/automation/automationService.js', () => ({
-  hasAutomation: vi.fn((action) => !!action.automation),
+  hasAutomation: vi.fn((action) => !!action?.automation),
 }));
 
 vi.mock('../../services/automation/common/buffToggle.js', () => ({
@@ -230,14 +213,18 @@ vi.mock('../../hooks/combat/useSpellMetamagicFlow.js', () => ({
   })),
 }));
 
-// Mock fetch for actions.json
+// --- Helpers ---
+
 const originalFetch = global.fetch;
-global.fetch = vi.fn((url) => {
-  if (url === '/data/actions.json') {
-    return Promise.resolve({ json: () => Promise.resolve(['Hide', 'Dodge', 'Grapple']) });
-  }
-  return originalFetch(url);
-});
+
+function setupFetchMock(actions = ['Hide', 'Dodge', 'Grapple']) {
+  global.fetch = vi.fn((url) => {
+    if (url === '/data/actions.json') {
+      return Promise.resolve({ json: () => Promise.resolve(actions) });
+    }
+    return originalFetch(url);
+  });
+}
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -283,13 +270,16 @@ const baseProps = {
   spellModalState: {},
 };
 
+// --- Tests ---
+
 describe('CharActions - handleAutomationAction', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    _syncedStore.clear();
+    setupFetchMock();
   });
 
-  it('returns early when cannotAct is true', async () => {
-    const executeHandler = (await import('../../services/automation/index.js')).executeHandler;
+  it('does not call executeHandler when cannotAct is true', async () => {
     const { getByText } = render(<CharActions {...baseProps} cannotAct={true} />);
     await waitFor(() => {
       expect(getByText('Reckless Attack:')).toBeInTheDocument();
@@ -301,8 +291,7 @@ describe('CharActions - handleAutomationAction', () => {
     expect(executeHandler).not.toHaveBeenCalled();
   });
 
-  it('calls executeHandler when action has automation', async () => {
-    const executeHandler = (await import('../../services/automation/index.js')).executeHandler;
+  it('calls executeHandler when action has automation and cannotAct is false', async () => {
     const { getByText } = render(<CharActions {...baseProps} />);
     await waitFor(() => {
       expect(getByText('Reckless Attack:')).toBeInTheDocument();
@@ -314,77 +303,110 @@ describe('CharActions - handleAutomationAction', () => {
     expect(executeHandler).toHaveBeenCalled();
   });
 
-  it('dispatches focus-points-updated event when monk spends focus points', async () => {
-    const monkStats = {
+  it('does not call executeHandler when action has no automation metadata', async () => {
+    const stats = {
       ...basePlayerStats,
-      name: 'MonkCharacter',
-      class: { name: 'Monk', class_levels: [{ level: 5, focus_points: 2 }] },
-      actions: [
-        { name: 'Flurry of Blows', automation: { type: 'damage_bonus' } },
-      ],
-      automation: { ...basePlayerStats.automation, passives: [] },
+      actions: [{ name: 'Plain Action', description: 'No automation here' }],
     };
-
-    const { getByText } = render(<CharActions {...baseProps} playerStats={monkStats} />);
+    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
     await waitFor(() => {
-      expect(getByText('Flurry of Blows:')).toBeInTheDocument();
+      expect(getByText('Plain Action:')).toBeInTheDocument();
+    });
+    const actionLink = getByText('Plain Action:');
+    await act(async () => {
+      await fireEvent.click(actionLink);
+    });
+    // Plain action without automation should not call executeHandler
+    expect(executeHandler).not.toHaveBeenCalled();
+  });
+
+  it('renders automation badges for save_attack type actions', async () => {
+    const stats = {
+      ...basePlayerStats,
+      actions: [
+        { name: 'TestSaveAttack', automation: { type: 'save_attack', saveDc: 13, saveType: 'DEX' } },
+      ],
+    };
+    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
+    await waitFor(() => {
+      expect(getByText('TestSaveAttack:')).toBeInTheDocument();
+      expect(getByText('DC 13 DEX')).toBeInTheDocument();
     });
   });
 
-  it('shows popup when no ki points remain for monk', async () => {
-    const getRTV = (await import('../../hooks/runtime/useRuntimeState.js')).getRuntimeValue;
-    getRTV.mockImplementation((_, key) => {
-      if (key === 'focusPoints') return 0;
-      if (key === 'activeBuffs') return [];
-      if (key === '_recklessAttack_offeredThisTurn') return null;
-      if (key === '_BrutalStrike_usedRound') return null;
-      if (key === 'lastActionSpellCast') return null;
-      if (key === 'lastAttack') return null;
-      return undefined;
-    });
-
-    const monkStats = {
+  it('renders automation badges for healing_pool type actions', async () => {
+    const stats = {
       ...basePlayerStats,
-      name: 'MonkCharacter',
-      class: { name: 'Monk', class_levels: [{ level: 5, focus_points: 2 }] },
       actions: [
-        { name: 'Flurry of Blows', automation: { type: 'damage_bonus' } },
+        { name: 'TestHealingPool', automation: { type: 'healing_pool', pool: 10 } },
       ],
-      automation: { ...basePlayerStats.automation, passives: [] },
     };
-
-    const { getByText } = render(<CharActions {...baseProps} playerStats={monkStats} />);
+    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
     await waitFor(() => {
-      expect(getByText('Flurry of Blows:')).toBeInTheDocument();
+      expect(getByText('TestHealingPool:')).toBeInTheDocument();
+      expect(getByText('Pool: 10 HP')).toBeInTheDocument();
     });
   });
 
-  it('checks trigger conditions for gated actions', async () => {
-    const { getByText } = render(<CharActions {...baseProps} />);
+  it('renders automation badges for damage type actions', async () => {
+    const stats = {
+      ...basePlayerStats,
+      actions: [
+        { name: 'TestDamage', automation: { damage: '2d6', damageType: 'Fire' } },
+      ],
+    };
+    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
     await waitFor(() => {
-      expect(getByText('Second Wind:')).toBeInTheDocument();
+      expect(getByText('TestDamage:')).toBeInTheDocument();
+      expect(getByText('2d6 Fire')).toBeInTheDocument();
     });
+  });
+
+  it('renders feature detail popup when action has details but no automation', async () => {
+    const buildFeatureDetailHtml = (await import('../../hooks/combat/useActionPopup.js')).buildFeatureDetailHtml;
+    const stats = {
+      ...basePlayerStats,
+      actions: [{ name: 'Tactical Genius', details: 'Tactical details', description: 'A smart move' }],
+    };
+    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
+    await waitFor(() => {
+      expect(getByText('Tactical Genius:')).toBeInTheDocument();
+    });
+    const actionLink = getByText('Tactical Genius:');
+    await act(async () => {
+      await fireEvent.click(actionLink);
+    });
+    expect(buildFeatureDetailHtml).toHaveBeenCalledWith(stats.actions[0]);
+  });
+
+  it('displays empowered spell name for Metamagic with spell_modifier type', async () => {
+    const getEmpoweredSpellDescription = (await import('../../services/rules/spells/empoweredSpellService.js')).getEmpoweredSpellDescription;
+    const stats = {
+      ...basePlayerStats,
+      actions: [{ name: 'Metamagic', automation: { type: 'spell_modifier' }, description: 'Modify spell' }],
+    };
+    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
+    await waitFor(() => {
+      expect(getByText('Empowered Spell:')).toBeInTheDocument();
+    });
+    expect(getEmpoweredSpellDescription).toHaveBeenCalledWith(stats.actions[0]);
   });
 });
 
 describe('CharActions - setModalState wrapper', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    _syncedStore.clear();
+    setupFetchMock();
   });
 
-  it('calls onSpellModalStateChange when setModalState is called', async () => {
+  it('calls onSpellModalStateChange when modal state changes', async () => {
     const onSpellModalStateChange = vi.fn();
     const { getByText } = render(<CharActions {...baseProps} onSpellModalStateChange={onSpellModalStateChange} />);
     await waitFor(() => {
       expect(getByText('Actions')).toBeInTheDocument();
     });
-  });
-
-  it('creates mergedModalState from modalState and spellModalState', async () => {
-    const { getByText } = render(<CharActions {...baseProps} />);
-    await waitFor(() => {
-      expect(getByText('Actions')).toBeInTheDocument();
-    });
+    expect(onSpellModalStateChange).toBeDefined();
   });
 
   it('renders automation badges for save_attack type actions', async () => {

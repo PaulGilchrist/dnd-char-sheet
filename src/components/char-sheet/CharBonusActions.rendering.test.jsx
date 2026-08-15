@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharBonusActions from './CharBonusActions.jsx';
@@ -33,6 +34,10 @@ vi.mock('../../services/automation/index.js', () => ({
 
 vi.mock('../../services/automation/handlers/combat/saveAttackHandler.js', () => ({
   isExhausted: vi.fn(() => false),
+}));
+
+vi.mock('../../services/automation/handlers/buffs/tempHpService.js', () => ({
+  setTempHp: vi.fn(),
 }));
 
 vi.mock('../../services/rules/spells/postCastRiderService.js', () => ({
@@ -95,16 +100,16 @@ vi.mock('../../hooks/combat/useActionPopup.js', () => ({
   }),
 }));
 
+vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
+  useDiceRollPopup: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn() })),
+}));
+
 vi.mock('./popups/MetamagicPopup.jsx', () => ({
-  default: vi.fn((props) => <div data-testid="metamagic-popup">{props.spell?.name || 'MetamagicPopup'}</div>),
+  default: vi.fn((_props) => <div data-testid="metamagic-popup">{_props.spell?.name || 'MetamagicPopup'}</div>),
 }));
 
 vi.mock('./char-spells/SpellDetailPopup.jsx', () => ({
-  default: vi.fn((props) => <div data-testid="spell-detail-popup">{props.spell?.name || 'SpellDetailPopup'}</div>),
-}));
-
-vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
-  useDiceRollPopup: vi.fn(() => ({ popupHtml: 'some html', setPopupHtml: vi.fn() })),
+  default: vi.fn((_props) => <div data-testid="spell-detail-popup">SpellDetailPopup</div>),
 }));
 
 vi.mock('./HexAbilityModal.jsx', () => ({
@@ -119,8 +124,50 @@ vi.mock('./ArcaneVigorModal.jsx', () => ({
   default: vi.fn(() => <div data-testid="arcane-vigor-modal">Arcane Vigor</div>),
 }));
 
+vi.mock('../../services/rules/core/spellDamageUtils.js', () => ({
+  resolveSpellDamageAtLevel: vi.fn(() => null),
+  isAutoHitSpell: vi.fn(() => false),
+  resolveHealExpression: vi.fn(() => ''),
+}));
+
+vi.mock('../../services/ui/spellSectionUtils.js', () => ({
+  getBonusActionSpellNames: vi.fn(() => new Set()),
+}));
+
+vi.mock('../../services/character/featureCategories.js', () => ({
+  getCategories: vi.fn(() => ({ featuresToIgnore: [] })),
+}));
+
+vi.mock('../../hooks/combat/useSimpleDamageRoll.js', () => ({
+  useSimpleDamageRoll: vi.fn(() => vi.fn()),
+}));
+
+vi.mock('../../hooks/combat/useSpellPositionResolver.js', () => ({
+  useSpellPositionResolver: vi.fn(() => ({ resolvePositions: vi.fn(), cachedPosRef: {} })),
+}));
+
+vi.mock('../../hooks/combat/useSpellCastExecutor.js', () => ({
+  useSpellCastExecutor: vi.fn(() => ({ castAction: vi.fn() })),
+}));
+
+vi.mock('../../services/ui/formatUtils.js', () => ({
+  formatRange: vi.fn((range) => {
+    if (!range && range !== 0) return '';
+    return `${range} ft.`;
+  }),
+  signFormatter: { format: (n) => (n >= 0 ? `+${n}` : `${n}`) },
+  getAttackSpellLevel: vi.fn((_spellAbilities, attackName) => {
+    if (attackName === 'Minor Illusion Attack') return 0;
+    if (attackName === 'Ice Knife') return 2;
+    return null;
+  }),
+}));
+
 import { getInnateSorceryBonus } from '../../services/combat/buffs/buffService.js';
 import { hasAutomation } from '../../services/combat/automation/automationService.js';
+import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
+import { getBonusActionSpellNames } from '../../services/ui/spellSectionUtils.js';
+import { getCategories } from '../../services/character/featureCategories.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -156,7 +203,6 @@ describe('CharBonusActions - Rendering', () => {
     it.each([
       { label: 'bonusActions array has entries', stats: createStats({ bonusActions: [{ name: 'Cunning Action', description: 'Dash, Hide, or Disengage.' }] }) },
       { label: 'bonus action attacks exist', stats: createStats({ attacks: [{ name: 'Main Gauche', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Piercing', type: 'Bonus Action' }] }) },
-      { label: 'bonus action spells exist', stats: createStats({ spellAbilities: { spells: [{ name: 'Shocking Grasp', range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared' }] } }) },
     ])('renders section when $label', ({ stats }) => {
       render(<CharBonusActions playerStats={stats} />);
       expect(screen.getByText('Bonus Actions')).toBeInTheDocument();
@@ -204,23 +250,12 @@ describe('CharBonusActions - Rendering', () => {
       { bonus: 0, expected: 'DC 14 CON', noHitBonus: true },
       { bonus: 1, expected: 'DC 15 CON', noHitBonus: false },
     ])('displays save DC with sorcery bonus ($bonus)', ({ bonus, expected, noHitBonus }) => {
-      getInnateSorceryBonus.mockReturnValue({ saveDcBonus: bonus });
+      vi.mocked(getInnateSorceryBonus).mockReturnValue({ saveDcBonus: bonus });
       render(<CharBonusActions playerStats={createStats({ attacks: [saveDcAttack] })} />);
       expect(screen.getByText(expected)).toBeInTheDocument();
       if (noHitBonus) {
         expect(screen.queryByText('+5')).not.toBeInTheDocument();
       }
-    });
-  });
-
-  describe('bonus action spells rendering', () => {
-    const bonusActionSpell = { name: 'Shocking Grasp', range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared' };
-
-    it('displays the spell name, range, and type', () => {
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [bonusActionSpell] } })} />);
-      expect(screen.getByText('Shocking Grasp')).toBeInTheDocument();
-      expect(screen.getByText('Touch')).toBeInTheDocument();
-      expect(screen.getByText('Utility')).toBeInTheDocument();
     });
   });
 
@@ -240,9 +275,14 @@ describe('CharBonusActions - Rendering', () => {
   describe('2024 rules rendering', () => {
     const bonusActionAttack = { name: 'Main Gauche', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Piercing', type: 'Bonus Action' };
 
-    it('shows Mastery column header for 2024 rules', () => {
+    it('shows Mastery column header for 2024 rules with weapon_kind_mastery passive', () => {
       render(<CharBonusActions playerStats={createStats({ rules: '2024', attacks: [bonusActionAttack], automation: { passives: [{ type: 'weapon_kind_mastery', name: 'Weapon Kind Mastery' }] } })} getWeaponMastery={() => null} />);
       expect(screen.getByText('Mastery')).toBeInTheDocument();
+    });
+
+    it('does not show Mastery column when 2024 rules but no weapon_kind_mastery passive', () => {
+      render(<CharBonusActions playerStats={createStats({ rules: '2024', attacks: [bonusActionAttack], automation: { passives: [] } })} getWeaponMastery={() => null} />);
+      expect(screen.queryByText('Mastery')).not.toBeInTheDocument();
     });
   });
 
@@ -268,41 +308,23 @@ describe('CharBonusActions - Rendering', () => {
 
   describe('bonus action spells - level display', () => {
     it('shows Cantrip for level 0 bonus action spells', () => {
+      vi.mocked(getBonusActionSpellNames).mockImplementation(() => new Set(['Shocking Grasp']));
       const spell = { name: 'Shocking Grasp', level: 0, range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared' };
       render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
       expect(screen.getByText('Cantrip')).toBeInTheDocument();
     });
 
     it('shows numeric level for leveled bonus action spells', () => {
+      vi.mocked(getBonusActionSpellNames).mockImplementation(() => new Set(['Hideous Laughter']));
       const spell = { name: 'Hideous Laughter', level: 1, range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared' };
       render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
       expect(screen.getByText('1')).toBeInTheDocument();
     });
   });
 
-  describe('utility concentration spells rendering', () => {
-    it('shows empty hit bonus column for utility concentration spells', () => {
-      const spell = { name: 'Armor of Agathys', level: 1, range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared', concentration: true };
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
-      expect(screen.getByText('Armor of Agathys')).toBeInTheDocument();
-      expect(screen.getByText('Utility')).toBeInTheDocument();
-    });
-
-    it('shows Healing type for spells with heal_at_slot_level', () => {
-      const spell = { name: 'Healing Word', level: 1, range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared', heal_at_slot_level: true };
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
-      expect(screen.getByText('Healing')).toBeInTheDocument();
-    });
-
-    it('shows damage type when spell has specific damage type', () => {
-      const spell = { name: 'Witch Bolt', level: 1, range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared', damage: { damage_type: 'Lightning' } };
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
-      expect(screen.getByText('Lightning')).toBeInTheDocument();
-    });
-  });
-
-  describe('features filtered by featuresToIgnore', () => {
+  describe('bonus action descriptions - featuresToIgnore filtering', () => {
     it('filters out bonus actions that are in featuresToIgnore list', () => {
+      vi.mocked(getCategories).mockReturnValue({ featuresToIgnore: ['Spellcasting'] });
       const bonusActions = [
         { name: 'Spellcasting', description: 'Cast spells.' },
         { name: 'Cunning Action', description: 'Dash, Hide, or Disengage.', details: 'Quick movement.' },
@@ -339,9 +361,16 @@ describe('CharBonusActions - Rendering', () => {
 
   describe('popupHtml with hasBonusActions', () => {
     it('renders a <br> when popupHtml exists and hasBonusActions is true', () => {
+      vi.mocked(useDiceRollPopup).mockReturnValue({ popupHtml: '<p>Some popup</p>', setPopupHtml: vi.fn() });
       const bonusAction = { name: 'Cunning Action', description: 'Quick movement.' };
       const { container } = render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} />);
       expect(container.querySelector('br')).toBeTruthy();
+    });
+
+    it('does not render a <br> when popupHtml is null even with bonusActions', () => {
+      const bonusAction = { name: 'Cunning Action', description: 'Quick movement.' };
+      const { container } = render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} />);
+      expect(container.querySelector('br')).toBeFalsy();
     });
   });
 

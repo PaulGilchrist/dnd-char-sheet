@@ -1,10 +1,10 @@
+// @improved-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import CharSheet from './CharSheet';
 import {
   createMockStore,
-  createMockPlayerStats,
   createDefaultProps,
   createSharedPopupReturnValue,
   resetTestState,
@@ -143,15 +143,33 @@ vi.mock('../../services/ui/sanitize.js', () => ({
 }));
 
 vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
-  default: vi.fn(() => <div data-testid="secondary-target-modal">modal</div>),
+  default: vi.fn(({ title, targets }) => (
+    <div data-testid="secondary-target-modal">
+      <span>{title}</span>
+      <span data-testid="target-count">{targets?.length ?? 0}</span>
+    </div>
+  )),
 }));
 
 vi.mock('./modals/PolymorphSelectionModal.jsx', () => ({
-  default: vi.fn(() => <div data-testid="polymorph-selection-modal">modal</div>),
+  default: vi.fn(({ title, maxCR, allowAnyCreature, mode }) => (
+    <div data-testid="polymorph-selection-modal">
+      <span>{title}</span>
+      {maxCR !== undefined && <span data-testid="max-cr">{maxCR}</span>}
+      {allowAnyCreature && <span data-testid="allow-any-creature">true</span>}
+      {mode && <span data-testid="poly-mode">{mode}</span>}
+    </div>
+  )),
 }));
 
 vi.mock('./modals/AnimalShapesSelectionModal.jsx', () => ({
-  default: vi.fn(() => <div data-testid="animal-shapes-selection-modal">modal</div>),
+  default: vi.fn(({ title, targets, maxCR }) => (
+    <div data-testid="animal-shapes-selection-modal">
+      <span>{title}</span>
+      <span data-testid="target-count">{targets?.length ?? 0}</span>
+      {maxCR !== undefined && <span data-testid="max-cr">{maxCR}</span>}
+    </div>
+  )),
 }));
 
 vi.mock('./modals/ObjectTransformModal.jsx', () => ({
@@ -170,6 +188,11 @@ vi.mock('../common/AttackResultPopup.jsx', () => ({
   )),
 }));
 
+// ---------------------------------------------------------------------------
+// Mocks — hooks
+// ---------------------------------------------------------------------------
+
+const mockStore = createMockStore();
 const sharedPopupReturnValue = createSharedPopupReturnValue();
 
 vi.mock('../../hooks/combat/useSharedPopup.js', () => {
@@ -179,8 +202,6 @@ vi.mock('../../hooks/combat/useSharedPopup.js', () => {
   });
   return { default: mockFn };
 });
-
-const mockStore = createMockStore();
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
@@ -193,7 +214,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
     if (prop === 'bardicInspirationDie') return mockStore.get(`${key}:bardicInspirationDie`) ?? null;
     if (prop === 'bardicInspirationCombatOptions') return mockStore.get(`${key}:bardicInspirationCombatOptions`) ?? null;
     if (prop === 'activeConditions') return [];
-    if (prop === 'activeBuffs') return [];
+    if (prop === 'activeBuffs') return mockStore.get(`${key}:activeBuffs`) ? JSON.parse(mockStore.get(`${key}:activeBuffs`)) : [];
     if (prop === 'targetEffects') return [];
     if (prop === 'preparedSpells') return mockStore.get(`${key}:preparedSpells`) ?? null;
     if (prop === 'aspectOfTheWildsOption') return mockStore.get(`${key}:aspectOfTheWildsOption`) ?? null;
@@ -231,7 +252,25 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
 
 vi.mock('../../services/rules/rulesFactory.js', () => ({
   default: {
-    getPlayerStats: vi.fn().mockImplementation(() => Promise.resolve(createMockPlayerStats())),
+    getPlayerStats: vi.fn().mockImplementation(() => Promise.resolve({
+      name: 'Test Character',
+      level: 5,
+      hitPoints: { current: 40, max: 40 },
+      abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
+      spellAbilities: { spells: [], maxPreparedSpells: 5 },
+      rules: '5e',
+      automation: { passives: [] },
+      class: { name: 'Fighter' },
+      speed: 30,
+      race: { speed: 30, traits: [] },
+      actions: [],
+      bonusActions: [],
+      reactions: [],
+      specialActions: [],
+      characterAdvancement: [],
+      skillProficiencies: [],
+      saveModifiers: [],
+    })),
   },
 }));
 
@@ -247,7 +286,7 @@ describe('ShieldOfFaithTargetSelectionModal', () => {
     mockStore.clear();
   });
 
-  it('renders shield_of_faith_target_selection modal', async () => {
+  it('renders shield_of_faith_target_selection modal with correct title', async () => {
     sharedPopupReturnValue.popupHtml = {
       type: 'shield_of_faith_target_selection',
       creatureTargets: [{ name: 'Ally1' }, { name: 'Ally2' }],
@@ -258,11 +297,15 @@ describe('ShieldOfFaithTargetSelectionModal', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+    expect(screen.getByText('Shield of Faith')).toBeInTheDocument();
+    expect(screen.getByTestId('target-count')).toHaveTextContent('2');
   });
 
-  it('renders with empty creatureTargets when popupHtml has none', async () => {
+  it('renders with empty creatureTargets showing zero targets', async () => {
     sharedPopupReturnValue.popupHtml = {
       type: 'shield_of_faith_target_selection',
       creatureTargets: [],
@@ -273,11 +316,14 @@ describe('ShieldOfFaithTargetSelectionModal', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('target-count')).toHaveTextContent('0');
   });
 
-  it('renders with null creatureTargets when popupHtml has none property', async () => {
+  it('renders with null creatureTargets treating as zero targets', async () => {
     sharedPopupReturnValue.popupHtml = {
       type: 'shield_of_faith_target_selection',
       duration: '1 minute',
@@ -287,8 +333,11 @@ describe('ShieldOfFaithTargetSelectionModal', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('target-count')).toHaveTextContent('0');
   });
 });
 
@@ -304,7 +353,7 @@ describe('Wild Shape confirm handler', () => {
     mockStore.clear();
   });
 
-  it('renders wild_shape_select modal with action', async () => {
+  it('renders wild_shape_select modal with correct title and action label', async () => {
     sharedPopupReturnValue.popupHtml = {
       type: 'wild_shape_select',
       playerStats: { name: 'Test Character' },
@@ -315,8 +364,11 @@ describe('Wild Shape confirm handler', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+    expect(screen.getByText('Wild Shape')).toBeInTheDocument();
   });
 });
 
@@ -332,7 +384,7 @@ describe('Polymorph confirm handler', () => {
     mockStore.clear();
   });
 
-  it('renders polymorph_select modal with all required data', async () => {
+  it('renders polymorph_select modal with correct title and maxCR', async () => {
     sharedPopupReturnValue.popupHtml = {
       type: 'polymorph_select',
       maxCR: 1,
@@ -346,8 +398,12 @@ describe('Polymorph confirm handler', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+    expect(screen.getByText('Polymorph')).toBeInTheDocument();
+    expect(screen.getByTestId('max-cr')).toHaveTextContent('1');
   });
 });
 
@@ -363,7 +419,7 @@ describe('Shapechange confirm handler', () => {
     mockStore.clear();
   });
 
-  it('renders shapechange_select modal with allowAnyCreature', async () => {
+  it('renders shapechange_select modal with allowAnyCreature flag', async () => {
     sharedPopupReturnValue.popupHtml = {
       type: 'shapechange_select',
       maxCR: 5,
@@ -378,8 +434,13 @@ describe('Shapechange confirm handler', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+    expect(screen.getByText('Shapechange')).toBeInTheDocument();
+    expect(screen.getByTestId('allow-any-creature')).toBeInTheDocument();
+    expect(screen.getByTestId('max-cr')).toHaveTextContent('5');
   });
 });
 
@@ -395,7 +456,7 @@ describe('Animal Shapes confirm handler', () => {
     mockStore.clear();
   });
 
-  it('renders animal_shapes_target_selection modal', async () => {
+  it('renders animal_shapes_target_selection modal with correct title and target count', async () => {
     sharedPopupReturnValue.popupHtml = {
       type: 'animal_shapes_target_selection',
       targets: [{ name: 'Ally1' }, { name: 'Ally2' }],
@@ -406,8 +467,13 @@ describe('Animal Shapes confirm handler', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('animal-shapes-selection-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('animal-shapes-selection-modal')).toBeInTheDocument();
+    expect(screen.getByText('Animal Shapes')).toBeInTheDocument();
+    expect(screen.getByTestId('target-count')).toHaveTextContent('2');
+    expect(screen.getByTestId('max-cr')).toHaveTextContent('4');
   });
 });
 
@@ -438,8 +504,13 @@ describe('True Polymorph confirm handler', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
+    expect(screen.getByText('True Polymorph')).toBeInTheDocument();
+    expect(screen.getByTestId('poly-mode')).toHaveTextContent('creature_to_creature');
+    expect(screen.getByTestId('allow-any-creature')).toBeInTheDocument();
   });
 });
 
@@ -455,7 +526,7 @@ describe('Object Transform confirm handler', () => {
     mockStore.clear();
   });
 
-  it('renders true_polymorph_object modal', async () => {
+  it('renders object_transform modal for true_polymorph_object type', async () => {
     sharedPopupReturnValue.popupHtml = {
       type: 'true_polymorph_object',
       campaignName: 'test-campaign',
@@ -467,7 +538,68 @@ describe('Object Transform confirm handler', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('object-transform-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('object-transform-modal')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — renderPopup returns null for special popup types
+// ---------------------------------------------------------------------------
+
+describe('renderPopup null-return types', () => {
+  const defaultProps = createDefaultProps();
+
+  beforeEach(() => {
+    resetTestState(sharedPopupReturnValue);
+    mockStore.clear();
+  });
+
+  it('does not render secondary-target-modal for barkskin_target_selection popup type', async () => {
+    sharedPopupReturnValue.popupHtml = {
+      type: 'barkskin_target_selection',
+      creatureTargets: [{ name: 'Ally1' }],
+    };
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — renderPopup returns null for unhandled popup types
+// ---------------------------------------------------------------------------
+
+describe('renderPopup unknown popup types', () => {
+  const defaultProps = createDefaultProps();
+
+  beforeEach(() => {
+    resetTestState(sharedPopupReturnValue);
+    mockStore.clear();
+  });
+
+  it('renders char sheet without extra modals for unknown popup type', async () => {
+    sharedPopupReturnValue.popupHtml = {
+      type: 'unknown_popup_type',
+      someData: 'value',
+    };
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('polymorph-selection-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('animal-shapes-selection-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('object-transform-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
   });
 });

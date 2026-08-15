@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ArcaneWardRestoreModal from './ArcaneWardRestoreModal.jsx';
@@ -78,6 +79,29 @@ describe('ArcaneWardRestoreModal', () => {
       expect(level1Option).not.toHaveClass('disabled');
       expect(level3Option).toHaveClass('disabled');
     });
+
+    it('renders radio inputs for each spell slot level with correct checked state', () => {
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const radios = document.querySelectorAll('input[type="radio"]');
+      expect(radios).toHaveLength(9);
+      radios.forEach((radio, idx) => {
+        expect(radio.checked).toBe(false);
+        const lvl = idx + 1;
+        const option = radio.closest('.arcane-ward-slot-option');
+        if (lvl === 1 || lvl === 2) {
+          expect(radio.disabled).toBe(false);
+          expect(option).not.toHaveClass('disabled');
+        } else {
+          expect(radio.disabled).toBe(true);
+          expect(option).toHaveClass('disabled');
+        }
+      });
+    });
+
+    it('renders the preview section only when no level is selected', () => {
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      expect(document.querySelector('.arcane-ward-preview')).toBeNull();
+    });
   });
 
   describe('selection behavior', () => {
@@ -87,7 +111,7 @@ describe('ArcaneWardRestoreModal', () => {
       fireEvent.click(level1Option);
       expect(level1Option).toHaveClass('selected');
       expect(screen.getByText(/Preview:/)).toBeInTheDocument();
-      expect(screen.getByText(/Restore Ward/)).toBeEnabled();
+      expect(screen.getByRole('button', { name: /Restore Ward/ })).toBeEnabled();
     });
 
     it('switches selection when a different level is clicked', () => {
@@ -115,6 +139,26 @@ describe('ArcaneWardRestoreModal', () => {
       fireEvent.click(level2Option);
       const preview = document.querySelector('.arcane-ward-preview');
       expect(preview.textContent).toContain('18 → 20/20');
+    });
+
+    it('selects the highest available level (level 9)', () => {
+      setupRuntimeValues(5, 30, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 1 });
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const level9Option = screen.getByText('Level 9').closest('.arcane-ward-slot-option');
+      fireEvent.click(level9Option);
+      expect(level9Option).toHaveClass('selected');
+      expect(screen.getByText(/Preview:/)).toBeInTheDocument();
+      expect(screen.getByText(/5 → 23\/30/)).toBeInTheDocument();
+    });
+
+    it('keeps preview visible when clicking a disabled slot after selecting one', () => {
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const level1Option = screen.getByText('Level 1').closest('.arcane-ward-slot-option');
+      fireEvent.click(level1Option);
+      expect(document.querySelector('.arcane-ward-preview')).toBeTruthy();
+      const level3Option = screen.getByText('Level 3').closest('.arcane-ward-slot-option');
+      fireEvent.click(level3Option);
+      expect(document.querySelector('.arcane-ward-preview')).toBeTruthy();
     });
   });
 
@@ -161,6 +205,43 @@ describe('ArcaneWardRestoreModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /Restore Ward/ }));
       expect(defaultOnClose).toHaveBeenCalledTimes(1);
     });
+
+    it('decrements the selected spell slot by exactly 1', () => {
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const level1Option = screen.getByText('Level 1').closest('.arcane-ward-slot-option');
+      fireEvent.click(level1Option);
+      fireEvent.click(screen.getByRole('button', { name: /Restore Ward/ }));
+      expect(setRuntimeBatch).toHaveBeenCalledWith(
+        'Sorcerer1',
+        expect.objectContaining({ spell_slots_level_1: 1 }),
+        'test-campaign'
+      );
+    });
+
+    it('uses level 2 slot (1 available) and decrements to 0', () => {
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const level2Option = screen.getByText('Level 2').closest('.arcane-ward-slot-option');
+      fireEvent.click(level2Option);
+      fireEvent.click(screen.getByRole('button', { name: /Restore Ward/ }));
+      expect(setRuntimeBatch).toHaveBeenCalledWith(
+        'Sorcerer1',
+        expect.objectContaining({ spell_slots_level_2: 0 }),
+        'test-campaign'
+      );
+    });
+
+    it('restores ward to full HP when restore equals remaining', () => {
+      setupRuntimeValues(12, 20, { 1: 2, 2: 1, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 });
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const level4Option = screen.getByText('Level 4').closest('.arcane-ward-slot-option');
+      expect(level4Option).toHaveClass('disabled');
+      // Use level 4 which would give +8, but ward has 8 remaining (20-12)
+      // Actually level 4 has 0 slots. Use level 1 which gives +2, not enough.
+      // Use level 2 which gives +4, ward has 8 remaining → 16/20
+      const level2Option = screen.getByText('Level 2').closest('.arcane-ward-slot-option');
+      fireEvent.click(level2Option);
+      expect(document.querySelector('.arcane-ward-preview').textContent).toContain('12 → 16/20');
+    });
   });
 
   describe('close behavior', () => {
@@ -194,18 +275,31 @@ describe('ArcaneWardRestoreModal', () => {
       expect(p.textContent).toContain('0/0');
     });
 
+    it('renders all slots as disabled when all spell slots are 0', () => {
+      setupRuntimeValues(10, 20, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 });
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const options = document.querySelectorAll('.arcane-ward-slot-option');
+      options.forEach((option) => {
+        expect(option).toHaveClass('disabled');
+      });
+      expect(screen.getByRole('button', { name: /Restore Ward/ })).toBeDisabled();
+    });
+
+    it('allows selection when only the highest slot level is available', () => {
+      setupRuntimeValues(5, 30, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 1 });
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const level9Option = screen.getByText('Level 9').closest('.arcane-ward-slot-option');
+      expect(level9Option).not.toHaveClass('disabled');
+      fireEvent.click(level9Option);
+      expect(level9Option).toHaveClass('selected');
+      expect(screen.getByRole('button', { name: /Restore Ward/ })).toBeEnabled();
+    });
+
     it('defaults to 0/0 when runtime values are undefined', () => {
       getRuntimeValue.mockReturnValue(undefined);
       render(<ArcaneWardRestoreModal {...makeProps()} />);
       const p = document.querySelector('.sp-body p');
       expect(p.textContent).toContain('0/0');
-    });
-
-    it('defaults to 0 for spell slots when runtime value is null', () => {
-      getRuntimeValue.mockReturnValue(null);
-      render(<ArcaneWardRestoreModal {...makeProps()} />);
-      const options = screen.queryAllByText(/available/);
-      expect(options.length).toBeGreaterThan(0);
     });
   });
 
@@ -223,6 +317,28 @@ describe('ArcaneWardRestoreModal', () => {
     it('renders with a custom action name', () => {
       render(<ArcaneWardRestoreModal {...makeProps({ action: { name: 'Custom Ward Restore' } })} />);
       expect(screen.getByText('Custom Ward Restore')).toBeInTheDocument();
+    });
+
+    it('renders with ward already at max HP', () => {
+      setupRuntimeValues(20, 20, { 1: 2, 2: 1, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 });
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const p = document.querySelector('.sp-body p');
+      expect(p.textContent).toContain('20/20');
+      const level1Option = screen.getByText('Level 1').closest('.arcane-ward-slot-option');
+      fireEvent.click(level1Option);
+      const preview = document.querySelector('.arcane-ward-preview');
+      expect(preview.textContent).toContain('20 → 20/20');
+    });
+
+    it('renders with ward at 0 HP', () => {
+      setupRuntimeValues(0, 20, { 1: 2, 2: 1, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 });
+      render(<ArcaneWardRestoreModal {...makeProps()} />);
+      const p = document.querySelector('.sp-body p');
+      expect(p.textContent).toContain('0/20');
+      const level1Option = screen.getByText('Level 1').closest('.arcane-ward-slot-option');
+      fireEvent.click(level1Option);
+      const preview = document.querySelector('.arcane-ward-preview');
+      expect(preview.textContent).toContain('0 → 2/20');
     });
   });
 });

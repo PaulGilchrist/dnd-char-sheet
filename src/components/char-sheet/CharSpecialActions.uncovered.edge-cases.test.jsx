@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -323,8 +324,6 @@ vi.mock('../../services/automation/handlers/buffs/tempHpService.js', () => ({
   }),
 }));
 
-// tempHpService mock is imported for side effects (runtime store setup)
-
 vi.mock('../../services/automation/handlers/buffs/tempHpBuffHandler.js', () => ({
   confirmBolsteringPerformance: vi.fn(() => Promise.resolve({ type: 'popup', payload: { name: 'Bolstering Performance', description: 'Allies inspired.' } })),
 }));
@@ -419,21 +418,27 @@ describe('CharSpecialActions - FeatureChoiceModal early return', () => {
     Object.keys(mockRuntimeStore).forEach(k => delete mockRuntimeStore[k]);
   });
 
-  it('returns early when featureChoiceModal is null (no modal open)', async () => {
+  it('calls executeHandler but does not render feature choice modal when featureChoiceModal stays null', async () => {
+    executeHandler.mockResolvedValue({
+      type: 'popup',
+      payload: { name: 'Test Feature', description: 'Feature activated.' },
+    });
+
     const playerStats = createPlayerStats({
       specialActions: [
         { name: 'Test Feature', description: 'A test feature.', automation: { type: 'generic' } },
       ],
     });
 
-    executeHandler.mockResolvedValue({
-      type: 'popup',
-      payload: { name: 'Test Feature', description: 'Feature activated.' },
-    });
-
     render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-    fireEvent.click(screen.getByText(/Test Feature/));
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Test Feature/));
+    });
+
+    await waitFor(() => {
+      expect(executeHandler).toHaveBeenCalled();
+    });
 
     await waitFor(() => {
       expect(screen.queryByText(/Choose your option/)).not.toBeInTheDocument();
@@ -459,7 +464,7 @@ describe('CharSpecialActions - useEffect cancelled guard', () => {
     });
 
     // If we got here without an error, the cancelled guard works
-    expect(true).toBe(true);
+    expect(screen.queryByText('Great Weapon Fighting')).not.toBeInTheDocument();
   });
 });
 
@@ -468,21 +473,27 @@ describe('CharSpecialActions - Bolstering Performance modal early return', () =>
     vi.clearAllMocks();
   });
 
-  it('returns early when bolsteringPerformanceModal is null', async () => {
+  it('closes modal and does not render creature selection when handler returns no modal result', async () => {
+    executeHandler.mockResolvedValue({
+      type: 'popup',
+      payload: { name: 'Bolstering Performance', description: 'Allies inspired.' },
+    });
+
     const playerStats = createPlayerStats({
       specialActions: [
         { name: 'Bolstering Performance', description: 'Inspire allies.', automation: { type: 'temp_hp_buff' } },
       ],
     });
 
-    executeHandler.mockResolvedValue({
-      type: 'popup',
-      payload: { name: 'Bolstering Performance', description: 'Allies inspired.' },
-    });
-
     render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-    fireEvent.click(screen.getByText(/Bolstering Performance/));
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Bolstering Performance/));
+    });
+
+    await waitFor(() => {
+      expect(executeHandler).toHaveBeenCalled();
+    });
 
     await waitFor(() => {
       expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
@@ -495,21 +506,27 @@ describe('CharSpecialActions - Encouraging Song modal early return', () => {
     vi.clearAllMocks();
   });
 
-  it('returns early when encouragingSongModal is null', async () => {
+  it('closes modal and does not render creature selection when handler returns no modal result', async () => {
+    executeHandler.mockResolvedValue({
+      type: 'popup',
+      payload: { name: 'Encouraging Song', description: 'Song performed.' },
+    });
+
     const playerStats = createPlayerStats({
       specialActions: [
         { name: 'Encouraging Song', description: 'Sing to allies.', automation: { type: 'heroic_inspiration_buff' } },
       ],
     });
 
-    executeHandler.mockResolvedValue({
-      type: 'popup',
-      payload: { name: 'Encouraging Song', description: 'Song performed.' },
-    });
-
     render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-    fireEvent.click(screen.getByText(/Encouraging Song/));
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Encouraging Song/));
+    });
+
+    await waitFor(() => {
+      expect(executeHandler).toHaveBeenCalled();
+    });
 
     await waitFor(() => {
       expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
@@ -522,16 +539,21 @@ describe('CharSpecialActions - Action filtering', () => {
     vi.clearAllMocks();
   });
 
-  it('filters out actions that appear in actions list', async () => {
+  function renderWithDuplicates(specialActions, actionsList, actionsKey) {
     const playerStats = createPlayerStats({
-      specialActions: [
-        { name: 'Attack', description: 'Make an attack.' },
-      ],
-      actions: [
-        { name: 'Attack', description: 'Make an attack.' },
-      ],
+      specialActions,
+      [actionsKey]: actionsList,
     });
     render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+    return playerStats;
+  }
+
+  it('filters out actions that appear in actions list', async () => {
+    renderWithDuplicates(
+      [{ name: 'Attack', description: 'Make an attack.' }],
+      [{ name: 'Attack', description: 'Make an attack.' }],
+      'actions'
+    );
 
     await waitFor(() => {
       expect(screen.queryByText(/Attack/)).not.toBeInTheDocument();
@@ -539,15 +561,11 @@ describe('CharSpecialActions - Action filtering', () => {
   });
 
   it('filters out actions that appear in bonusActions list', async () => {
-    const playerStats = createPlayerStats({
-      specialActions: [
-        { name: 'Second Wind', description: 'Regain hit points.' },
-      ],
-      bonusActions: [
-        { name: 'Second Wind', description: 'Regain hit points.' },
-      ],
-    });
-    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+    renderWithDuplicates(
+      [{ name: 'Second Wind', description: 'Regain hit points.' }],
+      [{ name: 'Second Wind', description: 'Regain hit points.' }],
+      'bonusActions'
+    );
 
     await waitFor(() => {
       expect(screen.queryByText(/Second Wind/)).not.toBeInTheDocument();
@@ -555,15 +573,11 @@ describe('CharSpecialActions - Action filtering', () => {
   });
 
   it('filters out actions that appear in reactions list', async () => {
-    const playerStats = createPlayerStats({
-      specialActions: [
-        { name: 'Reaction Attack', description: 'Attack as a reaction.' },
-      ],
-      reactions: [
-        { name: 'Reaction Attack', description: 'Attack as a reaction.' },
-      ],
-    });
-    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+    renderWithDuplicates(
+      [{ name: 'Reaction Attack', description: 'Attack as a reaction.' }],
+      [{ name: 'Reaction Attack', description: 'Attack as a reaction.' }],
+      'reactions'
+    );
 
     await waitFor(() => {
       expect(screen.queryByText(/Reaction Attack/)).not.toBeInTheDocument();
@@ -571,18 +585,46 @@ describe('CharSpecialActions - Action filtering', () => {
   });
 
   it('filters out actions that appear in characterAdvancement list', async () => {
+    renderWithDuplicates(
+      [{ name: 'Feat', description: 'Take a feat.' }],
+      [{ name: 'Feat', description: 'Take a feat.' }],
+      'characterAdvancement'
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Feat/)).not.toBeInTheDocument();
+    });
+  });
+
+  it('does not filter specialActions that have unique names across all lists', async () => {
     const playerStats = createPlayerStats({
       specialActions: [
-        { name: 'Feat', description: 'Take a feat.' },
+        { name: 'Unique Action', description: 'A unique action.' },
       ],
-      characterAdvancement: [
-        { name: 'Feat', description: 'Take a feat.' },
+      actions: [{ name: 'Attack', description: 'Make an attack.' }],
+      bonusActions: [{ name: 'Second Wind', description: 'Regain hit points.' }],
+      reactions: [{ name: 'Reaction Attack', description: 'Attack as a reaction.' }],
+      characterAdvancement: [{ name: 'Feat', description: 'Take a feat.' }],
+    });
+    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Unique Action/)).toBeInTheDocument();
+    });
+  });
+
+  it('deduplicates specialActions with the same name, keeping the last occurrence', async () => {
+    const playerStats = createPlayerStats({
+      specialActions: [
+        { name: 'Attack', description: 'First definition.' },
+        { name: 'Attack', description: 'Second definition.' },
       ],
     });
     render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Feat/)).not.toBeInTheDocument();
+      const instances = screen.getAllByText(/Attack/);
+      expect(instances).toHaveLength(1);
     });
   });
 });
@@ -592,7 +634,7 @@ describe('CharSpecialActions - MoonlightStepFallback onClose', () => {
     vi.clearAllMocks();
   });
 
-  it('closes MoonlightStepFallback modal when clicking overlay', async () => {
+  it('closes MoonlightStepFallback modal when the close button is clicked', async () => {
     executeHandler.mockResolvedValue({
       type: 'modal',
       modalName: 'moonlightStepFallback',
@@ -610,17 +652,22 @@ describe('CharSpecialActions - MoonlightStepFallback onClose', () => {
 
     render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-    fireEvent.click(screen.getAllByText(/Moonlight Step/)[0]);
+    await act(async () => {
+      fireEvent.click(screen.getAllByText(/Moonlight Step/)[0]);
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/Consume a level 3 spell slot/)).toBeInTheDocument();
     });
 
-    // Find the overlay div and click it - the overlay has onClick={() => setMoonlightStepFallback(null)}
-    const overlay = document.querySelector('.sp-overlay');
-    if (overlay) {
-      fireEvent.click(overlay);
-    }
+    // Click the "No" button which closes the modal
+    const buttons = screen.getAllByRole('button');
+    const noButton = buttons.find(b => b.textContent.includes('No') && !b.textContent.includes('Moonlight'));
+    expect(noButton).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(noButton);
+    });
 
     await waitFor(() => {
       expect(screen.queryByText(/Consume a level 3 spell slot/)).not.toBeInTheDocument();

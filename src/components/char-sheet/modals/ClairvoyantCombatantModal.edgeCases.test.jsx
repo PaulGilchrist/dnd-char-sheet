@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ClairvoyantCombatantModal from './ClairvoyantCombatantModal.jsx';
@@ -21,6 +22,8 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 // ── Re-import mocked modules ──
 
 import * as useRuntimeState from '../../../hooks/runtime/useRuntimeState.js';
+import { createSaveListener } from '../../../services/automation/common/savePrompt.js';
+import { addEntry } from '../../../services/ui/logService.js';
 
 // ── Test fixtures ──
 
@@ -57,20 +60,18 @@ describe('ClairvoyantCombatantModal - edge cases', () => {
     vi.clearAllMocks();
     localStorage.clear();
     useRuntimeState.clearRuntimeState('campaign');
+    useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+      if (key === 'campaign' && prop === 'targetEffects') return [];
+      if (key === 'Paladin1' && prop === 'activeBuffs') return [];
+      return null;
+    });
+    useRuntimeState.setRuntimeValue.mockImplementation(() => Promise.resolve());
   });
 
   // ── Save result event filtering ──
 
   describe('save result event filtering', () => {
-    beforeEach(() => {
-      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'campaign' && prop === 'targetEffects') return [];
-        return null;
-      });
-      useRuntimeState.setRuntimeValue.mockImplementation(() => Promise.resolve());
-    });
-
-    it('ignores save-result events with mismatched promptId', async () => {
+    it('ignores save-result events with mismatched promptId on success', async () => {
       const props = makeProps({ currentUses: 1, maxUses: 3 });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
@@ -87,13 +88,88 @@ describe('ClairvoyantCombatantModal - edge cases', () => {
       window.dispatchEvent(wrongEvent);
 
       await waitFor(() => {
-        // Should still show the info/result from confirm, not have switched to success
-        expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalledWith(
-          'Paladin1',
-          'clairvoyantCombatantTarget',
-          null,
-          'test-campaign',
+        // The correct promptId should have been used for the save listener
+        expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
+          targetName: 'Goblin1',
+          saveType: 'Wisdom',
+          saveDc: 13,
+        });
+        // No target clearing should happen for wrong promptId
+        const targetCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+          c => c[0] === 'Paladin1' && c[1] === 'clairvoyantCombatantTarget' && c[2] === null
         );
+        expect(targetCalls).toHaveLength(0);
+      });
+    });
+
+    it('ignores save-result events with mismatched promptId on failure', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      const wrongEvent = new CustomEvent('save-result', {
+        detail: {
+          promptId: 'wrong-prompt-id',
+          roll: 5,
+          total: 10,
+          success: false,
+        },
+      });
+      window.dispatchEvent(wrongEvent);
+
+      await waitFor(() => {
+        // No save_result log should be created for wrong promptId
+        const saveResultCalls = addEntry.mock.calls.filter(
+          c => c[1] && c[1].type === 'save_result'
+        );
+        expect(saveResultCalls).toHaveLength(0);
+      });
+    });
+
+    it('processes save-result event with matching promptId on success', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      const successEvent = new CustomEvent('save-result', {
+        detail: {
+          promptId: 'test-prompt-id',
+          roll: 10,
+          total: 15,
+          success: true,
+        },
+      });
+      window.dispatchEvent(successEvent);
+
+      await waitFor(() => {
+        const targetCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+          c => c[0] === 'Paladin1' && c[1] === 'clairvoyantCombatantTarget'
+        );
+        const nullCall = targetCalls.find(c => c[2] === null);
+        expect(nullCall).toBeDefined();
+      });
+    });
+
+    it('processes save-result event with matching promptId on failure', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      const failureEvent = new CustomEvent('save-result', {
+        detail: {
+          promptId: 'test-prompt-id',
+          roll: 5,
+          total: 10,
+          success: false,
+        },
+      });
+      window.dispatchEvent(failureEvent);
+
+      await waitFor(() => {
+        const saveResultCalls = addEntry.mock.calls.filter(
+          c => c[1] && c[1].type === 'save_result' && c[1].success === false
+        );
+        expect(saveResultCalls.length).toBeGreaterThan(0);
       });
     });
   });
@@ -101,15 +177,7 @@ describe('ClairvoyantCombatantModal - edge cases', () => {
   // ── targetEffects with existing effects ──
 
   describe('targetEffects with existing effects', () => {
-    beforeEach(() => {
-      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'campaign' && prop === 'targetEffects') return [];
-        return null;
-      });
-      useRuntimeState.setRuntimeValue.mockImplementation(() => Promise.resolve());
-    });
-
-    it('preserves existing targetEffects when adding new one', async () => {
+    it('preserves existing targetEffects when adding new clairvoyant_combatant', async () => {
       const existingEffect = {
         target: 'OtherCreature',
         source: 'OtherSource',
@@ -137,84 +205,8 @@ describe('ClairvoyantCombatantModal - edge cases', () => {
         }));
       });
     });
-  });
 
-  // ── activeBuffs with existing buffs ──
-
-  describe('activeBuffs with existing buffs', () => {
-    beforeEach(() => {
-      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'campaign' && prop === 'targetEffects') return [];
-        if (key === 'Paladin1' && prop === 'activeBuffs') return [];
-        return null;
-      });
-      useRuntimeState.setRuntimeValue.mockImplementation(() => Promise.resolve());
-    });
-
-    it('preserves existing activeBuffs when adding new one', async () => {
-      const existingBuff = {
-        name: 'Blessing',
-        effect: 'blessing',
-      };
-      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'campaign' && prop === 'targetEffects') return [];
-        if (key === 'Paladin1' && prop === 'activeBuffs') return [existingBuff];
-        return null;
-      });
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      await waitFor(() => {
-        const calls = useRuntimeState.setRuntimeValue.mock.calls;
-        const buffsCall = calls.find(
-          c => c[0] === 'Paladin1' && c[1] === 'activeBuffs'
-        );
-        expect(buffsCall).toBeDefined();
-        expect(buffsCall[2]).toContainEqual(existingBuff);
-        expect(buffsCall[2]).toContainEqual(expect.objectContaining({
-          effect: 'clairvoyant_combatant',
-        }));
-      });
-    });
-  });
-
-  // ── activeBuffs with empty array fallback ──
-
-  describe('activeBuffs empty array fallback', () => {
-    beforeEach(() => {
-      useRuntimeState.getRuntimeValue.mockImplementation(() => null);
-      useRuntimeState.setRuntimeValue.mockImplementation(() => Promise.resolve());
-    });
-
-    it('handles null activeBuffs gracefully by using empty array', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      await waitFor(() => {
-        const calls = useRuntimeState.setRuntimeValue.mock.calls;
-        const buffsCall = calls.find(
-          c => c[0] === 'Paladin1' && c[1] === 'activeBuffs'
-        );
-        expect(buffsCall).toBeDefined();
-        expect(buffsCall[2]).toHaveLength(1);
-      });
-    });
-  });
-
-  // ── targetEffects filtering for success ──
-
-  describe('targetEffects filtering for success', () => {
-    beforeEach(() => {
-      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'campaign' && prop === 'targetEffects') return [];
-        return null;
-      });
-      useRuntimeState.setRuntimeValue.mockImplementation(() => Promise.resolve());
-    });
-
-    it('removes only matching clairvoyant_combatant effects on success', async () => {
+    it('filters only matching clairvoyant_combatant effects on success save', async () => {
       const matchingEffect = {
         target: 'Goblin1',
         source: 'Clairvoyant Combatant',
@@ -251,17 +243,68 @@ describe('ClairvoyantCombatantModal - edge cases', () => {
 
       await waitFor(() => {
         const calls = useRuntimeState.setRuntimeValue.mock.calls;
-        const teCall = calls.find(
+        const teCalls = calls.filter(
           c => c[0] === 'campaign' && c[1] === 'targetEffects'
         );
-        expect(teCall).toBeDefined();
-        expect(teCall[2]).toContainEqual(otherEffect);
-        expect(teCall[2]).toContainEqual(differentTargetEffect);
-        expect(teCall[2]).not.toContainEqual(matchingEffect);
+        // Get the last call (from handleSaveResult filtering)
+        const lastTeCall = teCalls[teCalls.length - 1];
+        expect(lastTeCall[2]).toContainEqual(otherEffect);
+        expect(lastTeCall[2]).toContainEqual(differentTargetEffect);
+        expect(lastTeCall[2]).not.toContainEqual(matchingEffect);
+      });
+    });
+  });
+
+  // ── activeBuffs edge cases ──
+
+  describe('activeBuffs edge cases', () => {
+    it('preserves existing activeBuffs when adding new clairvoyant_combatant', async () => {
+      const existingBuff = {
+        name: 'Blessing',
+        effect: 'blessing',
+      };
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'campaign' && prop === 'targetEffects') return [];
+        if (key === 'Paladin1' && prop === 'activeBuffs') return [existingBuff];
+        return null;
+      });
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        const calls = useRuntimeState.setRuntimeValue.mock.calls;
+        const buffsCall = calls.find(
+          c => c[0] === 'Paladin1' && c[1] === 'activeBuffs'
+        );
+        expect(buffsCall).toBeDefined();
+        expect(buffsCall[2]).toContainEqual(existingBuff);
+        expect(buffsCall[2]).toContainEqual(expect.objectContaining({
+          effect: 'clairvoyant_combatant',
+        }));
       });
     });
 
-    it('removes only matching clairvoyant_combatant buffs on success', async () => {
+    it('handles null activeBuffs gracefully by using empty array', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'campaign' && prop === 'targetEffects') return [];
+        return null;
+      });
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        const calls = useRuntimeState.setRuntimeValue.mock.calls;
+        const buffsCall = calls.find(
+          c => c[0] === 'Paladin1' && c[1] === 'activeBuffs'
+        );
+        expect(buffsCall).toBeDefined();
+        expect(buffsCall[2]).toHaveLength(1);
+      });
+    });
+
+    it('removes only matching clairvoyant_combatant buffs on success save', async () => {
       const matchingBuff = {
         name: 'Clairvoyant Combatant',
         effect: 'clairvoyant_combatant',
@@ -272,10 +315,18 @@ describe('ClairvoyantCombatantModal - edge cases', () => {
         effect: 'blessing',
         target: 'Goblin1',
       };
-      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+      // Use a mutable store so getRuntimeValue reflects setRuntimeValue writes
+      const store = { activeBuffs: [matchingBuff, otherBuff] };
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop, _campaign) => {
         if (key === 'campaign' && prop === 'targetEffects') return [];
-        if (key === 'Paladin1' && prop === 'activeBuffs') return [matchingBuff, otherBuff];
+        if (key === 'Paladin1' && prop === 'activeBuffs') return store.activeBuffs;
         return null;
+      });
+      useRuntimeState.setRuntimeValue.mockImplementation((player, prop, value) => {
+        if (player === 'Paladin1' && prop === 'activeBuffs') {
+          store.activeBuffs = value;
+        }
+        return Promise.resolve();
       });
       const props = makeProps({ currentUses: 1, maxUses: 3 });
       renderModal(props);
@@ -294,12 +345,108 @@ describe('ClairvoyantCombatantModal - edge cases', () => {
 
       await waitFor(() => {
         const calls = useRuntimeState.setRuntimeValue.mock.calls;
-        const buffsCall = calls.find(
+        const buffCalls = calls.filter(
           c => c[0] === 'Paladin1' && c[1] === 'activeBuffs'
         );
-        expect(buffsCall).toBeDefined();
-        expect(buffsCall[2]).toContainEqual(otherBuff);
-        expect(buffsCall[2]).not.toContainEqual(matchingBuff);
+        // Get the last call (from handleSaveResult filtering)
+        const lastBuffCall = buffCalls[buffCalls.length - 1];
+        expect(lastBuffCall[2]).toContainEqual(otherBuff);
+        expect(lastBuffCall[2]).not.toContainEqual(matchingBuff);
+      });
+    });
+  });
+
+  // ── Event listener cleanup ──
+
+  describe('event listener cleanup', () => {
+    it('removes save-result listener after success save resolves', async () => {
+      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      const successEvent = new CustomEvent('save-result', {
+        detail: {
+          promptId: 'test-prompt-id',
+          roll: 10,
+          total: 15,
+          success: true,
+        },
+      });
+      window.dispatchEvent(successEvent);
+
+      await waitFor(() => {
+        expect(removeEventListenerSpy).toHaveBeenCalledWith('save-result', expect.any(Function));
+      });
+      removeEventListenerSpy.mockRestore();
+    });
+
+    it('removes save-result listener after failure save resolves', async () => {
+      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      const failureEvent = new CustomEvent('save-result', {
+        detail: {
+          promptId: 'test-prompt-id',
+          roll: 5,
+          total: 10,
+          success: false,
+        },
+      });
+      window.dispatchEvent(failureEvent);
+
+      await waitFor(() => {
+        expect(removeEventListenerSpy).toHaveBeenCalledWith('save-result', expect.any(Function));
+      });
+      removeEventListenerSpy.mockRestore();
+    });
+  });
+
+  // ── Pact Magic with save result ──
+
+  describe('Pact Magic with save result', () => {
+    it('still filters effects correctly when Pact Magic was used to activate', async () => {
+      const pactEffect = {
+        target: 'Goblin1',
+        source: 'Clairvoyant Combatant',
+        effect: 'clairvoyant_combatant',
+      };
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'campaign' && prop === 'targetEffects') return [pactEffect];
+        if (key === 'Paladin1' && prop === 'activeBuffs') return [];
+        if (key === 'Paladin1' && prop === 'spell_slots_level_2') return 2;
+        return null;
+      });
+      const props = makeProps({
+        currentUses: 3,
+        maxUses: 3,
+        pactMagicRecharge: true,
+        pactSlotLevel: 2,
+        pactSlotsAvailable: true,
+      });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      const successEvent = new CustomEvent('save-result', {
+        detail: {
+          promptId: 'test-prompt-id',
+          roll: 10,
+          total: 15,
+          success: true,
+        },
+      });
+      window.dispatchEvent(successEvent);
+
+      await waitFor(() => {
+        const calls = useRuntimeState.setRuntimeValue.mock.calls;
+        const teCalls = calls.filter(
+          c => c[0] === 'campaign' && c[1] === 'targetEffects'
+        );
+        // Get the last call (from handleSaveResult filtering)
+        const lastTeCall = teCalls[teCalls.length - 1];
+        expect(lastTeCall[2]).not.toContainEqual(pactEffect);
       });
     });
   });

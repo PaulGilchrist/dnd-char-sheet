@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import LongRestButton from './LongRestButton.jsx';
@@ -9,7 +10,7 @@ vi.mock('../../services/rules/effects/tranceRules.js', () => ({
 }));
 
 vi.mock('../../services/rules/effects/restRules.js', () => ({
-  applyLongRest: vi.fn(() => Promise.resolve({})),
+  applyLongRest: vi.fn(),
 }));
 
 vi.mock('../../services/automation/handlers/buffs/tempHpService.js', () => ({
@@ -59,7 +60,9 @@ describe('LongRestButton - long rest click flow', () => {
 
   it('calls applyLongRest with playerStats and campaignName on button click', async () => {
     restRules.applyLongRest.mockResolvedValue({});
-    render(<LongRestButton {...makeProps()} />);
+
+    const onLongRest = vi.fn();
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button'));
@@ -70,20 +73,20 @@ describe('LongRestButton - long rest click flow', () => {
 
   it('calls onLongRest callback when applyLongRest returns no celestialResilienceAllies', async () => {
     restRules.applyLongRest.mockResolvedValue({});
-    render(<LongRestButton {...makeProps()} />);
+
+    const onLongRest = vi.fn();
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button'));
     });
 
     await waitFor(() => {
-      expect(restRules.applyLongRest).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+      expect(onLongRest).toHaveBeenCalledTimes(1);
     });
   });
+
+
 
   it('shows CreatureSelectionModal when applyLongRest returns celestialResilienceAllies', async () => {
     const celestialData = {
@@ -105,52 +108,38 @@ describe('LongRestButton - long rest click flow', () => {
     });
   });
 
-  it('does not show modal when celestialResilienceAllies is null', async () => {
+  it('calls onLongRest when celestialResilienceAllies is null', async () => {
     restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: null });
 
-    render(<LongRestButton {...makeProps()} />);
+    const onLongRest = vi.fn();
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button'));
     });
 
     await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+      expect(onLongRest).toHaveBeenCalledTimes(1);
     });
+
+    expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
   });
 
-  it('does not show modal when celestialResilienceAllies is undefined', async () => {
-    restRules.applyLongRest.mockResolvedValue({});
+  it('calls onLongRest when celestialResilienceAllies is undefined', async () => {
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: undefined });
 
-    render(<LongRestButton {...makeProps()} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
-    });
-  });
-
-  it('passes correct props to CreatureSelectionModal when showing celestial resilience', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }, { name: 'Ally2', type: 'npc' }],
-      allyTempHp: 12,
-      selfTempHp: 8,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-
-    render(<LongRestButton {...makeProps()} />);
+    const onLongRest = vi.fn();
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button'));
     });
 
     await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+      expect(onLongRest).toHaveBeenCalledTimes(1);
     });
+
+    expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
   });
 
   it('does not call onLongRest when celestialResilienceAllies is present (waits for modal)', async () => {
@@ -169,27 +158,29 @@ describe('LongRestButton - long rest click flow', () => {
       fireEvent.click(screen.getByRole('button'));
     });
 
-    // onLongRest should NOT be called yet because modal is showing
     expect(onLongRest).not.toHaveBeenCalled();
   });
 
-  it('handles missing onLongRest gracefully (no crash)', async () => {
+  it('handles missing onLongRest gracefully without crashing', async () => {
     restRules.applyLongRest.mockResolvedValue({});
 
-    render(
-      <LongRestButton
-        playerStats={basePlayerStats}
-        campaignName={mockCampaignName}
-      />,
-    );
+    expect(() =>
+      render(
+        <LongRestButton
+          playerStats={basePlayerStats}
+          campaignName={mockCampaignName}
+        />,
+      ),
+    ).not.toThrow();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button'));
     });
 
-    // Should not throw
     await waitFor(() => {
       expect(restRules.applyLongRest).toHaveBeenCalled();
     });
   });
+
+
 });

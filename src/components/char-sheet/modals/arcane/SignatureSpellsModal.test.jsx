@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SignatureSpellsModal from './SignatureSpellsModal.jsx';
@@ -33,16 +34,14 @@ const level3Options = [
   'Web',
 ];
 
-const baseProps = {
-  payload: { level3Options, selectedSpells: [] },
-  onConfirm: vi.fn(),
-  onClose: vi.fn(),
-};
-
-function makeProps(overrides) {
-  const { payload: overridePayload, ...overrideCallbacks } = overrides || {};
+function makeProps(overrides = {}) {
+  const { payload: overridePayload, ...overrideCallbacks } = overrides;
   return {
-    payload: { ...baseProps.payload, ...(overridePayload || {}) },
+    payload: {
+      level3Options: level3Options,
+      selectedSpells: [],
+      ...overridePayload,
+    },
     onConfirm: overrideCallbacks.onConfirm ?? vi.fn(),
     onClose: overrideCallbacks.onClose ?? vi.fn(),
   };
@@ -70,6 +69,7 @@ describe('SignatureSpellsModal', () => {
   it('populates each dropdown with all level 3 options and a default placeholder', () => {
     render(<SignatureSpellsModal {...makeProps()} />);
     const selects = document.querySelectorAll('select');
+    expect(selects).toHaveLength(2);
     selects.forEach((select) => {
       expect(select.querySelector('option[value=""]')).toHaveTextContent('-- Select a level 3 spell --');
       level3Options.forEach((spell) => {
@@ -85,6 +85,14 @@ describe('SignatureSpellsModal', () => {
     const selects = document.querySelectorAll('select');
     selects.forEach((select) => expect(select).toHaveClass('char-btn'));
     expect(screen.getByRole('button', { name: 'Confirm Selection' })).toHaveClass('char-btn');
+  });
+
+  it('renders label elements associated with each select dropdown', () => {
+    render(<SignatureSpellsModal {...makeProps()} />);
+    const labels = document.querySelectorAll('label');
+    expect(labels).toHaveLength(2);
+    expect(labels[0]).toHaveTextContent('Signature spell 1:');
+    expect(labels[1]).toHaveTextContent('Signature spell 2:');
   });
 
   // ── Button disabled state ──
@@ -114,6 +122,18 @@ describe('SignatureSpellsModal', () => {
     expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeDisabled();
   });
 
+  it('enables the confirm button after changing one dropdown to a different spell', () => {
+    render(<SignatureSpellsModal {...makeProps()} />);
+    const selects = document.querySelectorAll('select');
+    // Both identical → disabled
+    fireEvent.change(selects[0], { target: { value: 'Shield' } });
+    fireEvent.change(selects[1], { target: { value: 'Shield' } });
+    expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeDisabled();
+    // Change second to different → enabled
+    fireEvent.change(selects[1], { target: { value: 'Magic Missile' } });
+    expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeEnabled();
+  });
+
   it('allows re-selecting a different spell after an initial selection', () => {
     render(<SignatureSpellsModal {...makeProps()} />);
     const selects = document.querySelectorAll('select');
@@ -138,18 +158,26 @@ describe('SignatureSpellsModal', () => {
   });
 
   it('does not display current selection when selectedSpells is empty, undefined, or null', () => {
-    render(<SignatureSpellsModal {...makeProps()} />);
+    // empty array
+    render(<SignatureSpellsModal {...makeProps({ payload: { selectedSpells: [] } })} />);
     expect(screen.queryByText(/Current:/)).not.toBeInTheDocument();
-    const selects = document.querySelectorAll('select');
+    let selects = document.querySelectorAll('select');
     expect(selects[0].value).toBe('');
     expect(selects[1].value).toBe('');
-  });
 
-  it('does not display current selection when selectedSpells is undefined or null', () => {
+    // undefined
     render(<SignatureSpellsModal {...makeProps({ payload: { selectedSpells: undefined } })} />);
     expect(screen.queryByText(/Current:/)).not.toBeInTheDocument();
+    selects = document.querySelectorAll('select');
+    expect(selects[0].value).toBe('');
+    expect(selects[1].value).toBe('');
+
+    // null
     render(<SignatureSpellsModal {...makeProps({ payload: { selectedSpells: null } })} />);
     expect(screen.queryByText(/Current:/)).not.toBeInTheDocument();
+    selects = document.querySelectorAll('select');
+    expect(selects[0].value).toBe('');
+    expect(selects[1].value).toBe('');
   });
 
   it('handles partial pre-selected spells (fewer than 2)', () => {
@@ -159,12 +187,35 @@ describe('SignatureSpellsModal', () => {
     expect(selects[1].value).toBe('');
   });
 
-  it('handles null entries in selectedSpells', () => {
+  it('handles null entries in selectedSpells array', () => {
     render(<SignatureSpellsModal {...makeProps({ payload: { selectedSpells: [null, 'Shield'] } })} />);
     const selects = document.querySelectorAll('select');
     expect(selects[0].value).toBe('');
     expect(selects[1].value).toBe('Shield');
     expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeDisabled();
+  });
+
+  // ── Clear Selection button ──
+
+  it('shows a Clear Selection button when there are pre-selected spells', () => {
+    render(
+      <SignatureSpellsModal {...makeProps({ payload: { selectedSpells: ['Shield', 'Magic Missile'] } })} />,
+    );
+    expect(screen.getByRole('button', { name: 'Clear Selection' })).toBeInTheDocument();
+  });
+
+  it('does not show a Clear Selection button when no spells are pre-selected', () => {
+    render(<SignatureSpellsModal {...makeProps()} />);
+    expect(screen.queryByRole('button', { name: 'Clear Selection' })).not.toBeInTheDocument();
+  });
+
+  it('calls onConfirm with null,null when Clear Selection is clicked', () => {
+    const onConfirm = vi.fn();
+    render(
+      <SignatureSpellsModal {...makeProps({ payload: { selectedSpells: ['Shield', 'Magic Missile'] }, onConfirm })} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Selection' }));
+    expect(onConfirm).toHaveBeenCalledWith(null, null);
   });
 
   // ── Confirm interaction ──
@@ -195,6 +246,24 @@ describe('SignatureSpellsModal', () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  // ── Overlay interaction ──
+
+  it('calls onClose when the overlay background is clicked', () => {
+    const onClose = vi.fn();
+    render(<SignatureSpellsModal {...makeProps({ onClose })} />);
+    const overlay = document.querySelector('.popup-overlay');
+    fireEvent.click(overlay);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onClose when the inner modal is clicked', () => {
+    const onClose = vi.fn();
+    render(<SignatureSpellsModal {...makeProps({ onClose })} />);
+    const innerModal = document.querySelector('.popup-modal');
+    fireEvent.click(innerModal);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   // ── Edge cases ──
 
   it('renders selects with only the default option when level3Options is empty', () => {
@@ -222,5 +291,17 @@ describe('SignatureSpellsModal', () => {
     expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Selection' }));
     expect(onConfirm).toHaveBeenCalledWith('Unknown Spell', 'Another Unknown');
+  });
+
+  it('calls onConfirm with null,null on Clear Selection without re-rendering the component', () => {
+    const onConfirm = vi.fn();
+    render(
+      <SignatureSpellsModal {...makeProps({ payload: { selectedSpells: ['Shield', 'Magic Missile'] }, onConfirm })} />,
+    );
+    // Clear the selection — onConfirm is called but component does not re-render
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Selection' }));
+    expect(onConfirm).toHaveBeenCalledWith(null, null);
+    // Internal state still holds the original values since there's no re-render
+    expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeEnabled();
   });
 });

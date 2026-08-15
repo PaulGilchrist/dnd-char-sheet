@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BlindnessDeafnessModal from './BlindnessDeafnessModal.jsx';
@@ -47,7 +48,7 @@ vi.mock('./shared/AreaEffectTargetModalBase.jsx', () => {
             };
 
             return (
-                <div data-testid="area-effect-modal-base" className="sp-overlay" onClick={onClose}>
+                <div data-testid="area-effect-base" className="sp-overlay" onClick={onClose}>
                     <div className="sp-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="sp-header">
                             <i className={icon}></i> {featureName}
@@ -109,9 +110,8 @@ vi.mock('../../../services/automation/handlers/spells/blindnessDeafnessHandler.j
 
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
 import * as expirations from '../../../services/rules/effects/expirations.js';
-import * as diceRoller from '../../../services/dice/diceRoller.js';
-
 import * as logService from '../../../services/ui/logService.js';
+import * as savePromptService from '../../../services/combat/conditions/savePromptService.js';
 import utils from '../../../services/ui/utils.js';
 import AreaEffectTargetModalBase from './shared/AreaEffectTargetModalBase.jsx';
 
@@ -138,12 +138,11 @@ function makeProps(overrides) {
     return { ...baseProps, ...(overrides || {}) };
 }
 
-// ── HandleSaveResultOverride ──
+// ── handleSaveResultOverride ──
 
 describe('BlindnessDeafnessModal save result handling', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        diceRoller.rollD20.mockReturnValue(15);
         utils.guid.mockReturnValue('test-guid-123');
         runtimeState.getRuntimeValue.mockReturnValue(null);
         mockState.selectedEffect = null;
@@ -152,35 +151,55 @@ describe('BlindnessDeafnessModal save result handling', () => {
         mockState.pendingPrompts = [];
     });
 
+    function getSaveResultFn() {
+        const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1];
+        return lastCall?.[0]?.handleSaveResultOverride;
+    }
+
+    function makeCtx(overrides = {}) {
+        return {
+            selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
+            processing: true,
+            combatSummary: baseCombatSummary,
+            results: [],
+            pendingPrompts: [],
+            allResolved: false,
+            selected: new Set(),
+            eligibleTargets: [],
+            toggleTarget: vi.fn(),
+            handleApply: vi.fn(),
+            setProcessing: vi.fn(),
+            setResults: vi.fn(),
+            setPendingPrompts: vi.fn(),
+            ...overrides,
+        };
+    }
+
     describe('handleSaveResultOverride', () => {
-        it('applies condition when player save fails', async () => {
+        it('applies condition, logs, and updates state when player save fails', async () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
+
+            // Select an effect via the real setter so the component's
+            // useCallback closure captures a non-null selectedEffect
             await act(async () => {
                 if (mockState.setSelectedEffect) {
                     mockState.setSelectedEffect({ key: 'blinded', label: 'Blinded', condition: 'blinded' });
                 }
             });
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const saveResultFn = lastCall.handleSaveResultOverride;
 
-            const setResults = vi.fn();
-            const setPendingPrompts = vi.fn();
+            const saveResultFn = getSaveResultFn();
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: true,
-                combatSummary: baseCombatSummary,
+            let resultsAccum = [];
+            let pendingAccum = [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }];
+            const setResults = vi.fn((fn) => { resultsAccum = fn(resultsAccum); });
+            const setPendingPrompts = vi.fn((fn) => { pendingAccum = fn(pendingAccum); });
+
+            const ctx = makeCtx({
                 results: [],
                 pendingPrompts: [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
                 setResults,
                 setPendingPrompts,
-            };
+            });
 
             const event = {
                 detail: {
@@ -199,37 +218,38 @@ describe('BlindnessDeafnessModal save result handling', () => {
             expect(expirations.addExpiration).toHaveBeenCalled();
             expect(logService.addEntry).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.objectContaining({
-                    type: 'condition',
-                    action: 'applied',
-                    characterName: 'Elf Mage',
-                })
+                expect.objectContaining({ type: 'condition', action: 'applied', characterName: 'Elf Mage' })
             );
+            expect(logService.addEntry).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({ type: 'roll', targetName: 'Elf Mage', saveDc: 14, saveType: 'CON' })
+            );
+            expect(resultsAccum).toHaveLength(1);
+            expect(resultsAccum[0]).toEqual({ targetName: 'Elf Mage', success: false, roll: 3, total: 4, saveBonus: 1 });
+            expect(pendingAccum).toHaveLength(0);
         });
 
-        it('does not apply condition when player save succeeds', () => {
+        it('does not apply condition when player save succeeds', async () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const saveResultFn = lastCall.handleSaveResultOverride;
 
-            const setResults = vi.fn();
-            const setPendingPrompts = vi.fn();
+            await act(async () => {
+                if (mockState.setSelectedEffect) {
+                    mockState.setSelectedEffect({ key: 'blinded', label: 'Blinded', condition: 'blinded' });
+                }
+            });
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: true,
-                combatSummary: baseCombatSummary,
-                results: [],
+            const saveResultFn = getSaveResultFn();
+
+            let resultsAccum = [];
+            let pendingAccum = [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }];
+            const setResults = vi.fn((fn) => { resultsAccum = fn(resultsAccum); });
+            const setPendingPrompts = vi.fn((fn) => { pendingAccum = fn(pendingAccum); });
+
+            const ctx = makeCtx({
                 pendingPrompts: [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
                 setResults,
                 setPendingPrompts,
-            };
+            });
 
             const event = {
                 detail: {
@@ -246,162 +266,26 @@ describe('BlindnessDeafnessModal save result handling', () => {
             });
 
             expect(expirations.addExpiration).not.toHaveBeenCalled();
-        });
-
-        it('logs save result for player save', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const saveResultFn = lastCall.handleSaveResultOverride;
-
-            const setResults = vi.fn();
-            const setPendingPrompts = vi.fn();
-
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: true,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults,
-                setPendingPrompts,
-            };
-
-            const event = {
-                detail: {
-                    promptId: 'test-guid-123',
-                    success: false,
-                    roll: 3,
-                    total: 4,
-                    saveBonus: 1,
-                },
-            };
-
-            act(() => {
-                saveResultFn(event, ctx);
-            });
-
-            expect(logService.addEntry).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.objectContaining({
-                    type: 'roll',
-                    targetName: 'Elf Mage',
-                    saveDc: 14,
-                    saveType: 'CON',
-                })
-            );
-        });
-
-        it('updates results with player save outcome', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const saveResultFn = lastCall.handleSaveResultOverride;
-
-            const setResults = vi.fn();
-            const setPendingPrompts = vi.fn();
-
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: true,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults,
-                setPendingPrompts,
-            };
-
-            const event = {
-                detail: {
-                    promptId: 'test-guid-123',
-                    success: false,
-                    roll: 3,
-                    total: 4,
-                    saveBonus: 1,
-                },
-            };
-
-            act(() => {
-                saveResultFn(event, ctx);
-            });
-
-            expect(setResults).toHaveBeenCalledWith(expect.any(Function));
-        });
-
-        it('removes pending prompt after save result', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const saveResultFn = lastCall.handleSaveResultOverride;
-
-            const setResults = vi.fn();
-            const setPendingPrompts = vi.fn();
-
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: true,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults,
-                setPendingPrompts,
-            };
-
-            const event = {
-                detail: {
-                    promptId: 'test-guid-123',
-                    success: false,
-                    roll: 3,
-                    total: 4,
-                    saveBonus: 1,
-                },
-            };
-
-            act(() => {
-                saveResultFn(event, ctx);
-            });
-
-            expect(setPendingPrompts).toHaveBeenCalledWith(expect.any(Function));
+            expect(savePromptService.sendSaveResult).not.toHaveBeenCalled();
+            expect(resultsAccum).toHaveLength(1);
+            expect(resultsAccum[0].success).toBe(true);
+            expect(pendingAccum).toHaveLength(0);
         });
 
         it('does nothing when promptId does not match any pending prompt', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const saveResultFn = lastCall.handleSaveResultOverride;
+            const saveResultFn = getSaveResultFn();
 
-            const setResults = vi.fn();
-            const setPendingPrompts = vi.fn();
+            let resultsAccum = [];
+            let pendingAccum = [{ promptId: 'other-id', targetName: 'Elf Mage' }];
+            const setResults = vi.fn((fn) => { resultsAccum = fn(resultsAccum); });
+            const setPendingPrompts = vi.fn((fn) => { pendingAccum = fn(pendingAccum); });
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: true,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [{ promptId: 'other-prompt-id', targetName: 'Elf Mage' }],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
+            const ctx = makeCtx({
+                pendingPrompts: [{ promptId: 'other-id', targetName: 'Elf Mage' }],
                 setResults,
                 setPendingPrompts,
-            };
+            });
 
             const event = {
                 detail: {
@@ -417,101 +301,92 @@ describe('BlindnessDeafnessModal save result handling', () => {
                 saveResultFn(event, ctx);
             });
 
-            expect(setResults).not.toHaveBeenCalled();
-            expect(setPendingPrompts).not.toHaveBeenCalled();
+            expect(resultsAccum).toHaveLength(0);
+            expect(pendingAccum).toHaveLength(1);
         });
 
         it('does nothing when event has no detail', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const saveResultFn = lastCall.handleSaveResultOverride;
+            const saveResultFn = getSaveResultFn();
 
-            const setResults = vi.fn();
-            const setPendingPrompts = vi.fn();
-
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: true,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults,
-                setPendingPrompts,
-            };
-
+            const ctx = makeCtx();
             act(() => {
                 saveResultFn({ detail: null }, ctx);
             });
 
-            expect(setResults).not.toHaveBeenCalled();
+            expect(expirations.addExpiration).not.toHaveBeenCalled();
         });
 
         it('does nothing when event detail has no promptId', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const saveResultFn = lastCall.handleSaveResultOverride;
+            const saveResultFn = getSaveResultFn();
 
-            const setResults = vi.fn();
-            const setPendingPrompts = vi.fn();
-
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: true,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults,
-                setPendingPrompts,
-            };
-
+            const ctx = makeCtx();
             act(() => {
                 saveResultFn({ detail: {} }, ctx);
             });
 
-            expect(setResults).not.toHaveBeenCalled();
+            expect(expirations.addExpiration).not.toHaveBeenCalled();
         });
 
-        it('calls setResults and setPendingPrompts with callbacks that execute correctly', () => {
+        it('uses fallback values when detail fields are missing', async () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const saveResultFn = lastCall.handleSaveResultOverride;
+
+            await act(async () => {
+                if (mockState.setSelectedEffect) {
+                    mockState.setSelectedEffect({ key: 'blinded', label: 'Blinded', condition: 'blinded' });
+                }
+            });
+
+            const saveResultFn = getSaveResultFn();
 
             let resultsAccum = [];
             let pendingAccum = [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }];
-            const setResults = vi.fn((fn) => {
-                resultsAccum = fn(resultsAccum);
-            });
-            const setPendingPrompts = vi.fn((fn) => {
-                pendingAccum = fn(pendingAccum);
-            });
+            const setResults = vi.fn((fn) => { resultsAccum = fn(resultsAccum); });
+            const setPendingPrompts = vi.fn((fn) => { pendingAccum = fn(pendingAccum); });
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: true,
-                combatSummary: baseCombatSummary,
-                results: [],
+            const ctx = makeCtx({
                 pendingPrompts: [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
                 setResults,
                 setPendingPrompts,
+            });
+
+            const event = {
+                detail: {
+                    promptId: 'test-guid-123',
+                    success: false,
+                },
             };
+
+            act(() => {
+                saveResultFn(event, ctx);
+            });
+
+            expect(resultsAccum[0]).toEqual({ targetName: 'Elf Mage', success: false, roll: 0, total: 0, saveBonus: 0 });
+            expect(pendingAccum).toHaveLength(0);
+        });
+
+        it('logs the save entry with correct formula including bonus', async () => {
+            render(<BlindnessDeafnessModal {...makeProps()} />);
+
+            await act(async () => {
+                if (mockState.setSelectedEffect) {
+                    mockState.setSelectedEffect({ key: 'blinded', label: 'Blinded', condition: 'blinded' });
+                }
+            });
+
+            const saveResultFn = getSaveResultFn();
+
+            let resultsAccum = [];
+            let pendingAccum = [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }];
+            const setResults = vi.fn((fn) => { resultsAccum = fn(resultsAccum); });
+            const setPendingPrompts = vi.fn((fn) => { pendingAccum = fn(pendingAccum); });
+
+            const ctx = makeCtx({
+                pendingPrompts: [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }],
+                setResults,
+                setPendingPrompts,
+            });
 
             const event = {
                 detail: {
@@ -527,12 +402,52 @@ describe('BlindnessDeafnessModal save result handling', () => {
                 saveResultFn(event, ctx);
             });
 
-            expect(setResults).toHaveBeenCalledWith(expect.any(Function));
-            expect(setPendingPrompts).toHaveBeenCalledWith(expect.any(Function));
-            expect(resultsAccum).toHaveLength(1);
-            expect(resultsAccum[0].targetName).toBe('Elf Mage');
-            expect(resultsAccum[0].success).toBe(false);
-            expect(pendingAccum).toHaveLength(0);
+            const rollLogCall = logService.addEntry.mock.calls.find(
+                (call) => call[1]?.type === 'roll'
+            );
+            expect(rollLogCall[1].formula).toBe('1d20+1');
+        });
+
+        it('logs the save entry with correct formula when bonus is zero', async () => {
+            render(<BlindnessDeafnessModal {...makeProps()} />);
+
+            await act(async () => {
+                if (mockState.setSelectedEffect) {
+                    mockState.setSelectedEffect({ key: 'blinded', label: 'Blinded', condition: 'blinded' });
+                }
+            });
+
+            const saveResultFn = getSaveResultFn();
+
+            let resultsAccum = [];
+            let pendingAccum = [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }];
+            const setResults = vi.fn((fn) => { resultsAccum = fn(resultsAccum); });
+            const setPendingPrompts = vi.fn((fn) => { pendingAccum = fn(pendingAccum); });
+
+            const ctx = makeCtx({
+                pendingPrompts: [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }],
+                setResults,
+                setPendingPrompts,
+            });
+
+            const event = {
+                detail: {
+                    promptId: 'test-guid-123',
+                    success: false,
+                    roll: 14,
+                    total: 14,
+                    saveBonus: 0,
+                },
+            };
+
+            act(() => {
+                saveResultFn(event, ctx);
+            });
+
+            const rollLogCall = logService.addEntry.mock.calls.find(
+                (call) => call[1]?.type === 'roll'
+            );
+            expect(rollLogCall[1].formula).toBe('1d20');
         });
     });
 });

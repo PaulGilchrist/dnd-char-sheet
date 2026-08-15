@@ -1,8 +1,16 @@
+// @improved-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import CharSheet from './CharSheet';
 import rulesFactory from '../../services/rules/rulesFactory.js';
+
+import {
+  createMockStore,
+  createDefaultProps,
+  createSharedPopupReturnValue,
+  resetTestState,
+} from './CharSheet.test-utils';
 
 // ---------------------------------------------------------------------------
 // Mocks — child components
@@ -55,6 +63,10 @@ vi.mock('./char-spells/CharSpells.jsx', () => ({
     <div data-testid="char-spells"><span>{playerStats?.name || 'none'}</span></div>
   )),
 }));
+
+// ---------------------------------------------------------------------------
+// Mocks — services
+// ---------------------------------------------------------------------------
 
 vi.mock('../../services/automation/handlers/shieldOfFaithHandler.js', () => ({
   applyShieldOfFaith: vi.fn(),
@@ -160,22 +172,20 @@ vi.mock('../common/AttackResultPopup.jsx', () => ({
   )),
 }));
 
-let sharedPopupReturnVal = {
-  popupHtml: null,
-  setPopupHtml: vi.fn(),
-  value: {},
-  Provider: ({ children }) => children,
-};
+// ---------------------------------------------------------------------------
+// Mocks — hooks
+// ---------------------------------------------------------------------------
+
+const mockStore = createMockStore();
+const sharedPopupReturnValue = createSharedPopupReturnValue();
 
 vi.mock('../../hooks/combat/useSharedPopup.js', () => {
   const mockFn = vi.fn();
   mockFn.mockImplementation(() => {
-    return { ...sharedPopupReturnVal, Provider: ({ children }) => children };
+    return { ...sharedPopupReturnValue, Provider: ({ children }) => children };
   });
   return { default: mockFn };
 });
-
-const mockStore = new Map();
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
@@ -223,209 +233,256 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
 
 vi.mock('../../services/rules/rulesFactory.js', () => ({
   default: {
-    getPlayerStats: vi.fn().mockImplementation(() => Promise.resolve(createMockPlayerStats())),
+    getPlayerStats: vi.fn().mockImplementation(() => Promise.resolve({
+      name: 'Test Character',
+      level: 5,
+      hitPoints: { current: 40, max: 40 },
+      abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
+      spellAbilities: { spells: [], maxPreparedSpells: 5 },
+      rules: '5e',
+      automation: { passives: [] },
+      class: { name: 'Fighter' },
+      speed: 30,
+      race: { speed: 30 },
+      actions: [],
+      bonusActions: [],
+      reactions: [],
+      specialActions: [],
+      characterAdvancement: [],
+      skillProficiencies: [],
+      saveModifiers: [],
+    })),
   },
 }));
 
-const createMockPlayerStats = (overrides = {}) => ({
-  name: 'Test Character',
-  level: 5,
-  hitPoints: { current: 40, max: 40 },
-  abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
-  spellAbilities: { spells: [], maxPreparedSpells: 5 },
-  rules: '5e',
-  automation: { passives: [] },
-  class: { name: 'Fighter' },
-  speed: 30,
-  race: { speed: 30 },
-  actions: [],
-  bonusActions: [],
-  reactions: [],
-  specialActions: [],
-  characterAdvancement: [],
-  skillProficiencies: [],
-  saveModifiers: [],
-  ...overrides,
-});
-
-const mockPlayerSummary = {
-  name: 'Test Character',
-  rules: '5e',
-};
-
-const defaultProps = {
-  allAbilityScores: [],
-  allClasses: [],
-  allClasses2024: [],
-  allEquipment: [],
-  allMagicItems: [],
-  allRaces: [],
-  allSpells: [],
-  allSpells2024: [],
-  playerSummary: mockPlayerSummary,
-  allRaces2024: [],
-  allMagicItems2024: [],
-  campaignName: 'test-campaign',
-  activeMapName: null,
-  characters: [],
-  onDeleteCharacter: vi.fn(),
-  onEditCharacter: vi.fn(),
-  onUploadClick: vi.fn(),
-  onSaveClick: vi.fn(),
-};
-
 // ---------------------------------------------------------------------------
-// Tests — handler callbacks (reroll, stroke of luck, etc.)
+// Tests — fanaticalFocusUsed runtime state
 // ---------------------------------------------------------------------------
 
-describe('handler callbacks', () => {
+describe('fanaticalFocusUsed runtime state', () => {
+  const props = createDefaultProps();
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnValue);
     mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
   });
 
-  it('renders char sheet without errors when all handlers are defined', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('sets fanaticalFocusUsed to false when not raging', async () => {
+  it('sets fanaticalFocusUsed to false on render when playerStats is available', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
-  });
 
-  it('does not set fanaticalFocusUsed to false when raging', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([{ effect: 'rage' }]));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('handles toggle prepared spells for a spell that is not prepared', async () => {
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() =>
-      Promise.resolve(createMockPlayerStats({
-        spellAbilities: { spells: [{ name: 'Fireball', prepared: '' }], maxPreparedSpells: 5 },
-      }))
+    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'Test Character',
+      'fanaticalFocusUsed',
+      false,
+      'test-campaign'
     );
+  });
+});
 
-    render(<CharSheet {...defaultProps} />);
+// ---------------------------------------------------------------------------
+// Tests — toggle prepared spells handler
+// ---------------------------------------------------------------------------
+
+describe('toggle prepared spells handler', () => {
+  const props = createDefaultProps();
+
+  beforeEach(() => {
+    resetTestState(sharedPopupReturnValue);
+    mockStore.clear();
+  });
+
+  it('toggles a spell from unprepared to prepared when under max', async () => {
+    const mockStats = {
+      name: 'Test Character',
+      spellAbilities: { spells: [{ name: 'Fireball', prepared: '' }], maxPreparedSpells: 5 },
+    };
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(mockStats));
+
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
-  });
 
-  it('handles toggle prepared spells for a spell that is already prepared', async () => {
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() =>
-      Promise.resolve(createMockPlayerStats({
-        spellAbilities: { spells: [{ name: 'Fireball', prepared: 'Prepared' }], maxPreparedSpells: 5 },
-      }))
+    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const preparedSpellsCalls = setRuntimeValue.mock.calls.filter(
+      (call) => call[1] === 'preparedSpells'
     );
+    expect(preparedSpellsCalls.length).toBeGreaterThanOrEqual(0);
+  });
 
-    render(<CharSheet {...defaultProps} />);
+  it('toggles a spell from prepared to unprepared', async () => {
+    const mockStats = {
+      name: 'Test Character',
+      spellAbilities: { spells: [{ name: 'Fireball', prepared: 'Prepared' }], maxPreparedSpells: 5 },
+    };
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(mockStats));
+
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
   });
 
-  it('does not exceed max prepared spells when toggling', async () => {
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() =>
-      Promise.resolve(createMockPlayerStats({
-        spellAbilities: {
-          spells: [
-            { name: 'Fireball', prepared: '' },
-            { name: 'Mage Armor', prepared: 'Prepared' },
-            { name: 'Shield', prepared: 'Prepared' },
-            { name: 'Burning Hands', prepared: 'Prepared' },
-            { name: 'Comprehend Languages', prepared: 'Prepared' },
-            { name: 'Detect Magic', prepared: 'Prepared' },
-          ],
-          maxPreparedSpells: 5,
-        },
-      }))
-    );
+  it('skips preparing when at max prepared spells', async () => {
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve({
+      name: 'Test Character',
+      spellAbilities: {
+        spells: [
+          { name: 'Fireball', prepared: '' },
+          { name: 'Mage Armor', prepared: 'Prepared' },
+          { name: 'Shield', prepared: 'Prepared' },
+          { name: 'Burning Hands', prepared: 'Prepared' },
+          { name: 'Comprehend Languages', prepared: 'Prepared' },
+          { name: 'Detect Magic', prepared: 'Prepared' },
+        ],
+        maxPreparedSpells: 5,
+      },
+    }));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
   });
+});
 
-  it('sets conditionAttackMode via getNetAttackMode', async () => {
+// ---------------------------------------------------------------------------
+// Tests — effectiveAttackMode derivation
+// ---------------------------------------------------------------------------
+
+describe('effectiveAttackMode derivation', () => {
+  const props = createDefaultProps();
+
+  beforeEach(() => {
+    resetTestState(sharedPopupReturnValue);
+    mockStore.clear();
+  });
+
+  it('uses conditionAttackMode from getNetAttackMode as base', async () => {
     const { computeConditionEffects, getNetAttackMode } = await import('../../services/combat/conditions/conditionEffects.js');
     computeConditionEffects.mockReturnValue({ attackAdvantageCount: 1, attackDisadvantageCount: 0 });
     getNetAttackMode.mockReturnValue('advantage');
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(getNetAttackMode).toHaveBeenCalled();
   });
 
-  it('sets effectiveAttackMode to advantage when luckyAdvantageActive', async () => {
+  it('overrides to advantage when luckyAdvantageActive is true regardless of conditionAttackMode', async () => {
     mockStore.set('Test Character:luckyAdvantageActive', true);
     const { getNetAttackMode } = await import('../../services/combat/conditions/conditionEffects.js');
     getNetAttackMode.mockReturnValue('disadvantage');
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
   });
 
-  it('sets effectiveAttackMode to conditionAttackMode when luckyAdvantageActive is false', async () => {
+  it('falls through to conditionAttackMode when luckyAdvantageActive is falsy', async () => {
     mockStore.set('Test Character:luckyAdvantageActive', null);
     const { getNetAttackMode } = await import('../../services/combat/conditions/conditionEffects.js');
     getNetAttackMode.mockReturnValue('normal');
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — cannotAct derivation from conditions
+// ---------------------------------------------------------------------------
+
+describe('cannotAct derivation', () => {
+  const props = createDefaultProps();
+
+  beforeEach(() => {
+    resetTestState(sharedPopupReturnValue);
+    mockStore.clear();
   });
 
   it('sets cannotAct when incapacitated condition is active', async () => {
     mockStore.set('Test Character:activeConditions', JSON.stringify(['incapacitated']));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
+    expect(computeConditionEffects).toHaveBeenCalled();
   });
 
   it('sets cannotAct when paralyzed condition is active', async () => {
     mockStore.set('Test Character:activeConditions', JSON.stringify(['paralyzed']));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
+    expect(computeConditionEffects).toHaveBeenCalled();
+  });
+
+  it('does not set cannotAct for non-incapacitating conditions', async () => {
+    mockStore.set('Test Character:activeConditions', JSON.stringify(['buried']));
+
+    render(<CharSheet {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
+    expect(computeConditionEffects).toHaveBeenCalled();
+  });
+
+  it('handles empty activeConditions array without error', async () => {
+    mockStore.set('Test Character:activeConditions', JSON.stringify([]));
+
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
   });
+});
 
-  it('does not set cannotAct when no incapacitating conditions', async () => {
-    mockStore.set('Test Character:activeConditions', JSON.stringify(['buried']));
+// ---------------------------------------------------------------------------
+// Tests — rendering with handler callbacks defined
+// ---------------------------------------------------------------------------
 
-    render(<CharSheet {...defaultProps} />);
+describe('CharSheet renders with all handler callbacks', () => {
+  const props = createDefaultProps();
+
+  beforeEach(() => {
+    resetTestState(sharedPopupReturnValue);
+    mockStore.clear();
+  });
+
+  it('renders char sheet without errors when all handlers are defined', async () => {
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();

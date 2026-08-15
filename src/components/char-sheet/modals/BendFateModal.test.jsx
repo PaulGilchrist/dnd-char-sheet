@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BendFateModal from './BendFateModal.jsx';
@@ -32,6 +33,7 @@ const baseLastAttack = {
   d20: 14,
   bonus: 6,
   targetAc: 17,
+  effectiveAc: null,
   saveDc: 13,
   saveType: 'Dexterity',
   saveResult: 'success',
@@ -73,12 +75,16 @@ function renderModal(props) {
   return render(<BendFateModal {...props} />);
 }
 
+function bodyText(props) {
+  renderModal(props);
+  return document.querySelector('.sp-body').textContent;
+}
+
 // ── Tests ──
 
 describe('BendFateModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
   });
 
   // ── Initial render / display ──
@@ -106,26 +112,20 @@ describe('BendFateModal', () => {
       expect(screen.getByText('Attack by Goblin1')).toBeInTheDocument();
     });
 
-    it('renders original roll calculation', () => {
-      renderModal(baseProps);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Original roll: d20(14) + 6 = 20');
+    it('renders original roll calculation with numeric bonus', () => {
+      expect(bodyText(baseProps)).toContain('Original roll: d20(14) + 6 = 20');
     });
 
     it('renders hit status line for attack type', () => {
-      renderModal(baseProps);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('vs AC 17 → Hit');
+      expect(bodyText(baseProps)).toContain('vs AC 17 → Hit');
     });
 
     it('renders d4 roll result', () => {
-      renderModal(baseProps);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Rolled 1d4:');
-      expect(body.textContent).toContain('3');
+      expect(bodyText(baseProps)).toContain('Rolled 1d4:');
+      expect(bodyText(baseProps)).toContain('3');
     });
 
-    it('renders "Choose how to apply the modifier" text', () => {
+    it('renders choice prompt text', () => {
       renderModal(baseProps);
       expect(screen.getByText('Choose how to apply the modifier:')).toBeInTheDocument();
     });
@@ -168,9 +168,7 @@ describe('BendFateModal', () => {
         saveStatus: 'Failure',
         eventLabel: 'Saving Throw by Goblin1',
       });
-      renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('vs DC 13 → Failure');
+      expect(bodyText(props)).toContain('vs DC 13 → Failure');
     });
 
     it('renders save status with custom save type', () => {
@@ -181,101 +179,140 @@ describe('BendFateModal', () => {
         eventLabel: 'CON by Goblin1',
         lastAttack: { ...baseLastAttack, saveType: 'Constitution' },
       });
-      renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('vs DC 13 → Success');
+      expect(bodyText(props)).toContain('vs DC 13 → Success');
     });
 
-    it('does not render hit status when isAttack is false', () => {
-      const props = makeProps({
-        isAttack: false,
-        isSave: false,
-        hitStatus: null,
-      });
+    it('omits hit status when isAttack is false', () => {
+      const props = makeProps({ isAttack: false, isSave: false, hitStatus: null });
       renderModal(props);
       expect(screen.queryByText(/vs AC/)).not.toBeInTheDocument();
     });
 
-    it('does not render save status when isSave is false', () => {
-      const props = makeProps({
-        isAttack: true,
-        isSave: false,
-        saveStatus: null,
-      });
+    it('omits save status when isSave is false', () => {
+      const props = makeProps({ isAttack: true, isSave: false, saveStatus: null });
       renderModal(props);
       expect(screen.queryByText(/vs DC/)).not.toBeInTheDocument();
     });
 
     it('hides hit status when hitStatus is null', () => {
-      const props = makeProps({
-        hitStatus: null,
-      });
-      renderModal(props);
+      renderModal(makeProps({ hitStatus: null }));
       expect(screen.queryByText(/vs AC/)).not.toBeInTheDocument();
     });
 
     it('hides save status when saveStatus is null', () => {
-      const props = makeProps({
-        isSave: true,
-        saveStatus: null,
-      });
-      renderModal(props);
+      renderModal(makeProps({ isSave: true, saveStatus: null }));
       expect(screen.queryByText(/vs DC/)).not.toBeInTheDocument();
     });
   });
 
-  // ── Bonus value computation edge cases ──
+  // ── Bonus value computation ──
 
   describe('bonus value computation', () => {
-    it('handles bonus as object with modifier', () => {
+    it('extracts modifier from bonus object', () => {
       const props = makeProps({
         lastAttack: { ...baseLastAttack, bonus: { modifier: 5, total: 8 } },
       });
-      renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Original roll: d20(14) + 5 = 19');
+      expect(bodyText(props)).toContain('Original roll: d20(14) + 5 = 19');
     });
 
-    it('handles bonus as object with total', () => {
+    it('falls back to total when bonus object lacks modifier', () => {
       const props = makeProps({
         lastAttack: { ...baseLastAttack, bonus: { total: 7 } },
       });
-      renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Original roll: d20(14) + 7 = 21');
+      expect(bodyText(props)).toContain('Original roll: d20(14) + 7 = 21');
     });
 
-    it('handles bonus as object with neither modifier nor total', () => {
+    it('defaults to 0 when bonus object has neither modifier nor total', () => {
       const props = makeProps({
         lastAttack: { ...baseLastAttack, bonus: {} },
       });
-      renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Original roll: d20(14) + 0 = 14');
+      expect(bodyText(props)).toContain('Original roll: d20(14) + 0 = 14');
     });
 
-    it('handles bonus as a number', () => {
+    it('uses bonus number directly when not an object', () => {
       const props = makeProps({
         lastAttack: { ...baseLastAttack, bonus: 4 },
       });
-      renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Original roll: d20(14) + 4 = 18');
+      expect(bodyText(props)).toContain('Original roll: d20(14) + 4 = 18');
     });
 
     it('handles missing d20 in lastAttack', () => {
       const props = makeProps({
         lastAttack: { ...baseLastAttack, d20: undefined },
       });
-      renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Original roll: d20() + 6 = 6');
+      expect(bodyText(props)).toContain('Original roll: d20() + 6 = 6');
     });
   });
 
-  // ── Bonus/Penalty buttons ──
+  // ── AC and DC display variations ──
 
-  describe('bonus and penalty buttons', () => {
+  describe('AC and DC display', () => {
+    it('uses targetAc for AC display', () => {
+      const props = makeProps({
+        lastAttack: { ...baseLastAttack, targetAc: 18, effectiveAc: null },
+      });
+      renderModal(props);
+      expect(screen.getByText(/vs AC 18/)).toBeInTheDocument();
+    });
+
+    it('falls back to effectiveAc when targetAc is missing', () => {
+      const props = makeProps({
+        lastAttack: { ...baseLastAttack, targetAc: null, effectiveAc: 16 },
+      });
+      renderModal(props);
+      expect(screen.getByText(/vs AC 16/)).toBeInTheDocument();
+    });
+
+    it('shows em dash when both AC values are missing', () => {
+      const props = makeProps({
+        lastAttack: { ...baseLastAttack, targetAc: null, effectiveAc: null },
+      });
+      renderModal(props);
+      expect(screen.getByText(/vs AC —/)).toBeInTheDocument();
+    });
+
+    it('uses saveDc for save DC display', () => {
+      const props = makeProps({
+        isSave: true,
+        saveStatus: 'Failure',
+        lastAttack: { ...baseLastAttack, saveDc: 15 },
+      });
+      renderModal(props);
+      expect(screen.getByText(/vs DC 15/)).toBeInTheDocument();
+    });
+
+    it('shows em dash when saveDc is missing', () => {
+      const props = makeProps({
+        isSave: true,
+        saveStatus: 'Failure',
+        lastAttack: { ...baseLastAttack, saveDc: null },
+      });
+      renderModal(props);
+      expect(screen.getByText(/vs DC —/)).toBeInTheDocument();
+    });
+  });
+
+  // ── d4 roll value variations ──
+
+  describe('d4 roll value variations', () => {
+    it('renders buttons with d4 roll of 1', () => {
+      const props = makeProps({ d4Roll: { total: 1 } });
+      renderModal(props);
+      expect(screen.getByRole('button', { name: 'Apply +1 (Bonus)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Apply -1 (Penalty)' })).toBeInTheDocument();
+    });
+
+    it('renders buttons with d4 roll of 4', () => {
+      const props = makeProps({ d4Roll: { total: 4 } });
+      renderModal(props);
+      expect(screen.getByRole('button', { name: 'Apply +4 (Bonus)' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Apply -4 (Penalty)' })).toBeInTheDocument();
+    });
+  });
+
+  // ── Bonus/Penalty button interactions ──
+
+  describe('bonus and penalty button interactions', () => {
     it('calls applyBendFateChoice with "bonus" mode when bonus button is clicked', async () => {
       reactionBonusHandler.applyBendFateChoice.mockResolvedValue({
         type: 'popup',
@@ -291,7 +328,7 @@ describe('BendFateModal', () => {
         expect(reactionBonusHandler.applyBendFateChoice).toHaveBeenCalledWith(
           baseAction,
           basePlayerStats,
-          'test-campaign',
+          baseProps.campaignName,
           baseD4Roll,
           baseLastAttack,
           'bonus',
@@ -314,7 +351,7 @@ describe('BendFateModal', () => {
         expect(reactionBonusHandler.applyBendFateChoice).toHaveBeenCalledWith(
           baseAction,
           basePlayerStats,
-          'test-campaign',
+          baseProps.campaignName,
           baseD4Roll,
           baseLastAttack,
           'penalty',
@@ -322,27 +359,17 @@ describe('BendFateModal', () => {
       });
     });
 
-    it('does not call applyBendFateChoice when cancel is clicked', async () => {
+    it('does not call applyBendFateChoice when cancel is clicked', () => {
       renderModal(baseProps);
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(reactionBonusHandler.applyBendFateChoice).not.toHaveBeenCalled();
     });
   });
 
-  // ── Cancel button ──
-
-  describe('cancel button', () => {
-    it('calls onClose when cancel is clicked', () => {
-      renderModal(baseProps);
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(baseProps.onClose).toHaveBeenCalledTimes(1);
-    });
-  });
-
   // ── Result view ──
 
   describe('result view', () => {
-    it('shows result view after applyBendFateChoice returns a result', async () => {
+    it('shows result view after applyBendFateChoice resolves', async () => {
       reactionBonusHandler.applyBendFateChoice.mockResolvedValue({
         type: 'popup',
         payload: {
@@ -390,7 +417,7 @@ describe('BendFateModal', () => {
       });
     });
 
-    it('hides selection buttons after applying', async () => {
+    it('hides selection buttons and choice prompt after applying', async () => {
       reactionBonusHandler.applyBendFateChoice.mockResolvedValue({
         type: 'popup',
         payload: {
@@ -405,26 +432,11 @@ describe('BendFateModal', () => {
         expect(screen.queryByRole('button', { name: 'Apply +3 (Bonus)' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Apply -3 (Penalty)' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-      });
-    });
-
-    it('hides choice prompt after applying', async () => {
-      reactionBonusHandler.applyBendFateChoice.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Bend Fate',
-          description: 'Result',
-        },
-      });
-      renderModal(baseProps);
-      fireEvent.click(screen.getByRole('button', { name: 'Apply +3 (Bonus)' }));
-      await waitFor(() => {
         expect(screen.queryByText('Choose how to apply the modifier:')).not.toBeInTheDocument();
       });
     });
 
-    it('renders result with custom action name', async () => {
+    it('displays result with custom action name', async () => {
       const customAction = makeAction({ name: 'Divine Favor' });
       reactionBonusHandler.applyBendFateChoice.mockResolvedValue({
         type: 'popup',
@@ -441,7 +453,7 @@ describe('BendFateModal', () => {
       });
     });
 
-    it('renders result with default name when action name is missing', async () => {
+    it('displays result with default name when action name is missing', async () => {
       const noNameAction = makeAction({ name: null });
       reactionBonusHandler.applyBendFateChoice.mockResolvedValue({
         type: 'popup',
@@ -455,6 +467,22 @@ describe('BendFateModal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Apply +3 (Bonus)' }));
       await waitFor(() => {
         expect(screen.getByText('Bend Fate')).toBeInTheDocument();
+      });
+    });
+
+    it('renders result with penalty mode', async () => {
+      reactionBonusHandler.applyBendFateChoice.mockResolvedValue({
+        type: 'popup',
+        payload: {
+          type: 'automation_info',
+          name: 'Bend Fate',
+          description: 'Penalty result',
+        },
+      });
+      renderModal(baseProps);
+      fireEvent.click(screen.getByRole('button', { name: 'Apply -3 (Penalty)' }));
+      await waitFor(() => {
+        expect(screen.getByText('Penalty result')).toBeInTheDocument();
       });
     });
   });
@@ -480,7 +508,7 @@ describe('BendFateModal', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClose when overlay is clicked', async () => {
+    it('calls onClose when result overlay is clicked', async () => {
       reactionBonusHandler.applyBendFateChoice.mockResolvedValue({
         type: 'popup',
         payload: {
@@ -500,106 +528,16 @@ describe('BendFateModal', () => {
     });
   });
 
-  // ── Initial render close behavior ──
+  // ── Close behavior ──
 
-  describe('initial render close behavior', () => {
+  describe('close behavior', () => {
+    it('calls onClose when cancel is clicked', () => {
+      renderModal(baseProps);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(baseProps.onClose).toHaveBeenCalledTimes(1);
+    });
+
     it('calls onClose when overlay is clicked on initial render', () => {
-      const onClose = vi.fn();
-      renderModal(makeProps({ onClose }));
-      const overlay = document.querySelector('.sp-overlay');
-      fireEvent.click(overlay);
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not call onClose when modal content is clicked', () => {
-      const onClose = vi.fn();
-      renderModal(makeProps({ onClose }));
-      const modal = document.querySelector('.sp-modal');
-      fireEvent.click(modal);
-      expect(onClose).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── d4Roll value variations ──
-
-  describe('d4 roll value variations', () => {
-    it('renders d4 roll of 1', () => {
-      const props = makeProps({ d4Roll: { total: 1 } });
-      renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Rolled 1d4:');
-      expect(body.textContent).toContain('1');
-      expect(screen.getByRole('button', { name: 'Apply +1 (Bonus)' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Apply -1 (Penalty)' })).toBeInTheDocument();
-    });
-
-    it('renders d4 roll of 4', () => {
-      const props = makeProps({ d4Roll: { total: 4 } });
-      renderModal(props);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Rolled 1d4:');
-      expect(body.textContent).toContain('4');
-      expect(screen.getByRole('button', { name: 'Apply +4 (Bonus)' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Apply -4 (Penalty)' })).toBeInTheDocument();
-    });
-  });
-
-  // ── AC display variations ──
-
-  describe('AC display variations', () => {
-    it('uses targetAc for AC display', () => {
-      const props = makeProps({
-        lastAttack: { ...baseLastAttack, targetAc: 18, effectiveAc: null },
-      });
-      renderModal(props);
-      expect(screen.getByText(/vs AC 18/)).toBeInTheDocument();
-    });
-
-    it('falls back to effectiveAc when targetAc is missing', () => {
-      const props = makeProps({
-        lastAttack: { ...baseLastAttack, targetAc: null, effectiveAc: 16 },
-      });
-      renderModal(props);
-      expect(screen.getByText(/vs AC 16/)).toBeInTheDocument();
-    });
-
-    it('shows em dash when both AC values are missing', () => {
-      const props = makeProps({
-        lastAttack: { ...baseLastAttack, targetAc: null, effectiveAc: null },
-      });
-      renderModal(props);
-      expect(screen.getByText(/vs AC —/)).toBeInTheDocument();
-    });
-  });
-
-  // ── Save DC display variations ──
-
-  describe('save DC display variations', () => {
-    it('uses saveDc for DC display', () => {
-      const props = makeProps({
-        isSave: true,
-        saveStatus: 'Failure',
-        lastAttack: { ...baseLastAttack, saveDc: 15 },
-      });
-      renderModal(props);
-      expect(screen.getByText(/vs DC 15/)).toBeInTheDocument();
-    });
-
-    it('shows em dash when saveDc is missing', () => {
-      const props = makeProps({
-        isSave: true,
-        saveStatus: 'Failure',
-        lastAttack: { ...baseLastAttack, saveDc: null },
-      });
-      renderModal(props);
-      expect(screen.getByText(/vs DC —/)).toBeInTheDocument();
-    });
-  });
-
-  // ── Overlay interaction ──
-
-  describe('overlay interaction', () => {
-    it('calls onClose when the overlay background is clicked', () => {
       const onClose = vi.fn();
       renderModal(makeProps({ onClose }));
       const overlay = document.querySelector('.sp-overlay');
@@ -613,6 +551,31 @@ describe('BendFateModal', () => {
       const modal = document.querySelector('.sp-modal');
       fireEvent.click(modal);
       expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Error handling ──
+
+  describe('error handling', () => {
+    it('does not switch to result view when applyBendFateChoice rejects', async () => {
+      reactionBonusHandler.applyBendFateChoice.mockRejectedValue(new Error('Network error'));
+      renderModal(baseProps);
+      fireEvent.click(screen.getByRole('button', { name: 'Apply +3 (Bonus)' }));
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Apply +3 (Bonus)' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('keeps selection buttons visible after error', async () => {
+      reactionBonusHandler.applyBendFateChoice.mockRejectedValue(new Error('Failed'));
+      renderModal(baseProps);
+      fireEvent.click(screen.getByRole('button', { name: 'Apply +3 (Bonus)' }));
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Apply +3 (Bonus)' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Apply -3 (Penalty)' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      });
     });
   });
 });

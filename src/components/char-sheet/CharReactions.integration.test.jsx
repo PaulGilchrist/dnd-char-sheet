@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
@@ -140,7 +141,7 @@ import { getCategories } from '../../services/character/featureCategories.js';
 import { getReactionSpellNames } from '../../services/ui/spellSectionUtils.js';
 import { useSpellCastExecutor } from '../../hooks/combat/useSpellCastExecutor.js';
 import { useSpellPositionResolver } from '../../hooks/combat/useSpellPositionResolver.js';
-import { resolveSpellDamageAtLevel, isAutoHitSpell, resolveHealExpression } from '../../services/rules/core/spellDamageUtils.js';
+import { resolveSpellDamageAtLevel, resolveHealExpression } from '../../services/rules/core/spellDamageUtils.js';
 
 const campaignName = 'test-campaign';
 
@@ -181,120 +182,94 @@ function createProps(overrides = {}) {
     };
 }
 
-describe('CharReactions - useSpellCastExecutor integration', () => {
+function setupDefaultMocks() {
+    useRuntimeValue.mockImplementation((_charKey, key) => {
+        if (key === 'activeBuffs') return [];
+        if (key === 'powerWordHealStandPermission') return false;
+        if (key === 'bastionOfLawActive') return false;
+        if (key === 'bastionOfLawWardDice') return [];
+        return [];
+    });
+    getRuntimeValue.mockReturnValue(null);
+    setRuntimeValue.mockReturnValue(undefined);
+    hasAutomation.mockReturnValue(false);
+    buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
+    getCategories.mockReturnValue({ featuresToIgnore: [] });
+    getReactionSpellNames.mockReturnValue(new Set());
+    resolveSpellDamageAtLevel.mockReturnValue(null);
+    resolveHealExpression.mockReturnValue(null);
+    useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
+}
+
+describe('CharReactions - integration: hooks receive correct arguments', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        useRuntimeValue.mockReturnValue([]);
-        getRuntimeValue.mockReturnValue(null);
-        setRuntimeValue.mockReturnValue(undefined);
-        hasAutomation.mockReturnValue(false);
-        buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
-        getCategories.mockReturnValue({ featuresToIgnore: [] });
-        getReactionSpellNames.mockReturnValue(new Set());
-        resolveSpellDamageAtLevel.mockReturnValue(null);
-        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
+        setupDefaultMocks();
     });
 
-    it('calls useSpellCastExecutor with campaignName and characters', () => {
+    it('renders and uses useSpellCastExecutor with campaignName and characters from props', () => {
         const castAction = vi.fn();
         vi.mocked(useSpellCastExecutor).mockReturnValue({ castAction });
         render(<CharReactions {...createProps()} />);
+
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
         expect(useSpellCastExecutor).toHaveBeenCalledTimes(1);
-        expect(useSpellCastExecutor.mock.calls[0][4]).toBe(campaignName);
-        expect(useSpellCastExecutor.mock.calls[0][6]).toEqual([]);
-    });
-});
-
-describe('CharReactions - useSpellPositionResolver integration', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        useRuntimeValue.mockReturnValue([]);
-        getRuntimeValue.mockReturnValue(null);
-        setRuntimeValue.mockReturnValue(undefined);
-        hasAutomation.mockReturnValue(false);
-        buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
-        getCategories.mockReturnValue({ featuresToIgnore: [] });
-        getReactionSpellNames.mockReturnValue(new Set());
-        resolveSpellDamageAtLevel.mockReturnValue(null);
-        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
+        const callArgs = useSpellCastExecutor.mock.calls[0];
+        expect(callArgs[4]).toBe(campaignName);
+        expect(callArgs[6]).toEqual([]);
     });
 
-    it('calls useSpellPositionResolver with correct arguments', () => {
+    it('renders and uses useSpellPositionResolver with campaignName, mapName, and character name', () => {
         const resolvePositions = vi.fn();
-        vi.mocked(useSpellPositionResolver).mockReturnValue({ resolvePositions: resolvePositions, cachedPosRef: { current: null } });
+        vi.mocked(useSpellPositionResolver).mockReturnValue({ resolvePositions, cachedPosRef: { current: null } });
         render(<CharReactions {...createProps()} />);
+
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
         expect(useSpellPositionResolver).toHaveBeenCalledWith(campaignName, null, 'TestFighter');
     });
 });
 
-describe('CharReactions - useRuntimeValue hooks', () => {
+describe('CharReactions - integration: runtime values control rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReturnValue(null);
-        setRuntimeValue.mockReturnValue(undefined);
-        hasAutomation.mockReturnValue(false);
-        buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
-        getCategories.mockReturnValue({ featuresToIgnore: [] });
-        getReactionSpellNames.mockReturnValue(new Set());
-        resolveSpellDamageAtLevel.mockReturnValue(null);
-        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
+        setupDefaultMocks();
     });
 
-    it('uses activeBuffs from runtime when available', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'activeBuffs') return [{ effect: 'test_buff' }];
-            return [];
-        });
-        render(<CharReactions {...createProps()} />);
-        expect(useRuntimeValue).toHaveBeenCalledWith('TestFighter', 'activeBuffs', campaignName);
-    });
-
-    it('defaults to empty array when activeBuffs is null', () => {
+    it('renders correctly when activeBuffs is null', () => {
         useRuntimeValue.mockReturnValue(null);
         render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Reactions')).toBeInTheDocument();
     });
 
-    it('reads powerWordHealStandPermission from runtime', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
+    it('renders correctly when powerWordHealStandPermission is true, adding Stand reaction', () => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'powerWordHealStandPermission') return true;
             if (key === 'activeBuffs') return [];
             return [];
         });
         render(<CharReactions {...createProps()} />);
-        expect(useRuntimeValue).toHaveBeenCalledWith('TestFighter', 'powerWordHealStandPermission', campaignName);
+        expect(screen.getByText('Stand (Power Word Heal):')).toBeInTheDocument();
     });
 
-    it('reads bastionOfLawActive and bastionOfLawWardDice from runtime', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
+    it('renders correctly when bastionOfLawActive is true with ward dice, adding Bastion reaction', () => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'bastionOfLawActive') return true;
             if (key === 'bastionOfLawWardDice') return [{ value: 8 }];
             if (key === 'activeBuffs') return [];
             return [];
         });
         render(<CharReactions {...createProps()} />);
-        expect(useRuntimeValue).toHaveBeenCalledWith('TestFighter', 'bastionOfLawActive', campaignName);
-        expect(useRuntimeValue).toHaveBeenCalledWith('TestFighter', 'bastionOfLawWardDice', campaignName);
+        expect(screen.getByText("Bastion of Law:")).toBeInTheDocument();
     });
 });
 
-describe('CharReactions - getReactionSpellDamageDisplay logic', () => {
+describe('CharReactions - integration: spell damage display logic', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        useRuntimeValue.mockReturnValue([]);
-        getRuntimeValue.mockReturnValue(null);
-        setRuntimeValue.mockReturnValue(undefined);
-        hasAutomation.mockReturnValue(false);
-        buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
-        getCategories.mockReturnValue({ featuresToIgnore: [] });
-        getReactionSpellNames.mockReturnValue(new Set());
-        resolveSpellDamageAtLevel.mockReturnValue(null);
-        resolveHealExpression.mockReturnValue('2d8+3');
-        isAutoHitSpell.mockReturnValue(false);
-        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
+        setupDefaultMocks();
     });
 
-    it('calls resolveHealExpression for healing spells in render', () => {
+    it('renders correctly with reaction spells that have heal_at_slot_level', () => {
         resolveHealExpression.mockReturnValue('3d8+4');
         const healingSpell = {
             name: 'Lesser Restoration',

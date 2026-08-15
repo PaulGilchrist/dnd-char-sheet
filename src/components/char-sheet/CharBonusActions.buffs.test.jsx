@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharBonusActions from './CharBonusActions.jsx';
@@ -120,7 +121,6 @@ vi.mock('./ArcaneVigorModal.jsx', () => ({
 }));
 
 import { getRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import { hasAutomation } from '../../services/combat/automation/automationService.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -135,15 +135,22 @@ function createStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
 
+function makeStatsWithWisdom(wisBonus, level = 5) {
+  return createStats({
+    level,
+    abilities: [{ name: 'Wisdom', bonus: wisBonus }],
+    spellAbilities: { toHit: 7 },
+    bonusActions: [{ name: 'TestFeature', description: 'test' }],
+  });
+}
+
 describe('CharBonusActions - Wrath of the Sea', () => {
   beforeEach(() => {
-    getRuntimeValue.mockReset().mockReturnValue(null);
-    useRuntimeValue.mockReset().mockReturnValue(null);
-    hasAutomation.mockReset().mockReturnValue(false);
+    vi.resetAllMocks();
     localStorage.clear();
   });
 
-  it('renders Wrath of the Sea when wrathOfTheSeaActive is true and not in bonusActions', () => {
+  it('renders Wrath of the Sea when wrathOfTheSeaActive is true and not already in bonusActions', () => {
     vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
       if (key === 'wrathOfTheSeaActive') return true;
       return null;
@@ -153,22 +160,30 @@ describe('CharBonusActions - Wrath of the Sea', () => {
     expect(screen.getByText(/Force a creature to make a CON save or take WIS modifier d6 Cold damage/)).toBeInTheDocument();
   });
 
-  it('does not render Wrath of the Sea when already in bonusActions', () => {
-    getRuntimeValue.mockImplementation((name, key) => {
+  it('does not render Wrath of the Sea when already present in bonusActions', () => {
+    vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
       if (key === 'wrathOfTheSeaActive') return true;
       return null;
     });
     render(<CharBonusActions playerStats={createStats({ bonusActions: [{ name: 'Wrath of the Sea', description: '...' }, { name: 'TestFeature', description: 'test' }] })} onAutomationAction={vi.fn()} />);
-    // The feature itself is in bonusActions, so the auto-generated one should not appear
-    // We verify by checking that the auto-generated clickable link is not present
+    // Only the existing bonusAction entry should appear, not the auto-generated clickable
     const allWrathElements = screen.queryAllByText(/Wrath of the Sea/);
     expect(allWrathElements.length).toBe(1);
   });
 
-  it('does not render Wrath of the Sea when buff is not active', () => {
-    getRuntimeValue.mockReturnValue(null);
+  it('does not render Wrath of the Sea when the buff is not active', () => {
+    vi.mocked(getRuntimeValue).mockReturnValue(null);
     render(<CharBonusActions playerStats={createStats({ bonusActions: [{ name: 'TestFeature', description: 'test' }] })} onAutomationAction={vi.fn()} />);
     expect(screen.queryByText(/Wrath of the Sea:/)).not.toBeInTheDocument();
+  });
+
+  it('renders Wrath of the Sea even when cannotAct is true (component does not check cannotAct for this feature)', () => {
+    vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
+      if (key === 'wrathOfTheSeaActive') return true;
+      return null;
+    });
+    render(<CharBonusActions playerStats={createStats({ bonusActions: [{ name: 'TestFeature', description: 'test' }] })} campaignName="test" cannotAct={true} />);
+    expect(screen.getByText(/Wrath of the Sea:/)).toBeInTheDocument();
   });
 
   it('calls onAutomationAction with correct automation payload when clicked', () => {
@@ -193,51 +208,60 @@ describe('CharBonusActions - Wrath of the Sea', () => {
 
 describe('CharBonusActions - Starry Form: Luminous Arrow', () => {
   beforeEach(() => {
-    getRuntimeValue.mockReset().mockReturnValue(null);
-    useRuntimeValue.mockReset().mockReturnValue(null);
-    hasAutomation.mockReset().mockReturnValue(false);
+    vi.resetAllMocks();
     localStorage.clear();
   });
 
-  it('renders Starry Form when Archer constellation buff is active', () => {
-    useRuntimeValue.mockImplementation((name, key) => {
+  it('renders Starry Form: Luminous Arrow when Archer constellation buff is active', () => {
+    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
       return null;
     });
-    const stats = createStats({ level: 5, abilities: [{ name: 'Wisdom', bonus: 3 }], spellAbilities: { toHit: 7 }, bonusActions: [{ name: 'TestFeature', description: 'test' }] });
+    const stats = makeStatsWithWisdom(3, 5);
     render(<CharBonusActions playerStats={stats} onAutomationAction={vi.fn()} />);
     expect(screen.getByText(/Starry Form: Luminous Arrow:/)).toBeInTheDocument();
     expect(screen.getByText(/Ranged spell attack, 60 ft/)).toBeInTheDocument();
   });
 
-  it('shows 2d8 damage for level 10+ characters', () => {
-    useRuntimeValue.mockImplementation((name, key) => {
+  it('shows 2d8 damage dice for level 10+ characters', () => {
+    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
       return null;
     });
-    const stats = createStats({ level: 10, abilities: [{ name: 'Wisdom', bonus: 3 }], spellAbilities: { toHit: 12 }, bonusActions: [{ name: 'TestFeature', description: 'test' }] });
+    const stats = makeStatsWithWisdom(3, 10);
     render(<CharBonusActions playerStats={stats} onAutomationAction={vi.fn()} />);
     expect(screen.getByText(/2d8/)).toBeInTheDocument();
   });
 
-  it('shows 1d8 damage for level < 10 characters', () => {
-    useRuntimeValue.mockImplementation((name, key) => {
+  it('shows 1d8 damage dice for level < 10 characters', () => {
+    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
       return null;
     });
-    const stats = createStats({ level: 5, abilities: [{ name: 'Wisdom', bonus: 3 }], spellAbilities: { toHit: 7 }, bonusActions: [{ name: 'TestFeature', description: 'test' }] });
+    const stats = makeStatsWithWisdom(3, 5);
     render(<CharBonusActions playerStats={stats} onAutomationAction={vi.fn()} />);
     expect(screen.getByText(/1d8/)).toBeInTheDocument();
   });
 
+  it('shows 0 in damage text when Wisdom modifier is 0', () => {
+    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
+      return null;
+    });
+    const stats = makeStatsWithWisdom(0, 5);
+    render(<CharBonusActions playerStats={stats} onAutomationAction={vi.fn()} />);
+    expect(screen.getByText(/Radiant damage/)).toBeInTheDocument();
+    expect(screen.getByText(/1d8/)).toBeInTheDocument();
+  });
+
   it('does not render when Starry Form buff is absent', () => {
-    useRuntimeValue.mockReturnValue(null);
+    vi.mocked(useRuntimeValue).mockReturnValue(null);
     render(<CharBonusActions playerStats={createStats({ level: 10, bonusActions: [{ name: 'TestFeature', description: 'test' }] })} onAutomationAction={vi.fn()} />);
     expect(screen.queryByText(/Starry Form: Luminous Arrow:/)).not.toBeInTheDocument();
   });
 
   it('does not render when constellation is not Archer', () => {
-    useRuntimeValue.mockImplementation((name, key) => {
+    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Hunter' }];
       return null;
     });
@@ -245,13 +269,22 @@ describe('CharBonusActions - Starry Form: Luminous Arrow', () => {
     expect(screen.queryByText(/Starry Form: Luminous Arrow:/)).not.toBeInTheDocument();
   });
 
-  it('calls onAutomationAction with correct payload when clicked', () => {
-    useRuntimeValue.mockImplementation((name, key) => {
+  it('renders Starry Form even when cannotAct is true (component does not check cannotAct for this feature)', () => {
+    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
+      return null;
+    });
+    render(<CharBonusActions playerStats={makeStatsWithWisdom(3, 5)} campaignName="test" cannotAct={true} />);
+    expect(screen.getByText(/Starry Form: Luminous Arrow:/)).toBeInTheDocument();
+  });
+
+  it('calls onAutomationAction with correct payload including WisMod and spellAttackMod', () => {
+    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
       return null;
     });
     const mockOnAutomationAction = vi.fn();
-    const stats = createStats({ level: 5, abilities: [{ name: 'Wisdom', bonus: 3 }], spellAbilities: { toHit: 7 }, bonusActions: [{ name: 'TestFeature', description: 'test' }] });
+    const stats = makeStatsWithWisdom(3, 5);
     render(<CharBonusActions playerStats={stats} onAutomationAction={mockOnAutomationAction} />);
     fireEvent.click(screen.getByText(/Starry Form: Luminous Arrow:/));
     expect(mockOnAutomationAction).toHaveBeenCalledWith({
@@ -267,5 +300,46 @@ describe('CharBonusActions - Starry Form: Luminous Arrow', () => {
         range: '60_ft',
       },
     });
+  });
+
+  it('uses spellAbilities.toHit for spellAttackMod in payload', () => {
+    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
+      return null;
+    });
+    const mockOnAutomationAction = vi.fn();
+    const stats = createStats({
+      level: 5,
+      abilities: [{ name: 'Wisdom', bonus: 2 }],
+      spellAbilities: { toHit: 9 },
+      bonusActions: [{ name: 'TestFeature', description: 'test' }],
+    });
+    render(<CharBonusActions playerStats={stats} onAutomationAction={mockOnAutomationAction} />);
+    fireEvent.click(screen.getByText(/Starry Form: Luminous Arrow:/));
+    expect(mockOnAutomationAction).toHaveBeenCalledWith(expect.objectContaining({
+      automation: expect.objectContaining({ spellAttackMod: 9, damageBonus: 2 }),
+    }));
+  });
+});
+
+describe('CharBonusActions - Multiple buffs active simultaneously', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    localStorage.clear();
+  });
+
+  it('renders both Wrath of the Sea and Starry Form when both buffs are active', () => {
+    vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
+      if (key === 'wrathOfTheSeaActive') return true;
+      return null;
+    });
+    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
+      return null;
+    });
+    const stats = makeStatsWithWisdom(3, 5);
+    render(<CharBonusActions playerStats={stats} onAutomationAction={vi.fn()} />);
+    expect(screen.getByText(/Wrath of the Sea:/)).toBeInTheDocument();
+    expect(screen.getByText(/Starry Form: Luminous Arrow:/)).toBeInTheDocument();
   });
 });

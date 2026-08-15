@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConstellationSelectionModal from './ConstellationSelectionModal.jsx';
@@ -6,7 +7,12 @@ vi.mock('../../../services/automation/handlers/class-sorcerer/starryFormHandler.
   applyConstellationOption: vi.fn(),
 }));
 
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(),
+}));
+
 import * as starryFormHandler from '../../../services/automation/handlers/class-sorcerer/starryFormHandler.js';
+import * as useRuntimeState from '../../../hooks/runtime/useRuntimeState.js';
 
 const baseProps = {
   action: { name: 'Starry Form', automation: { type: 'constellation_selection' } },
@@ -36,6 +42,7 @@ describe('ConstellationSelectionModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     starryFormHandler.applyConstellationOption.mockResolvedValue(defaultResult);
+    useRuntimeState.getRuntimeValue.mockReturnValue([]);
   });
 
   describe('initial render', () => {
@@ -62,7 +69,7 @@ describe('ConstellationSelectionModal', () => {
       render(<ConstellationSelectionModal {...makeProps({ isTwinkled: false })} />);
       expect(screen.getByRole('button', { name: /Archer/ }).textContent).toContain('Ranged Spell Attack: 1d8 + Wisdom Modifier Radiant damage');
       expect(screen.getByRole('button', { name: /Chalice/ }).textContent).toContain('Healing Spell: 1d8 + Wisdom Modifier HP to ally within 30 feet');
-      expect(screen.getByRole('button', { name: /Dragon/ }).textContent).toContain('Treat d20 rolls of 9 or lower as 10');
+      expect(screen.getByRole('button', { name: /Dragon/ }).textContent).toContain('Concentration: Treat d20 rolls of 9 or lower as 10');
     });
 
     it('shows enhanced descriptions when twinkled', () => {
@@ -112,6 +119,20 @@ describe('ConstellationSelectionModal', () => {
       });
       expect(starryFormHandler.applyConstellationOption).not.toHaveBeenCalled();
       expect(baseProps.onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('calls onClose when Cancel button is clicked', async () => {
+      const onClose = vi.fn();
+      render(<ConstellationSelectionModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onClose when clicking overlay in selection state', () => {
+      const onClose = vi.fn();
+      render(<ConstellationSelectionModal {...makeProps({ onClose })} />);
+      fireEvent.click(document.querySelector('.sp-overlay'));
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -183,6 +204,39 @@ describe('ConstellationSelectionModal', () => {
       await waitFor(() => {
         expect(screen.getByText('My Custom Starry Form')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('runtime state restoration', () => {
+    it('restores selected constellation from activeBuffs on mount', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { name: 'Starry Form', constellation: 'Chalice' },
+      ]);
+      render(<ConstellationSelectionModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: /Chalice/ })).toHaveStyle({
+        background: 'rgba(255,255,255,0.15)',
+        border: '1px solid var(--color-link)',
+      });
+    });
+
+    it('does not restore selection when activeBuffs has no matching buff', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { name: 'Other Feature', constellation: 'Archer' },
+      ]);
+      render(<ConstellationSelectionModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: 'Choose' })).toBeDisabled();
+    });
+
+    it('does not restore selection when activeBuffs is empty', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([]);
+      render(<ConstellationSelectionModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: 'Choose' })).toBeDisabled();
+    });
+
+    it('does not restore selection when activeBuffs is not an array', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue(null);
+      render(<ConstellationSelectionModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: 'Choose' })).toBeDisabled();
     });
   });
 });

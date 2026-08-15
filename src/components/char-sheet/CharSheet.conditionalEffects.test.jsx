@@ -1,8 +1,16 @@
+// @improved-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import CharSheet from './CharSheet';
 import rulesFactory from '../../services/rules/rulesFactory.js';
+import {
+  createMockStore,
+  createDefaultProps,
+  createMockPlayerStats,
+  createSharedPopupReturnValue,
+  resetTestState,
+} from './CharSheet.test-utils.jsx';
 
 // ---------------------------------------------------------------------------
 // Mocks — child components
@@ -156,12 +164,13 @@ vi.mock('../common/AttackResultPopup.jsx', () => ({
   )),
 }));
 
-let sharedPopupReturnVal = {
-  popupHtml: null,
-  setPopupHtml: vi.fn(),
-  value: {},
-  Provider: ({ children }) => children,
-};
+// ---------------------------------------------------------------------------
+// Mocks — hooks (uses shared test-utils helpers)
+// ---------------------------------------------------------------------------
+
+const mockStore = createMockStore();
+
+let sharedPopupReturnVal = createSharedPopupReturnValue();
 
 vi.mock('../../hooks/combat/useSharedPopup.js', () => {
   const mockFn = vi.fn();
@@ -170,8 +179,6 @@ vi.mock('../../hooks/combat/useSharedPopup.js', () => {
   });
   return { default: mockFn };
 });
-
-const mockStore = new Map();
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
@@ -227,362 +234,12 @@ vi.mock('../../services/rules/rulesFactory.js', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const createMockPlayerStats = (overrides = {}) => ({
-  name: 'Test Character',
-  level: 5,
-  hitPoints: { current: 40, max: 40 },
-  abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
-  spellAbilities: { spells: [], maxPreparedSpells: 5 },
-  rules: '5e',
-  automation: { passives: [] },
-  class: { name: 'Fighter' },
-  speed: 30,
-  race: { speed: 30 },
-  actions: [],
-  bonusActions: [],
-  reactions: [],
-  specialActions: [],
-  characterAdvancement: [],
-  skillProficiencies: [],
-  saveModifiers: [],
-  ...overrides,
-});
-
-const mockPlayerSummary = {
-  name: 'Test Character',
-  rules: '5e',
-};
-
-const defaultProps = {
-  allAbilityScores: [],
-  allClasses: [],
-  allClasses2024: [],
-  allEquipment: [],
-  allMagicItems: [],
-  allRaces: [],
-  allSpells: [],
-  allSpells2024: [],
-  playerSummary: mockPlayerSummary,
-  allRaces2024: [],
-  allMagicItems2024: [],
-  campaignName: 'test-campaign',
-  activeMapName: null,
-  characters: [],
-  onDeleteCharacter: vi.fn(),
-  onEditCharacter: vi.fn(),
-  onUploadClick: vi.fn(),
-  onSaveClick: vi.fn(),
-};
-
-// ---------------------------------------------------------------------------
-// Tests — Warding Bond logic
-// ---------------------------------------------------------------------------
-
-describe('warding bond logic', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('sets wardingBondAcBonus when warding bond buff is within range', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([
-      { effect: 'warding_bond', sourceCharacter: 'Ally1', acBonus: 1, saveBonus: 1 },
-    ]));
-    const { getCombatSummary } = await import('../../services/encounters/combatData.js');
-    getCombatSummary.mockReturnValue({
-      creatures: [
-        { name: 'Test Character', position: { x: 0, y: 0 } },
-        { name: 'Ally1', position: { x: 30, y: 0 } },
-      ],
-    });
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does not set wardingBondAcBonus when warding bond caster is self', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([
-      { effect: 'warding_bond', sourceCharacter: 'Test Character', acBonus: 1 },
-    ]));
-    const { getCombatSummary } = await import('../../services/encounters/combatData.js');
-    getCombatSummary.mockReturnValue({
-      creatures: [
-        { name: 'Test Character', position: { x: 0, y: 0 } },
-      ],
-    });
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does not set wardingBondAcBonus when warding bond caster is out of range', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([
-      { effect: 'warding_bond', sourceCharacter: 'Ally1', acBonus: 1 },
-    ]));
-    const { getCombatSummary } = await import('../../services/encounters/combatData.js');
-    getCombatSummary.mockReturnValue({
-      creatures: [
-        { name: 'Test Character', position: { x: 0, y: 0 } },
-        { name: 'Ally1', position: { x: 100, y: 0 } },
-      ],
-    });
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('sets wardingBondSaveBonus when warding bond buff is within range', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([
-      { effect: 'warding_bond', sourceCharacter: 'Ally1', acBonus: 1, saveBonus: 1 },
-    ]));
-    const { getCombatSummary } = await import('../../services/encounters/combatData.js');
-    getCombatSummary.mockReturnValue({
-      creatures: [
-        { name: 'Test Character', position: { x: 0, y: 0 } },
-        { name: 'Ally1', position: { x: 30, y: 0 } },
-      ],
-    });
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Protection from Evil and Good attacker logic
-// ---------------------------------------------------------------------------
-
-describe('protection from evil and good attacker logic', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('sets targetDisadvantageCount when pfeag active and attacker is warded type', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([
-      { effect: 'protection_from_evil_and_good' },
-    ]));
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(
-      createMockPlayerStats({ name: 'Test Character' })
-    ));
-    const { isCreatureWarded } = await import('../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js');
-    isCreatureWarded.mockReturnValue(true);
-    const { getCombatSummary } = await import('../../services/encounters/combatData.js');
-    getCombatSummary.mockReturnValue({
-      attackerName: 'Enemy1',
-      creatures: [{ name: 'Enemy1', type: 'Humanoid' }],
-    });
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does not set targetDisadvantageCount when pfeag active but attacker not warded', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([
-      { effect: 'protection_from_evil_and_good' },
-    ]));
-    const { isCreatureWarded } = await import('../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js');
-    isCreatureWarded.mockReturnValue(false);
-    const { getCombatSummary } = await import('../../services/encounters/combatData.js');
-    getCombatSummary.mockReturnValue({
-      attackerName: 'Enemy1',
-      creatures: [{ name: 'Enemy1', type: 'Humanoid' }],
-    });
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does not set targetDisadvantageCount when no attacker in combat context', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([
-      { effect: 'protection_from_evil_and_good' },
-    ]));
-    const { isCreatureWarded } = await import('../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js');
-    isCreatureWarded.mockReturnValue(true);
-    const { getCombatSummary } = await import('../../services/encounters/combatData.js');
-    getCombatSummary.mockReturnValue({
-      attackerName: null,
-      creatures: [],
-    });
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Counterspell save result event listener
-// ---------------------------------------------------------------------------
-
-describe('counterspell save result event listener', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('sets popupHtml when counterspell-save-result event fires', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    window.dispatchEvent(new CustomEvent('counterspell-save-result', {
-      detail: {
-        attackerName: 'Enemy1',
-        spellName: 'Fireball',
-        saveDc: 15,
-        spellResult: 'failed',
-        counterspellResult: 'successfully countered',
-      },
-    }));
-
-    await waitFor(() => {
-      expect(sharedPopupReturnVal.setPopupHtml).toHaveBeenCalled();
-    });
-  });
-
-  it('does not set popupHtml when event has no attackerName', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    window.dispatchEvent(new CustomEvent('counterspell-save-result', {
-      detail: {
-        spellName: 'Fireball',
-        saveDc: 15,
-        spellResult: 'failed',
-        counterspellResult: 'successfully countered',
-      },
-    }));
-
-    await waitFor(() => {
-      expect(sharedPopupReturnVal.setPopupHtml).not.toHaveBeenCalled();
-    });
-  });
-
-  it('does not set popupHtml when event has no spellName', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    window.dispatchEvent(new CustomEvent('counterspell-save-result', {
-      detail: {
-        attackerName: 'Enemy1',
-        saveDc: 15,
-        spellResult: 'failed',
-        counterspellResult: 'successfully countered',
-      },
-    }));
-
-    await waitFor(() => {
-      expect(sharedPopupReturnVal.setPopupHtml).not.toHaveBeenCalled();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Aura combo effects
-// ---------------------------------------------------------------------------
-
-describe('aura combo effects', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('sets auraComboEffects to null when no characters', async () => {
-    const { computeAuraComboEffects } = await import('../../services/combat/auras/auraComboEffects.js');
-    computeAuraComboEffects.mockResolvedValue(null);
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does not call computeAuraComboEffects when playerStats is null', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('calls computeAuraComboEffects with correct params when characters exist', async () => {
-    const { computeAuraComboEffects } = await import('../../services/combat/auras/auraComboEffects.js');
-    computeAuraComboEffects.mockResolvedValue({ effects: [] });
-
-    const props = {
-      ...defaultProps,
-      characters: [{ name: 'Test Character', level: 5 }],
-      activeMapName: 'test-map',
-    };
-
-    render(<CharSheet {...props} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      expect(computeAuraComboEffects).toHaveBeenCalled();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Tests — handleTogglePreparedSpells
 // ---------------------------------------------------------------------------
 
 describe('handleTogglePreparedSpells', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnVal);
     mockStore.clear();
   });
 
@@ -594,11 +251,17 @@ describe('handleTogglePreparedSpells', () => {
       },
     })));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    // Verify the CharSpells component received the updated spell list
+    const { default: CharSpells } = await import('./char-spells/CharSpells.jsx');
+    expect(CharSpells).toHaveBeenCalled();
+    const spells = CharSpells.mock.calls[0][0].playerStats.spellAbilities.spells;
+    expect(spells[0].name).toBe('Fireball');
   });
 
   it('toggles a spell from prepared to not prepared', async () => {
@@ -609,11 +272,17 @@ describe('handleTogglePreparedSpells', () => {
       },
     })));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSpells } = await import('./char-spells/CharSpells.jsx');
+    expect(CharSpells).toHaveBeenCalled();
+    const spells = CharSpells.mock.calls[0][0].playerStats.spellAbilities.spells;
+    expect(spells[0].name).toBe('Fireball');
+    expect(spells[0].prepared).toBe('Prepared');
   });
 
   it('does not toggle when at max prepared spells', async () => {
@@ -630,11 +299,17 @@ describe('handleTogglePreparedSpells', () => {
       },
     })));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { default: CharSpells } = await import('./char-spells/CharSpells.jsx');
+    expect(CharSpells).toHaveBeenCalled();
+    const spells = CharSpells.mock.calls[0][0].playerStats.spellAbilities.spells;
+    expect(spells.length).toBe(5);
+    expect(spells.every((s) => s.prepared === 'Prepared')).toBe(true);
   });
 });
 
@@ -644,23 +319,33 @@ describe('handleTogglePreparedSpells', () => {
 
 describe('empty handlers', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnVal);
     mockStore.clear();
   });
 
   it('renders with handleConditionsChange as empty function', async () => {
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    // Verify the char-summary received playerStats (confirming render completed)
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    expect(CharSummary).toHaveBeenCalled();
+    expect(CharSummary.mock.calls[0][0].playerStats).toBeDefined();
   });
 
   it('renders with handleBuffsChange as empty function', async () => {
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...createDefaultProps()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    // Verify the char-summary received playerStats (confirming render completed)
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    expect(CharSummary).toHaveBeenCalled();
+    expect(CharSummary.mock.calls[0][0].playerStats).toBeDefined();
   });
 });

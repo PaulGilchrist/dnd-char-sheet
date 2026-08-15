@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharBonusActions from './CharBonusActions.jsx';
@@ -29,6 +30,10 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
 
 vi.mock('../../services/automation/index.js', () => ({
   executeHandler: vi.fn(),
+}));
+
+vi.mock('../../services/automation/handlers/combat/saveAttackHandler.js', () => ({
+  isExhausted: vi.fn(() => false),
 }));
 
 vi.mock('../../services/automation/handlers/buffs/tempHpService.js', () => ({
@@ -107,6 +112,48 @@ vi.mock('./char-spells/SpellDetailPopup.jsx', () => ({
   default: vi.fn((props) => <div data-testid="spell-detail-popup">{props.spell?.name || 'SpellDetailPopup'}</div>),
 }));
 
+vi.mock('./HexAbilityModal.jsx', () => ({
+  default: vi.fn((props) => <div data-testid="hex-ability-modal"><button onClick={props.onCancel}>Cancel</button></div>),
+}));
+
+vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
+  default: vi.fn((props) => <div data-testid="secondary-target-modal">{props.title}</div>),
+}));
+
+vi.mock('./ArcaneVigorModal.jsx', () => ({
+  default: vi.fn(() => <div data-testid="arcane-vigor-modal">Arcane Vigor</div>),
+}));
+
+vi.mock('../../services/rules/core/spellDamageUtils.js', () => ({
+  resolveSpellDamageAtLevel: vi.fn(() => null),
+  isAutoHitSpell: vi.fn(() => false),
+  resolveHealExpression: vi.fn(() => ''),
+}));
+
+vi.mock('../../services/ui/spellSectionUtils.js', () => ({
+  getBonusActionSpellNames: vi.fn(() => new Set(['Shocking Grasp'])),
+}));
+
+vi.mock('../../services/character/featureCategories.js', () => ({
+  getCategories: vi.fn(() => ({ featuresToIgnore: ['Spellcasting'] })),
+}));
+
+
+
+vi.mock('../../hooks/combat/useSpellPositionResolver.js', () => ({
+  useSpellPositionResolver: vi.fn(() => ({ resolvePositions: vi.fn(), cachedPosRef: {} })),
+}));
+
+vi.mock('../../hooks/combat/useSpellCastExecutor.js', () => ({
+  useSpellCastExecutor: vi.fn(() => ({ castAction: vi.fn() })),
+}));
+
+vi.mock('../../services/ui/formatUtils.js', () => ({
+  formatRange: vi.fn((range) => range || ''),
+  signFormatter: { format: (n) => (n >= 0 ? `+${n}` : `${n}`) },
+  getAttackSpellLevel: vi.fn(() => null),
+}));
+
 import { hasAutomation } from '../../services/combat/automation/automationService.js';
 import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../services/ui/logService.js';
@@ -139,12 +186,21 @@ describe('CharBonusActions - Interactive', () => {
     };
 
     it('calls onAutomationAction when a bonus action with automation is clicked', () => {
-      hasAutomation.mockReturnValue(true);
+      vi.mocked(hasAutomation).mockReturnValue(true);
       const onAutomationAction = vi.fn();
       render(<CharBonusActions playerStats={createStats({ bonusActions: [automatedBonusAction] })} onAutomationAction={onAutomationAction} />);
       const actionName = screen.getByText(/War Priest:/);
       fireEvent.click(actionName);
       expect(onAutomationAction).toHaveBeenCalledWith(automatedBonusAction);
+    });
+
+    it('does not call onAutomationAction when hasAutomation returns false', () => {
+      vi.mocked(hasAutomation).mockReturnValue(false);
+      const onAutomationAction = vi.fn();
+      render(<CharBonusActions playerStats={createStats({ bonusActions: [automatedBonusAction] })} onAutomationAction={onAutomationAction} />);
+      const actionName = screen.getByText(/War Priest:/);
+      fireEvent.click(actionName);
+      expect(onAutomationAction).not.toHaveBeenCalled();
     });
   });
 
@@ -155,14 +211,14 @@ describe('CharBonusActions - Interactive', () => {
       automation: { type: 'combat_stance', recharge: 'long_rest_or_expend_rage', resourceKey: 'ragePoints' },
     };
 
-    it('shows rage-expendable bonus action as clickable even when exhausted', async () => {
-      hasAutomation.mockReturnValue(true);
+    it('renders rage-expendable bonus action as clickable regardless of rage exhaustion', () => {
+      vi.mocked(hasAutomation).mockReturnValue(true);
       render(<CharBonusActions playerStats={createStats({ bonusActions: [rageBonusAction] })} />);
       expect(screen.getByText(/Berserker Rage:/)).toHaveClass('clickable');
     });
 
-    it('dispatches automation on click when exhausted (handler manages rage)', async () => {
-      hasAutomation.mockReturnValue(true);
+    it('dispatches automation on click when rage is exhausted (handler manages rage)', () => {
+      vi.mocked(hasAutomation).mockReturnValue(true);
       vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
         if (key === 'ragePoints') return 1;
         return null;
@@ -201,6 +257,15 @@ describe('CharBonusActions - Interactive', () => {
           formula: '1d4+3',
           note: 'Direct damage roll (no target)',
         }));
+      });
+    });
+
+    it('does not log damage roll when cannotAct is true', async () => {
+      render(<CharBonusActions playerStats={createStats({ attacks: [bonusActionAttack] })} campaignName="test-campaign" cannotAct={true} />);
+      const damageElement = screen.getByText('1d4+3');
+      fireEvent.click(damageElement);
+      await waitFor(() => {
+        expect(vi.mocked(addEntry)).not.toHaveBeenCalled();
       });
     });
   });
@@ -306,7 +371,7 @@ describe('CharBonusActions - Interactive', () => {
       });
     });
 
-    it('blocks Eat Bolstering Treat when cannotAct is true', () => {
+    it('does not call setTempHp when cannotAct is true', () => {
       useRuntimeValue.mockImplementation((name, key) => {
         if (key === 'bolsteringTreat') return 2;
         if (key === 'chefBolsteringTreats') return 0;
@@ -474,12 +539,15 @@ describe('CharBonusActions - Interactive', () => {
   });
 
   describe('sacred weapon buff on hit bonus', () => {
-    it('adds sacred weapon bonus to hit for melee attacks when buff is active', () => {
-      const mockGrv = vi.fn((name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
+    const createBuffsMock = (hasSacredWeapon) => {
+      return vi.fn((name, key) => {
+        if (key === 'activeBuffs') return hasSacredWeapon ? [{ effect: 'sacred_weapon' }] : null;
         return null;
       });
-      getRuntimeValue.mockImplementation(mockGrv);
+    };
+
+    it('adds sacred weapon bonus to hit for melee attacks when buff is active', () => {
+      getRuntimeValue.mockImplementation(createBuffsMock(true));
       const stats = createStats({
         abilities: [{ name: 'Charisma', bonus: 4 }],
         attacks: [{ name: 'Rapier', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Piercing', type: 'Bonus Action', weaponType: 'melee' }],
@@ -489,11 +557,7 @@ describe('CharBonusActions - Interactive', () => {
     });
 
     it('does not add sacred weapon bonus for ranged attacks', () => {
-      const mockGrv = vi.fn((name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
-        return null;
-      });
-      getRuntimeValue.mockImplementation(mockGrv);
+      getRuntimeValue.mockImplementation(createBuffsMock(true));
       const stats = createStats({
         abilities: [{ name: 'Charisma', bonus: 4 }],
         attacks: [{ name: 'Shortbow', range: 80, hitBonus: 5, damage: '1d6+3', damageType: 'Piercing', type: 'Bonus Action', weaponType: 'ranged' }],
@@ -503,17 +567,23 @@ describe('CharBonusActions - Interactive', () => {
     });
 
     it('adds sacred weapon bonus for unarmed attacks', () => {
-      const mockGrv = vi.fn((name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
-        return null;
-      });
-      getRuntimeValue.mockImplementation(mockGrv);
+      getRuntimeValue.mockImplementation(createBuffsMock(true));
       const stats = createStats({
         abilities: [{ name: 'Charisma', bonus: 4 }],
         attacks: [{ name: 'Unarmed Strike', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Bludgeoning', type: 'Bonus Action', weaponType: 'unarmed' }],
       });
       render(<CharBonusActions playerStats={stats} exhaustionPenalty={0} />);
       expect(screen.getByText(/\+9/)).toBeInTheDocument();
+    });
+
+    it('does not add sacred weapon bonus when buff is not active', () => {
+      getRuntimeValue.mockImplementation(createBuffsMock(false));
+      const stats = createStats({
+        abilities: [{ name: 'Charisma', bonus: 4 }],
+        attacks: [{ name: 'Rapier', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Piercing', type: 'Bonus Action', weaponType: 'melee' }],
+      });
+      render(<CharBonusActions playerStats={stats} exhaustionPenalty={0} />);
+      expect(screen.getByText(/\+5/)).toBeInTheDocument();
     });
   });
 

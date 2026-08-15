@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -75,7 +76,7 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
     getTargetFromAttacker: vi.fn(),
 }));
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-    useRuntimeValue: vi.fn(() => []),
+    useRuntimeValue: vi.fn(),
     getRuntimeValue: vi.fn(),
     setRuntimeValue: vi.fn(),
 }));
@@ -183,23 +184,33 @@ function createProps(overrides = {}) {
     };
 }
 
-describe('CharReactions - Spell Click Handlers', () => {
+function setupDefaultMocks() {
+    useRuntimeValue.mockImplementation((_charKey, key) => {
+        if (key === 'activeBuffs') return [];
+        if (key === 'powerWordHealStandPermission') return false;
+        if (key === 'bastionOfLawActive') return false;
+        if (key === 'bastionOfLawWardDice') return [];
+        return [];
+    });
+    getRuntimeValue.mockReturnValue(null);
+    setRuntimeValue.mockReturnValue(undefined);
+    hasAutomation.mockReturnValue(false);
+    buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
+    getCategories.mockReturnValue({ featuresToIgnore: [] });
+    getReactionSpellNames.mockReturnValue(new Set(['Shield', 'Hellish Rebuke']));
+    resolveSpellDamageAtLevel.mockReturnValue('1d10');
+    resolveHealExpression.mockReturnValue('2d8+3');
+    isAutoHitSpell.mockReturnValue(false);
+    useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
+}
+
+describe('CharReactions - Spell Damage Click Handlers', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        useRuntimeValue.mockReturnValue([]);
-        getRuntimeValue.mockReturnValue(null);
-        setRuntimeValue.mockReturnValue(undefined);
-        hasAutomation.mockReturnValue(false);
-        buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
-        getCategories.mockReturnValue({ featuresToIgnore: [] });
-        getReactionSpellNames.mockReturnValue(new Set(['Shield', 'Hellish Rebuke']));
-        resolveSpellDamageAtLevel.mockReturnValue('1d10');
-        resolveHealExpression.mockReturnValue('2d8+3');
-        isAutoHitSpell.mockReturnValue(false);
-        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
+        setupDefaultMocks();
     });
 
-    it('calls gateMetamagic when clicking reaction spell damage', () => {
+    it('calls gateMetamagic when clicking a reaction spell damage cell', () => {
         const gateMetamagic = vi.fn();
         useSpellMetamagicFlow.mockReturnValue({
             pendingMetamagic: null,
@@ -213,7 +224,7 @@ describe('CharReactions - Spell Click Handlers', () => {
         expect(gateMetamagic).toHaveBeenCalled();
     });
 
-    it('does not call gateMetamagic when cannotAct is true on damage click', () => {
+    it('does not call gateMetamagic when clicking damage with cannotAct true', () => {
         const gateMetamagic = vi.fn();
         useSpellMetamagicFlow.mockReturnValue({
             pendingMetamagic: null,
@@ -221,14 +232,110 @@ describe('CharReactions - Spell Click Handlers', () => {
             handleConfirm: vi.fn(),
             handleSkip: vi.fn(),
         });
-        const props = createProps({ cannotAct: true });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...createProps({ cannotAct: true })} />);
         const damageCells = screen.getAllByText('1d10');
         fireEvent.click(damageCells[0]);
         expect(gateMetamagic).not.toHaveBeenCalled();
     });
 
-    it('renders clickable attack for spells with attack_type and no cannotAct', () => {
+    it('calls gateMetamagic with the correct spell object when clicking damage', () => {
+        const gateMetamagic = vi.fn();
+        useSpellMetamagicFlow.mockReturnValue({
+            pendingMetamagic: null,
+            gateMetamagic,
+            handleConfirm: vi.fn(),
+            handleSkip: vi.fn(),
+        });
+        render(<CharReactions {...createProps()} />);
+        const damageCells = screen.getAllByText('1d10');
+        fireEvent.click(damageCells[0]);
+        expect(gateMetamagic).toHaveBeenCalledWith(
+            expect.objectContaining({ casting_time: '1 reaction' }),
+            expect.any(Object)
+        );
+    });
+
+    it('calls gateMetamagic for healing reaction spells when clicking damage', () => {
+        const gateMetamagic = vi.fn();
+        useSpellMetamagicFlow.mockReturnValue({
+            pendingMetamagic: null,
+            gateMetamagic,
+            handleConfirm: vi.fn(),
+            handleSkip: vi.fn(),
+        });
+        resolveHealExpression.mockReturnValue('3d8+4');
+        const healingSpell = {
+            name: 'Lesser Restoration',
+            casting_time: '1 reaction',
+            level: 2,
+            range: 'Touch',
+            prepared: 'Always',
+            damage: null,
+            heal_at_slot_level: true,
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [healingSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Lesser Restoration']));
+        render(<CharReactions {...props} />);
+        const damageCells = screen.getAllByText('3d8+4');
+        fireEvent.click(damageCells[0]);
+        expect(gateMetamagic).toHaveBeenCalled();
+        expect(gateMetamagic).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Lesser Restoration', heal_at_slot_level: true }),
+            expect.any(Object)
+        );
+    });
+
+    it('does not call gateMetamagic for healing spells when cannotAct is true', () => {
+        const gateMetamagic = vi.fn();
+        useSpellMetamagicFlow.mockReturnValue({
+            pendingMetamagic: null,
+            gateMetamagic,
+            handleConfirm: vi.fn(),
+            handleSkip: vi.fn(),
+        });
+        resolveHealExpression.mockReturnValue('3d8+4');
+        const healingSpell = {
+            name: 'Lesser Restoration',
+            casting_time: '1 reaction',
+            level: 2,
+            range: 'Touch',
+            prepared: 'Always',
+            damage: null,
+            heal_at_slot_level: true,
+        };
+        const props = createProps({
+            cannotAct: true,
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [healingSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Lesser Restoration']));
+        render(<CharReactions {...props} />);
+        const damageCells = screen.getAllByText('3d8+4');
+        fireEvent.click(damageCells[0]);
+        expect(gateMetamagic).not.toHaveBeenCalled();
+    });
+});
+
+describe('CharReactions - Spell Attack Bonus Click Handler', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        setupDefaultMocks();
+    });
+
+    it('renders clickable attack bonus for spells with attack_type when able to act', () => {
         const attackSpell = {
             name: 'Thorn Whip',
             casting_time: '1 reaction',
@@ -251,13 +358,13 @@ describe('CharReactions - Spell Click Handlers', () => {
         });
         getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
         resolveSpellDamageAtLevel.mockReturnValue('1d8+3 thunder');
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         const attackCell = screen.getByText('+5');
         expect(attackCell).toHaveClass('clickable');
         expect(attackCell).not.toHaveClass('disabled-attack');
     });
 
-    it('renders disabled attack for spells with attack_type when cannotAct', () => {
+    it('renders disabled attack bonus for spells with attack_type when cannotAct', () => {
         const attackSpell = {
             name: 'Thorn Whip',
             casting_time: '1 reaction',
@@ -281,12 +388,159 @@ describe('CharReactions - Spell Click Handlers', () => {
         });
         getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
         resolveSpellDamageAtLevel.mockReturnValue('1d8+3 thunder');
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         const attackCell = screen.getByText('+5');
         expect(attackCell).toHaveClass('disabled-attack');
     });
 
-    it('renders auto-hit spell without attack bonus column', () => {
+    it('calls rollAttack when clicking attack bonus for a spell with attack_type', () => {
+        const rollAttack = vi.fn();
+        useLoggedDiceRoll.mockReturnValue({ rollAttack, rollDamage: vi.fn() });
+        const attackSpell = {
+            name: 'Thorn Whip',
+            casting_time: '1 reaction',
+            level: 0,
+            range: '30 ft.',
+            prepared: 'Always',
+            attack_type: 'melee',
+            damage: '1d8 thunder',
+            damage_type: 'thunder',
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    toHit: -2,
+                    spells: [attackSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d8-2 thunder');
+        render(<CharReactions {...props} />);
+        const attackCell = screen.getByText('-2');
+        fireEvent.click(attackCell);
+        expect(rollAttack).toHaveBeenCalledWith('Thorn Whip', -2, expect.any(Object));
+    });
+
+    it('renders attack bonus with negative toHit value', () => {
+        const attackSpell = {
+            name: 'Thorn Whip',
+            casting_time: '1 reaction',
+            level: 0,
+            range: '30 ft.',
+            prepared: 'Always',
+            attack_type: 'melee',
+            damage: '1d8 thunder',
+            damage_type: 'thunder',
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    toHit: -4,
+                    spells: [attackSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d8-4 thunder');
+        render(<CharReactions {...props} />);
+        expect(screen.getByText('-4')).toBeInTheDocument();
+    });
+
+    it('renders attack bonus with zero toHit value', () => {
+        const attackSpell = {
+            name: 'Thorn Whip',
+            casting_time: '1 reaction',
+            level: 0,
+            range: '30 ft.',
+            prepared: 'Always',
+            attack_type: 'melee',
+            damage: '1d8 thunder',
+            damage_type: 'thunder',
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    toHit: 0,
+                    spells: [attackSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d8 thunder');
+        render(<CharReactions {...props} />);
+        expect(screen.getByText('+0')).toBeInTheDocument();
+    });
+
+    it('renders attack bonus with disabled-attack class when cannotAct (handler still attached)', () => {
+        const rollAttack = vi.fn();
+        useLoggedDiceRoll.mockReturnValue({ rollAttack, rollDamage: vi.fn() });
+        const attackSpell = {
+            name: 'Thorn Whip',
+            casting_time: '1 reaction',
+            level: 0,
+            range: '30 ft.',
+            prepared: 'Always',
+            attack_type: 'melee',
+            damage: '1d8 thunder',
+            damage_type: 'thunder',
+        };
+        const props = createProps({
+            cannotAct: true,
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    toHit: 5,
+                    spells: [attackSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d8+3 thunder');
+        render(<CharReactions {...props} />);
+        const attackCell = screen.getByText('+5');
+        expect(attackCell).toHaveClass('disabled-attack');
+        fireEvent.click(attackCell);
+        expect(rollAttack).toHaveBeenCalled();
+    });
+});
+
+describe('CharReactions - Spell Name Click Handler', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        setupDefaultMocks();
+    });
+
+    it('opens spell detail popup when clicking a spell name', () => {
+        render(<CharReactions {...createProps()} />);
+        const spellLink = screen.getByText('Shield');
+        fireEvent.click(spellLink);
+        expect(screen.getByTestId('popup')).toBeInTheDocument();
+        expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
+    });
+
+    it('opens spell detail popup for the correct spell when multiple spells exist', () => {
+        render(<CharReactions {...createProps()} />);
+        const rebukeLink = screen.getByText('Hellish Rebuke');
+        fireEvent.click(rebukeLink);
+        expect(screen.getByTestId('popup')).toBeInTheDocument();
+    });
+});
+
+describe('CharReactions - Auto-Hit Spell Rendering', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        setupDefaultMocks();
+    });
+
+    it('renders auto-hit spell without an attack bonus column', () => {
         isAutoHitSpell.mockReturnValue(true);
         const autoHitSpell = {
             name: 'Guiding Bolt',
@@ -308,7 +562,35 @@ describe('CharReactions - Spell Click Handlers', () => {
         });
         getReactionSpellNames.mockReturnValue(new Set(['Guiding Bolt']));
         resolveSpellDamageAtLevel.mockReturnValue('4d6+3 radiant');
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText('Guiding Bolt')).toBeInTheDocument();
+        expect(screen.queryByText('+6')).not.toBeInTheDocument();
+    });
+
+    it('renders auto-hit spell damage cell as clickable', () => {
+        isAutoHitSpell.mockReturnValue(true);
+        const autoHitSpell = {
+            name: 'Guiding Bolt',
+            casting_time: '1 reaction',
+            level: 2,
+            range: '120 ft.',
+            prepared: 'Always',
+            damage: '4d6 radiant',
+            damage_type: 'radiant',
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [autoHitSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Guiding Bolt']));
+        resolveSpellDamageAtLevel.mockReturnValue('4d6+3 radiant');
+        render(<CharReactions {...props} />);
+        const damageCells = screen.getByText('4d6+3 radiant');
+        expect(damageCells).toHaveClass('clickable');
     });
 });

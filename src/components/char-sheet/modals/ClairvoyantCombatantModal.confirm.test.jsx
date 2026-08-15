@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ClairvoyantCombatantModal from './ClairvoyantCombatantModal.jsx';
@@ -61,218 +62,343 @@ describe('ClairvoyantCombatantModal - confirm flow', () => {
     useRuntimeState.clearRuntimeState('campaign');
     useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
       if (key === 'campaign' && prop === 'targetEffects') return [];
+      if (key === 'Paladin1' && prop === 'activeBuffs') return [];
       return null;
     });
     useRuntimeState.setRuntimeValue.mockImplementation(() => Promise.resolve());
   });
 
-  it('increments clairvoyantCombatantUses when hasUse is true', async () => {
-    const props = makeProps({ currentUses: 1, maxUses: 3 });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+  // ── Confirm with uses available ──
 
-    await waitFor(() => {
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Paladin1',
-        'clairvoyantCombatantUses',
-        2,
-        'test-campaign',
-      );
+  describe('confirm with uses available', () => {
+    it('increments clairvoyantCombatantUses when hasUse is true', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'Paladin1',
+          'clairvoyantCombatantUses',
+          2,
+          'test-campaign',
+        );
+      });
+    });
+
+    it('does not touch spell slots when uses are available', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        const slotCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+          c => c[1] && c[1].startsWith('spell_slots_level_')
+        );
+        expect(slotCalls).toHaveLength(0);
+      });
+    });
+
+    it('adds clairvoyant_combatant targetEffect to campaign', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        const calls = useRuntimeState.setRuntimeValue.mock.calls;
+        const teCall = calls.find(
+          c => c[0] === 'campaign' && c[1] === 'targetEffects'
+        );
+        expect(teCall).toBeDefined();
+        expect(teCall[2]).toContainEqual(expect.objectContaining({
+          target: 'Goblin1',
+          source: 'Clairvoyant Combatant',
+          effect: 'clairvoyant_combatant',
+          attackerAdvantage: true,
+          defenderDisadvantage: true,
+        }));
+      });
+    });
+
+    it('sets clairvoyantCombatantTarget on player stats', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'Paladin1',
+          'clairvoyantCombatantTarget',
+          'Goblin1',
+          'test-campaign',
+        );
+      });
+    });
+
+    it('adds clairvoyant_combatant to activeBuffs', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        const calls = useRuntimeState.setRuntimeValue.mock.calls;
+        const buffsCall = calls.find(
+          c => c[0] === 'Paladin1' && c[1] === 'activeBuffs'
+        );
+        expect(buffsCall).toBeDefined();
+        expect(buffsCall[2]).toContainEqual(expect.objectContaining({
+          name: 'Clairvoyant Combatant',
+          effect: 'clairvoyant_combatant',
+          target: 'Goblin1',
+        }));
+      });
+    });
+
+    it('creates save listener with correct parameters', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
+          targetName: 'Goblin1',
+          saveType: 'Wisdom',
+          saveDc: 13,
+        });
+      });
+    });
+
+    it('adds ability_use log entry with save prompt info', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        const abilityCalls = addEntry.mock.calls.filter(
+          c => c[1] && c[1].type === 'ability_use'
+        );
+        expect(abilityCalls.length).toBeGreaterThan(0);
+        const match = abilityCalls.find(
+          c => c[1].characterName === 'Paladin1'
+            && c[1].abilityName === 'Clairvoyant Combatant'
+            && c[1].targetName === 'Goblin1'
+            && c[1].description.includes('Awakened Mind')
+            && c[1].description.includes('Wisdom save')
+            && c[1].description.includes('DC 13')
+        );
+        expect(match).toBeDefined();
+      });
+    });
+
+    it('attaches save-result event listener on confirm', async () => {
+      const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        expect(addEventListenerSpy).toHaveBeenCalledWith('save-result', expect.any(Function));
+      });
+      addEventListenerSpy.mockRestore();
     });
   });
 
-  it('does not have confirm button when no uses available and no pact magic', () => {
-    const props = makeProps({ currentUses: 3, maxUses: 3 });
-    renderModal(props);
-    expect(screen.queryByRole('button', { name: /Clairvoyant Combatant/ })).not.toBeInTheDocument();
-  });
+  // ── Confirm with Pact Magic expenditure ──
 
-  it('expends Pact Magic slot when no uses but pactMagicRecharge and pactSlotsAvailable', async () => {
-    const props = makeProps({
-      currentUses: 3,
-      maxUses: 3,
-      pactMagicRecharge: true,
-      pactSlotLevel: 2,
-      pactSlotsAvailable: true,
+  describe('confirm with Pact Magic expenditure', () => {
+    it('expends Pact Magic slot when no uses but pactMagicRecharge and pactSlotsAvailable', async () => {
+      const props = makeProps({
+        currentUses: 3,
+        maxUses: 3,
+        pactMagicRecharge: true,
+        pactSlotLevel: 2,
+        pactSlotsAvailable: true,
+      });
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'campaign' && prop === 'targetEffects') return [];
+        if (key === 'Paladin1' && prop === 'activeBuffs') return [];
+        if (key === 'Paladin1' && prop === 'spell_slots_level_2') return 3;
+        return null;
+      });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'Paladin1',
+          'spell_slots_level_2',
+          2,
+          'test-campaign',
+        );
+      });
     });
-    useRuntimeState.getRuntimeValue.mockImplementation((key, prop, _campaign) => {
-      if (key === 'campaign' && prop === 'targetEffects') return [];
-      if (key === 'Paladin1' && prop === 'spell_slots_level_2') return 3;
-      return null;
+
+    it('does not increment clairvoyantCombatantUses when expending Pact Magic slot', async () => {
+      const props = makeProps({
+        currentUses: 3,
+        maxUses: 3,
+        pactMagicRecharge: true,
+        pactSlotLevel: 2,
+        pactSlotsAvailable: true,
+      });
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'campaign' && prop === 'targetEffects') return [];
+        if (key === 'Paladin1' && prop === 'activeBuffs') return [];
+        if (key === 'Paladin1' && prop === 'spell_slots_level_2') return 3;
+        return null;
+      });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        const useCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+          c => c[1] === 'clairvoyantCombatantUses'
+        );
+        expect(useCalls).toHaveLength(0);
+      });
     });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
-    await waitFor(() => {
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Paladin1',
-        'spell_slots_level_2',
-        2,
-        'test-campaign',
-      );
+    it('logs ability_use entry when expending Pact Magic slot', async () => {
+      const props = makeProps({
+        currentUses: 3,
+        maxUses: 3,
+        pactMagicRecharge: true,
+        pactSlotLevel: 2,
+        pactSlotsAvailable: true,
+      });
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'campaign' && prop === 'targetEffects') return [];
+        if (key === 'Paladin1' && prop === 'activeBuffs') return [];
+        if (key === 'Paladin1' && prop === 'spell_slots_level_2') return 3;
+        return null;
+      });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+
+      await waitFor(() => {
+        const pactCalls = addEntry.mock.calls.filter(
+          c => c[1] && c[1].type === 'ability_use'
+        );
+        const pactMatch = pactCalls.find(
+          c => c[1].abilityName === 'Clairvoyant Combatant'
+            && c[1].description.includes('Pact Magic')
+            && c[1].description.includes('level 2')
+        );
+        expect(pactMatch).toBeDefined();
+      });
     });
-  });
 
-  it('logs ability_use entry when expending Pact Magic slot', async () => {
-    const props = makeProps({
-      currentUses: 3,
-      maxUses: 3,
-      pactMagicRecharge: true,
-      pactSlotLevel: 2,
-      pactSlotsAvailable: true,
-    });
-    useRuntimeState.getRuntimeValue.mockImplementation((key, prop, _campaign) => {
-      if (key === 'campaign' && prop === 'targetEffects') return [];
-      if (key === 'Paladin1' && prop === 'spell_slots_level_2') return 3;
-      return null;
-    });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+    it('logs both Pact Magic and ability_use entries when expending Pact Magic slot', async () => {
+      const props = makeProps({
+        currentUses: 3,
+        maxUses: 3,
+        pactMagicRecharge: true,
+        pactSlotLevel: 2,
+        pactSlotsAvailable: true,
+      });
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'campaign' && prop === 'targetEffects') return [];
+        if (key === 'Paladin1' && prop === 'activeBuffs') return [];
+        if (key === 'Paladin1' && prop === 'spell_slots_level_2') return 3;
+        return null;
+      });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
 
-    await waitFor(() => {
-      expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-        type: 'ability_use',
-        characterName: 'Paladin1',
-        abilityName: 'Clairvoyant Combatant',
-      }));
-    });
-  });
-
-  it('adds targetEffect to campaign targetEffects', async () => {
-    const props = makeProps({ currentUses: 1, maxUses: 3 });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-    await waitFor(() => {
-      // setRuntimeValue is called twice: once for uses, once for targetEffects
-      const calls = useRuntimeState.setRuntimeValue.mock.calls;
-      const teCall = calls.find(
-        c => c[0] === 'campaign' && c[1] === 'targetEffects'
-      );
-      expect(teCall).toBeDefined();
-      expect(teCall[2]).toContainEqual(expect.objectContaining({
-        target: 'Goblin1',
-        source: 'Clairvoyant Combatant',
-        effect: 'clairvoyant_combatant',
-        attackerAdvantage: true,
-        defenderDisadvantage: true,
-      }));
-    });
-  });
-
-  it('sets clairvoyantCombatantTarget on player stats', async () => {
-    const props = makeProps({ currentUses: 1, maxUses: 3 });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-    await waitFor(() => {
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Paladin1',
-        'clairvoyantCombatantTarget',
-        'Goblin1',
-        'test-campaign',
-      );
-    });
-  });
-
-  it('adds clairvoyant_combatant to activeBuffs', async () => {
-    const props = makeProps({ currentUses: 1, maxUses: 3 });
-    useRuntimeState.getRuntimeValue.mockImplementation((key, prop, _campaign) => {
-      if (key === 'campaign' && prop === 'targetEffects') return [];
-      if (key === 'Paladin1' && prop === 'activeBuffs') return [];
-      return null;
-    });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-    await waitFor(() => {
-      const calls = useRuntimeState.setRuntimeValue.mock.calls;
-      const buffsCall = calls.find(
-        c => c[0] === 'Paladin1' && c[1] === 'activeBuffs'
-      );
-      expect(buffsCall).toBeDefined();
-      expect(buffsCall[2]).toContainEqual(expect.objectContaining({
-        name: 'Clairvoyant Combatant',
-        effect: 'clairvoyant_combatant',
-        target: 'Goblin1',
-      }));
-    });
-  });
-
-  it('creates save listener with correct parameters', async () => {
-    const props = makeProps({ currentUses: 1, maxUses: 3 });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-    await waitFor(() => {
-      expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
-        targetName: 'Goblin1',
-        saveType: 'Wisdom',
-        saveDc: 13,
+      await waitFor(() => {
+        const abilityCalls = addEntry.mock.calls.filter(
+          c => c[1] && c[1].type === 'ability_use'
+        );
+        expect(abilityCalls.length).toBeGreaterThan(1);
+        const pactLog = abilityCalls.find(
+          c => c[1].description.includes('Pact Magic')
+        );
+        const saveLog = abilityCalls.find(
+          c => c[1].description.includes('Awakened Mind')
+        );
+        expect(pactLog).toBeDefined();
+        expect(saveLog).toBeDefined();
       });
     });
   });
 
-  it('adds ability_use log entry with save prompt info', async () => {
-    const props = makeProps({ currentUses: 1, maxUses: 3 });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+  // ── Cancel behavior ──
 
-    await waitFor(() => {
-      const abilityCalls = addEntry.mock.calls.filter(
-        c => c[1] && c[1].type === 'ability_use'
-      );
-      expect(abilityCalls.length).toBeGreaterThan(0);
-      const match = abilityCalls.find(
-        c => c[1].characterName === 'Paladin1'
-          && c[1].abilityName === 'Clairvoyant Combatant'
-          && c[1].targetName === 'Goblin1'
-          && c[1].description.includes('Awakened Mind')
-          && c[1].description.includes('Wisdom save')
-          && c[1].description.includes('DC 13')
-      );
-      expect(match).toBeDefined();
+  describe('cancel behavior', () => {
+    it('does not trigger any runtime state changes when cancelled', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => {
+        expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+      });
+    });
+
+    it('does not create a save listener when cancelled', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => {
+        expect(createSaveListener).not.toHaveBeenCalled();
+      });
+    });
+
+    it('does not log any entries when cancelled', async () => {
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => {
+        expect(addEntry).not.toHaveBeenCalled();
+      });
+    });
+
+    it('does not attach save-result event listener when cancelled', async () => {
+      const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+      const props = makeProps({ currentUses: 1, maxUses: 3 });
+      renderModal(props);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => {
+        expect(addEventListenerSpy).not.toHaveBeenCalledWith('save-result', expect.any(Function));
+      });
+      addEventListenerSpy.mockRestore();
     });
   });
 
-  it('adds ability_use log entry for Pact Magic expenditure', async () => {
-    const props = makeProps({
-      currentUses: 3,
-      maxUses: 3,
-      pactMagicRecharge: true,
-      pactSlotLevel: 2,
-      pactSlotsAvailable: true,
-    });
-    useRuntimeState.getRuntimeValue.mockImplementation((key, prop, _campaign) => {
-      if (key === 'campaign' && prop === 'targetEffects') return [];
-      if (key === 'Paladin1' && prop === 'spell_slots_level_2') return 3;
-      return null;
-    });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
+  // ── No confirm button scenarios ──
 
-    await waitFor(() => {
-      const pactCalls = addEntry.mock.calls.filter(
-        c => c[1] && c[1].type === 'ability_use'
-      );
-      const pactMatch = pactCalls.find(
-        c => c[1].abilityName === 'Clairvoyant Combatant'
-          && c[1].description.includes('Pact Magic')
-          && c[1].description.includes('level 2')
-      );
-      expect(pactMatch).toBeDefined();
+  describe('no confirm button scenarios', () => {
+    it('does not have confirm button when no uses available and no pact magic', () => {
+      const props = makeProps({ currentUses: 3, maxUses: 3 });
+      renderModal(props);
+      expect(screen.queryByRole('button', { name: /Clairvoyant Combatant/ })).not.toBeInTheDocument();
     });
-  });
 
-  it('attaches save-result event listener on confirm', async () => {
-    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
-    const props = makeProps({ currentUses: 1, maxUses: 3 });
-    renderModal(props);
-    fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-    await waitFor(() => {
-      expect(addEventListenerSpy).toHaveBeenCalledWith('save-result', expect.any(Function));
+    it('does not have confirm button when no uses but pactMagicRecharge and no slots available', () => {
+      const props = makeProps({
+        currentUses: 3,
+        maxUses: 3,
+        pactMagicRecharge: true,
+        pactSlotLevel: 2,
+        pactSlotsAvailable: false,
+      });
+      renderModal(props);
+      expect(screen.queryByRole('button', { name: /Clairvoyant Combatant/ })).not.toBeInTheDocument();
     });
-    addEventListenerSpy.mockRestore();
+
+    it('has confirm button when no uses but Pact Magic is available', () => {
+      const props = makeProps({
+        currentUses: 3,
+        maxUses: 3,
+        pactMagicRecharge: true,
+        pactSlotLevel: 2,
+        pactSlotsAvailable: true,
+      });
+      renderModal(props);
+      expect(screen.getByRole('button', { name: /Clairvoyant Combatant/ })).toBeInTheDocument();
+    });
   });
 });

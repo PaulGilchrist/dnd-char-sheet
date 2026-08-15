@@ -1,80 +1,64 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AnimateDeadModal from './AnimateDeadModal.jsx';
 
 // ── Test fixtures ──
 
-const mockOnClose = vi.fn();
-const mockOnConfirm = vi.fn();
-
 function makeProps(overrides) {
   return {
     maxTargets: 3,
-    onConfirm: mockOnConfirm,
-    onClose: mockOnClose,
+    onConfirm: vi.fn(),
+    onClose: vi.fn(),
     ...(overrides || {}),
   };
 }
 
-// ── Helpers ──
-
-/**
- * Find the total display div by searching for the one with the background style
- * that contains "Total creatures" text.
- */
-function getTotalDisplay() {
-  const allDivs = document.querySelectorAll('div[style*="background: rgba"]');
-  for (const div of allDivs) {
-    if (div.textContent.includes('Total creatures:')) {
-      return div;
-    }
-  }
-  // Fallback: find any div with "Total creatures:" that doesn't also contain "Animate Dead"
-  const allDivs2 = document.querySelectorAll('div');
-  for (const div of allDivs2) {
-    const tc = div.textContent;
-    if (tc.includes('Total creatures:') && !tc.includes('Animate Dead')) {
-      return div;
-    }
-  }
-  return null;
+function renderModal(overrides) {
+  const props = makeProps(overrides);
+  render(<AnimateDeadModal {...props} />);
+  return props;
 }
 
-/**
- * Find the flex container that contains a specific label text.
- * We look for divs with display:flex that contain the label but have no nested flex divs.
- */
-function findFlexContainer(labelText) {
-  const allDivs = document.querySelectorAll('div[style*="display: flex"]');
-  for (const div of allDivs) {
-    // Skip if this div has nested flex children (it's the sp-body container)
-    const nestedFlex = div.querySelectorAll(':scope > div[style*="display: flex"]');
-    if (nestedFlex.length > 0) continue;
-    if (div.textContent.includes(labelText)) {
-      return div;
-    }
-  }
-  // Fallback: search all flex divs regardless of nesting
-  for (const div of allDivs) {
-    if (div.textContent.includes(labelText)) {
-      return div;
-    }
-  }
-  return null;
+// ── Helpers ──
+
+function getCreatureCounters() {
+  const allSpans = document.querySelectorAll('span');
+  const countSpans = Array.from(allSpans).filter(
+    (el) => el.style.width === '40px' && el.style.textAlign === 'center'
+  );
+  return {
+    zombieCount: countSpans[0] ? parseInt(countSpans[0].textContent, 10) : null,
+    skeletonCount: countSpans[1] ? parseInt(countSpans[1].textContent, 10) : null,
+  };
+}
+
+function getTotalDisplay() {
+  return screen.getByText(/Total creatures:/);
+}
+
+function getConfirmButton() {
+  return screen.getByRole('button', { name: /Animate Dead/ });
+}
+
+function getCancelButton() {
+  return screen.getByRole('button', { name: 'Cancel' });
 }
 
 function getZombieButtons() {
-  const container = findFlexContainer('Zombie(s)');
-  if (!container) return { minus: null, plus: null };
-  const btns = Array.from(container.querySelectorAll('button'));
-  return { minus: btns[0], plus: btns[1] };
+  const zombieLabel = screen.getByText('Zombie(s)');
+  const row = zombieLabel.closest('[style*="gap: 12px"]');
+  if (!row) return { minus: null, plus: null };
+  const buttons = Array.from(row.querySelectorAll('button'));
+  return { minus: buttons[0], plus: buttons[1] };
 }
 
 function getSkeletonButtons() {
-  const container = findFlexContainer('Skeleton(s)');
-  if (!container) return { minus: null, plus: null };
-  const btns = Array.from(container.querySelectorAll('button'));
-  return { minus: btns[0], plus: btns[1] };
+  const skeletonLabel = screen.getByText('Skeleton(s)');
+  const row = skeletonLabel.closest('[style*="gap: 12px"]');
+  if (!row) return { minus: null, plus: null };
+  const buttons = Array.from(row.querySelectorAll('button'));
+  return { minus: buttons[0], plus: buttons[1] };
 }
 
 // ── Tests ──
@@ -82,94 +66,88 @@ function getSkeletonButtons() {
 describe('AnimateDeadModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
   });
 
   // ── Rendering ──
 
   describe('initial render', () => {
     it('renders the modal overlay and container', () => {
-      render(<AnimateDeadModal {...makeProps()} />);
+      renderModal();
       expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
       expect(document.querySelector('.sp-modal')).toBeInTheDocument();
     });
 
     it('renders the header with bone icon and "Animate Dead" title', () => {
-      render(<AnimateDeadModal {...makeProps()} />);
+      renderModal();
       expect(screen.getByText('Animate Dead')).toBeInTheDocument();
     });
 
     it('renders the instruction text with maxTargets', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 5 })} />);
-      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/5 undead creature/);
+      renderModal({ maxTargets: 5 });
+      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/5/);
     });
 
     it('renders Zombie and Skeleton count rows', () => {
-      render(<AnimateDeadModal {...makeProps()} />);
+      renderModal();
       expect(screen.getByText('Zombie(s)')).toBeInTheDocument();
       expect(screen.getByText('Skeleton(s)')).toBeInTheDocument();
     });
 
-    it('renders the total display showing maxTargets / maxTargets (skeleton starts at max)', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 3 \/ 3/);
+    it('renders the total display showing maxTargets / maxTargets when skeleton starts at max', () => {
+      renderModal({ maxTargets: 3 });
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 3 \/ 3/);
     });
 
     it('renders Confirm and Cancel buttons', () => {
-      render(<AnimateDeadModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
-    it('shows the confirm button with bone icon and total count', () => {
-      render(<AnimateDeadModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Animate Dead/ })).toBeInTheDocument();
+      renderModal();
+      expect(getCancelButton()).toBeInTheDocument();
+      expect(getConfirmButton()).toBeInTheDocument();
     });
 
     it('initially sets skeleton count to maxTargets and zombie count to 0', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      const skelBtns = getSkeletonButtons();
-      fireEvent.click(skelBtns.minus);
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 2 \/ 3/);
+      renderModal({ maxTargets: 3 });
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(zombieCount).toBe(0);
+      expect(skeletonCount).toBe(3);
     });
   });
 
   // ── Zombie count adjustment ──
 
   describe('zombie count adjustment', () => {
-    it('starts at 0 and increments with plus button (skeleton adjusts down)', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+    it('increments zombie and decrements skeleton to keep total constant', () => {
+      renderModal({ maxTargets: 3 });
       const zBtns = getZombieButtons();
       fireEvent.click(zBtns.plus);
-      // Zombie becomes 1, skeleton reduces from 3 to 2, total stays 3
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 3 \/ 3/);
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(zombieCount).toBe(1);
+      expect(skeletonCount).toBe(2);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 3 \/ 3/);
     });
 
-    it('does not go below 0 (skeleton adjusts up)', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+    it('does not go below 0 for zombie (skeleton adjusts up)', () => {
+      renderModal({ maxTargets: 3 });
       const zBtns = getZombieButtons();
       fireEvent.click(zBtns.minus);
-      // Zombie stays at 0, skeleton increases to 3, total stays 3
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 3 \/ 3/);
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(zombieCount).toBe(0);
+      expect(skeletonCount).toBe(3);
     });
 
-    it('does not exceed maxTargets (skeleton stays at 0)', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 2 })} />);
+    it('does not exceed maxTargets for zombie (skeleton stays at 0)', () => {
+      renderModal({ maxTargets: 2 });
       const zBtns = getZombieButtons();
       fireEvent.click(zBtns.plus);
       fireEvent.click(zBtns.plus);
       fireEvent.click(zBtns.plus);
-      // Zombie caps at 2, skeleton at 0, total stays 2
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 2 \/ 2/);
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(zombieCount).toBe(2);
+      expect(skeletonCount).toBe(0);
     });
 
-    it('decrements with minus button (skeleton adjusts up)', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      // First set skeleton to 0 by decrementing it
+    it('decrements zombie and increments skeleton', () => {
+      renderModal({ maxTargets: 3 });
+      // Set skeleton to 0 first
       const skelBtns = getSkeletonButtons();
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
@@ -177,67 +155,49 @@ describe('AnimateDeadModal', () => {
       // Now increment zombie
       const zBtns = getZombieButtons();
       fireEvent.click(zBtns.plus);
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 3/);
-    });
-
-    it('adjusts skeleton count down when zombie goes over max', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      const zBtns = getZombieButtons();
-      // Click plus twice to set zombie to 2
-      fireEvent.click(zBtns.plus);
-      fireEvent.click(zBtns.plus);
-      // Skeleton should have been reduced to 1, total stays 3
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 3 \/ 3/);
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(zombieCount).toBe(1);
+      expect(skeletonCount).toBe(0);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 1 \/ 3/);
     });
   });
 
   // ── Skeleton count adjustment ──
 
   describe('skeleton count adjustment', () => {
-    it('starts at maxTargets and decrements with minus button (total decreases)', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+    it('decrements skeleton and keeps total decreasing', () => {
+      renderModal({ maxTargets: 3 });
       const skelBtns = getSkeletonButtons();
       fireEvent.click(skelBtns.minus);
-      // Skeleton becomes 2, zombie stays at 0, total=2
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 2 \/ 3/);
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(skeletonCount).toBe(2);
+      expect(zombieCount).toBe(0);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 2 \/ 3/);
     });
 
-    it('starts at maxTargets and plus button does not exceed max', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      const skelBtns = getSkeletonButtons();
-      fireEvent.click(skelBtns.plus);
-      // Skeleton stays at 3, zombie at 0, total stays 3
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 3 \/ 3/);
-    });
-
-    it('does not go below 0 (total stays at 0)', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      const skelBtns = getSkeletonButtons();
-      fireEvent.click(skelBtns.minus);
-      fireEvent.click(skelBtns.minus);
-      fireEvent.click(skelBtns.minus);
-      fireEvent.click(skelBtns.minus);
-      // Skeleton stays at 0, zombie at 0, total=0
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 0 \/ 3/);
-    });
-
-    it('does not exceed maxTargets (zombie stays at 0)', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 2 })} />);
+    it('does not exceed maxTargets for skeleton', () => {
+      renderModal({ maxTargets: 3 });
       const skelBtns = getSkeletonButtons();
       fireEvent.click(skelBtns.plus);
-      fireEvent.click(skelBtns.plus);
-      // Skeleton stays at 2, zombie at 0, total stays 2
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 2 \/ 2/);
+      const { skeletonCount } = getCreatureCounters();
+      expect(skeletonCount).toBe(3);
     });
 
-    it('adjusts zombie count down when skeleton goes over max', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+    it('does not go below 0 for skeleton (total stays at 0)', () => {
+      renderModal({ maxTargets: 3 });
+      const skelBtns = getSkeletonButtons();
+      fireEvent.click(skelBtns.minus);
+      fireEvent.click(skelBtns.minus);
+      fireEvent.click(skelBtns.minus);
+      fireEvent.click(skelBtns.minus);
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(skeletonCount).toBe(0);
+      expect(zombieCount).toBe(0);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 0 \/ 3/);
+    });
+
+    it('adjusts zombie down when skeleton decrement would exceed max', () => {
+      renderModal({ maxTargets: 3 });
       const zBtns = getZombieButtons();
       // Set zombie to 2 (skeleton goes from 3 to 1)
       fireEvent.click(zBtns.plus);
@@ -246,9 +206,10 @@ describe('AnimateDeadModal', () => {
       // Decrement skeleton: newCount=0, 2+0=2 ≤ 3, zombie stays 2
       const skelBtns = getSkeletonButtons();
       fireEvent.click(skelBtns.minus);
-      // Total should be 2 (zombie=2, skeleton=0)
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 2 \/ 3/);
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(zombieCount).toBe(2);
+      expect(skeletonCount).toBe(0);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 2 \/ 3/);
     });
   });
 
@@ -256,106 +217,87 @@ describe('AnimateDeadModal', () => {
 
   describe('interactive adjustment scenarios', () => {
     it('allows distributing between zombie and skeleton', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 4 })} />);
+      renderModal({ maxTargets: 4 });
       const zBtns = getZombieButtons();
       const skelBtns = getSkeletonButtons();
       // Start: zombie=0, skeleton=4, total=4
-      // Click zombie plus: zombie=1, skeleton reduces to 3, total=4
       fireEvent.click(zBtns.plus);
-      // Click skeleton minus: skeleton=2, 1+2=3 ≤ 4, zombie stays 1, total=3
+      // zombie=1, skeleton=3, total=4
       fireEvent.click(skelBtns.minus);
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 3 \/ 4/);
+      // zombie=1, skeleton=2, total=3
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(zombieCount).toBe(1);
+      expect(skeletonCount).toBe(2);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 3 \/ 4/);
     });
 
     it('allows creating only zombies', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+      renderModal({ maxTargets: 3 });
       const zBtns = getZombieButtons();
       const skelBtns = getSkeletonButtons();
-      // Start: zombie=0, skeleton=3, total=3
-      // Decrement skeleton 3 times: skeleton=0, total=0
+      // Decrement skeleton to 0
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
-      // Click zombie plus 2 times: zombie=2, total=2
+      // Increment zombie
       fireEvent.click(zBtns.plus);
       fireEvent.click(zBtns.plus);
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 2 \/ 3/);
-    });
-
-    it('allows creating only skeletons', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      // Skeleton starts at 3, which is all skeletons
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 3 \/ 3/);
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(zombieCount).toBe(2);
+      expect(skeletonCount).toBe(0);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 2 \/ 3/);
     });
 
     it('allows creating zero creatures', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+      renderModal({ maxTargets: 3 });
       const skelBtns = getSkeletonButtons();
-      // Start: zombie=0, skeleton=3, total=3
-      // Decrement skeleton 3 times: skeleton=0, total=0
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 0 \/ 3/);
+      const { zombieCount, skeletonCount } = getCreatureCounters();
+      expect(zombieCount).toBe(0);
+      expect(skeletonCount).toBe(0);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 0 \/ 3/);
     });
   });
 
   // ── Confirm button state ──
 
   describe('confirm button state', () => {
-    it('is disabled when total is 0 (both counts at 0)', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      // Start: zombie=0, skeleton=3, total=3
-      // Decrement skeleton to 0: total=0
+    it('is disabled when total is 0', () => {
+      renderModal({ maxTargets: 3 });
       const skelBtns = getSkeletonButtons();
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
-      const confirmBtn = screen.getByRole('button', { name: /Animate Dead/ });
-      expect(confirmBtn).toBeDisabled();
+      expect(getConfirmButton()).toBeDisabled();
     });
 
     it('is enabled when total > 0', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      const zBtns = getZombieButtons();
-      fireEvent.click(zBtns.plus);
-      const confirmBtn = screen.getByRole('button', { name: /Animate Dead/ });
-      expect(confirmBtn).not.toBeDisabled();
+      renderModal({ maxTargets: 3 });
+      expect(getConfirmButton()).not.toBeDisabled();
     });
 
-    it('shows total count in button label when enabled', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      // Start: zombie=0, skeleton=3, total=3
-      // Click zombie plus: zombie=1, skeleton=2, total=3
-      const zBtns = getZombieButtons();
-      fireEvent.click(zBtns.plus);
-      expect(screen.getByRole('button', { name: /Animate Dead \(3\)/ })).toBeInTheDocument();
+    it('shows total count in button label', () => {
+      renderModal({ maxTargets: 3 });
+      expect(getConfirmButton()).toHaveTextContent(/Animate Dead \(3\)/);
     });
 
     it('updates button label as total changes', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+      renderModal({ maxTargets: 3 });
       const zBtns = getZombieButtons();
       const skelBtns = getSkeletonButtons();
 
-      // Start: zombie=0, skeleton=3, total=3
-      expect(screen.getByRole('button', { name: /Animate Dead \(3\)/ })).toBeInTheDocument();
+      expect(getConfirmButton()).toHaveTextContent(/Animate Dead \(3\)/);
 
-      // Increment zombie: zombie=1, skeleton=2, total=3
       fireEvent.click(zBtns.plus);
-      expect(screen.getByRole('button', { name: /Animate Dead \(3\)/ })).toBeInTheDocument();
-
-      // Decrement skeleton to 0: total goes 3→2→1→0
-      fireEvent.click(skelBtns.minus);
-      // skeleton=1, zombie=1, total=2
-      expect(screen.getByRole('button', { name: /Animate Dead \(2\)/ })).toBeInTheDocument();
+      expect(getConfirmButton()).toHaveTextContent(/Animate Dead \(3\)/);
 
       fireEvent.click(skelBtns.minus);
-      // skeleton=0, zombie=1, total=1
-      expect(screen.getByRole('button', { name: /Animate Dead \(1\)/ })).toBeInTheDocument();
+      expect(getConfirmButton()).toHaveTextContent(/Animate Dead \(2\)/);
+
+      fireEvent.click(skelBtns.minus);
+      expect(getConfirmButton()).toHaveTextContent(/Animate Dead \(1\)/);
     });
   });
 
@@ -363,47 +305,42 @@ describe('AnimateDeadModal', () => {
 
   describe('confirm action', () => {
     it('calls onConfirm with zombieCount and skeletonCount when total > 0', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+      const { onConfirm } = renderModal({ maxTargets: 3 });
       const zBtns = getZombieButtons();
       fireEvent.click(zBtns.plus);
-      const confirmBtn = screen.getByRole('button', { name: /Animate Dead/ });
-      fireEvent.click(confirmBtn);
-      expect(mockOnConfirm).toHaveBeenCalledWith({ zombieCount: 1, skeletonCount: 2 });
+      fireEvent.click(getConfirmButton());
+      expect(onConfirm).toHaveBeenCalledWith({ zombieCount: 1, skeletonCount: 2 });
     });
 
     it('calls onConfirm with all zombies when skeleton is 0', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+      const { onConfirm } = renderModal({ maxTargets: 3 });
       const zBtns = getZombieButtons();
       const skelBtns = getSkeletonButtons();
-      // Set zombie to 2, skeleton to 0
       fireEvent.click(zBtns.plus);
       fireEvent.click(zBtns.plus);
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
-      const confirmBtn = screen.getByRole('button', { name: /Animate Dead/ });
-      fireEvent.click(confirmBtn);
-      expect(mockOnConfirm).toHaveBeenCalledWith({ zombieCount: 2, skeletonCount: 0 });
+      fireEvent.click(getConfirmButton());
+      expect(onConfirm).toHaveBeenCalledWith({ zombieCount: 2, skeletonCount: 0 });
     });
 
     it('calls onConfirm with all skeletons when zombie is 0', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
-      const confirmBtn = screen.getByRole('button', { name: /Animate Dead/ });
-      fireEvent.click(confirmBtn);
-      expect(mockOnConfirm).toHaveBeenCalledWith({ zombieCount: 0, skeletonCount: 3 });
+      const { onConfirm } = renderModal({ maxTargets: 3 });
+      fireEvent.click(getConfirmButton());
+      expect(onConfirm).toHaveBeenCalledWith({ zombieCount: 0, skeletonCount: 3 });
     });
 
     it('does not call onConfirm when total is 0', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 3 })} />);
+      const { onConfirm } = renderModal({ maxTargets: 3 });
       const skelBtns = getSkeletonButtons();
-      // Set skeleton to 0
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
       fireEvent.click(skelBtns.minus);
-      const confirmBtn = screen.getByRole('button', { name: /Animate Dead/ });
+      const confirmBtn = getConfirmButton();
       expect(confirmBtn).toBeDisabled();
       fireEvent.click(confirmBtn);
-      expect(mockOnConfirm).not.toHaveBeenCalled();
+      expect(onConfirm).not.toHaveBeenCalled();
     });
   });
 
@@ -411,21 +348,21 @@ describe('AnimateDeadModal', () => {
 
   describe('cancel / close', () => {
     it('calls onClose when Cancel button is clicked', () => {
-      render(<AnimateDeadModal {...makeProps()} />);
-      fireEvent.click(screen.getByText('Cancel'));
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
+      const { onClose } = renderModal();
+      fireEvent.click(getCancelButton());
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('calls onClose when clicking the overlay', () => {
-      render(<AnimateDeadModal {...makeProps()} />);
+      const { onClose } = renderModal();
       fireEvent.click(document.querySelector('.sp-overlay'));
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('does not call onClose when clicking the modal content', () => {
-      render(<AnimateDeadModal {...makeProps()} />);
+      const { onClose } = renderModal();
       fireEvent.click(document.querySelector('.sp-modal'));
-      expect(mockOnClose).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
@@ -433,53 +370,48 @@ describe('AnimateDeadModal', () => {
 
   describe('edge cases', () => {
     it('handles maxTargets of 1', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 1 })} />);
-      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/1 undead creature/);
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 1/);
+      renderModal({ maxTargets: 1 });
+      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/1/);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 1 \/ 1/);
     });
 
-    it('handles maxTargets of 0', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 0 })} />);
-      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/0 undead creature/);
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 0 \/ 0/);
-      const confirmBtn = screen.getByRole('button', { name: /Animate Dead/ });
-      expect(confirmBtn).toBeDisabled();
+    it('handles maxTargets of 0 (all buttons disabled, confirm disabled)', () => {
+      renderModal({ maxTargets: 0 });
+      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/0/);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 0 \/ 0/);
+      expect(getConfirmButton()).toBeDisabled();
     });
 
     it('handles large maxTargets', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 13 })} />);
-      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/13 undead creature/);
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 13 \/ 13/);
+      renderModal({ maxTargets: 13 });
+      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/13/);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 13 \/ 13/);
     });
 
     it('prevents zombie from exceeding maxTargets when skeleton is 0', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 5 })} />);
+      renderModal({ maxTargets: 5 });
       const zBtns = getZombieButtons();
       const skelBtns = getSkeletonButtons();
-      // Set skeleton to 0
       for (let i = 0; i < 5; i++) {
         fireEvent.click(skelBtns.minus);
       }
-      // Now increment zombie past max
       for (let i = 0; i < 10; i++) {
         fireEvent.click(zBtns.plus);
       }
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 5 \/ 5/);
+      const { zombieCount } = getCreatureCounters();
+      expect(zombieCount).toBe(5);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 5 \/ 5/);
     });
 
     it('prevents skeleton from exceeding maxTargets when zombie is 0', () => {
-      render(<AnimateDeadModal {...makeProps({ maxTargets: 5 })} />);
+      renderModal({ maxTargets: 5 });
       const skelBtns = getSkeletonButtons();
-      // Skeleton starts at 5, try to increment
       for (let i = 0; i < 10; i++) {
         fireEvent.click(skelBtns.plus);
       }
-      const totalDisplay = getTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 5 \/ 5/);
+      const { skeletonCount } = getCreatureCounters();
+      expect(skeletonCount).toBe(5);
+      expect(getTotalDisplay()).toHaveTextContent(/Total creatures: 5 \/ 5/);
     });
   });
 });

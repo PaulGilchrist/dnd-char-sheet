@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BlindnessDeafnessModal from './BlindnessDeafnessModal.jsx';
@@ -25,7 +26,6 @@ const mockState = {
 vi.mock('./shared/AreaEffectTargetModalBase.jsx', () => {
     return {
         default: vi.fn(({ renderBody, renderActions, featureName, icon, onClose, extraState, combatSummary }) => {
-            // Capture setters from extraState for external test access
             if (extraState?.setSelectedEffect) {
                 mockState.setSelectedEffect = extraState.setSelectedEffect;
             }
@@ -66,7 +66,6 @@ vi.mock('./shared/AreaEffectTargetModalBase.jsx', () => {
     };
 });
 
-// Export mockState for tests to manipulate
 export { mockState };
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -109,8 +108,6 @@ vi.mock('../../../services/automation/handlers/spells/blindnessDeafnessHandler.j
     ]),
 }));
 
-import utils from '../../../services/ui/utils.js';
-
 const baseProps = {
     combatSummary: {
         creatures: [
@@ -134,38 +131,35 @@ function makeProps(overrides) {
     return { ...baseProps, ...(overrides || {}) };
 }
 
-// ── Rendering ──
+// ── Initial render ──
 
 describe('BlindnessDeafnessModal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        utils.guid.mockReturnValue('test-guid-123');
         mockState.selectedEffect = null;
         mockState.processing = false;
         mockState.results = [];
         mockState.pendingPrompts = [];
     });
 
-    // ── Initial render ──
-
     describe('initial render', () => {
-        it('renders the AreaEffectTargetModalBase wrapper with correct header', () => {
+        it('renders the modal wrapper with the feature name header', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             expect(screen.getByText('Blindness/Deafness')).toBeInTheDocument();
         });
 
-        it('renders with the eye icon', () => {
+        it('renders the eye icon in the header', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const header = document.querySelector('.sp-header i');
-            expect(header).toHaveClass('fa-solid fa-eye');
+            const icon = document.querySelector('.sp-header i');
+            expect(icon).toHaveClass('fa-solid fa-eye');
         });
 
-        it('renders the effect selection prompt', () => {
+        it('renders the effect selection prompt text', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             expect(screen.getByText('Choose an effect for the target:')).toBeInTheDocument();
         });
 
-        it('renders both effect options: Blinded and Deafened', () => {
+        it('renders both effect buttons: Blinded and Deafened', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: /Blinded/ })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /Deafened/ })).toBeInTheDocument();
@@ -183,60 +177,51 @@ describe('BlindnessDeafnessModal', () => {
         });
     });
 
-    // ── Effect selection ──
+    // ── Effect selection UI ──
+    // Note: Full effect selection behavior (target list, apply, save resolution)
+    // is tested in BlindnessDeafnessModal.handlers.test.jsx and
+    // BlindnessDeafnessModal.edge-cases.test.jsx. These tests only verify
+    // the UI state change on the effect buttons themselves.
 
-    describe('effect selection', () => {
-        it('selects Blinded when clicked and shows target selection screen', () => {
+    describe('effect selection UI', () => {
+        it('applies selected class to Blinded when clicked', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Blinded/ }));
-            // The parent's setSelectedEffect is the real useState setter
-            // The mock reads from mockState.selectedEffect which we need to update
-            // Since the real component updates its own state, we simulate the mock state update
-            // that would happen when the parent's state syncs
-            expect(screen.getByRole('button', { name: /Blinded/ })).toHaveClass('blindness-deafness-effect-selected');
+            const blindedBtn = screen.getByRole('button', { name: /Blinded/ });
+            fireEvent.click(blindedBtn);
+            expect(blindedBtn).toHaveClass('blindness-deafness-effect-selected');
         });
 
-        it('selects Deafened when clicked', () => {
+        it('applies selected class to Deafened when clicked', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Deafened/ }));
-            expect(screen.getByRole('button', { name: /Deafened/ })).toHaveClass('blindness-deafness-effect-selected');
+            const deafenedBtn = screen.getByRole('button', { name: /Deafened/ });
+            fireEvent.click(deafenedBtn);
+            expect(deafenedBtn).toHaveClass('blindness-deafness-effect-selected');
         });
 
-        it('switches selection when a different effect is clicked', () => {
+        it('switches selection from one effect to another', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Blinded/ }));
-            fireEvent.click(screen.getByRole('button', { name: /Deafened/ }));
-            expect(screen.getByRole('button', { name: /Deafened/ })).toHaveClass('blindness-deafness-effect-selected');
-            expect(screen.getByRole('button', { name: /Blinded/ })).not.toHaveClass('blindness-deafness-effect-selected');
-        });
+            const blindedBtn = screen.getByRole('button', { name: /Blinded/ });
+            const deafenedBtn = screen.getByRole('button', { name: /Deafened/ });
 
-        it('shows Back and Cancel buttons after effect selection', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Blinded/ }));
-            // After selection, the component's renderBody changes, but the mock
-            // still renders the initial body. We verify the button styling changed.
-            expect(screen.getByRole('button', { name: /Blinded/ })).toHaveClass('blindness-deafness-effect-selected');
-        });
+            fireEvent.click(blindedBtn);
+            expect(blindedBtn).toHaveClass('blindness-deafness-effect-selected');
 
-        it('goes back to effect selection when Back is clicked', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Blinded/ }));
-            // Back button would be in the actions area of the second render
-            // Since mock doesn't re-render, we verify the selection state changed
-            expect(screen.getByRole('button', { name: /Blinded/ })).toHaveClass('blindness-deafness-effect-selected');
+            fireEvent.click(deafenedBtn);
+            expect(deafenedBtn).toHaveClass('blindness-deafness-effect-selected');
+            expect(blindedBtn).not.toHaveClass('blindness-deafness-effect-selected');
         });
     });
 
     // ── Cancel / Close ──
 
     describe('cancel / close', () => {
-        it('calls onClose when Cancel is clicked on effect selection screen', () => {
+        it('calls onClose when Cancel button is clicked', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
             expect(baseProps.onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('calls onClose when clicking the overlay', () => {
+        it('calls onClose when clicking the overlay outside the modal', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             fireEvent.click(document.querySelector('.sp-overlay'));
             expect(baseProps.onClose).toHaveBeenCalledTimes(1);

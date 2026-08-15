@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
@@ -25,7 +26,7 @@ describe('DiceRollResult', () => {
                     rollType={rollType}
                 />
             );
-            const icon = container.querySelector('.fa-solid');
+            const icon = container.querySelector('.dice-roll-header .fa-solid');
             expect(icon).toHaveClass(expectedIcon);
         });
     });
@@ -78,6 +79,19 @@ describe('DiceRollResult', () => {
             );
             expect(screen.queryByText(/Great Weapon Fighting/)).not.toBeInTheDocument();
         });
+
+        it('does not show GWF when gwfOriginalRolls is missing', () => {
+            render(
+                <DiceRollResult
+                    name="Longsword"
+                    type="damage"
+                    rolls={[2, 4]}
+                    bonus={0}
+                    gwfApplied={true}
+                />
+            );
+            expect(screen.queryByText(/Great Weapon Fighting/)).not.toBeInTheDocument();
+        });
     });
 
     describe('reliable talent display', () => {
@@ -99,12 +113,28 @@ describe('DiceRollResult', () => {
             expect(rt.textContent).toContain('10');
         });
 
-        it('does not show reliable talent indicator when d20 roll is 10 or more', () => {
+        it('shows reliable talent indicator at boundary value of 9', () => {
+            const { container } = render(
+                <DiceRollResult
+                    name="Stealth"
+                    type="d20"
+                    rolls={[9]}
+                    bonus={2}
+                    rollType="skill"
+                    reliableTalent={true}
+                />
+            );
+            const rt = container.querySelector('.dice-roll-reliable-talent');
+            expect(rt).toBeInTheDocument();
+            expect(rt.textContent).toContain('d20 9');
+        });
+
+        it('does not show reliable talent indicator when d20 roll is 10', () => {
             render(
                 <DiceRollResult
                     name="Athletics"
                     type="d20"
-                    rolls={[12]}
+                    rolls={[10]}
                     bonus={5}
                     rollType="skill"
                     reliableTalent={true}
@@ -121,6 +151,20 @@ describe('DiceRollResult', () => {
                     rolls={[3]}
                     bonus={5}
                     rollType="attack"
+                    reliableTalent={true}
+                />
+            );
+            expect(screen.queryByText(/Reliable Talent/)).not.toBeInTheDocument();
+        });
+
+        it('does not show reliable talent for save rollType', () => {
+            render(
+                <DiceRollResult
+                    name="DEX Save"
+                    type="d20"
+                    rolls={[3]}
+                    bonus={5}
+                    rollType="save"
                     reliableTalent={true}
                 />
             );
@@ -168,6 +212,39 @@ describe('DiceRollResult', () => {
             expect(heal.textContent).toContain('HP:');
         });
 
+        it('shows already at full HP when finalHeal is 0', () => {
+            const { container } = render(
+                <DiceRollResult
+                    name="Cure Wounds"
+                    type="heal"
+                    rolls={[5, 3]}
+                    bonus={0}
+                    total={8}
+                    finalHeal={0}
+                    targetName="Ally"
+                />
+            );
+            const heal = container.querySelector('.dice-roll-heal-applied');
+            expect(heal.textContent).toContain('already at full HP');
+            expect(heal.textContent).not.toContain('healing applied');
+        });
+
+        it('shows already at full HP when finalHeal is negative', () => {
+            const { container } = render(
+                <DiceRollResult
+                    name="Cure Wounds"
+                    type="heal"
+                    rolls={[5, 3]}
+                    bonus={0}
+                    total={8}
+                    finalHeal={-3}
+                    targetName="Ally"
+                />
+            );
+            const heal = container.querySelector('.dice-roll-heal-applied');
+            expect(heal.textContent).toContain('already at full HP');
+        });
+
         it('shows bonus heal when bonusHeal is greater than 0', () => {
             const { container } = render(
                 <DiceRollResult
@@ -198,6 +275,21 @@ describe('DiceRollResult', () => {
                     total={8}
                     finalHeal={8}
                     bonusHeal={0}
+                    targetName="Ally"
+                />
+            );
+            expect(container.querySelector('.dice-roll-heal-bonus')).not.toBeInTheDocument();
+        });
+
+        it('does not show bonus heal when bonusHeal is undefined', () => {
+            const { container } = render(
+                <DiceRollResult
+                    name="Cure Wounds"
+                    type="heal"
+                    rolls={[5, 3]}
+                    bonus={0}
+                    total={8}
+                    finalHeal={8}
                     targetName="Ally"
                 />
             );
@@ -253,7 +345,7 @@ describe('DiceRollResult', () => {
             expect(screen.getByText(/Still Failed/)).toBeInTheDocument();
         });
 
-        it('shows consumed state after clicking succeeded', () => {
+        it('shows consumed state with result after clicking succeeded', () => {
             const { container } = render(
                 <DiceRollResult
                     name="Insight"
@@ -269,7 +361,11 @@ describe('DiceRollResult', () => {
             expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
             fireEvent.click(screen.getByText(/Succeeded/));
             // consumed state should still show the result but without buttons
-            expect(container.querySelectorAll('.dice-roll-reroll-result').length).toBeGreaterThanOrEqual(1);
+            const rerollResults = container.querySelectorAll('.dice-roll-reroll-result');
+            expect(rerollResults.length).toBeGreaterThanOrEqual(1);
+            // Succeeded/Still Failed buttons should no longer be visible
+            expect(screen.queryByText(/Succeeded/)).not.toBeInTheDocument();
+            expect(screen.queryByText(/Still Failed/)).not.toBeInTheDocument();
         });
     });
 });

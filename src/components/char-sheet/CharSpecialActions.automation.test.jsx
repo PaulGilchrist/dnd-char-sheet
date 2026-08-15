@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -93,9 +94,58 @@ vi.mock('../../services/automation/handlers/class-wizard/SavantHandler.js', () =
   onSavantSelected: vi.fn(),
 }));
 
+// Mock runtime state
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(() => null),
+  setRuntimeValue: vi.fn(() => Promise.resolve()),
+  useRuntimeValue: vi.fn(() => null),
+}));
+
+// Mock DiceRollContext
+vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
+  useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
+}));
+
+// Mock useCombatSuperiorityModal
+vi.mock('../../hooks/combat/useCombatSuperiorityModal.js', () => ({
+  useCombatSuperiorityModal: vi.fn(() => ({
+    combatSuperiorityModal: null,
+    setCombatSuperiorityModal: vi.fn(),
+    handleCombatSuperiorityConfirm: vi.fn(),
+    handleCombatSuperiorityReopenSelection: vi.fn(),
+  })),
+}));
+
+// Mock useLoggedDiceRoll
+vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
+  default: vi.fn(() => ({
+    rollAttack: vi.fn(),
+    rollDamage: vi.fn(),
+  })),
+}));
+
+// Mock log service
+vi.mock('../../services/ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+// Mock normalizeAutoDamage / resolveAttackDamageStandalone
+vi.mock('./useAttackDamageResolution.js', () => ({
+  normalizeAutoDamage: vi.fn(() => ({ attack: {}, ctx: {} })),
+  resolveAttackDamageStandalone: vi.fn(() => Promise.resolve()),
+}));
+
+// Mock getCombatContext
+vi.mock('../../services/rules/combat/damageUtils.js', () => ({
+  getCombatContext: vi.fn(() => Promise.resolve({ creatures: [] })),
+}));
+
+// Import mocked modules for use with vi.mocked()
 import { executeHandler } from '../../services/automation/index.js';
+import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 
 const basePlayerStats = {
+  name: 'TestCharacter',
   specialActions: [],
   class: {
     fightingStyles: [],
@@ -119,20 +169,38 @@ describe('CharSpecialActions - Automation', () => {
     vi.clearAllMocks();
   });
 
-  describe('automation behavior', () => {
-    it('executes automation when clicked and cannotAct is false', async () => {
+  describe('handleAutomationClick - cannotAct guard', () => {
+    it('does not execute automation when cannotAct is true', async () => {
+      executeHandler.mockResolvedValue({ type: 'popup', payload: { name: 'Should not fire' } });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Blocked Action', { type: 'generic' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
+
+      fireEvent.click(screen.getAllByText(/Blocked Action/)[0]);
+
+      await waitFor(() => {
+        expect(executeHandler).not.toHaveBeenCalled();
+      });
+    });
+
+    it('allows automation execution when cannotAct is false', async () => {
       executeHandler.mockResolvedValue({
         type: 'popup',
-        payload: { type: 'automation_info', name: 'Blink Steps', description: 'Teleported 30 ft.' },
+        payload: { name: 'Executed Action', description: 'Action completed.' },
       });
 
       const playerStats = createPlayerStats({
         specialActions: [
-          createSpecialAction('Blink Steps', { type: 'teleport', distance: '30 ft' }),
+          createSpecialAction('Executed Action', { type: 'teleport' }),
         ],
       });
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={false} />);
-      fireEvent.click(screen.getAllByText(/Blink Steps/)[0]);
+
+      fireEvent.click(screen.getAllByText(/Executed Action/)[0]);
 
       await waitFor(() => {
         expect(executeHandler).toHaveBeenCalledWith(
@@ -144,20 +212,90 @@ describe('CharSpecialActions - Automation', () => {
         );
       });
     });
+  });
 
-    it('does not execute automation when cannotAct is true', async () => {
-      executeHandler.mockResolvedValue(null);
+  describe('handleAutomationClick - executeHandler result handling', () => {
+    it('displays popup when executeHandler returns popup result', async () => {
+      let capturedPopup = null;
+      const mockSetPopupHtml = (html) => { capturedPopup = html; };
+      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
+
+      executeHandler.mockResolvedValue({
+        type: 'popup',
+        payload: { name: 'Test Action', description: 'Action completed.' },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Test Action', { type: 'teleport' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Test Action/)[0]);
+
+      await waitFor(() => {
+        expect(capturedPopup).toContain('Test Action');
+        expect(capturedPopup).toContain('Action completed.');
+      });
+    });
+
+    it('opens teleport modal when executeHandler returns teleport modal result', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'teleport',
+        payload: { action: { name: 'Blink Steps' }, playerStats: basePlayerStats, campaignName: 'test' },
+      });
 
       const playerStats = createPlayerStats({
         specialActions: [
           createSpecialAction('Blink Steps', { type: 'teleport', distance: '30 ft' }),
         ],
       });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
       fireEvent.click(screen.getAllByText(/Blink Steps/)[0]);
 
       await waitFor(() => {
-        expect(executeHandler).not.toHaveBeenCalled();
+        expect(screen.getByTestId('teleport-modal')).toBeInTheDocument();
+      });
+    });
+
+    it('opens signature spells modal when executeHandler returns signatureSpells modal result', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'signatureSpells',
+        payload: { action: { name: 'Signature Spells' }, playerStats: basePlayerStats, campaignName: 'test', level3Options: ['Fireball', 'Haste'] },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Signature Spells', { type: 'signature_spells' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Signature Spells/)[0]);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('signature-spells-modal')).toBeInTheDocument();
+      });
+    });
+
+    it('handles executeHandler returning null silently', async () => {
+      executeHandler.mockResolvedValue(null);
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          createSpecialAction('Silent Action', { type: 'teleport' }),
+        ],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(/Silent Action/)[0]);
+
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalled();
       });
     });
   });

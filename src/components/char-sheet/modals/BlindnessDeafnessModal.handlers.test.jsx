@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BlindnessDeafnessModal from './BlindnessDeafnessModal.jsx';
@@ -110,7 +111,6 @@ vi.mock('../../../services/automation/handlers/spells/blindnessDeafnessHandler.j
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
 import * as expirations from '../../../services/rules/effects/expirations.js';
 import * as diceRoller from '../../../services/dice/diceRoller.js';
-
 import * as logService from '../../../services/ui/logService.js';
 import * as savePromptService from '../../../services/combat/conditions/savePromptService.js';
 import utils from '../../../services/ui/utils.js';
@@ -139,6 +139,32 @@ function makeProps(overrides) {
     return { ...baseProps, ...(overrides || {}) };
 }
 
+// Helper: get the handleApplyOverride function from the last AreaEffectTargetModalBase render
+function getApplyFn() {
+    const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1];
+    return lastCall?.[0]?.handleApplyOverride;
+}
+
+// Helper: create a minimal ctx with the defaults, allowing overrides
+function makeCtx(overrides = {}) {
+    return {
+        selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
+        processing: false,
+        combatSummary: baseCombatSummary,
+        results: [],
+        pendingPrompts: [],
+        allResolved: false,
+        selected: new Set(['Goblin1']),
+        eligibleTargets: [],
+        toggleTarget: vi.fn(),
+        handleApply: vi.fn(),
+        setProcessing: vi.fn(),
+        setResults: vi.fn(),
+        setPendingPrompts: vi.fn(),
+        ...overrides,
+    };
+}
+
 // ── Initiative rolled event ──
 
 describe('BlindnessDeafnessModal handlers', () => {
@@ -153,27 +179,29 @@ describe('BlindnessDeafnessModal handlers', () => {
         mockState.pendingPrompts = [];
     });
 
+    // ── Initiative-rolled event: no-op guards ──
+
     describe('initiative-rolled event handling', () => {
-        it('does nothing when rolling character is not the caster', () => {
+        function renderModal() {
             render(<BlindnessDeafnessModal {...makeProps()} />);
+        }
+
+        it('does nothing when event detail is missing', () => {
+            renderModal();
+            window.dispatchEvent(new CustomEvent('initiative-rolled', { detail: null }));
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when event detail lacks characterName', () => {
+            renderModal();
+            window.dispatchEvent(new CustomEvent('initiative-rolled', { detail: {} }));
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when the rolling character is not the caster', () => {
+            renderModal();
             window.dispatchEvent(new CustomEvent('initiative-rolled', {
                 detail: { characterName: 'OtherCharacter' },
-            }));
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('does nothing when event has no detail', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            window.dispatchEvent(new CustomEvent('initiative-rolled', {
-                detail: null,
-            }));
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('does nothing when event detail has no characterName', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            window.dispatchEvent(new CustomEvent('initiative-rolled', {
-                detail: {},
             }));
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
         });
@@ -182,28 +210,12 @@ describe('BlindnessDeafnessModal handlers', () => {
     // ── HandleApplyOverride (NPC resolution) ──
 
     describe('handleApplyOverride - NPC resolution', () => {
-        it('sets processing to true on apply', () => {
+        it('sets processing to true before resolving', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
+            const applyFn = getApplyFn();
 
             const setProcessing = vi.fn();
-
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Goblin1']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing,
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
+            const ctx = makeCtx({ setProcessing });
 
             act(() => {
                 applyFn(ctx);
@@ -214,27 +226,10 @@ describe('BlindnessDeafnessModal handlers', () => {
 
         it('does nothing when no effect is selected', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
-
-            const ctx = {
-                selectedEffect: null,
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Goblin1']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
+            const applyFn = getApplyFn();
 
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx({ selectedEffect: null }));
             });
 
             expect(diceRoller.rollD20).not.toHaveBeenCalled();
@@ -242,27 +237,10 @@ describe('BlindnessDeafnessModal handlers', () => {
 
         it('does nothing when no targets are selected', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
-
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
+            const applyFn = getApplyFn();
 
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx({ selected: new Set() }));
             });
 
             expect(diceRoller.rollD20).not.toHaveBeenCalled();
@@ -270,37 +248,19 @@ describe('BlindnessDeafnessModal handlers', () => {
 
         it('applies condition when NPC fails save', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
+            const applyFn = getApplyFn();
 
             diceRoller.rollD20.mockReturnValue(1);
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Goblin1']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
-
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx());
             });
 
-            expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
-                'test-campaign',
-                'Goblin1',
-                expect.objectContaining({
-                    success: false,
-                })
+            const sendSaveResultCall = savePromptService.sendSaveResult.mock.calls[0];
+            expect(sendSaveResultCall[0]).toBe('test-campaign');
+            expect(sendSaveResultCall[1]).toBe('Goblin1');
+            expect(sendSaveResultCall[2]).toEqual(
+                expect.objectContaining({ success: false })
             );
 
             expect(expirations.addExpiration).toHaveBeenCalled();
@@ -316,66 +276,30 @@ describe('BlindnessDeafnessModal handlers', () => {
 
         it('does not apply condition when NPC succeeds save', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
+            const applyFn = getApplyFn();
 
             diceRoller.rollD20.mockReturnValue(15);
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Goblin1']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
-
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx());
             });
 
             expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
                 'test-campaign',
                 'Goblin1',
-                expect.objectContaining({
-                    success: true,
-                })
+                expect.objectContaining({ success: true })
             );
             expect(expirations.addExpiration).not.toHaveBeenCalled();
         });
 
-        it('sends save result with correct roll details', () => {
+        it('sends save result with correct roll details for NPC', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
+            const applyFn = getApplyFn();
 
             diceRoller.rollD20.mockReturnValue(7);
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Goblin1']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
-
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx());
             });
 
             expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
@@ -392,29 +316,12 @@ describe('BlindnessDeafnessModal handlers', () => {
 
         it('logs save entry for NPC resolution', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
+            const applyFn = getApplyFn();
 
             diceRoller.rollD20.mockReturnValue(5);
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Goblin1']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
-
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx());
             });
 
             expect(logService.addEntry).toHaveBeenCalledWith(
@@ -428,69 +335,40 @@ describe('BlindnessDeafnessModal handlers', () => {
             );
         });
 
-        it('treats missing creature as NPC', () => {
+        it('treats missing creature as NPC with zero save bonus', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
+            const applyFn = getApplyFn();
 
             diceRoller.rollD20.mockReturnValue(5);
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Unknown Creature']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
-
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx({ selected: new Set(['Unknown Creature']) }));
             });
 
-            expect(savePromptService.sendSaveResult).toHaveBeenCalled();
+            expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
+                'test-campaign',
+                'Unknown Creature',
+                expect.objectContaining({ saveBonus: 0 })
+            );
         });
 
         it('works with deafened effect for NPC', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
+            const applyFn = getApplyFn();
 
             diceRoller.rollD20.mockReturnValue(1);
 
-            const ctx = {
-                selectedEffect: { key: 'deafened', label: 'Deafened', condition: 'deafened' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Orc Warrior']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
-
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx({
+                    selectedEffect: { key: 'deafened', label: 'Deafened', condition: 'deafened' },
+                    selected: new Set(['Orc Warrior']),
+                }));
             });
 
             expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
                 'test-campaign',
                 'Orc Warrior',
-                expect.objectContaining({
-                    success: false,
-                })
+                expect.objectContaining({ success: false })
             );
             expect(expirations.addExpiration).toHaveBeenCalled();
         });
@@ -501,27 +379,10 @@ describe('BlindnessDeafnessModal handlers', () => {
     describe('handleApplyOverride - player save prompt', () => {
         it('sends save prompt for player targets', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
-
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Elf Mage']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
+            const applyFn = getApplyFn();
 
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx({ selected: new Set(['Elf Mage']) }));
             });
 
             expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
@@ -534,27 +395,10 @@ describe('BlindnessDeafnessModal handlers', () => {
 
         it('logs save entry for pending player prompts', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
-
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Elf Mage']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts: vi.fn(),
-            };
+            const applyFn = getApplyFn();
 
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx({ selected: new Set(['Elf Mage']) }));
             });
 
             expect(logService.addEntry).toHaveBeenCalledWith(
@@ -570,29 +414,15 @@ describe('BlindnessDeafnessModal handlers', () => {
 
         it('sets pending prompts for player targets', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
-            const lastCall = AreaEffectTargetModalBase.mock.calls[AreaEffectTargetModalBase.mock.calls.length - 1][0];
-            const applyFn = lastCall.handleApplyOverride;
+            const applyFn = getApplyFn();
 
             const setPendingPrompts = vi.fn();
 
-            const ctx = {
-                selectedEffect: { key: 'blinded', label: 'Blinded', condition: 'blinded' },
-                processing: false,
-                combatSummary: baseCombatSummary,
-                results: [],
-                pendingPrompts: [],
-                allResolved: false,
-                selected: new Set(['Elf Mage']),
-                eligibleTargets: [],
-                toggleTarget: vi.fn(),
-                handleApply: vi.fn(),
-                setProcessing: vi.fn(),
-                setResults: vi.fn(),
-                setPendingPrompts,
-            };
-
             act(() => {
-                applyFn(ctx);
+                applyFn(makeCtx({
+                    selected: new Set(['Elf Mage']),
+                    setPendingPrompts,
+                }));
             });
 
             expect(setPendingPrompts).toHaveBeenCalled();

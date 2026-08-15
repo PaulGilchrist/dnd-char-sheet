@@ -37,9 +37,7 @@ describe('CharInventory item lookup', () => {
     it('should handle item name with leading/trailing spaces via normalization', async () => {
       const stats = { inventory: { magicItems: [], equipped: [' Longsword '], backpack: [] } };
       helpers.renderComponent(stats);
-      const clickable = screen.getByText(/Longsword/);
-      fireEvent.click(clickable);
-      await waitFor(() => { expect(helpers.setPopupHtmlSpy).toHaveBeenCalled(); });
+      await helpers.clickItemByText('Longsword');
       const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('not found in database');
     });
@@ -49,11 +47,8 @@ describe('CharInventory item lookup', () => {
         { name: 'Potion of Healing', index: 'potion-of-healing', cost: { quantity: 100, unit: 'gp' } },
       ]);
       const stats = { inventory: { magicItems: [], equipped: ['Potion  of  Healing'], backpack: [] } };
-      const { container } = helpers.renderComponent(stats);
-      const allSpans = container.querySelectorAll('span.clickable');
-      expect(allSpans.length).toBeGreaterThan(0);
-      fireEvent.click(allSpans[0]);
-      await waitFor(() => { expect(helpers.setPopupHtmlSpy).toHaveBeenCalled(); });
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText(/Potion/);
       expect(helpers.setPopupHtmlSpy.mock.calls[0][0]).toContain('<b>Potion of Healing</b>');
     });
 
@@ -63,7 +58,7 @@ describe('CharInventory item lookup', () => {
       ]);
       const stats = { inventory: { magicItems: [], equipped: ['   '], backpack: [] } };
       helpers.renderComponent(stats);
-      const clickable = screen.getByText((content, element) => element && element.classList.contains('clickable'));
+      const clickable = screen.getByText((content, element) => element && element.classList.contains('clickable') && content.trim() === '');
       fireEvent.click(clickable);
       await waitFor(() => { expect(helpers.setPopupHtmlSpy).toHaveBeenCalled(); });
       expect(helpers.setPopupHtmlSpy.mock.calls[0][0]).toContain('not found in database');

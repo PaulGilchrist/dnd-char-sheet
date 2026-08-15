@@ -1,8 +1,13 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
-import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { DiceRollContext } from '../../hooks/combat/DiceRollContext.js';
+import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
+import { addEntry } from '../../services/ui/logService.js';
+import { toggleBuff } from '../../services/automation/common/buffToggle.js';
+import { addExpiration } from '../../services/rules/effects/expirations.js';
 
 const _syncedStore = new Map();
 
@@ -13,7 +18,9 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   useSyncedState: vi.fn((_, key, defaultValue) => {
     const hasValue = _syncedStore.has(key);
     const value = hasValue ? _syncedStore.get(key) : defaultValue;
-    const setter = vi.fn((newValue) => { _syncedStore.set(key, newValue); });
+    const setter = vi.fn((newValue) => {
+      _syncedStore.set(key, newValue);
+    });
     return [value, setter];
   }),
   useRuntimeValue: vi.fn((_, key, _campaignName) => {
@@ -25,8 +32,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
 
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
   default: vi.fn(() => ({
-    popupHtml: null, setPopupHtml: vi.fn(), rollAttack: vi.fn(), rollDamage: vi.fn(),
-    rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
+    popupHtml: null, setPopupHtml: vi.fn(), rollAttack: vi.fn(), rollDamage: vi.fn(), rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
   })),
 }));
 
@@ -109,7 +115,7 @@ vi.mock('../../services/character/classFeatures.js', () => ({
 }));
 
 vi.mock('../../services/character/featRangeService.js', () => ({
-  computeFeatRangeEffects: vi.fn(() => Promise.resolve(null)),
+  computeFeatRangeEffects: vi.fn(() => Promise.resolve({ rangeBonus: 5 })),
 }));
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -195,161 +201,186 @@ function createStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
 
-describe('CharActions base actions (Hide, Dodge)', () => {
+function makeDefaultGetRuntimeValue() {
+  return (_name, key) => {
+    if (key === 'activeBuffs') return [];
+    if (key === 'hasteExtraActionUsed') return false;
+    if (key === 'activeConditions') return [];
+    return null;
+  };
+}
+
+function renderWithWrapper(component, wrapper) {
+  return act(async () => render(component, { wrapper }));
+}
+
+function getHideButton() {
+  return screen.getByText('Hide');
+}
+
+function getDodgeButton() {
+  return screen.getByText('Dodge');
+}
+
+function clickHide() {
+  return act(async () => { fireEvent.click(getHideButton()); });
+}
+
+function clickDodge() {
+  return act(async () => { fireEvent.click(getDodgeButton()); });
+}
+
+function makeStealthStats(bonus = 5) {
+  const stats = createStats({ actions: ['Hide'], skillProficiencies: ['Stealth'], level: 5 });
+  stats.abilities = [
+    { name: 'Dexterity', bonus: 2, skills: [{ name: 'Stealth', bonus }] },
+    { name: 'Strength', bonus: 0, skills: [] },
+    { name: 'Constitution', bonus: 0, skills: [] },
+    { name: 'Intelligence', bonus: 0, skills: [] },
+    { name: 'Wisdom', bonus: 0, skills: [] },
+    { name: 'Charisma', bonus: 0, skills: [] },
+  ];
+  return stats;
+}
+
+function makeDefaultWrapper(mockSetPopupHtml) {
+  return ({ children }) => (
+    <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+      {children}
+    </DiceRollContext.Provider>
+  );
+}
+
+describe('CharActions Hide/Dodge base actions — integration behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     _syncedStore.clear();
     globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve(['Hide', 'Dash', 'Disengage', 'Dodge', 'Grapple']) });
-    getRuntimeValue.mockImplementation(() => null);
+    getRuntimeValue.mockImplementation(makeDefaultGetRuntimeValue());
+    setRuntimeValue.mockReset();
+    addEntry.mockReset();
+    toggleBuff.mockReset();
+    addExpiration.mockReset();
   });
 
-  describe('Hide base action', () => {
-    it('renders Hide in base actions list', async () => {
+  describe('Hide action — full integration flow', () => {
+    it('rolls Stealth skill check on click and invokes setRuntimeValue for success', async () => {
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
+      const mockRollSkillCheck = vi.fn().mockResolvedValue(undefined);
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
 
       getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'campaign' && key === undefined) return null;
         if (key === 'activeBuffs') return [];
         if (key === 'hasteExtraActionUsed') return false;
         if (key === 'activeConditions') return [];
+        if (_name === 'campaign' && key === 'lastAttack') return { d20: 12, bonus: 5, total: 17 };
         return null;
       });
 
-      await act(async () => {
-        render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper });
+      useLoggedDiceRoll.mockReturnValue({
+        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(),
+        rollSkillCheck: mockRollSkillCheck, rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
       });
 
-      expect(screen.getByText('Hide')).toBeInTheDocument();
-    });
+      const stealthStats = makeStealthStats(5);
 
-    it('does nothing when cannotAct is true for Hide', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      await act(async () => {
-        render(<CharActions playerStats={createStats()} campaignName="test-campaign" cannotAct={true} />, { wrapper });
-      });
-
-      expect(screen.getByText('Hide')).toBeInTheDocument();
-    });
-
-    it('shows popup when already invisible', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeConditions') return ['invisible'];
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        return null;
-      });
-
-      const stats = createStats({ actions: ['Hide'] });
-
-      await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
-      });
-
-      const hideEl = screen.getByText('Hide');
-      await act(async () => { fireEvent.click(hideEl); });
+      await renderWithWrapper(<CharActions playerStats={stealthStats} campaignName="test-campaign" />, wrapper);
+      await clickHide();
 
       await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-          description: expect.stringContaining('already hidden'),
+        expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), expect.any(Object));
+      });
+
+      await waitFor(() => {
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'activeConditions', expect.arrayContaining(['invisible']), 'test-campaign');
+      });
+
+      await waitFor(() => {
+        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'TestCharacter',
+          abilityName: 'Hide',
         }));
       });
     });
+
+    it('does not add invisible condition or buff on failed Stealth check (< DC 15)', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const mockRollSkillCheck = vi.fn().mockResolvedValue(undefined);
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'activeBuffs') return [];
+        if (key === 'hasteExtraActionUsed') return false;
+        if (key === 'activeConditions') return [];
+        if (_name === 'campaign' && key === 'lastAttack') return { d20: 3, bonus: 5, total: 8 };
+        return null;
+      });
+
+      useLoggedDiceRoll.mockReturnValue({
+        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(),
+        rollSkillCheck: mockRollSkillCheck, rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
+      });
+
+      const stealthStats = makeStealthStats(5);
+
+      await renderWithWrapper(<CharActions playerStats={stealthStats} campaignName="test-campaign" />, wrapper);
+      await clickHide();
+
+      await waitFor(() => {
+        expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), expect.any(Object));
+      });
+
+      expect(setRuntimeValue).not.toHaveBeenCalledWith('TestCharacter', 'activeConditions', expect.arrayContaining(['invisible']), 'test-campaign');
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+          name: 'Hide',
+          description: expect.stringContaining('Hide failed'),
+        }));
+      });
+    });
+
+    it('skips skill check and shows popup when already invisible', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const mockRollSkillCheck = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'activeConditions') return ['invisible'];
+        return makeDefaultGetRuntimeValue()(key);
+      });
+
+      useLoggedDiceRoll.mockReturnValue({
+        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(),
+        rollSkillCheck: mockRollSkillCheck, rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
+      });
+
+      await renderWithWrapper(<CharActions playerStats={createStats({ actions: ['Hide'] })} campaignName="test-campaign" />, wrapper);
+      await clickHide();
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+          name: 'Hide',
+          description: expect.stringContaining('already hidden'),
+        }));
+      });
+
+      expect(mockRollSkillCheck).not.toHaveBeenCalled();
+      expect(setRuntimeValue).not.toHaveBeenCalled();
+    });
   });
 
-  describe('Dodge base action', () => {
-    it('renders Dodge in base actions list', async () => {
+  describe('Dodge action — full integration flow', () => {
+    it('toggles dodge buff on and logs activation', async () => {
       const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      await act(async () => {
-        render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper });
-      });
-
-      expect(screen.getByText('Dodge')).toBeInTheDocument();
-    });
-
-    it('does nothing when cannotAct is true for Dodge', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      await act(async () => {
-        render(<CharActions playerStats={createStats()} campaignName="test-campaign" cannotAct={true} />, { wrapper });
-      });
-
-      expect(screen.getByText('Dodge')).toBeInTheDocument();
-    });
-
-    it('toggles Dodge buff on/off', async () => {
-      const { toggleBuff } = await import('../../services/automation/common/buffToggle.js');
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
       toggleBuff.mockReturnValue({ wasActive: false });
 
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      await act(async () => {
-        render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper });
-      });
-
-      const dodgeEl = screen.getByText('Dodge');
-      await act(async () => { fireEvent.click(dodgeEl); });
+      await renderWithWrapper(<CharActions playerStats={createStats()} campaignName="test-campaign" />, wrapper);
+      await clickDodge();
 
       await waitFor(() => {
         expect(toggleBuff).toHaveBeenCalledWith(
@@ -360,37 +391,75 @@ describe('CharActions base actions (Hide, Dodge)', () => {
           'TestCharacter'
         );
       });
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+          description: expect.stringContaining('Dodge activated'),
+        }));
+      });
+
+      await waitFor(() => {
+        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+          type: 'ability_use',
+          abilityName: 'Dodge',
+        }));
+      });
     });
 
-    it('toggles off when already active', async () => {
-      const { toggleBuff } = await import('../../services/automation/common/buffToggle.js');
+    it('deactivates dodge buff and does not add expiration when already active', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
       toggleBuff.mockReturnValue({ wasActive: true });
 
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      await act(async () => {
-        render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper });
-      });
-
-      const dodgeEl = screen.getByText('Dodge');
-      await act(async () => { fireEvent.click(dodgeEl); });
+      await renderWithWrapper(<CharActions playerStats={createStats()} campaignName="test-campaign" />, wrapper);
+      await clickDodge();
 
       await waitFor(() => {
         expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
           description: 'Dodge deactivated.',
         }));
+      });
+
+      expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({ abilityName: 'Dodge' }));
+      expect(addExpiration).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cannotAct guard — both Hide and Dodge', () => {
+    it('prevents Hide from triggering any side effects when cannotAct is true', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const mockRollSkillCheck = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      useLoggedDiceRoll.mockReturnValue({
+        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(),
+        rollSkillCheck: mockRollSkillCheck, rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
+      });
+
+      await renderWithWrapper(<CharActions playerStats={createStats({ actions: ['Hide'] })} campaignName="test-campaign" cannotAct={true} />, wrapper);
+      await clickHide();
+
+      await waitFor(() => {
+        expect(mockRollSkillCheck).not.toHaveBeenCalled();
+        expect(mockSetPopupHtml).not.toHaveBeenCalled();
+        expect(setRuntimeValue).not.toHaveBeenCalled();
+        expect(addEntry).not.toHaveBeenCalled();
+      });
+    });
+
+    it('prevents Dodge from toggling buff when cannotAct is true', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+      toggleBuff.mockReturnValue({ wasActive: false });
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} campaignName="test-campaign" cannotAct={true} />, wrapper);
+      await clickDodge();
+
+      await waitFor(() => {
+        expect(toggleBuff).not.toHaveBeenCalled();
+        expect(mockSetPopupHtml).not.toHaveBeenCalled();
+        expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({ abilityName: 'Dodge' }));
+        expect(addExpiration).not.toHaveBeenCalled();
       });
     });
   });

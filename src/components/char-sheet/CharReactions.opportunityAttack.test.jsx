@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -58,9 +59,13 @@ vi.mock('../../hooks/combat/useActionPopup.js', () => ({
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
     default: vi.fn(),
 }));
-vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
-    useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
-}));
+vi.mock('../../hooks/combat/DiceRollContext.js', () => {
+    const mockSetPopupHtml = vi.fn();
+    return {
+        useDiceRollPopup: vi.fn(() => ({ setPopupHtml: mockSetPopupHtml })),
+        _getMockSetPopupHtml: () => mockSetPopupHtml,
+    };
+});
 vi.mock('../../services/combat/baseCombatActions.js', () => ({
     OPPORTUNITY_ATTACK: { name: 'Opportunity Attack', description: 'Can attack creature that moves out of your reach' },
     MELEE_REACH_FEET: 5,
@@ -75,7 +80,7 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
     getTargetFromAttacker: vi.fn(),
 }));
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-    useRuntimeValue: vi.fn(() => []),
+    useRuntimeValue: vi.fn(),
     getRuntimeValue: vi.fn(),
     setRuntimeValue: vi.fn(),
 }));
@@ -140,6 +145,7 @@ import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
 import { getCategories } from '../../services/character/featureCategories.js';
 import { getReactionSpellNames } from '../../services/ui/spellSectionUtils.js';
 import { resolveSpellDamageAtLevel } from '../../services/rules/core/spellDamageUtils.js';
+import { _getMockSetPopupHtml } from '../../hooks/combat/DiceRollContext.js';
 
 const campaignName = 'test-campaign';
 
@@ -181,8 +187,10 @@ function createProps(overrides = {}) {
 }
 
 describe('CharReactions - handleOpportunityAttack', () => {
+    let setPopupHtml;
     beforeEach(() => {
         vi.clearAllMocks();
+        setPopupHtml = _getMockSetPopupHtml();
         useRuntimeValue.mockReturnValue([]);
         getRuntimeValue.mockReturnValue(null);
         setRuntimeValue.mockReturnValue(undefined);
@@ -194,10 +202,11 @@ describe('CharReactions - handleOpportunityAttack', () => {
         getReactionSpellNames.mockReturnValue(new Set());
         resolveSpellDamageAtLevel.mockReturnValue(null);
         getCombatContext.mockResolvedValue(null);
+        getTargetFromAttacker.mockReturnValue(null);
         useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
     });
 
-    it('falls through to normal OA when no combat context', async () => {
+    it('falls through to normal OA roll when no combat context', async () => {
         const rollAttack = vi.fn();
         useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
         render(<CharReactions {...createProps()} />);
@@ -211,55 +220,7 @@ describe('CharReactions - handleOpportunityAttack', () => {
         );
     });
 
-    it('shows popup when target has inspiring movement protection', async () => {
-        getCombatContext.mockResolvedValue({});
-        getTargetFromAttacker.mockReturnValue({ name: 'Ally1' });
-        const mockGrv = vi.fn((charKey, key) => {
-            if (key === 'inspiringMovementNoOA') return true;
-            return null;
-        });
-        getRuntimeValue.mockImplementation(mockGrv);
-        render(<CharReactions {...createProps()} />);
-        const reaction = screen.getByText('Opportunity Attack:');
-        fireEvent.click(reaction);
-        await new Promise(r => setTimeout(r, 100));
-        expect(mockGrv).toHaveBeenCalledWith('Ally1', 'inspiringMovementNoOA');
-    });
-
-    it('shows popup when target has tactical shift', async () => {
-        getCombatContext.mockResolvedValue({});
-        getTargetFromAttacker.mockReturnValue({ name: 'Enemy1' });
-        const mockGrv = vi.fn((charKey, key) => {
-            if (key === 'inspiringMovementNoOA') return false;
-            return null;
-        });
-        getRuntimeValue.mockImplementation(mockGrv);
-        hasTacticalShift.mockReturnValue(true);
-        render(<CharReactions {...createProps()} />);
-        const reaction = screen.getByText('Opportunity Attack:');
-        fireEvent.click(reaction);
-        await new Promise(r => setTimeout(r, 100));
-        expect(hasTacticalShift).toHaveBeenCalledWith({ name: 'Enemy1' });
-    });
-
-    it('shows popup when target has speedy disadvantage', async () => {
-        getCombatContext.mockResolvedValue({});
-        getTargetFromAttacker.mockReturnValue({ name: 'Enemy1' });
-        const mockGrv = vi.fn((charKey, key) => {
-            if (key === 'inspiringMovementNoOA') return false;
-            return null;
-        });
-        getRuntimeValue.mockImplementation(mockGrv);
-        hasTacticalShift.mockReturnValue(false);
-        hasSpeedyOpportunityDisadvantage.mockReturnValue(true);
-        render(<CharReactions {...createProps()} />);
-        const reaction = screen.getByText('Opportunity Attack:');
-        fireEvent.click(reaction);
-        await new Promise(r => setTimeout(r, 100));
-        expect(hasSpeedyOpportunityDisadvantage).toHaveBeenCalledWith({ name: 'Enemy1' });
-    });
-
-    it('uses first melee attack for OA roll', async () => {
+    it('uses first melee attack (range=5) for OA roll', async () => {
         const rollAttack = vi.fn();
         useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
         getCombatContext.mockResolvedValue(null);
@@ -270,9 +231,10 @@ describe('CharReactions - handleOpportunityAttack', () => {
         expect(rollAttack).toHaveBeenCalledWith('Longsword', 6, expect.any(Object));
     });
 
-    it('uses first attack when no melee attacks available', async () => {
+    it('falls back to first attack when no melee attacks exist', async () => {
         const rollAttack = vi.fn();
         useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
+        getCombatContext.mockResolvedValue(null);
         const props = createProps({
             playerStats: {
                 ...basePlayerStats,
@@ -281,8 +243,7 @@ describe('CharReactions - handleOpportunityAttack', () => {
                 ],
             },
         });
-        getCombatContext.mockResolvedValue(null);
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         const reaction = screen.getByText('Opportunity Attack:');
         fireEvent.click(reaction);
         await waitFor(() => expect(rollAttack).toHaveBeenCalled());
@@ -292,21 +253,21 @@ describe('CharReactions - handleOpportunityAttack', () => {
     it('does nothing when no attacks available', async () => {
         const rollAttack = vi.fn();
         useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
+        getCombatContext.mockResolvedValue(null);
         const props = createProps({
             playerStats: {
                 ...basePlayerStats,
                 attacks: [],
             },
         });
-        getCombatContext.mockResolvedValue(null);
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         const reaction = screen.getByText('Opportunity Attack:');
         fireEvent.click(reaction);
         await new Promise(r => setTimeout(r, 50));
         expect(rollAttack).not.toHaveBeenCalled();
     });
 
-    it('handles getCombatContext rejection gracefully', async () => {
+    it('handles getCombatContext rejection gracefully by falling through to OA roll', async () => {
         const rollAttack = vi.fn();
         useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
         getCombatContext.mockRejectedValue(new Error('network error'));
@@ -314,5 +275,88 @@ describe('CharReactions - handleOpportunityAttack', () => {
         const reaction = screen.getByText('Opportunity Attack:');
         fireEvent.click(reaction);
         await waitFor(() => expect(rollAttack).toHaveBeenCalled());
+        expect(rollAttack).toHaveBeenCalledWith(
+            'Longsword',
+            6,
+            expect.objectContaining({ isOpportunityAttack: true })
+        );
+    });
+
+    it('shows Inspiring Movement popup when target is protected', async () => {
+        getCombatContext.mockResolvedValue({});
+        getTargetFromAttacker.mockReturnValue({ name: 'Ally1' });
+        getRuntimeValue.mockImplementation((charKey, key) => {
+            if (key === 'inspiringMovementNoOA') return true;
+            return null;
+        });
+        render(<CharReactions {...createProps()} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await new Promise(r => setTimeout(r, 100));
+        expect(getRuntimeValue).toHaveBeenCalledWith('Ally1', 'inspiringMovementNoOA');
+        expect(setPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Ally1'));
+        expect(setPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Inspiring Movement'));
+    });
+
+    it('shows Inspiring Movement popup when target has tactical shift', async () => {
+        getCombatContext.mockResolvedValue({});
+        getTargetFromAttacker.mockReturnValue({ name: 'Enemy1' });
+        getRuntimeValue.mockImplementation((charKey, key) => {
+            if (key === 'inspiringMovementNoOA') return false;
+            return null;
+        });
+        hasTacticalShift.mockReturnValue(true);
+        render(<CharReactions {...createProps()} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await new Promise(r => setTimeout(r, 100));
+        expect(hasTacticalShift).toHaveBeenCalledWith({ name: 'Enemy1' });
+        expect(setPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Enemy1'));
+        expect(setPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Inspiring Movement'));
+    });
+
+    it('shows Agile Movement popup when target has speedy disadvantage', async () => {
+        getCombatContext.mockResolvedValue({});
+        getTargetFromAttacker.mockReturnValue({ name: 'Enemy1' });
+        getRuntimeValue.mockImplementation((charKey, key) => {
+            if (key === 'inspiringMovementNoOA') return false;
+            return null;
+        });
+        hasTacticalShift.mockReturnValue(false);
+        hasSpeedyOpportunityDisadvantage.mockReturnValue(true);
+        render(<CharReactions {...createProps()} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await new Promise(r => setTimeout(r, 100));
+        expect(hasSpeedyOpportunityDisadvantage).toHaveBeenCalledWith({ name: 'Enemy1' });
+        expect(setPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Agile Movement'));
+    });
+
+    it('falls through to OA roll when combat context exists but target is null', async () => {
+        const rollAttack = vi.fn();
+        useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
+        getCombatContext.mockResolvedValue({});
+        getTargetFromAttacker.mockReturnValue(null);
+        render(<CharReactions {...createProps()} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await waitFor(() => expect(rollAttack).toHaveBeenCalled());
+        expect(rollAttack).toHaveBeenCalledWith(
+            'Longsword',
+            6,
+            expect.objectContaining({ isOpportunityAttack: true })
+        );
+    });
+
+    it('passes isOpportunityAttack flag in OA context object', async () => {
+        const rollAttack = vi.fn();
+        useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
+        getCombatContext.mockResolvedValue(null);
+        render(<CharReactions {...createProps()} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await waitFor(() => expect(rollAttack).toHaveBeenCalled());
+        const contextArg = rollAttack.mock.calls[0][2];
+        expect(contextArg.isOpportunityAttack).toBe(true);
     });
 });

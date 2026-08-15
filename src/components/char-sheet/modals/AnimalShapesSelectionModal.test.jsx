@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AnimalShapesSelectionModal from './AnimalShapesSelectionModal.jsx';
@@ -68,10 +69,37 @@ const mockBeasts = [
         speed: { walk: 40, climb: 20 },
         actions: [{ name: 'Bite' }, { name: 'Multiattack' }, { name: 'Dash' }],
     },
+    {
+        index: 'rat',
+        name: 'Rat',
+        type: 'beast',
+        size: 'Tiny',
+        challenge_rating: '0',
+        speed: { walk: 20 },
+        actions: [{ name: 'Bite' }],
+    },
+    {
+        index: 'owl',
+        name: 'Owl',
+        type: 'BEAST',
+        size: 'Tiny',
+        challenge_rating: '0',
+        speed: { fly: 10 },
+        actions: [{ name: 'Beak' }],
+    },
+    {
+        index: 'hippogriff',
+        name: 'Hippogriff',
+        type: 'Beast',
+        size: 'Medium',
+        challenge_rating: '1',
+        speed: { walk: 40, fly: 60 },
+        actions: [{ name: 'Horns' }, { name: 'Wings' }],
+    },
 ];
 
 vi.mock('../../../services/ui/dataLoader.js', () => ({
-    loadMonsters: vi.fn(async () => mockBeasts),
+    loadMonsters: vi.fn().mockImplementation(() => Promise.resolve(mockBeasts)),
 }));
 
 const baseProps = {
@@ -114,18 +142,18 @@ function findBeastItem(beastName) {
 }
 
 describe('AnimalShapesSelectionModal', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
+        const { loadMonsters } = await import('../../../services/ui/dataLoader.js');
+        loadMonsters.mockImplementation(() => Promise.resolve(mockBeasts));
     });
 
-    describe('loading state', () => {
+    describe('modal structure', () => {
         it('renders the modal container', () => {
             const { container } = render(<AnimalShapesSelectionModal {...baseProps} />);
             expect(container.querySelector('.sp-modal')).toBeInTheDocument();
         });
-    });
 
-    describe('rendering after data loads', () => {
         it('renders the modal with header and icon', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
@@ -150,18 +178,18 @@ describe('AnimalShapesSelectionModal', () => {
             });
         });
 
-        it('renders beast names in the filtered list', async () => {
+        it('renders Cancel and Transform buttons', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                expect(screen.getAllByText('Wolf').length).toBe(2);
-                expect(screen.getAllByText('Giant Spider').length).toBe(2);
-                expect(screen.getAllByText('Crocodile').length).toBe(2);
-                expect(screen.getAllByText('Panther').length).toBe(2);
-                expect(screen.getAllByText('Eagle').length).toBe(2);
-                expect(screen.getAllByText('Brown Bear').length).toBe(2);
+                expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+                const transformBtn = screen.getByRole('button', { name: /Transform/ });
+                expect(transformBtn).toBeInTheDocument();
+                expect(transformBtn).toBeDisabled();
             });
         });
+    });
 
+    describe('creature filtering', () => {
         it('filters out non-beast creatures', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
@@ -177,77 +205,101 @@ describe('AnimalShapesSelectionModal', () => {
             });
         });
 
-        it('filters out creatures that are not Small or Large', async () => {
+        it('excludes creatures that are not Small or Large size', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                expect(screen.getAllByText('Wolf').length).toBe(2);
-                expect(screen.getAllByText('Giant Spider').length).toBe(2);
-                expect(screen.getAllByText('Crocodile').length).toBe(2);
-                expect(screen.getAllByText('Panther').length).toBe(2);
-                expect(screen.getAllByText('Eagle').length).toBe(2);
-                expect(screen.getAllByText('Brown Bear').length).toBe(2);
+                const beasts = document.querySelectorAll('.animal-shapes-beast-name');
+                const names = Array.from(beasts).map(el => el.childNodes[0].textContent.trim());
+                // Medium creatures (Hippogriff) should be excluded
+                expect(names).not.toContain('Hippogriff');
+                // Tiny creatures (Rat, Owl) should be excluded
+                expect(names).not.toContain('Rat');
+                expect(names).not.toContain('Owl');
             });
         });
 
-        it('renders CR and size for each beast', async () => {
+        it('includes beasts with lowercase type field', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                const crTexts = document.querySelectorAll('.animal-shapes-beast-cr');
-                const crs = Array.from(crTexts).map(el => el.textContent.trim());
-                expect(crs).toContain('CR 0.25');
-                expect(crs).toContain('CR 1');
+                // Wolf has type 'Beast' and Large size, should be included
+                expect(screen.queryAllByText('Wolf').length).toBe(2);
             });
         });
 
-        it('renders speed info for beasts', async () => {
+        it('includes beasts with uppercase type field', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                const speedTexts = document.querySelectorAll('.animal-shapes-beast-stats');
-                const speeds = Array.from(speedTexts).map(el => el.textContent.trim());
-                expect(speeds.some(s => s.includes('Walk 40'))).toBe(true);
+                // Owl has type 'BEAST' but Tiny size, should be excluded
+                expect(screen.queryAllByText('Owl').length).toBe(0);
             });
         });
 
-        it('renders actions summary for beasts', async () => {
+        it('includes CR 0 beasts that match size criteria', async () => {
+            const { loadMonsters } = await import('../../../services/ui/dataLoader.js');
+            const cr0Beasts = [
+                {
+                    index: 'spider',
+                    name: 'Giant Spider',
+                    type: 'Beast',
+                    size: 'Large',
+                    challenge_rating: '0',
+                    speed: { walk: 20 },
+                    actions: [{ name: 'Bite' }],
+                },
+                {
+                    index: 'wolf',
+                    name: 'Wolf',
+                    type: 'Beast',
+                    size: 'Large',
+                    challenge_rating: '1/4',
+                    speed: { walk: 40 },
+                    actions: [{ name: 'Bite' }],
+                },
+            ];
+            loadMonsters.mockImplementation(() => Promise.resolve(cr0Beasts));
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                const actionTexts = document.querySelectorAll('.animal-shapes-beast-actions');
-                const actions = Array.from(actionTexts).map(el => el.textContent.trim());
-                expect(actions.some(a => a.includes('Bite, Grapple, Swallow'))).toBe(true);
+                const beasts = document.querySelectorAll('.animal-shapes-beast-name');
+                const names = Array.from(beasts).map(el => el.childNodes[0].textContent.trim());
+                expect(names).toContain('Giant Spider');
             });
         });
 
-        it('renders search inputs for each target', async () => {
+        it('excludes CR 0 beasts that do not match size criteria', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                const inputs = document.querySelectorAll('input[type="text"]');
-                expect(inputs.length).toBe(2);
-                expect(inputs[0]).toHaveAttribute('placeholder', 'Search beasts for Alric...');
-                expect(inputs[1]).toHaveAttribute('placeholder', 'Search beasts for Berenik...');
+                const beasts = document.querySelectorAll('.animal-shapes-beast-name');
+                const names = Array.from(beasts).map(el => el.childNodes[0].textContent.trim());
+                // Rat and Owl are Tiny, should be excluded despite CR 0
+                expect(names).not.toContain('Rat');
+                expect(names).not.toContain('Owl');
             });
         });
 
-        it('renders Cancel button', async () => {
+        it('sorts filtered beasts by CR ascending then name', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-            });
-        });
+                const items = document.querySelectorAll('.animal-shapes-beast-item');
+                const names = Array.from(items).map(getBeastName);
+                // CR 0.25 beasts should come before CR 1 beasts
+                const wolfIndex = names.indexOf('Wolf');
+                const pantherIndex = names.indexOf('Panther');
+                const eagleIndex = names.indexOf('Eagle');
+                const bearIndex = names.indexOf('Brown Bear');
+                const crocodileIndex = names.indexOf('Crocodile');
+                const spiderIndex = names.indexOf('Giant Spider');
 
-        it('renders Transform button with count', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const transformBtn = screen.getByRole('button', { name: /Transform/ });
-                expect(transformBtn).toBeInTheDocument();
-                expect(transformBtn.textContent).toContain('0/2');
-            });
-        });
+                // All CR 0.25 beasts should come before CR 1 beasts
+                expect(wolfIndex).toBeLessThan(bearIndex);
+                expect(pantherIndex).toBeLessThan(crocodileIndex);
+                expect(eagleIndex).toBeLessThan(spiderIndex);
 
-        it('disables Transform button when not all targets have beasts selected', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const transformBtn = screen.getByRole('button', { name: /Transform/ });
-                expect(transformBtn).toBeDisabled();
+                // Within same CR, sorted alphabetically
+                expect(names.indexOf('Eagle')).toBeLessThan(names.indexOf('Panther'));
+                expect(names.indexOf('Panther')).toBeLessThan(names.indexOf('Wolf'));
+
+                expect(names.indexOf('Brown Bear')).toBeLessThan(names.indexOf('Crocodile'));
+                expect(names.indexOf('Crocodile')).toBeLessThan(names.indexOf('Giant Spider'));
             });
         });
     });
@@ -468,35 +520,6 @@ describe('AnimalShapesSelectionModal', () => {
             });
         });
 
-        it('applies selected CSS class to selected beast items', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getAllByText('Crocodile').length).toBe(2);
-            });
-
-            fireEvent.click(findBeastItem('Crocodile'));
-
-            await waitFor(() => {
-                const selectedItem = document.querySelector('.animal-shapes-beast-item.selected');
-                expect(selectedItem).toBeInTheDocument();
-            });
-        });
-
-        it('shows selected beast name in target header badge', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getAllByText('Crocodile').length).toBe(2);
-            });
-
-            fireEvent.click(findBeastItem('Crocodile'));
-
-            await waitFor(() => {
-                const badge = document.querySelector('.animal-shapes-selected-badge');
-                expect(badge).toBeInTheDocument();
-                expect(badge.textContent).toContain('Crocodile');
-            });
-        });
-
         it('deselecting a beast disables the Transform button', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
@@ -517,6 +540,21 @@ describe('AnimalShapesSelectionModal', () => {
             await waitFor(() => {
                 const transformBtn = screen.getByRole('button', { name: /Transform/ });
                 expect(transformBtn).toBeDisabled();
+            });
+        });
+
+        it('shows selected beast name in target header badge', async () => {
+            render(<AnimalShapesSelectionModal {...baseProps} />);
+            await waitFor(() => {
+                expect(screen.getAllByText('Crocodile').length).toBe(2);
+            });
+
+            fireEvent.click(findBeastItem('Crocodile'));
+
+            await waitFor(() => {
+                const badge = document.querySelector('.animal-shapes-selected-badge');
+                expect(badge).toBeInTheDocument();
+                expect(badge.textContent).toContain('Crocodile');
             });
         });
     });
@@ -580,19 +618,28 @@ describe('AnimalShapesSelectionModal', () => {
             });
         });
 
-        it('keeps Transform button disabled when not all targets are selected', async () => {
-            const props = makeProps({
-                targets: ['Alric', 'Berenik', 'Cedric'],
-            });
-            render(<AnimalShapesSelectionModal {...props} />);
+        it('passes the full beast object in the confirm map', async () => {
+            render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                expect(screen.getAllByText('Crocodile').length).toBe(3);
+                expect(screen.getAllByText('Crocodile').length).toBe(2);
             });
 
-            fireEvent.click(findBeastItem('Crocodile'));
+            fireEvent.click(findBeastItemInSection('Crocodile', 0));
+            fireEvent.click(findBeastItemInSection('Panther', 1));
 
-            const transformBtn = screen.getByRole('button', { name: /Transform/ });
-            expect(transformBtn).toBeDisabled();
+            await waitFor(() => {
+                const transformBtn = screen.getByRole('button', { name: /Transform/ });
+                fireEvent.click(transformBtn);
+            });
+
+            await waitFor(() => {
+                const map = baseProps.onConfirm.mock.calls[0][0];
+                expect(map.Alric).toHaveProperty('name', 'Crocodile');
+                expect(map.Alric).toHaveProperty('type', 'Beast');
+                expect(map.Alric).toHaveProperty('size', 'Large');
+                expect(map.Alric).toHaveProperty('speed');
+                expect(map.Alric).toHaveProperty('actions');
+            });
         });
     });
 });

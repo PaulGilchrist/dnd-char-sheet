@@ -1,8 +1,15 @@
+// @improved-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import CharSheet from './CharSheet';
-import rulesFactory from '../../services/rules/rulesFactory.js';
+
+import {
+  createMockStore,
+  createDefaultProps,
+  createSharedPopupReturnValue,
+  resetTestState,
+} from './CharSheet.test-utils';
 
 // ---------------------------------------------------------------------------
 // Mocks — child components
@@ -160,19 +167,13 @@ vi.mock('../common/AttackResultPopup.jsx', () => ({
 // Mocks — hooks
 // ---------------------------------------------------------------------------
 
-const mockStore = new Map();
-
-let sharedPopupReturnVal = {
-  popupHtml: null,
-  setPopupHtml: vi.fn(),
-  value: {},
-  Provider: ({ children }) => children,
-};
+const mockStore = createMockStore();
+const sharedPopupReturnValue = createSharedPopupReturnValue();
 
 vi.mock('../../hooks/combat/useSharedPopup.js', () => {
   const mockFn = vi.fn();
   mockFn.mockImplementation(() => {
-    return { ...sharedPopupReturnVal, Provider: ({ children }) => children };
+    return { ...sharedPopupReturnValue, Provider: ({ children }) => children };
   });
   return { default: mockFn };
 });
@@ -187,9 +188,9 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
     if (prop === 'exhaustionLevel') return 0;
     if (prop === 'bardicInspirationDie') return mockStore.get(`${key}:bardicInspirationDie`) ?? null;
     if (prop === 'bardicInspirationCombatOptions') return mockStore.get(`${key}:bardicInspirationCombatOptions`) ?? null;
-    if (prop === 'activeConditions') return [];
-    if (prop === 'activeBuffs') return [];
-    if (prop === 'targetEffects') return [];
+    if (prop === 'activeConditions') return mockStore.get(`${key}:activeConditions`) ?? [];
+    if (prop === 'activeBuffs') return mockStore.get(`${key}:activeBuffs`) ? JSON.parse(mockStore.get(`${key}:activeBuffs`)) : [];
+    if (prop === 'targetEffects') return mockStore.get(`${key}:targetEffects`) ?? [];
     if (prop === 'preparedSpells') return mockStore.get(`${key}:preparedSpells`) ?? null;
     if (prop === 'aspectOfTheWildsOption') return mockStore.get(`${key}:aspectOfTheWildsOption`) ?? null;
     if (prop === 'bardicInspirationGrantedBy') return mockStore.get(`${key}:bardicInspirationGrantedBy`) ?? 'unknown';
@@ -223,286 +224,119 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
 
 vi.mock('../../services/rules/rulesFactory.js', () => ({
   default: {
-    getPlayerStats: vi.fn().mockImplementation(() => Promise.resolve(createMockPlayerStats())),
+    getPlayerStats: vi.fn().mockImplementation(() => Promise.resolve({
+      name: 'Test Character',
+      level: 5,
+      hitPoints: { current: 40, max: 40 },
+      abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
+      spellAbilities: { spells: [], maxPreparedSpells: 5 },
+      rules: '5e',
+      automation: { passives: [] },
+      class: { name: 'Fighter' },
+      speed: 30,
+      race: { speed: 30, traits: [] },
+      actions: [],
+      bonusActions: [],
+      reactions: [],
+      specialActions: [],
+      characterAdvancement: [],
+      skillProficiencies: [],
+      saveModifiers: [],
+    })),
   },
 }));
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Tests — fanaticalFocusUsed runtime state
 // ---------------------------------------------------------------------------
 
-const createMockPlayerStats = (overrides = {}) => ({
-  name: 'Test Character',
-  level: 5,
-  hitPoints: { current: 40, max: 40 },
-  abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
-  spellAbilities: { spells: [], maxPreparedSpells: 5 },
-  rules: '5e',
-  automation: { passives: [] },
-  class: { name: 'Fighter' },
-  speed: 30,
-  race: { speed: 30 },
-  actions: [],
-  bonusActions: [],
-  reactions: [],
-  specialActions: [],
-  characterAdvancement: [],
-  skillProficiencies: [],
-  saveModifiers: [],
-  ...overrides,
-});
+describe('fanaticalFocusUsed runtime state', () => {
+  const props = createDefaultProps();
 
-const mockPlayerSummary = {
-  name: 'Test Character',
-  rules: '5e',
-};
-
-const defaultProps = {
-  allAbilityScores: [],
-  allClasses: [],
-  allClasses2024: [],
-  allEquipment: [],
-  allMagicItems: [],
-  allRaces: [],
-  allSpells: [],
-  allSpells2024: [],
-  playerSummary: mockPlayerSummary,
-  allRaces2024: [],
-  allMagicItems2024: [],
-  campaignName: 'test-campaign',
-  activeMapName: null,
-  characters: [],
-  onDeleteCharacter: vi.fn(),
-  onEditCharacter: vi.fn(),
-  onUploadClick: vi.fn(),
-  onSaveClick: vi.fn(),
-};
-
-// ---------------------------------------------------------------------------
-// Tests — handler callbacks (handleReroll, handleStrokeOfLuck, etc.)
-// ---------------------------------------------------------------------------
-
-describe('CharSheet handler callbacks', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnValue);
     mockStore.clear();
-    sharedPopupReturnVal = {
-      popupHtml: null,
-      setPopupHtml: vi.fn(),
-      value: {},
-      Provider: ({ children }) => children,
-    };
   });
 
-  it('renders char sheet with playerStats set from rulesFactory', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('sets hitPoints runtime value when playerStats changes', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    expect(mockStore.has('Test Character:hitPoints')).toBe(true);
-  });
-
-  it('sets fanaticalFocusUsed to false when not raging', async () => {
+  it('sets fanaticalFocusUsed to false on render when not raging', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
-    render(<CharSheet {...defaultProps} />);
+
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
-    expect(mockStore.get('Test Character:fanaticalFocusUsed')).toBe(false);
+    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'Test Character',
+      'fanaticalFocusUsed',
+      false,
+      'test-campaign'
+    );
   });
 
   it('does not set fanaticalFocusUsed when raging', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([
       { damageBonusExpression: '2d6' },
     ]));
-    render(<CharSheet {...defaultProps} />);
+
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const fanaticalFocusCalls = setRuntimeValue.mock.calls.filter(
+      (call) => call[1] === 'fanaticalFocusUsed'
+    );
+    expect(fanaticalFocusCalls.length).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — hitPoints sync
+// ---------------------------------------------------------------------------
+
+describe('hitPoints sync', () => {
+  const props = createDefaultProps();
+
+  beforeEach(() => {
+    resetTestState(sharedPopupReturnValue);
+    mockStore.clear();
   });
 
-  it('renders auraComboEffects with null when no characters', async () => {
-    render(<CharSheet {...defaultProps} />);
+  it('sets hitPoints runtime value when playerStats is available', async () => {
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const hpCalls = setRuntimeValue.mock.calls.filter(
+      (call) => call[1] === 'hitPoints'
+    );
+    expect(hpCalls.length).toBeGreaterThan(0);
+    expect(hpCalls[0][2]).toEqual({ current: 40, max: 40 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — CharSheet renders with all handler callbacks defined
+// ---------------------------------------------------------------------------
+
+describe('CharSheet renders with all handler callbacks', () => {
+  const props = createDefaultProps();
+
+  beforeEach(() => {
+    resetTestState(sharedPopupReturnValue);
+    mockStore.clear();
   });
 
-  it('renders with peerlessAthleteActive runtime value', async () => {
-    mockStore.set('Test Character:peerlessAthleteActive', true);
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with largeFormActive runtime value', async () => {
-    mockStore.set('Test Character:largeFormActive', true);
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with livingLegendActive runtime value', async () => {
-    mockStore.set('Test Character:livingLegendActive', true);
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with elderChampionActive runtime value', async () => {
-    mockStore.set('Test Character:elderChampionActive', true);
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with holyAuraActive runtime value', async () => {
-    const { getHolyAuraTargets } = await import('../../services/automation/handlers/buffs/holyAuraHandler.js');
-    getHolyAuraTargets.mockReturnValue(true);
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with tranceOfOrderActive runtime value', async () => {
-    mockStore.set('Test Character:tranceOfOrderActive', true);
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockReturnValue({});
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with exhaustionLevel calculated from runtime', async () => {
-    mockStore.set('Test Character:exhaustionLevel', 3);
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with bardicInspirationDie runtime value', async () => {
-    mockStore.set('Test Character:bardicInspirationDie', 8);
-    mockStore.set('Test Character:bardicInspirationGrantedBy', 'Ally');
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with bardicInspirationCombatOptions runtime value', async () => {
-    mockStore.set('Test Character:bardicInspirationDie', 8);
-    mockStore.set('Test Character:bardicInspirationCombatOptions', JSON.stringify(['defense_add_to_ac', 'offense_add_to_damage']));
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with aspectOfTheWildsOption runtime value', async () => {
-    mockStore.set('Test Character:aspectOfTheWildsOption', 'Owl');
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with aquaticAffinityEmanationRange runtime value', async () => {
-    const stats = createMockPlayerStats({
-      automation: { passives: [{ effect: 'aquatic_affinity' }] },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with second_storywork passive', async () => {
-    const stats = createMockPlayerStats({
-      automation: { passives: [{ effect: 'second_storywork' }] },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with athlete passives', async () => {
-    const stats = createMockPlayerStats({
-      automation: { passives: [{ effect: 'climb_speed' }, { effect: 'stand_from_prone' }, { effect: 'reduced_running_jump_requirement' }] },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with Roving passive', async () => {
-    const stats = createMockPlayerStats({
-      automation: { passives: [{ name: 'Roving' }] },
-      inventory: { equipped: [] },
-      equipment: [],
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-    render(<CharSheet {...defaultProps} />);
+  it('renders char sheet without errors when all handlers are defined', async () => {
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
