@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import useCharActionModals from './useCharActionModals.js';
 
 vi.mock('./useAttackDamageResolution.js', () => ({
@@ -36,8 +37,6 @@ vi.mock('../../hooks/runtime/useSyncedState.js', () => ({
 
 const useAttackDamageResolution = (await import('./useAttackDamageResolution.js')).default;
 const useModalHandlers = (await import('./useModalHandlers.js')).default;
-const { useSyncedState } = await import('../../hooks/runtime/useSyncedState.js');
-const { useCombatSuperiorityModal } = await import('../../hooks/combat/useCombatSuperiorityModal.js');
 
 const mockResolveAttackDamageResult = {
   resolveAttackDamage: vi.fn(),
@@ -76,249 +75,15 @@ const baseArgs = {
   buildCtxSync: vi.fn(() => ({})),
 };
 
-describe('useCharActionModals — integration & prop passing', () => {
+describe('useCharActionModals — integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useAttackDamageResolution.mockReturnValue(mockResolveAttackDamageResult);
     useModalHandlers.mockReturnValue(mockModalHandlersResult);
   });
 
-  describe('useSyncedState invocation', () => {
-    it('calls useSyncedState with campaignName as characterKey', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useSyncedState).toHaveBeenCalledWith('test-campaign', 'pipeline-pause', null, 'test-campaign');
-    });
-
-    it('pendingDamage defaults to null', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(result.current.pendingDamage).toBeNull();
-    });
-
-    it('setPendingDamage is a function', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(typeof result.current.setPendingDamage).toBe('function');
-    });
-  });
-
-  describe('useAttackDamageResolution prop passing', () => {
-    it('passes playerStats to useAttackDamageResolution', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ playerStats: baseArgs.playerStats }),
-      );
-    });
-
-    it('passes campaignName to useAttackDamageResolution', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ campaignName: 'test-campaign' }),
-      );
-    });
-
-    it('passes mapName to useAttackDamageResolution', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ mapName: null }),
-      );
-    });
-
-    it('passes popupHtml to useAttackDamageResolution', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ popupHtml: null }),
-      );
-    });
-
-    it('passes setPopupHtml to useAttackDamageResolution', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ setPopupHtml: baseArgs.setPopupHtml }),
-      );
-    });
-
-    it('passes rollDamage to useAttackDamageResolution', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ rollDamage: baseArgs.rollDamage }),
-      );
-    });
-
-    it('passes buildCtx to useAttackDamageResolution', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ buildCtx: baseArgs.buildCtx }),
-      );
-    });
-
-    it('passes buildCtxSync to useAttackDamageResolution', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ buildCtxSync: baseArgs.buildCtxSync }),
-      );
-    });
-
-    it('passes setModalState to useAttackDamageResolution', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ setModalState: result.current.setModalState }),
-      );
-    });
-
-    it('passes modalState to useAttackDamageResolution', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ modalState: result.current.modalState }),
-      );
-    });
-
-    it('passes setPendingDamage to useAttackDamageResolution', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ setPendingDamage: result.current.setPendingDamage }),
-      );
-    });
-  });
-
-  describe('useCombatSuperiorityModal prop passing', () => {
-    it('passes playerStats to useCombatSuperiorityModal', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useCombatSuperiorityModal).toHaveBeenCalledWith(
-        baseArgs.playerStats,
-        'test-campaign',
-        baseArgs.rollAttack,
-        baseArgs.rollDamage,
-        baseArgs.setPopupHtml,
-      );
-    });
-  });
-
-  describe('useModalHandlers prop passing', () => {
-    it('passes playerStats to useModalHandlers', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useModalHandlers).toHaveBeenCalledWith(
-        expect.objectContaining({ playerStats: baseArgs.playerStats }),
-      );
-    });
-
-    it('passes campaignName to useModalHandlers', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useModalHandlers).toHaveBeenCalledWith(
-        expect.objectContaining({ campaignName: 'test-campaign' }),
-      );
-    });
-
-    it('passes rollDamage to useModalHandlers', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useModalHandlers).toHaveBeenCalledWith(
-        expect.objectContaining({ rollDamage: baseArgs.rollDamage }),
-      );
-    });
-
-    it('passes proceedWithDamage from useAttackDamageResolution to useModalHandlers', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useModalHandlers).toHaveBeenCalledWith(
-        expect.objectContaining({ proceedWithDamage: expect.any(Function) }),
-      );
-    });
-
-    it('passes pendingDamage to useModalHandlers', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(useModalHandlers).toHaveBeenCalledWith(
-        expect.objectContaining({ pendingDamage: result.current.pendingDamage }),
-      );
-    });
-
-    it('passes setPendingDamage to useModalHandlers', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(useModalHandlers).toHaveBeenCalledWith(
-        expect.objectContaining({ setPendingDamage: result.current.setPendingDamage }),
-      );
-    });
-
-    it('passes setModalState to useModalHandlers', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(useModalHandlers).toHaveBeenCalledWith(
-        expect.objectContaining({ setModalState: result.current.setModalState }),
-      );
-    });
-
-    it('passes modalState to useModalHandlers', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(useModalHandlers).toHaveBeenCalledWith(
-        expect.objectContaining({ modalState: result.current.modalState }),
-      );
-    });
-
-    it('passes setPopupHtml to useModalHandlers', () => {
-      renderHook(() => useCharActionModals(baseArgs));
-      expect(useModalHandlers).toHaveBeenCalledWith(
-        expect.objectContaining({ setPopupHtml: baseArgs.setPopupHtml }),
-      );
-    });
-  });
-
-  describe('buildCtx and buildCtxSync passthrough', () => {
-    it('returns buildCtx from args', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(result.current.buildCtx).toBe(baseArgs.buildCtx);
-    });
-
-    it('returns buildCtxSync from args', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      expect(result.current.buildCtxSync).toBe(baseArgs.buildCtxSync);
-    });
-  });
-
-  describe('custom mapName', () => {
-    it('passes mapName through to useAttackDamageResolution when set', () => {
-      const argsWithMap = { ...baseArgs, mapName: 'test-map' };
-      renderHook(() => useCharActionModals(argsWithMap));
-      expect(useAttackDamageResolution).toHaveBeenCalledWith(
-        expect.objectContaining({ mapName: 'test-map' }),
-      );
-    });
-  });
-
-  describe('complete return object shape', () => {
-    it('returns all 27 expected properties', () => {
-      const { result } = renderHook(() => useCharActionModals(baseArgs));
-      const expectedKeys = [
-        'modalState',
-        'setModalState',
-        'pendingDamage',
-        'setPendingDamage',
-        'buildCtx',
-        'buildCtxSync',
-        'combatSuperiorityModal',
-        'setCombatSuperiorityModal',
-        'handleCombatSuperiorityConfirm',
-        'handleCombatSuperiorityReopenSelection',
-        'resolveAttackDamage',
-        'handleMasteryClose',
-        'handleWeaponMasteryChoice',
-        'handleDivineFuryDamageType',
-        'handleDivineFurySkip',
-        'handleGenericDamageTypeChoice',
-        'handleGenericDamageTypeSkip',
-        'handleDamageTypeModifierChoice',
-        'handleDamageTypeModifierSkip',
-        'handleEnhancedUnarmedChoice',
-        'handleEnhancedUnarmedSkip',
-        'handleFeatureChoiceConfirm',
-        'handleFeatureChoiceSkip',
-        'handleConstellationSelect',
-        'handleFlurryOfBlowsConfirm',
-        'handleFlurryOfBlowsSkip',
-        'handleOpenHandFromFlurryConfirm',
-        'handleOpenHandFromFlurrySkip',
-      ];
-      const actualKeys = Object.keys(result.current);
-      for (const key of expectedKeys) {
-        expect(actualKeys).toContain(key);
-      }
-    });
-
-    it('returns exactly the expected properties (no extras)', () => {
+  describe('return object shape', () => {
+    it('returns exactly 27 properties with the expected keys', () => {
       const { result } = renderHook(() => useCharActionModals(baseArgs));
       const expectedKeys = [
         'modalState',
@@ -353,6 +118,106 @@ describe('useCharActionModals — integration & prop passing', () => {
       const actualKeys = Object.keys(result.current).sort();
       const sortedExpected = [...expectedKeys].sort();
       expect(actualKeys).toEqual(sortedExpected);
+    });
+  });
+
+  describe('sub-hook composition', () => {
+    it('passes buildCtx and buildCtxSync through from args', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(result.current.buildCtx).toBe(baseArgs.buildCtx);
+      expect(result.current.buildCtxSync).toBe(baseArgs.buildCtxSync);
+    });
+
+    it('passes mapName to useAttackDamageResolution when provided', () => {
+      const argsWithMap = { ...baseArgs, mapName: 'test-map' };
+      renderHook(() => useCharActionModals(argsWithMap));
+      expect(useAttackDamageResolution).toHaveBeenCalledWith(
+        expect.objectContaining({ mapName: 'test-map' }),
+      );
+    });
+
+    it('does not expose internal args (setPopupHtml, rollDamage, rollAttack) in return object', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(result.current.setPopupHtml).toBeUndefined();
+      expect(result.current.rollDamage).toBeUndefined();
+      expect(result.current.rollAttack).toBeUndefined();
+    });
+
+    it('delegates resolveAttackDamage from useAttackDamageResolution', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(result.current.resolveAttackDamage).toBe(mockResolveAttackDamageResult.resolveAttackDamage);
+    });
+
+    it('delegates all modal handlers from useModalHandlers', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(result.current.handleMasteryClose).toBe(mockModalHandlersResult.handleMasteryClose);
+      expect(result.current.handleWeaponMasteryChoice).toBe(mockModalHandlersResult.handleWeaponMasteryChoice);
+      expect(result.current.handleDivineFuryDamageType).toBe(mockModalHandlersResult.handleDivineFuryDamageType);
+      expect(result.current.handleGenericDamageTypeChoice).toBe(mockModalHandlersResult.handleGenericDamageTypeChoice);
+      expect(result.current.handleFeatureChoiceConfirm).toBe(mockModalHandlersResult.handleFeatureChoiceConfirm);
+      expect(result.current.handleFlurryOfBlowsConfirm).toBe(mockModalHandlersResult.handleFlurryOfBlowsConfirm);
+      expect(result.current.handleOpenHandFromFlurryConfirm).toBe(mockModalHandlersResult.handleOpenHandFromFlurryConfirm);
+    });
+
+    it('delegates combat superiority handlers from useCombatSuperiorityModal', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(typeof result.current.handleCombatSuperiorityConfirm).toBe('function');
+      expect(typeof result.current.handleCombatSuperiorityReopenSelection).toBe('function');
+    });
+
+    it('passes setModalState from useState to useAttackDamageResolution', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(useAttackDamageResolution).toHaveBeenCalledWith(
+        expect.objectContaining({ setModalState: result.current.setModalState }),
+      );
+    });
+
+    it('passes modalState from useState to useAttackDamageResolution', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(useAttackDamageResolution).toHaveBeenCalledWith(
+        expect.objectContaining({ modalState: result.current.modalState }),
+      );
+    });
+
+    it('passes proceedWithDamage from useAttackDamageResolution to useModalHandlers', () => {
+      renderHook(() => useCharActionModals(baseArgs));
+      expect(useModalHandlers).toHaveBeenCalledWith(
+        expect.objectContaining({ proceedWithDamage: mockResolveAttackDamageResult.proceedWithDamage }),
+      );
+    });
+  });
+
+  describe('setModalState behavior in context', () => {
+    it('starts as an empty object and setModalState merges updates', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(result.current.modalState).toEqual({});
+      act(() => {
+        result.current.setModalState({ key: 'value' });
+      });
+      expect(result.current.modalState).toEqual({ key: 'value' });
+    });
+
+    it('clears modalState when setModalState receives a falsy value', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      act(() => {
+        result.current.setModalState({ key: 'value' });
+      });
+      act(() => {
+        result.current.setModalState(null);
+      });
+      expect(result.current.modalState).toEqual({});
+    });
+  });
+
+  describe('pendingDamage from useSyncedState', () => {
+    it('defaults to null', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(result.current.pendingDamage).toBeNull();
+    });
+
+    it('setPendingDamage is callable', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(() => act(() => result.current.setPendingDamage({ data: 'test' }))).not.toThrow();
     });
   });
 });

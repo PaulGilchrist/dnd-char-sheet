@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useCharActionsModalHandlers from './useCharActionsModalHandlers.js';
 
@@ -123,13 +124,13 @@ vi.mock('../../services/automation/handlers/reactions/reactionBonusHandler.js', 
 const mockSetPopupHtml = vi.fn();
 const mockSetModalState = vi.fn();
 
-function getHandlers() {
+function getHandlers(modalState = {}, mergedModalState = {}) {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useCharActionsModalHandlers({
     setPopupHtml: mockSetPopupHtml,
     setModalState: mockSetModalState,
-    modalState: {},
-    mergedModalState: {},
+    modalState,
+    mergedModalState,
   });
 }
 
@@ -141,34 +142,20 @@ describe('useCharActionsModalHandlers', () => {
   });
 
   describe('return value', () => {
-    it('returns an object with all 27 handler functions', () => {
+    it('returns an object with exactly 26 handler functions', () => {
       const handlers = getHandlers();
-      expect(typeof handlers.handleSweepingAttackConfirm).toBe('function');
-      expect(typeof handlers.handleBaitAndSwitchChoiceConfirm).toBe('function');
-      expect(typeof handlers.handleCommanderStrikeChoiceConfirm).toBe('function');
-      expect(typeof handlers.handleRallyChoiceConfirm).toBe('function');
-      expect(typeof handlers.handleBulwarkOfForceConfirm).toBe('function');
-      expect(typeof handlers.handleZealousPresenceConfirm).toBe('function');
-      expect(typeof handlers.handleMassHealConfirm).toBe('function');
-      expect(typeof handlers.handleClockworkCavalcadeHealConfirm).toBe('function');
-      expect(typeof handlers.handleClockworkCavalcadeDispelConfirm).toBe('function');
-      expect(typeof handlers.handleClockworkCavalcadeRepairConfirm).toBe('function');
-      expect(typeof handlers.handleMassCureWoundsConfirm).toBe('function');
-      expect(typeof handlers.handlePrayerOfHealingConfirm).toBe('function');
-      expect(typeof handlers.handlePowerWordFortifyConfirm).toBe('function');
-      expect(typeof handlers.handleMassHealingWordConfirm).toBe('function');
-      expect(typeof handlers.handleNaturesSanctuaryConfirm).toBe('function');
-      expect(typeof handlers.handleCoronaEnemySelectionConfirm).toBe('function');
-      expect(typeof handlers.handleRadianceOfDawnConfirm).toBe('function');
-      expect(typeof handlers.handleMantleOfInspirationConfirm).toBe('function');
-      expect(typeof handlers.handleCelestialResilienceConfirm).toBe('function');
-      expect(typeof handlers.handleCelestialResilienceSkip).toBe('function');
-      expect(typeof handlers.handleInspiringSmiteConfirm).toBe('function');
-      expect(typeof handlers.handleVitalityOfTheTreeConfirm).toBe('function');
-      expect(typeof handlers.handleTricksterBlessingConfirm).toBe('function');
-      expect(typeof handlers.handleBardicInspirationConfirm).toBe('function');
-      expect(typeof handlers.handleInspiringMovementConfirm).toBe('function');
-      expect(typeof handlers.handleOceanicGiftConfirm).toBe('function');
+      const entries = Object.entries(handlers);
+      expect(entries.length).toBe(26);
+      entries.forEach(([_key, value]) => {
+        expect(typeof value).toBe('function');
+      });
+    });
+
+    it('returns unique function references (no duplicates)', () => {
+      const handlers = getHandlers();
+      const values = Object.values(handlers);
+      const uniqueValues = new Set(values);
+      expect(uniqueValues.size).toBe(values.length);
     });
   });
 });

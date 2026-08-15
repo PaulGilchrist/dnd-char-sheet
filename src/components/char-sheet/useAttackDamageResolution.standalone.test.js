@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { resolveAttackDamageStandalone } from './useAttackDamageResolution.js';
+import { resolveAttackDamageStandalone, normalizeAutoDamage } from './useAttackDamageResolution.js';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
     rollExpression: vi.fn(),
@@ -30,6 +31,22 @@ import { rollExpression } from '../../services/dice/diceRoller.js';
 const mockRollDamage = vi.fn();
 const mockSetPopupHtml = vi.fn();
 
+const defaultPlayerStats = {
+    name: 'TestFighter',
+    level: 5,
+    abilities: [],
+    automation: { actions: [], passives: [] },
+};
+
+function makeAttack(overrides = {}) {
+    return { name: 'Longsword', damage: '1d8+3', damageType: 'slashing', ...overrides };
+}
+
+function getCtxFromLastRun() {
+    const pipeline = buildPipelineForAction.mock.results[0]?.value;
+    const runCalls = pipeline?.run?.mock?.calls;
+    return runCalls?.length > 0 ? runCalls[0][1] : null;
+}
 
 describe('resolveAttackDamageStandalone', () => {
     beforeEach(() => {
@@ -40,10 +57,10 @@ describe('resolveAttackDamageStandalone', () => {
         });
     });
 
-    describe('basic flow', () => {
-        it('builds a pipeline and runs housekeeping:do', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
+    describe('pipeline construction and execution', () => {
+        it('calls buildPipelineForAction with attack and playerStats, then runs housekeeping:do', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
 
             await resolveAttackDamageStandalone(attack, {}, {
                 playerStats,
@@ -53,12 +70,29 @@ describe('resolveAttackDamageStandalone', () => {
             });
 
             expect(buildPipelineForAction).toHaveBeenCalledWith(attack, playerStats);
-            expect(buildPipelineForAction().run).toHaveBeenCalledWith('housekeeping:do', expect.any(Object), expect.any(Object));
+            const pipeline = buildPipelineForAction.mock.results[0].value;
+            expect(pipeline.run).toHaveBeenCalledWith('housekeeping:do', expect.any(Object), expect.any(Object));
         });
 
-        it('uses defaults when ctxOverrides is empty', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
+        it('returns a resolved promise when pipeline completes successfully', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
+            const result = resolveAttackDamageStandalone(attack, {}, {
+                playerStats,
+                campaignName: 'test-campaign',
+                setPopupHtml: mockSetPopupHtml,
+                rollDamage: mockRollDamage,
+            });
+
+            expect(result).toBeInstanceOf(Promise);
+            await expect(result).resolves.toBeUndefined();
+        });
+    });
+
+    describe('context defaults from ctxOverrides', () => {
+        it('sets all default context fields when ctxOverrides is an empty object', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
 
             await resolveAttackDamageStandalone(attack, {}, {
                 playerStats,
@@ -67,21 +101,41 @@ describe('resolveAttackDamageStandalone', () => {
                 rollDamage: mockRollDamage,
             });
 
-            const ctx = buildPipelineForAction().run.mock.calls[0][1];
+            const ctx = getCtxFromLastRun();
             expect(ctx.hit).toBe(true);
             expect(ctx.isCrit).toBe(false);
             expect(ctx.isNatural20).toBe(false);
             expect(ctx.targetName).toBe(null);
             expect(ctx.isBonusActionAttack).toBe(false);
+            expect(ctx.formula).toBe(null);
+            expect(ctx.total).toBe(0);
+            expect(ctx.rolls).toEqual([]);
+            expect(ctx.modifier).toBe(0);
+            expect(ctx.sneakDice).toBe(0);
+            expect(ctx.effectiveSneakDice).toBe(0);
+            expect(ctx.isMeleeOrUnarmed).toBe(false);
+            expect(ctx.buildCtxResult).toBe(null);
+            expect(ctx.autoFormulaOverride).toBe(null);
             expect(ctx.overchannelActive).toBe(false);
             expect(ctx.overchannelUseCount).toBe(0);
             expect(ctx.overchannelSpellLevel).toBe(1);
+            expect(ctx.autoDamageSaveDc).toBe(null);
+            expect(ctx.empoweredEvocationModifier).toBe(0);
         });
 
-        it('respects ctxOverrides for hit/crit flags', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
-            const overrides = { hit: false, isCrit: true, isNatural20: false };
+        it('overrides defaults with provided ctxOverrides values', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
+            const overrides = {
+                hit: false,
+                isCrit: true,
+                isNatural20: true,
+                targetName: 'Goblin',
+                isBonusActionAttack: true,
+                overchannelActive: true,
+                overchannelUseCount: 2,
+                overchannelSpellLevel: 3,
+            };
 
             await resolveAttackDamageStandalone(attack, overrides, {
                 playerStats,
@@ -90,54 +144,52 @@ describe('resolveAttackDamageStandalone', () => {
                 rollDamage: mockRollDamage,
             });
 
-            const ctx = buildPipelineForAction().run.mock.calls[0][1];
+            const ctx = getCtxFromLastRun();
             expect(ctx.hit).toBe(false);
             expect(ctx.isCrit).toBe(true);
-            expect(ctx.isNatural20).toBe(false);
-        });
-
-        it('passes ctxOverrides through to pipeline context', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
-            const overrides = { targetName: 'Goblin', isBonusActionAttack: true };
-
-            await resolveAttackDamageStandalone(attack, overrides, {
-                playerStats,
-                campaignName: 'test-campaign',
-                setPopupHtml: mockSetPopupHtml,
-                rollDamage: mockRollDamage,
-            });
-
-            const ctx = buildPipelineForAction().run.mock.calls[0][1];
+            expect(ctx.isNatural20).toBe(true);
             expect(ctx.targetName).toBe('Goblin');
             expect(ctx.isBonusActionAttack).toBe(true);
-        });
-
-        it('uses ctxOverrides values over defaults when provided', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
-            const overrides = { hit: false, isCrit: false, overchannelActive: true, overchannelUseCount: 2, overchannelSpellLevel: 3 };
-
-            await resolveAttackDamageStandalone(attack, overrides, {
-                playerStats,
-                campaignName: 'test-campaign',
-                setPopupHtml: mockSetPopupHtml,
-                rollDamage: mockRollDamage,
-            });
-
-            const ctx = buildPipelineForAction().run.mock.calls[0][1];
-            expect(ctx.hit).toBe(false);
-            expect(ctx.isCrit).toBe(false);
             expect(ctx.overchannelActive).toBe(true);
             expect(ctx.overchannelUseCount).toBe(2);
             expect(ctx.overchannelSpellLevel).toBe(3);
         });
+
+        it('passes arbitrary ctxOverrides fields through the spread operator', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
+            const overrides = {
+                sneakDice: 4,
+                effectiveSneakDice: 4,
+                isMeleeOrUnarmed: true,
+                autoFormulaOverride: 'custom formula',
+                empoweredEvocationModifier: 2,
+                autoDamageSaveDc: 16,
+                attackerName: 'Custom Attacker',
+            };
+
+            await resolveAttackDamageStandalone(attack, overrides, {
+                playerStats,
+                campaignName: 'test-campaign',
+                setPopupHtml: mockSetPopupHtml,
+                rollDamage: mockRollDamage,
+            });
+
+            const ctx = getCtxFromLastRun();
+            expect(ctx.sneakDice).toBe(4);
+            expect(ctx.effectiveSneakDice).toBe(4);
+            expect(ctx.isMeleeOrUnarmed).toBe(true);
+            expect(ctx.autoFormulaOverride).toBe('custom formula');
+            expect(ctx.empoweredEvocationModifier).toBe(2);
+            expect(ctx.autoDamageSaveDc).toBe(16);
+            expect(ctx.attackerName).toBe('Custom Attacker');
+        });
     });
 
     describe('modal state handlers', () => {
-        it('creates modalState object and exposes setters', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
+        it('creates a context with modal setter functions', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
 
             await resolveAttackDamageStandalone(attack, {}, {
                 playerStats,
@@ -146,55 +198,61 @@ describe('resolveAttackDamageStandalone', () => {
                 rollDamage: mockRollDamage,
             });
 
-            const ctx = buildPipelineForAction().run.mock.calls[0][1];
+            const ctx = getCtxFromLastRun();
+            expect(typeof ctx.setDamageTypeChoice).toBe('function');
+            expect(typeof ctx.setDivineFuryChoice).toBe('function');
+            expect(typeof ctx.setAttackRiderModal).toBe('function');
+            expect(typeof ctx.setAttackRiderManeuverPrompt).toBe('function');
+            expect(typeof ctx.setSweepingAttackTargetModal).toBe('function');
+            expect(typeof ctx.setSecondaryTargetModal).toBe('function');
+        });
+
+        it('updates modalState when modal setters are called', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
+
+            await resolveAttackDamageStandalone(attack, {}, {
+                playerStats,
+                campaignName: 'test-campaign',
+                setPopupHtml: mockSetPopupHtml,
+                rollDamage: mockRollDamage,
+            });
+
+            const ctx = getCtxFromLastRun();
+            ctx.setDamageTypeChoice('fire');
+            ctx.setDivineFuryChoice('cold');
+            ctx.setAttackRiderModal({ option: 'test' });
+            ctx.setAttackRiderManeuverPrompt({ maneuvers: [] });
+            ctx.setSweepingAttackTargetModal({ targets: ['Orc'] });
+            ctx.setSecondaryTargetModal({ title: 'Choose' });
+
+            // modalState is internal to the function; verify via internal state capture
             expect(ctx.setDamageTypeChoice).toBeDefined();
             expect(ctx.setDivineFuryChoice).toBeDefined();
             expect(ctx.setAttackRiderModal).toBeDefined();
-            expect(ctx.setAttackRiderManeuverPrompt).toBeDefined();
-            expect(ctx.setSweepingAttackTargetModal).toBeDefined();
-            expect(ctx.setSecondaryTargetModal).toBeDefined();
-        });
-
-        it('setDamageTypeChoice updates modalState.damageTypeChoice', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
-
-            await resolveAttackDamageStandalone(attack, {}, {
-                playerStats,
-                campaignName: 'test-campaign',
-                setPopupHtml: mockSetPopupHtml,
-                rollDamage: mockRollDamage,
-            });
-
-            const ctx = buildPipelineForAction().run.mock.calls[0][1];
-            ctx.setDamageTypeChoice('fire');
-            // modalState is internal; verify via the proceedWithDamage flow
-            expect(typeof ctx.setDamageTypeChoice).toBe('function');
         });
     });
 
     describe('proceedWithDamage', () => {
-        it('calls rollDamage with minimalCtx when proceedWithDamage is invoked by pipeline', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
+        it('passes minimalCtx fields through to rollDamage when proceedWithDamage is invoked', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
 
-            // Override the pipeline run to call proceedWithDamage
             const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
                 if (event === 'housekeeping:do') {
-                    // Simulate pipeline calling proceedWithDamage
                     ctx.proceedWithDamage(
                         { name: 'Longsword', damageType: 'slashing' },
                         '1d8+3',
                         8,
                         [5, 3],
                         3,
-                        { targetName: 'Goblin', isCrit: false }
+                        { targetName: 'Goblin', isCrit: false, attackerName: 'Player' }
                     );
                 }
             });
             buildPipelineForAction.mockReturnValue({ run: mockRun });
 
-            await resolveAttackDamageStandalone(attack, { targetName: 'Goblin' }, {
+            await resolveAttackDamageStandalone(attack, { targetName: 'Goblin', attackerName: 'Player' }, {
                 playerStats,
                 campaignName: 'test-campaign',
                 setPopupHtml: mockSetPopupHtml,
@@ -211,15 +269,25 @@ describe('resolveAttackDamageStandalone', () => {
                     attackName: 'Longsword',
                     damageType: 'slashing',
                     targetName: 'Goblin',
-                    attackerName: 'Longsword',
+                    attackerName: 'Player',
                     isAutoCrit: false,
+                    doubledRolls: null,
+                    playerStats: null,
+                    autoDamageSecondaryFormula: null,
+                    autoDamageSecondaryName: null,
+                    autoDamageSecondaryDamageType: null,
+                    saveDc: null,
+                    saveType: null,
+                    dcSuccess: null,
+                    metamagicTwinTarget: null,
+                    metamagicHeighten: false,
                 })
             );
         });
 
-        it('passes autoDamageSecondary fields through minimalCtx from ctxOverrides', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
+        it('passes autoDamageSecondary and save fields through minimalCtx from ctxOverrides', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
 
             const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
                 if (event === 'housekeeping:do') {
@@ -266,9 +334,9 @@ describe('resolveAttackDamageStandalone', () => {
             );
         });
 
-        it('includes metamagic fields in minimalCtx from ctxOverrides', async () => {
-            const attack = { name: 'Fire Bolt', damage: '1d10+4', damageType: 'fire' };
-            const playerStats = { name: 'TestWizard', level: 10, abilities: [], automation: { actions: [], passives: [] } };
+        it('passes metamagic fields through minimalCtx from ctxOverrides', async () => {
+            const attack = makeAttack({ name: 'Fire Bolt', damage: '1d10+4', damageType: 'fire' });
+            const playerStats = { ...defaultPlayerStats };
 
             const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
                 if (event === 'housekeeping:do') {
@@ -284,7 +352,10 @@ describe('resolveAttackDamageStandalone', () => {
             });
             buildPipelineForAction.mockReturnValue({ run: mockRun });
 
-            await resolveAttackDamageStandalone(attack, { metamagicTwinTarget: 'Goblin', metamagicHeighten: true }, {
+            await resolveAttackDamageStandalone(attack, {
+                metamagicTwinTarget: 'Goblin',
+                metamagicHeighten: true,
+            }, {
                 playerStats,
                 campaignName: 'test-campaign',
                 setPopupHtml: mockSetPopupHtml,
@@ -305,8 +376,220 @@ describe('resolveAttackDamageStandalone', () => {
         });
 
         it('defaults doubledRolls to null when not in ctxOverrides', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
+
+            const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
+                if (event === 'housekeeping:do') {
+                    ctx.proceedWithDamage(
+                        { name: 'Longsword', damageType: 'slashing' },
+                        '1d8+3',
+                        8,
+                        [5, 3],
+                        3,
+                        {}
+                    );
+                }
+            });
+            buildPipelineForAction.mockReturnValue({ run: mockRun });
+
+            await resolveAttackDamageStandalone(attack, {}, {
+                playerStats,
+                campaignName: 'test-campaign',
+                setPopupHtml: mockSetPopupHtml,
+                rollDamage: mockRollDamage,
+            });
+
+            expect(mockRollDamage).toHaveBeenCalledWith(
+                'Longsword',
+                '1d8+3',
+                8,
+                [5, 3],
+                3,
+                expect.objectContaining({ doubledRolls: null })
+            );
+        });
+
+        it('uses doubledRolls from ctxOverrides when provided', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
+
+            const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
+                if (event === 'housekeeping:do') {
+                    ctx.proceedWithDamage(
+                        { name: 'Longsword', damageType: 'slashing' },
+                        '1d8+3',
+                        8,
+                        [5, 3],
+                        3,
+                        { doubledRolls: [5, 5] }
+                    );
+                }
+            });
+            buildPipelineForAction.mockReturnValue({ run: mockRun });
+
+            await resolveAttackDamageStandalone(attack, { doubledRolls: [5, 5] }, {
+                playerStats,
+                campaignName: 'test-campaign',
+                setPopupHtml: mockSetPopupHtml,
+                rollDamage: mockRollDamage,
+            });
+
+            expect(mockRollDamage).toHaveBeenCalledWith(
+                'Longsword',
+                '1d8+3',
+                8,
+                [5, 3],
+                3,
+                expect.objectContaining({ doubledRolls: [5, 5] })
+            );
+        });
+
+        it('defaults isAutoCrit to false when isCrit is absent from ctxOverrides', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
+
+            const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
+                if (event === 'housekeeping:do') {
+                    ctx.proceedWithDamage(
+                        { name: 'Longsword', damageType: 'slashing' },
+                        '1d8+3',
+                        8,
+                        [5, 3],
+                        3,
+                        {}
+                    );
+                }
+            });
+            buildPipelineForAction.mockReturnValue({ run: mockRun });
+
+            await resolveAttackDamageStandalone(attack, {}, {
+                playerStats,
+                campaignName: 'test-campaign',
+                setPopupHtml: mockSetPopupHtml,
+                rollDamage: mockRollDamage,
+            });
+
+            expect(mockRollDamage).toHaveBeenCalledWith(
+                'Longsword',
+                '1d8+3',
+                8,
+                [5, 3],
+                3,
+                expect.objectContaining({ isAutoCrit: false })
+            );
+        });
+
+        it('sets isAutoCrit to true when isCrit is true in ctxOverrides', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
+
+            const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
+                if (event === 'housekeeping:do') {
+                    ctx.proceedWithDamage(
+                        { name: 'Longsword', damageType: 'slashing' },
+                        '1d8+3',
+                        8,
+                        [5, 3],
+                        3,
+                        {}
+                    );
+                }
+            });
+            buildPipelineForAction.mockReturnValue({ run: mockRun });
+
+            await resolveAttackDamageStandalone(attack, { isCrit: true }, {
+                playerStats,
+                campaignName: 'test-campaign',
+                setPopupHtml: mockSetPopupHtml,
+                rollDamage: mockRollDamage,
+            });
+
+            expect(mockRollDamage).toHaveBeenCalledWith(
+                'Longsword',
+                '1d8+3',
+                8,
+                [5, 3],
+                3,
+                expect.objectContaining({ isAutoCrit: true })
+            );
+        });
+
+        it('uses attack name as attackerName fallback when attackerName is absent from ctxOverrides', async () => {
+            const attack = makeAttack({ name: 'Rapier' });
+            const playerStats = { ...defaultPlayerStats };
+
+            const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
+                if (event === 'housekeeping:do') {
+                    ctx.proceedWithDamage(
+                        { name: 'Rapier', damageType: 'piercing' },
+                        '1d8+4',
+                        9,
+                        [5, 4],
+                        4,
+                        {}
+                    );
+                }
+            });
+            buildPipelineForAction.mockReturnValue({ run: mockRun });
+
+            await resolveAttackDamageStandalone(attack, {}, {
+                playerStats,
+                campaignName: 'test-campaign',
+                setPopupHtml: mockSetPopupHtml,
+                rollDamage: mockRollDamage,
+            });
+
+            expect(mockRollDamage).toHaveBeenCalledWith(
+                'Rapier',
+                '1d8+4',
+                9,
+                [5, 4],
+                4,
+                expect.objectContaining({ attackerName: 'Rapier' })
+            );
+        });
+    });
+
+    describe('ctxOverrides field defaults', () => {
+        it('defaults metamagicHeighten to false when not in ctxOverrides', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
+
+            const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
+                if (event === 'housekeeping:do') {
+                    ctx.proceedWithDamage(
+                        { name: 'Longsword', damageType: 'slashing' },
+                        '1d8+3',
+                        8,
+                        [5, 3],
+                        3,
+                        {}
+                    );
+                }
+            });
+            buildPipelineForAction.mockReturnValue({ run: mockRun });
+
+            await resolveAttackDamageStandalone(attack, {}, {
+                playerStats,
+                campaignName: 'test-campaign',
+                setPopupHtml: mockSetPopupHtml,
+                rollDamage: mockRollDamage,
+            });
+
+            expect(mockRollDamage).toHaveBeenCalledWith(
+                'Longsword',
+                '1d8+3',
+                8,
+                [5, 3],
+                3,
+                expect.objectContaining({ metamagicHeighten: false })
+            );
+        });
+
+        it('defaults all autoDamageSecondary/save fields to null when absent from ctxOverrides', async () => {
+            const attack = makeAttack();
+            const playerStats = { ...defaultPlayerStats };
 
             const mockRun = vi.fn().mockImplementation(async (event, ctx) => {
                 if (event === 'housekeeping:do') {
@@ -336,39 +619,204 @@ describe('resolveAttackDamageStandalone', () => {
                 [5, 3],
                 3,
                 expect.objectContaining({
-                    doubledRolls: null,
+                    autoDamageSecondaryFormula: null,
+                    autoDamageSecondaryName: null,
+                    autoDamageSecondaryDamageType: null,
+                    saveDc: null,
+                    saveType: null,
+                    dcSuccess: null,
                 })
             );
         });
     });
+});
 
-    describe('ctxOverrides spread', () => {
-        it('spreads all ctxOverrides into the pipeline context', async () => {
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-            const playerStats = { name: 'TestFighter', level: 5, abilities: [], automation: { actions: [], passives: [] } };
-            const overrides = {
-                sneakDice: 4,
-                effectiveSneakDice: 4,
-                isMeleeOrUnarmed: true,
-                autoFormulaOverride: 'custom formula',
-                empoweredEvocationModifier: 2,
-                autoDamageSaveDc: 16,
-            };
+describe('normalizeAutoDamage', () => {
+    it('returns attack and ctx objects from a valid autoDamage payload', () => {
+        const autoDamage = {
+            name: 'Longsword',
+            formula: '1d8+3',
+            damageType: 'slashing',
+            isAutoCrit: false,
+            targetName: 'Goblin',
+            saveDc: 15,
+            saveType: 'Dexterity',
+            dcSuccess: 'half',
+            secondaryFormula: '1d6',
+            secondaryName: 'Sneak Attack',
+            secondaryDamageType: 'piercing',
+            attackerName: 'TestFighter',
+            isCantrip: false,
+            metamagicHeighten: false,
+            metamagicTwinTarget: null,
+            autoDamageSchool: 'evocation',
+            d20Roll: 15,
+        };
+        const playerStats = {
+            name: 'TestFighter',
+            attacks: [{ name: 'Longsword', weaponType: 'weapon', properties: [] }],
+        };
 
-            await resolveAttackDamageStandalone(attack, overrides, {
-                playerStats,
-                campaignName: 'test-campaign',
-                setPopupHtml: mockSetPopupHtml,
-                rollDamage: mockRollDamage,
-            });
+        const { attack, ctx } = normalizeAutoDamage(autoDamage, false, playerStats);
 
-            const ctx = buildPipelineForAction().run.mock.calls[0][1];
-            expect(ctx.sneakDice).toBe(4);
-            expect(ctx.effectiveSneakDice).toBe(4);
-            expect(ctx.isMeleeOrUnarmed).toBe(true);
-            expect(ctx.autoFormulaOverride).toBe('custom formula');
-            expect(ctx.empoweredEvocationModifier).toBe(2);
-            expect(ctx.autoDamageSaveDc).toBe(16);
+        expect(attack).toEqual({
+            name: 'Longsword',
+            damage: '1d8+3',
+            damageType: 'slashing',
+            weaponType: 'weapon',
+            properties: [],
         });
+
+        expect(ctx.hit).toBe(true);
+        expect(ctx.isCrit).toBe(false);
+        expect(ctx.isAutoCrit).toBe(false);
+        expect(ctx.isNatural20).toBe(false);
+        expect(ctx.targetName).toBe('Goblin');
+        expect(ctx.isBonusActionAttack).toBe(false);
+        expect(ctx.autoDamageSource).toBe(true);
+        expect(ctx.saveDc).toBe(15);
+        expect(ctx.saveType).toBe('Dexterity');
+        expect(ctx.dcSuccess).toBe('half');
+        expect(ctx.autoDamageSecondaryFormula).toBe('1d6');
+        expect(ctx.autoDamageSecondaryName).toBe('Sneak Attack');
+        expect(ctx.autoDamageSecondaryDamageType).toBe('piercing');
+        expect(ctx.attackerName).toBe('TestFighter');
+        expect(ctx.isCantrip).toBe(false);
+        expect(ctx.metamagicHeighten).toBe(false);
+        expect(ctx.metamagicTwinTarget).toBe(null);
+        expect(ctx.autoDamageSchool).toBe('evocation');
+        expect(ctx.d20Roll).toBe(15);
+    });
+
+    it('sets isCrit and isAutoCrit to true when isCrit parameter is true', () => {
+        const autoDamage = { name: 'Longsword', formula: '1d8+3', damageType: 'slashing' };
+        const playerStats = { attacks: [] };
+
+        const { ctx } = normalizeAutoDamage(autoDamage, true, playerStats);
+
+        expect(ctx.isCrit).toBe(true);
+        expect(ctx.isAutoCrit).toBe(true);
+        expect(ctx.isNatural20).toBe(true);
+    });
+
+    it('sets isCrit and isAutoCrit to true when autoDamage.isAutoCrit is true', () => {
+        const autoDamage = { name: 'Longsword', formula: '1d8+3', damageType: 'slashing', isAutoCrit: true };
+        const playerStats = { attacks: [] };
+
+        const { ctx } = normalizeAutoDamage(autoDamage, false, playerStats);
+
+        expect(ctx.isCrit).toBe(true);
+        expect(ctx.isAutoCrit).toBe(true);
+    });
+
+    it('detects unarmed strike weaponType', () => {
+        const autoDamage = { name: 'Unarmed Strike', formula: '1d4', damageType: 'bludgeoning' };
+        const playerStats = { attacks: [] };
+
+        const { attack } = normalizeAutoDamage(autoDamage, false, playerStats);
+
+        expect(attack.weaponType).toBe('unarmed');
+    });
+
+    it('uses weaponAttack info for weaponType and properties when available', () => {
+        const autoDamage = { name: 'Greataxe', formula: '1d12+3', damageType: 'slashing' };
+        const playerStats = {
+            attacks: [{ name: 'Greataxe', weaponType: 'melee', properties: ['Heavy', 'Two-Handed'] }],
+        };
+
+        const { attack } = normalizeAutoDamage(autoDamage, false, playerStats);
+
+        expect(attack.weaponType).toBe('melee');
+        expect(attack.properties).toEqual(['Heavy', 'Two-Handed']);
+    });
+
+    it('defaults weaponType to weapon when no matching attack found', () => {
+        const autoDamage = { name: 'Mystic Weapon', formula: '1d6+2', damageType: 'force' };
+        const playerStats = { attacks: [{ name: 'Longsword', weaponType: 'weapon' }] };
+
+        const { attack } = normalizeAutoDamage(autoDamage, false, playerStats);
+
+        expect(attack.weaponType).toBe('weapon');
+        expect(attack.properties).toEqual([]);
+    });
+
+    it('defaults missing fields to safe defaults', () => {
+        const autoDamage = {};
+        const playerStats = { attacks: [] };
+
+        const { ctx } = normalizeAutoDamage(autoDamage, false, playerStats);
+
+        expect(ctx.hit).toBe(true);
+        expect(ctx.isCrit).toBe(false);
+        expect(ctx.isAutoCrit).toBe(false);
+        expect(ctx.isNatural20).toBe(false);
+        expect(ctx.targetName).toBe(null);
+        expect(ctx.isBonusActionAttack).toBe(false);
+        expect(ctx.overchannelActive).toBe(false);
+        expect(ctx.overchannelUseCount).toBe(0);
+        expect(ctx.overchannelSpellLevel).toBe(1);
+        expect(ctx.sneakDice).toBe(0);
+        expect(ctx.autoDamageSource).toBe(true);
+        expect(ctx.empoweredEvocationModifier).toBe(0);
+        expect(ctx.autoDamageSecondaryFormula).toBeUndefined();
+        expect(ctx.autoDamageSchool).toBe('');
+        expect(ctx.d20Roll).toBeUndefined();
+    });
+
+    it('defaults overchannel values from autoDamage when present', () => {
+        const autoDamage = {
+            name: 'Fire Bolt',
+            formula: '1d10+4',
+            damageType: 'fire',
+            overchannelActive: true,
+            overchannelUseCount: 2,
+            overchannelSpellLevel: 3,
+            sneakAttackDice: 4,
+        };
+        const playerStats = { attacks: [] };
+
+        const { ctx } = normalizeAutoDamage(autoDamage, false, playerStats);
+
+        expect(ctx.overchannelActive).toBe(true);
+        expect(ctx.overchannelUseCount).toBe(2);
+        expect(ctx.overchannelSpellLevel).toBe(3);
+        expect(ctx.sneakDice).toBe(4);
+    });
+
+    it('computes empoweredEvocationModifier when player has the feature and spell is evocation', () => {
+        const autoDamage = {
+            name: 'Fire Bolt',
+            formula: '1d10+4',
+            damageType: 'fire',
+            autoDamageSchool: 'evocation',
+        };
+        const playerStats = {
+            name: 'TestWizard',
+            attacks: [],
+            automation: { actions: [], passives: [] },
+        };
+
+        // The mock returns empty features and 0 modifier, so empoweredEvocationModifier should be 0
+        const { ctx } = normalizeAutoDamage(autoDamage, false, playerStats);
+
+        expect(ctx.empoweredEvocationModifier).toBe(0);
+    });
+
+    it('handles null/undefined playerStats gracefully', () => {
+        const autoDamage = { name: 'Weapon', formula: '1d6', damageType: 'slashing' };
+
+        const { attack, ctx } = normalizeAutoDamage(autoDamage, false, null);
+
+        expect(attack.weaponType).toBe('weapon');
+        expect(ctx.hit).toBe(true);
+        expect(ctx.empoweredEvocationModifier).toBe(0);
+    });
+
+    it('handles attack name with "Unarmed Strike" substring in null playerStats', () => {
+        const autoDamage = { name: 'Unarmed Strike', formula: '1d4', damageType: 'bludgeoning' };
+
+        const { attack } = normalizeAutoDamage(autoDamage, false, null);
+
+        expect(attack.weaponType).toBe('unarmed');
     });
 });

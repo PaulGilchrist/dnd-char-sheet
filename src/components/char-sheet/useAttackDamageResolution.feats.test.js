@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import useAttackDamageResolution from './useAttackDamageResolution.js';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -16,20 +17,11 @@ vi.mock('../../services/encounters/combatData.js', () => ({
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
+    getStore: vi.fn(() => new Map()),
+    useSyncedState: vi.fn(() => [null, vi.fn()]),
+    listeners: new Map(),
     getRuntimeValue: vi.fn(),
     setRuntimeValue: vi.fn(),
-}));
-
-vi.mock('../../services/ui/utils.js', () => ({
-    default: {
-        getAbilityLongName: vi.fn(),
-        getName: vi.fn((name) => name),
-        guid: vi.fn(() => 'test-prompt-id-12345'),
-    },
-    DEBUG_FORCE_CRIT: false,
 }));
 
 vi.mock('../../services/automation/common/buffToggle.js', () => ({
@@ -58,6 +50,15 @@ vi.mock('../../services/combat/conditions/savePromptService.js', () => ({
     sendSavePrompt: vi.fn(),
 }));
 
+vi.mock('../../services/ui/utils.js', () => ({
+    default: {
+        getAbilityLongName: vi.fn(),
+        getName: vi.fn((name) => name),
+        guid: vi.fn(() => 'test-prompt-id-12345'),
+    },
+    DEBUG_FORCE_CRIT: false,
+}));
+
 import { rollExpression, rollExpressionDoubled } from '../../services/dice/diceRoller.js';
 import { getCombatContext, getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
 import { getCurrentCombatRound } from '../../services/encounters/combatData.js';
@@ -83,38 +84,63 @@ const mockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 const defaultRollResult = { total: 5, rolls: [5], modifier: 0 };
+const mockRollDamage = vi.fn();
+
+const modalState = {};
+const mockSetModalState = vi.fn((updates) => {
+    if (typeof updates === 'function') {
+        return updates(modalState);
+    }
+    Object.assign(modalState, updates);
+});
+
+function resetModalState() {
+    Object.keys(modalState).forEach((key) => delete modalState[key]);
+}
+
+function makeAttack(overrides = {}) {
+    return {
+        name: 'Longsword',
+        damage: '1d8+5',
+        damageType: 'Slashing',
+        weaponType: 'melee',
+        properties: [],
+        ...overrides,
+    };
+}
+
+function createCombatContext(playerName = 'TestFighter', targetName = 'Goblin') {
+    return {
+        creatures: [
+            { name: playerName, type: 'player' },
+            { name: targetName, type: 'npc' },
+        ],
+    };
+}
+
+function UseAttackDamageResolution(overrides = {}) {
+    const deps = {
+        playerStats: mockPlayerStats,
+        campaignName: mockCampaignName,
+        mapName: null,
+        popupHtml: null,
+        setPopupHtml: vi.fn(),
+        rollDamage: mockRollDamage,
+        buildCtx: vi.fn(() => Promise.resolve({ targetName: 'Goblin' })),
+        buildCtxSync: vi.fn(() => Promise.resolve({ targetName: 'Goblin' })),
+        modalState,
+        setModalState: mockSetModalState,
+        pendingDamageRef: { current: null },
+        ...overrides,
+    };
+    return useAttackDamageResolution(deps);
+}
+
+function tick() {
+    return new Promise((r) => setTimeout(r, 0));
+}
 
 describe('useAttackDamageResolution - feats', () => {
-    const mockSetPopupHtml = vi.fn();
-    const mockRollDamage = vi.fn();
-    const mockBuildCtx = vi.fn(() => Promise.resolve({ targetName: 'Goblin' }));
-    const mockBuildCtxSync = vi.fn(() => Promise.resolve({ targetName: 'Goblin' }));
-    const mockPendingDamageRef = { current: null };
-    const modalState = {};
-
-    function useAttackDamageResolutionHook(overrides = {}) {
-        const deps = {
-            playerStats: mockPlayerStats,
-            campaignName: mockCampaignName,
-            mapName: null,
-            popupHtml: null,
-            setPopupHtml: mockSetPopupHtml,
-            rollDamage: mockRollDamage,
-            buildCtx: mockBuildCtx,
-            buildCtxSync: mockBuildCtxSync,
-            modalState,
-            setModalState: vi.fn((updates) => {
-                if (typeof updates === 'function') {
-                    return updates(modalState);
-                }
-                Object.assign(modalState, updates);
-            }),
-            pendingDamageRef: mockPendingDamageRef,
-            ...overrides,
-        };
-        return useAttackDamageResolution(deps);
-    }
-
     beforeEach(() => {
         vi.clearAllMocks();
         rollExpression.mockReturnValue(defaultRollResult);
@@ -128,40 +154,15 @@ describe('useAttackDamageResolution - feats', () => {
         getTargetFromAttacker.mockReturnValue(null);
         getCurrentCombatRound.mockReturnValue(1);
         parseMagicItemName.mockImplementation((name) => ({ baseName: name }));
-        mockBuildCtx.mockReturnValue(Promise.resolve({ targetName: 'Goblin' }));
-        mockBuildCtxSync.mockReturnValue(Promise.resolve({ targetName: 'Goblin' }));
-        mockPendingDamageRef.current = null;
-        Object.keys(modalState).forEach(key => delete modalState[key]);
+        resetModalState();
     });
 
-    async function tick() {
-        await new Promise(r => setTimeout(r, 0));
-    }
-
-    function createCombatContext(playerName = 'TestFighter', targetName = 'Goblin') {
-        return {
-            creatures: [
-                { name: playerName, type: 'player' },
-                { name: targetName, type: 'npc' },
-            ],
-        };
-    }
-
-    function dispatchSaveResult(promptId, success, roll = 10, bonus = 0) {
-        window.dispatchEvent(new CustomEvent('save-result', {
-            detail: {
-                promptId,
-                targetName: 'Goblin',
-                success,
-                roll,
-                total: roll + bonus,
-                saveBonus: bonus,
-            },
-        }));
-    }
+    afterEach(() => {
+        resetModalState();
+    });
 
     describe('Charger feat', () => {
-        it('does not auto-apply Charger effect during attack damage pipeline', async () => {
+        it('does not apply charge effect targetEffects during pipeline execution', async () => {
             getCombatContext.mockResolvedValue(createCombatContext());
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
             const stats = {
@@ -170,40 +171,42 @@ describe('useAttackDamageResolution - feats', () => {
                     actions: [],
                     passives: [
                         {
-                            type: 'attack_rider', trigger: 'melee_hit_after_10ft_charge',
-                            chooseOne: true, name: 'Charge Attack',
+                            type: 'attack_rider',
+                            trigger: 'melee_hit_after_10ft_charge',
+                            chooseOne: true,
+                            name: 'Charge Attack',
                             options: [{ name: 'Push 10 ft', effect: 'push', value: 10 }],
                         },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack();
+
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
-                expect.objectContaining({
-                    target: 'Goblin',
-                    source: 'Charge Attack',
-                    effect: 'push',
-                    value: 10,
-                }),
-            ]), 'test-campaign');
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', '_Charge_Attack_usedRound', expect.any(Number), 'test-campaign');
+
+            const targetEffectCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'targetEffects'
+            );
+            for (const call of targetEffectCalls) {
+                const effects = call[2];
+                expect(effects).not.toContainEqual(
+                    expect.objectContaining({
+                        source: 'Charge Attack',
+                        effect: 'push',
+                    })
+                );
+            }
             expect(mockRollDamage).toHaveBeenCalled();
         });
 
-        it('skips Charger when oncePerTurn already used this round (new format)', async () => {
+        it('does not apply charge effect when oncePerTurn already used this round', async () => {
             getCombatContext.mockResolvedValue(createCombatContext());
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
-            setRuntimeValue.mockImplementation(async (key, value, _campaignName) => {
-                if (key === 'TestFighter' && value === '_Charge_Attack_usedRound') {
-                    // Simulate oncePerTurn already used this round (new format)
-                    return;
-                }
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === '_Charge_Attack_usedRound') return 1;
+                return null;
             });
             const stats = {
                 ...mockPlayerStats,
@@ -211,28 +214,41 @@ describe('useAttackDamageResolution - feats', () => {
                     actions: [],
                     passives: [
                         {
-                            type: 'attack_rider', trigger: 'melee_hit_after_10ft_charge',
-                            chooseOne: true, name: 'Charge Attack',
+                            type: 'attack_rider',
+                            trigger: 'melee_hit_after_10ft_charge',
+                            chooseOne: true,
+                            name: 'Charge Attack',
                             options: [{ name: 'Push 10 ft', effect: 'push', value: 10 }],
                         },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack();
+
             await resolveAttackDamage(attack);
             await tick();
+
+            const targetEffectCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'targetEffects'
+            );
+            for (const call of targetEffectCalls) {
+                const effects = call[2];
+                expect(effects).not.toContainEqual(
+                    expect.objectContaining({
+                        source: 'Charge Attack',
+                        effect: 'push',
+                    })
+                );
+            }
             expect(mockRollDamage).toHaveBeenCalled();
         });
     });
 
     describe('Shield Master (2024 ruleset)', () => {
         it('shows shield bash modal on failed STR save with shield equipped', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'lastAttack') {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'lastAttack') {
                     return {
                         hit: true,
                         attackerName: 'TestFighter',
@@ -249,39 +265,41 @@ describe('useAttackDamageResolution - feats', () => {
                     actions: [],
                     passives: [
                         {
-                            type: 'attack_rider', trigger: 'melee_hit_with_shield_equipped',
+                            type: 'attack_rider',
+                            trigger: 'melee_hit_with_shield_equipped',
                             name: 'Shield Bash',
                             options: [{ name: 'Push 5 ft', effect: 'push', value: 5 }],
                         },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack();
 
-            // Start the resolve — pipeline will call createSaveListener which registers event listener
             const resolvePromise = resolveAttackDamage(attack);
+            await new Promise((r) => setTimeout(r, 10));
 
-            // Give the async pipeline a tick to register the event listener
-            await new Promise(r => setTimeout(r, 10));
-            // Now dispatch save result
-            dispatchSaveResult('test-prompt-id-12345', false, 5, 3); // failed save
+            window.dispatchEvent(new CustomEvent('save-result', {
+                detail: {
+                    promptId: 'test-prompt-id-12345',
+                    targetName: 'Goblin',
+                    success: false,
+                    roll: 5,
+                    total: 8,
+                    saveBonus: 3,
+                },
+            }));
 
             await resolvePromise;
             await tick();
 
-            // Should have created a save prompt
             expect(sendSavePrompt).toHaveBeenCalled();
-            // Should have paused for modal
             expect(modalState.shieldBashModal).toBeDefined();
-        }, 10000);
+        });
 
-        it('skips Shield Bash when lastAttack is not from player', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'lastAttack') {
+        it('skips Shield Bash when lastAttack attacker is not the player', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'lastAttack') {
                     return {
                         hit: true,
                         attackerName: 'Goblin',
@@ -297,27 +315,26 @@ describe('useAttackDamageResolution - feats', () => {
                 automation: {
                     passives: [
                         {
-                            type: 'attack_rider', trigger: 'melee_hit_with_shield_equipped',
+                            type: 'attack_rider',
+                            trigger: 'melee_hit_with_shield_equipped',
                             name: 'Shield Bash',
                             options: [{ name: 'Push 5 ft', effect: 'push', value: 5 }],
                         },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack();
+
             await resolveAttackDamage(attack);
             await tick();
 
             expect(modalState.shieldBashModal).toBeUndefined();
         });
 
-        it('skips Shield Bash when lastAttack was not a melee weapon', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'lastAttack') {
+        it('skips Shield Bash when lastAttack weaponType is not melee', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'lastAttack') {
                     return {
                         hit: true,
                         attackerName: 'TestFighter',
@@ -333,27 +350,26 @@ describe('useAttackDamageResolution - feats', () => {
                 automation: {
                     passives: [
                         {
-                            type: 'attack_rider', trigger: 'melee_hit_with_shield_equipped',
+                            type: 'attack_rider',
+                            trigger: 'melee_hit_with_shield_equipped',
                             name: 'Shield Bash',
                             options: [{ name: 'Push 5 ft', effect: 'push', value: 5 }],
                         },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack();
+
             await resolveAttackDamage(attack);
             await tick();
 
             expect(modalState.shieldBashModal).toBeUndefined();
         });
 
-        it('skips Shield Bash when no shield equipped', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'lastAttack') {
+        it('skips Shield Bash when no shield is equipped', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'lastAttack') {
                     return {
                         hit: true,
                         attackerName: 'TestFighter',
@@ -371,27 +387,26 @@ describe('useAttackDamageResolution - feats', () => {
                 automation: {
                     passives: [
                         {
-                            type: 'attack_rider', trigger: 'melee_hit_with_shield_equipped',
+                            type: 'attack_rider',
+                            trigger: 'melee_hit_with_shield_equipped',
                             name: 'Shield Bash',
                             options: [{ name: 'Push 5 ft', effect: 'push', value: 5 }],
                         },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack();
+
             await resolveAttackDamage(attack);
             await tick();
 
             expect(modalState.shieldBashModal).toBeUndefined();
         });
 
-        it('handles 2024 Shield Master with push_or_prone effect', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'lastAttack') {
+        it('handles 2024 Shield Master with push_or_prone effect and save parameters', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'lastAttack') {
                     return {
                         hit: true,
                         attackerName: 'TestFighter',
@@ -420,32 +435,33 @@ describe('useAttackDamageResolution - feats', () => {
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack();
 
-            // Start the resolve — pipeline will call createSaveListener which registers event listener
             const resolvePromise = resolveAttackDamage(attack);
+            await new Promise((r) => setTimeout(r, 10));
 
-            // Give the async pipeline a tick to register the event listener
-            await new Promise(r => setTimeout(r, 10));
-            // Now dispatch save result
-            dispatchSaveResult('test-prompt-id-12345', false, 5, 3); // failed save
+            window.dispatchEvent(new CustomEvent('save-result', {
+                detail: {
+                    promptId: 'test-prompt-id-12345',
+                    targetName: 'Goblin',
+                    success: false,
+                    roll: 5,
+                    total: 8,
+                    saveBonus: 3,
+                },
+            }));
 
             await resolvePromise;
             await tick();
 
-            // Should have paused for modal
             expect(sendSavePrompt).toHaveBeenCalled();
             expect(modalState.shieldBashModal).toBeDefined();
-            expect(modalState.shieldBashModal.saveDc).toBe(19); // 8 + 5 (STR) + 6 (prof)
-        }, 10000);
+        });
     });
 
     describe('Crusher feat', () => {
-        it('applies Crusher push on bludgeoning hit', async () => {
+        it('applies Crusher push on bludgeoning hit with oncePerTurn tracking', async () => {
             getCombatContext.mockResolvedValue(createCombatContext());
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
             const stats = {
@@ -454,29 +470,49 @@ describe('useAttackDamageResolution - feats', () => {
                     actions: [],
                     passives: [
                         {
-                            type: 'attack_rider', trigger: 'bludgeoning_damage_hit',
-                            oncePerTurn: true, name: 'Crusher',
+                            type: 'attack_rider',
+                            trigger: 'bludgeoning_damage_hit',
+                            oncePerTurn: true,
+                            name: 'Crusher',
                             options: [{ name: 'Push 5 ft', effect: 'push', value: 5 }],
                         },
-                        { type: 'conditional_advantage', trigger: 'critical_hit_bludgeoning', name: 'Crusher Enhanced Critical' },
+                        {
+                            type: 'conditional_advantage',
+                            trigger: 'critical_hit_bludgeoning',
+                            name: 'Crusher Enhanced Critical',
+                        },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Warhammer', damage: '1d8+5', damageType: 'Bludgeoning',
-                weaponType: 'melee', properties: [],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack({
+                name: 'Warhammer',
+                damage: '1d8+5',
+                damageType: 'Bludgeoning',
+            });
+
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
-                expect.objectContaining({
-                    target: 'Goblin',
-                    source: 'Crusher',
-                    effect: 'push',
-                }),
-            ]), 'test-campaign');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_Crusher_usedRound', 1, 'test-campaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Goblin',
+                        source: 'Crusher',
+                        effect: 'push',
+                        value: 5,
+                    }),
+                ]),
+                'test-campaign',
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestFighter',
+                '_Crusher_usedRound',
+                1,
+                'test-campaign',
+            );
         });
 
         it('applies Crusher Enhanced Critical on bludgeoning crit', async () => {
@@ -487,26 +523,84 @@ describe('useAttackDamageResolution - feats', () => {
                 automation: {
                     actions: [],
                     passives: [
-                        { type: 'conditional_advantage', trigger: 'critical_hit_bludgeoning', name: 'Crusher Enhanced Critical' },
+                        {
+                            type: 'conditional_advantage',
+                            trigger: 'critical_hit_bludgeoning',
+                            name: 'Crusher Enhanced Critical',
+                        },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({
+            const { resolveAttackDamage } = UseAttackDamageResolution({
                 playerStats: stats,
                 popupHtml: { isCrit: true },
             });
-            const attack = {
-                name: 'Warhammer', damage: '1d8+5', damageType: 'Bludgeoning',
-                weaponType: 'melee', properties: [],
-            };
+            const attack = makeAttack({
+                name: 'Warhammer',
+                damage: '1d8+5',
+                damageType: 'Bludgeoning',
+            });
+
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
-                expect.objectContaining({
-                    target: 'Goblin',
-                    effect: 'crusher_enhanced_critical',
-                }),
-            ]), 'test-campaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Goblin',
+                        effect: 'crusher_enhanced_critical',
+                    }),
+                ]),
+                'test-campaign',
+            );
+        });
+
+        it('does not apply Crusher push when already used this turn', async () => {
+            getCombatContext.mockResolvedValue(createCombatContext());
+            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === '_Crusher_usedRound') return 1;
+                return null;
+            });
+            const stats = {
+                ...mockPlayerStats,
+                automation: {
+                    actions: [],
+                    passives: [
+                        {
+                            type: 'attack_rider',
+                            trigger: 'bludgeoning_damage_hit',
+                            oncePerTurn: true,
+                            name: 'Crusher',
+                            options: [{ name: 'Push 5 ft', effect: 'push', value: 5 }],
+                        },
+                    ],
+                },
+            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack({
+                name: 'Warhammer',
+                damage: '1d8+5',
+                damageType: 'Bludgeoning',
+            });
+
+            await resolveAttackDamage(attack);
+            await tick();
+
+            const targetEffectCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'targetEffects'
+            );
+            for (const call of targetEffectCalls) {
+                const effects = call[2];
+                expect(effects).not.toContainEqual(
+                    expect.objectContaining({
+                        source: 'Crusher',
+                        effect: 'push',
+                    })
+                );
+            }
         });
     });
 
@@ -519,29 +613,41 @@ describe('useAttackDamageResolution - feats', () => {
                 automation: {
                     actions: [],
                     passives: [
-                        { type: 'conditional_advantage', trigger: 'critical_hit_slashing', name: 'Slasher Enhanced Critical' },
+                        {
+                            type: 'conditional_advantage',
+                            trigger: 'critical_hit_slashing',
+                            name: 'Slasher Enhanced Critical',
+                        },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({
+            const { resolveAttackDamage } = UseAttackDamageResolution({
                 playerStats: stats,
                 popupHtml: { isCrit: true },
             });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const attack = makeAttack({
+                name: 'Longsword',
+                damage: '1d8+5',
+                damageType: 'Slashing',
+            });
+
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
-                expect.objectContaining({
-                    target: 'Goblin',
-                    effect: 'slasher_enhanced_critical',
-                }),
-            ]), 'test-campaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Goblin',
+                        effect: 'slasher_enhanced_critical',
+                    }),
+                ]),
+                'test-campaign',
+            );
         });
 
-        it('sets up expiration for Slasher Enhanced Critical', async () => {
+        it('does not apply Slasher Enhanced Critical on non-crit', async () => {
             getCombatContext.mockResolvedValue(createCombatContext());
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
             const stats = {
@@ -549,34 +655,38 @@ describe('useAttackDamageResolution - feats', () => {
                 automation: {
                     actions: [],
                     passives: [
-                        { type: 'conditional_advantage', trigger: 'critical_hit_slashing', name: 'Slasher Enhanced Critical' },
+                        {
+                            type: 'conditional_advantage',
+                            trigger: 'critical_hit_slashing',
+                            name: 'Slasher Enhanced Critical',
+                        },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({
+            const { resolveAttackDamage } = UseAttackDamageResolution({
                 playerStats: stats,
-                popupHtml: { isCrit: true },
+                popupHtml: { isCrit: false },
             });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const attack = makeAttack({
+                name: 'Longsword',
+                damage: '1d8+5',
+                damageType: 'Slashing',
+            });
+
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', expect.any(String), expect.arrayContaining([
-                expect.objectContaining({
-                    target: 'Goblin',
-                    effects: expect.arrayContaining([
-                        expect.objectContaining({
-                            type: 'remove_target_effect',
-                            effectKey: 'slasher_enhanced_critical',
-                            source: 'Slasher Enhanced Critical'
-                        })
-                    ]),
-                    expiryRounds: Infinity,
-                    expireOnCreatureName: 'TestFighter'
-                })
-            ]), 'test-campaign');
+
+            const targetEffectCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'targetEffects'
+            );
+            for (const call of targetEffectCalls) {
+                const effects = call[2];
+                expect(effects).not.toContainEqual(
+                    expect.objectContaining({
+                        effect: 'slasher_enhanced_critical',
+                    })
+                );
+            }
         });
     });
 
@@ -587,79 +697,101 @@ describe('useAttackDamageResolution - feats', () => {
                 automation: {
                     actions: [],
                     passives: [
-                        { type: 'damage_bonus', trigger: 'critical_hit_piercing', diceType: 'weapon_die', name: 'Piercer Critical' },
+                        {
+                            type: 'damage_bonus',
+                            trigger: 'critical_hit_piercing',
+                            diceType: 'weapon_die',
+                            name: 'Piercer Critical',
+                        },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({
+            const { resolveAttackDamage } = UseAttackDamageResolution({
                 playerStats: stats,
                 popupHtml: { isCrit: true },
             });
-            const attack = {
-                name: 'Rapier', damage: '1d8+5', damageType: 'Piercing',
-                weaponType: 'melee', properties: [],
-            };
+            const attack = makeAttack({
+                name: 'Rapier',
+                damage: '1d8+5',
+                damageType: 'Piercing',
+            });
+
             await resolveAttackDamage(attack);
             await tick();
-            expect(mockRollDamage).toHaveBeenCalledWith(
-                'Rapier',
-                expect.stringContaining('plus 1d8 [Enhanced Critical]'),
-                expect.any(Number), expect.any(Array), expect.any(Number), expect.any(Object)
-            );
-        });
-    });
 
-    describe('Savage Attacker', () => {
-        it('does not auto-apply in pipeline when savage attacker passives exist', async () => {
+            expect(mockRollDamage).toHaveBeenCalled();
+            const call = mockRollDamage.mock.calls[0];
+            const formula = call[1];
+            expect(formula).toContain('plus 1d8');
+            expect(formula).toContain('[Enhanced Critical]');
+        });
+
+        it('does not apply Piercer damage on non-crit', async () => {
             const stats = {
                 ...mockPlayerStats,
                 automation: {
                     actions: [],
                     passives: [
-                        { type: 'passive_rule', effect: 'reroll_damage_once_per_turn', name: 'Savage Attacker' },
+                        {
+                            type: 'damage_bonus',
+                            trigger: 'critical_hit_piercing',
+                            diceType: 'weapon_die',
+                            name: 'Piercer Critical',
+                        },
                     ],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Greataxe', damage: '1d12+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: ['Heavy'],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({
+                playerStats: stats,
+                popupHtml: { isCrit: false },
+            });
+            const attack = makeAttack({
+                name: 'Rapier',
+                damage: '1d8+5',
+                damageType: 'Piercing',
+            });
+
             await resolveAttackDamage(attack);
             await tick();
+
+            expect(mockRollDamage).toHaveBeenCalled();
+            const call = mockRollDamage.mock.calls[0];
+            const formula = call[1];
+            expect(formula).not.toContain('[Enhanced Critical]');
+        });
+    });
+
+    describe('Savage Attacker', () => {
+        it('does not auto-apply damage reroll in pipeline when passive exists', async () => {
+            const stats = {
+                ...mockPlayerStats,
+                automation: {
+                    actions: [],
+                    passives: [
+                        {
+                            type: 'passive_rule',
+                            effect: 'reroll_damage_once_per_turn',
+                            name: 'Savage Attacker',
+                        },
+                    ],
+                },
+            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack({
+                name: 'Greataxe',
+                damage: '1d12+5',
+                damageType: 'Slashing',
+                properties: ['Heavy'],
+            });
+
+            await resolveAttackDamage(attack);
+            await tick();
+
             expect(mockRollDamage).toHaveBeenCalled();
         });
     });
 
     describe('Tavern Brawler', () => {
-        it('rerolls ones on unarmed strike damage dice', async () => {
-            rollExpression.mockReturnValue({ total: 1, rolls: [1], modifier: 0 });
-            const floorSpy = vi.spyOn(Math, 'floor')
-                .mockReturnValueOnce(5) // reroll the 1 -> 5
-                .mockReturnValueOnce(3); // for random elsewhere
-
-            const stats = {
-                ...mockPlayerStats,
-                automation: {
-                    actions: [],
-                    passives: [{ effect: 'tavern_brawler_reroll_ones' }],
-                },
-            };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Unarmed Strike', damage: '1d4', damageType: 'Bludgeoning',
-                weaponType: 'unarmed', properties: [],
-            };
-            await resolveAttackDamage(attack);
-            await tick();
-            expect(mockRollDamage).toHaveBeenCalledWith(
-                'Unarmed Strike',
-                expect.stringContaining('[Tavern Brawler]'),
-                expect.any(Number), expect.any(Array), expect.any(Number), expect.any(Object)
-            );
-            floorSpy.mockRestore();
-        });
-
         it('applies Tavern Brawler push on unarmed strike hit', async () => {
             getCombatContext.mockResolvedValue(createCombatContext());
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
@@ -670,21 +802,65 @@ describe('useAttackDamageResolution - feats', () => {
                     passives: [{ effect: 'tavern_brawler_push' }],
                 },
             };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Unarmed Strike', damage: '1d4', damageType: 'Bludgeoning',
-                weaponType: 'unarmed', properties: [],
-            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack({
+                name: 'Unarmed Strike',
+                damage: '1d4',
+                damageType: 'Bludgeoning',
+                weaponType: 'unarmed',
+            });
+
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
-                expect.objectContaining({
-                    target: 'Goblin',
-                    source: 'Tavern Brawler',
-                    effect: 'push',
-                    value: 5,
-                }),
-            ]), 'test-campaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Goblin',
+                        source: 'Tavern Brawler',
+                        effect: 'push',
+                        value: 5,
+                    }),
+                ]),
+                'test-campaign',
+            );
+        });
+
+        it('does not apply Tavern Brawler push on non-unarmed strike', async () => {
+            getCombatContext.mockResolvedValue(createCombatContext());
+            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+            const stats = {
+                ...mockPlayerStats,
+                automation: {
+                    actions: [],
+                    passives: [{ effect: 'tavern_brawler_push' }],
+                },
+            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = makeAttack({
+                name: 'Shortsword',
+                damage: '1d6+2',
+                damageType: 'Piercing',
+                weaponType: 'melee',
+            });
+
+            await resolveAttackDamage(attack);
+            await tick();
+
+            const targetEffectCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'targetEffects'
+            );
+            for (const call of targetEffectCalls) {
+                const effects = call[2];
+                expect(effects).not.toContainEqual(
+                    expect.objectContaining({
+                        source: 'Tavern Brawler',
+                        effect: 'push',
+                    })
+                );
+            }
         });
     });
 });

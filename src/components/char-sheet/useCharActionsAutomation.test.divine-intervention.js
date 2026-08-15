@@ -11,6 +11,15 @@ vi.mock('../../services/rules/spells/spellCastService.js', () => ({
     executeSpellCast: vi.fn(),
 }));
 
+vi.mock('../../services/rules/combat/damageUtils.js', () => ({
+    getCombatContext: vi.fn(),
+    getTargetFromAttacker: vi.fn(),
+}));
+
+vi.mock('../../services/character/classFeatures.js', () => ({
+    getClassFeatures: vi.fn(),
+}));
+
 import { onSpellSelected } from '../../services/automation/handlers/class-cleric-paladin/divineInterventionHandler.js';
 import { executeSpellCast } from '../../services/rules/spells/spellCastService.js';
 
@@ -83,6 +92,7 @@ describe('useCharActionsAutomation', () => {
             await handleDivineInterventionCast({ name: 'Guidance' });
 
             expect(hooks.setModalState).toHaveBeenCalledWith({ divineInterventionModal: null, divineInterventionAction: null });
+            expect(onSpellSelected).not.toHaveBeenCalled();
         });
 
         it('should get action from runtime value when not in modalState', async () => {
@@ -144,6 +154,7 @@ describe('useCharActionsAutomation', () => {
             await handleDivineInterventionCast({ name: 'Guidance' });
 
             expect(hooks.setPopupHtml).not.toHaveBeenCalled();
+            expect(executeSpellCast).not.toHaveBeenCalled();
         });
 
         it('should handle spell_selected result with triggerResult modal', async () => {
@@ -251,6 +262,105 @@ describe('useCharActionsAutomation', () => {
                     bonusHealDetail: '2 Inspiration',
                     healingRerollOriginalRolls: null,
                     healingRerollDisplayRolls: null,
+                });
+            });
+        });
+
+        it('should handle healing with no bonus details', async () => {
+            onSpellSelected.mockResolvedValue({
+                type: 'spell_selected',
+                spell: { name: 'Cure Wounds' },
+                name: 'Divine Intervention',
+                rechargeMessage: 'recharged',
+            });
+            executeSpellCast.mockResolvedValue({
+                healAmount: 5,
+                rawTotal: 5,
+                formula: '1d8',
+                rolls: [5],
+                targetName: 'Ally1',
+                bonusHeal: 0,
+                bonusDetails: [],
+                triggerResult: null,
+            });
+
+            const action = { name: 'Divine Intervention' };
+            const grv = vi.fn((charKey, key, _cn) => {
+                if (key === 'divineInterventionAction') return action;
+                return undefined;
+            });
+            const hooks = createDivineHooks({
+                modalState: { divineInterventionAction: action },
+                grv,
+            });
+            const { handleDivineInterventionCast } = useCharActionsAutomation(hooks);
+            await handleDivineInterventionCast({ name: 'Cure Wounds' });
+            await vi.waitFor(() => {
+                expect(hooks.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                    type: 'heal',
+                    finalHeal: 5,
+                    bonusHeal: 0,
+                    bonusHealDetail: '',
+                }));
+            });
+        });
+
+        it('should handle executeSpellCast error gracefully', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            onSpellSelected.mockResolvedValue({
+                type: 'spell_selected',
+                spell: { name: 'Guidance' },
+                name: 'Divine Intervention',
+                rechargeMessage: 'recharged',
+            });
+            executeSpellCast.mockRejectedValue(new Error('Cast failed'));
+
+            const action = { name: 'Divine Intervention' };
+            const grv = vi.fn((charKey, key, _cn) => {
+                if (key === 'divineInterventionAction') return action;
+                return undefined;
+            });
+            const hooks = createDivineHooks({
+                modalState: { divineInterventionAction: action },
+                grv,
+            });
+            const { handleDivineInterventionCast } = useCharActionsAutomation(hooks);
+            await handleDivineInterventionCast({ name: 'Guidance' });
+
+            await vi.waitFor(() => {
+                expect(consoleError).toHaveBeenCalledWith('[CharActions] executeSpellCast error:', expect.any(Error));
+            });
+            consoleError.mockRestore();
+        });
+
+        it('should show automation_info popup after spell cast', async () => {
+            onSpellSelected.mockResolvedValue({
+                type: 'spell_selected',
+                spell: { name: 'Guidance' },
+                name: 'Divine Intervention',
+                rechargeMessage: 'until you finish a Long Rest',
+            });
+            executeSpellCast.mockResolvedValue({
+                healAmount: 0,
+                triggerResult: null,
+            });
+
+            const action = { name: 'Divine Intervention' };
+            const grv = vi.fn((charKey, key, _cn) => {
+                if (key === 'divineInterventionAction') return action;
+                return undefined;
+            });
+            const hooks = createDivineHooks({
+                modalState: { divineInterventionAction: action },
+                grv,
+            });
+            const { handleDivineInterventionCast } = useCharActionsAutomation(hooks);
+            await handleDivineInterventionCast({ name: 'Guidance' });
+            await vi.waitFor(() => {
+                expect(hooks.setPopupHtml).toHaveBeenCalledWith({
+                    type: 'automation_info',
+                    name: 'Divine Intervention',
+                    description: 'Divine Intervention cast Guidance. Divine Intervention recharges until you finish a Long Rest',
                 });
             });
         });

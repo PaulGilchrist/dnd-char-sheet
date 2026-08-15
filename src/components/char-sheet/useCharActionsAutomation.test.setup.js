@@ -1,13 +1,5 @@
+// @improved-by-ai
 import { vi, beforeEach } from 'vitest';
-
-vi.mock('../../services/rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn(),
-    getTargetFromAttacker: vi.fn(),
-}));
-
-vi.mock('../../services/character/classFeatures.js', () => ({
-    getClassFeatures: vi.fn(),
-}));
 
 export const campaignName = 'test-campaign';
 
@@ -44,6 +36,9 @@ export function createHooks(overrides = {}) {
         setPopupHtml: customSetPopupHtml,
         setModalState: customSetModalState,
         onBuffsChange: customOnBuffsChange,
+        modalState: customModalState,
+        mapName: customMapName,
+        characters: customCharacters,
     } = overrides;
 
     const baseGRV = vi.fn((charKey, key, _cn) => {
@@ -66,11 +61,11 @@ export function createHooks(overrides = {}) {
         addEntry: customAddEntry || vi.fn().mockResolvedValue(undefined),
         setPopupHtml: customSetPopupHtml || vi.fn(),
         setModalState: customSetModalState || vi.fn(),
-        modalState: overrides.modalState || {},
+        modalState: customModalState || {},
         playerStats,
         campaignName: cn,
-        mapName: overrides.mapName || 'test-map',
-        characters: overrides.characters || [],
+        mapName: customMapName || 'test-map',
+        characters: customCharacters || [],
         onBuffsChange: customOnBuffsChange || vi.fn(),
     };
 }

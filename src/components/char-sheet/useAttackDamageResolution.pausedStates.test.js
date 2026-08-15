@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import useAttackDamageResolution from './useAttackDamageResolution.js';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -56,6 +57,7 @@ vi.mock('../../services/ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
+import { buildPipelineForAction } from '../../services/combat/steps/index.js';
 import { getActiveBuffs } from '../../services/automation/common/buffToggle.js';
 import { hasTwoWeaponFighting } from '../../services/combat/automation/automationService.js';
 import { setRuntimeObject } from '../../hooks/runtime/useRuntimeState.js';
@@ -106,15 +108,23 @@ function tick() {
     return new Promise((r) => setTimeout(r, 0));
 }
 
+function resetModalState() {
+    Object.keys(modalState).forEach((k) => delete modalState[k]);
+}
+
 describe('useAttackDamageResolution - pipeline paused states', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         getActiveBuffs.mockReturnValue([]);
         hasTwoWeaponFighting.mockReturnValue(false);
         setRuntimeObject.mockReturnValue(undefined);
-        Object.keys(modalState).forEach(k => delete modalState[k]);
+        resetModalState();
         mockSetModalState.mockClear();
         mockPendingDamageRef.current = null;
+    });
+
+    afterEach(() => {
+        resetModalState();
     });
 
     describe('damageTypeChoice modal pause', () => {
@@ -141,10 +151,11 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
             await resolveAttackDamage(attack);
             await tick();
 
+            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
             expect(mockSetModalState).toHaveBeenCalledWith({
                 damageTypeChoice: pausedCtx._modalProps,
             });
-            expect(mockSetPendingDamage).toHaveBeenCalledWith(expect.objectContaining({
+            expect(mockSetPendingDamage).toHaveBeenCalledWith({
                 attack: pausedCtx.attack,
                 formula: pausedCtx.formula,
                 total: pausedCtx.total,
@@ -154,7 +165,7 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 bonusTotal: pausedCtx.bonusTotal,
                 bonusRolls: pausedCtx.bonusRolls,
                 oncePerTurnKey: pausedCtx._weaponHitOnceKey,
-            }));
+            });
         });
     });
 
@@ -181,10 +192,11 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
             await resolveAttackDamage(attack);
             await tick();
 
+            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
             expect(mockSetModalState).toHaveBeenCalledWith({
                 divineFuryChoice: pausedCtx._modalProps,
             });
-            expect(mockSetPendingDamage).toHaveBeenCalledWith(expect.objectContaining({
+            expect(mockSetPendingDamage).toHaveBeenCalledWith({
                 attack: pausedCtx.attack,
                 formula: pausedCtx.formula,
                 total: pausedCtx.total,
@@ -193,7 +205,7 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 bonusExpr: pausedCtx.bonusExpr,
                 bonusTotal: pausedCtx.bonusTotal,
                 bonusRolls: pausedCtx.bonusRolls,
-            }));
+            });
         });
     });
 
@@ -212,9 +224,11 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
             await resolveAttackDamage(attack);
             await tick();
 
+            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
             expect(mockSetModalState).toHaveBeenCalledWith({
                 secondaryTargetModal: pausedCtx._modalProps,
             });
+            expect(mockSetPendingDamage).not.toHaveBeenCalled();
         });
     });
 
@@ -233,12 +247,15 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
             await resolveAttackDamage(attack);
             await tick();
 
+            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
             expect(setRuntimeObject).toHaveBeenCalledWith(
                 'campaign',
                 { tacticalMasterPending: pausedCtx._modalProps },
                 'test-campaign',
                 true,
             );
+            expect(mockSetModalState).not.toHaveBeenCalled();
+            expect(mockSetPendingDamage).not.toHaveBeenCalled();
         });
     });
 
@@ -257,14 +274,16 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
             await resolveAttackDamage(attack);
             await tick();
 
+            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
             expect(mockSetModalState).toHaveBeenCalledWith({
                 shieldBashModal: pausedCtx._modalProps,
             });
+            expect(mockSetPendingDamage).not.toHaveBeenCalled();
         });
     });
 
-    describe('no pause', () => {
-        it('does not set any modal state when pipeline completes without pause', async () => {
+    describe('pipeline completes without pause', () => {
+        it('runs the pipeline and does not set any modal or pending state', async () => {
             mockPendingDamageRef.current = null;
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
@@ -273,22 +292,13 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
             await resolveAttackDamage(attack);
             await tick();
 
-            expect(mockSetModalState).not.toHaveBeenCalledWith(
-                expect.objectContaining({ damageTypeChoice: expect.anything() })
-            );
-            expect(mockSetModalState).not.toHaveBeenCalledWith(
-                expect.objectContaining({ divineFuryChoice: expect.anything() })
-            );
-            expect(mockSetModalState).not.toHaveBeenCalledWith(
-                expect.objectContaining({ secondaryTargetModal: expect.anything() })
-            );
+            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
+            expect(mockSetModalState).not.toHaveBeenCalled();
+            expect(mockSetPendingDamage).not.toHaveBeenCalled();
             expect(setRuntimeObject).not.toHaveBeenCalled();
-            expect(mockSetModalState).not.toHaveBeenCalledWith(
-                expect.objectContaining({ shieldBashModal: expect.anything() })
-            );
         });
 
-        it('does not set modal when _pausedStep is null', async () => {
+        it('does not set any modal state when _pausedStep is null', async () => {
             mockPendingDamageRef.current = { _pausedStep: null };
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
@@ -297,12 +307,11 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
             await resolveAttackDamage(attack);
             await tick();
 
-            expect(mockSetModalState).not.toHaveBeenCalledWith(
-                expect.objectContaining({ damageTypeChoice: expect.anything() })
-            );
+            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
+            expect(mockSetModalState).not.toHaveBeenCalled();
         });
 
-        it('does not set modal when _pausedStep is unknown', async () => {
+        it('does not set any modal state when _pausedStep is an unknown value', async () => {
             mockPendingDamageRef.current = { _pausedStep: 'unknownStep' };
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
@@ -311,9 +320,21 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
             await resolveAttackDamage(attack);
             await tick();
 
-            expect(mockSetModalState).not.toHaveBeenCalledWith(
-                expect.objectContaining({ damageTypeChoice: expect.anything() })
-            );
+            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
+            expect(mockSetModalState).not.toHaveBeenCalled();
+        });
+
+        it('does not set any modal state when resumeRef.current is undefined', async () => {
+            mockPendingDamageRef.current = undefined;
+
+            const { resolveAttackDamage } = UseAttackDamageResolution();
+            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
+
+            await resolveAttackDamage(attack);
+            await tick();
+
+            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
+            expect(mockSetModalState).not.toHaveBeenCalled();
         });
     });
 });

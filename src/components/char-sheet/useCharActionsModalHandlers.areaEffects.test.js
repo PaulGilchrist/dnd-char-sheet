@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useCharActionsModalHandlers from './useCharActionsModalHandlers.js';
 
@@ -100,21 +101,27 @@ const { confirmRadianceOfDawn } = await import('../../services/automation/handle
 const mockSetPopupHtml = vi.fn();
 const mockSetModalState = vi.fn();
 
-const baseModalState = {};
-const baseMergedModalState = {};
-
-function getHandlers(extraModalState = {}, extraMergedModalState = {}) {
+function getHandlers(modalState = {}, mergedModalState = {}) {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useCharActionsModalHandlers({
     setPopupHtml: mockSetPopupHtml,
     setModalState: mockSetModalState,
-    modalState: { ...baseModalState, ...extraModalState },
-    mergedModalState: { ...baseMergedModalState, ...extraMergedModalState },
+    modalState,
+    mergedModalState,
   });
 }
 
 function makePlayerStats() {
   return { name: 'TestChar', class: { name: 'Fighter' } };
+}
+
+function makeBaseModalData(overrides = {}) {
+  return {
+    action: { name: 'Test Action' },
+    playerStats: makePlayerStats(),
+    campaignName: 'test-campaign',
+    ...overrides,
+  };
 }
 
 describe('useCharActionsModalHandlers - area effects', () => {
@@ -125,11 +132,12 @@ describe('useCharActionsModalHandlers - area effects', () => {
   });
 
   describe('handleNaturesSanctuaryConfirm', () => {
-    it('returns early when targetNames is missing', async () => {
+    it.each([null, undefined])('returns early when targetNames is %s', async (targetNames) => {
       const handlers = getHandlers();
-      await handlers.handleNaturesSanctuaryConfirm(null, null);
+      await handlers.handleNaturesSanctuaryConfirm(targetNames, null);
       expect(activateNaturesSanctuary).not.toHaveBeenCalled();
       expect(moveNaturesSanctuary).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
     it('returns early when naturesSanctuaryCreaturesModal is not in modalState', async () => {
@@ -137,16 +145,14 @@ describe('useCharActionsModalHandlers - area effects', () => {
       await handlers.handleNaturesSanctuaryConfirm(['target'], null);
       expect(activateNaturesSanctuary).not.toHaveBeenCalled();
       expect(moveNaturesSanctuary).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
     it('calls moveNaturesSanctuary when isMove is true', async () => {
       moveNaturesSanctuary.mockResolvedValue({ payload: '<p>Moved!</p>' });
       const modalState = {
         naturesSanctuaryCreaturesModal: {
-          action: { name: "Nature's Sanctuary" },
-          isMove: true,
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
+          ...makeBaseModalData({ action: { name: "Nature's Sanctuary" }, isMove: true }),
         },
       };
       const handlers = getHandlers(modalState);
@@ -165,10 +171,7 @@ describe('useCharActionsModalHandlers - area effects', () => {
       activateNaturesSanctuary.mockResolvedValue({ payload: '<p>Activated!</p>' });
       const modalState = {
         naturesSanctuaryCreaturesModal: {
-          action: { name: "Nature's Sanctuary" },
-          isMove: false,
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
+          ...makeBaseModalData({ action: { name: "Nature's Sanctuary" }, isMove: false }),
         },
       };
       const handlers = getHandlers(modalState);
@@ -187,26 +190,20 @@ describe('useCharActionsModalHandlers - area effects', () => {
     it('calls activateNaturesSanctuary when isMove is undefined', async () => {
       activateNaturesSanctuary.mockResolvedValue({ payload: '<p>Activated!</p>' });
       const modalState = {
-        naturesSanctuaryCreaturesModal: {
-          action: { name: "Nature's Sanctuary" },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-        },
+        naturesSanctuaryCreaturesModal: makeBaseModalData({ action: { name: "Nature's Sanctuary" } }),
       };
       const handlers = getHandlers(modalState);
       await handlers.handleNaturesSanctuaryConfirm(['Ally1'], 'Forest Map');
       expect(activateNaturesSanctuary).toHaveBeenCalled();
       expect(moveNaturesSanctuary).not.toHaveBeenCalled();
+      expect(mockSetModalState).toHaveBeenCalledWith({ naturesSanctuaryCreaturesModal: null });
     });
 
     it('does not call setPopupHtml when result has no payload (isMove=true)', async () => {
       moveNaturesSanctuary.mockResolvedValue({});
       const modalState = {
         naturesSanctuaryCreaturesModal: {
-          action: { name: "Nature's Sanctuary" },
-          isMove: true,
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
+          ...makeBaseModalData({ action: { name: "Nature's Sanctuary" }, isMove: true }),
         },
       };
       const handlers = getHandlers(modalState);
@@ -219,10 +216,7 @@ describe('useCharActionsModalHandlers - area effects', () => {
       activateNaturesSanctuary.mockResolvedValue({});
       const modalState = {
         naturesSanctuaryCreaturesModal: {
-          action: { name: "Nature's Sanctuary" },
-          isMove: false,
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
+          ...makeBaseModalData({ action: { name: "Nature's Sanctuary" }, isMove: false }),
         },
       };
       const handlers = getHandlers(modalState);
@@ -233,26 +227,24 @@ describe('useCharActionsModalHandlers - area effects', () => {
   });
 
   describe('handleCoronaEnemySelectionConfirm', () => {
-    it('returns early when selectedEnemies is missing', async () => {
+    it.each([null, undefined])('returns early when selectedEnemies is %s', async (selectedEnemies) => {
       const handlers = getHandlers();
-      await handlers.handleCoronaEnemySelectionConfirm(null);
+      await handlers.handleCoronaEnemySelectionConfirm(selectedEnemies);
       expect(activateCoronaOfLight).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
     it('returns early when coronaEnemySelectionModal is not in modalState', async () => {
       const handlers = getHandlers();
       await handlers.handleCoronaEnemySelectionConfirm(['enemy']);
       expect(activateCoronaOfLight).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
     it('calls activateCoronaOfLight when modal is present', async () => {
       activateCoronaOfLight.mockResolvedValue({ payload: '<p>Corona!</p>' });
       const modalState = {
-        coronaEnemySelectionModal: {
-          action: { name: 'Corona of Light' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-        },
+        coronaEnemySelectionModal: makeBaseModalData({ action: { name: 'Corona of Light' } }),
       };
       const handlers = getHandlers(modalState);
       await handlers.handleCoronaEnemySelectionConfirm(['Enemy1', 'Enemy2']);
@@ -268,11 +260,7 @@ describe('useCharActionsModalHandlers - area effects', () => {
     it('does not call setPopupHtml when result has no payload', async () => {
       activateCoronaOfLight.mockResolvedValue({});
       const modalState = {
-        coronaEnemySelectionModal: {
-          action: { name: 'Corona of Light' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-        },
+        coronaEnemySelectionModal: makeBaseModalData({ action: { name: 'Corona of Light' } }),
       };
       const handlers = getHandlers(modalState);
       await handlers.handleCoronaEnemySelectionConfirm(['Enemy1', 'Enemy2']);
@@ -282,26 +270,24 @@ describe('useCharActionsModalHandlers - area effects', () => {
   });
 
   describe('handleRadianceOfDawnConfirm', () => {
-    it('returns early when selectedTargets is missing', async () => {
+    it.each([null, undefined])('returns early when selectedTargets is %s', async (selectedTargets) => {
       const handlers = getHandlers();
-      await handlers.handleRadianceOfDawnConfirm(null);
+      await handlers.handleRadianceOfDawnConfirm(selectedTargets);
       expect(confirmRadianceOfDawn).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
     it('returns early when radianceOfDawnModal is not in modalState', async () => {
       const handlers = getHandlers();
       await handlers.handleRadianceOfDawnConfirm(['target']);
       expect(confirmRadianceOfDawn).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
     it('calls confirmRadianceOfDawn when modal is present', async () => {
       confirmRadianceOfDawn.mockResolvedValue({ payload: '<p>Radiance!</p>' });
       const modalState = {
-        radianceOfDawnModal: {
-          action: { name: 'Radiance of Dawn' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-        },
+        radianceOfDawnModal: makeBaseModalData({ action: { name: 'Radiance of Dawn' } }),
       };
       const handlers = getHandlers(modalState);
       await handlers.handleRadianceOfDawnConfirm(['Ally1', 'Enemy1']);
@@ -317,11 +303,7 @@ describe('useCharActionsModalHandlers - area effects', () => {
     it('does not call setPopupHtml when result has no payload', async () => {
       confirmRadianceOfDawn.mockResolvedValue({});
       const modalState = {
-        radianceOfDawnModal: {
-          action: { name: 'Radiance of Dawn' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-        },
+        radianceOfDawnModal: makeBaseModalData({ action: { name: 'Radiance of Dawn' } }),
       };
       const handlers = getHandlers(modalState);
       await handlers.handleRadianceOfDawnConfirm(['Ally1', 'Enemy1']);

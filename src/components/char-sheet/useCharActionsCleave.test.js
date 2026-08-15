@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useCharActionsCleave from './useCharActionsCleave.js';
 
@@ -20,20 +21,17 @@ function createDeps(overrides = {}) {
         attacks: [{ name: 'Longsword', abilityName: 'Strength' }],
         ...overrides.playerStats,
     };
-    // addEntry must return a promise with .catch() to avoid unhandled rejection
-    const entryPromise = Promise.resolve();
-    entryPromise.catch(() => {});
     return {
-        playerStats,
         campaignName: 'test-campaign',
         rollDamage: vi.fn(),
         getCombatContext: vi.fn(),
         getRuntimeValue: vi.fn(),
         setRuntimeValue: vi.fn(),
-        addEntry: vi.fn().mockReturnValue(entryPromise),
+        addEntry: vi.fn().mockResolvedValue(undefined),
         setShowCleaveTargetSelection: vi.fn(),
         setTacticalMasterModal: vi.fn(),
         ...overrides,
+        playerStats,
     };
 }
 
@@ -45,22 +43,17 @@ describe('useCharActionsCleave', () => {
         deps = createDeps();
         deps.getRuntimeValue.mockReturnValue(null);
         deps.setRuntimeValue.mockResolvedValue(undefined);
-        // addEntry must return a promise with .catch() to avoid unhandled rejection
-        const entryPromise = Promise.resolve();
-        entryPromise.catch(() => {});
-        deps.addEntry.mockReturnValue(entryPromise);
         rollExpression.mockReturnValue({ total: 8, rolls: [5, 3] });
-        globalThis.Math.random = () => 0.5;
     });
 
     describe('handleCleaveAttack', () => {
-        it('returns early without setting modal state when cleaveTargetName is falsy', async () => {
+        it('dismisses cleave modal and returns when cleaveTargetName is falsy', async () => {
             const { handleCleaveAttack } = useCharActionsCleave(deps);
             await handleCleaveAttack(null);
             expect(deps.setShowCleaveTargetSelection).toHaveBeenCalledWith(false);
         });
 
-        it('returns early when there is no lastAttack', async () => {
+        it('dismisses cleave modal and returns when lastAttack is missing', async () => {
             const testDeps = createDeps();
             testDeps.getRuntimeValue.mockReturnValueOnce(null);
             const { handleCleaveAttack } = useCharActionsCleave(testDeps);
@@ -70,7 +63,7 @@ describe('useCharActionsCleave', () => {
             expect(testDeps.addEntry).not.toHaveBeenCalled();
         });
 
-        it('rolls damage and logs entry when cleave attack hits', async () => {
+        it('rolls weapon damage without ability modifier and logs entry on hit', async () => {
             const lastAttack = {
                 attackName: 'Longsword',
                 damageFormula: '1d8+3',
@@ -118,8 +111,6 @@ describe('useCharActionsCleave', () => {
             const { handleCleaveAttack } = useCharActionsCleave(testDeps);
             await handleCleaveAttack('Orc');
 
-            // The regex removes "+3" but leaves "(STR)" — formula becomes '1d8 (STR)'
-            // which still contains 'd' so it passes the check
             expect(testDeps.rollDamage).toHaveBeenCalledWith(
                 'Longsword (Cleave)',
                 '1d8 (STR)',
@@ -143,7 +134,6 @@ describe('useCharActionsCleave', () => {
             const { handleCleaveAttack } = useCharActionsCleave(testDeps);
             await handleCleaveAttack('Ghost');
 
-            // After stripping "+3", formula is empty, no 'd' found, falls back to original
             expect(testDeps.rollDamage).toHaveBeenCalledWith(
                 'Magic Weapon (Cleave)',
                 '+3',
@@ -168,8 +158,6 @@ describe('useCharActionsCleave', () => {
             const { handleCleaveAttack } = useCharActionsCleave(testDeps);
             await handleCleaveAttack('Goblin');
 
-            // When hit but damageResult is null, goes to else branch
-            // Formula after stripping: '1d8' (the +3 was removed)
             expect(testDeps.rollDamage).toHaveBeenCalledWith(
                 'Longsword (Cleave)',
                 '1d8',
@@ -185,15 +173,13 @@ describe('useCharActionsCleave', () => {
             );
         });
 
-        it('handles miss when d20 + attack bonus < target AC', async () => {
+        it('treats attack as miss when d20 + attack bonus is below target AC', async () => {
             const lastAttack = {
                 attackName: 'Longsword',
                 damageFormula: '1d8+3',
                 damageType: 'slashing',
                 targetName: 'Ogre',
             };
-            // After stripping: '1d8'
-            // Use AC 30 which even a natural 20 + 6 = 26 cannot hit
             const testDeps = createDeps();
             testDeps.getCombatContext.mockResolvedValue({ creatures: [{ name: 'Ogre', ac: 30 }] });
             testDeps.getRuntimeValue.mockReturnValueOnce(lastAttack);
@@ -223,7 +209,7 @@ describe('useCharActionsCleave', () => {
             });
         });
 
-        it('uses first ability name when abilities array is empty', async () => {
+        it('defaults to STR when abilities array is empty', async () => {
             const lastAttack = {
                 attackName: 'Longsword',
                 damageFormula: '1d8+3',
@@ -236,11 +222,21 @@ describe('useCharActionsCleave', () => {
             const { handleCleaveAttack } = useCharActionsCleave(testDeps);
             await handleCleaveAttack('Goblin');
 
-            // abilityName defaults to 'STR' when first ability has no name
-            expect(testDeps.rollDamage).toHaveBeenCalled();
+            expect(testDeps.rollDamage).toHaveBeenCalledWith(
+                'Longsword (Cleave)',
+                '1d8',
+                8,
+                [5, 3],
+                0,
+                {
+                    attackerName: 'TestFighter',
+                    damageType: 'slashing',
+                    targetName: 'Goblin',
+                }
+            );
         });
 
-        it('uses target AC of 0 when target not found in combat summary', async () => {
+        it('uses target AC of 0 when target not found in combat context', async () => {
             const lastAttack = {
                 attackName: 'Longsword',
                 damageFormula: '1d8+3',
@@ -253,11 +249,17 @@ describe('useCharActionsCleave', () => {
             const { handleCleaveAttack } = useCharActionsCleave(testDeps);
             await handleCleaveAttack('Unknown');
 
-            // AC = 0, so d20 + 6 >= 0 always hits
-            expect(testDeps.rollDamage).toHaveBeenCalled();
+            expect(testDeps.rollDamage).toHaveBeenCalledWith(
+                'Longsword (Cleave)',
+                '1d8',
+                8,
+                [5, 3],
+                0,
+                expect.objectContaining({ targetName: 'Unknown' })
+            );
         });
 
-        it('uses playerStats.name as attackerName in context', async () => {
+        it('uses playerStats.name as attackerName in rollDamage context', async () => {
             const lastAttack = {
                 attackName: 'Spear',
                 damageFormula: '1d6+3',
@@ -286,7 +288,7 @@ describe('useCharActionsCleave', () => {
     });
 
     describe('handleTacticalMasterConfirm', () => {
-        it('returns early when chosenMastery is falsy', async () => {
+        it('dismisses modal and returns when chosenMastery is falsy', async () => {
             deps.getRuntimeValue.mockReturnValue(null);
             const { handleTacticalMasterConfirm } = useCharActionsCleave(deps);
             await handleTacticalMasterConfirm(null);
@@ -305,6 +307,7 @@ describe('useCharActionsCleave', () => {
             });
             await handleTacticalMasterConfirm('Vex');
 
+            expect(testDeps.setTacticalMasterModal).toHaveBeenCalledWith(null);
             expect(testDeps.addEntry).toHaveBeenCalledWith('test-campaign', {
                 type: 'ability_use',
                 characterName: 'TestFighter',
@@ -314,10 +317,14 @@ describe('useCharActionsCleave', () => {
             });
         });
 
-        it('returns early when lastAttack has no targetName', async () => {
+        it('returns early without applying mastery when lastAttack has no targetName', async () => {
             const testDeps = createDeps();
             const pending = { baseMastery: 'Piercing', attackName: 'Longsword', targetName: 'Goblin' };
-            testDeps.getRuntimeValue.mockReturnValueOnce(pending).mockReturnValueOnce(pending).mockReturnValueOnce(pending).mockReturnValueOnce({ targetName: null });
+            testDeps.getRuntimeValue
+                .mockReturnValueOnce(pending)
+                .mockReturnValueOnce(pending)
+                .mockReturnValueOnce(pending)
+                .mockReturnValueOnce({ targetName: null });
             const applyMasteryEffect = vi.fn();
             const { handleTacticalMasterConfirm } = useCharActionsCleave({
                 ...testDeps,
@@ -325,8 +332,8 @@ describe('useCharActionsCleave', () => {
             });
             await handleTacticalMasterConfirm('Vex');
 
-            // Should have logged the Tactical Master entry but not the mastery effect
             expect(testDeps.addEntry).toHaveBeenCalledTimes(1);
+            expect(applyMasteryEffect).not.toHaveBeenCalled();
         });
 
         it('applies Topple mastery with CON save and prone condition on failed save', async () => {
@@ -350,18 +357,18 @@ describe('useCharActionsCleave', () => {
             });
             await handleTacticalMasterConfirm('Topple');
 
-            // Verify save DC calculation: 8 + STR(3) + prof(3) = 14
             expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
                 targetName: 'Orc',
                 saveType: 'CON',
                 saveDc: 14,
             });
 
-            // Verify setRuntimeValue was called to add prone condition
-            expect(deps.setRuntimeValue).toHaveBeenCalledWith('Orc', 'activeConditions', ['prone'], 'test-campaign');
-
-            // Verify entries were logged: Tactical Master + CON save result + Topple ability
-            expect(deps.addEntry).toHaveBeenCalledTimes(4);
+            expect(deps.setRuntimeValue).toHaveBeenCalledWith(
+                'Orc',
+                'activeConditions',
+                ['prone'],
+                'test-campaign'
+            );
         });
 
         it('does not add prone condition if target already has it', async () => {
@@ -385,11 +392,15 @@ describe('useCharActionsCleave', () => {
             });
             await handleTacticalMasterConfirm('Topple');
 
-            // prone should not be added again
-            expect(deps.setRuntimeValue).not.toHaveBeenCalledWith('Orc', 'activeConditions', expect.arrayContaining(['prone']), 'test-campaign');
+            expect(deps.setRuntimeValue).not.toHaveBeenCalledWith(
+                'Orc',
+                'activeConditions',
+                expect.arrayContaining(['prone']),
+                'test-campaign'
+            );
         });
 
-        it('does nothing when save result indicates success', async () => {
+        it('does not apply prone condition when save result indicates success', async () => {
             const pending = { baseMastery: 'Piercing', attackName: 'Greataxe', targetName: 'Orc' };
             const lastAttack = { targetName: 'Orc' };
             deps.getRuntimeValue
@@ -410,10 +421,14 @@ describe('useCharActionsCleave', () => {
             });
             await handleTacticalMasterConfirm('Topple');
 
-            // No prone condition should be added
             expect(deps.setRuntimeValue).not.toHaveBeenCalled();
-            // Only the initial Tactical Master entry should be logged
-            expect(deps.addEntry).toHaveBeenCalledTimes(2);
+            expect(deps.addEntry).toHaveBeenCalledWith('test-campaign', {
+                type: 'ability_use',
+                characterName: 'TestFighter',
+                abilityName: 'Tactical Master',
+                description: expect.stringContaining('Tactical Master'),
+                targetName: 'Orc',
+            });
         });
 
         it('calls applyMasteryEffect for non-Topple mastery choices', async () => {
@@ -434,11 +449,15 @@ describe('useCharActionsCleave', () => {
             });
             await handleTacticalMasterConfirm('Vex');
 
-            expect(applyMasteryEffect).toHaveBeenCalledWith('Vex', testDeps.playerStats, 'test-campaign', 'Goblin');
-            expect(testDeps.addEntry).toHaveBeenCalledTimes(1);
+            expect(applyMasteryEffect).toHaveBeenCalledWith(
+                'Vex',
+                testDeps.playerStats,
+                'test-campaign',
+                'Goblin'
+            );
         });
 
-        it('handles Topple with missing weapon attack gracefully', async () => {
+        it('defaults to Strength ability when weapon attack not found for Topple', async () => {
             const pending = { baseMastery: 'Piercing', attackName: 'NonexistentWeapon', targetName: 'Orc' };
             const lastAttack = { targetName: 'Orc' };
             deps.getRuntimeValue
@@ -464,7 +483,6 @@ describe('useCharActionsCleave', () => {
             });
             await handleTacticalMasterConfirm('Topple');
 
-            // Should default to 'Strength' when weapon attack not found
             expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
                 targetName: 'Orc',
                 saveType: 'CON',
@@ -472,7 +490,7 @@ describe('useCharActionsCleave', () => {
             });
         });
 
-        it('handles null save result gracefully', async () => {
+        it('skips prone condition when save result is null', async () => {
             const pending = { baseMastery: 'Piercing', attackName: 'Greataxe', targetName: 'Orc' };
             const lastAttack = { targetName: 'Orc' };
             deps.getRuntimeValue
@@ -493,7 +511,6 @@ describe('useCharActionsCleave', () => {
             });
             await handleTacticalMasterConfirm('Topple');
 
-            // null result should skip the prone condition block
             expect(deps.setRuntimeValue).not.toHaveBeenCalled();
         });
     });

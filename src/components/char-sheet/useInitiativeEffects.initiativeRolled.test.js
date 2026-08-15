@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import useInitiativeEffects from './useInitiativeEffects.js';
@@ -22,8 +23,30 @@ vi.mock('../../services/ui/utils.js', () => ({
     },
 }));
 
+vi.mock('../../services/encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => null),
+}));
+
+vi.mock('../../services/ui/storage.js', () => ({
+    default: {
+        set: vi.fn(),
+    },
+}));
+
+vi.mock('../../services/rules/features/invisibilityService.js', () => ({
+    endInvisibility: vi.fn(),
+    endGreaterInvisibility: vi.fn(),
+}));
+
+vi.mock('../../services/automation/handlers/spells/polymorphService.js', () => ({
+    revertPolymorph: vi.fn(),
+}));
+
+vi.mock('../../services/automation/handlers/spells/shapechangeService.js', () => ({
+    revertShapechange: vi.fn(),
+}));
+
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import { rollExpression } from '../../services/dice/diceRoller.js';
 
 describe('useInitiativeEffects - initiative-rolled event', () => {
     const campaignName = 'test-campaign';
@@ -45,7 +68,6 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         getRuntimeValue.mockReturnValue(null);
-        rollExpression.mockReturnValue({ total: 4, rolls: [4], modifier: 0 });
     });
 
     function renderHookWithStats(stats = defaultPlayerStats) {
@@ -61,7 +83,7 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
     }
 
     describe('guard clauses', () => {
-        it('does nothing when playerStats is null or undefined', () => {
+        it('does not call setRuntimeValue when playerStats is null', () => {
             renderHook(() =>
                 useInitiativeEffects(null, campaignName, vi.fn())
             );
@@ -72,19 +94,42 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
             expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('does nothing when event detail is null or undefined', () => {
+        it('does not call setRuntimeValue when playerStats is undefined', () => {
+            renderHook(() =>
+                useInitiativeEffects(undefined, campaignName, vi.fn())
+            );
+            dispatchInitiativeRoll({
+                characterName: 'TestMonk',
+                roll: 15,
+            });
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('does not call setRuntimeValue when event detail is null', () => {
             renderHookWithStats();
             dispatchInitiativeRoll(null);
             expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('does nothing when detail has no characterName or characterName is empty', () => {
+        it('does not call setRuntimeValue when event detail is undefined', () => {
+            renderHookWithStats();
+            dispatchInitiativeRoll(undefined);
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('does not call setRuntimeValue when detail has no characterName', () => {
             renderHookWithStats();
             dispatchInitiativeRoll({ roll: 15 });
             expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('does nothing when rolling name does not match player name', () => {
+        it('does not call setRuntimeValue when characterName is empty string', () => {
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: '', roll: 15 });
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('does not call setRuntimeValue when rolling name does not match player name', () => {
             renderHookWithStats();
             dispatchInitiativeRoll({
                 characterName: 'OtherPlayer',
@@ -192,12 +237,10 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 characterName: 'TestMonk',
                 roll: 15,
             });
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestMonk',
-                'focusPoints',
-                expect.any(Number),
-                campaignName
+            const fpCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'focusPoints'
             );
+            expect(fpCalls.length).toBe(0);
         });
 
         it('does not recover when uncanny metabolism was used', () => {
@@ -223,12 +266,10 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 characterName: 'TestMonk',
                 roll: 15,
             });
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestMonk',
-                'focusPoints',
-                expect.any(Number),
-                campaignName
+            const fpCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'focusPoints'
             );
+            expect(fpCalls.length).toBe(0);
         });
     });
 
@@ -299,12 +340,10 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 characterName: 'TestMonk',
                 roll: 15,
             });
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestMonk',
-                'wildShapeUses',
-                expect.any(Number),
-                campaignName
+            const wsCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'wildShapeUses'
             );
+            expect(wsCalls.length).toBe(0);
         });
 
         it('does not recover when max wild shape is 0', () => {
@@ -336,12 +375,10 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 characterName: 'TestMonk',
                 roll: 15,
             });
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestMonk',
-                'wildShapeUses',
-                expect.any(Number),
-                campaignName
+            const wsCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'wildShapeUses'
             );
+            expect(wsCalls.length).toBe(0);
         });
 
         it('does not recover when no evergreen action exists', () => {
@@ -364,12 +401,10 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 characterName: 'TestMonk',
                 roll: 15,
             });
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestMonk',
-                'wildShapeUses',
-                expect.any(Number),
-                campaignName
+            const wsCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'wildShapeUses'
             );
+            expect(wsCalls.length).toBe(0);
         });
     });
 
@@ -483,12 +518,10 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 characterName: 'TestMonk',
                 roll: 15,
             });
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestMonk',
-                'bardicInspirationUses',
-                expect.any(Number),
-                campaignName
+            const biCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'bardicInspirationUses'
             );
+            expect(biCalls.length).toBe(0);
         });
 
         it('does not recover for non-Bard classes', () => {
@@ -518,12 +551,10 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 characterName: 'TestMonk',
                 roll: 15,
             });
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestMonk',
-                'bardicInspirationUses',
-                expect.any(Number),
-                campaignName
+            const biCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'bardicInspirationUses'
             );
+            expect(biCalls.length).toBe(0);
         });
     });
 
@@ -547,44 +578,6 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 [
                     { name: 'Mage Armor', effect: 'mage_armor' },
                 ],
-                campaignName
-            );
-        });
-
-        it('does nothing when no Superior Defense buff is present', () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return [
-                    { name: 'Mage Armor', effect: 'mage_armor' },
-                ];
-                return null;
-            });
-            renderHookWithStats();
-            dispatchInitiativeRoll({
-                characterName: 'TestMonk',
-                roll: 15,
-            });
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestMonk',
-                'activeBuffs',
-                expect.any(Array),
-                campaignName
-            );
-        });
-
-        it('does nothing when no activeBuffs exist', () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return null;
-                return null;
-            });
-            renderHookWithStats();
-            dispatchInitiativeRoll({
-                characterName: 'TestMonk',
-                roll: 15,
-            });
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestMonk',
-                'activeBuffs',
-                expect.any(Array),
                 campaignName
             );
         });

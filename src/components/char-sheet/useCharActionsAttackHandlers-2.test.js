@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useCharActionsAttackHandlers from './useCharActionsAttackHandlers.js';
 
@@ -92,9 +93,9 @@ describe('useCharActionsAttackHandlers', () => {
                 buildCtx,
                 rollAttack,
             });
-            const handlers = useCharActionsAttackHandlers(deps);
             const attack = { name: 'Longsword' };
 
+            const handlers = useCharActionsAttackHandlers(deps);
             handlers.handleAttackClick(attack);
             handlers.handleRecklessAttackConfirm(attack, null);
 
@@ -164,10 +165,15 @@ describe('useCharActionsAttackHandlers', () => {
             expect(logService.addEntry).toHaveBeenCalled();
             expect(expirations.addExpiration).toHaveBeenCalled();
 
-            // targetEffects should NOT have a duplicate - the code checks hasRecklessEffect
             const teCalls = deps.setRuntimeValue.mock.calls.filter(c => c[1] === 'targetEffects');
             expect(teCalls.length).toBe(0);
 
+            expect(deps.setRuntimeValue).toHaveBeenCalledWith(
+                'TestFighter',
+                '_recklessAttack_offeredThisTurn',
+                expect.objectContaining({ activeCreature: 'TestFighter' }),
+                campaignName
+            );
             expect(deps.setModalState).toHaveBeenCalledWith({ recklessAttackModal: null });
         });
 
@@ -324,6 +330,35 @@ describe('useCharActionsAttackHandlers', () => {
             expect(deps.setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_brutalStrikeNoAdvantage', null, campaignName);
             consoleErrorSpy.mockRestore();
         });
+
+        it('should apply exhaustionPenalty to the attack roll', async () => {
+            const grv = vi.fn((charKey, key, _cn) => {
+                if (key === 'activeBuffs') return [];
+                if (key === '_recklessAttack_offeredThisTurn') return null;
+                if (key === '_BrutalStrike_usedRound') return null;
+                if (charKey === 'campaign' && key === 'targetEffects') return [];
+                return undefined;
+            });
+            const buildCtx = vi.fn(() => Promise.resolve({ hitBonus: 8 }));
+            const rollAttack = vi.fn();
+
+            const deps = createDeps({
+                getRuntimeValue: grv,
+                specialActions: [],
+                passives: [],
+                buildCtx,
+                rollAttack,
+                exhaustionPenalty: 2,
+            });
+            const handlers = useCharActionsAttackHandlers(deps);
+            const attack = { name: 'Longsword' };
+
+            handlers.handleAttackClick(attack);
+            handlers.handleRecklessAttackConfirm(attack, null);
+
+            await new Promise(process.nextTick);
+            expect(rollAttack).toHaveBeenCalledWith('Longsword', 6, expect.any(Object));
+        });
     });
 
     describe('handleRecklessAttackCancel', () => {
@@ -370,6 +405,24 @@ describe('useCharActionsAttackHandlers', () => {
             await new Promise(process.nextTick);
             expect(consoleErrorSpy).toHaveBeenCalledWith('[CharActions] Error:', expect.any(Error));
             consoleErrorSpy.mockRestore();
+        });
+
+        it('should apply exhaustionPenalty to the attack roll', async () => {
+            const buildCtx = vi.fn(() => Promise.resolve({ hitBonus: 8 }));
+            const rollAttack = vi.fn();
+
+            const deps = createDeps({
+                buildCtx,
+                rollAttack,
+                exhaustionPenalty: 2,
+            });
+            const handlers = useCharActionsAttackHandlers(deps);
+            const attack = { name: 'Longsword' };
+
+            handlers.handleRecklessAttackCancel(attack);
+
+            await new Promise(process.nextTick);
+            expect(rollAttack).toHaveBeenCalledWith('Longsword', 6, expect.any(Object));
         });
     });
 
@@ -427,6 +480,7 @@ describe('useCharActionsAttackHandlers', () => {
             handlers.handleBrutalStrikeConfirm(brutalChoice, attack);
 
             expect(deps.setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', '_brutalStrikeActive', true, campaignName);
+            expect(deps.setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', '_brutalStrikeEffects', expect.any(Array), campaignName);
             expect(oncePerTurn.markOncePerTurn).not.toHaveBeenCalled();
             expect(logService.addEntry).not.toHaveBeenCalledWith(campaignName, expect.objectContaining({ abilityName: 'Brutal Strike' }));
             expect(deps.setModalState).toHaveBeenCalledWith({ recklessAttackModal: null });
@@ -452,6 +506,14 @@ describe('useCharActionsAttackHandlers', () => {
 
             handlers.handleBrutalStrikeConfirm(brutalChoice, null);
 
+            expect(deps.setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_brutalStrikeActive', true, campaignName);
+            expect(deps.setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_brutalStrikeEffects', ['option1'], campaignName);
+            expect(oncePerTurn.markOncePerTurn).toHaveBeenCalledWith('Brutal Strike', '_BrutalStrike_usedRound', basePlayerStats, campaignName);
+            expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                type: 'ability_use',
+                characterName: 'TestFighter',
+                abilityName: 'Brutal Strike',
+            }));
             expect(deps.setModalState).toHaveBeenCalledWith({ recklessAttackModal: null });
             expect(buildCtx).not.toHaveBeenCalled();
             expect(rollAttack).not.toHaveBeenCalled();
@@ -475,6 +537,7 @@ describe('useCharActionsAttackHandlers', () => {
 
             handlers.handleBrutalStrikeConfirm(brutalChoice, attack);
 
+            expect(deps.setModalState).toHaveBeenCalledWith({ recklessAttackModal: null });
             expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                 description: expect.stringContaining('no effect'),
             }));
@@ -503,6 +566,73 @@ describe('useCharActionsAttackHandlers', () => {
             await new Promise(process.nextTick);
             expect(consoleErrorSpy).toHaveBeenCalledWith('[CharActions] Error:', expect.any(Error));
             consoleErrorSpy.mockRestore();
+        });
+
+        it('should apply exhaustionPenalty to the attack roll', async () => {
+            const buildCtx = vi.fn(() => Promise.resolve({ hitBonus: 8 }));
+            const rollAttack = vi.fn();
+
+            const brutalChoice = {
+                useBrutalStrike: true,
+                effectChoices: ['option1'],
+            };
+
+            const deps = createDeps({
+                buildCtx,
+                rollAttack,
+                exhaustionPenalty: 2,
+            });
+            const handlers = useCharActionsAttackHandlers(deps);
+            const attack = { name: 'Longsword' };
+
+            handlers.handleBrutalStrikeConfirm(brutalChoice, attack);
+
+            await new Promise(process.nextTick);
+            expect(rollAttack).toHaveBeenCalledWith('Longsword', 6, expect.any(Object));
+        });
+
+        it('should skip brutal strike setup and proceed when brutalStrikeChoice is null', async () => {
+            const buildCtx = vi.fn(() => Promise.resolve({ hitBonus: 6 }));
+            const rollAttack = vi.fn();
+
+            const deps = createDeps({
+                buildCtx,
+                rollAttack,
+            });
+            const handlers = useCharActionsAttackHandlers(deps);
+            const attack = { name: 'Longsword' };
+
+            handlers.handleBrutalStrikeConfirm(null, attack);
+
+            expect(deps.setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', '_brutalStrikeActive', true, campaignName);
+            expect(oncePerTurn.markOncePerTurn).not.toHaveBeenCalled();
+            expect(deps.setModalState).toHaveBeenCalledWith({ recklessAttackModal: null });
+
+            await new Promise(process.nextTick);
+            expect(buildCtx).toHaveBeenCalledWith(attack);
+        });
+
+        it('should skip brutal strike setup and proceed when attack is null and useBrutalStrike is false', async () => {
+            const buildCtx = vi.fn(() => Promise.resolve({ hitBonus: 6 }));
+            const rollAttack = vi.fn();
+
+            const brutalChoice = {
+                useBrutalStrike: false,
+                effectChoices: [],
+            };
+
+            const deps = createDeps({
+                buildCtx,
+                rollAttack,
+            });
+            const handlers = useCharActionsAttackHandlers(deps);
+
+            handlers.handleBrutalStrikeConfirm(brutalChoice, null);
+
+            expect(deps.setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', '_brutalStrikeActive', true, campaignName);
+            expect(deps.setModalState).toHaveBeenCalledWith({ recklessAttackModal: null });
+            expect(buildCtx).not.toHaveBeenCalled();
+            expect(rollAttack).not.toHaveBeenCalled();
         });
     });
 
@@ -561,6 +691,24 @@ describe('useCharActionsAttackHandlers', () => {
             await new Promise(process.nextTick);
             expect(consoleErrorSpy).toHaveBeenCalledWith('[CharActions] Error:', expect.any(Error));
             consoleErrorSpy.mockRestore();
+        });
+
+        it('should apply exhaustionPenalty to the attack roll', async () => {
+            const buildCtx = vi.fn(() => Promise.resolve({ hitBonus: 8 }));
+            const rollAttack = vi.fn();
+
+            const deps = createDeps({
+                buildCtx,
+                rollAttack,
+                exhaustionPenalty: 2,
+            });
+            const handlers = useCharActionsAttackHandlers(deps);
+            const attack = { name: 'Longsword' };
+
+            handlers.handleBrutalStrikeCancel(attack);
+
+            await new Promise(process.nextTick);
+            expect(rollAttack).toHaveBeenCalledWith('Longsword', 6, expect.any(Object));
         });
     });
 });

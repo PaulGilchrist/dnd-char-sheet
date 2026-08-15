@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import useInitiativeEffects from './useInitiativeEffects.js';
@@ -94,13 +95,11 @@ describe('useInitiativeEffects - concentration clearing', () => {
         });
     }
 
-    describe('general concentration clearing', () => {
-        it('clears concentration when creature has concentration', () => {
+    describe('concentration clearing - general behavior', () => {
+        it('clears concentration and persists combat summary when creature has concentration', () => {
             mockCombatSummary('Bane');
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            // Concentration is cleared by setting creature.concentration = null directly
-            // and calling storage.set('combatSummary', cs, campaignName)
             expect(storageService.default.set).toHaveBeenCalledWith(
                 'combatSummary',
                 expect.objectContaining({
@@ -112,24 +111,44 @@ describe('useInitiativeEffects - concentration clearing', () => {
             );
         });
 
+        it('clears concentration but skips spell-specific effects when spell is undefined', () => {
+            vi.mocked(getCombatSummary).mockReturnValue({
+                creatures: [
+                    {
+                        name: 'TestMonk',
+                        concentration: {},
+                    },
+                ],
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(storageService.default.set).toHaveBeenCalledWith(
+                'combatSummary',
+                expect.objectContaining({
+                    creatures: expect.arrayContaining([
+                        expect.objectContaining({ concentration: null }),
+                    ]),
+                }),
+                campaignName
+            );
+            const targetEffectCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'campaign' && call[1] === 'targetEffects'
+            );
+            expect(targetEffectCalls.length).toBe(0);
+        });
+
         it('does nothing when creature has no concentration', () => {
             mockCombatSummary(null);
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            const concCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
-                call => call[1] === 'concentration'
-            );
-            expect(concCalls.length).toBe(0);
+            expect(storageService.default.set).not.toHaveBeenCalled();
         });
 
         it('does nothing when combat summary is null', () => {
             vi.mocked(getCombatSummary).mockReturnValue(null);
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            const concCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
-                call => call[1] === 'concentration'
-            );
-            expect(concCalls.length).toBe(0);
+            expect(storageService.default.set).not.toHaveBeenCalled();
         });
 
         it('does nothing when creature not found in combat summary', () => {
@@ -138,10 +157,7 @@ describe('useInitiativeEffects - concentration clearing', () => {
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            const concCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
-                call => call[1] === 'concentration'
-            );
-            expect(concCalls.length).toBe(0);
+            expect(storageService.default.set).not.toHaveBeenCalled();
         });
     });
 
@@ -165,6 +181,20 @@ describe('useInitiativeEffects - concentration clearing', () => {
                 true
             );
         });
+
+        it('does nothing when no bane_penalty effect exists', () => {
+            mockCombatSummary('Bane');
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'targetEffects') return [{ effect: 'other_effect', source: 'Ally' }];
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            const targetEffectCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'campaign' && call[1] === 'targetEffects'
+            );
+            expect(targetEffectCalls.length).toBe(0);
+        });
     });
 
     describe('Blade Ward concentration clearing', () => {
@@ -186,6 +216,20 @@ describe('useInitiativeEffects - concentration clearing', () => {
                 campaignName,
                 true
             );
+        });
+
+        it('does nothing when no bane_penalty effect exists', () => {
+            mockCombatSummary('Blade Ward');
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'targetEffects') return [{ effect: 'other_effect', source: 'Ally' }];
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            const targetEffectCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'campaign' && call[1] === 'targetEffects'
+            );
+            expect(targetEffectCalls.length).toBe(0);
         });
     });
 
@@ -209,6 +253,20 @@ describe('useInitiativeEffects - concentration clearing', () => {
                 true
             );
         });
+
+        it('does nothing when no bless_bonus effect exists', () => {
+            mockCombatSummary('Bless');
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'targetEffects') return [{ effect: 'other_effect', source: 'Ally' }];
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            const targetEffectCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'campaign' && call[1] === 'targetEffects'
+            );
+            expect(targetEffectCalls.length).toBe(0);
+        });
     });
 
     describe('Ray of Enfeeblement concentration clearing', () => {
@@ -230,6 +288,20 @@ describe('useInitiativeEffects - concentration clearing', () => {
                 campaignName,
                 true
             );
+        });
+
+        it('does nothing when no ray_of_enfeeble_debuff effect exists', () => {
+            mockCombatSummary('Ray of Enfeeblement');
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'targetEffects') return [{ effect: 'other_effect', source: 'Ally' }];
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            const targetEffectCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'campaign' && call[1] === 'targetEffects'
+            );
+            expect(targetEffectCalls.length).toBe(0);
         });
     });
 
@@ -253,6 +325,20 @@ describe('useInitiativeEffects - concentration clearing', () => {
                 true
             );
         });
+
+        it('does nothing when no compelled_duel effect exists', () => {
+            mockCombatSummary('Compelled Duel');
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'targetEffects') return [{ effect: 'other_effect', source: 'Ally' }];
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            const targetEffectCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'campaign' && call[1] === 'targetEffects'
+            );
+            expect(targetEffectCalls.length).toBe(0);
+        });
     });
 
     describe('Resistance concentration clearing', () => {
@@ -275,6 +361,20 @@ describe('useInitiativeEffects - concentration clearing', () => {
                 true
             );
         });
+
+        it('does nothing when no resistance_damage_reduction effect exists', () => {
+            mockCombatSummary('Resistance');
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'targetEffects') return [{ effect: 'other_effect', source: 'Ally' }];
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            const targetEffectCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'campaign' && call[1] === 'targetEffects'
+            );
+            expect(targetEffectCalls.length).toBe(0);
+        });
     });
 
     describe('Protection from Energy concentration clearing', () => {
@@ -289,11 +389,19 @@ describe('useInitiativeEffects - concentration clearing', () => {
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            // Should be called for each creature in combat summary
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'TestMonk',
                 'activeBuffs',
                 [{ name: 'Mage Armor', effect: 'mage_armor' }],
+                campaignName
+            );
+            expect(storageService.default.set).toHaveBeenCalledWith(
+                'combatSummary',
+                expect.objectContaining({
+                    creatures: expect.arrayContaining([
+                        expect.objectContaining({ concentration: null }),
+                    ]),
+                }),
                 campaignName
             );
         });
@@ -302,6 +410,31 @@ describe('useInitiativeEffects - concentration clearing', () => {
             mockCombatSummary('Protection from Energy');
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'activeBuffs') return [{ name: 'Mage Armor', effect: 'mage_armor' }];
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            const buffCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'activeBuffs'
+            );
+            expect(buffCalls.length).toBe(0);
+        });
+
+        it('handles empty creatures array gracefully', () => {
+            vi.mocked(getCombatSummary).mockReturnValue({
+                creatures: [],
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(storageService.default.set).not.toHaveBeenCalled();
+        });
+
+        it('handles creature with no activeBuffs gracefully', () => {
+            vi.mocked(getCombatSummary).mockReturnValue({
+                creatures: [{ name: 'TestMonk', concentration: { spell: 'Protection from Energy' } }],
+            });
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'activeBuffs') return undefined;
                 return null;
             });
             renderHookWithStats();

@@ -1,6 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import useCharActionsAutomation from './useCharActionsAutomation.js';
 import { createHooks, setupBeforeEach } from './useCharActionsAutomation.test.setup.js';
+
+vi.mock('../../services/automation/handlers/class-cleric-paladin/divineInterventionHandler.js', () => ({
+    handle: vi.fn(),
+    onSpellSelected: vi.fn(),
+}));
+
+vi.mock('../../services/rules/spells/spellCastService.js', () => ({
+    executeSpellCast: vi.fn(),
+}));
 
 describe('useCharActionsAutomation', () => {
     setupBeforeEach();
@@ -299,6 +308,23 @@ describe('useCharActionsAutomation', () => {
 
             expect(hooks.setModalState).toHaveBeenCalledWith({ bonusActionChoiceModal: { choices: ['attack', 'dash'] } });
         });
+
+        it('should handle divineIntervention modal with action reference', async () => {
+            const hooks = createHooks();
+            const action = { name: 'Divine Intervention' };
+            hooks.executeHandler.mockResolvedValue({
+                type: 'modal',
+                modalName: 'divineIntervention',
+                payload: { options: ['smite', 'teleport'] },
+            });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            await handleAutomationAction(action);
+
+            expect(hooks.setModalState).toHaveBeenCalledWith({
+                divineInterventionAction: action,
+                divineInterventionModal: { options: ['smite', 'teleport'] },
+            });
+        });
     });
 
     describe('handleAutomationAction - lineage modals', () => {
@@ -557,7 +583,7 @@ describe('useCharActionsAutomation', () => {
         });
     });
 
-    describe('handleAutomationAction - teleport/modals with special payloads', () => {
+    describe('handleAutomationAction - teleport and special modals', () => {
         it('should handle teleport modal', async () => {
             const hooks = createHooks();
             hooks.executeHandler.mockResolvedValue({
@@ -570,23 +596,6 @@ describe('useCharActionsAutomation', () => {
             await handleAutomationAction(action);
 
             expect(hooks.setModalState).toHaveBeenCalledWith({ teleportModal: { destination: 'room2' } });
-        });
-
-        it('should handle divineIntervention modal', async () => {
-            const hooks = createHooks();
-            const action = { name: 'Divine Intervention' };
-            hooks.executeHandler.mockResolvedValue({
-                type: 'modal',
-                modalName: 'divineIntervention',
-                payload: { options: ['smite', 'teleport'] },
-            });
-            const { handleAutomationAction } = useCharActionsAutomation(hooks);
-            await handleAutomationAction(action);
-
-            expect(hooks.setModalState).toHaveBeenCalledWith({
-                divineInterventionAction: action,
-                divineInterventionModal: { options: ['smite', 'teleport'] },
-            });
         });
 
         it('should handle starryFormConstellation modal', async () => {
@@ -618,8 +627,8 @@ describe('useCharActionsAutomation', () => {
         });
     });
 
-    describe('handleAutomationAction - telepathicSpeech callback tests', () => {
-        it('should handle telepathicSpeech modal', async () => {
+    describe('handleAutomationAction - telepathicSpeech', () => {
+        it('should set secondaryTargetModal with correct structure', async () => {
             const hooks = createHooks();
             hooks.executeHandler.mockResolvedValue({
                 type: 'modal',
@@ -643,13 +652,30 @@ describe('useCharActionsAutomation', () => {
                     description: 'Choose one creature within 30 feet to communicate with telepathically.',
                 }),
             }));
-            // Verify the onTargetSelected and onSkip callbacks are function
             const callArgs = hooks.setModalState.mock.calls[0][0];
             expect(typeof callArgs.secondaryTargetModal.onTargetSelected).toBe('function');
             expect(typeof callArgs.secondaryTargetModal.onSkip).toBe('function');
         });
 
-        it('should call onTargetSelected callback for telepathicSpeech', async () => {
+        it('should use action name from payload when setting secondaryTargetModal', async () => {
+            const hooks = createHooks();
+            hooks.executeHandler.mockResolvedValue({
+                type: 'modal',
+                modalName: 'telepathicSpeech',
+                payload: {
+                    action: { name: 'Custom Action Name' },
+                    creatureTargets: ['goblin1'],
+                },
+            });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            const action = { name: 'TestAction', automation: {} };
+            await handleAutomationAction(action);
+
+            const callArgs = hooks.setModalState.mock.calls[0][0];
+            expect(callArgs.secondaryTargetModal.title).toBe('Custom Action Name');
+        });
+
+        it('should call onTargetSelected callback to clear modal', async () => {
             const hooks = createHooks();
             hooks.executeHandler.mockResolvedValue({
                 type: 'modal',
@@ -669,7 +695,7 @@ describe('useCharActionsAutomation', () => {
             expect(hooks.setModalState).toHaveBeenCalledWith({ secondaryTargetModal: null });
         });
 
-        it('should call onSkip callback for telepathicSpeech', async () => {
+        it('should call onSkip callback to clear modal', async () => {
             const hooks = createHooks();
             hooks.executeHandler.mockResolvedValue({
                 type: 'modal',

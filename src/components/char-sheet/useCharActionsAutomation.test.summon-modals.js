@@ -1,6 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import useCharActionsAutomation from './useCharActionsAutomation.js';
 import { createHooks, setupBeforeEach } from './useCharActionsAutomation.test.setup.js';
+
+vi.mock('../../services/automation/handlers/class-cleric-paladin/divineInterventionHandler.js', () => ({
+    handle: vi.fn(),
+    onSpellSelected: vi.fn(),
+}));
+
+vi.mock('../../services/rules/spells/spellCastService.js', () => ({
+    executeSpellCast: vi.fn(),
+}));
 
 describe('useCharActionsAutomation', () => {
     setupBeforeEach();

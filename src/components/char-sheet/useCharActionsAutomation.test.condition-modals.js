@@ -1,6 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import useCharActionsAutomation from './useCharActionsAutomation.js';
 import { createHooks, setupBeforeEach } from './useCharActionsAutomation.test.setup.js';
+
+vi.mock('../../services/automation/handlers/class-cleric-paladin/divineInterventionHandler.js', () => ({
+    handle: vi.fn(),
+    onSpellSelected: vi.fn(),
+}));
+
+vi.mock('../../services/rules/spells/spellCastService.js', () => ({
+    executeSpellCast: vi.fn(),
+}));
 
 describe('useCharActionsAutomation', () => {
     setupBeforeEach();
@@ -244,7 +253,7 @@ describe('useCharActionsAutomation', () => {
             expect(hooks.setModalState).toHaveBeenCalledWith({ moonlightStepFallbackModal: { fallback: 'dash' } });
         });
 
-        it('should handle celestialResilienceModal', async () => {
+        it('should handle celestialResilienceModal with injected dependencies', async () => {
             const hooks = createHooks();
             hooks.executeHandler.mockResolvedValue({
                 type: 'modal',
@@ -331,7 +340,7 @@ describe('useCharActionsAutomation', () => {
             });
         });
 
-        it('should handle breathWeaponShape modal', async () => {
+        it('should handle breathWeaponShape modal with injected dependencies', async () => {
             const hooks = createHooks();
             hooks.executeHandler.mockResolvedValue({
                 type: 'modal',

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import useCharActionsAutomation from './useCharActionsAutomation.js';
 import { createHooks, setupBeforeEach, campaignName, basePlayerStats } from './useCharActionsAutomation.test.setup.js';
 
@@ -21,19 +21,19 @@ describe('useCharActionsAutomation', () => {
             const action = { name: 'TestAction' };
             await handleAutomationAction(action);
 
-            expect(hooks.getRuntimeValue).not.toHaveBeenCalled();
+            expect(hooks.setPopupHtml).not.toHaveBeenCalled();
+            expect(hooks.setModalState).not.toHaveBeenCalled();
             expect(hooks.executeHandler).not.toHaveBeenCalled();
         });
 
-        it('should return early when focus points are 0 for monk ki feature', async () => {
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'activeBuffs') return [];
-                if (key === 'focusPoints') return 0;
-                return undefined;
-            });
+        it('should show popup and skip handler when focus points are 0 for monk ki feature', async () => {
             const hooks = createHooks({
                 playerStats: { ...basePlayerStats, class: { class_levels: [{ level: 5, focus_points: 2 }] } },
-                getRuntimeValue: grv,
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === 'focusPoints') return 0;
+                    return undefined;
+                }),
             });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
             const action = { name: 'Flurry of Blows' };
@@ -45,20 +45,18 @@ describe('useCharActionsAutomation', () => {
             expect(hooks.executeHandler).not.toHaveBeenCalled();
         });
 
-        it('should return early when focus points are 0 for 2024 rules', async () => {
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'activeBuffs') return [];
-                if (key === 'focusPoints') return 0;
-                return undefined;
-            });
-            const monkStats = {
-                ...basePlayerStats,
-                rules: '2024',
-                class: { class_levels: [{ level: 5, focus_points: 2 }] },
-            };
+        it('should show popup with "Focus Points" message for 2024 rules', async () => {
             const hooks = createHooks({
-                playerStats: monkStats,
-                getRuntimeValue: grv,
+                playerStats: {
+                    ...basePlayerStats,
+                    rules: '2024',
+                    class: { class_levels: [{ level: 5, focus_points: 2 }] },
+                },
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === 'focusPoints') return 0;
+                    return undefined;
+                }),
             });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
             const action = { name: 'Flurry of Blows' };
@@ -72,23 +70,17 @@ describe('useCharActionsAutomation', () => {
 
         it('should skip FP cost when Flurry of Healing and Harm is active for Hand of Healing', async () => {
             const srw = vi.fn();
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'focusPoints') return 3;
-                return undefined;
-            });
-            const playerStats = {
-                ...basePlayerStats,
-                specialActions: [{ name: 'Flurry of Healing and Harm' }],
-                class: { class_levels: [{ level: 5, focus_points: 2 }] },
-            };
             const hooks = createHooks({
-                playerStats,
-                getRuntimeValue: grv,
+                playerStats: {
+                    ...basePlayerStats,
+                    specialActions: [{ name: 'Flurry of Healing and Harm' }],
+                    class: { class_levels: [{ level: 5, focus_points: 2 }] },
+                },
                 setRuntimeValue: srw,
             });
             hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
-            const action = { name: 'Hand of Healing', automation: {} };
+            const action = { name: 'Hand of Healing' };
             await handleAutomationAction(action);
 
             expect(srw).not.toHaveBeenCalledWith(
@@ -100,23 +92,17 @@ describe('useCharActionsAutomation', () => {
 
         it('should skip FP cost when Flurry of Healing and Harm is active for Flurry of Blows', async () => {
             const srw = vi.fn();
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'focusPoints') return 3;
-                return undefined;
-            });
-            const playerStats = {
-                ...basePlayerStats,
-                specialActions: [{ name: 'Flurry of Healing and Harm' }],
-                class: { class_levels: [{ level: 5, focus_points: 2 }] },
-            };
             const hooks = createHooks({
-                playerStats,
-                getRuntimeValue: grv,
+                playerStats: {
+                    ...basePlayerStats,
+                    specialActions: [{ name: 'Flurry of Healing and Harm' }],
+                    class: { class_levels: [{ level: 5, focus_points: 2 }] },
+                },
                 setRuntimeValue: srw,
             });
             hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
-            const action = { name: 'Flurry of Blows', automation: {} };
+            const action = { name: 'Flurry of Blows' };
             await handleAutomationAction(action);
 
             expect(srw).not.toHaveBeenCalledWith(
@@ -126,20 +112,55 @@ describe('useCharActionsAutomation', () => {
             );
         });
 
-        it('should skip FP cost when Cloak of Shadows is active for Flurry of Blows', async () => {
+        it('should skip FP cost for Flurry of Blows when Cloak of Shadows is active', async () => {
             const srw = vi.fn();
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'focusPoints') return 3;
-                return undefined;
-            });
             const hooks = createHooks({
                 activeBuffs: [{ effect: 'cloak_of_shadows' }],
-                getRuntimeValue: grv,
                 setRuntimeValue: srw,
             });
             hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
-            const action = { name: 'Flurry of Blows', automation: {} };
+            const action = { name: 'Flurry of Blows' };
+            await handleAutomationAction(action);
+
+            expect(srw).not.toHaveBeenCalledWith(
+                'TestFighter',
+                'focusPoints',
+                expect.any(Number)
+            );
+        });
+
+        it('should skip FP cost for Heightened Flurry of Blows when Flurry of Healing and Harm is active', async () => {
+            const srw = vi.fn();
+            const hooks = createHooks({
+                playerStats: {
+                    ...basePlayerStats,
+                    specialActions: [{ name: 'Flurry of Healing and Harm' }],
+                    class: { class_levels: [{ level: 5, focus_points: 2 }] },
+                },
+                setRuntimeValue: srw,
+            });
+            hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            const action = { name: 'Heightened Flurry of Blows' };
+            await handleAutomationAction(action);
+
+            expect(srw).not.toHaveBeenCalledWith(
+                'TestFighter',
+                'focusPoints',
+                expect.any(Number)
+            );
+        });
+
+        it('should skip FP cost for Heightened Flurry of Blows when Cloak of Shadows is active', async () => {
+            const srw = vi.fn();
+            const hooks = createHooks({
+                activeBuffs: [{ effect: 'cloak_of_shadows' }],
+                setRuntimeValue: srw,
+            });
+            hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            const action = { name: 'Heightened Flurry of Blows' };
             await handleAutomationAction(action);
 
             expect(srw).not.toHaveBeenCalledWith(
@@ -151,23 +172,17 @@ describe('useCharActionsAutomation', () => {
 
         it('should NOT skip FP cost when Flurry of Healing and Harm is active but action is not Hand of Healing or Flurry of Blows', async () => {
             const srw = vi.fn();
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'focusPoints') return 3;
-                return undefined;
-            });
-            const playerStats = {
-                ...basePlayerStats,
-                specialActions: [{ name: 'Flurry of Healing and Harm' }],
-                class: { class_levels: [{ level: 5, focus_points: 2 }] },
-            };
             const hooks = createHooks({
-                playerStats,
-                getRuntimeValue: grv,
+                playerStats: {
+                    ...basePlayerStats,
+                    specialActions: [{ name: 'Flurry of Healing and Harm' }],
+                    class: { class_levels: [{ level: 5, focus_points: 2 }] },
+                },
                 setRuntimeValue: srw,
             });
             hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
-            const action = { name: 'Patient Defense', automation: {} };
+            const action = { name: 'Patient Defense' };
             await handleAutomationAction(action);
 
             expect(srw).toHaveBeenCalledWith('TestFighter', 'focusPoints', 2, campaignName);
@@ -175,17 +190,12 @@ describe('useCharActionsAutomation', () => {
 
         it('should decrement focus points for monk ki features', async () => {
             const srw = vi.fn().mockResolvedValue(undefined);
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'focusPoints') return 3;
-                return undefined;
-            });
             const hooks = createHooks({
-                getRuntimeValue: grv,
                 setRuntimeValue: srw,
             });
             hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
-            const action = { name: 'Stunning Strike', automation: {} };
+            const action = { name: 'Stunning Strike' };
             await handleAutomationAction(action);
 
             expect(srw).toHaveBeenCalledWith('TestFighter', 'focusPoints', 2, campaignName);
@@ -194,32 +204,88 @@ describe('useCharActionsAutomation', () => {
         it('should dispatch focus-points-updated event when spending focus points', async () => {
             const dispatchEvent = vi.spyOn(window, 'dispatchEvent');
             const srw = vi.fn().mockResolvedValue(undefined);
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'focusPoints') return 3;
-                return undefined;
-            });
             const hooks = createHooks({
-                getRuntimeValue: grv,
                 setRuntimeValue: srw,
             });
             hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
-            const action = { name: 'Stunning Strike', automation: {} };
+            const action = { name: 'Stunning Strike' };
             await handleAutomationAction(action);
 
-            expect(dispatchEvent).toHaveBeenCalledWith(expect.any(CustomEvent));
+            expect(dispatchEvent).toHaveBeenCalledOnce();
+            const event = dispatchEvent.mock.calls[0][0];
+            expect(event).toBeInstanceOf(CustomEvent);
+            expect(event.type).toBe('focus-points-updated');
             dispatchEvent.mockRestore();
+        });
+
+        it('should use _trackedResources fallback when getRuntimeValue returns null for focusPoints', async () => {
+            const srw = vi.fn().mockResolvedValue(undefined);
+            const trackedResources = { focusPoints: { current: 4 } };
+            const hooks = createHooks({
+                playerStats: {
+                    ...basePlayerStats,
+                    _trackedResources: trackedResources,
+                },
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === 'focusPoints') return null;
+                    return undefined;
+                }),
+                setRuntimeValue: srw,
+            });
+            hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            const action = { name: 'Stunning Strike' };
+            await handleAutomationAction(action);
+
+            expect(srw).toHaveBeenCalledWith('TestFighter', 'focusPoints', 3, campaignName);
+        });
+
+        it('should handle undefined playerStats.class gracefully', async () => {
+            const srw = vi.fn().mockResolvedValue(undefined);
+            const hooks = createHooks({
+                playerStats: {
+                    ...basePlayerStats,
+                    class: undefined,
+                },
+                setRuntimeValue: srw,
+            });
+            hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            const action = { name: 'Stunning Strike' };
+            await handleAutomationAction(action);
+
+            expect(srw).toHaveBeenCalledWith('TestFighter', 'focusPoints', 2, campaignName);
+        });
+
+        it('should NOT spend focus points when action is not a monk ki feature', async () => {
+            const srw = vi.fn().mockResolvedValue(undefined);
+            const hooks = createHooks({
+                setRuntimeValue: srw,
+            });
+            hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            const action = { name: 'Fireball' };
+            await handleAutomationAction(action);
+
+            expect(srw).not.toHaveBeenCalledWith(
+                'TestFighter',
+                'focusPoints',
+                expect.any(Number)
+            );
         });
     });
 
     describe('handleAutomationAction - trigger conditions', () => {
         it('should show popup when trigger is after_casting_action_spell and no last action spell cast', async () => {
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'activeBuffs') return [];
-                if (key === 'lastActionSpellCast') return null;
-                return undefined;
+            const hooks = createHooks({
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === 'lastActionSpellCast') return null;
+                    return undefined;
+                }),
             });
-            const hooks = createHooks({ getRuntimeValue: grv });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
             const action = { name: 'TestAction', automation: { trigger: 'after_casting_action_spell' } };
             await handleAutomationAction(action);
@@ -232,13 +298,12 @@ describe('useCharActionsAutomation', () => {
 
         it('should clear lastActionSpellCast and proceed when trigger is after_casting_action_spell and spell was cast', async () => {
             const srw = vi.fn().mockResolvedValue(undefined);
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'activeBuffs') return [];
-                if (key === 'lastActionSpellCast') return 'Cure Wounds';
-                return undefined;
-            });
             const hooks = createHooks({
-                getRuntimeValue: grv,
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === 'lastActionSpellCast') return 'Cure Wounds';
+                    return undefined;
+                }),
                 setRuntimeValue: srw,
             });
             hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
@@ -249,16 +314,35 @@ describe('useCharActionsAutomation', () => {
             expect(srw).toHaveBeenCalledWith('TestFighter', 'lastActionSpellCast', 0, campaignName);
             expect(hooks.executeHandler).toHaveBeenCalled();
         });
+
+        it('should not apply trigger logic when trigger is empty string', async () => {
+            const srw = vi.fn().mockResolvedValue(undefined);
+            const hooks = createHooks({
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === 'lastActionSpellCast') return null;
+                    return undefined;
+                }),
+                setRuntimeValue: srw,
+            });
+            hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            const action = { name: 'TestAction', automation: { trigger: '' } };
+            await handleAutomationAction(action);
+
+            expect(hooks.executeHandler).toHaveBeenCalled();
+        });
     });
 
     describe('handleAutomationAction - damage_bonus with options', () => {
         it('should show modal when damage_bonus has options and no choice made yet', async () => {
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'activeBuffs') return [];
-                if (key === '_Test_Action_option') return null;
-                return undefined;
+            const hooks = createHooks({
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === '_Test_Action_option') return null;
+                    return undefined;
+                }),
             });
-            const hooks = createHooks({ getRuntimeValue: grv });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
             const action = {
                 name: 'Test Action',
@@ -278,13 +362,12 @@ describe('useCharActionsAutomation', () => {
 
         it('should proceed when damage_bonus has options and a choice was already made', async () => {
             const srw = vi.fn().mockResolvedValue(undefined);
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'activeBuffs') return [];
-                if (key === '_Test_Action_option') return 'Option A';
-                return undefined;
-            });
             const hooks = createHooks({
-                getRuntimeValue: grv,
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === '_Test_Action_option') return 'Option A';
+                    return undefined;
+                }),
                 setRuntimeValue: srw,
             });
             hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
@@ -297,16 +380,37 @@ describe('useCharActionsAutomation', () => {
 
             expect(hooks.executeHandler).toHaveBeenCalled();
         });
+
+        it('should show modal when damage_bonus has no options', async () => {
+            const srw = vi.fn().mockResolvedValue(undefined);
+            const hooks = createHooks({
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    return undefined;
+                }),
+                setRuntimeValue: srw,
+            });
+            hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            const action = {
+                name: 'Test Action',
+                automation: { type: 'damage_bonus', options: [] },
+            };
+            await handleAutomationAction(action);
+
+            expect(hooks.executeHandler).toHaveBeenCalled();
+        });
     });
 
     describe('handleAutomationAction - defensive_tactics', () => {
         it('should show modal when defensive_tactics type and no choice made yet', async () => {
-            const grv = vi.fn((charKey, key, _cn) => {
-                if (key === 'activeBuffs') return [];
-                if (key === '_Defensive_Tactics_choice') return null;
-                return undefined;
+            const hooks = createHooks({
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === '_Defensive_Tactics_choice') return null;
+                    return undefined;
+                }),
             });
-            const hooks = createHooks({ getRuntimeValue: grv });
             const { handleAutomationAction } = useCharActionsAutomation(hooks);
             const action = {
                 name: 'Defensive Tactics',
@@ -322,6 +426,27 @@ describe('useCharActionsAutomation', () => {
                 },
             });
             expect(hooks.executeHandler).not.toHaveBeenCalled();
+        });
+
+        it('should proceed when defensive_tactics choice was already made', async () => {
+            const srw = vi.fn().mockResolvedValue(undefined);
+            const hooks = createHooks({
+                getRuntimeValue: vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === '_Defensive_Tactics_choice') return 'Escape the Horde';
+                    return undefined;
+                }),
+                setRuntimeValue: srw,
+            });
+            hooks.executeHandler.mockResolvedValue({ type: 'popup', payload: 'done' });
+            const action = {
+                name: 'Defensive Tactics',
+                automation: { type: 'defensive_tactics' },
+            };
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            await handleAutomationAction(action);
+
+            expect(hooks.executeHandler).toHaveBeenCalled();
         });
     });
 });

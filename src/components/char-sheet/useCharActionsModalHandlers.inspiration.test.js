@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useCharActionsModalHandlers from './useCharActionsModalHandlers.js';
 
@@ -126,21 +127,27 @@ const { applyInspiringMovement } = await import('../../services/automation/handl
 const mockSetPopupHtml = vi.fn();
 const mockSetModalState = vi.fn();
 
-const baseModalState = {};
-const baseMergedModalState = {};
-
-function getHandlers(extraModalState = {}, extraMergedModalState = {}) {
+function getHandlers(modalState = {}, mergedModalState = {}) {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useCharActionsModalHandlers({
     setPopupHtml: mockSetPopupHtml,
     setModalState: mockSetModalState,
-    modalState: { ...baseModalState, ...extraModalState },
-    mergedModalState: { ...baseMergedModalState, ...extraMergedModalState },
+    modalState,
+    mergedModalState,
   });
 }
 
 function makePlayerStats() {
   return { name: 'TestChar', class: { name: 'Fighter' } };
+}
+
+function makeBaseModalData(overrides = {}) {
+  return {
+    action: { name: 'Test Action' },
+    playerStats: makePlayerStats(),
+    campaignName: 'test-campaign',
+    ...overrides,
+  };
 }
 
 describe('useCharActionsModalHandlers - inspiration', () => {
@@ -151,174 +158,126 @@ describe('useCharActionsModalHandlers - inspiration', () => {
   });
 
   describe('handleBardicInspirationConfirm', () => {
-    it('returns early when bardicInspirationTargetModal is not in modalState', async () => {
-      const handlers = getHandlers();
-      await handlers.handleBardicInspirationConfirm('target');
+    it.each([null, undefined])('returns early without side effects when bardicInspirationTargetModal is %s', async (modalValue) => {
+      const handlers = getHandlers({ bardicInspirationTargetModal: modalValue });
+      await handlers.handleBardicInspirationConfirm('Ally1');
       expect(applyBardicInspiration).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('clears modal state immediately', async () => {
-      const modalState = {
-        bardicInspirationTargetModal: {
-          action: { name: 'Bardic Inspiration' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          dieSize: 'd8',
-          hasCombatOptions: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
-      await handlers.handleBardicInspirationConfirm('Ally1');
+    it.each([null, undefined, ''])('returns early when targetName is %s but still clears modal state', async (targetName) => {
+      const handlers = getHandlers({
+        bardicInspirationTargetModal: makeBaseModalData({ dieSize: 'd8', hasCombatOptions: false }),
+      });
+      await handlers.handleBardicInspirationConfirm(targetName);
+      expect(applyBardicInspiration).not.toHaveBeenCalled();
       expect(mockSetModalState).toHaveBeenCalledWith({ bardicInspirationTargetModal: null });
     });
 
-    it('returns early when targetName is empty string', async () => {
-      const modalState = {
-        bardicInspirationTargetModal: {
-          action: { name: 'Bardic Inspiration' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          dieSize: 'd8',
-          hasCombatOptions: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
-      await handlers.handleBardicInspirationConfirm('');
-      expect(applyBardicInspiration).not.toHaveBeenCalled();
-    });
-
-    it('returns early when applyBardicInspiration returns falsy', async () => {
-      const modalState = {
-        bardicInspirationTargetModal: {
-          action: { name: 'Bardic Inspiration' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          dieSize: 'd8',
-          hasCombatOptions: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
-      applyBardicInspiration.mockResolvedValue(null);
-      await handlers.handleBardicInspirationConfirm('Ally1');
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-    });
-
-    it('calls setPopupHtml when result type is popup', async () => {
-      const modalState = {
-        bardicInspirationTargetModal: {
-          action: { name: 'Bardic Inspiration' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          dieSize: 'd8',
-          hasCombatOptions: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
+    it('delegates to applyBardicInspiration with all parameters and clears the modal', async () => {
       applyBardicInspiration.mockResolvedValue({ type: 'popup', payload: '<p>Inspired!</p>' });
+      const modalState = {
+        bardicInspirationTargetModal: {
+          action: { name: 'Bardic Inspiration' },
+          playerStats: makePlayerStats(),
+          campaignName: 'test-campaign',
+          dieSize: 'd8',
+          hasCombatOptions: false,
+        },
+      };
+      const handlers = getHandlers(modalState);
+      await handlers.handleBardicInspirationConfirm('Ally1');
+      expect(applyBardicInspiration).toHaveBeenCalledWith(
+        modalState.bardicInspirationTargetModal.action,
+        modalState.bardicInspirationTargetModal.playerStats,
+        modalState.bardicInspirationTargetModal.campaignName,
+        'Ally1',
+        'd8',
+        false
+      );
+      expect(mockSetModalState).toHaveBeenCalledWith({ bardicInspirationTargetModal: null });
+    });
+
+    it('shows popup when applyBardicInspiration returns a payload', async () => {
+      applyBardicInspiration.mockResolvedValue({ type: 'popup', payload: '<p>Inspired!</p>' });
+      const handlers = getHandlers({
+        bardicInspirationTargetModal: makeBaseModalData({ dieSize: 'd8', hasCombatOptions: false }),
+      });
       await handlers.handleBardicInspirationConfirm('Ally1');
       expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Inspired!</p>');
+      expect(mockSetModalState).toHaveBeenCalledWith({ bardicInspirationTargetModal: null });
     });
 
-    it('does not call setPopupHtml when result type is not popup', async () => {
-      const modalState = {
-        bardicInspirationTargetModal: {
-          action: { name: 'Bardic Inspiration' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          dieSize: 'd8',
-          hasCombatOptions: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
-      applyBardicInspiration.mockResolvedValue({ type: 'info', payload: 'Some info' });
+    it('skips popup when applyBardicInspiration returns no payload but still clears modal', async () => {
+      applyBardicInspiration.mockResolvedValue({});
+      const handlers = getHandlers({
+        bardicInspirationTargetModal: makeBaseModalData({ dieSize: 'd8', hasCombatOptions: false }),
+      });
       await handlers.handleBardicInspirationConfirm('Ally1');
       expect(mockSetPopupHtml).not.toHaveBeenCalled();
+      expect(mockSetModalState).toHaveBeenCalledWith({ bardicInspirationTargetModal: null });
     });
   });
 
   describe('handleInspiringMovementConfirm', () => {
-    it('returns early when inspiringMovementAllyModal is not in modalState', async () => {
-      const handlers = getHandlers();
-      await handlers.handleInspiringMovementConfirm('ally');
+    it.each([null, undefined])('returns early without side effects when inspiringMovementAllyModal is %s', async (modalValue) => {
+      const handlers = getHandlers({ inspiringMovementAllyModal: modalValue });
+      await handlers.handleInspiringMovementConfirm('Ally1');
       expect(applyInspiringMovement).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('clears modal state immediately', async () => {
-      const modalState = {
-        inspiringMovementAllyModal: {
-          action: { name: 'Inspiring Movement' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          halfSpeed: true,
-          noOAs: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
-      await handlers.handleInspiringMovementConfirm('Ally1');
+    it.each([null, undefined, ''])('returns early when allyName is %s but still clears modal state', async (allyName) => {
+      const handlers = getHandlers({
+        inspiringMovementAllyModal: makeBaseModalData({ halfSpeed: true, noOAs: false }),
+      });
+      await handlers.handleInspiringMovementConfirm(allyName);
+      expect(applyInspiringMovement).not.toHaveBeenCalled();
       expect(mockSetModalState).toHaveBeenCalledWith({ inspiringMovementAllyModal: null });
     });
 
-    it('returns early when allyName is empty', async () => {
-      const modalState = {
-        inspiringMovementAllyModal: {
-          action: { name: 'Inspiring Movement' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          halfSpeed: true,
-          noOAs: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
-      await handlers.handleInspiringMovementConfirm('');
-      expect(applyInspiringMovement).not.toHaveBeenCalled();
-    });
-
-    it('returns early when applyInspiringMovement returns falsy', async () => {
-      const modalState = {
-        inspiringMovementAllyModal: {
-          action: { name: 'Inspiring Movement' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          halfSpeed: true,
-          noOAs: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
-      applyInspiringMovement.mockResolvedValue(null);
-      await handlers.handleInspiringMovementConfirm('Ally1');
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-    });
-
-    it('calls setPopupHtml when result type is popup', async () => {
-      const modalState = {
-        inspiringMovementAllyModal: {
-          action: { name: 'Inspiring Movement' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          halfSpeed: true,
-          noOAs: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
+    it('delegates to applyInspiringMovement with all parameters and clears the modal', async () => {
       applyInspiringMovement.mockResolvedValue({ type: 'popup', payload: '<p>Moving!</p>' });
+      const modalState = {
+        inspiringMovementAllyModal: {
+          action: { name: 'Inspiring Movement' },
+          playerStats: makePlayerStats(),
+          campaignName: 'test-campaign',
+          halfSpeed: true,
+          noOAs: false,
+        },
+      };
+      const handlers = getHandlers(modalState);
+      await handlers.handleInspiringMovementConfirm('Ally1');
+      expect(applyInspiringMovement).toHaveBeenCalledWith(
+        modalState.inspiringMovementAllyModal.action,
+        modalState.inspiringMovementAllyModal.playerStats,
+        modalState.inspiringMovementAllyModal.campaignName,
+        'Ally1',
+        true,
+        false
+      );
+      expect(mockSetModalState).toHaveBeenCalledWith({ inspiringMovementAllyModal: null });
+    });
+
+    it('shows popup when applyInspiringMovement returns a payload', async () => {
+      applyInspiringMovement.mockResolvedValue({ type: 'popup', payload: '<p>Moving!</p>' });
+      const handlers = getHandlers({
+        inspiringMovementAllyModal: makeBaseModalData({ halfSpeed: true, noOAs: false }),
+      });
       await handlers.handleInspiringMovementConfirm('Ally1');
       expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Moving!</p>');
+      expect(mockSetModalState).toHaveBeenCalledWith({ inspiringMovementAllyModal: null });
     });
 
-    it('does not call setPopupHtml when result type is not popup', async () => {
-      const modalState = {
-        inspiringMovementAllyModal: {
-          action: { name: 'Inspiring Movement' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          halfSpeed: true,
-          noOAs: false,
-        },
-      };
-      const handlers = getHandlers(modalState);
-      applyInspiringMovement.mockResolvedValue({ type: 'info', payload: 'Some info' });
+    it('skips popup when applyInspiringMovement returns no payload but still clears modal', async () => {
+      applyInspiringMovement.mockResolvedValue({});
+      const handlers = getHandlers({
+        inspiringMovementAllyModal: makeBaseModalData({ halfSpeed: true, noOAs: false }),
+      });
       await handlers.handleInspiringMovementConfirm('Ally1');
       expect(mockSetPopupHtml).not.toHaveBeenCalled();
+      expect(mockSetModalState).toHaveBeenCalledWith({ inspiringMovementAllyModal: null });
     });
   });
 });

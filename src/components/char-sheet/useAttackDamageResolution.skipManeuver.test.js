@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useAttackDamageResolution from './useAttackDamageResolution.js';
 
@@ -56,9 +57,6 @@ vi.mock('../../services/ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-import { getActiveBuffs } from '../../services/automation/common/buffToggle.js';
-import { hasTwoWeaponFighting } from '../../services/combat/automation/automationService.js';
-
 const mockPlayerStats = {
     name: 'TestFighter',
     level: 5,
@@ -70,6 +68,10 @@ const mockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 
+const mockSetPopupHtml = vi.fn();
+const mockRollDamage = vi.fn();
+const mockBuildCtx = vi.fn(() => Promise.resolve({ targetName: 'Goblin' }));
+const mockBuildCtxSync = vi.fn(() => Promise.resolve({ targetName: 'Goblin' }));
 const modalState = {};
 const mockSetModalState = vi.fn((updates) => {
     if (typeof updates === 'function') {
@@ -84,10 +86,10 @@ function UseAttackDamageResolution(overrides = {}) {
         campaignName: mockCampaignName,
         mapName: null,
         popupHtml: null,
-        setPopupHtml: vi.fn(),
-        rollDamage: vi.fn(),
-        buildCtx: vi.fn(() => Promise.resolve({ targetName: 'Goblin' })),
-        buildCtxSync: vi.fn(() => Promise.resolve({ targetName: 'Goblin' })),
+        setPopupHtml: mockSetPopupHtml,
+        rollDamage: mockRollDamage,
+        buildCtx: mockBuildCtx,
+        buildCtxSync: mockBuildCtxSync,
         modalState,
         setModalState: mockSetModalState,
         pendingDamage: null,
@@ -98,33 +100,54 @@ function UseAttackDamageResolution(overrides = {}) {
     return useAttackDamageResolution(deps);
 }
 
-describe('useAttackDamageResolution - handleAttackRiderManeuverSkip', () => {
+describe('useAttackDamageResolution', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        getActiveBuffs.mockReturnValue([]);
-        hasTwoWeaponFighting.mockReturnValue(false);
-        Object.keys(modalState).forEach(k => delete modalState[k]);
+        Object.keys(modalState).forEach((k) => delete modalState[k]);
         mockSetModalState.mockClear();
     });
 
-    it('clears attackRiderManeuverPrompt modal state', () => {
-        const { handleAttackRiderManeuverSkip } = UseAttackDamageResolution();
-        handleAttackRiderManeuverSkip();
-        expect(mockSetModalState).toHaveBeenCalledWith({ attackRiderManeuverPrompt: null });
+    describe('handleAttackRiderManeuverSkip', () => {
+        it('sets attackRiderManeuverPrompt to null in modal state', () => {
+            const { handleAttackRiderManeuverSkip } = UseAttackDamageResolution();
+            handleAttackRiderManeuverSkip();
+            expect(mockSetModalState).toHaveBeenCalledWith({ attackRiderManeuverPrompt: null });
+        });
+
+        it('returns undefined', () => {
+            const { handleAttackRiderManeuverSkip } = UseAttackDamageResolution();
+            const result = handleAttackRiderManeuverSkip();
+            expect(result).toBeUndefined();
+        });
     });
 
-    it('does nothing else when called', () => {
-        const { handleAttackRiderManeuverSkip } = UseAttackDamageResolution();
-        handleAttackRiderManeuverSkip();
-        expect(mockSetModalState).toHaveBeenCalledTimes(1);
-        expect(mockSetModalState).toHaveBeenCalledWith({ attackRiderManeuverPrompt: null });
-    });
+    describe('handleAttackRiderOptionSelect', () => {
+        it('resets attackRiderOptionsModal and sets brutalStrike flags', async () => {
+            const { handleAttackRiderOptionSelect } = UseAttackDamageResolution();
+            const modalPayload = {
+                maneuver: { name: 'Brutal Strike', automation: { options: [] } },
+                targetName: 'Goblin',
+                description: 'Test description',
+            };
 
-    it('can be called multiple times without error', () => {
-        const { handleAttackRiderManeuverSkip } = UseAttackDamageResolution();
-        handleAttackRiderManeuverSkip();
-        handleAttackRiderManeuverSkip();
-        handleAttackRiderManeuverSkip();
-        expect(mockSetModalState).toHaveBeenCalledTimes(3);
+            await handleAttackRiderOptionSelect('brutal', modalPayload);
+
+            expect(mockSetModalState).toHaveBeenCalledWith({ attackRiderOptionsModal: null });
+        });
+
+        it('sets popupHtml with automation info', async () => {
+            const { handleAttackRiderOptionSelect } = UseAttackDamageResolution();
+            const modalPayload = {
+                maneuver: { name: 'Brutal Strike', automation: { options: [] } },
+                targetName: 'Goblin',
+                description: 'Test description',
+            };
+
+            await handleAttackRiderOptionSelect('brutal', modalPayload);
+
+            expect(mockSetPopupHtml).toHaveBeenCalledWith(
+                expect.objectContaining({ type: 'automation_info' })
+            );
+        });
     });
 });

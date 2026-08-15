@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useAttackDamageResolution from './useAttackDamageResolution.js';
 
@@ -8,7 +9,6 @@ vi.mock('../../services/dice/diceRoller.js', () => ({
 
 vi.mock('../../services/rules/combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(),
-    getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../services/encounters/combatData.js', () => ({
@@ -17,9 +17,6 @@ vi.mock('../../services/encounters/combatData.js', () => ({
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
     getRuntimeValue: vi.fn(),
     setRuntimeValue: vi.fn(),
 }));
@@ -30,7 +27,7 @@ vi.mock('../../services/automation/common/buffToggle.js', () => ({
 
 vi.mock('../../services/combat/automation/automationService.js', () => ({
     collectWeaponMastery: vi.fn(),
-    evaluateAutoExpression: vi.fn(() => 5),
+    evaluateAutoExpression: vi.fn(),
     hasTwoWeaponFighting: vi.fn(),
 }));
 
@@ -69,12 +66,11 @@ const mockPlayerStats = {
 const mockCampaignName = 'test-campaign';
 const defaultRollResult = { total: 5, rolls: [5], modifier: 0 };
 
-describe('useAttackDamageResolution - cantrip damage bonus', () => {
+describe('useAttackDamageResolution - advanced automations', () => {
     const mockSetPopupHtml = vi.fn();
     const mockRollDamage = vi.fn();
     const mockBuildCtx = vi.fn(() => Promise.resolve({ targetName: 'Goblin' }));
     const mockBuildCtxSync = vi.fn(() => Promise.resolve({ targetName: 'Goblin' }));
-    const mockPendingDamageRef = { current: null };
     const modalState = {};
 
     function UseAttackDamageResolution(overrides = {}) {
@@ -94,7 +90,6 @@ describe('useAttackDamageResolution - cantrip damage bonus', () => {
                 }
                 Object.assign(modalState, updates);
             }),
-            pendingDamageRef: mockPendingDamageRef,
             ...overrides,
         };
         return useAttackDamageResolution(deps);
@@ -114,11 +109,10 @@ describe('useAttackDamageResolution - cantrip damage bonus', () => {
         getCurrentCombatRound.mockReturnValue(1);
         mockBuildCtx.mockReturnValue(Promise.resolve({ targetName: 'Goblin' }));
         mockBuildCtxSync.mockReturnValue(Promise.resolve({ targetName: 'Goblin' }));
-        mockPendingDamageRef.current = null;
     });
 
-    async function tick() {
-        await new Promise(r => setTimeout(r, 0));
+    function tick() {
+        return new Promise((r) => setTimeout(r, 0));
     }
 
     describe('Potent Spellcasting (cantrip damage bonus)', () => {
@@ -128,7 +122,8 @@ describe('useAttackDamageResolution - cantrip damage bonus', () => {
                 automation: {
                     actions: [
                         {
-                            type: 'damage_bonus', trigger: 'weapon_attack_hit',
+                            type: 'damage_bonus',
+                            trigger: 'weapon_attack_hit',
                             options: ['Potent Spellcasting (Cantrip)'],
                             name: 'Potent Spellcasting',
                             ...overrides,
@@ -145,20 +140,117 @@ describe('useAttackDamageResolution - cantrip damage bonus', () => {
             };
         }
 
-        it('adds Wisdom modifier to cantrip damage when ability is positive', async () => {
+        it('adds Wisdom modifier to cantrip damage formula and total', async () => {
             const stats = makeCantripStats();
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
             const attack = {
-                name: 'Fire Bolt', damage: '1d10', damageType: 'Fire',
-                weaponType: 'ranged', properties: [],
+                name: 'Fire Bolt',
+                damage: '1d10',
+                damageType: 'Fire',
+                weaponType: 'ranged',
+                properties: [],
             };
+
             await resolveAttackDamage(attack);
             await tick();
-            expect(mockRollDamage).toHaveBeenCalledWith(
-                'Fire Bolt',
-                expect.stringContaining('4 [Cantrip]'),
-                expect.any(Number), expect.any(Array), expect.any(Number), expect.any(Object)
-            );
+
+            expect(mockRollDamage).toHaveBeenCalled();
+            const call = mockRollDamage.mock.calls[0];
+            const formula = call[1];
+            const total = call[2];
+
+            expect(formula).toContain('4 [Cantrip]');
+            expect(total).toBe(9);
+        });
+
+        it('does not add cantrip damage bonus when feature is absent', async () => {
+            const { resolveAttackDamage } = UseAttackDamageResolution();
+            const attack = {
+                name: 'Fire Bolt',
+                damage: '1d10',
+                damageType: 'Fire',
+                weaponType: 'ranged',
+                properties: [],
+            };
+
+            await resolveAttackDamage(attack);
+            await tick();
+
+            expect(mockRollDamage).toHaveBeenCalled();
+            const formula = mockRollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('[Cantrip]');
+        });
+
+        it('does not add cantrip damage bonus when spellAbilities is missing', async () => {
+            const stats = {
+                ...mockPlayerStats,
+                automation: {
+                    actions: [
+                        {
+                            type: 'damage_bonus',
+                            trigger: 'weapon_attack_hit',
+                            options: ['Potent Spellcasting (Cantrip)'],
+                            name: 'Potent Spellcasting',
+                        },
+                    ],
+                    passives: [],
+                },
+            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = {
+                name: 'Fire Bolt',
+                damage: '1d10',
+                damageType: 'Fire',
+                weaponType: 'ranged',
+                properties: [],
+            };
+
+            await resolveAttackDamage(attack);
+            await tick();
+
+            expect(mockRollDamage).toHaveBeenCalled();
+            const formula = mockRollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('[Cantrip]');
+        });
+
+        it('skips cantrip damage bonus when Wisdom modifier is negative', async () => {
+            const stats = {
+                ...mockPlayerStats,
+                abilities: [
+                    { name: 'Strength', bonus: 3 },
+                    { name: 'Dexterity', bonus: 2 },
+                    { name: 'Wisdom', bonus: -2 },
+                ],
+                automation: {
+                    actions: [
+                        {
+                            type: 'damage_bonus',
+                            trigger: 'weapon_attack_hit',
+                            options: ['Potent Spellcasting (Cantrip)'],
+                            name: 'Potent Spellcasting',
+                        },
+                    ],
+                    passives: [],
+                },
+                spellAbilities: {
+                    spells: [{ name: 'Fire Bolt', level: 0 }],
+                },
+            };
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
+            const attack = {
+                name: 'Fire Bolt',
+                damage: '1d10',
+                damageType: 'Fire',
+                weaponType: 'ranged',
+                properties: [],
+            };
+
+            await resolveAttackDamage(attack);
+            await tick();
+
+            expect(mockRollDamage).toHaveBeenCalled();
+            const formula = mockRollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('[Cantrip]');
         });
     });
 });

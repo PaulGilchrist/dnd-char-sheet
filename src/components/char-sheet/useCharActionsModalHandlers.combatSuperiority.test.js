@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useCharActionsModalHandlers from './useCharActionsModalHandlers.js';
 
@@ -34,24 +35,23 @@ vi.mock('../../services/automation/handlers/class-fighter-rogue/combatSuperiorit
   executeRallyChoice: vi.fn(),
 }));
 
-const { executeSweepingAttack } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
-const { executeBaitAndSwitchChoice } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
-const { executeCommanderStrikeChoice } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
-const { executeRallyChoice } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
+const {
+  executeSweepingAttack,
+  executeBaitAndSwitchChoice,
+  executeCommanderStrikeChoice,
+  executeRallyChoice,
+} = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
 
 const mockSetPopupHtml = vi.fn();
 const mockSetModalState = vi.fn();
 
-const baseModalState = {};
-const baseMergedModalState = {};
-
-function getHandlers(extraModalState = {}, extraMergedModalState = {}) {
+function getHandlers(modalState = {}, mergedModalState = {}) {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useCharActionsModalHandlers({
     setPopupHtml: mockSetPopupHtml,
     setModalState: mockSetModalState,
-    modalState: { ...baseModalState, ...extraModalState },
-    mergedModalState: { ...baseMergedModalState, ...extraMergedModalState },
+    modalState,
+    mergedModalState,
   });
 }
 
@@ -59,11 +59,11 @@ function makePlayerStats() {
   return { name: 'TestChar', class: { name: 'Fighter' } };
 }
 
-function makeModalData(extra = {}) {
+function makeModalData(overrides = {}) {
   return {
     playerStats: makePlayerStats(),
     campaignName: 'test-campaign',
-    ...extra,
+    ...overrides,
   };
 }
 
@@ -75,16 +75,23 @@ describe('useCharActionsModalHandlers - combat superiority', () => {
   });
 
   describe('handleSweepingAttackConfirm', () => {
-    it('returns early when targetName is null', async () => {
+    it.each([null, undefined])('returns early without side effects when targetName is %s', async (targetName) => {
       const handlers = getHandlers();
-      await handlers.handleSweepingAttackConfirm(null, {});
+      await handlers.handleSweepingAttackConfirm(targetName, {});
       expect(executeSweepingAttack).not.toHaveBeenCalled();
       expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('returns early when modalData is null', async () => {
+    it('returns early without side effects when targetName is an empty string', async () => {
       const handlers = getHandlers();
-      await handlers.handleSweepingAttackConfirm('target', null);
+      await handlers.handleSweepingAttackConfirm('', {});
+      expect(executeSweepingAttack).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
+    });
+
+    it.each([null, undefined])('returns early without side effects when modalData is %s', async (modalData) => {
+      const handlers = getHandlers();
+      await handlers.handleSweepingAttackConfirm('target', modalData);
       expect(executeSweepingAttack).not.toHaveBeenCalled();
       expect(mockSetModalState).not.toHaveBeenCalled();
     });
@@ -104,7 +111,7 @@ describe('useCharActionsModalHandlers - combat superiority', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ sweepingAttackTargetModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
+    it('does not call setPopupHtml when result has no payload but still clears modal', async () => {
       executeSweepingAttack.mockResolvedValue({});
       const handlers = getHandlers();
       const modalData = makeModalData();
@@ -115,13 +122,21 @@ describe('useCharActionsModalHandlers - combat superiority', () => {
   });
 
   describe('handleBaitAndSwitchChoiceConfirm', () => {
-    it('returns early when targetName is missing', async () => {
+    it.each([null, undefined, ''])('returns early without side effects when targetName is %s', async (targetName) => {
       const handlers = getHandlers();
-      await handlers.handleBaitAndSwitchChoiceConfirm(null, {});
+      await handlers.handleBaitAndSwitchChoiceConfirm(targetName, {});
       expect(executeBaitAndSwitchChoice).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls executeBaitAndSwitchChoice with correct args', async () => {
+    it.each([null, undefined])('returns early without side effects when modalData is %s', async (modalData) => {
+      const handlers = getHandlers();
+      await handlers.handleBaitAndSwitchChoiceConfirm('Orc', modalData);
+      expect(executeBaitAndSwitchChoice).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
+    });
+
+    it('calls executeBaitAndSwitchChoice with correct args and clears modal', async () => {
       executeBaitAndSwitchChoice.mockResolvedValue({ payload: '<p>Success</p>' });
       const handlers = getHandlers();
       const modalData = makeModalData({ dieValue: 15, maneuverName: 'Trip' });
@@ -135,7 +150,7 @@ describe('useCharActionsModalHandlers - combat superiority', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ baitAndSwitchChoiceModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
+    it('does not call setPopupHtml when result has no payload but still clears modal', async () => {
       executeBaitAndSwitchChoice.mockResolvedValue({});
       const handlers = getHandlers();
       const modalData = makeModalData({ dieValue: 15, maneuverName: 'Trip' });
@@ -146,13 +161,21 @@ describe('useCharActionsModalHandlers - combat superiority', () => {
   });
 
   describe('handleCommanderStrikeChoiceConfirm', () => {
-    it('returns early when targetName is missing', async () => {
+    it.each([null, undefined, ''])('returns early without side effects when targetName is %s', async (targetName) => {
       const handlers = getHandlers();
-      await handlers.handleCommanderStrikeChoiceConfirm(null, {});
+      await handlers.handleCommanderStrikeChoiceConfirm(targetName, {});
       expect(executeCommanderStrikeChoice).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls executeCommanderStrikeChoice with correct args', async () => {
+    it.each([null, undefined])('returns early without side effects when modalData is %s', async (modalData) => {
+      const handlers = getHandlers();
+      await handlers.handleCommanderStrikeChoiceConfirm('Ally1', modalData);
+      expect(executeCommanderStrikeChoice).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
+    });
+
+    it('calls executeCommanderStrikeChoice with correct args and clears modal', async () => {
       executeCommanderStrikeChoice.mockResolvedValue({ payload: '<p>Struck</p>' });
       const handlers = getHandlers();
       const modalData = makeModalData({ dieValue: 12, maneuverName: 'Commander Strike' });
@@ -166,7 +189,7 @@ describe('useCharActionsModalHandlers - combat superiority', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ commanderStrikeChoiceModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
+    it('does not call setPopupHtml when result has no payload but still clears modal', async () => {
       executeCommanderStrikeChoice.mockResolvedValue({});
       const handlers = getHandlers();
       const modalData = makeModalData({ dieValue: 12, maneuverName: 'Commander Strike' });
@@ -177,13 +200,21 @@ describe('useCharActionsModalHandlers - combat superiority', () => {
   });
 
   describe('handleRallyChoiceConfirm', () => {
-    it('returns early when targetName is missing', async () => {
+    it.each([null, undefined, ''])('returns early without side effects when targetName is %s', async (targetName) => {
       const handlers = getHandlers();
-      await handlers.handleRallyChoiceConfirm(null, {});
+      await handlers.handleRallyChoiceConfirm(targetName, {});
       expect(executeRallyChoice).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls executeRallyChoice with all parameters', async () => {
+    it.each([null, undefined])('returns early without side effects when modalData is %s', async (modalData) => {
+      const handlers = getHandlers();
+      await handlers.handleRallyChoiceConfirm('Ally2', modalData);
+      expect(executeRallyChoice).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
+    });
+
+    it('calls executeRallyChoice with all parameters and clears modal', async () => {
       executeRallyChoice.mockResolvedValue({ payload: '<p>Rally!</p>' });
       const handlers = getHandlers();
       const modalData = makeModalData({
@@ -206,7 +237,7 @@ describe('useCharActionsModalHandlers - combat superiority', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ rallyChoiceModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
+    it('does not call setPopupHtml when result has no payload but still clears modal', async () => {
       executeRallyChoice.mockResolvedValue({});
       const handlers = getHandlers();
       const modalData = makeModalData({

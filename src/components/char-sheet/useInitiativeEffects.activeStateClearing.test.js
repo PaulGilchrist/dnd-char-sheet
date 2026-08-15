@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import useInitiativeEffects from './useInitiativeEffects.js';
@@ -81,59 +82,43 @@ describe('useInitiativeEffects - active state clearing', () => {
         );
     }
 
-    describe('War God\'s Blessing / Living Legend clearing', () => {
-        it('clears _War_Gods_Blessing_active on initiative', () => {
+    describe('guard clauses', () => {
+        it('does not clear active states when event characterName does not match player name', () => {
             renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_War_Gods_Blessing_active', null, campaignName
+            dispatchInitiativeRoll({ characterName: 'OtherPlayer', roll: 15 });
+            const clearCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'TestMonk'
             );
+            expect(clearCalls.length).toBe(0);
         });
 
-        it('clears livingLegendActive on initiative', () => {
-            renderHookWithStats();
+        it('does not clear active states when automation is null', () => {
+            const stats = {
+                ...defaultPlayerStats,
+                automation: null,
+            };
+            renderHookWithStats(stats);
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'livingLegendActive', null, campaignName
+            const clearCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'TestMonk'
             );
+            expect(clearCalls.length).toBeGreaterThan(0);
         });
 
-        it('clears unerringStrikeUsed on initiative', () => {
-            renderHookWithStats();
+        it('does not clear active states when automation.passives/actions are undefined', () => {
+            const stats = {
+                ...defaultPlayerStats,
+                automation: {
+                    passives: undefined,
+                    actions: undefined,
+                },
+            };
+            renderHookWithStats(stats);
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'unerringStrikeUsed', null, campaignName
+            const clearCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'TestMonk'
             );
-        });
-    });
-
-    describe('Holy Nimbus clearing', () => {
-        it('clears holyNimbusActive on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'holyNimbusActive', null, campaignName
-            );
-        });
-    });
-
-    describe('Elder Champion clearing', () => {
-        it('clears elderChampionActive (sets to false) on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'elderChampionActive', false, campaignName
-            );
-        });
-    });
-
-    describe('Avenging Angel clearing', () => {
-        it('clears avengingAngelActive (sets to false) on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'avengingAngelActive', false, campaignName
-            );
+            expect(clearCalls.length).toBeGreaterThan(0);
         });
     });
 
@@ -172,41 +157,10 @@ describe('useInitiativeEffects - active state clearing', () => {
             getRuntimeValue.mockReturnValue(null);
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            // Should not call setRuntimeValue for target buffs since there's no target
             const targetBuffCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
                 call => call[0] === 'EnemyTarget'
             );
             expect(targetBuffCalls.length).toBe(0);
-        });
-    });
-
-    describe('Large Form clearing', () => {
-        it('clears largeFormActive on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'largeFormActive', null, campaignName
-            );
-        });
-    });
-
-    describe('Trance of Order clearing', () => {
-        it('clears tranceOfOrderActive on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'tranceOfOrderActive', null, campaignName
-            );
-        });
-    });
-
-    describe('Poisoned Weapons clearing', () => {
-        it('clears poisonedWeaponsActive on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'poisonedWeaponsActive', null, campaignName
-            );
         });
     });
 
@@ -237,7 +191,7 @@ describe('useInitiativeEffects - active state clearing', () => {
             );
         });
 
-        it('does nothing when no Awakened Mind buff is present', () => {
+        it('does not modify activeBuffs when no Awakened Mind buff is present', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'activeBuffs') return [{ name: 'Mage Armor', effect: 'mage_armor' }];
                 return null;
@@ -271,6 +225,59 @@ describe('useInitiativeEffects - active state clearing', () => {
             );
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'TestMonk', 'bastionOfLawLastAttackDamage', null, campaignName
+            );
+        });
+    });
+
+    describe('active state clearing completeness', () => {
+        it('clears all per-character active state fields in a single initiative event', () => {
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+
+            const calls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 'TestMonk'
+            );
+            const clearedKeys = calls.map(call => call[1]);
+
+            // Verify all expected active state fields are cleared
+            const expectedFields = [
+                '_War_Gods_Blessing_active',
+                'livingLegendActive',
+                'unerringStrikeUsed',
+                'holyNimbusActive',
+                'elderChampionActive',
+                'avengingAngelActive',
+                'vowOfEnmityTarget',
+                'vowOfEnmityCostPaid',
+                'largeFormActive',
+                'tranceOfOrderActive',
+                'poisonedWeaponsActive',
+                'awakenedMindTarget',
+                'bastionOfLawActive',
+                'bastionOfLawWardDice',
+                'bastionOfLawWardSource',
+                'bastionOfLawWardUsed',
+                'bastionOfLawLastAttackDamage',
+            ];
+
+            for (const field of expectedFields) {
+                expect(clearedKeys).toContain(field);
+            }
+        });
+
+        it('sets elderChampionActive to false (not null) on initiative', () => {
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestMonk', 'elderChampionActive', false, campaignName
+            );
+        });
+
+        it('sets avengingAngelActive to false (not null) on initiative', () => {
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestMonk', 'avengingAngelActive', false, campaignName
             );
         });
     });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useAttackDamageResolution from './useAttackDamageResolution.js';
 
@@ -60,7 +61,7 @@ import { getCurrentCombatRound, loadCombatSummary } from '../../services/encount
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../services/automation/common/buffToggle.js';
 import { hasTwoWeaponFighting } from '../../services/combat/automation/automationService.js';
-import { getAttackRiderOptions, getAttackRiderOptionsByContext } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
+import { getAttackRiderOptions, getAttackRiderOptionsByContext, executeAttackRiderManeuver } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 
 const defaultRollResult = { total: 5, rolls: [5], modifier: 0 };
 const defaultCtx = { targetName: 'Goblin', sneakAttackDice: 0 };
@@ -84,6 +85,7 @@ const mockRollDamage = vi.fn();
 const mockBuildCtx = vi.fn(() => Promise.resolve(defaultCtx));
 const mockBuildCtxSync = vi.fn(() => Promise.resolve(defaultCtx));
 const mockPendingDamageRef = { current: null };
+const mockSetPendingDamage = vi.fn();
 const modalState = {};
 const mockSetModalState = vi.fn((updates) => {
     if (typeof updates === 'function') {
@@ -105,6 +107,7 @@ function UseAttackDamageResolution(overrides = {}) {
         modalState,
         setModalState: mockSetModalState,
         pendingDamage: mockPendingDamageRef.current,
+        setPendingDamage: mockSetPendingDamage,
         resumeRef: mockPendingDamageRef,
         ...overrides,
     };
@@ -113,6 +116,10 @@ function UseAttackDamageResolution(overrides = {}) {
 
 function tick() {
     return new Promise((r) => setTimeout(r, 0));
+}
+
+function resetModalState() {
+    Object.keys(modalState).forEach((key) => delete modalState[key]);
 }
 
 describe('useAttackDamageResolution - attack rider maneuvers', () => {
@@ -133,6 +140,7 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         mockBuildCtx.mockReturnValue(Promise.resolve(defaultCtx));
         mockBuildCtxSync.mockReturnValue(Promise.resolve(defaultCtx));
         mockPendingDamageRef.current = null;
+        resetModalState();
     });
 
     // ── Precision Attack (miss) ───────────────────────────────────────
@@ -180,7 +188,7 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
             expect(mockRollDamage).toHaveBeenCalled();
         });
 
-        it('prompts for maneuver when no maneuvers are available for miss', async () => {
+        it('does not prompt when no maneuvers are available for miss', async () => {
             getAttackRiderOptionsByContext.mockResolvedValue([]);
             const { resolveAttackDamage } = UseAttackDamageResolution({
                 popupHtml: { hit: false, isCrit: false, targetName: 'Goblin' },
@@ -297,7 +305,6 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         });
 
         it('adds damage bonus when maneuver has damageBonus and result type is popup', async () => {
-            const { executeAttackRiderManeuver } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
             executeAttackRiderManeuver.mockResolvedValue({
                 type: 'popup',
                 payload: { hit: true },
@@ -323,7 +330,6 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         });
 
         it('opens sweeping attack target modal when maneuver returns that type', async () => {
-            const { executeAttackRiderManeuver } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
             executeAttackRiderManeuver.mockResolvedValue({
                 type: 'modal',
                 modalName: 'sweepingAttackTarget',
@@ -344,7 +350,6 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         });
 
         it('sets popupHtml when maneuver result type is popup', async () => {
-            const { executeAttackRiderManeuver } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
             executeAttackRiderManeuver.mockResolvedValue({
                 type: 'popup',
                 payload: { hit: true, isCrit: false },
@@ -361,6 +366,112 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
             );
 
             expect(mockSetPopupHtml).toHaveBeenCalledWith({ hit: true, isCrit: false });
+        });
+
+        it('preserves isNatural20 when precision attack adds to a natural 20 roll', async () => {
+            const { handleAttackRiderManeuverUse } = UseAttackDamageResolution({
+                popupHtml: { rolls: [20], bonus: 2, targetAc: 25, isCrit: false },
+            });
+            const maneuver = {
+                name: 'Precision Attack',
+                effect: 'attack_roll_bonus',
+                dieExpression: '1d6',
+            };
+            const attack = { damageType: 'slashing' };
+            const popupHtmlData = { isMiss: true, hit: false };
+            rollExpression.mockReturnValue({ total: 4, rolls: [4], modifier: 0 });
+
+            const result = await handleAttackRiderManeuverUse(
+                maneuver, attack, popupHtmlData,
+                '1d8+3', 8, [5, 3],
+            );
+
+            expect(result.isMissResult).toBe(true);
+            expect(result.hit).toBe(true);
+            const popupCall = mockSetPopupHtml.mock.calls[0][0];
+            expect(popupCall.isNatural20).toBe(true);
+        });
+
+        it('handles precision attack when popupHtml.rolls is missing', async () => {
+            const { handleAttackRiderManeuverUse } = UseAttackDamageResolution({
+                popupHtml: { bonus: 2, targetAc: 5, isCrit: false },
+            });
+            const maneuver = {
+                name: 'Precision Attack',
+                effect: 'attack_roll_bonus',
+                dieExpression: '1d6',
+            };
+            const attack = { damageType: 'slashing' };
+            const popupHtmlData = { isMiss: true, hit: false };
+            rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
+
+            const result = await handleAttackRiderManeuverUse(
+                maneuver, attack, popupHtmlData,
+                '1d8+3', 8, [5, 3],
+            );
+
+            expect(result.isMissResult).toBe(true);
+            expect(result.hit).toBe(true);
+        });
+
+        it('returns unchanged values when maneuver is undefined', async () => {
+            const { handleAttackRiderManeuverUse } = UseAttackDamageResolution();
+            const attack = { damageType: 'slashing' };
+            const popupHtmlData = { isMiss: false };
+
+            const result = await handleAttackRiderManeuverUse(
+                undefined, attack, popupHtmlData,
+                '1d8+3', 8, [5, 3],
+            );
+
+            expect(result).toEqual({
+                formula: '1d8+3',
+                total: 8,
+                rolls: [5, 3],
+            });
+            expect(mockSetModalState).toHaveBeenCalledWith({ attackRiderManeuverPrompt: null });
+        });
+
+        it('returns unchanged values when maneuver result is undefined', async () => {
+            executeAttackRiderManeuver.mockResolvedValue(undefined);
+
+            const { handleAttackRiderManeuverUse } = UseAttackDamageResolution();
+            const maneuver = { name: 'Unknown Maneuver' };
+            const attack = { damageType: 'slashing' };
+            const popupHtmlData = { isMiss: false };
+
+            const result = await handleAttackRiderManeuverUse(
+                maneuver, attack, popupHtmlData,
+                '1d8+3', 8, [5, 3],
+            );
+
+            expect(result).toEqual({
+                formula: '1d8+3',
+                total: 8,
+                rolls: [5, 3],
+            });
+            expect(mockSetModalState).toHaveBeenCalledWith({ attackRiderManeuverPrompt: null });
+        });
+
+        it('opens attackRiderOptions modal when maneuver returns that type', async () => {
+            executeAttackRiderManeuver.mockResolvedValue({
+                type: 'modal',
+                modalName: 'attackRiderOptions',
+                payload: { options: ['Option A', 'Option B'] },
+            });
+
+            const { handleAttackRiderManeuverUse } = UseAttackDamageResolution();
+            const maneuver = { name: 'Brutal Strike' };
+            const attack = { damageType: 'slashing' };
+            const popupHtmlData = { isMiss: false };
+
+            const result = await handleAttackRiderManeuverUse(
+                maneuver, attack, popupHtmlData,
+                '1d8+3', 8, [5, 3],
+            );
+
+            expect(result.pendingOptions).toBe(true);
+            expect(mockSetModalState).toHaveBeenCalledWith({ attackRiderOptionsModal: { options: ['Option A', 'Option B'] } });
         });
     });
 

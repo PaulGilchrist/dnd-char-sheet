@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import useInitiativeEffects from './useInitiativeEffects.js';
@@ -75,34 +76,45 @@ describe('useInitiativeEffects - event listener cleanup', () => {
         );
     }
 
-    describe('event listener cleanup on unmount', () => {
-        it('removes initiative-rolled event listener on unmount', () => {
+    describe('event listener registration and cleanup on unmount', () => {
+        it('registers and removes initiative-rolled event listener on unmount', () => {
+            const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
             const { unmount } = renderHookWithStats();
+            expect(addEventListenerSpy).toHaveBeenCalledWith(
+                'initiative-rolled',
+                expect.any(Function)
+            );
             unmount();
             expect(removeEventListenerSpy).toHaveBeenCalledWith(
                 'initiative-rolled',
                 expect.any(Function)
             );
+            addEventListenerSpy.mockRestore();
             removeEventListenerSpy.mockRestore();
         });
 
-        it('removes turn-undead-result event listener on unmount', () => {
+        it('registers and removes turn-undead-result event listener on unmount', () => {
+            const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
             const { unmount } = renderHookWithStats();
+            expect(addEventListenerSpy).toHaveBeenCalledWith(
+                'turn-undead-result',
+                expect.any(Function)
+            );
             unmount();
             expect(removeEventListenerSpy).toHaveBeenCalledWith(
                 'turn-undead-result',
                 expect.any(Function)
             );
+            addEventListenerSpy.mockRestore();
             removeEventListenerSpy.mockRestore();
         });
 
-        it('removes both event listeners when both effects are registered', () => {
+        it('removes both event listeners when both useEffects are mounted', () => {
             const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
             const { unmount } = renderHookWithStats();
             unmount();
-            // Should have two calls - one for each event type
             expect(removeEventListenerSpy).toHaveBeenCalledTimes(2);
             const calls = removeEventListenerSpy.mock.calls;
             const eventTypes = calls.map(c => c[0]);

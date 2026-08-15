@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import useAttackDamageResolution from './useAttackDamageResolution.js';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -123,7 +124,7 @@ function UseAttackDamageResolution(overrides = {}) {
         resumeRef: mockPendingDamageRef,
         ...overrides,
     };
-        return useAttackDamageResolution(deps);
+    return useAttackDamageResolution(deps);
 }
 
 function makeAttack(overrides = {}) {
@@ -146,8 +147,7 @@ describe('useAttackDamageResolution - class features', () => {
         vi.clearAllMocks();
         rollExpression.mockReturnValue(defaultRollResult);
         rollExpressionDoubled.mockReturnValue({ total: 10, rolls: [5, 5], modifier: 0 });
-        getRuntimeValue.mockReturnValue(null);
-        getRuntimeValue.mockImplementation((key, prop) => prop === 'resumeRef' ? {} : null);
+        getRuntimeValue.mockImplementation((_name, key) => (key === 'resumeRef' ? {} : null));
         setRuntimeValue.mockReturnValue(undefined);
         getActiveBuffs.mockReturnValue([]);
         hasTwoWeaponFighting.mockReturnValue(false);
@@ -163,6 +163,11 @@ describe('useAttackDamageResolution - class features', () => {
         mockBuildCtx.mockReturnValue(Promise.resolve({ targetName: 'Goblin' }));
         mockBuildCtxSync.mockReturnValue(Promise.resolve({ targetName: 'Goblin' }));
         mockPendingDamageRef.current = null;
+    });
+
+    afterEach(() => {
+        Object.keys(modalState).forEach((k) => delete modalState[k]);
+        mockSetModalState.mockClear();
     });
 
     describe('Assassinate (first_round_sneak_attack_hit)', () => {
@@ -214,6 +219,15 @@ describe('useAttackDamageResolution - class features', () => {
             await tick();
             expect(rollExpression).not.toHaveBeenCalledWith('2d6');
         });
+
+        it('skips Assassinate when combat context is unavailable', async () => {
+            getCombatContext.mockResolvedValue(null);
+            getCurrentCombatRound.mockReturnValue(1);
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeAssassinateStats() });
+            await resolveAttackDamage(makeAttack());
+            await tick();
+            expect(rollExpression).not.toHaveBeenCalledWith('2d6');
+        });
     });
 
     describe('Stealth Attack (Supreme Sneak cost deduction)', () => {
@@ -248,7 +262,13 @@ describe('useAttackDamageResolution - class features', () => {
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeStealthAttackStats() });
             await resolveAttackDamage(makeAttack());
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestRogue', 'stealthAttackCost', 0, 'test-campaign');
+            const stealthCostCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'stealthAttackCost'
+            );
+            expect(stealthCostCalls).toHaveLength(1);
+            expect(stealthCostCalls[0]).toEqual([
+                'TestRogue', 'stealthAttackCost', 0, 'test-campaign',
+            ]);
         });
 
         it('does not deduct when sneak attack dice cannot cover the cost', async () => {
@@ -268,12 +288,10 @@ describe('useAttackDamageResolution - class features', () => {
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
             await resolveAttackDamage(makeAttack());
             await tick();
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'TestRogue',
-                'stealthAttackCost',
-                0,
-                'test-campaign',
+            const stealthCostCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'stealthAttackCost'
             );
+            expect(stealthCostCalls).toHaveLength(0);
         });
     });
 
@@ -303,9 +321,6 @@ describe('useAttackDamageResolution - class features', () => {
         }
 
         it('triggers WIS save via createSaveListener on first use', async () => {
-            getRuntimeValue.mockReturnValue(null);
-        getRuntimeValue.mockImplementation((key, prop) => prop === 'resumeRef' ? {} : null);
-            createSaveListener.mockReturnValue({ promise: Promise.resolve({ success: false }) });
             getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }] });
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeRendMindStats() });
             await resolveAttackDamage(makeAttack({ name: 'Psychic Blade', damage: '1d6+5', damageType: 'Psychic' }));
@@ -323,16 +338,15 @@ describe('useAttackDamageResolution - class features', () => {
         });
 
         it('does not apply stunned condition on save success', async () => {
-            getRuntimeValue.mockReturnValue(null);
-        getRuntimeValue.mockImplementation((key, prop) => prop === 'resumeRef' ? {} : null);
             const successPromise = Promise.resolve({ success: true });
             createSaveListener.mockReturnValue({ promise: successPromise });
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeRendMindStats() });
             await resolveAttackDamage(makeAttack({ name: 'Psychic Blade', damage: '1d6+5', damageType: 'Psychic' }));
             await tick();
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'Goblin', 'activeConditions', expect.anything(), 'test-campaign',
+            const conditionCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[0] === 'Goblin' && c[1] === 'activeConditions'
             );
+            expect(conditionCalls).toHaveLength(0);
         });
 
         it('skips Rend Mind when already used this long rest', async () => {
@@ -349,8 +363,6 @@ describe('useAttackDamageResolution - class features', () => {
         });
 
         it('skips Rend Mind when no target in context', async () => {
-            getRuntimeValue.mockReturnValue(null);
-        getRuntimeValue.mockImplementation((key, prop) => prop === 'resumeRef' ? {} : null);
             mockBuildCtxSync.mockResolvedValue({ targetName: null });
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeRendMindStats() });
             await resolveAttackDamage(makeAttack({ name: 'Psychic Blade', damage: '1d6+5', damageType: 'Psychic' }));
@@ -466,8 +478,6 @@ describe('useAttackDamageResolution - class features', () => {
         });
 
         it('does not spread damage when Hunter Mark is not active', async () => {
-            getRuntimeValue.mockReturnValue(null);
-        getRuntimeValue.mockImplementation((key, prop) => prop === 'resumeRef' ? {} : null);
             getCombatContext.mockResolvedValue({
                 creatures: [
                     { name: 'TestRogue', type: 'player' },
@@ -499,6 +509,27 @@ describe('useAttackDamageResolution - class features', () => {
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeSuperiorHunterStats() });
             await resolveAttackDamage(makeAttack());
             await tick();
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
+        });
+
+        it('does not spread damage when only primary target exists', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (key === "_Hunter's_Prey_choice") return 'Colossus Slayer';
+                return null;
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'TestRogue', type: 'player', concentration: { spell: "Hunter's Mark", target: 'Goblin' } },
+                    { name: 'Goblin', type: 'npc', maxHp: 20 },
+                ],
+            });
+            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeSuperiorHunterStats() });
+            await resolveAttackDamage(makeAttack());
+            await tick();
+            expect(mockSetModalState).not.toHaveBeenCalledWith(
+                expect.objectContaining({ secondaryTargetModal: expect.anything() })
+            );
             expect(applyDamageToTarget).not.toHaveBeenCalled();
         });
     });
