@@ -1,5 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { useState } from 'react';
+import { describe, it, expect, vi } from 'vitest';
 import MarchingOrderPanel from './MarchingOrderPanel.jsx';
 
 const defaultCharacters = [
@@ -8,207 +10,225 @@ const defaultCharacters = [
     { name: 'Charlie', imagePath: '/charlie.png' },
 ];
 
-function renderPanel(marchingOrder = ['Alice', 'Bob'], characters = defaultCharacters, overrides = {}) {
-    const setMarchingOrder = vi.fn();
-    const onClose = vi.fn();
-    const { container } = render(
+function StatefulPanel({ initialOrder, characters, onClose, campaignName }) {
+    const [order, setOrder] = useState(initialOrder);
+    return (
         <MarchingOrderPanel
-            marchingOrder={marchingOrder}
-            setMarchingOrder={setMarchingOrder}
+            marchingOrder={order}
+            setMarchingOrder={setOrder}
             characters={characters}
             onClose={onClose}
-            {...overrides}
+            campaignName={campaignName}
         />
     );
-    return { container, setMarchingOrder, onClose };
+}
+
+function renderPanel({ initialOrder = ['Alice', 'Bob'], characters = defaultCharacters, campaignName, onClose } = {}) {
+    const onCloseMock = onClose ?? vi.fn();
+    const { container } = render(
+        <StatefulPanel
+            initialOrder={initialOrder}
+            characters={characters}
+            onClose={onCloseMock}
+            campaignName={campaignName}
+        />
+    );
+    return { container, onClose: onCloseMock };
 }
 
 function getRowByName(container, name) {
-    const rows = container.querySelectorAll('.marching-order-row');
-    for (const row of rows) {
-        if (row.querySelector('.marching-order-name').textContent === name) {
-            return row;
-        }
-    }
-    return null;
+    const nameEl = within(container).getByText(name);
+    return nameEl.closest('.marching-order-row');
+}
+
+function getOrderedNames(container) {
+    return [...container.querySelectorAll('.marching-order-name')].map(el => el.textContent);
+}
+
+function getControls(row) {
+    return {
+        up: within(row).getByTitle('Move up'),
+        down: within(row).getByTitle('Move down'),
+        remove: within(row).getByTitle('Remove from order'),
+    };
 }
 
 describe('MarchingOrderPanel', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
     describe('rendering', () => {
-        it('renders the panel with title, close button, and list', () => {
+        it('renders the panel with a title, close button, and row list', () => {
             const { container } = renderPanel();
             expect(container.querySelector('.marching-order-panel')).toBeInTheDocument();
             expect(screen.getByText('Marching Order')).toBeInTheDocument();
+            expect(screen.getByLabelText('Close marching order')).toBeInTheDocument();
             expect(container.querySelector('.marching-order-list')).toBeInTheDocument();
         });
 
-        it('calls onClose when close button is clicked', () => {
+        it('calls onClose when the close button is clicked', () => {
             const { onClose } = renderPanel();
-            const closeBtn = document.querySelector('.marching-order-close');
-            fireEvent.click(closeBtn);
+            fireEvent.click(screen.getByLabelText('Close marching order'));
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('renders rows with rank numbers, character names, and leader class on first row', () => {
+        it('renders rows in marching order with rank numbers and marks the first row as leader', () => {
             const { container } = renderPanel();
-            const rows = container.querySelectorAll('.marching-order-row');
-            expect(rows.length).toBe(2);
-            expect(rows[0]).toHaveClass('marching-order-leader');
-            expect(rows[1]).not.toHaveClass('marching-order-leader');
+            expect(getOrderedNames(container)).toEqual(['Alice', 'Bob']);
             const ranks = [...container.querySelectorAll('.marching-order-rank')].map(el => el.textContent);
             expect(ranks).toEqual(['1', '2']);
-            expect(screen.getByText('Alice')).toBeInTheDocument();
-            expect(screen.getByText('Bob')).toBeInTheDocument();
+            expect(getRowByName(container, 'Alice')).toHaveClass('marching-order-leader');
+            expect(getRowByName(container, 'Bob')).not.toHaveClass('marching-order-leader');
         });
 
-        it('renders character image when imagePath exists, initial otherwise', () => {
+        it('renders the character image when imagePath exists and initials otherwise', () => {
             const { container } = renderPanel();
             const img = container.querySelector('.marching-order-img');
             expect(img).toHaveAttribute('src', '/alice.png');
             expect(img).toHaveAttribute('alt', 'Alice');
-            const initials = container.querySelectorAll('.marching-order-initial');
-            expect(initials.length).toBe(1);
-            expect(initials[0]).toHaveTextContent('B');
+            expect(container.querySelector('.marching-order-initial')).toHaveTextContent('B');
         });
 
-        it('renders initials for all characters without images', () => {
+        it('renders initials for every character that has no image', () => {
             const characters = [
                 { name: 'Alice', imagePath: null },
                 { name: 'Bob', imagePath: null },
             ];
-            const { container } = renderPanel(['Alice', 'Bob'], characters);
-            const initials = container.querySelectorAll('.marching-order-initial');
-            expect(initials.length).toBe(2);
-            expect(initials[0]).toHaveTextContent('A');
-            expect(initials[1]).toHaveTextContent('B');
+            const { container } = renderPanel({ initialOrder: ['Alice', 'Bob'], characters });
+            const initials = [...container.querySelectorAll('.marching-order-initial')].map(el => el.textContent);
+            expect(initials).toEqual(['A', 'B']);
         });
     });
 
     describe('move up', () => {
-        it('swaps the character up when not at the top', () => {
-            const { container, setMarchingOrder } = renderPanel();
-            const bobRow = getRowByName(container, 'Bob');
-            const buttons = bobRow.querySelectorAll('.marching-order-controls button');
-            fireEvent.click(buttons[0]);
-            expect(setMarchingOrder).toHaveBeenCalledWith(['Bob', 'Alice']);
-        });
-
-        it('does nothing when the character is already at index 0', () => {
-            const { container, setMarchingOrder } = renderPanel();
-            const aliceRow = getRowByName(container, 'Alice');
-            const buttons = aliceRow.querySelectorAll('.marching-order-controls button');
-            fireEvent.click(buttons[0]);
-            expect(setMarchingOrder).not.toHaveBeenCalled();
-        });
-
-        it('disables the move up button for the first row', () => {
+        it('moves a character up and re-ranks the rows', () => {
             const { container } = renderPanel();
-            const aliceRow = getRowByName(container, 'Alice');
-            const buttons = aliceRow.querySelectorAll('.marching-order-controls button');
-            expect(buttons[0]).toBeDisabled();
+            fireEvent.click(getControls(getRowByName(container, 'Bob')).up);
+            expect(getOrderedNames(container)).toEqual(['Bob', 'Alice']);
+            expect(getRowByName(container, 'Bob')).toHaveClass('marching-order-leader');
+            expect([...container.querySelectorAll('.marching-order-rank')].map(el => el.textContent)).toEqual(['1', '2']);
+        });
+
+        it('disables the move up control for the first row', () => {
+            const { container } = renderPanel();
+            expect(getControls(getRowByName(container, 'Alice')).up).toBeDisabled();
+        });
+
+        it('allows moving a character up repeatedly to the top', () => {
+            const { container } = renderPanel({ initialOrder: ['Alice', 'Bob', 'Charlie'] });
+            const charlieUp = getControls(getRowByName(container, 'Charlie')).up;
+            fireEvent.click(charlieUp);
+            fireEvent.click(getControls(getRowByName(container, 'Charlie')).up);
+            expect(getOrderedNames(container)).toEqual(['Charlie', 'Alice', 'Bob']);
         });
     });
 
     describe('move down', () => {
-        it('swaps the character down when not at the bottom', () => {
-            const { container, setMarchingOrder } = renderPanel();
-            const aliceRow = getRowByName(container, 'Alice');
-            const buttons = aliceRow.querySelectorAll('.marching-order-controls button');
-            fireEvent.click(buttons[1]);
-            expect(setMarchingOrder).toHaveBeenCalledWith(['Bob', 'Alice']);
-        });
-
-        it('does nothing when the character is already at the last index', () => {
-            const { container, setMarchingOrder } = renderPanel();
-            const bobRow = getRowByName(container, 'Bob');
-            const buttons = bobRow.querySelectorAll('.marching-order-controls button');
-            fireEvent.click(buttons[1]);
-            expect(setMarchingOrder).not.toHaveBeenCalled();
-        });
-
-        it('disables the move down button for the last row', () => {
+        it('moves a character down and re-ranks the rows', () => {
             const { container } = renderPanel();
-            const bobRow = getRowByName(container, 'Bob');
-            const buttons = bobRow.querySelectorAll('.marching-order-controls button');
-            expect(buttons[1]).toBeDisabled();
+            fireEvent.click(getControls(getRowByName(container, 'Alice')).down);
+            expect(getOrderedNames(container)).toEqual(['Bob', 'Alice']);
+            expect(getRowByName(container, 'Bob')).toHaveClass('marching-order-leader');
+        });
+
+        it('disables the move down control for the last row', () => {
+            const { container } = renderPanel();
+            expect(getControls(getRowByName(container, 'Bob')).down).toBeDisabled();
+        });
+
+        it('moving a character down and back up restores the original order', () => {
+            const { container } = renderPanel();
+            const aliceControls = getControls(getRowByName(container, 'Alice'));
+            fireEvent.click(aliceControls.down);
+            fireEvent.click(getControls(getRowByName(container, 'Alice')).up);
+            expect(getOrderedNames(container)).toEqual(['Alice', 'Bob']);
         });
     });
 
     describe('remove from order', () => {
-        it('removes the character when the remove button is clicked', () => {
-            const { container, setMarchingOrder } = renderPanel();
-            const bobRow = getRowByName(container, 'Bob');
-            const buttons = bobRow.querySelectorAll('.marching-order-controls button');
-            fireEvent.click(buttons[2]);
-            const arg = setMarchingOrder.mock.calls[0][0];
-            const result = typeof arg === 'function' ? arg(['Alice', 'Bob']) : arg;
-            expect(result).toEqual(['Alice']);
+        it('removes the character, re-ranks the remaining rows, and re-offers them in the add section', () => {
+            const { container } = renderPanel();
+            fireEvent.click(getControls(getRowByName(container, 'Bob')).remove);
+            expect(getOrderedNames(container)).toEqual(['Alice']);
+            expect([...container.querySelectorAll('.marching-order-rank')].map(el => el.textContent)).toEqual(['1']);
+            expect(screen.getByText('+ Bob')).toBeInTheDocument();
         });
 
-        it('removes the first character when remove is clicked on row 0', () => {
-            const { container, setMarchingOrder } = renderPanel();
-            const aliceRow = getRowByName(container, 'Alice');
-            const buttons = aliceRow.querySelectorAll('.marching-order-controls button');
-            fireEvent.click(buttons[2]);
-            const arg = setMarchingOrder.mock.calls[0][0];
-            const result = typeof arg === 'function' ? arg(['Alice', 'Bob']) : arg;
-            expect(result).toEqual(['Bob']);
+        it('removing the leader promotes the next character to leader', () => {
+            const { container } = renderPanel();
+            fireEvent.click(getControls(getRowByName(container, 'Alice')).remove);
+            expect(getOrderedNames(container)).toEqual(['Bob']);
+            expect(getRowByName(container, 'Bob')).toHaveClass('marching-order-leader');
+        });
+
+        it('allows re-adding a removed character to the end of the order', () => {
+            const { container } = renderPanel();
+            fireEvent.click(getControls(getRowByName(container, 'Bob')).remove);
+            fireEvent.click(screen.getByText('+ Bob'));
+            expect(getOrderedNames(container)).toEqual(['Alice', 'Bob']);
+            expect(screen.queryByText('+ Bob')).not.toBeInTheDocument();
         });
     });
 
     describe('add to order', () => {
-        it('renders add buttons for characters not in order', () => {
+        it('renders add buttons only for characters not already in the order', () => {
             renderPanel();
             expect(screen.getByText('+ Charlie')).toBeInTheDocument();
-        });
-
-        it('appends the character when add button is clicked', () => {
-            const { setMarchingOrder } = renderPanel();
-            fireEvent.click(screen.getByText('+ Charlie'));
-            const arg = setMarchingOrder.mock.calls[0][0];
-            const result = typeof arg === 'function' ? arg(['Alice', 'Bob']) : arg;
-            expect(result).toEqual(['Alice', 'Bob', 'Charlie']);
-        });
-
-        it('does not show add buttons for characters already in order', () => {
-            renderPanel();
             expect(screen.queryByText('+ Alice')).not.toBeInTheDocument();
             expect(screen.queryByText('+ Bob')).not.toBeInTheDocument();
         });
 
-        it('does not show add section when all characters are in order', () => {
-            const { container } = renderPanel(
-                ['Alice', 'Bob', 'Charlie'],
-                defaultCharacters,
-            );
+        it('appends the added character to the end of the order with the next rank', () => {
+            const { container } = renderPanel();
+            fireEvent.click(screen.getByText('+ Charlie'));
+            expect(getOrderedNames(container)).toEqual(['Alice', 'Bob', 'Charlie']);
+            expect(getRowByName(container, 'Charlie')).not.toHaveClass('marching-order-leader');
+            expect([...container.querySelectorAll('.marching-order-rank')].map(el => el.textContent)).toEqual(['1', '2', '3']);
+            expect(screen.queryByText('+ Charlie')).not.toBeInTheDocument();
+        });
+
+        it('does not render the add section when every character is in the order', () => {
+            const { container } = renderPanel({ initialOrder: ['Alice', 'Bob', 'Charlie'] });
             expect(container.querySelector('.marching-order-add-section')).not.toBeInTheDocument();
         });
 
-        it('does not show add section when characters array is empty', () => {
-            const { container } = renderPanel(['Alice'], []);
+        it('does not render the add section when no characters are provided', () => {
+            const { container } = renderPanel({ initialOrder: ['Alice'], characters: [] });
             expect(container.querySelector('.marching-order-add-section')).not.toBeInTheDocument();
         });
     });
 
     describe('empty state', () => {
-        it('shows empty message when marching order is empty', () => {
-            renderPanel([], defaultCharacters);
+        it('shows an empty message when the marching order is empty', () => {
+            renderPanel({ initialOrder: [] });
             expect(screen.getByText('No characters assigned to march order.')).toBeInTheDocument();
         });
     });
 
     describe('single character', () => {
-        it('renders one row with both move buttons disabled', () => {
-            const { container } = renderPanel(['Alice']);
-            const rows = container.querySelectorAll('.marching-order-row');
-            expect(rows.length).toBe(1);
-            const buttons = container.querySelectorAll('.marching-order-controls button');
-            expect(buttons[0]).toBeDisabled();
-            expect(buttons[1]).toBeDisabled();
+        it('renders one row with both move controls disabled', () => {
+            const { container } = renderPanel({ initialOrder: ['Alice'] });
+            const controls = getControls(getRowByName(container, 'Alice'));
+            expect(controls.up).toBeDisabled();
+            expect(controls.down).toBeDisabled();
+        });
+    });
+
+    describe('image paths', () => {
+        it('prefixes relative image paths with the campaign name', () => {
+            const characters = [{ name: 'Alice', imagePath: 'alice.png' }];
+            const { container } = renderPanel({ initialOrder: ['Alice'], characters, campaignName: 'SummerCampaign' });
+            expect(container.querySelector('.marching-order-img')).toHaveAttribute('src', 'campaigns/SummerCampaign/alice.png');
+        });
+
+        it('uses http image paths as-is even when a campaign name is present', () => {
+            const characters = [{ name: 'Alice', imagePath: 'https://example.com/alice.png' }];
+            const { container } = renderPanel({ initialOrder: ['Alice'], characters, campaignName: 'SummerCampaign' });
+            expect(container.querySelector('.marching-order-img')).toHaveAttribute('src', 'https://example.com/alice.png');
+        });
+
+        it('renders initials without crashing when a marching order name has no matching character', () => {
+            const { container } = renderPanel({ initialOrder: ['Ghost'] });
+            const ghostRow = getRowByName(container, 'Ghost');
+            expect(within(ghostRow).getByText('G')).toBeInTheDocument();
+            expect(getRowByName(container, 'Ghost')).toHaveClass('marching-order-leader');
         });
     });
 });

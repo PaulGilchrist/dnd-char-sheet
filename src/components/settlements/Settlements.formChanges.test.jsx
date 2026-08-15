@@ -1,17 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+// Threat-field form behavior while editing an existing settlement.
+// Intentionally NOT duplicated here (covered in sibling files):
+//   - size change auto-populates population/description/atmosphere/government/threat
+//       with exact deterministic values -> Settlements.formFields.test.jsx
+//   - threat field hidden when editing a settlement without a threat
+//       -> Settlements.formFields.test.jsx
+//   - threat field revealed by a size change in the new-settlement modal
+//       -> Settlements.formFields.test.jsx
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
 
-const settlementMockReturn = {
+// Module-level mock store for useEntityManagement — vi.mock captures this object
+// by reference. Tests mutate its `items` field before rendering so the component
+// reads fresh state.
+const settlementMockStore = {
   items: [],
   loading: false,
-  loadItems: () => {},
-  saveItems: async () => {},
-  deleteItem: async () => {},
+  loadItems: vi.fn(),
+  saveItems: vi.fn(),
+  deleteItem: vi.fn(),
 };
 
 vi.mock('../../hooks/useEntityManagement.js', () => ({
-  useEntityManagement: () => ({ ...settlementMockReturn }),
+  useEntityManagement: () => settlementMockStore,
 }));
 
 vi.mock('../common/PreviewToggle.jsx', () => ({
@@ -31,118 +43,75 @@ vi.mock('../common/PreviewToggle.jsx', () => ({
 }));
 
 vi.mock('../../services/campaign/settlementGenerator.js', () => ({
-  generateSettlement: vi.fn().mockResolvedValue({
-    name: 'Generated Town',
-    size: 'town',
-    description: 'A bustling town',
-    atmosphere: 'Lively',
-    government: 'Council',
-    population: '1,500 souls',
-    services: [],
-    notableNPCs: [],
-    rumors: [],
-    tags: 'generated',
-    notes: '',
-    threat: 'Bandits',
-  }),
+  generateSettlement: vi.fn(),
 }));
 
+const makeSettlement = (name, overrides = {}) => ({
+  name,
+  size: 'village',
+  population: '',
+  tags: '',
+  services: [],
+  description: '',
+  atmosphere: '',
+  government: '',
+  notableNPCs: [],
+  rumors: [],
+  notes: '',
+  threat: '',
+  ...overrides,
+});
 
-describe('Settlements - form field changes', () => {
-  const mockUseSettlements = {
-    items: [],
-    loading: false,
-    saveItems: async () => {},
-    deleteItem: async () => {},
-  };
+const THREAT_PLACEHOLDER = /current dangers or tensions/i;
 
+const renderEditingSettlement = (settlement) => {
+  settlementMockStore.items = [settlement];
+  render(<Settlements campaignName="test" onBack={() => {}} />);
+  fireEvent.click(
+    screen.getByRole('button', { name: new RegExp(`edit settlement: ${settlement.name}`, 'i') }),
+  );
+};
+
+describe('Settlements - form field changes (threat field)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    settlementMockStore.items = [];
+    settlementMockStore.loading = false;
+    settlementMockStore.loadItems.mockResolvedValue(undefined);
+    // The component fetches settlement-descriptions.json on mount; no test here
+    // changes the size select, so the response body is irrelevant.
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({
-        village: {
-          descriptions: ['A quiet village', 'A small farming village'],
-          atmospheres: ['Peaceful', 'Rustic'],
-          governments: ['Village council'],
-          threats: ['Wild animals'],
-          features: ['A small pond'],
-        },
-        town: {
-          descriptions: ['A bustling town'],
-          atmospheres: ['Lively'],
-          governments: ['Mayor'],
-          threats: ['Bandits'],
-          features: ['A market square'],
-        },
-        city: {
-          descriptions: ['A great city'],
-          atmospheres: ['Cosmopolitan'],
-          governments: ['City council'],
-          threats: ['Crime'],
-          features: ['A grand plaza'],
-        },
-        metropolis: {
-          descriptions: ['A vast metropolis'],
-          atmospheres: ['Diverse'],
-          governments: ['Duke'],
-          threats: ['Political intrigue'],
-          features: ['A massive wall'],
-        },
-      }),
+      json: () => Promise.resolve({}),
     });
-    // Override module mock
-    Object.assign(settlementMockReturn, mockUseSettlements);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('populates fields with defaults when size changes', async () => {
-    globalThis.Math.random = () => 0.5;
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const modalOpen = screen.getByRole('button', { name: /new settlement/i });
-    fireEvent.click(modalOpen);
-    const sizeSelect = screen.getByRole('combobox', { name: /size/i });
-    fireEvent.change(sizeSelect, { target: { value: 'town' } });
-    const popInput = screen.getByPlaceholderText(/souls/i);
-    expect(popInput.value).toContain('souls');
+  it('shows the threat field with its current value when editing a settlement that has a threat', () => {
+    renderEditingSettlement(makeSettlement('Threat Town', { threat: 'Bandits' }));
+
+    expect(screen.getByText('Threats')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(THREAT_PLACEHOLDER)).toHaveValue('Bandits');
   });
 
-  it('shows or hides threat preview toggle based on threat value', () => {
-    // Empty threat — toggle should not appear
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const modalOpen = screen.getByRole('button', { name: /new settlement/i });
-    fireEvent.click(modalOpen);
-    expect(screen.queryByText(/threats/i)).not.toBeInTheDocument();
+  it('updates the threat value when typed into its field', () => {
+    renderEditingSettlement(makeSettlement('Threat Town', { threat: 'Bandits' }));
 
-    // With threat — toggle should appear
-    Object.assign(settlementMockReturn, {
-      ...mockUseSettlements,
-      items: [
-        { name: 'Threat Town', size: 'village', population: '', tags: '', services: [], description: '', atmosphere: '', government: '', notableNPCs: [], rumors: [], notes: '', threat: 'Bandits' },
-      ],
-    });
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const settlementItem = screen.getByRole('button', { name: /edit settlement/i });
-    fireEvent.click(settlementItem);
-    expect(screen.getByText(/threats/i)).toBeInTheDocument();
+    const threatField = screen.getByPlaceholderText(THREAT_PLACEHOLDER);
+    fireEvent.change(threatField, { target: { value: 'Dragon sightings' } });
+
+    expect(threatField).toHaveValue('Dragon sightings');
   });
 
-  it('updates threat value via PreviewToggle when threat is present', () => {
-    Object.assign(settlementMockReturn, {
-      ...mockUseSettlements,
-      items: [
-        { name: 'Threat Town', size: 'village', population: '', tags: '', services: [], description: '', atmosphere: '', government: '', notableNPCs: [], rumors: [], notes: '', threat: 'Bandits' },
-      ],
-    });
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const settlementItem = screen.getByRole('button', { name: /edit settlement/i });
-    fireEvent.click(settlementItem);
-    // Find the threat PreviewToggle textarea by its data-testid
-    const threatTextarea = screen.getByTestId('preview-toggle-settlement-threat');
-    fireEvent.change(threatTextarea, { target: { value: 'Dragon sightings' } });
-    expect(threatTextarea.value).toBe('Dragon sightings');
+  it('hides the threat field again when the threat value is cleared', () => {
+    renderEditingSettlement(makeSettlement('Threat Town', { threat: 'Bandits' }));
+
+    fireEvent.change(screen.getByPlaceholderText(THREAT_PLACEHOLDER), { target: { value: '' } });
+
+    expect(screen.queryByPlaceholderText(THREAT_PLACEHOLDER)).not.toBeInTheDocument();
+    expect(screen.queryByText('Threats')).not.toBeInTheDocument();
   });
 });

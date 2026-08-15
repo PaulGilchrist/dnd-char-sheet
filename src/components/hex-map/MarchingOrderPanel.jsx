@@ -29,7 +29,7 @@ function MarchingOrderPanel({ marchingOrder, setMarchingOrder, characters, onClo
         <div className="marching-order-panel">
             <div className="marching-order-header">
                 <span className="marching-order-title">Marching Order</span>
-                <button className="marching-order-close" onClick={onClose}>
+                <button className="marching-order-close" onClick={onClose} aria-label="Close marching order">
                     <i className="fa-solid fa-times"></i>
                 </button>
             </div>

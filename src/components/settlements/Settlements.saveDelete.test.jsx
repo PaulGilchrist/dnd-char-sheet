@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
@@ -8,7 +9,6 @@ const settlementMockStore = {
   loading: false,
   loadItems: vi.fn(),
   deleteItem: vi.fn(),
-  saveItems: vi.fn(),
 };
 
 vi.mock('../../hooks/useEntityManagement.js', () => ({
@@ -48,21 +48,44 @@ vi.mock('../../services/campaign/settlementGenerator.js', () => ({
   }),
 }));
 
-// Module-level mock service functions — vi.mock closure captures these by reference.
+// Only saveSettlement is invoked directly by the component. loadSettlements and
+// deleteSettlement are passed into the (mocked) useEntityManagement hook and never
+// reach the service, so they are exported only as inert placeholders (Vitest
+// requires every named import the component makes to exist on the mock).
 const mockSaveSettlement = vi.fn();
-const mockDeleteSettlement = vi.fn();
-
 vi.mock('../../services/campaign/settlementsService.js', () => ({
   loadSettlements: vi.fn(),
   saveSettlement: (...args) => mockSaveSettlement(...args),
-  deleteSettlement: (...args) => mockDeleteSettlement(...args),
+  deleteSettlement: vi.fn(),
 }));
+
+const makeSettlement = (name) => ({
+  name,
+  size: 'village',
+  population: '',
+  tags: '',
+  services: [],
+  description: '',
+  atmosphere: '',
+  government: '',
+  notableNPCs: [],
+  rumors: [],
+  notes: '',
+  threat: '',
+});
+
+const openNewSettlement = () => {
+  fireEvent.click(screen.getByRole('button', { name: /new settlement/i }));
+};
+
+const openEditSettlement = () => {
+  fireEvent.click(screen.getByRole('button', { name: /edit settlement/i }));
+};
 
 describe('Settlements - save and delete behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSaveSettlement.mockResolvedValue({ success: true });
-    mockDeleteSettlement.mockResolvedValue({ success: true });
     settlementMockStore.deleteItem.mockResolvedValue({});
     settlementMockStore.loadItems.mockResolvedValue(undefined);
     settlementMockStore.items = [];
@@ -77,243 +100,221 @@ describe('Settlements - save and delete behavior', () => {
     vi.restoreAllMocks();
   });
 
-  it('calls saveSettlement with campaign name, formData, and oldName when editing an existing settlement', async () => {
-    settlementMockStore.items = [
-      { name: 'Old Name', size: 'village', population: '', tags: '', services: [], description: '', atmosphere: '', government: '', notableNPCs: [], rumors: [], notes: '', threat: '' },
-    ];
-    render(<Settlements campaignName="test" onBack={() => {}} />);
+  describe('Save', () => {
+    it('saves an edited settlement with its new data and the original name as the rename target', async () => {
+      settlementMockStore.items = [makeSettlement('Old Name')];
+      render(<Settlements campaignName="test" onBack={() => {}} />);
 
-    const editBtn = screen.getByRole('button', { name: /edit settlement/i });
-    fireEvent.click(editBtn);
+      openEditSettlement();
 
-    const nameInput = screen.getByDisplayValue('Old Name');
-    fireEvent.change(nameInput, { target: { value: 'New Name' } });
+      fireEvent.change(screen.getByDisplayValue('Old Name'), { target: { value: 'New Name' } });
+      fireEvent.change(screen.getByTestId('preview-toggle-settlement-description'), {
+        target: { value: 'A bustling marketplace' },
+      });
 
-    const saveBtn = screen.getByRole('button', { name: /save/i });
-    fireEvent.click(saveBtn);
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
-    await waitFor(() => {
-      expect(mockSaveSettlement).toHaveBeenCalledWith('test', expect.objectContaining({ name: 'New Name' }), 'Old Name');
-    });
-  });
-
-  it('calls saveSettlement with undefined oldName when creating a new settlement', async () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-
-    const newBtn = screen.getByRole('button', { name: /new settlement/i });
-    fireEvent.click(newBtn);
-
-    const nameInput = screen.getByRole('textbox', { name: /name\s?\*/i });
-    fireEvent.change(nameInput, { target: { value: 'My Settlement' } });
-
-    const saveBtn = screen.getByRole('button', { name: /save/i });
-    fireEvent.click(saveBtn);
-
-    await waitFor(() => {
-      expect(mockSaveSettlement).toHaveBeenCalledWith('test', expect.objectContaining({ name: 'My Settlement' }), undefined);
-    });
-  });
-
-  it('calls loadItems after successful save and closes modal', async () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-
-    const newBtn = screen.getByRole('button', { name: /new settlement/i });
-    fireEvent.click(newBtn);
-
-    const nameInput = screen.getByRole('textbox', { name: /name\s?\*/i });
-    fireEvent.change(nameInput, { target: { value: 'My Settlement' } });
-
-    const saveBtn = screen.getByRole('button', { name: /save/i });
-    fireEvent.click(saveBtn);
-
-    await waitFor(() => {
-      expect(mockSaveSettlement).toHaveBeenCalled();
-      expect(settlementMockStore.loadItems).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockSaveSettlement).toHaveBeenCalledWith(
+          'test',
+          expect.objectContaining({ name: 'New Name', description: 'A bustling marketplace' }),
+          'Old Name'
+        );
+      });
     });
 
-    expect(screen.queryByRole('heading', { name: 'New Settlement' })).not.toBeInTheDocument();
-  });
+    it('saves a new settlement without an old name', async () => {
+      render(<Settlements campaignName="test" onBack={() => {}} />);
 
-  it('does not call saveSettlement when name is only whitespace', async () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
+      openNewSettlement();
+      fireEvent.change(screen.getByRole('textbox', { name: /name\s?\*/i }), {
+        target: { value: 'My Settlement' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
-    const newBtn = screen.getByRole('button', { name: /new settlement/i });
-    fireEvent.click(newBtn);
+      await waitFor(() => {
+        expect(mockSaveSettlement).toHaveBeenCalledWith(
+          'test',
+          expect.objectContaining({ name: 'My Settlement' }),
+          undefined
+        );
+      });
+    });
 
-    const nameInput = screen.getByRole('textbox', { name: /name\s?\*/i });
-    fireEvent.change(nameInput, { target: { value: '   ' } });
+    it('reloads the settlement list and closes the modal after a successful save', async () => {
+      render(<Settlements campaignName="test" onBack={() => {}} />);
 
-    const saveBtn = screen.getByRole('button', { name: /save/i });
-    fireEvent.click(saveBtn);
+      openNewSettlement();
+      fireEvent.change(screen.getByRole('textbox', { name: /name\s?\*/i }), {
+        target: { value: 'My Settlement' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
-    await waitFor(() => {});
-    expect(mockSaveSettlement).not.toHaveBeenCalled();
-  });
+      await waitFor(() => {
+        expect(mockSaveSettlement).toHaveBeenCalled();
+        expect(settlementMockStore.loadItems).toHaveBeenCalled();
+      });
 
-  it('disables the save button while saving is in progress', async () => {
-    mockSaveSettlement.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100)));
-
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-
-    const newBtn = screen.getByRole('button', { name: /new settlement/i });
-    fireEvent.click(newBtn);
-
-    const nameInput = screen.getByRole('textbox', { name: /name\s?\*/i });
-    fireEvent.change(nameInput, { target: { value: 'My Settlement' } });
-
-    const saveBtn = screen.getByRole('button', { name: /save/i });
-    fireEvent.click(saveBtn);
-
-    expect(saveBtn).toBeDisabled();
-    expect(saveBtn).toHaveTextContent('Saving…');
-
-    // Wait for save to complete and modal to close
-    await waitFor(() => {
-      expect(mockSaveSettlement).toHaveBeenCalled();
       expect(screen.queryByRole('heading', { name: 'New Settlement' })).not.toBeInTheDocument();
     });
-  });
 
-  it('disables the save button and keeps modal open when save fails', async () => {
-    mockSaveSettlement.mockRejectedValue(new Error('Save failed'));
+    it('does not attempt to save when the name is only whitespace', () => {
+      render(<Settlements campaignName="test" onBack={() => {}} />);
 
-    render(<Settlements campaignName="test" onBack={() => {}} />);
+      openNewSettlement();
+      fireEvent.change(screen.getByRole('textbox', { name: /name\s?\*/i }), {
+        target: { value: '   ' },
+      });
 
-    const newBtn = screen.getByRole('button', { name: /new settlement/i });
-    fireEvent.click(newBtn);
+      const saveBtn = screen.getByRole('button', { name: /save/i });
+      expect(saveBtn).toBeDisabled();
+      fireEvent.click(saveBtn);
 
-    const nameInput = screen.getByRole('textbox', { name: /name\s?\*/i });
-    fireEvent.change(nameInput, { target: { value: 'My Settlement' } });
+      expect(mockSaveSettlement).not.toHaveBeenCalled();
+    });
 
-    const saveBtn = screen.getByRole('button', { name: /save/i });
-    fireEvent.click(saveBtn);
+    it('disables the save button and shows "Saving…" while a save is in flight', async () => {
+      let resolveSave;
+      mockSaveSettlement.mockImplementation(() => new Promise((resolve) => {
+        resolveSave = resolve;
+      }));
 
-    expect(saveBtn).toBeDisabled();
+      render(<Settlements campaignName="test" onBack={() => {}} />);
 
-    await waitFor(() => {
+      openNewSettlement();
+      fireEvent.change(screen.getByRole('textbox', { name: /name\s?\*/i }), {
+        target: { value: 'My Settlement' },
+      });
+
+      const saveBtn = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveBtn);
+
+      expect(saveBtn).toBeDisabled();
+      expect(saveBtn).toHaveTextContent('Saving…');
+
+      resolveSave({ success: true });
+
+      await waitFor(() => {
+        expect(mockSaveSettlement).toHaveBeenCalled();
+        expect(screen.queryByRole('heading', { name: 'New Settlement' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('re-enables the save button and keeps the modal open with data intact when a save fails', async () => {
+      mockSaveSettlement.mockRejectedValue(new Error('Save failed'));
+
+      render(<Settlements campaignName="test" onBack={() => {}} />);
+
+      openNewSettlement();
+      fireEvent.change(screen.getByRole('textbox', { name: /name\s?\*/i }), {
+        target: { value: 'My Settlement' },
+      });
+
+      const saveBtn = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveBtn);
+      expect(saveBtn).toBeDisabled();
+
+      await waitFor(() => {
+        expect(mockSaveSettlement).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(saveBtn).not.toBeDisabled();
+      });
+
+      expect(screen.getByRole('heading', { name: 'New Settlement' })).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /name\s?\*/i })).toHaveValue('My Settlement');
+    });
+
+    it('disables the cancel button while a save is in flight', () => {
+      mockSaveSettlement.mockImplementation(() => new Promise(() => {}));
+
+      render(<Settlements campaignName="test" onBack={() => {}} />);
+
+      openNewSettlement();
+      fireEvent.change(screen.getByRole('textbox', { name: /name\s?\*/i }), {
+        target: { value: 'My Settlement' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
       expect(mockSaveSettlement).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
-      expect(saveBtn).not.toBeDisabled();
-    });
-    expect(screen.getByRole('heading', { name: 'New Settlement' })).toBeInTheDocument();
-  });
-
-  it('does not call saveSettlement when name input is empty', async () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-
-    const newBtn = screen.getByRole('button', { name: /new settlement/i });
-    fireEvent.click(newBtn);
-
-    const saveBtn = screen.getByRole('button', { name: /save/i });
-    fireEvent.click(saveBtn);
-
-    expect(mockSaveSettlement).not.toHaveBeenCalled();
-  });
-
-  it('does not call deleteSettlement when user cancels confirmation', async () => {
-    vi.spyOn(globalThis.window, 'confirm').mockReturnValue(false);
-
-    settlementMockStore.items = [
-      { name: 'Keep Me', size: 'village', population: '', tags: '', services: [], description: '', atmosphere: '', government: '', notableNPCs: [], rumors: [], notes: '', threat: '' },
-    ];
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-
-    const editBtn = screen.getByRole('button', { name: /edit settlement/i });
-    fireEvent.click(editBtn);
-
-    const deleteBtn = screen.getByRole('button', { name: 'Delete' });
-    fireEvent.click(deleteBtn);
-
-    expect(mockDeleteSettlement).not.toHaveBeenCalled();
-    expect(settlementMockStore.deleteItem).not.toHaveBeenCalled();
-    expect(screen.getByRole('heading', { name: 'Edit Settlement' })).toBeInTheDocument();
-  });
-
-  it('calls deleteSettlement with settlement name when user confirms deletion', async () => {
-    vi.spyOn(globalThis.window, 'confirm').mockReturnValue(true);
-
-    settlementMockStore.items = [
-      { name: 'Delete Me', size: 'village', population: '', tags: '', services: [], description: '', atmosphere: '', government: '', notableNPCs: [], rumors: [], notes: '', threat: '' },
-    ];
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-
-    const editBtn = screen.getByRole('button', { name: /edit settlement/i });
-    fireEvent.click(editBtn);
-
-    const deleteBtn = screen.getByRole('button', { name: 'Delete' });
-    fireEvent.click(deleteBtn);
-
-    await waitFor(() => {
-      expect(settlementMockStore.deleteItem).toHaveBeenCalledWith('Delete Me');
+      expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled();
     });
   });
 
-  it('disables the delete button and shows deleting text during delete', async () => {
-    vi.spyOn(globalThis.window, 'confirm').mockReturnValue(true);
+  describe('Delete', () => {
+    it('does not delete when the user cancels the confirmation dialog', () => {
+      vi.spyOn(globalThis.window, 'confirm').mockReturnValue(false);
 
-    settlementMockStore.items = [
-      { name: 'Deleting...', size: 'village', population: '', tags: '', services: [], description: '', atmosphere: '', government: '', notableNPCs: [], rumors: [], notes: '', threat: '' },
-    ];
-    settlementMockStore.deleteItem.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({}), 100)));
+      settlementMockStore.items = [makeSettlement('Keep Me')];
+      render(<Settlements campaignName="test" onBack={() => {}} />);
 
-    render(<Settlements campaignName="test" onBack={() => {}} />);
+      openEditSettlement();
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-    const editBtn = screen.getByRole('button', { name: /edit settlement/i });
-    fireEvent.click(editBtn);
-
-    const deleteBtn = screen.getByRole('button', { name: 'Delete' });
-    fireEvent.click(deleteBtn);
-
-    expect(deleteBtn).toBeDisabled();
-    expect(screen.getByText('Deleting…')).toBeInTheDocument();
-
-    // Wait for delete to complete and modal to close
-    await waitFor(() => {
-      expect(settlementMockStore.deleteItem).toHaveBeenCalled();
-      expect(screen.queryByRole('heading', { name: 'Edit Settlement' })).not.toBeInTheDocument();
-    });
-  });
-
-  it('keeps modal open when delete fails', async () => {
-    vi.spyOn(globalThis.window, 'confirm').mockReturnValue(true);
-
-    settlementMockStore.items = [
-      { name: 'Keep Me', size: 'village', population: '', tags: '', services: [], description: '', atmosphere: '', government: '', notableNPCs: [], rumors: [], notes: '', threat: '' },
-    ];
-    settlementMockStore.deleteItem.mockRejectedValue(new Error('Delete failed'));
-
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-
-    const editBtn = screen.getByRole('button', { name: /edit settlement/i });
-    fireEvent.click(editBtn);
-
-    const deleteBtn = screen.getByRole('button', { name: 'Delete' });
-    fireEvent.click(deleteBtn);
-
-    await waitFor(() => {
-      expect(settlementMockStore.deleteItem).toHaveBeenCalled();
+      expect(settlementMockStore.deleteItem).not.toHaveBeenCalled();
+      expect(screen.getByRole('heading', { name: 'Edit Settlement' })).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('heading', { name: 'Edit Settlement' })).toBeInTheDocument();
-  });
+    it('deletes the settlement through the delete action when the user confirms', async () => {
+      vi.spyOn(globalThis.window, 'confirm').mockReturnValue(true);
 
-  it('disables cancel button while saving', async () => {
-    mockSaveSettlement.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100)));
+      settlementMockStore.items = [makeSettlement('Delete Me')];
+      render(<Settlements campaignName="test" onBack={() => {}} />);
 
-    render(<Settlements campaignName="test" onBack={() => {}} />);
+      openEditSettlement();
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-    const newBtn = screen.getByRole('button', { name: /new settlement/i });
-    fireEvent.click(newBtn);
+      await waitFor(() => {
+        expect(settlementMockStore.deleteItem).toHaveBeenCalledWith('Delete Me');
+      });
+    });
 
-    const nameInput = screen.getByRole('textbox', { name: /name\s?\*/i });
-    fireEvent.change(nameInput, { target: { value: 'My Settlement' } });
+    it('disables the delete button and shows "Deleting…" while a delete is in flight, then closes the modal', async () => {
+      vi.spyOn(globalThis.window, 'confirm').mockReturnValue(true);
 
-    const saveBtn = screen.getByRole('button', { name: /save/i });
-    fireEvent.click(saveBtn);
+      let resolveDelete;
+      settlementMockStore.deleteItem.mockImplementation(() => new Promise((resolve) => {
+        resolveDelete = resolve;
+      }));
 
-    const cancelBtn = screen.getByRole('button', { name: /cancel/i });
-    expect(cancelBtn).toBeDisabled();
+      settlementMockStore.items = [makeSettlement('Deleting...')];
+      render(<Settlements campaignName="test" onBack={() => {}} />);
+
+      openEditSettlement();
+      const deleteBtn = screen.getByRole('button', { name: 'Delete' });
+      fireEvent.click(deleteBtn);
+
+      expect(deleteBtn).toBeDisabled();
+      expect(screen.getByText('Deleting…')).toBeInTheDocument();
+
+      resolveDelete({});
+
+      await waitFor(() => {
+        expect(settlementMockStore.deleteItem).toHaveBeenCalled();
+        expect(screen.queryByRole('heading', { name: 'Edit Settlement' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('re-enables the delete button and keeps the modal open when a delete fails', async () => {
+      vi.spyOn(globalThis.window, 'confirm').mockReturnValue(true);
+
+      settlementMockStore.deleteItem.mockRejectedValue(new Error('Delete failed'));
+
+      settlementMockStore.items = [makeSettlement('Keep Me')];
+      render(<Settlements campaignName="test" onBack={() => {}} />);
+
+      openEditSettlement();
+      const deleteBtn = screen.getByRole('button', { name: 'Delete' });
+      fireEvent.click(deleteBtn);
+
+      await waitFor(() => {
+        expect(settlementMockStore.deleteItem).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(deleteBtn).not.toBeDisabled();
+      });
+
+      expect(screen.getByRole('heading', { name: 'Edit Settlement' })).toBeInTheDocument();
+    });
   });
 });

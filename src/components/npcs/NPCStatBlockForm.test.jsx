@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import NPCStatBlockForm from './NPCStatBlockForm';
+import { ABILITY_LABELS } from '../../services/npcs/npcFormUtils.js';
 
 function createFormData(overrides = {}) {
   return {
@@ -37,12 +39,26 @@ const SECTION_HEADINGS = [
   'Reactions',
 ];
 
-const ABILITY_ABBRS = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+function renderForm(formData = createFormData()) {
+  return render(<NPCStatBlockForm formData={formData} setFormData={vi.fn()} />);
+}
+
+function abilityGrid(container) {
+  return within(container.querySelector('.npcs-abilities-grid'));
+}
+
+function abilityScoreInputs(container) {
+  return abilityGrid(container).getAllByRole('spinbutton');
+}
+
+function initiativeInput() {
+  return screen.getAllByPlaceholderText('+0').find((input) => input.type === 'number');
+}
 
 describe('NPCStatBlockForm rendering', () => {
   describe('section headings', () => {
     it('renders all section headings', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
+      renderForm();
       SECTION_HEADINGS.forEach((heading) => {
         expect(screen.getByText(heading)).toBeInTheDocument();
       });
@@ -50,104 +66,91 @@ describe('NPCStatBlockForm rendering', () => {
   });
 
   describe('ability scores', () => {
-    it('renders all ability score labels', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
-      ABILITY_ABBRS.forEach((abbr) => {
-        expect(screen.getByText(abbr)).toBeInTheDocument();
+    it('renders a label for every ability', () => {
+      renderForm();
+      Object.values(ABILITY_LABELS).forEach((label) => {
+        expect(screen.getByText(label)).toBeInTheDocument();
       });
     });
 
-    it('displays calculated ability modifiers based on scores', () => {
-      const data = createFormData({
+    it('displays calculated ability modifiers from the scores', () => {
+      renderForm(createFormData({
         abilityScores: { str: 16, dex: 8, con: 10, int: 10, wis: 10, cha: 10 },
-      });
-      render(<NPCStatBlockForm formData={data} setFormData={vi.fn()} />);
-      // Modifier = Math.floor((score - 10) / 2): str=16 -> +3, dex=8 -> -1, con/int/wis/cha=10 -> +0
+      }));
       expect(screen.getByText('+3')).toBeInTheDocument();
       expect(screen.getByText('-1')).toBeInTheDocument();
-      expect(screen.getAllByText('+0').length).toBe(4);
+      expect(screen.getAllByText('+0')).toHaveLength(4);
     });
 
-    it('uses default score of 10 when abilityScores is missing', () => {
-      render(<NPCStatBlockForm formData={createFormData({ abilityScores: undefined })} setFormData={vi.fn()} />);
-      // All abilities default to 10, so all modifiers are +0
-      const zeroModElements = screen.getAllByText('+0');
-      expect(zeroModElements.length).toBeGreaterThan(0);
+    it('defaults every ability score to 10 when abilityScores is missing', () => {
+      const { container } = renderForm(createFormData({ abilityScores: undefined }));
+      expect(abilityScoreInputs(container).map((input) => input.value)).toEqual(['10', '10', '10', '10', '10', '10']);
+      expect(screen.getAllByText('+0')).toHaveLength(6);
     });
 
-    it('renders saving throw bonus inputs for each ability', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
-      const saveInputs = screen.getAllByTitle('Saving throw bonus');
-      expect(saveInputs).toHaveLength(6);
+    it('defaults only the missing abilities to 10', () => {
+      const { container } = renderForm(createFormData({ abilityScores: { str: 16 } }));
+      expect(abilityScoreInputs(container).map((input) => input.value)).toEqual(['16', '10', '10', '10', '10', '10']);
+      expect(screen.getAllByText('+0')).toHaveLength(5);
     });
 
-    it('displays existing saving throw bonus values', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
-      expect(screen.getByDisplayValue('+2')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('+4')).toBeInTheDocument();
+    it('renders a saving throw bonus input for every ability', () => {
+      renderForm();
+      expect(screen.getAllByTitle('Saving throw bonus')).toHaveLength(6);
+    });
+
+    it('maps existing saving throw bonuses to the correct ability', () => {
+      const { container } = renderForm();
+      const saveInputs = abilityGrid(container).getAllByTitle('Saving throw bonus');
+      expect(saveInputs.map((input) => input.value)).toEqual(['+2', '+4', '', '', '', '']);
     });
   });
 
   describe('skill bonuses', () => {
-    it('displays existing skill names', () => {
-      const { container } = render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
-      const skillNameInputs = container.querySelectorAll('.npcs-skill-name');
-      const values = Array.from(skillNameInputs).map((input) => input.value);
-      expect(values).toContain('perception');
-      expect(values).toContain('stealth');
+    it('displays each existing skill name', () => {
+      renderForm();
+      const skillNameInputs = screen.getAllByPlaceholderText('Skill name');
+      expect(skillNameInputs.map((input) => input.value)).toEqual(['perception', 'stealth']);
     });
 
-    it('renders remove buttons for each existing skill', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
-      const removeButtons = screen.getAllByRole('button', { name: /Remove skill/i });
-      expect(removeButtons).toHaveLength(2);
+    it('renders a remove button for every existing skill', () => {
+      renderForm();
+      expect(screen.getAllByRole('button', { name: /Remove skill/i })).toHaveLength(2);
     });
 
-    it('does not render remove buttons when no skills exist', () => {
-      render(<NPCStatBlockForm formData={createFormData({ skillBonuses: {} })} setFormData={vi.fn()} />);
-      const removeButtons = screen.queryAllByRole('button', { name: /Remove skill/i });
-      expect(removeButtons).toHaveLength(0);
+    it.each([
+      { label: 'an empty skill map', overrides: { skillBonuses: {} } },
+      { label: 'no skillBonuses', overrides: { skillBonuses: undefined } },
+    ])('renders no skill remove buttons when $label is provided', ({ overrides }) => {
+      renderForm(createFormData(overrides));
+      expect(screen.queryAllByRole('button', { name: /Remove skill/i })).toHaveLength(0);
     });
 
-    it('does not render remove buttons when skillBonuses is undefined', () => {
-      render(<NPCStatBlockForm formData={createFormData({ skillBonuses: undefined })} setFormData={vi.fn()} />);
-      const removeButtons = screen.queryAllByRole('button', { name: /Remove skill/i });
-      expect(removeButtons).toHaveLength(0);
-    });
-
-    it('renders Add Skill button', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
+    it('renders the Add Skill button', () => {
+      renderForm();
       expect(screen.getByRole('button', { name: /Add Skill/i })).toBeInTheDocument();
     });
   });
 
   describe('defenses', () => {
     it('displays damage resistance values', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
+      renderForm();
       expect(screen.getByDisplayValue('fire')).toBeInTheDocument();
     });
 
     it('displays condition immunity values', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
+      renderForm();
       expect(screen.getByDisplayValue('charmed')).toBeInTheDocument();
     });
 
-    it('shows empty inputs when all defense arrays are empty', () => {
-      render(<NPCStatBlockForm formData={createFormData({
-        damageResistances: [],
-        damageImmunities: [],
-        conditionImmunities: [],
-      })} setFormData={vi.fn()} />);
-      expect(screen.queryByDisplayValue('fire')).toBeNull();
-      expect(screen.queryByDisplayValue('charmed')).toBeNull();
-    });
-
-    it('shows empty inputs when defense arrays are undefined', () => {
-      render(<NPCStatBlockForm formData={createFormData({
-        damageResistances: undefined,
-        damageImmunities: undefined,
-        conditionImmunities: undefined,
-      })} setFormData={vi.fn()} />);
+    it.each([
+      { label: 'empty arrays', overrides: { damageResistances: [], damageImmunities: [], conditionImmunities: [] } },
+      { label: 'missing arrays', overrides: { damageResistances: undefined, damageImmunities: undefined, conditionImmunities: undefined } },
+    ])('renders empty defense inputs when $label are provided', ({ overrides }) => {
+      renderForm(createFormData(overrides));
+      expect(screen.getByPlaceholderText('fire, cold, poison')).toHaveValue('');
+      expect(screen.getByPlaceholderText('necrotic, psychic')).toHaveValue('');
+      expect(screen.getByPlaceholderText('charmed, frightened')).toHaveValue('');
       expect(screen.queryByDisplayValue('fire')).toBeNull();
       expect(screen.queryByDisplayValue('charmed')).toBeNull();
     });
@@ -155,80 +158,81 @@ describe('NPCStatBlockForm rendering', () => {
 
   describe('actions', () => {
     it('displays existing action data', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
+      renderForm();
       expect(screen.getByDisplayValue('Longsword')).toBeInTheDocument();
       expect(screen.getByDisplayValue('1d8+3')).toBeInTheDocument();
       expect(screen.getByDisplayValue('slashing')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Melee Weapon Attack.')).toBeInTheDocument();
     });
 
-    it('renders remove button for each existing action', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
-      const removeButtons = screen.getAllByRole('button', { name: /Remove action/i });
-      expect(removeButtons).toHaveLength(1);
+    it('renders a remove button for every existing action', () => {
+      renderForm();
+      expect(screen.getAllByRole('button', { name: /Remove action/i })).toHaveLength(1);
     });
 
-    it('does not render remove buttons when no actions exist', () => {
-      render(<NPCStatBlockForm formData={createFormData({ actions: [] })} setFormData={vi.fn()} />);
-      const removeButtons = screen.queryAllByRole('button', { name: /Remove action/i });
-      expect(removeButtons).toHaveLength(0);
+    it.each([
+      { label: 'an empty list', overrides: { actions: [] } },
+      { label: 'no actions', overrides: { actions: undefined } },
+    ])('renders no action remove buttons when $label is provided', ({ overrides }) => {
+      renderForm(createFormData(overrides));
+      expect(screen.queryAllByRole('button', { name: /Remove action/i })).toHaveLength(0);
     });
 
-    it('does not render remove buttons when actions is undefined', () => {
-      render(<NPCStatBlockForm formData={createFormData({ actions: undefined })} setFormData={vi.fn()} />);
-      const removeButtons = screen.queryAllByRole('button', { name: /Remove action/i });
-      expect(removeButtons).toHaveLength(0);
+    it('renders an action missing every field without crashing', () => {
+      renderForm(createFormData({ actions: [{}] }));
+      expect(screen.getByPlaceholderText('Action name')).toHaveValue('');
+      expect(screen.getByPlaceholderText('Atk bonus')).toHaveValue('');
+      expect(screen.getByPlaceholderText('Primary Damage Dice')).toHaveValue('');
+      expect(screen.getByPlaceholderText('Primary Type')).toHaveValue('');
+      expect(screen.getByPlaceholderText('Description')).toHaveValue('');
     });
 
-    it('renders Add Action button', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
+    it('renders the Add Action button', () => {
+      renderForm();
       expect(screen.getByRole('button', { name: /Add Action/i })).toBeInTheDocument();
     });
   });
 
   describe('traits and reactions', () => {
-    it('renders textareas for traits and reactions', () => {
-      const { container } = render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
-      const textareas = container.querySelectorAll('textarea');
-      expect(textareas.length).toBeGreaterThanOrEqual(2);
+    it('renders traits and reactions textareas with their values', () => {
+      renderForm();
+      expect(screen.getByPlaceholderText('Special traits (one per line or markdown)')).toHaveValue('Darkvision.');
+      expect(screen.getByPlaceholderText('Reactions (one per line or markdown)')).toHaveValue('Reaction text.');
     });
 
-    it('displays traits and reactions values', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
-      expect(screen.getByDisplayValue('Darkvision.')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Reaction text.')).toBeInTheDocument();
-    });
-
-    it('renders empty textareas when traits/reactions are empty', () => {
-      render(<NPCStatBlockForm formData={createFormData({ traits: '', reactions: '' })} setFormData={vi.fn()} />);
-      const textareas = screen.queryAllByPlaceholderText(/Special traits|Reactions/);
-      expect(textareas).toHaveLength(2);
-    });
-
-    it('renders empty textareas when traits/reactions are undefined', () => {
-      render(<NPCStatBlockForm formData={createFormData({ traits: undefined, reactions: undefined })} setFormData={vi.fn()} />);
-      const textareas = screen.queryAllByPlaceholderText(/Special traits|Reactions/);
-      expect(textareas).toHaveLength(2);
+    it.each([
+      { label: 'empty strings', overrides: { traits: '', reactions: '' } },
+      { label: 'undefined', overrides: { traits: undefined, reactions: undefined } },
+    ])('renders empty traits and reactions textareas when $label', ({ overrides }) => {
+      renderForm(createFormData(overrides));
+      expect(screen.getByPlaceholderText('Special traits (one per line or markdown)')).toHaveValue('');
+      expect(screen.getByPlaceholderText('Reactions (one per line or markdown)')).toHaveValue('');
     });
   });
 
   describe('combat stats fields', () => {
-    it('renders AC, HP, Hit Dice, Speed, and Initiative inputs', () => {
-      render(<NPCStatBlockForm formData={createFormData()} setFormData={vi.fn()} />);
+    it('renders AC, HP, Hit Dice, Speed, and Initiative inputs with their values', () => {
+      renderForm();
+      expect(screen.getByDisplayValue('15')).toBeInTheDocument();
       expect(screen.getByDisplayValue('45')).toBeInTheDocument();
       expect(screen.getByDisplayValue('6d8')).toBeInTheDocument();
       expect(screen.getByDisplayValue('30 ft.')).toBeInTheDocument();
+      expect(initiativeInput()).toBeInTheDocument();
     });
 
-    it('renders inputs with empty combat stats', () => {
-      render(<NPCStatBlockForm formData={createFormData({
+    it('renders empty combat stat inputs when values are missing', () => {
+      renderForm(createFormData({
         armorClass: null,
         hitPoints: '',
         hitDice: '',
+        speed: undefined,
         initiativeBonus: '',
-      })} setFormData={vi.fn()} />);
-      expect(screen.queryByDisplayValue('45')).toBeNull();
-      expect(screen.queryByDisplayValue('6d8')).toBeNull();
+      }));
+      expect(screen.getByPlaceholderText('10')).toHaveValue(null);
+      expect(screen.getByPlaceholderText('e.g., 45')).toHaveValue('');
+      expect(screen.getByPlaceholderText('e.g., 6d8')).toHaveValue('');
+      expect(screen.getByPlaceholderText('30 ft.')).toHaveValue('');
+      expect(initiativeInput()).toHaveValue(null);
     });
   });
 
@@ -250,12 +254,12 @@ describe('NPCStatBlockForm rendering', () => {
         traits: '',
         reactions: '',
       };
-      render(<NPCStatBlockForm formData={minimalData} setFormData={vi.fn()} />);
+      renderForm(minimalData);
       expect(screen.getByText('Combat Stats')).toBeInTheDocument();
     });
 
-    it('renders without crashing with empty object', () => {
-      render(<NPCStatBlockForm formData={{}} setFormData={vi.fn()} />);
+    it('renders without crashing with an empty object', () => {
+      renderForm({});
       expect(screen.getByText('Combat Stats')).toBeInTheDocument();
     });
   });

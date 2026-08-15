@@ -1,7 +1,22 @@
-import { describe, it, expect } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi } from 'vitest';
 import { toGrid, createOverlay, hitTestOverlay, svgOrigin, OverlayShape, DEFAULTS } from './SpellOverlay.js';
 
-// ── Constants ───────────────────────────────────────────────────
+// Grid geometry: CELL = 40px per 5ft grid unit, hit-testing is done in
+// screen pixels. Helpers below express positions in feet so each test
+// reads as the game rule it verifies instead of raw pixel arithmetic.
+const cellAt = (ft) => ft / 5;
+const pointAt = (originX, originY, dxFt, dyFt) => [
+  originX + cellAt(dxFt),
+  originY + cellAt(dyFt),
+];
+
+const makeOverlay = (shape, gridX, gridY, angle = 0, params = {}) =>
+  createOverlay(shape, gridX, gridY, angle, params);
+
+const DIMENSION_KEYS = ['radiusFt', 'coneAngle', 'widthFt', 'distanceFt', 'sizeFt', 'color'];
+
+// ── OverlayShape ───────────────────────────────────────────────────
 
 describe('OverlayShape', () => {
   it('exports all expected shape keys with correct string values', () => {
@@ -13,11 +28,14 @@ describe('OverlayShape', () => {
   });
 });
 
+// ── DEFAULTS ───────────────────────────────────────────────────────
+
 describe('DEFAULTS', () => {
-  it('provides defaults for every OverlayShape', () => {
+  it('provides every dimension key for each shape', () => {
     for (const key of Object.values(OverlayShape)) {
-      expect(DEFAULTS[key]).toBeDefined();
-      expect(typeof DEFAULTS[key]).toBe('object');
+      for (const dim of DIMENSION_KEYS) {
+        expect(DEFAULTS[key]).toHaveProperty(dim);
+      }
     }
   });
 
@@ -42,32 +60,28 @@ describe('DEFAULTS', () => {
   });
 });
 
-// ── toGrid ──────────────────────────────────────────────────────
+// ── toGrid ─────────────────────────────────────────────────────────
 
 describe('toGrid', () => {
   it('converts feet to grid units by dividing by 5', () => {
     expect(toGrid(5)).toBe(1);
     expect(toGrid(10)).toBe(2);
     expect(toGrid(20)).toBe(4);
+    expect(toGrid(45)).toBe(9);
     expect(toGrid(60)).toBe(12);
   });
 
-  it('handles edge cases', () => {
+  it('handles zero, negative, fractional, and NaN input', () => {
     expect(toGrid(0)).toBe(0);
-    expect(toGrid(NaN)).toBeNaN();
     expect(toGrid(-10)).toBe(-2);
     expect(toGrid(2.5)).toBe(0.5);
-    expect(toGrid(45)).toBe(9);
+    expect(toGrid(NaN)).toBeNaN();
   });
 });
 
-// ── createOverlay ───────────────────────────────────────────────
+// ── createOverlay ──────────────────────────────────────────────────
 
 describe('createOverlay', () => {
-  function makeOverlay(shape, gridX, gridY, angle, params = {}) {
-    return createOverlay(shape, gridX, gridY, angle, params);
-  }
-
   it('creates an overlay with shape, position, angle, and defaults', () => {
     const overlay = makeOverlay('sphere', 3, 4);
     expect(overlay.shape).toBe('sphere');
@@ -78,12 +92,12 @@ describe('createOverlay', () => {
     expect(overlay.color).toBe('rgba(255,80,60,0.35)');
   });
 
-  it('generates unique ids for each overlay', () => {
-    const ids = new Set();
-    for (let i = 0; i < 10; i++) {
-      ids.add(makeOverlay('sphere', 0, 0).id);
-    }
-    expect(ids.size).toBe(10);
+  it('assigns a unique id sourced from crypto.randomUUID', () => {
+    const uuidSpy = vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('mock-uuid-1');
+    const overlay = makeOverlay('sphere', 0, 0);
+    expect(overlay.id).toBe('mock-uuid-1');
+    expect(uuidSpy).toHaveBeenCalledTimes(1);
+    uuidSpy.mockRestore();
   });
 
   it('overrides defaults with params', () => {
@@ -114,9 +128,8 @@ describe('createOverlay', () => {
     expect(cone.coneAngle).toBe(53);
   });
 
-  it('accepts custom angle parameter', () => {
-    const overlay = makeOverlay('sphere', 0, 0, 45);
-    expect(overlay.angle).toBe(45);
+  it('accepts a custom angle parameter', () => {
+    expect(makeOverlay('sphere', 0, 0, 45).angle).toBe(45);
   });
 
   it('returns all expected properties', () => {
@@ -129,226 +142,291 @@ describe('createOverlay', () => {
     expect(overlay).toHaveProperty('radiusFt', 10);
     expect(overlay).toHaveProperty('color');
   });
+
+  it('keeps position, angle, and explicit params for unknown shapes', () => {
+    const overlay = makeOverlay('bogus', 1, 2, 90, { radiusFt: 5 });
+    expect(overlay.shape).toBe('bogus');
+    expect(overlay.startGridX).toBe(1);
+    expect(overlay.startGridY).toBe(2);
+    expect(overlay.angle).toBe(90);
+    expect(overlay.radiusFt).toBe(5);
+    expect(overlay).not.toHaveProperty('color');
+    expect(overlay).not.toHaveProperty('coneAngle');
+  });
 });
 
-// ── hitTestOverlay ──────────────────────────────────────────────
+// ── hitTestOverlay ─────────────────────────────────────────────────
 
 describe('hitTestOverlay', () => {
-  function makeOverlay(shape, gridX, gridY, angle, params = {}) {
-    return createOverlay(shape, gridX, gridY, angle, params);
-  }
-
-  // ── SPHERE ──────────────────────────────────────────────────────
+  // ── SPHERE ────────────────────────────────────────────────────────
 
   describe('SPHERE', () => {
     it('hits the center point', () => {
-      const overlay = makeOverlay('sphere', 5, 5, 0, { radiusFt: 20 });
-      expect(hitTestOverlay(overlay, 5, 5)).toBe(true);
+      expect(hitTestOverlay(makeOverlay('sphere', 5, 5, 0, { radiusFt: 20 }), 5, 5)).toBe(true);
     });
 
     it('hits points within the radius', () => {
-      const overlay = makeOverlay('sphere', 5, 5, 0, { radiusFt: 20 });
-      expect(hitTestOverlay(overlay, 5, 8)).toBe(true);
+      const [x, y] = pointAt(5, 5, 15, 0);
+      expect(hitTestOverlay(makeOverlay('sphere', 5, 5, 0, { radiusFt: 20 }), x, y)).toBe(true);
     });
 
     it('misses points outside the radius', () => {
-      const overlay = makeOverlay('sphere', 5, 5, 0, { radiusFt: 20 });
-      expect(hitTestOverlay(overlay, 5, 10)).toBe(false);
+      const [x, y] = pointAt(5, 5, 25, 0);
+      expect(hitTestOverlay(makeOverlay('sphere', 5, 5, 0, { radiusFt: 20 }), x, y)).toBe(false);
     });
 
     it('hits points exactly at the radius boundary', () => {
-      // radiusFt=25 => rGrid=5 => rPixels=200.
-      // Grid (10,5) is exactly 5 cells away from (5,5) => dx=200, dy=0 => dist=200=r.
-      const overlay = makeOverlay('sphere', 5, 5, 0, { radiusFt: 25 });
-      expect(hitTestOverlay(overlay, 10, 5)).toBe(true);
+      const [x, y] = pointAt(5, 5, 25, 0);
+      expect(hitTestOverlay(makeOverlay('sphere', 5, 5, 0, { radiusFt: 25 }), x, y)).toBe(true);
     });
 
     it('misses points just beyond the radius boundary', () => {
-      // radiusFt=25 => rPixels=200. Grid (11,5) => dx=240 => dist=240>200.
-      const overlay = makeOverlay('sphere', 5, 5, 0, { radiusFt: 25 });
-      expect(hitTestOverlay(overlay, 11, 5)).toBe(false);
+      const [x, y] = pointAt(5, 5, 30, 0);
+      expect(hitTestOverlay(makeOverlay('sphere', 5, 5, 0, { radiusFt: 25 }), x, y)).toBe(false);
     });
 
     it('only hits the center when radiusFt=0', () => {
       const overlay = makeOverlay('sphere', 5, 5, 0, { radiusFt: 0 });
       expect(hitTestOverlay(overlay, 5, 5)).toBe(true);
-      expect(hitTestOverlay(overlay, 6, 5)).toBe(false);
+      const [x, y] = pointAt(5, 5, 5, 0);
+      expect(hitTestOverlay(overlay, x, y)).toBe(false);
+    });
+
+    it('is unaffected by rotation angle', () => {
+      const unrotated = makeOverlay('sphere', 5, 5, 0, { radiusFt: 20 });
+      const rotated = makeOverlay('sphere', 5, 5, 90, { radiusFt: 20 });
+      const [fwdX, fwdY] = pointAt(5, 5, 15, 0);
+      const [sideX, sideY] = pointAt(5, 5, 0, 15);
+      expect(hitTestOverlay(rotated, fwdX, fwdY)).toBe(hitTestOverlay(unrotated, fwdX, fwdY));
+      expect(hitTestOverlay(rotated, sideX, sideY)).toBe(hitTestOverlay(unrotated, sideX, sideY));
     });
 
     it('works with negative grid coordinates', () => {
       const overlay = makeOverlay('sphere', -3, -3, 0, { radiusFt: 5 });
       expect(hitTestOverlay(overlay, -3, -3)).toBe(true);
-      expect(hitTestOverlay(overlay, -2, -4)).toBe(false);
+      const [x, y] = pointAt(-3, -3, 5, -5);
+      expect(hitTestOverlay(overlay, x, y)).toBe(false);
     });
   });
 
-  // ── CYLINDER (same code path as sphere) ────────────────────────
+  // ── CYLINDER (shares the sphere code path) ────────────────────────
 
   describe('CYLINDER', () => {
     it('hits the center point', () => {
-      const overlay = makeOverlay('cylinder', 5, 5, 0, { radiusFt: 20 });
-      expect(hitTestOverlay(overlay, 5, 5)).toBe(true);
+      expect(hitTestOverlay(makeOverlay('cylinder', 5, 5, 0, { radiusFt: 20 }), 5, 5)).toBe(true);
     });
 
-    it('hits points within the radius', () => {
-      const overlay = makeOverlay('cylinder', 5, 5, 0, { radiusFt: 20 });
-      expect(hitTestOverlay(overlay, 5, 8)).toBe(true);
+    it('hits points within the radius like a sphere', () => {
+      const [x, y] = pointAt(5, 5, 15, 0);
+      expect(hitTestOverlay(makeOverlay('cylinder', 5, 5, 0, { radiusFt: 20 }), x, y)).toBe(true);
     });
 
-    it('misses points outside the radius', () => {
-      const overlay = makeOverlay('cylinder', 5, 5, 0, { radiusFt: 20 });
-      expect(hitTestOverlay(overlay, 5, 10)).toBe(false);
+    it('misses points outside the radius like a sphere', () => {
+      const [x, y] = pointAt(5, 5, 25, 0);
+      expect(hitTestOverlay(makeOverlay('cylinder', 5, 5, 0, { radiusFt: 20 }), x, y)).toBe(false);
     });
   });
 
-  // ── CUBE ──────────────────────────────────────────────────────
+  // ── CUBE ─────────────────────────────────────────────────────────
 
   describe('CUBE', () => {
     it('hits the center and points within bounds', () => {
       const overlay = makeOverlay('cube', 5, 5, 0, { sizeFt: 15 });
       expect(hitTestOverlay(overlay, 5, 5)).toBe(true);
-      expect(hitTestOverlay(overlay, 6, 5)).toBe(true);
+      const [x, y] = pointAt(5, 5, 5, 0);
+      expect(hitTestOverlay(overlay, x, y)).toBe(true);
     });
 
     it('misses points outside the cube bounds', () => {
-      const overlay = makeOverlay('cube', 5, 5, 0, { sizeFt: 15 });
-      expect(hitTestOverlay(overlay, 7, 5)).toBe(false);
+      const [x, y] = pointAt(5, 5, 10, 0);
+      expect(hitTestOverlay(makeOverlay('cube', 5, 5, 0, { sizeFt: 15 }), x, y)).toBe(false);
     });
 
     it('hits points exactly at the cube edge boundary', () => {
-      // sizeFt=20 => half=(20/5)*40/2=80. Grid (7,5) => dx=80 => rx=80=half.
-      const overlay = makeOverlay('cube', 5, 5, 0, { sizeFt: 20 });
-      expect(hitTestOverlay(overlay, 7, 5)).toBe(true);
+      const [x, y] = pointAt(5, 5, 10, 0);
+      expect(hitTestOverlay(makeOverlay('cube', 5, 5, 0, { sizeFt: 20 }), x, y)).toBe(true);
     });
 
     it('misses points just beyond the cube edge', () => {
-      // sizeFt=20 => half=80. Grid (8,5) => dx=120 => rx=120>half.
-      const overlay = makeOverlay('cube', 5, 5, 0, { sizeFt: 20 });
-      expect(hitTestOverlay(overlay, 8, 5)).toBe(false);
+      const [x, y] = pointAt(5, 5, 15, 0);
+      expect(hitTestOverlay(makeOverlay('cube', 5, 5, 0, { sizeFt: 20 }), x, y)).toBe(false);
     });
 
-    it('respects rotation', () => {
-      const overlay = makeOverlay('cube', 5, 5, 90, { sizeFt: 15 });
-      expect(hitTestOverlay(overlay, 6, 5)).toBe(true);
+    it('rotated 45 degrees reaches further along its axis than unrotated', () => {
+      // sizeFt=20 => half-extent is 10ft. A point 12.5ft along the axis
+      // misses the unrotated cube but sits inside the cube rotated 45°,
+      // whose corner reaches ~14.1ft along that axis.
+      const rotated = makeOverlay('cube', 5, 5, 45, { sizeFt: 20 });
+      const unrotated = makeOverlay('cube', 5, 5, 0, { sizeFt: 20 });
+      const [x, y] = pointAt(5, 5, 12.5, 0);
+      expect(hitTestOverlay(rotated, x, y)).toBe(true);
+      expect(hitTestOverlay(unrotated, x, y)).toBe(false);
     });
 
-    it('respects 45-degree rotation', () => {
-      const overlay = makeOverlay('cube', 5, 5, 45, { sizeFt: 20 });
-      expect(hitTestOverlay(overlay, 5, 6)).toBe(true);
+    it('misses diagonal points that would hit when unrotated', () => {
+      // 8.75ft forward and 8.75ft sideways sits inside the unrotated
+      // square (both < half-extent) but escapes the 45°-rotated square.
+      const rotated = makeOverlay('cube', 5, 5, 45, { sizeFt: 20 });
+      const unrotated = makeOverlay('cube', 5, 5, 0, { sizeFt: 20 });
+      const [x, y] = pointAt(5, 5, 8.75, 8.75);
+      expect(hitTestOverlay(rotated, x, y)).toBe(false);
+      expect(hitTestOverlay(unrotated, x, y)).toBe(true);
     });
 
     it('only hits the center when sizeFt=0', () => {
       const overlay = makeOverlay('cube', 5, 5, 0, { sizeFt: 0 });
       expect(hitTestOverlay(overlay, 5, 5)).toBe(true);
-      expect(hitTestOverlay(overlay, 6, 5)).toBe(false);
+      const [x, y] = pointAt(5, 5, 5, 0);
+      expect(hitTestOverlay(overlay, x, y)).toBe(false);
     });
 
     it('works with negative grid coordinates', () => {
       const overlay = makeOverlay('cube', -2, -2, 0, { sizeFt: 10 });
       expect(hitTestOverlay(overlay, -2, -2)).toBe(true);
+      const [x, y] = pointAt(-2, -2, 5, 0);
+      expect(hitTestOverlay(overlay, x, y)).toBe(true);
     });
   });
 
-  // ── CONE ──────────────────────────────────────────────────────
+  // ── CONE ─────────────────────────────────────────────────────────
 
   describe('CONE', () => {
     it('hits the center point (origin)', () => {
-      const overlay = makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 53 });
-      expect(hitTestOverlay(overlay, 5, 5)).toBe(true);
+      expect(hitTestOverlay(makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 53 }), 5, 5)).toBe(true);
     });
 
     it('hits a point within distance and angle on the cone axis', () => {
-      const overlay = makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 53 });
-      expect(hitTestOverlay(overlay, 8, 5)).toBe(true);
+      const [x, y] = pointAt(5, 5, 15, 0);
+      expect(hitTestOverlay(makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 53 }), x, y)).toBe(true);
     });
 
-    it('misses points beyond the cone distance', () => {
-      const overlay = makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 53 });
-      expect(hitTestOverlay(overlay, 20, 5)).toBe(false);
+    it('hits points exactly at the distance boundary', () => {
+      const [x, y] = pointAt(5, 5, 60, 0);
+      expect(hitTestOverlay(makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 53 }), x, y)).toBe(true);
+    });
+
+    it('misses points just beyond the distance boundary', () => {
+      const [x, y] = pointAt(5, 5, 61, 0);
+      expect(hitTestOverlay(makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 53 }), x, y)).toBe(false);
     });
 
     it('misses points outside the cone angle', () => {
-      const overlay = makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 53 });
-      expect(hitTestOverlay(overlay, 8, 8)).toBe(false);
+      const [x, y] = pointAt(5, 5, 15, 15);
+      expect(hitTestOverlay(makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 53 }), x, y)).toBe(false);
     });
 
     it('respects rotation angle', () => {
-      const overlay = makeOverlay('cone', 5, 5, 90, { distanceFt: 60, coneAngle: 53 });
-      expect(hitTestOverlay(overlay, 5, 8)).toBe(true);
+      const [x, y] = pointAt(5, 5, 0, 15);
+      expect(hitTestOverlay(makeOverlay('cone', 5, 5, 90, { distanceFt: 60, coneAngle: 53 }), x, y)).toBe(true);
+    });
+
+    it('hits points exactly at the cone angle edge', () => {
+      // coneAngle=90 => half-spread of 45°. A point 35ft forward and
+      // 35ft sideways is exactly on the 45° edge and within distance.
+      const [x, y] = pointAt(5, 5, 35, 35);
+      expect(hitTestOverlay(makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 90 }), x, y)).toBe(true);
+    });
+
+    it('misses points just beyond the cone angle edge', () => {
+      // 36ft sideways vs 35ft forward pushes the point past 45°.
+      const [x, y] = pointAt(5, 5, 35, 36);
+      expect(hitTestOverlay(makeOverlay('cone', 5, 5, 0, { distanceFt: 60, coneAngle: 90 }), x, y)).toBe(false);
     });
 
     it('only hits the origin when distanceFt=0', () => {
       const overlay = makeOverlay('cone', 5, 5, 0, { distanceFt: 0, coneAngle: 53 });
       expect(hitTestOverlay(overlay, 5, 5)).toBe(true);
-      expect(hitTestOverlay(overlay, 6, 5)).toBe(false);
+      const [x, y] = pointAt(5, 5, 5, 0);
+      expect(hitTestOverlay(overlay, x, y)).toBe(false);
     });
   });
 
-  // ── LINE ──────────────────────────────────────────────────────
+  // ── LINE ─────────────────────────────────────────────────────────
 
   describe('LINE', () => {
     it('hits the center point (origin)', () => {
-      const overlay = makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 });
-      expect(hitTestOverlay(overlay, 5, 5)).toBe(true);
+      expect(hitTestOverlay(makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 }), 5, 5)).toBe(true);
     });
 
     it('hits a point along the line at angle=0', () => {
-      const overlay = makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 });
-      expect(hitTestOverlay(overlay, 8, 5)).toBe(true);
+      const [x, y] = pointAt(5, 5, 15, 0);
+      expect(hitTestOverlay(makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 }), x, y)).toBe(true);
     });
 
-    it('misses points beyond the line distance', () => {
-      const overlay = makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 });
-      expect(hitTestOverlay(overlay, 20, 5)).toBe(false);
+    it('hits points exactly at the far end of the line', () => {
+      const [x, y] = pointAt(5, 5, 60, 0);
+      expect(hitTestOverlay(makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 }), x, y)).toBe(true);
+    });
+
+    it('misses points just past the far end of the line', () => {
+      const [x, y] = pointAt(5, 5, 61, 0);
+      expect(hitTestOverlay(makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 }), x, y)).toBe(false);
     });
 
     it('misses points behind the line origin', () => {
-      const overlay = makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 });
-      expect(hitTestOverlay(overlay, 2, 5)).toBe(false);
+      const [x, y] = pointAt(5, 5, -15, 0);
+      expect(hitTestOverlay(makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 }), x, y)).toBe(false);
     });
 
     it('misses points outside the line width', () => {
-      const overlay = makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 });
-      expect(hitTestOverlay(overlay, 8, 6)).toBe(false);
+      const [x, y] = pointAt(5, 5, 15, 5);
+      expect(hitTestOverlay(makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 }), x, y)).toBe(false);
+    });
+
+    it('hits points exactly at the line width edge', () => {
+      const [x, y] = pointAt(5, 5, 15, 2.5);
+      expect(hitTestOverlay(makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 }), x, y)).toBe(true);
+    });
+
+    it('misses points just beyond the line width edge', () => {
+      const [x, y] = pointAt(5, 5, 15, 3);
+      expect(hitTestOverlay(makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 5 }), x, y)).toBe(false);
     });
 
     it('respects rotation angle', () => {
-      const overlay = makeOverlay('line', 5, 5, 90, { distanceFt: 60, widthFt: 5 });
-      expect(hitTestOverlay(overlay, 5, 8)).toBe(true);
+      const [x, y] = pointAt(5, 5, 0, 15);
+      expect(hitTestOverlay(makeOverlay('line', 5, 5, 90, { distanceFt: 60, widthFt: 5 }), x, y)).toBe(true);
+    });
+
+    it('a 180-degree rotation makes points behind the origin count as hits', () => {
+      const [x, y] = pointAt(5, 5, -15, 0);
+      const rotated = makeOverlay('line', 5, 5, 180, { distanceFt: 60, widthFt: 5 });
+      expect(hitTestOverlay(rotated, x, y)).toBe(true);
     });
 
     it('only hits the origin when widthFt=0 or distanceFt=0', () => {
       const w0 = makeOverlay('line', 5, 5, 0, { distanceFt: 60, widthFt: 0 });
       expect(hitTestOverlay(w0, 5, 5)).toBe(true);
-      expect(hitTestOverlay(w0, 8, 6)).toBe(false);
+      const [offX, offY] = pointAt(5, 5, 15, 5);
+      expect(hitTestOverlay(w0, offX, offY)).toBe(false);
 
       const d0 = makeOverlay('line', 5, 5, 0, { distanceFt: 0, widthFt: 5 });
       expect(hitTestOverlay(d0, 5, 5)).toBe(true);
-      expect(hitTestOverlay(d0, 6, 5)).toBe(false);
+      const [fwdX, fwdY] = pointAt(5, 5, 5, 0);
+      expect(hitTestOverlay(d0, fwdX, fwdY)).toBe(false);
     });
   });
 
-  // ── Unknown shapes ────────────────────────────────────────────
+  // ── Unknown shapes ────────────────────────────────────────────────
 
   describe('unknown shape', () => {
-    it('returns false for unknown or empty shape strings', () => {
+    it('returns false for unknown, empty, or missing shape values', () => {
       const overlay = createOverlay('sphere', 5, 5);
-      overlay.shape = 'unknown';
-      expect(hitTestOverlay(overlay, 5, 5)).toBe(false);
-
-      overlay.shape = '';
-      expect(hitTestOverlay(overlay, 5, 5)).toBe(false);
+      for (const shape of ['unknown', '', undefined, null]) {
+        overlay.shape = shape;
+        expect(hitTestOverlay(overlay, 5, 5)).toBe(false);
+      }
     });
   });
 });
 
-// ── svgOrigin ───────────────────────────────────────────────────
+// ── svgOrigin ──────────────────────────────────────────────────────
+// CELL = 40px; origin maps each grid cell to its center (grid * 40 + 20).
 
 describe('svgOrigin', () => {
   it('returns screen coordinates for the overlay origin', () => {
     const overlay = createOverlay('sphere', 3, 4);
-    const origin = svgOrigin(overlay);
-    expect(origin).toEqual({ x: 140, y: 180 });
+    expect(svgOrigin(overlay)).toEqual({ x: 140, y: 180 });
   });
 
   it('handles negative grid coordinates', () => {
@@ -359,5 +437,12 @@ describe('svgOrigin', () => {
   it('returns origin at (20, 20) for grid (0, 0)', () => {
     const overlay = createOverlay('sphere', 0, 0);
     expect(svgOrigin(overlay)).toEqual({ x: 20, y: 20 });
+  });
+
+  it('returns the same origin regardless of overlay shape', () => {
+    const cube = createOverlay('cube', 3, 4);
+    const cone = createOverlay('cone', 3, 4);
+    expect(svgOrigin(cube)).toEqual({ x: 140, y: 180 });
+    expect(svgOrigin(cone)).toEqual({ x: 140, y: 180 });
   });
 });

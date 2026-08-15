@@ -1,17 +1,31 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+// @improved-by-ai
+// List rendering details only: size badges, population, service counts, tags,
+// and description previews. Intentionally NOT duplicated here (covered in
+// sibling files):
+//   - size-only filtering (a filter excludes non-matching settlements)
+//       -> Settlements.filtering.test.jsx
+//   - loading / empty / no-results states, modal open/close, generate flow
+//       -> Settlements.modalActions.test.jsx
+//   - list item keyboard handling and accessible names
+//       -> Settlements.accessibility.test.jsx
+//   - row-level form CRUD and save/delete flows
+//       -> Settlements.crudOperations / serviceNPCRumor / saveDelete.test.jsx
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
 
-const settlementMockReturn = {
+// Module-level mock store captured by the vi.mock factory. Tests mutate its
+// `items` field before rendering so the component reads fresh state.
+const settlementMockStore = {
   items: [],
   loading: false,
-  loadItems: () => {},
-  saveItems: async () => {},
-  deleteItem: async () => {},
+  loadItems: vi.fn(),
+  saveItems: vi.fn(),
+  deleteItem: vi.fn(),
 };
 
 vi.mock('../../hooks/useEntityManagement.js', () => ({
-  useEntityManagement: () => ({ ...settlementMockReturn }),
+  useEntityManagement: () => settlementMockStore,
 }));
 
 vi.mock('../common/PreviewToggle.jsx', () => ({
@@ -24,7 +38,6 @@ vi.mock('../common/PreviewToggle.jsx', () => ({
           value={value || ''}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
-          aria-label={label || ''}
         />
       </div>
     );
@@ -32,59 +45,52 @@ vi.mock('../common/PreviewToggle.jsx', () => ({
 }));
 
 vi.mock('../../services/campaign/settlementGenerator.js', () => ({
-  generateSettlement: vi.fn().mockResolvedValue({
-    name: 'Generated Town',
-    size: 'town',
-    description: 'A bustling town',
-    atmosphere: 'Lively',
-    government: 'Council',
-    population: '1,500 souls',
-    services: [],
-    notableNPCs: [],
-    rumors: [],
-    tags: 'generated',
-    notes: '',
-    threat: 'Bandits',
-  }),
+  generateSettlement: vi.fn(),
 }));
 
-describe('Settlements - list rendering details', () => {
-  const mockUseSettlements = {
-    items: [
-      {
-        name: 'Fireport',
-        size: 'town',
-        population: '1,500 souls',
-        tags: 'coastal, trade',
-        services: [{ type: 'inn', name: 'The Rusty Anchor', description: 'A fine inn' }, { type: 'blacksmith', name: 'Ironworks', description: 'Quality steel' }],
-        description: 'A town of fire and smoke. The streets are lined with brick buildings and the air smells of coal.',
-      },
-      {
-        name: 'Iceholm',
-        size: 'village',
-        population: '',
-        tags: '',
-        services: [],
-        description: 'A cold village',
-      },
-      {
-        name: 'Goldhaven',
-        size: 'city',
-        population: '25,000 souls',
-        tags: 'trade hub',
-        services: [{ type: 'magic_shop', name: 'Arcane Emporium', description: 'Rare spells and potions' }],
-        description: 'A wealthy city of merchants and nobles. Golden spires tower over the harbor.',
-      },
-    ],
-    loading: false,
-    saveItems: async () => {},
-    deleteItem: async () => {},
-  };
+const makeSettlement = (name, overrides = {}) => ({
+  name,
+  size: 'village',
+  population: '',
+  tags: '',
+  services: [],
+  description: '',
+  atmosphere: '',
+  government: '',
+  notableNPCs: [],
+  rumors: [],
+  notes: '',
+  threat: '',
+  ...overrides,
+});
 
+const renderSettlements = () =>
+  render(<Settlements campaignName="test" onBack={() => {}} />);
+
+const getSettlementItem = (name) =>
+  screen.getByRole('button', { name: new RegExp(`edit settlement: ${name}`, 'i') });
+
+const withinListItem = (name) => within(getSettlementItem(name));
+
+// The description preview is a plain <p> with no accessible role, so it is
+// located by its class within the settlement list item.
+const getSettlementPreview = (name) =>
+  getSettlementItem(name).querySelector('.settlements-list-preview');
+
+// Size filter buttons are the only elements carrying a `Filter:` tooltip; the
+// size badges in the list use a bare lowercase size title. This query is exact
+// and unambiguous, unlike matching button names, which collide with the
+// aria-label of settlement list items (e.g. "Edit settlement: Fire Village").
+const getSizeFilterButton = (sizeLabel) => screen.getByTitle(`Filter: ${sizeLabel}`);
+
+describe('Settlements - list rendering details', () => {
   beforeEach(() => {
-    Object.assign(settlementMockReturn, mockUseSettlements);
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.clearAllMocks();
+    settlementMockStore.items = [];
+    settlementMockStore.loading = false;
+    settlementMockStore.loadItems.mockResolvedValue(undefined);
+    // The component fetches settlement-descriptions.json on mount; no test here
+    // changes the size select, so the response body is irrelevant.
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({}),
@@ -95,150 +101,147 @@ describe('Settlements - list rendering details', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows size badge with icon for each settlement', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const townBadge = screen.getByTitle('town');
-    expect(townBadge).toBeInTheDocument();
-    expect(townBadge.querySelector('i')).toHaveClass('fa-solid');
-  });
+  describe('Size badges', () => {
+    it('renders a badge showing each settlement size with its size-specific icon', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { size: 'town' }),
+        makeSettlement('Iceholm', { size: 'village' }),
+        makeSettlement('Goldhaven', { size: 'city' }),
+      ];
+      renderSettlements();
 
-  it('shows population in the list subtitle', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    expect(screen.getByText('1,500 souls')).toBeInTheDocument();
-    expect(screen.getByText('25,000 souls')).toBeInTheDocument();
-  });
+      const townBadge = withinListItem('Fireport').getByTitle('town');
+      expect(townBadge).toHaveTextContent('town');
+      expect(townBadge.querySelector('i')).toHaveClass('fa-solid', 'fa-hotel');
 
-  it('shows service count in the list', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    expect(screen.getByText('2 services')).toBeInTheDocument();
-    expect(screen.getByText('1 service')).toBeInTheDocument();
-  });
+      const villageBadge = withinListItem('Iceholm').getByTitle('village');
+      expect(villageBadge).toHaveTextContent('village');
+      expect(villageBadge.querySelector('i')).toHaveClass('fa-solid', 'fa-house-chimney');
 
-  it('shows tags in the list', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    expect(screen.getByText('coastal, trade')).toBeInTheDocument();
-    expect(screen.getByText('trade hub')).toBeInTheDocument();
-  });
-
-  it('truncates long descriptions at 120 characters in the list preview', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const fireport = screen.getByText(/Fireport/);
-    const listItems = fireport.closest('li');
-    const preview = listItems.querySelector('.settlements-list-preview');
-    expect(preview).toBeInTheDocument();
-    const textContent = preview.textContent;
-    // 120 chars + the HTML entity character = ~123 visual chars
-    expect(textContent.length).toBeLessThanOrEqual(123);
-  });
-
-  it('shows full description if under 120 characters', () => {
-    Object.assign(settlementMockReturn, {
-      ...mockUseSettlements,
-      items: [
-        {
-          name: 'ShortDesc',
-          size: 'village',
-          population: '100 souls',
-          tags: '',
-          services: [],
-          description: 'A short description under 120 chars',
-        },
-      ],
+      const cityBadge = withinListItem('Goldhaven').getByTitle('city');
+      expect(cityBadge).toHaveTextContent('city');
+      expect(cityBadge.querySelector('i')).toHaveClass('fa-solid', 'fa-city');
     });
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const shortDesc = screen.getByText(/ShortDesc/);
-    const listItems = shortDesc.closest('li');
-    const preview = listItems.querySelector('.settlements-list-preview');
-    expect(preview).toBeInTheDocument();
-    expect(preview.textContent).toBe('A short description under 120 chars');
-  });
 
-  it('hides description preview when there is no description', () => {
-    Object.assign(settlementMockReturn, {
-      ...mockUseSettlements,
-      items: [
-        {
-          name: 'NoDesc',
-          size: 'village',
-          population: '100 souls',
-          tags: '',
-          services: [],
-          description: '',
-        },
-      ],
+    it('does not render a size badge for a settlement without a size', () => {
+      settlementMockStore.items = [makeSettlement('Mysterious Hollow', { size: '' })];
+      renderSettlements();
+
+      expect(getSettlementItem('Mysterious Hollow').querySelector('.settlements-size-badge')).toBeNull();
     });
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const noDesc = screen.getByText(/NoDesc/);
-    const listItems = noDesc.closest('li');
-    const preview = listItems.querySelector('.settlements-list-preview');
-    expect(preview).not.toBeInTheDocument();
   });
 
-  it('hides service count when there are no services', () => {
-    Object.assign(settlementMockReturn, {
-      ...mockUseSettlements,
-      items: [
-        {
-          name: 'NoServices',
-          size: 'village',
-          population: '100 souls',
-          tags: '',
-          services: [],
-          description: 'A village with no services',
-        },
-      ],
+  describe('List metadata', () => {
+    it('shows the population inside each settlement list item', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { population: '1,500 souls' }),
+        makeSettlement('Goldhaven', { population: '25,000 souls' }),
+      ];
+      renderSettlements();
+
+      expect(withinListItem('Fireport').getByText('1,500 souls')).toBeInTheDocument();
+      expect(withinListItem('Goldhaven').getByText('25,000 souls')).toBeInTheDocument();
     });
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    expect(screen.queryByText(/0 services?/)).not.toBeInTheDocument();
-  });
 
-  it('hides tags when there are no tags', () => {
-    Object.assign(settlementMockReturn, {
-      ...mockUseSettlements,
-      items: [
-        {
-          name: 'NoTags',
-          size: 'village',
-          population: '100 souls',
-          tags: '',
-          services: [],
-          description: 'A peaceful hamlet',
-        },
-      ],
+    it('shows the service count with correct pluralization', () => {
+      const inn = { type: 'inn', name: 'The Rusty Anchor', description: 'A fine inn' };
+      const smithy = { type: 'blacksmith', name: 'Ironworks', description: 'Quality steel' };
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { services: [inn, smithy] }),
+        makeSettlement('Goldhaven', { services: [inn] }),
+      ];
+      renderSettlements();
+
+      expect(withinListItem('Fireport').getByText('2 services')).toBeInTheDocument();
+      expect(withinListItem('Goldhaven').getByText('1 service')).toBeInTheDocument();
     });
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    expect(screen.getByText('NoTags')).toBeInTheDocument();
-    // The tags span uses the settlements-list-tags class
-    const tagsSpans = document.querySelectorAll('.settlements-list-tags');
-    expect(tagsSpans.length).toBe(0);
+
+    it('shows the tags for settlements that have them', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { tags: 'coastal, trade' }),
+        makeSettlement('Goldhaven', { tags: 'trade hub' }),
+      ];
+      renderSettlements();
+
+      expect(withinListItem('Fireport').getByText('coastal, trade')).toBeInTheDocument();
+      expect(withinListItem('Goldhaven').getByText('trade hub')).toBeInTheDocument();
+    });
+
+    it('does not render a service count when a settlement has no services', () => {
+      settlementMockStore.items = [makeSettlement('Quiet Hollow', { services: [] })];
+      renderSettlements();
+
+      expect(getSettlementItem('Quiet Hollow').querySelector('.settlements-list-services')).toBeNull();
+    });
+
+    it('does not render a tags row when a settlement has no tags', () => {
+      settlementMockStore.items = [makeSettlement('Quiet Hollow', { tags: '' })];
+      renderSettlements();
+
+      expect(getSettlementItem('Quiet Hollow').querySelector('.settlements-list-tags')).toBeNull();
+    });
   });
 
-  it('shows all four size filter buttons', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    expect(screen.getByRole('button', { name: /village/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /town/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /city/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /metropolis/i })).toBeInTheDocument();
+  describe('Description previews', () => {
+    it('truncates a description longer than 120 characters to 120 characters plus an ellipsis', () => {
+      const longDescription = 'The town of Fireport sits at the mouth of a volcanic gorge, its streets paved with ash and cinder. Blacksmiths hammer through the night while ships unload raw ore beneath plumes of smoke.';
+      settlementMockStore.items = [makeSettlement('Fireport', { description: longDescription })];
+      renderSettlements();
+
+      const preview = getSettlementPreview('Fireport');
+      expect(preview.textContent).toBe(`${longDescription.slice(0, 120)}…`);
+      expect(preview.textContent).not.toContain(longDescription.slice(120));
+    });
+
+    it('shows a description of 120 characters or fewer in full', () => {
+      const shortDescription = 'A short description under 120 chars';
+      settlementMockStore.items = [makeSettlement('ShortDesc', { description: shortDescription })];
+      renderSettlements();
+
+      expect(withinListItem('ShortDesc').getByText(shortDescription)).toBeInTheDocument();
+    });
+
+    it('treats a 120-character description as short but truncates a 121-character one', () => {
+      const exactly120 = 'a'.repeat(120);
+      const over120 = 'b'.repeat(121);
+      settlementMockStore.items = [
+        makeSettlement('Exact Town', { description: exactly120 }),
+        makeSettlement('Over Town', { description: over120 }),
+      ];
+      renderSettlements();
+
+      expect(withinListItem('Exact Town').getByText(exactly120)).toBeInTheDocument();
+      expect(getSettlementPreview('Over Town').textContent).toBe(`${'b'.repeat(120)}…`);
+    });
+
+    it('does not render a description preview when the description is empty', () => {
+      settlementMockStore.items = [makeSettlement('Quiet Hollow', { description: '' })];
+      renderSettlements();
+
+      expect(getSettlementPreview('Quiet Hollow')).toBeNull();
+    });
   });
 
-  it('toggles size filter active state', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const villageBtns = screen.getAllByRole('button', { name: /village/i });
-    const sizeFilterBtn = villageBtns.find(btn => btn.classList.contains('settlements-size-btn'));
-    expect(sizeFilterBtn).not.toHaveClass('settlements-size-btn-active');
-    fireEvent.click(sizeFilterBtn);
-    expect(sizeFilterBtn).toHaveClass('settlements-size-btn-active');
-    fireEvent.click(sizeFilterBtn);
-    expect(sizeFilterBtn).not.toHaveClass('settlements-size-btn-active');
-  });
+  describe('Size filter buttons', () => {
+    it('renders all four size filter buttons', () => {
+      renderSettlements();
 
-  it('toggles size filter to show only matching settlements', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const villageBtns = screen.getAllByRole('button', { name: /village/i });
-    const sizeFilterBtn = villageBtns.find(btn => btn.classList.contains('settlements-size-btn'));
-    fireEvent.click(sizeFilterBtn);
-    expect(screen.getByText('Iceholm')).toBeInTheDocument();
-    expect(screen.queryByText('Fireport')).not.toBeInTheDocument();
-    expect(screen.queryByText('Goldhaven')).not.toBeInTheDocument();
+      ['Village', 'Town', 'City', 'Metropolis'].forEach((label) => {
+        expect(getSizeFilterButton(label)).toBeInTheDocument();
+      });
+    });
+
+    it('toggles the active state of a size filter button', () => {
+      renderSettlements();
+
+      const villageFilter = getSizeFilterButton('Village');
+      expect(villageFilter).not.toHaveClass('settlements-size-btn-active');
+
+      fireEvent.click(villageFilter);
+      expect(villageFilter).toHaveClass('settlements-size-btn-active');
+
+      fireEvent.click(villageFilter);
+      expect(villageFilter).not.toHaveClass('settlements-size-btn-active');
+    });
   });
 });

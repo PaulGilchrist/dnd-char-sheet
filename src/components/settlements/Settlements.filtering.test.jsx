@@ -1,17 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+// Filtering behavior only. Intentionally NOT duplicated here (covered in
+// sibling files):
+//   - size filter buttons render / active-state CSS toggle
+//                        -> Settlements.listRendering.test.jsx
+//   - search matching nothing shows the filters message
+//                        -> Settlements.modalActions.test.jsx
+//   - clear-search button presence and behavior
+//                        -> Settlements.accessibility.test.jsx
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
 
-const settlementMockReturn = {
+// Module-level mock store captured by the vi.mock factory. Tests mutate its
+// `items` field before rendering so the component reads fresh state.
+const settlementMockStore = {
   items: [],
   loading: false,
-  loadItems: () => {},
-  saveItems: async () => {},
-  deleteItem: async () => {},
+  loadItems: vi.fn(),
+  saveItems: vi.fn(),
+  deleteItem: vi.fn(),
 };
 
 vi.mock('../../hooks/useEntityManagement.js', () => ({
-  useEntityManagement: () => ({ ...settlementMockReturn }),
+  useEntityManagement: () => settlementMockStore,
 }));
 
 vi.mock('../common/PreviewToggle.jsx', () => ({
@@ -31,40 +42,49 @@ vi.mock('../common/PreviewToggle.jsx', () => ({
 }));
 
 vi.mock('../../services/campaign/settlementGenerator.js', () => ({
-  generateSettlement: vi.fn().mockResolvedValue({
-    name: 'Generated Town',
-    size: 'town',
-    description: 'A bustling town',
-    atmosphere: 'Lively',
-    government: 'Council',
-    population: '1,500 souls',
-    services: [],
-    notableNPCs: [],
-    rumors: [],
-    tags: 'generated',
-    notes: '',
-    threat: 'Bandits',
-  }),
+  generateSettlement: vi.fn(),
 }));
 
+const makeSettlement = (name, overrides = {}) => ({
+  name,
+  size: 'village',
+  population: '',
+  tags: '',
+  services: [],
+  description: '',
+  atmosphere: '',
+  government: '',
+  notableNPCs: [],
+  rumors: [],
+  notes: '',
+  threat: '',
+  ...overrides,
+});
 
-describe('Settlements - filtering', () => {
-  const mockUseSettlements = {
-    items: [
-      { name: 'Fireport', size: 'town', population: '', tags: 'coastal', services: [], description: 'A town of fire' },
-      { name: 'Iceholm', size: 'village', population: '', tags: 'frozen', services: [], description: 'A cold village' },
-      { name: 'Goldhaven', size: 'city', population: '', tags: 'trade', services: [], description: 'A wealthy city' },
-    ],
-    loading: false,
-    saveItems: async () => {},
-    deleteItem: async () => {},
-  };
+// Size filter buttons are the only elements carrying a `Filter:` tooltip
+// (the size badges in the list use a bare lowercase size title). This query is
+// exact and unambiguous, unlike matching button names, which collide with the
+// aria-label of settlement list items (e.g. "Edit settlement: Fire Village").
+const getSizeFilterButton = (sizeLabel) => screen.getByTitle(`Filter: ${sizeLabel}`);
 
+const getSettlementListItem = (name) =>
+  screen.getByRole('button', { name: new RegExp(`edit settlement: ${name}`, 'i') });
+
+const renderSettlements = (campaignName = 'test') =>
+  render(<Settlements campaignName={campaignName} onBack={() => {}} />);
+
+const searchSettlements = (query) => {
+  fireEvent.change(screen.getByLabelText('Search settlements'), { target: { value: query } });
+};
+
+describe('Settlements - filtering (behavioral)', () => {
   beforeEach(() => {
-    // Override module mock
-    Object.assign(settlementMockReturn, mockUseSettlements);
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.clearAllMocks();
+    settlementMockStore.items = [];
+    settlementMockStore.loading = false;
+    settlementMockStore.loadItems.mockResolvedValue(undefined);
+    // The component fetches settlement-descriptions.json on mount; no test here
+    // changes a size select, so the response body is irrelevant.
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({}),
@@ -75,41 +95,99 @@ describe('Settlements - filtering', () => {
     vi.restoreAllMocks();
   });
 
-  it('filters by name case-insensitively', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const searchInput = screen.getByLabelText('Search settlements');
-    fireEvent.change(searchInput, { target: { value: 'fire' } });
-    expect(screen.getByText('Fireport')).toBeInTheDocument();
-    expect(screen.queryByText('Iceholm')).not.toBeInTheDocument();
-    expect(screen.queryByText('Goldhaven')).not.toBeInTheDocument();
-  });
+  describe('Search filtering', () => {
+    const settlements = [
+      makeSettlement('Fireport', { size: 'town' }),
+      makeSettlement('Iceholm', { size: 'village' }),
+      makeSettlement('Goldhaven', { size: 'city' }),
+    ];
 
-  it('combines search and size filter', () => {
-    Object.assign(settlementMockReturn, {
-      ...mockUseSettlements,
-      items: [
-        { name: 'Fireport', size: 'town', population: '', tags: '', services: [], description: 'A town of fire' },
-        { name: 'Fire Village', size: 'village', population: '', tags: '', services: [], description: 'A village of fire' },
-        { name: 'Iceholm', size: 'village', population: '', tags: '', services: [], description: 'A cold village' },
-      ],
+    it('filters by name case-insensitively', () => {
+      settlementMockStore.items = settlements;
+      renderSettlements();
+      searchSettlements('fire');
+
+      expect(getSettlementListItem('Fireport')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: iceholm/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: goldhaven/i })).not.toBeInTheDocument();
     });
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const searchInput = screen.getByLabelText('Search settlements');
-    fireEvent.change(searchInput, { target: { value: 'fire' } });
-    const villageBtns = screen.getAllByRole('button', { name: /village/i });
-    const sizeFilterBtn = villageBtns.find(btn => btn.classList.contains('settlements-size-btn'));
-    fireEvent.click(sizeFilterBtn);
-    expect(screen.getByText('Fire Village')).toBeInTheDocument();
-    expect(screen.queryByText('Fireport')).not.toBeInTheDocument();
-    expect(screen.queryByText('Iceholm')).not.toBeInTheDocument();
+
+    it('matches search terms against tags and description, not just name', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { tags: 'coastal', description: 'A town of fire' }),
+        makeSettlement('Iceholm', { tags: 'frozen', description: 'A cold village on a glacier' }),
+      ];
+      renderSettlements();
+
+      searchSettlements('coastal');
+      expect(getSettlementListItem('Fireport')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: iceholm/i })).not.toBeInTheDocument();
+
+      searchSettlements('glacier');
+      expect(getSettlementListItem('Iceholm')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: fireport/i })).not.toBeInTheDocument();
+    });
+
+    it('treats a whitespace-only query as empty and shows every settlement', () => {
+      settlementMockStore.items = settlements;
+      renderSettlements();
+      searchSettlements('   ');
+
+      expect(getSettlementListItem('Fireport')).toBeInTheDocument();
+      expect(getSettlementListItem('Iceholm')).toBeInTheDocument();
+      expect(getSettlementListItem('Goldhaven')).toBeInTheDocument();
+    });
   });
 
-  it('shows no results message when both search and size filter yield no matches', () => {
-    render(<Settlements campaignName="test" onBack={() => {}} />);
-    const searchInput = screen.getByLabelText('Search settlements');
-    fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
-    const villageBtn = screen.getByRole('button', { name: /village/i });
-    fireEvent.click(villageBtn);
-    expect(screen.getByText(/no settlements found matching your filters/i)).toBeInTheDocument();
+  describe('Size filter', () => {
+    it('restores the full list when the active size filter is clicked again', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { size: 'town' }),
+        makeSettlement('Iceholm', { size: 'village' }),
+        makeSettlement('Goldhaven', { size: 'city' }),
+      ];
+      renderSettlements();
+
+      fireEvent.click(getSizeFilterButton('Village'));
+      expect(getSettlementListItem('Iceholm')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: fireport/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: goldhaven/i })).not.toBeInTheDocument();
+
+      fireEvent.click(getSizeFilterButton('Village'));
+      expect(getSettlementListItem('Fireport')).toBeInTheDocument();
+      expect(getSettlementListItem('Goldhaven')).toBeInTheDocument();
+    });
+  });
+
+  describe('Combined search and size filters', () => {
+    it('shows only the settlements that match both the search query and the size filter', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { size: 'town' }),
+        makeSettlement('Fire Village', { size: 'village' }),
+        makeSettlement('Iceholm', { size: 'village' }),
+      ];
+      renderSettlements();
+      searchSettlements('fire');
+
+      fireEvent.click(getSizeFilterButton('Village'));
+
+      expect(getSettlementListItem('Fire Village')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: fireport/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: iceholm/i })).not.toBeInTheDocument();
+    });
+
+    it('shows the no-results message when the size filter alone excludes every settlement', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { size: 'town' }),
+        makeSettlement('Iceholm', { size: 'village' }),
+        makeSettlement('Goldhaven', { size: 'city' }),
+      ];
+      renderSettlements();
+
+      fireEvent.click(getSizeFilterButton('Metropolis'));
+
+      expect(screen.getByText(/no settlements found matching your filters/i)).toBeInTheDocument();
+      expect(screen.queryByText(/no settlements yet/i)).not.toBeInTheDocument();
+    });
   });
 });

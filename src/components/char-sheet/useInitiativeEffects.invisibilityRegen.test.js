@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import useInitiativeEffects from './useInitiativeEffects.js';
@@ -83,7 +84,7 @@ describe('useInitiativeEffects - invisibility and regenerate clearing', () => {
     }
 
     describe('Invisibility clearing', () => {
-        it('calls endInvisibility when activeInvisibility key exists', () => {
+        it('calls endInvisibility and clears the key when activeInvisibility is present', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === `_activeInvisibility_TestMonk`) return 'TestMonk';
                 return null;
@@ -109,10 +110,20 @@ describe('useInitiativeEffects - invisibility and regenerate clearing', () => {
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
             expect(endInvisibility).not.toHaveBeenCalled();
         });
+
+        it('does not call endInvisibility when event characterName does not match player name', () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === `_activeInvisibility_TestMonk`) return 'TestMonk';
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'OtherPlayer', roll: 15 });
+            expect(endInvisibility).not.toHaveBeenCalled();
+        });
     });
 
     describe('Greater Invisibility clearing', () => {
-        it('calls endGreaterInvisibility when activeGreaterInvisibility key exists', () => {
+        it('calls endGreaterInvisibility and clears the key when activeGreaterInvisibility is present', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === `_activeGreaterInvisibility_TestMonk`) return 'TestMonk';
                 return null;
@@ -138,6 +149,50 @@ describe('useInitiativeEffects - invisibility and regenerate clearing', () => {
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
             expect(endGreaterInvisibility).not.toHaveBeenCalled();
         });
+
+        it('does not call endGreaterInvisibility when event characterName does not match player name', () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === `_activeGreaterInvisibility_TestMonk`) return 'TestMonk';
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'OtherPlayer', roll: 15 });
+            expect(endGreaterInvisibility).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Both invisibility effects clearing simultaneously', () => {
+        it('clears both regular and greater invisibility when both keys are present', () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === `_activeInvisibility_TestMonk`) return 'TestMonk';
+                if (key === `_activeGreaterInvisibility_TestMonk`) return 'TestMonk';
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(endInvisibility).toHaveBeenCalledWith(
+                'TestMonk',
+                campaignName,
+                'target rolled initiative'
+            );
+            expect(endGreaterInvisibility).toHaveBeenCalledWith(
+                'TestMonk',
+                campaignName,
+                'target rolled initiative'
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                `_activeInvisibility_TestMonk`,
+                null,
+                campaignName
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                `_activeGreaterInvisibility_TestMonk`,
+                null,
+                campaignName
+            );
+        });
     });
 
     describe('Regenerate HP restoration', () => {
@@ -150,8 +205,6 @@ describe('useInitiativeEffects - invisibility and regenerate clearing', () => {
             vi.mocked(getAllStoreKeys).mockReturnValue(['TestMonk', 'Goblin', 'Zombie']);
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            // Should set currentHitPoints = hitPoints for each creature with regenerateActive
-            // and set regenerateActive = false for each
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'TestMonk',
                 'currentHitPoints',
@@ -199,11 +252,37 @@ describe('useInitiativeEffects - invisibility and regenerate clearing', () => {
             vi.mocked(getAllStoreKeys).mockReturnValue([123, null]);
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            // The regenerate loop should not have called setRuntimeValue for those keys
             const regenCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
                 call => call[1] === 'regenerateActive'
             );
             expect(regenCalls.length).toBe(0);
+        });
+
+        it('handles mixed valid string keys and non-string keys together', () => {
+            getRuntimeValue.mockImplementation((charKey, prop) => {
+                if (prop === 'regenerateActive') return charKey === 'ValidCreature' ? true : false;
+                if (prop === 'hitPoints') return 15;
+                return null;
+            });
+            vi.mocked(getAllStoreKeys).mockReturnValue(['ValidCreature', 123, null, 'AnotherNonRegen']);
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'ValidCreature',
+                'currentHitPoints',
+                15,
+                campaignName
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'ValidCreature',
+                'regenerateActive',
+                false,
+                campaignName
+            );
+            const nonStringCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[0] === 123 || call[0] === null
+            );
+            expect(nonStringCalls.length).toBe(0);
         });
 
         it('does not set currentHitPoints when hitPoints is null', () => {
@@ -215,7 +294,6 @@ describe('useInitiativeEffects - invisibility and regenerate clearing', () => {
             vi.mocked(getAllStoreKeys).mockReturnValue(['TestMonk']);
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            // Should still set regenerateActive to false but not currentHitPoints
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'TestMonk',
                 'regenerateActive',
@@ -226,6 +304,74 @@ describe('useInitiativeEffects - invisibility and regenerate clearing', () => {
                 call => call[1] === 'currentHitPoints'
             );
             expect(hpCalls.length).toBe(0);
+        });
+
+        it('sets currentHitPoints to 0 when hitPoints is 0 (falsy but valid)', () => {
+            getRuntimeValue.mockImplementation((_charKey, prop) => {
+                if (prop === 'regenerateActive') return true;
+                if (prop === 'hitPoints') return 0;
+                return null;
+            });
+            vi.mocked(getAllStoreKeys).mockReturnValue(['TestMonk']);
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestMonk',
+                'currentHitPoints',
+                0,
+                campaignName
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestMonk',
+                'regenerateActive',
+                false,
+                campaignName
+            );
+        });
+
+        it('does not call setRuntimeValue when getAllStoreKeys returns empty array', () => {
+            getRuntimeValue.mockImplementation((_charKey, prop) => {
+                if (prop === 'regenerateActive') return true;
+                if (prop === 'hitPoints') return 20;
+                return null;
+            });
+            vi.mocked(getAllStoreKeys).mockReturnValue([]);
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            const regenCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'regenerateActive'
+            );
+            expect(regenCalls.length).toBe(0);
+        });
+
+        it('does not call setRuntimeValue when no creatures have regenerateActive', () => {
+            getRuntimeValue.mockImplementation((_charKey, prop) => {
+                if (prop === 'regenerateActive') return false;
+                if (prop === 'hitPoints') return 20;
+                return null;
+            });
+            vi.mocked(getAllStoreKeys).mockReturnValue(['TestMonk', 'Goblin']);
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            const regenCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'regenerateActive' || call[1] === 'currentHitPoints'
+            );
+            expect(regenCalls.length).toBe(0);
+        });
+
+        it('does not process regenerate when event characterName does not match player name', () => {
+            getRuntimeValue.mockImplementation((charKey, prop) => {
+                if (prop === 'regenerateActive') return true;
+                if (prop === 'hitPoints') return 20;
+                return null;
+            });
+            vi.mocked(getAllStoreKeys).mockReturnValue(['TestMonk']);
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'OtherPlayer', roll: 15 });
+            const regenCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'regenerateActive' || call[1] === 'currentHitPoints'
+            );
+            expect(regenCalls.length).toBe(0);
         });
     });
 });

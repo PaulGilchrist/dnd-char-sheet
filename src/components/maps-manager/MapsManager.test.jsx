@@ -1,860 +1,922 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MapsManager from './MapsManager.jsx';
+
+// Test access to the SSE handler wired into the (mocked) Subscriber component
+const subscriberMock = vi.hoisted(() => ({
+    props: { handleEvent: null },
+}));
 
 // Mock the mapsService
 vi.mock('../../services/maps/mapsService.js', () => ({
-  loadMaps: vi.fn(),
-  createMap: vi.fn(),
-  deleteMap: vi.fn(),
-  renameMap: vi.fn(),
-  activateMap: vi.fn(),
-  loadMapData: vi.fn(),
-  updateMapDescription: vi.fn(),
-  formatMapName: (name) => name,
+    loadMaps: vi.fn(),
+    createMap: vi.fn(),
+    deleteMap: vi.fn(),
+    renameMap: vi.fn(),
+    activateMap: vi.fn(),
+    loadMapData: vi.fn(),
+    updateMapDescription: vi.fn(),
 }));
 
 // Mock child components
 vi.mock('../common/PreviewToggle.jsx', () => ({
-  default: ({ value, onChange, placeholder }) => (
-    <textarea
-      data-testid="preview-toggle"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-    />
-  ),
+    default: ({ value, onChange, placeholder }) => (
+        <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+        />
+    ),
 }));
 
 vi.mock('../common/Subscriber.jsx', () => ({
-  default: () => <div data-testid="subscriber" />,
+    default: ({ handleEvent }) => {
+        subscriberMock.props.handleEvent = handleEvent;
+        return null;
+    },
 }));
 
 vi.mock('./GenerateDungeonModal.jsx', () => ({
-  default: () => <div data-testid="generate-dungeon-modal" />,
+    default: () => <div data-testid="generate-dungeon-modal" />,
 }));
 
 vi.mock('./GenerateTerrainModal.jsx', () => ({
-  default: () => <div data-testid="generate-terrain-modal" />,
+    default: () => <div data-testid="generate-terrain-modal" />,
 }));
 
 import * as mapsService from '../../services/maps/mapsService.js';
 
-const defaultProps = {
-  campaignName: 'test-campaign',
-  onOpenMap: vi.fn(),
-  onBack: vi.fn(),
-};
-
 const makeMap = (overrides) => ({
-  fileName: 'map1.json',
-  name: 'Test Map',
-  type: 'indoor',
-  isActive: false,
-  ...overrides,
+    fileName: 'map1.json',
+    name: 'Test Map',
+    type: 'indoor',
+    isActive: false,
+    ...overrides,
 });
 
+const deferred = () => {
+    let resolve;
+    const promise = new Promise((r) => { resolve = r; });
+    return { promise, resolve };
+};
+
 describe('MapsManager', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mapsService.loadMaps.mockResolvedValue({ maps: [] });
-  });
+    let props;
 
-  describe('Header & Back Button', () => {
-    it('calls onBack when back button is clicked', () => {
-      render(<MapsManager {...defaultProps} />);
-      fireEvent.click(screen.getByRole('button', { name: /back/i }));
-      expect(defaultProps.onBack).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('Loading & Empty States', () => {
-    it('shows loading indicator while loading maps', () => {
-      mapsService.loadMaps.mockResolvedValue(new Promise(() => {}));
-      render(<MapsManager {...defaultProps} />);
-      expect(screen.getByText('Loading maps...')).toBeInTheDocument();
+    beforeEach(() => {
+        vi.resetAllMocks();
+        subscriberMock.props.handleEvent = null;
+        mapsService.loadMaps.mockResolvedValue({ maps: [] });
+        mapsService.loadMapData.mockResolvedValue({ description: '' });
+        props = {
+            campaignName: 'test-campaign',
+            onOpenMap: vi.fn(),
+            onBack: vi.fn(),
+        };
     });
 
-    it('shows empty state when no maps exist', async () => {
-      mapsService.loadMaps.mockResolvedValue({ maps: [] });
-      render(<MapsManager {...defaultProps} />);
-      await waitFor(() => {
-        expect(screen.getByText('No maps yet. Create one to get started.')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Create Map Flow', () => {
-    it('creates a map when name is typed and Create Map is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({ maps: [] });
-      render(<MapsManager {...defaultProps} />);
-
-      const input = screen.getByPlaceholderText('New map name...');
-      fireEvent.change(input, { target: { value: 'Dungeon Level 1' } });
-      const createButton = screen.getByRole('button', { name: 'Create Map' });
-      fireEvent.click(createButton);
-
-      await waitFor(() => {
-        expect(mapsService.createMap).toHaveBeenCalledWith(
-          'test-campaign',
-          'Dungeon Level 1',
-          { type: 'indoor' }
-        );
-      });
+    // -----------------------------------------------------------------------
+    // Header & Back Button
+    // -----------------------------------------------------------------------
+    describe('Header & Back Button', () => {
+        it('calls onBack when the back button is clicked', () => {
+            render(<MapsManager {...props} />);
+            fireEvent.click(screen.getByRole('button', { name: /back/i }));
+            expect(props.onBack).toHaveBeenCalledTimes(1);
+        });
     });
 
-    it('creates an outdoor map when outdoor type is selected', async () => {
-      render(<MapsManager {...defaultProps} />);
-      const outdoorRadio = screen.getByRole('radio', { name: /outdoor/i });
-      fireEvent.click(outdoorRadio);
-      const input = screen.getByPlaceholderText('New map name...');
-      fireEvent.change(input, { target: { value: 'Forest Map' } });
-      const createButton = screen.getByRole('button', { name: 'Create Map' });
-      fireEvent.click(createButton);
+    // -----------------------------------------------------------------------
+    // Loading & Empty States
+    // -----------------------------------------------------------------------
+    describe('Loading & Empty States', () => {
+        it('shows a loading indicator while maps are being fetched', () => {
+            mapsService.loadMaps.mockImplementation(() => new Promise(() => {}));
+            render(<MapsManager {...props} />);
+            expect(screen.getByText('Loading maps...')).toBeInTheDocument();
+        });
 
-      await waitFor(() => {
-        expect(mapsService.createMap).toHaveBeenCalledWith(
-          'test-campaign',
-          'Forest Map',
-          { type: 'outdoor' }
-        );
-      });
+        it('shows the empty state when no maps exist', async () => {
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('No maps yet. Create one to get started.')).toBeInTheDocument();
+            });
+        });
+
+        it('treats a response without a maps array as an empty list', async () => {
+            mapsService.loadMaps.mockResolvedValue({});
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('No maps yet. Create one to get started.')).toBeInTheDocument();
+            });
+        });
+
+        it('shows an error message when loading maps fails', async () => {
+            mapsService.loadMaps.mockRejectedValue(new Error('Network error'));
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Network error')).toBeInTheDocument();
+            });
+        });
     });
 
-    it('triggers create when Enter key is pressed in create input', async () => {
-      render(<MapsManager {...defaultProps} />);
-      const input = screen.getByPlaceholderText('New map name...');
-      fireEvent.change(input, { target: { value: 'My Map' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
+    // -----------------------------------------------------------------------
+    // Create Map Flow
+    // -----------------------------------------------------------------------
+    describe('Create Map Flow', () => {
+        it('creates an indoor map when a name is typed and Create Map is clicked', async () => {
+            render(<MapsManager {...props} />);
+            fireEvent.change(screen.getByPlaceholderText('New map name...'), { target: { value: 'Dungeon Level 1' } });
+            fireEvent.click(screen.getByRole('button', { name: 'Create Map' }));
 
-      await waitFor(() => {
-        expect(mapsService.createMap).toHaveBeenCalledWith(
-          'test-campaign',
-          'My Map',
-          { type: 'indoor' }
-        );
-      });
+            await waitFor(() => {
+                expect(mapsService.createMap).toHaveBeenCalledWith(
+                    'test-campaign',
+                    'Dungeon Level 1',
+                    { type: 'indoor' }
+                );
+            });
+        });
+
+        it('creates an outdoor map when the outdoor type is selected', async () => {
+            render(<MapsManager {...props} />);
+            fireEvent.click(screen.getByRole('radio', { name: /outdoor/i }));
+            fireEvent.change(screen.getByPlaceholderText('New map name...'), { target: { value: 'Forest Map' } });
+            fireEvent.click(screen.getByRole('button', { name: 'Create Map' }));
+
+            await waitFor(() => {
+                expect(mapsService.createMap).toHaveBeenCalledWith(
+                    'test-campaign',
+                    'Forest Map',
+                    { type: 'outdoor' }
+                );
+            });
+        });
+
+        it('creates a map when Enter is pressed in the create input', async () => {
+            render(<MapsManager {...props} />);
+            const input = screen.getByPlaceholderText('New map name...');
+            fireEvent.change(input, { target: { value: 'My Map' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(mapsService.createMap).toHaveBeenCalledWith(
+                    'test-campaign',
+                    'My Map',
+                    { type: 'indoor' }
+                );
+            });
+        });
+
+        it('disables the create button when the name is empty or whitespace-only', () => {
+            render(<MapsManager {...props} />);
+            const createButton = screen.getByRole('button', { name: 'Create Map' });
+            expect(createButton).toBeDisabled();
+
+            fireEvent.change(screen.getByPlaceholderText('New map name...'), { target: { value: '   ' } });
+            expect(createButton).toBeDisabled();
+        });
+
+        it('shows an error when Enter is pressed with an empty name', () => {
+            render(<MapsManager {...props} />);
+            fireEvent.keyDown(screen.getByPlaceholderText('New map name...'), { key: 'Enter' });
+            expect(screen.getByText('Map name cannot be empty')).toBeInTheDocument();
+        });
+
+        it('rejects a duplicate name case-insensitively', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Existing Map' })],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Existing Map')).toBeInTheDocument();
+            });
+
+            fireEvent.change(screen.getByPlaceholderText('New map name...'), { target: { value: 'existing map' } });
+            fireEvent.click(screen.getByRole('button', { name: 'Create Map' }));
+
+            await waitFor(() => {
+                expect(screen.getByText('A map with that name already exists')).toBeInTheDocument();
+            });
+            expect(mapsService.createMap).not.toHaveBeenCalled();
+        });
+
+        it('shows the error message when map creation fails', async () => {
+            mapsService.createMap.mockRejectedValue(new Error('Server error'));
+            render(<MapsManager {...props} />);
+            fireEvent.change(screen.getByPlaceholderText('New map name...'), { target: { value: 'Bad Map' } });
+            fireEvent.click(screen.getByRole('button', { name: 'Create Map' }));
+
+            await waitFor(() => {
+                expect(screen.getByText('Server error')).toBeInTheDocument();
+            });
+        });
+
+        it('shows the fallback message when map creation fails without an error message', async () => {
+            mapsService.createMap.mockRejectedValue(new Error());
+            render(<MapsManager {...props} />);
+            fireEvent.change(screen.getByPlaceholderText('New map name...'), { target: { value: 'Bad Map' } });
+            fireEvent.click(screen.getByRole('button', { name: 'Create Map' }));
+
+            await waitFor(() => {
+                expect(screen.getByText('Failed to create map')).toBeInTheDocument();
+            });
+        });
+
+        it('clears a previous error when a subsequent create succeeds', async () => {
+            mapsService.createMap
+                .mockRejectedValueOnce(new Error('Server error'))
+                .mockResolvedValueOnce({});
+            render(<MapsManager {...props} />);
+            const input = screen.getByPlaceholderText('New map name...');
+            const createButton = screen.getByRole('button', { name: 'Create Map' });
+
+            fireEvent.change(input, { target: { value: 'Bad Map' } });
+            fireEvent.click(createButton);
+            await waitFor(() => {
+                expect(screen.getByText('Server error')).toBeInTheDocument();
+            });
+
+            fireEvent.change(input, { target: { value: 'Good Map' } });
+            fireEvent.click(createButton);
+            await waitFor(() => {
+                expect(screen.queryByText('Server error')).not.toBeInTheDocument();
+            });
+            expect(mapsService.createMap).toHaveBeenCalledTimes(2);
+        });
+
+        it('clears the input and refreshes the list after a successful create', async () => {
+            mapsService.loadMaps
+                .mockResolvedValueOnce({ maps: [] })
+                .mockResolvedValueOnce({ maps: [makeMap({ name: 'Created Map' })] });
+            render(<MapsManager {...props} />);
+            const input = screen.getByPlaceholderText('New map name...');
+            fireEvent.change(input, { target: { value: 'Created Map' } });
+            fireEvent.click(screen.getByRole('button', { name: 'Create Map' }));
+
+            await waitFor(() => {
+                expect(screen.getByText('Created Map')).toBeInTheDocument();
+            });
+            expect(input).toHaveValue('');
+        });
+
+        it.each([
+            ['indoor', 'Generate a dungeon map with rooms, hallways, and doorways'],
+            ['outdoor', 'Generate a terrain map with biomes'],
+        ])('shows the %s generator button for the selected map type', (mapType, title) => {
+            render(<MapsManager {...props} />);
+            if (mapType === 'outdoor') {
+                fireEvent.click(screen.getByRole('radio', { name: /outdoor/i }));
+            }
+            expect(screen.getByTitle(title)).toBeInTheDocument();
+        });
     });
 
-    it('disables create button when name is empty or whitespace', () => {
-      render(<MapsManager {...defaultProps} />);
-      const createButton = screen.getByRole('button', { name: 'Create Map' });
-      expect(createButton).toBeDisabled();
+    // -----------------------------------------------------------------------
+    // Maps List Rendering
+    // -----------------------------------------------------------------------
+    describe('Maps List Rendering', () => {
+        it('renders maps sorted alphabetically by name', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [
+                    makeMap({ fileName: 'map3.json', name: 'Zoo' }),
+                    makeMap({ fileName: 'map1.json', name: 'Alpha Cave', isActive: true }),
+                    makeMap({ fileName: 'map2.json', name: 'Beta Forest' }),
+                ],
+            });
+            render(<MapsManager {...props} />);
 
-      const input = screen.getByPlaceholderText('New map name...');
-      fireEvent.change(input, { target: { value: '   ' } });
-      expect(createButton).toBeDisabled();
+            await waitFor(() => {
+                const items = screen.getAllByRole('listitem');
+                expect(items[0]).toHaveTextContent('Alpha Cave');
+                expect(items[1]).toHaveTextContent('Beta Forest');
+                expect(items[2]).toHaveTextContent('Zoo');
+            });
+        });
+
+        it.each([
+            ['indoor', 'Indoor'],
+            ['outdoor', 'Outdoor'],
+        ])('renders the %s type badge', async (type, badgeText) => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ type })],
+            });
+            render(<MapsManager {...props} />);
+
+            await waitFor(() => {
+                expect(screen.getByText(badgeText)).toBeInTheDocument();
+            });
+        });
+
+        it('does not render a type badge when a map has no type', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ type: null })],
+            });
+            render(<MapsManager {...props} />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Map')).toBeInTheDocument();
+            });
+            const listItem = screen.getByText('Test Map').closest('li');
+            expect(within(listItem).queryByText('Indoor')).not.toBeInTheDocument();
+            expect(within(listItem).queryByText('Outdoor')).not.toBeInTheDocument();
+        });
+
+        it('renders an Active badge for the active map', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Dungeon Level 1', isActive: true })],
+            });
+            render(<MapsManager {...props} />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Active')).toBeInTheDocument();
+            });
+        });
+
+        it('does not show an Activate button for the active map', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Active Map', isActive: true })],
+            });
+            render(<MapsManager {...props} />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Active Map')).toBeInTheDocument();
+            });
+            expect(screen.queryByRole('button', { name: 'Activate' })).not.toBeInTheDocument();
+        });
+
+        it('shows an Activate button only for inactive maps', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [
+                    makeMap({ name: 'Active Map', isActive: true }),
+                    makeMap({ name: 'Inactive Map', isActive: false }),
+                ],
+            });
+            render(<MapsManager {...props} />);
+
+            await waitFor(() => {
+                expect(screen.getAllByRole('listitem')).toHaveLength(2);
+            });
+            expect(screen.getAllByRole('button', { name: 'Activate' })).toHaveLength(1);
+        });
     });
 
-    it('clears error before attempting create', async () => {
-      mapsService.loadMaps.mockResolvedValue({ maps: [] });
-      mapsService.createMap.mockRejectedValue(new Error('Server error'));
-      render(<MapsManager {...defaultProps} />);
+    // -----------------------------------------------------------------------
+    // Open Button
+    // -----------------------------------------------------------------------
+    describe('Open Button', () => {
+        it('calls onOpenMap with the correct fileName when Open is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
 
-      // Set an initial error
-      const input = screen.getByPlaceholderText('New map name...');
-      fireEvent.change(input, { target: { value: 'Bad Map' } });
-
-      const createButton = screen.getByRole('button', { name: 'Create Map' });
-      fireEvent.click(createButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Server error')).toBeInTheDocument();
-      });
+            fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+            expect(props.onOpenMap).toHaveBeenCalledWith('dungeon-level-1.json');
+        });
     });
 
-    it('rejects create with duplicate name (case-insensitive)', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Existing Map' })],
-      });
-      render(<MapsManager {...defaultProps} />);
+    // -----------------------------------------------------------------------
+    // Activate Button
+    // -----------------------------------------------------------------------
+    describe('Activate Button', () => {
+        it('calls activateMap with the campaign and fileName when Activate is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Forest', fileName: 'forest.json', isActive: false })],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Forest')).toBeInTheDocument();
+            });
 
-      await waitFor(() => {
-        expect(screen.getByText('Existing Map')).toBeInTheDocument();
-      });
+            fireEvent.click(screen.getByRole('button', { name: 'Activate' }));
 
-      const input = screen.getByPlaceholderText('New map name...');
-      fireEvent.change(input, { target: { value: 'existing map' } });
-      const createButton = screen.getByRole('button', { name: 'Create Map' });
-      fireEvent.click(createButton);
+            await waitFor(() => {
+                expect(mapsService.activateMap).toHaveBeenCalledWith('test-campaign', 'forest.json');
+            });
+        });
 
-      await waitFor(() => {
-        expect(screen.getByText('A map with that name already exists')).toBeInTheDocument();
-      });
+        it('shows an error message when activation fails', async () => {
+            mapsService.activateMap.mockRejectedValue(new Error('Activation failed'));
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Forest', fileName: 'forest.json', isActive: false })],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Forest')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Activate' }));
+
+            await waitFor(() => {
+                expect(screen.getByText('Activation failed')).toBeInTheDocument();
+            });
+        });
     });
 
-    it('displays error when map creation fails', async () => {
-      mapsService.createMap.mockRejectedValue(new Error('Server error'));
-      render(<MapsManager {...defaultProps} />);
+    // -----------------------------------------------------------------------
+    // Rename Flow
+    // -----------------------------------------------------------------------
+    describe('Rename Flow', () => {
+        it('shows a rename input when Rename is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
 
-      const input = screen.getByPlaceholderText('New map name...');
-      fireEvent.change(input, { target: { value: 'Bad Map' } });
-      const createButton = screen.getByRole('button', { name: 'Create Map' });
-      fireEvent.click(createButton);
+            fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+            expect(screen.getByDisplayValue('Dungeon Level 1')).toBeInTheDocument();
+        });
 
-      await waitFor(() => {
-        expect(screen.getByText('Server error')).toBeInTheDocument();
-      });
+        it('renames a map when a new name is typed and Enter is pressed', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+            const renameInput = screen.getByDisplayValue('Dungeon Level 1');
+            fireEvent.change(renameInput, { target: { value: 'Renamed Map' } });
+            fireEvent.keyDown(renameInput, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(mapsService.renameMap).toHaveBeenCalledWith(
+                    'test-campaign',
+                    'dungeon-level-1.json',
+                    'Renamed Map'
+                );
+            });
+        });
+
+        it('saves the rename when the input loses focus', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+            const renameInput = screen.getByDisplayValue('Dungeon Level 1');
+            fireEvent.change(renameInput, { target: { value: 'Renamed Map' } });
+            fireEvent.blur(renameInput);
+
+            await waitFor(() => {
+                expect(mapsService.renameMap).toHaveBeenCalledWith(
+                    'test-campaign',
+                    'dungeon-level-1.json',
+                    'Renamed Map'
+                );
+            });
+        });
+
+        it('cancels the rename when Escape is pressed', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+            const renameInput = screen.getByDisplayValue('Dungeon Level 1');
+            fireEvent.keyDown(renameInput, { key: 'Escape' });
+
+            expect(screen.queryByDisplayValue('Dungeon Level 1')).not.toBeInTheDocument();
+            expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+        });
+
+        it('cancels the rename when an empty name is submitted', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+            const renameInput = screen.getByDisplayValue('Dungeon Level 1');
+            fireEvent.change(renameInput, { target: { value: '' } });
+            fireEvent.keyDown(renameInput, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(mapsService.renameMap).not.toHaveBeenCalled();
+            });
+        });
+
+        it('cancels the rename when the name is unchanged', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+            const renameInput = screen.getByDisplayValue('Dungeon Level 1');
+            fireEvent.keyDown(renameInput, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(mapsService.renameMap).not.toHaveBeenCalled();
+            });
+        });
+
+        it('rejects a rename to a duplicate name (case-insensitive, kebab-normalized)', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [
+                    makeMap({ name: 'Dungeon Level 1' }),
+                    makeMap({ name: 'Forest', fileName: 'forest.json' }),
+                ],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            const renameButtons = screen.getAllByRole('button', { name: 'Rename' });
+            fireEvent.click(renameButtons[0]);
+
+            const renameInput = screen.getByDisplayValue('Dungeon Level 1');
+            fireEvent.change(renameInput, { target: { value: 'Forest' } });
+            fireEvent.keyDown(renameInput, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(screen.getByText('A map with that name already exists')).toBeInTheDocument();
+            });
+            expect(mapsService.renameMap).not.toHaveBeenCalled();
+        });
+
+        it('shows an error message when rename fails', async () => {
+            mapsService.renameMap.mockRejectedValue(new Error('Rename failed'));
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+            const renameInput = screen.getByDisplayValue('Dungeon Level 1');
+            fireEvent.change(renameInput, { target: { value: 'New Name' } });
+            fireEvent.keyDown(renameInput, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(screen.getByText('Rename failed')).toBeInTheDocument();
+            });
+        });
     });
 
-    it('shows error for duplicate map names on create', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Existing Map' })],
-      });
-      render(<MapsManager {...defaultProps} />);
+    // -----------------------------------------------------------------------
+    // Delete Flow
+    // -----------------------------------------------------------------------
+    describe('Delete Flow', () => {
+        it('shows a confirmation modal when Delete is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
 
-      await waitFor(() => {
-        expect(screen.getByText('Existing Map')).toBeInTheDocument();
-      });
+            fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-      const input = screen.getByPlaceholderText('New map name...');
-      fireEvent.change(input, { target: { value: 'Existing Map' } });
-      const createButton = screen.getByRole('button', { name: 'Create Map' });
-      fireEvent.click(createButton);
+            expect(screen.getByRole('heading', { name: 'Delete Map' })).toBeInTheDocument();
+            expect(screen.getByText(/permanently delete/i)).toBeInTheDocument();
+        });
 
-      await waitFor(() => {
-        expect(screen.getByText('A map with that name already exists')).toBeInTheDocument();
-      });
+        it('calls deleteMap when deletion is confirmed', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+            fireEvent.click(screen.getByRole('button', { name: /Yes, Delete Permanently/i }));
+
+            await waitFor(() => {
+                expect(mapsService.deleteMap).toHaveBeenCalledWith('test-campaign', 'dungeon-level-1.json');
+            });
+        });
+
+        it('closes the modal when Cancel is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+            expect(screen.getByRole('heading', { name: 'Delete Map' })).toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+            expect(screen.queryByRole('heading', { name: 'Delete Map' })).not.toBeInTheDocument();
+        });
+
+        it('closes the modal when the overlay is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+            expect(screen.getByRole('heading', { name: 'Delete Map' })).toBeInTheDocument();
+
+            const overlay = document.querySelector('.maps-manager-modal-overlay');
+            expect(overlay).not.toBeNull();
+            fireEvent.click(overlay);
+            expect(screen.queryByRole('heading', { name: 'Delete Map' })).not.toBeInTheDocument();
+        });
+
+        it('shows an error message when deletion fails', async () => {
+            mapsService.deleteMap.mockRejectedValue(new Error('Delete failed'));
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+            fireEvent.click(screen.getByRole('button', { name: /Yes, Delete Permanently/i }));
+
+            await waitFor(() => {
+                expect(screen.getByText('Delete failed')).toBeInTheDocument();
+            });
+        });
     });
 
-    it('shows generate dungeon button for indoor type', () => {
-      render(<MapsManager {...defaultProps} />);
-      expect(screen.getByTitle('Generate a dungeon map with rooms, hallways, and doorways')).toBeInTheDocument();
+    // -----------------------------------------------------------------------
+    // Edit Description Flow
+    // -----------------------------------------------------------------------
+    describe('Edit Description Flow', () => {
+        it('opens the edit modal when the edit description button is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByTitle('Edit description'));
+
+            await waitFor(() => {
+                expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
+            });
+        });
+
+        it('pre-fills the textarea with the existing description', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            mapsService.loadMapData.mockResolvedValue({ description: 'A dark dungeon.' });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByTitle('Edit description'));
+
+            await waitFor(() => {
+                expect(screen.getByPlaceholderText(/Describe this map/)).toHaveValue('A dark dungeon.');
+            });
+        });
+
+        it('does not open the modal until the map data has loaded', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            const pending = deferred();
+            mapsService.loadMapData.mockImplementation(() => pending.promise);
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByTitle('Edit description'));
+
+            expect(screen.queryByText(/Edit Description/)).not.toBeInTheDocument();
+            expect(screen.queryByText(/Loading map data/)).not.toBeInTheDocument();
+
+            pending.resolve({ description: 'Loaded.' });
+            await waitFor(() => {
+                expect(screen.getByPlaceholderText(/Describe this map/)).toHaveValue('Loaded.');
+            });
+        });
+
+        it('calls updateMapDescription when Save is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
+            });
+            mapsService.loadMapData.mockResolvedValue({ description: 'A dark dungeon.' });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByTitle('Edit description'));
+            await waitFor(() => {
+                expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
+            });
+
+            fireEvent.change(screen.getByPlaceholderText(/Describe this map/), { target: { value: 'Updated description.' } });
+            fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+            await waitFor(() => {
+                expect(mapsService.updateMapDescription).toHaveBeenCalledWith(
+                    'test-campaign',
+                    'dungeon-level-1.json',
+                    'Updated description.'
+                );
+            });
+        });
+
+        it('allows saving an empty description', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
+            });
+            mapsService.loadMapData.mockResolvedValue({ description: 'A dark dungeon.' });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByTitle('Edit description'));
+            await waitFor(() => {
+                expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
+            });
+
+            fireEvent.change(screen.getByPlaceholderText(/Describe this map/), { target: { value: '' } });
+            fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+            await waitFor(() => {
+                expect(mapsService.updateMapDescription).toHaveBeenCalledWith(
+                    'test-campaign',
+                    'dungeon-level-1.json',
+                    ''
+                );
+            });
+        });
+
+        it('closes the modal when Cancel is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            mapsService.loadMapData.mockResolvedValue({ description: '' });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByTitle('Edit description'));
+            await waitFor(() => {
+                expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+            expect(screen.queryByText(/Edit Description/)).not.toBeInTheDocument();
+        });
+
+        it('closes the modal when the overlay is clicked', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            mapsService.loadMapData.mockResolvedValue({ description: '' });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByTitle('Edit description'));
+            await waitFor(() => {
+                expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
+            });
+
+            const overlay = document.querySelector('.maps-manager-modal-overlay');
+            expect(overlay).not.toBeNull();
+            fireEvent.click(overlay);
+            expect(screen.queryByText(/Edit Description/)).not.toBeInTheDocument();
+        });
+
+        it('shows an error message when loading map data fails', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            mapsService.loadMapData.mockRejectedValue(new Error('Load failed'));
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByTitle('Edit description'));
+
+            await waitFor(() => {
+                expect(screen.getByText('Load failed')).toBeInTheDocument();
+            });
+        });
+
+        it('shows an error message when saving the description fails', async () => {
+            mapsService.loadMaps.mockResolvedValue({ maps: [makeMap({ name: 'Dungeon Level 1' })] });
+            mapsService.loadMapData.mockResolvedValue({ description: 'Original description.' });
+            mapsService.updateMapDescription.mockRejectedValue(new Error('Save failed'));
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByTitle('Edit description'));
+            await waitFor(() => {
+                expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
+            });
+
+            fireEvent.change(screen.getByPlaceholderText(/Describe this map/), { target: { value: 'New description.' } });
+            fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+            await waitFor(() => {
+                expect(screen.getByText('Save failed')).toBeInTheDocument();
+            });
+        });
     });
 
-    it('shows generate terrain button for outdoor type', () => {
-      render(<MapsManager {...defaultProps} />);
-      const outdoorRadio = screen.getByRole('radio', { name: /outdoor/i });
-      fireEvent.click(outdoorRadio);
-      expect(screen.getByTitle('Generate a terrain map with biomes')).toBeInTheDocument();
+    // -----------------------------------------------------------------------
+    // SSE Events
+    // -----------------------------------------------------------------------
+    describe('SSE Events', () => {
+        it('reloads the map list when a maps-list event arrives for this campaign', async () => {
+            mapsService.loadMaps
+                .mockResolvedValueOnce({ maps: [makeMap({ name: 'Initial Map' })] })
+                .mockResolvedValueOnce({ maps: [makeMap({ name: 'SSE Added Map' })] });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Initial Map')).toBeInTheDocument();
+            });
+
+            await act(async () => {
+                subscriberMock.props.handleEvent({ key: 'maps-list-test-campaign' });
+            });
+
+            await waitFor(() => {
+                expect(screen.getByText('SSE Added Map')).toBeInTheDocument();
+            });
+            expect(screen.queryByText('Initial Map')).not.toBeInTheDocument();
+        });
+
+        it('updates the active map directly on a map-activate event without re-fetching', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [
+                    makeMap({ name: 'Cave', fileName: 'cave.json', isActive: true }),
+                    makeMap({ name: 'Forest', fileName: 'forest.json', isActive: false }),
+                ],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Cave')).toBeInTheDocument();
+            });
+            expect(mapsService.loadMaps).toHaveBeenCalledTimes(1);
+
+            await act(async () => {
+                subscriberMock.props.handleEvent({
+                    key: 'map-activate-test-campaign',
+                    data: { activeMap: 'forest' },
+                });
+            });
+
+            expect(screen.getAllByText('Active')).toHaveLength(1);
+            expect(screen.getByText('Active').closest('li')).toHaveTextContent('Forest');
+            expect(mapsService.loadMaps).toHaveBeenCalledTimes(1);
+        });
+
+        it('ignores SSE events for other campaigns', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Cave', fileName: 'cave.json', isActive: true })],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Cave')).toBeInTheDocument();
+            });
+
+            await act(async () => {
+                subscriberMock.props.handleEvent({
+                    key: 'map-activate-other-campaign',
+                    data: { activeMap: 'something-else' },
+                });
+            });
+
+            expect(screen.getAllByText('Active')).toHaveLength(1);
+            expect(screen.getByText('Active').closest('li')).toHaveTextContent('Cave');
+        });
+
+        it('does nothing when an SSE event has no key', async () => {
+            mapsService.loadMaps.mockResolvedValue({
+                maps: [makeMap({ name: 'Cave', fileName: 'cave.json', isActive: true })],
+            });
+            render(<MapsManager {...props} />);
+            await waitFor(() => {
+                expect(screen.getByText('Cave')).toBeInTheDocument();
+            });
+
+            await act(async () => {
+                subscriberMock.props.handleEvent(null);
+                subscriberMock.props.handleEvent({ data: {} });
+            });
+
+            expect(screen.getAllByText('Active')).toHaveLength(1);
+            expect(mapsService.loadMaps).toHaveBeenCalledTimes(1);
+        });
     });
-  });
-
-  describe('Maps List Rendering', () => {
-    it('renders maps sorted alphabetically by name', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [
-          makeMap({ fileName: 'map3.json', name: 'Zoo' }),
-          makeMap({ fileName: 'map1.json', name: 'Alpha Cave', isActive: true }),
-          makeMap({ fileName: 'map2.json', name: 'Beta Forest' }),
-        ],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        const items = screen.getAllByRole('listitem');
-        expect(items[0]).toHaveTextContent('Alpha Cave');
-        expect(items[1]).toHaveTextContent('Beta Forest');
-        expect(items[2]).toHaveTextContent('Zoo');
-      });
-    });
-
-    it.each([
-      ['indoor', 'Indoor'],
-      ['outdoor', 'Outdoor'],
-    ])('renders %s type badge (%s)', async (type, badgeText) => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ type })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText(badgeText)).toBeInTheDocument();
-      });
-    });
-
-    it('renders active badge for the active map', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1', isActive: true })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Active')).toBeInTheDocument();
-      });
-    });
-
-    it('hides Activate button for the active map', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Active Map', isActive: true })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Active Map')).toBeInTheDocument();
-      });
-      expect(screen.queryByRole('button', { name: 'Activate' })).not.toBeInTheDocument();
-    });
-
-    it('shows Activate button only for inactive maps', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [
-          makeMap({ name: 'Active Map', isActive: true }),
-          makeMap({ name: 'Inactive Map', isActive: false }),
-        ],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        const items = screen.getAllByRole('listitem');
-        expect(items.length).toBe(2);
-      });
-
-      const activateButtons = screen.getAllByRole('button', { name: 'Activate' });
-      expect(activateButtons).toHaveLength(1);
-    });
-
-    it('renders error message when loading maps fails', async () => {
-      mapsService.loadMaps.mockRejectedValue(new Error('Network error'));
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Open Button', () => {
-    it('calls onOpenMap with the correct fileName when Open is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Open' }));
-      expect(defaultProps.onOpenMap).toHaveBeenCalledWith('dungeon-level-1.json');
-    });
-  });
-
-  describe('Activate Button', () => {
-    it('calls activateMap with campaign and fileName when Activate is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Forest', fileName: 'forest.json', isActive: false })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Forest')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Activate' }));
-
-      await waitFor(() => {
-        expect(mapsService.activateMap).toHaveBeenCalledWith('test-campaign', 'forest.json');
-      });
-    });
-
-    it('displays error when activation fails', async () => {
-      mapsService.activateMap.mockRejectedValue(new Error('Activation failed'));
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Forest', fileName: 'forest.json', isActive: false })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Forest')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Activate' }));
-
-      await waitFor(() => {
-        expect(screen.getByText('Activation failed')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Rename Flow', () => {
-    it('shows rename input when Rename button is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
-      expect(screen.getByDisplayValue('Dungeon Level 1')).toBeInTheDocument();
-    });
-
-    it('renames a map when new name is typed and Enter is pressed', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
-      const renameInput = screen.getByDisplayValue('Dungeon Level 1');
-      fireEvent.change(renameInput, { target: { value: 'Renamed Map' } });
-      fireEvent.keyDown(renameInput, { key: 'Enter' });
-
-      await waitFor(() => {
-        expect(mapsService.renameMap).toHaveBeenCalledWith(
-          'test-campaign',
-          'dungeon-level-1.json',
-          'Renamed Map'
-        );
-      });
-    });
-
-    it('saves rename on blur', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
-      const renameInput = screen.getByDisplayValue('Dungeon Level 1');
-      fireEvent.change(renameInput, { target: { value: 'Renamed Map' } });
-      fireEvent.blur(renameInput);
-
-      await waitFor(() => {
-        expect(mapsService.renameMap).toHaveBeenCalledWith(
-          'test-campaign',
-          'dungeon-level-1.json',
-          'Renamed Map'
-        );
-      });
-    });
-
-    it('cancels rename when Escape is pressed', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
-      const renameInput = screen.getByDisplayValue('Dungeon Level 1');
-      fireEvent.keyDown(renameInput, { key: 'Escape' });
-
-      expect(screen.queryByDisplayValue('Dungeon Level 1')).not.toBeInTheDocument();
-      expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-    });
-
-    it('cancels rename when empty name is entered and submitted', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
-      const renameInput = screen.getByDisplayValue('Dungeon Level 1');
-      fireEvent.change(renameInput, { target: { value: '' } });
-      fireEvent.keyDown(renameInput, { key: 'Enter' });
-
-      await waitFor(() => {
-        expect(mapsService.renameMap).not.toHaveBeenCalled();
-      });
-    });
-
-    it('cancels rename when name has not changed', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
-      const renameInput = screen.getByDisplayValue('Dungeon Level 1');
-      fireEvent.keyDown(renameInput, { key: 'Enter' });
-
-      await waitFor(() => {
-        expect(mapsService.renameMap).not.toHaveBeenCalled();
-      });
-    });
-
-    it('shows error when renaming to a duplicate name (case-insensitive, kebab-normalized)', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [
-          makeMap({ name: 'Dungeon Level 1' }),
-          makeMap({ name: 'Forest', fileName: 'forest.json' }),
-        ],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const renameButtons = screen.getAllByRole('button', { name: 'Rename' });
-      fireEvent.click(renameButtons[0]);
-
-      const renameInput = screen.getByDisplayValue('Dungeon Level 1');
-      fireEvent.change(renameInput, { target: { value: 'Forest' } });
-      fireEvent.keyDown(renameInput, { key: 'Enter' });
-
-      await waitFor(() => {
-        expect(screen.getByText('A map with that name already exists')).toBeInTheDocument();
-      });
-    });
-
-    it('displays error when rename fails', async () => {
-      mapsService.renameMap.mockRejectedValue(new Error('Rename failed'));
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
-      const renameInput = screen.getByDisplayValue('Dungeon Level 1');
-      fireEvent.change(renameInput, { target: { value: 'New Name' } });
-      fireEvent.keyDown(renameInput, { key: 'Enter' });
-
-      await waitFor(() => {
-        expect(screen.getByText('Rename failed')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Delete Flow', () => {
-    it('shows delete confirmation modal when Delete button is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-
-      expect(screen.getByRole('heading', { name: 'Delete Map' })).toBeInTheDocument();
-      expect(screen.getByText(/permanently delete/)).toBeInTheDocument();
-    });
-
-    it('calls deleteMap when delete is confirmed', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-      fireEvent.click(screen.getByRole('button', { name: /Yes, Delete Permanently/i }));
-
-      await waitFor(() => {
-        expect(mapsService.deleteMap).toHaveBeenCalledWith('test-campaign', 'dungeon-level-1.json');
-      });
-    });
-
-    it('closes delete modal when Cancel is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-      expect(screen.getByRole('heading', { name: 'Delete Map' })).toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(screen.queryByRole('heading', { name: 'Delete Map' })).not.toBeInTheDocument();
-    });
-
-    it('closes delete modal when overlay is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-      expect(screen.getByRole('heading', { name: 'Delete Map' })).toBeInTheDocument();
-
-      const overlay = document.querySelector('.maps-manager-modal-overlay');
-      if (overlay) {
-        fireEvent.click(overlay);
-      }
-      expect(screen.queryByRole('heading', { name: 'Delete Map' })).not.toBeInTheDocument();
-    });
-
-    it('displays error when delete fails', async () => {
-      mapsService.deleteMap.mockRejectedValue(new Error('Delete failed'));
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-      fireEvent.click(screen.getByRole('button', { name: /Yes, Delete Permanently/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText('Delete failed')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Edit Description Flow', () => {
-    it('opens edit description modal when edit description button is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      mapsService.loadMapData.mockResolvedValue({ description: 'A dark dungeon.' });
-
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const editDescButton = screen.getByTitle('Edit description');
-      fireEvent.click(editDescButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
-      });
-    });
-
-    it('pre-populates the textarea with existing description', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      mapsService.loadMapData.mockResolvedValue({ description: 'A dark dungeon.' });
-
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const editDescButton = screen.getByTitle('Edit description');
-      fireEvent.click(editDescButton);
-
-      await waitFor(() => {
-        const textarea = screen.getByTestId('preview-toggle');
-        expect(textarea).toHaveValue('A dark dungeon.');
-      });
-    });
-
-    it('does not show loading indicator during edit since loadingMapData is internal state', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      // When loadMapData takes a long time, the component sets loadingMapData=true
-      // but since we mock it with a never-resolving promise, the UI shows the edit modal
-      // with the textarea already rendered (PreviewToggle mock renders instantly)
-      mapsService.loadMapData.mockResolvedValue({ description: 'A dark dungeon.' });
-
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const editDescButton = screen.getByTitle('Edit description');
-      fireEvent.click(editDescButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
-      });
-    });
-
-    it('calls updateMapDescription when Save is clicked in edit modal', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
-      });
-      mapsService.loadMapData.mockResolvedValue({ description: 'A dark dungeon.' });
-
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const editDescButton = screen.getByTitle('Edit description');
-      fireEvent.click(editDescButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
-      });
-
-      const textarea = screen.getByTestId('preview-toggle');
-      fireEvent.change(textarea, { target: { value: 'Updated description.' } });
-      const saveButton = screen.getByRole('button', { name: /save/i });
-      fireEvent.click(saveButton);
-
-      await waitFor(() => {
-        expect(mapsService.updateMapDescription).toHaveBeenCalledWith(
-          'test-campaign',
-          'dungeon-level-1.json',
-          'Updated description.'
-        );
-      });
-    });
-
-    it('allows saving an empty description', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1', fileName: 'dungeon-level-1.json' })],
-      });
-      mapsService.loadMapData.mockResolvedValue({ description: 'A dark dungeon.' });
-
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const editDescButton = screen.getByTitle('Edit description');
-      fireEvent.click(editDescButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
-      });
-
-      const textarea = screen.getByTestId('preview-toggle');
-      fireEvent.change(textarea, { target: { value: '' } });
-      const saveButton = screen.getByRole('button', { name: /save/i });
-      fireEvent.click(saveButton);
-
-      await waitFor(() => {
-        expect(mapsService.updateMapDescription).toHaveBeenCalledWith(
-          'test-campaign',
-          'dungeon-level-1.json',
-          ''
-        );
-      });
-    });
-
-    it('closes edit description modal when Cancel is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      mapsService.loadMapData.mockResolvedValue({ description: '' });
-
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const editDescButton = screen.getByTitle('Edit description');
-      fireEvent.click(editDescButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(screen.queryByText(/Edit Description/)).not.toBeInTheDocument();
-    });
-
-    it('closes edit description modal when overlay is clicked', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      mapsService.loadMapData.mockResolvedValue({ description: '' });
-
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const editDescButton = screen.getByTitle('Edit description');
-      fireEvent.click(editDescButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
-      });
-
-      // Click on the overlay (outside the modal content)
-      const overlay = document.querySelector('.maps-manager-modal-overlay');
-      if (overlay) {
-        fireEvent.click(overlay);
-      }
-      expect(screen.queryByText(/Edit Description/)).not.toBeInTheDocument();
-    });
-
-    it('displays error when loading map data fails', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      mapsService.loadMapData.mockRejectedValue(new Error('Load failed'));
-
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const editDescButton = screen.getByTitle('Edit description');
-      fireEvent.click(editDescButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Load failed')).toBeInTheDocument();
-      });
-    });
-
-    it('displays error when saving description fails', async () => {
-      mapsService.loadMaps.mockResolvedValue({
-        maps: [makeMap({ name: 'Dungeon Level 1' })],
-      });
-      mapsService.loadMapData.mockResolvedValue({ description: 'Original description.' });
-      mapsService.updateMapDescription.mockRejectedValue(new Error('Save failed'));
-
-      render(<MapsManager {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Dungeon Level 1')).toBeInTheDocument();
-      });
-
-      const editDescButton = screen.getByTitle('Edit description');
-      fireEvent.click(editDescButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Edit Description/)).toBeInTheDocument();
-      });
-
-      const textarea = screen.getByTestId('preview-toggle');
-      fireEvent.change(textarea, { target: { value: 'New description.' } });
-      const saveButton = screen.getByRole('button', { name: /save/i });
-      fireEvent.click(saveButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Save failed')).toBeInTheDocument();
-      });
-    });
-  });
 });

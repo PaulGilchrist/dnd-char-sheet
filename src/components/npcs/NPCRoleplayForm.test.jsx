@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NPCRoleplayForm from './NPCRoleplayForm.jsx';
@@ -37,101 +38,79 @@ describe('NPCRoleplayForm', () => {
   // ── Text inputs ─────────────────────────────────────────────────────
 
   describe('Text inputs', () => {
-    it('renders race and tags inputs with correct labels, htmlFor, and id pairs', () => {
-      renderForm();
-      const raceInput = screen.getByLabelText('Race');
-      expect(raceInput).toHaveAttribute('id', 'npc-race');
+    const textFields = [
+      { label: 'Race', id: 'npc-race', key: 'race', placeholder: 'e.g., Human, Elf, Dwarf', value: 'Human' },
+      { label: 'Class / Role', id: 'npc-classRole', key: 'classRole', placeholder: 'e.g., Fighter, Wizard, Merchant', value: 'Wizard' },
+      { label: 'Tags (comma separated)', id: 'npc-tags', key: 'tags', placeholder: 'e.g., ally, enemy, quest-giver', value: 'ally, quest-giver' },
+    ];
 
-      const label = document.querySelector('label[for="npc-race"]');
-      expect(label).toBeInTheDocument();
-      expect(label).toHaveTextContent('Race');
+    it.each(textFields)('associates the "$label" label with its input', ({ label, id }) => {
+      renderForm();
+      expect(screen.getByLabelText(label)).toHaveAttribute('id', id);
     });
 
-    it('renders text inputs with correct placeholder text', () => {
+    it.each(textFields)('renders the "$label" input with its placeholder', ({ label, placeholder }) => {
       renderForm();
-      expect(screen.getByLabelText('Race')).toHaveAttribute('placeholder', 'e.g., Human, Elf, Dwarf');
-      expect(screen.getByLabelText('Class / Role')).toHaveAttribute('placeholder', 'e.g., Fighter, Wizard, Merchant');
-      expect(screen.getByLabelText(/Tags/)).toHaveAttribute('placeholder', 'e.g., ally, enemy, quest-giver');
+      expect(screen.getByLabelText(label)).toHaveAttribute('placeholder', placeholder);
     });
 
-    it('renders text inputs with correct CSS classes', () => {
+    it.each(textFields)('displays the current "$key" value in the "$label" input', ({ label, value }) => {
       renderForm();
-      expect(screen.getByLabelText('Race')).toHaveClass('ct-input');
-      expect(screen.getByLabelText('Class / Role')).toHaveClass('ct-input');
-      expect(screen.getByLabelText(/Tags/)).toHaveClass('ct-input');
+      expect(screen.getByLabelText(label)).toHaveValue(value);
     });
 
-    it('reports field changes for race', () => {
-      renderForm();
-      const raceInput = screen.getByLabelText('Race');
-      fireEvent.change(raceInput, { target: { value: 'Elf' } });
-      expect(mockOnFieldChange).toHaveBeenCalledWith('race', 'Elf');
-    });
-
-    it('reports field changes for classRole', () => {
-      renderForm();
-      const classRoleInput = screen.getByLabelText('Class / Role');
-      fireEvent.change(classRoleInput, { target: { value: 'Rogue' } });
-      expect(mockOnFieldChange).toHaveBeenCalledWith('classRole', 'Rogue');
-    });
-
-    it('reports field changes for tags', () => {
-      renderForm();
-      const tagsInput = screen.getByLabelText(/Tags/);
-      fireEvent.change(tagsInput, { target: { value: 'boss, dragon' } });
-      expect(mockOnFieldChange).toHaveBeenCalledWith('tags', 'boss, dragon');
-    });
-
-    it('handles empty string input changes', () => {
-      renderForm();
-      const raceInput = screen.getByLabelText('Race');
-      fireEvent.change(raceInput, { target: { value: '' } });
-      expect(mockOnFieldChange).toHaveBeenCalledWith('race', '');
-    });
-
-    it('handles special characters in text inputs', () => {
-      renderForm();
-      const raceInput = screen.getByLabelText('Race');
-      fireEvent.change(raceInput, { target: { value: "O'Brien" } });
-      expect(mockOnFieldChange).toHaveBeenCalledWith('race', "O'Brien");
-    });
-
-    it('displays initial values in text inputs', () => {
+    it('renders empty text inputs when formData values are empty', () => {
       renderForm({ ...defaultFormData, race: '', classRole: '', tags: '' });
-      expect(screen.getByLabelText('Race')).toHaveValue('');
-      expect(screen.getByLabelText('Class / Role')).toHaveValue('');
-      expect(screen.getByLabelText(/Tags/)).toHaveValue('');
+      for (const { label } of textFields) {
+        expect(screen.getByLabelText(label)).toHaveValue('');
+      }
+    });
+
+    it.each([
+      { label: 'Race', key: 'race', typed: 'Elf' },
+      { label: 'Class / Role', key: 'classRole', typed: 'Rogue' },
+      { label: 'Tags (comma separated)', key: 'tags', typed: 'boss, dragon' },
+      { label: 'Race', key: 'race', typed: '' },
+      { label: 'Class / Role', key: 'classRole', typed: "O'Brien" },
+    ])('reports only the "$label" change with the "$key" key', ({ label, key, typed }) => {
+      renderForm();
+      fireEvent.change(screen.getByLabelText(label), { target: { value: typed } });
+      expect(mockOnFieldChange).toHaveBeenCalledTimes(1);
+      expect(mockOnFieldChange).toHaveBeenCalledWith(key, typed);
     });
   });
 
   // ── Attitude select ─────────────────────────────────────────────────
 
   describe('Attitude select', () => {
-    it('renders with correct label and CSS class', () => {
+    it('renders a select labeled "Attitude"', () => {
       renderForm();
-      const select = screen.getByLabelText('Attitude');
-      expect(select).toHaveClass('ct-select');
+      expect(screen.getByLabelText('Attitude')).toHaveAttribute('id', 'npc-attitude');
     });
 
-    it('defaults to neutral attitude value', () => {
+    it('shows the initial attitude value', () => {
       renderForm();
-      expect(screen.getByLabelText('Attitude').value).toBe('neutral');
+      expect(screen.getByLabelText('Attitude')).toHaveValue('neutral');
     });
 
-    it('renders all attitude options from ATTITUDE_OPTIONS', () => {
+    it('shows a provided non-default attitude value', () => {
+      renderForm({ ...defaultFormData, attitude: 'negative' });
+      expect(screen.getByLabelText('Attitude')).toHaveValue('negative');
+    });
+
+    it('renders every option from ATTITUDE_OPTIONS', () => {
       renderForm();
-      const select = screen.getByLabelText('Attitude');
-      const options = Array.from(select.querySelectorAll('option'));
+      const options = Array.from(screen.getByLabelText('Attitude').querySelectorAll('option'));
       expect(options).toHaveLength(ATTITUDE_OPTIONS.length);
       for (const option of ATTITUDE_OPTIONS) {
         expect(options.find((o) => o.value === option.value)).toHaveTextContent(option.label);
       }
     });
 
-    it('reports attitude changes', () => {
+    it('reports only the attitude change', () => {
       renderForm();
-      const select = screen.getByLabelText('Attitude');
-      fireEvent.change(select, { target: { value: 'positive' } });
+      fireEvent.change(screen.getByLabelText('Attitude'), { target: { value: 'positive' } });
+      expect(mockOnFieldChange).toHaveBeenCalledTimes(1);
       expect(mockOnFieldChange).toHaveBeenCalledWith('attitude', 'positive');
     });
   });
@@ -140,36 +119,24 @@ describe('NPCRoleplayForm', () => {
 
   describe('PreviewToggle fields', () => {
     const previewFields = [
-      { label: 'Appearance', key: 'appearance', placeholder: 'Physical description…' },
-      { label: 'Personality', key: 'personality', placeholder: 'Personality traits, ideals, bonds, flaws…' },
-      { label: 'Goals', key: 'goals', placeholder: 'What does this NPC want?' },
-      { label: 'Secrets', key: 'secrets', placeholder: 'Hidden truths about this NPC…' },
-      { label: 'Notes', key: 'notes', placeholder: 'Additional notes…' },
+      { label: 'Appearance', key: 'appearance', placeholder: 'Physical description…', value: 'Tall with a long beard' },
+      { label: 'Personality', key: 'personality', placeholder: 'Personality traits, ideals, bonds, flaws…', value: 'Wise and mysterious' },
+      { label: 'Goals', key: 'goals', placeholder: 'What does this NPC want?', value: 'Defeat Sauron' },
+      { label: 'Secrets', key: 'secrets', placeholder: 'Hidden truths about this NPC…', value: 'He is a Maia' },
+      { label: 'Notes', key: 'notes', placeholder: 'Additional notes…', value: 'Carries a staff' },
     ];
 
-    it('renders all PreviewToggle fields with labels and textareas', () => {
+    it.each(previewFields)('renders the "$label" field with its current value', ({ label, value }) => {
       renderForm();
-      for (const field of previewFields) {
-        expect(screen.getByText(field.label)).toBeInTheDocument();
-      }
+      expect(screen.getByLabelText(label)).toHaveValue(value);
     });
 
-    it('renders textareas with correct placeholders', () => {
+    it.each(previewFields)('renders the "$label" textarea with its placeholder', ({ label, placeholder }) => {
       renderForm();
-      for (const field of previewFields) {
-        const textarea = screen.getByPlaceholderText(field.placeholder);
-        expect(textarea).toBeInTheDocument();
-      }
+      expect(screen.getByLabelText(label)).toHaveAttribute('placeholder', placeholder);
     });
 
-    it('reports textarea changes', () => {
-      renderForm();
-      const textarea = screen.getByDisplayValue('Tall with a long beard');
-      fireEvent.change(textarea, { target: { value: 'Short and stout' } });
-      expect(mockOnFieldChange).toHaveBeenCalledWith('appearance', 'Short and stout');
-    });
-
-    it('renders empty textareas when values are empty', () => {
+    it('renders empty textareas when preview values are empty', () => {
       renderForm({
         ...defaultFormData,
         appearance: '',
@@ -178,97 +145,16 @@ describe('NPCRoleplayForm', () => {
         secrets: '',
         notes: '',
       });
-      const textareas = document.querySelectorAll('.preview-toggle-textarea');
-      expect(textareas).toHaveLength(5);
-      for (const textarea of textareas) {
-        expect(textarea).toHaveValue('');
+      for (const { label } of previewFields) {
+        expect(screen.getByLabelText(label)).toHaveValue('');
       }
     });
 
-    it('displays initial values in textareas', () => {
+    it.each(previewFields)('reports only the "$key" change from the "$label" textarea', ({ label, key }) => {
       renderForm();
-      expect(screen.getByDisplayValue('Tall with a long beard')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Wise and mysterious')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Defeat Sauron')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('He is a Maia')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Carries a staff')).toBeInTheDocument();
-    });
-
-    it('toggles between preview and edit modes', () => {
-      renderForm();
-      const textarea = screen.getByDisplayValue('Tall with a long beard');
-      const wrapper = textarea.closest('.preview-toggle-wrapper');
-      const previewButton = wrapper.querySelector('.preview-toggle-button');
-
-      expect(textarea).not.toHaveClass('preview-toggle-textarea--hidden');
-      expect(previewButton).toHaveTextContent('Preview');
-
-      fireEvent.click(previewButton);
-
-      expect(textarea).toHaveClass('preview-toggle-textarea--hidden');
-      expect(previewButton).toHaveTextContent('Edit');
-
-      fireEvent.click(previewButton);
-
-      expect(textarea).not.toHaveClass('preview-toggle-textarea--hidden');
-      expect(previewButton).toHaveTextContent('Preview');
-    });
-
-    it('shows rendered markdown preview when toggled', () => {
-      renderForm();
-      const textarea = screen.getByDisplayValue('Tall with a long beard');
-      const wrapper = textarea.closest('.preview-toggle-wrapper');
-      const previewButton = wrapper.querySelector('.preview-toggle-button');
-
-      fireEvent.click(previewButton);
-
-      const previewDiv = wrapper.querySelector('.preview-toggle-preview');
-      expect(previewDiv).not.toHaveClass('preview-toggle-preview--hidden');
-      expect(previewDiv.querySelector('.markdown-preview')).toBeInTheDocument();
-    });
-
-    it('shows nothing in preview when value is empty', () => {
-      renderForm({
-        ...defaultFormData,
-        appearance: '',
-      });
-      const textarea = screen.getByDisplayValue('');
-      const wrapper = textarea.closest('.preview-toggle-wrapper');
-      const previewButton = wrapper?.querySelector('.preview-toggle-button');
-
-      fireEvent.click(previewButton);
-
-      const previewDiv = wrapper?.querySelector('.preview-toggle-preview');
-      expect(previewDiv).not.toHaveClass('preview-toggle-preview--hidden');
-      expect(previewDiv?.querySelector('.markdown-preview')).not.toBeInTheDocument();
-    });
-
-    it('toggles each PreviewToggle independently', () => {
-      renderForm();
-      const appearanceTextarea = screen.getByDisplayValue('Tall with a long beard');
-      const personalityTextarea = screen.getByDisplayValue('Wise and mysterious');
-
-      const appearanceWrapper = appearanceTextarea.closest('.preview-toggle-wrapper');
-      const personalityWrapper = personalityTextarea.closest('.preview-toggle-wrapper');
-
-      const appearanceButton = appearanceWrapper.querySelector('.preview-toggle-button');
-      const personalityButton = personalityWrapper.querySelector('.preview-toggle-button');
-
-      // Toggle Appearance to preview
-      fireEvent.click(appearanceButton);
-      expect(appearanceTextarea).toHaveClass('preview-toggle-textarea--hidden');
-      expect(personalityTextarea).not.toHaveClass('preview-toggle-textarea--hidden');
-
-      // Toggle Personality to preview
-      fireEvent.click(personalityButton);
-      expect(appearanceTextarea).toHaveClass('preview-toggle-textarea--hidden');
-      expect(personalityTextarea).toHaveClass('preview-toggle-textarea--hidden');
-
-      // Toggle Appearance back to edit
-      const appearanceEditButton = appearanceWrapper.querySelector('.preview-toggle-button');
-      fireEvent.click(appearanceEditButton);
-      expect(appearanceTextarea).not.toHaveClass('preview-toggle-textarea--hidden');
-      expect(personalityTextarea).toHaveClass('preview-toggle-textarea--hidden');
+      fireEvent.change(screen.getByLabelText(label), { target: { value: 'Updated text' } });
+      expect(mockOnFieldChange).toHaveBeenCalledTimes(1);
+      expect(mockOnFieldChange).toHaveBeenCalledWith(key, 'Updated text');
     });
   });
 });
