@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DragonCompanionModal from './DragonCompanionModal.jsx';
@@ -22,16 +23,6 @@ const baseProps = {
   onClose: vi.fn(),
 };
 
-const defaultMockResult = {
-  type: 'popup',
-  payload: {
-    type: 'automation_info',
-    name: 'Dragon Companion',
-    description: 'Dragon Companion: Free cast of Summon Dragon (0 remaining). Duration: 1 minute.<br/><br/><em>Open your spell sheet and cast Summon Dragon normally — no spell slot or material components will be consumed.</em>',
-    automation: { spell: 'Summon Dragon', usesMax: 1 },
-  },
-};
-
 function makeProps(overrides) {
   return { ...baseProps, ...(overrides || {}) };
 }
@@ -48,23 +39,43 @@ describe('DragonCompanionModal', () => {
   });
 
   describe('initial render', () => {
-    it('renders the modal with header, description, concentration checkbox, and action buttons', () => {
+    it('renders modal header with dragon icon and action name', () => {
       renderModal();
       expect(screen.getByText('Dragon Companion')).toBeInTheDocument();
+    });
+
+    it('renders action button, cancel button, and concentration controls', () => {
+      renderModal();
       expect(screen.getByRole('button', { name: /Summon Dragon/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
       expect(screen.getByLabelText(/Skip Concentration/)).toBeInTheDocument();
-      expect(screen.getByText(/Cast/)).toBeInTheDocument();
-      expect(screen.getByText(/without material components or spell slot/)).toBeInTheDocument();
     });
 
-    it('shows normal concentration description unchecked, and skip description when checked', () => {
+    it('displays cast description text', () => {
+      renderModal();
+      const paragraph = document.querySelector('.sp-body p');
+      expect(paragraph).toBeInTheDocument();
+      expect(paragraph.textContent).toContain('Cast');
+      expect(paragraph.textContent).toContain('Summon Dragon');
+      expect(paragraph.textContent).toContain('without material components or spell slot');
+    });
+
+    it('shows normal concentration description when unchecked', () => {
       renderModal();
       expect(screen.getByText(/will require Concentration and last up to 1 hour/)).toBeInTheDocument();
       expect(screen.queryByText(/will not require Concentration/)).not.toBeInTheDocument();
+    });
 
+    it('toggling skip concentration checkbox updates description and checkbox state', () => {
+      renderModal();
       const checkbox = screen.getByLabelText(/Skip Concentration/);
+      expect(checkbox.checked).toBe(false);
+
+      expect(screen.getByText(/will require Concentration and last up to 1 hour/)).toBeInTheDocument();
+
       fireEvent.click(checkbox);
+      expect(checkbox.checked).toBe(true);
+
       expect(screen.getByText(/will not require Concentration and will last 1 minute/)).toBeInTheDocument();
       expect(screen.queryByText(/will require Concentration/)).not.toBeInTheDocument();
     });
@@ -77,11 +88,39 @@ describe('DragonCompanionModal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('calls onClose when overlay background is clicked', () => {
+      const onClose = vi.fn();
+      renderModal({ onClose });
+      const overlay = document.querySelector('.sp-overlay');
+      expect(overlay).toBeInTheDocument();
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close when modal content is clicked', () => {
+      const onClose = vi.fn();
+      renderModal({ onClose });
+      const modal = document.querySelector('.sp-modal');
+      expect(modal).toBeInTheDocument();
+      fireEvent.click(modal);
+      expect(onClose).not.toHaveBeenCalled();
+    });
   });
 
   describe('confirm flow', () => {
+    const mockPopupResult = {
+      type: 'popup',
+      payload: {
+        type: 'automation_info',
+        name: 'Dragon Companion',
+        description: 'Dragon Companion: Free cast of Summon Dragon (0 remaining). Duration: 1 minute.',
+        automation: { spell: 'Summon Dragon', usesMax: 1 },
+      },
+    };
+
     it('calls confirmDragonCompanion with noConcentration=false when checkbox is unchecked', async () => {
-      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(defaultMockResult);
+      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(mockPopupResult);
       renderModal();
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /Summon Dragon/ }));
@@ -95,7 +134,7 @@ describe('DragonCompanionModal', () => {
     });
 
     it('calls confirmDragonCompanion with noConcentration=true when checkbox is checked', async () => {
-      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(defaultMockResult);
+      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(mockPopupResult);
       renderModal();
       const checkbox = screen.getByLabelText(/Skip Concentration/);
       fireEvent.click(checkbox);
@@ -111,7 +150,7 @@ describe('DragonCompanionModal', () => {
     });
 
     it('replaces initial UI with result description and Done button after confirm', async () => {
-      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(defaultMockResult);
+      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(mockPopupResult);
       renderModal();
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /Summon Dragon/ }));
@@ -127,7 +166,7 @@ describe('DragonCompanionModal', () => {
 
     it('calls onClose when Done button is clicked after confirm', async () => {
       const onClose = vi.fn();
-      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(defaultMockResult);
+      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(mockPopupResult);
       renderModal({ onClose });
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /Summon Dragon/ }));
@@ -136,6 +175,36 @@ describe('DragonCompanionModal', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
       });
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onClose when overlay is clicked after confirm', async () => {
+      const onClose = vi.fn();
+      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(mockPopupResult);
+      renderModal({ onClose });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Summon Dragon/ }));
+      });
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+      });
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close when modal content is clicked after confirm', async () => {
+      const onClose = vi.fn();
+      dragonCompanionHandler.confirmDragonCompanion.mockResolvedValue(mockPopupResult);
+      renderModal({ onClose });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Summon Dragon/ }));
+      });
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+      });
+      const modal = document.querySelector('.sp-modal');
+      fireEvent.click(modal);
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 });

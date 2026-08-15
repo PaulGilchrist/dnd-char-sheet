@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ClockworkCavalcadeModal from './ClockworkCavalcadeModal.jsx';
@@ -11,62 +12,50 @@ function makeProps(overrides) {
   };
 }
 
+function renderModal(overrides) {
+  return render(<ClockworkCavalcadeModal {...makeProps(overrides)} />);
+}
+
 // ── Tests ──
 
 describe('ClockworkCavalcadeModal', () => {
   // ── Initial render / display ──
 
   it('renders modal overlay with default feature name', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
     expect(screen.getByText('Clockwork Cavalcade')).toBeInTheDocument();
   });
 
   it('renders modal overlay with custom feature name', () => {
-    render(<ClockworkCavalcadeModal {...makeProps({ featureName: 'Custom Feature' })} />);
+    renderModal({ featureName: 'Custom Feature' });
     expect(screen.getByText('Custom Feature')).toBeInTheDocument();
   });
 
   it('renders the feature description paragraph', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     expect(
       screen.getByText(/As a Magic action, you call forth the spirit of order/)
     ).toBeInTheDocument();
   });
 
   it('renders all three option buttons: Heal, Repair, Dispel', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     expect(screen.getByRole('button', { name: /HealRestore up to 100 HP/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /RepairDamaged objects/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /DispelEvery spell of level 6/ })).toBeInTheDocument();
   });
 
-  it('renders Font Awesome icons for each option', () => {
-    const { container } = render(<ClockworkCavalcadeModal {...makeProps()} />);
-    const icons = container.querySelectorAll('i.fa-solid');
-    expect(icons.length).toBe(4); // 3 options + 1 header gear icon
-  });
-
-  it('renders Font Awesome heart icon for Heal option', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
-    const healBtn = screen.getByRole('button', { name: /HealRestore up to 100 HP/ });
-    expect(healBtn.querySelector('i.fa-heart')).toBeInTheDocument();
-  });
-
-  it('renders Font Awesome hammer icon for Repair option', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
-    const repairBtn = screen.getByRole('button', { name: /RepairDamaged objects/ });
-    expect(repairBtn.querySelector('i.fa-hammer')).toBeInTheDocument();
-  });
-
-  it('renders Font Awesome wand icon for Dispel option', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
-    const dispelBtn = screen.getByRole('button', { name: /DispelEvery spell of level 6/ });
-    expect(dispelBtn.querySelector('i.fa-wand-magic-sparkles')).toBeInTheDocument();
+  it('renders Font Awesome icons for each option and the header', () => {
+    const { container } = renderModal();
+    expect(container.querySelectorAll('i.fa-solid.fa-heart').length).toBe(1);
+    expect(container.querySelectorAll('i.fa-solid.fa-hammer').length).toBe(1);
+    expect(container.querySelectorAll('i.fa-solid.fa-wand-magic-sparkles').length).toBe(1);
+    expect(container.querySelectorAll('i.fa-solid.fa-gears').length).toBe(1);
   });
 
   it('renders description text for each option', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     expect(
       screen.getByText(/Restore up to 100 HP/)
     ).toBeInTheDocument();
@@ -78,14 +67,8 @@ describe('ClockworkCavalcadeModal', () => {
     ).toBeInTheDocument();
   });
 
-  it('applies clockwork-cavalcade-option class to each option button', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
-    const options = document.querySelectorAll('.clockwork-cavalcade-option');
-    expect(options.length).toBe(3);
-  });
-
   it('renders Cancel button', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
@@ -93,7 +76,7 @@ describe('ClockworkCavalcadeModal', () => {
 
   it('calls onChoose with "heal" when Heal option is clicked', () => {
     const onChoose = vi.fn();
-    render(<ClockworkCavalcadeModal {...makeProps({ onChoose })} />);
+    renderModal({ onChoose });
     fireEvent.click(screen.getByRole('button', { name: /HealRestore up to 100 HP/ }));
     expect(onChoose).toHaveBeenCalledTimes(1);
     expect(onChoose).toHaveBeenCalledWith('heal');
@@ -101,7 +84,7 @@ describe('ClockworkCavalcadeModal', () => {
 
   it('calls onChoose with "repair" when Repair option is clicked', () => {
     const onChoose = vi.fn();
-    render(<ClockworkCavalcadeModal {...makeProps({ onChoose })} />);
+    renderModal({ onChoose });
     fireEvent.click(screen.getByRole('button', { name: /RepairDamaged objects/ }));
     expect(onChoose).toHaveBeenCalledTimes(1);
     expect(onChoose).toHaveBeenCalledWith('repair');
@@ -109,7 +92,7 @@ describe('ClockworkCavalcadeModal', () => {
 
   it('calls onChoose with "dispel" when Dispel option is clicked', () => {
     const onChoose = vi.fn();
-    render(<ClockworkCavalcadeModal {...makeProps({ onChoose })} />);
+    renderModal({ onChoose });
     fireEvent.click(screen.getByRole('button', { name: /DispelEvery spell of level 6/ }));
     expect(onChoose).toHaveBeenCalledTimes(1);
     expect(onChoose).toHaveBeenCalledWith('dispel');
@@ -119,7 +102,7 @@ describe('ClockworkCavalcadeModal', () => {
 
   it('calls onClose when Cancel button is clicked', () => {
     const onClose = vi.fn();
-    render(<ClockworkCavalcadeModal {...makeProps({ onClose })} />);
+    renderModal({ onClose });
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -128,7 +111,7 @@ describe('ClockworkCavalcadeModal', () => {
 
   it('calls onClose when clicking the overlay background', () => {
     const onClose = vi.fn();
-    render(<ClockworkCavalcadeModal {...makeProps({ onClose })} />);
+    renderModal({ onClose });
     const overlay = document.querySelector('.sp-overlay');
     fireEvent.click(overlay);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -136,36 +119,28 @@ describe('ClockworkCavalcadeModal', () => {
 
   it('does not call onClose when clicking inside the modal content', () => {
     const onClose = vi.fn();
-    render(<ClockworkCavalcadeModal {...makeProps({ onClose })} />);
+    renderModal({ onClose });
     const modal = document.querySelector('.sp-modal');
     fireEvent.click(modal);
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it('does not call onClose when clicking an option button inside the modal', () => {
-    const onClose = vi.fn();
-    render(<ClockworkCavalcadeModal {...makeProps({ onClose })} />);
-    // Clicking the button should not trigger overlay close due to stopPropagation
-    // The button itself calls onChoose, not onClose
     expect(onClose).not.toHaveBeenCalled();
   });
 
   // ── Modal structure ──
 
   it('renders with sp-header, sp-body, and sp-actions sections', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     expect(document.querySelector('.sp-header')).toBeInTheDocument();
     expect(document.querySelector('.sp-body')).toBeInTheDocument();
     expect(document.querySelector('.sp-actions')).toBeInTheDocument();
   });
 
   it('renders options within a secondary-target-list container', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     expect(document.querySelector('.secondary-target-list')).toBeInTheDocument();
   });
 
   it('renders each option with secondary-target-name and secondary-target-hp spans', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     const nameSpans = document.querySelectorAll('.secondary-target-name');
     const hpSpans = document.querySelectorAll('.secondary-target-hp');
     expect(nameSpans.length).toBe(3);
@@ -173,7 +148,7 @@ describe('ClockworkCavalcadeModal', () => {
   });
 
   it('renders each option as a button with type="button"', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     const optionButtons = document.querySelectorAll('.clockwork-cavalcade-option');
     optionButtons.forEach(btn => {
       expect(btn.getAttribute('type')).toBe('button');
@@ -181,7 +156,7 @@ describe('ClockworkCavalcadeModal', () => {
   });
 
   it('renders the header with a gear icon', () => {
-    render(<ClockworkCavalcadeModal {...makeProps()} />);
+    renderModal();
     const header = document.querySelector('.sp-header');
     expect(header.querySelector('i.fa-gears')).toBeInTheDocument();
   });

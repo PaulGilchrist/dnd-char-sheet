@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingPoolModal from './HealingPoolModal.jsx';
@@ -77,11 +78,11 @@ function makeProps(overrides) {
 
 async function renderModal(poolConfig, overrides) {
   setupPoolMock(poolConfig?.current, poolConfig?.max);
-  const rendered = render(<HealingPoolModal {...makeProps(overrides)} />);
+  render(<HealingPoolModal {...makeProps(overrides)} />);
   await waitFor(() => {
     expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
   });
-  return { ...rendered, updateFn };
+  return { updateFn };
 }
 
 // ── Tests ──
@@ -103,19 +104,93 @@ describe('HealingPoolModal - Bloodied', () => {
       currentHp: 15,
       conditions: [{ key: 'blinded' }],
     });
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeConditions') return ['blinded'];
-      return null;
-    });
     setupPoolMock();
   });
 
+  // ── Bloodied restriction badge ──
+
   it('shows bloodied restriction badge when bloodiedOnly is true', async () => {
     await renderModal({ current: 15, max: 20 }, { bloodiedOnly: true });
-    expect(screen.getByText(/Bloodied only/)).toBeInTheDocument();
+    expect(screen.getByText(/Bloodied only/)).toBeTruthy();
   });
 
-  it('disables apply heal when target is not bloodied and bloodiedOnly is true', async () => {
+  it('does not show bloodied restriction badge when bloodiedOnly is false', async () => {
+    await renderModal({ current: 15, max: 20 }, { bloodiedOnly: false });
+    expect(screen.queryByText(/Bloodied only/)).not.toBeInTheDocument();
+  });
+
+  it('does not show bloodied restriction badge when bloodiedOnly is omitted', async () => {
+    await renderModal({ current: 15, max: 20 });
+    expect(screen.queryByText(/Bloodied only/)).not.toBeInTheDocument();
+  });
+
+  // ── Apply heal button state with bloodiedOnly ──
+
+  it.each([
+    { targetHp: 15, maxHp: 30, label: 'bloodied target with bloodiedOnly true' },
+    { targetHp: 15, maxHp: 31, label: 'bloodied target (odd max) with bloodiedOnly true' },
+  ])('enables apply heal when target is $label', async ({ targetHp, maxHp }) => {
+    damageUtils.getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'Orc Warrior', type: 'npc', maxHp, currentHp: targetHp },
+      ],
+    });
+    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'currentHitPoints') return targetHp;
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+
+    await renderModal({ current: 15, max: 20 }, { bloodiedOnly: true });
+    const input = screen.getByRole('spinbutton');
+    fireEvent.change(input, { target: { value: '5' } });
+    const btn = screen.getByRole('button', { name: /Apply Heal/i });
+    expect(btn).not.toBeDisabled();
+  });
+
+  it.each([
+    { playerHp: 25, label: 'non-bloodied target with bloodiedOnly true' },
+    { playerHp: 21, label: 'target just above half HP with bloodiedOnly true' },
+    { playerHp: 40, label: 'full HP target with bloodiedOnly true' },
+  ])('disables apply heal when target is $label', async ({ playerHp }) => {
+    damageUtils.getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'Orc Warrior', type: 'npc', maxHp: 30, currentHp: 15 },
+      ],
+    });
+    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'currentHitPoints') return playerHp;
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+
+    await renderModal({ current: 15, max: 20 }, { bloodiedOnly: true });
+    const input = screen.getByRole('spinbutton');
+    fireEvent.change(input, { target: { value: '5' } });
+    const btn = screen.getByRole('button', { name: /Apply Heal/i });
+    expect(btn).toBeDisabled();
+  });
+
+  it('disables apply heal when bloodiedOnly is true and pool is zero', async () => {
+    damageUtils.getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'Orc Warrior', type: 'npc', maxHp: 30, currentHp: 15 },
+      ],
+    });
+    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'currentHitPoints') return 15;
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+
+    await renderModal({ current: 0, max: 20 }, { bloodiedOnly: true });
+    const btn = screen.getByRole('button', { name: /Apply Heal/i });
+    expect(btn).toBeDisabled();
+  });
+
+  // ── Restriction note ──
+
+  it('shows restriction note when target is not bloodied and bloodiedOnly is true', async () => {
     damageUtils.getCombatContext.mockResolvedValue({
       creatures: [
         { name: 'Orc Warrior', type: 'npc', maxHp: 30, currentHp: 25 },
@@ -128,13 +203,10 @@ describe('HealingPoolModal - Bloodied', () => {
     });
 
     await renderModal({ current: 15, max: 20 }, { bloodiedOnly: true });
-    const input = screen.getByRole('spinbutton');
-    fireEvent.change(input, { target: { value: '5' } });
-    const btn = screen.getByRole('button', { name: /Apply Heal/i });
-    expect(btn).toBeDisabled();
+    expect(screen.getByText(/This feature can only heal Bloodied creatures/)).toBeTruthy();
   });
 
-  it('enables apply heal when target is bloodied and bloodiedOnly is true', async () => {
+  it('does not show restriction note when target is bloodied and bloodiedOnly is true', async () => {
     damageUtils.getCombatContext.mockResolvedValue({
       creatures: [
         { name: 'Orc Warrior', type: 'npc', maxHp: 30, currentHp: 15 },
@@ -147,13 +219,10 @@ describe('HealingPoolModal - Bloodied', () => {
     });
 
     await renderModal({ current: 15, max: 20 }, { bloodiedOnly: true });
-    const input = screen.getByRole('spinbutton');
-    fireEvent.change(input, { target: { value: '5' } });
-    const btn = screen.getByRole('button', { name: /Apply Heal/i });
-    expect(btn).not.toBeDisabled();
+    expect(screen.queryByText(/This feature can only heal Bloodied creatures/)).not.toBeInTheDocument();
   });
 
-  it('shows restriction note when target is not bloodied', async () => {
+  it('does not show restriction note when bloodiedOnly is false', async () => {
     damageUtils.getCombatContext.mockResolvedValue({
       creatures: [
         { name: 'Orc Warrior', type: 'npc', maxHp: 30, currentHp: 25 },
@@ -165,7 +234,45 @@ describe('HealingPoolModal - Bloodied', () => {
       return null;
     });
 
+    await renderModal({ current: 15, max: 20 }, { bloodiedOnly: false });
+    expect(screen.queryByText(/This feature can only heal Bloodied creatures/)).not.toBeInTheDocument();
+  });
+
+  // ── Boundary conditions for bloodied check ──
+
+  it('treats target at exactly half HP as bloodied', async () => {
+    damageUtils.getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'Orc Warrior', type: 'npc', maxHp: 30, currentHp: 15 },
+      ],
+    });
+    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'currentHitPoints') return 20;
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+
     await renderModal({ current: 15, max: 20 }, { bloodiedOnly: true });
-    expect(screen.getByText(/This feature can only heal Bloodied creatures/)).toBeInTheDocument();
+    const btn = screen.getByRole('button', { name: /Apply Heal/i });
+    expect(btn).not.toBeDisabled();
+    expect(screen.queryByText(/This feature can only heal Bloodied creatures/)).not.toBeInTheDocument();
+  });
+
+  it('treats target at floor(maxHp/2) + 1 as not bloodied', async () => {
+    damageUtils.getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'Orc Warrior', type: 'npc', maxHp: 30, currentHp: 15 },
+      ],
+    });
+    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'currentHitPoints') return 21;
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+
+    await renderModal({ current: 15, max: 20 }, { bloodiedOnly: true });
+    const btn = screen.getByRole('button', { name: /Apply Heal/i });
+    expect(btn).toBeDisabled();
+    expect(screen.getByText(/This feature can only heal Bloodied creatures/)).toBeTruthy();
   });
 });

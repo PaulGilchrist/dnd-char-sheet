@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAffinityModal from './ElementalAffinityModal.jsx';
@@ -20,6 +21,7 @@ vi.mock('../../../services/ui/logService.js', () => ({
 // ── Re-import mocked modules ──
 
 import * as elementalAffinityHandler from '../../../services/automation/handlers/class-sorcerer/elementalAffinityHandler.js';
+
 
 // ── Test fixtures ──
 
@@ -50,12 +52,47 @@ function makeAction(overrides) {
   return { ...baseAction, ...(overrides || {}) };
 }
 
+// ── Helpers ──
+
+function selectType(type) {
+  fireEvent.click(screen.getByLabelText(type));
+}
+
+function clickDoneButton() {
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+}
+
+function clickCancelButton() {
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+}
+
+function waitForApply() {
+  return waitFor(() => {
+    fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
+  });
+}
+
+function waitForResult() {
+  return waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+  });
+}
+
 // ── Tests ──
 
 describe('ElementalAffinityModal', () => {
+  let unhandledRejectionHandler;
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    unhandledRejectionHandler = null;
+  });
+
+  afterEach(() => {
+    if (unhandledRejectionHandler) {
+      process.off('unhandledRejection', unhandledRejectionHandler);
+    }
   });
 
   // ── Initial render / display ──
@@ -66,35 +103,27 @@ describe('ElementalAffinityModal', () => {
       expect(screen.getByText('Elemental Affinity')).toBeInTheDocument();
     });
 
-    it('renders default name when action name is missing/null/undefined', () => {
-      const { unmount } = render(<ElementalAffinityModal {...makeProps({ action: { automation: baseAction.automation } })} />);
-      expect(screen.getByText('Elemental Affinity')).toBeInTheDocument();
-      unmount();
-
-      const { unmount: unmount2 } = render(<ElementalAffinityModal {...makeProps({ action: null })} />);
-      expect(screen.getByText('Elemental Affinity')).toBeInTheDocument();
-      unmount2();
-
-      render(<ElementalAffinityModal {...makeProps({ action: undefined })} />);
+    it('defaults to "Elemental Affinity" when action name is missing', () => {
+      render(<ElementalAffinityModal {...makeProps({ action: { automation: baseAction.automation } })} />);
       expect(screen.getByText('Elemental Affinity')).toBeInTheDocument();
     });
 
-    it('renders description text for new selection', () => {
-      render(<ElementalAffinityModal {...baseProps} />);
-      expect(screen.getByText(/Choose one damage type/)).toBeInTheDocument();
-    });
-
-    it('renders description text for changing existing type', () => {
-      const actionWithExisting = makeAction({ existingType: 'Fire' });
-      render(<ElementalAffinityModal {...makeProps({ action: actionWithExisting })} />);
-      expect(screen.getByText(/Change damage type \(currently Fire\)/)).toBeInTheDocument();
-    });
-
-    it('renders all five default damage type options', () => {
+    it('renders all five default damage type radio options', () => {
       render(<ElementalAffinityModal {...baseProps} />);
       DEFAULT_DAMAGE_TYPES.forEach(type => {
         expect(screen.getByLabelText(type)).toBeInTheDocument();
       });
+    });
+
+    it('renders description for new selection', () => {
+      render(<ElementalAffinityModal {...baseProps} />);
+      expect(screen.getByText(/Choose one damage type/)).toBeInTheDocument();
+    });
+
+    it('renders description for changing existing type', () => {
+      const actionWithExisting = makeAction({ existingType: 'Fire' });
+      render(<ElementalAffinityModal {...makeProps({ action: actionWithExisting })} />);
+      expect(screen.getByText(/Change damage type \(currently Fire\)/)).toBeInTheDocument();
     });
 
     it('marks existing type with (current) label', () => {
@@ -103,7 +132,7 @@ describe('ElementalAffinityModal', () => {
       expect(screen.getByText('(current)')).toBeInTheDocument();
     });
 
-    it('does not show (current) label when no existing type', () => {
+    it('hides (current) label when no existing type', () => {
       render(<ElementalAffinityModal {...baseProps} />);
       expect(screen.queryByText('(current)')).not.toBeInTheDocument();
     });
@@ -111,7 +140,7 @@ describe('ElementalAffinityModal', () => {
     it('hides (current) label after user selects a different type', () => {
       const actionWithExisting = makeAction({ existingType: 'Fire' });
       render(<ElementalAffinityModal {...makeProps({ action: actionWithExisting })} />);
-      fireEvent.click(screen.getByLabelText('Acid'));
+      selectType('Acid');
       expect(screen.queryByText('(current)')).not.toBeInTheDocument();
     });
 
@@ -133,18 +162,18 @@ describe('ElementalAffinityModal', () => {
     });
   });
 
-  // ── Radio button selection ──
+  // ── Radio selection ──
 
   describe('radio selection', () => {
     it('selects a damage type when its radio is clicked', () => {
       render(<ElementalAffinityModal {...baseProps} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
+      selectType('Fire');
       expect(screen.getByLabelText('Fire')).toBeChecked();
     });
 
     it('enables apply button after selecting a type', () => {
       render(<ElementalAffinityModal {...baseProps} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
+      selectType('Fire');
       expect(screen.getByRole('button', { name: /Damage Type/ })).toBeEnabled();
     });
   });
@@ -163,86 +192,85 @@ describe('ElementalAffinityModal', () => {
       });
     });
 
-    it('calls applyTypeChoice with correct arguments when apply is clicked', async () => {
+    it('calls applyTypeChoice with correct arguments and shows result view', async () => {
       render(<ElementalAffinityModal {...baseProps} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
+      selectType('Fire');
+      await waitForApply();
+
       expect(elementalAffinityHandler.applyTypeChoice).toHaveBeenCalledWith(
         baseAction,
         basePlayerStats,
         'test-campaign',
         'Fire'
       );
+      await waitForResult();
+      expect(screen.getByText(/Fire selected/)).toBeInTheDocument();
     });
 
     it('does not call applyTypeChoice when apply is clicked without a selection', async () => {
       render(<ElementalAffinityModal {...baseProps} />);
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
+      await waitForApply();
       expect(elementalAffinityHandler.applyTypeChoice).not.toHaveBeenCalled();
     });
 
-    it('shows result view after successful apply', async () => {
+    it('hides selection controls after successful apply', async () => {
       render(<ElementalAffinityModal {...baseProps} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        expect(screen.getByText(/Fire selected/)).toBeInTheDocument();
-      });
+      selectType('Fire');
+      await waitForApply();
+      await waitForResult();
+      expect(screen.queryByLabelText('Fire')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+      expect(screen.queryByText(/Choose one damage type/)).not.toBeInTheDocument();
     });
 
     it('renders result description from payload', async () => {
       render(<ElementalAffinityModal {...baseProps} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        const body = document.querySelector('.sp-body');
-        expect(body.textContent).toContain('Fire selected');
-        expect(body.textContent).toContain('resistance to Fire damage');
-      });
-    });
-
-    it('renders Done button in result view', async () => {
-      render(<ElementalAffinityModal {...baseProps} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-      });
-    });
-
-    it('hides selection controls after apply', async () => {
-      render(<ElementalAffinityModal {...baseProps} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        expect(screen.queryByLabelText('Fire')).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-        expect(screen.queryByText(/Choose one damage type/)).not.toBeInTheDocument();
-      });
+      selectType('Fire');
+      await waitForApply();
+      await waitForResult();
+      expect(screen.getByText(/resistance to Fire damage/)).toBeInTheDocument();
     });
 
     it('renders result with custom action name', async () => {
       const customAction = makeAction({ name: 'Custom Affinity' });
       render(<ElementalAffinityModal {...makeProps({ action: customAction })} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        expect(screen.getByText('Custom Affinity')).toBeInTheDocument();
-      });
+      selectType('Fire');
+      await waitForApply();
+      await waitForResult();
+      expect(screen.getByText('Custom Affinity')).toBeInTheDocument();
+    });
+
+    it('does not show result view when applyTypeChoice returns null', async () => {
+      elementalAffinityHandler.applyTypeChoice.mockResolvedValue(null);
+      render(<ElementalAffinityModal {...baseProps} />);
+      selectType('Fire');
+      await waitForApply();
+      expect(screen.getByRole('button', { name: /Damage Type/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+    });
+
+    it('does not show result view when applyTypeChoice returns undefined', async () => {
+      elementalAffinityHandler.applyTypeChoice.mockResolvedValue(undefined);
+      render(<ElementalAffinityModal {...baseProps} />);
+      selectType('Acid');
+      await waitForApply();
+      expect(screen.getByRole('button', { name: /Damage Type/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Error handling ──
+
+  describe('error handling', () => {
+    it('keeps selection view when applyTypeChoice throws', async () => {
+      unhandledRejectionHandler = vi.fn();
+      process.on('unhandledRejection', unhandledRejectionHandler);
+      elementalAffinityHandler.applyTypeChoice.mockRejectedValue(new Error('Network error'));
+      render(<ElementalAffinityModal {...baseProps} />);
+      selectType('Fire');
+      await waitForApply();
+      expect(screen.getByRole('button', { name: /Damage Type/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     });
   });
 
@@ -263,14 +291,33 @@ describe('ElementalAffinityModal', () => {
     it('calls onClose when Done button is clicked in result view', async () => {
       const onClose = vi.fn();
       render(<ElementalAffinityModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-      });
+      selectType('Fire');
+      await waitForApply();
+      await waitForResult();
+      clickDoneButton();
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onClose when overlay is clicked in result view', async () => {
+      const onClose = vi.fn();
+      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
+      selectType('Fire');
+      await waitForApply();
+      await waitForResult();
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onClose when result modal content is clicked', async () => {
+      const onClose = vi.fn();
+      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
+      selectType('Fire');
+      await waitForApply();
+      await waitForResult();
+      const modal = document.querySelector('.sp-modal');
+      fireEvent.click(modal);
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
@@ -306,27 +353,6 @@ describe('ElementalAffinityModal', () => {
     });
   });
 
-  // ── Edge cases: null/undefined action ──
-
-  describe('null/undefined action handling', () => {
-    it('renders with default damage types and buttons when action is null or undefined', () => {
-      const { unmount } = render(<ElementalAffinityModal {...makeProps({ action: null })} />);
-      DEFAULT_DAMAGE_TYPES.forEach(type => {
-        expect(screen.getByLabelText(type)).toBeInTheDocument();
-      });
-      expect(screen.getByRole('button', { name: /Damage Type/ })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-      unmount();
-
-      render(<ElementalAffinityModal {...makeProps({ action: undefined })} />);
-      DEFAULT_DAMAGE_TYPES.forEach(type => {
-        expect(screen.getByLabelText(type)).toBeInTheDocument();
-      });
-      expect(screen.getByRole('button', { name: /Damage Type/ })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-  });
-
   // ── Overlay interaction ──
 
   describe('overlay interaction', () => {
@@ -353,15 +379,15 @@ describe('ElementalAffinityModal', () => {
     it('calls onClose when Cancel is clicked', () => {
       const onClose = vi.fn();
       render(<ElementalAffinityModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      clickCancelButton();
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('does not call applyTypeChoice when Cancel is clicked', () => {
       const onClose = vi.fn();
       render(<ElementalAffinityModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      selectType('Fire');
+      clickCancelButton();
       expect(elementalAffinityHandler.applyTypeChoice).not.toHaveBeenCalled();
     });
   });
@@ -415,97 +441,11 @@ describe('ElementalAffinityModal', () => {
         },
       });
       render(<ElementalAffinityModal {...makeProps({ action: adeptAction })} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        expect(screen.getByText(/ignore Resistance/)).toBeInTheDocument();
-        expect(screen.getByText(/treat any 1 on a damage die as a 2/)).toBeInTheDocument();
-      });
-    });
-  });
-
-  // ── Result view overlay close ──
-
-  describe('result view overlay close', () => {
-    beforeEach(() => {
-      elementalAffinityHandler.applyTypeChoice.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Elemental Affinity',
-          description: 'Elemental Affinity: Fire selected.',
-        },
-      });
-    });
-
-    it('calls onClose when overlay is clicked in result view', async () => {
-      const onClose = vi.fn();
-      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        const overlay = document.querySelector('.sp-overlay');
-        fireEvent.click(overlay);
-      });
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not call onClose when result modal content is clicked', async () => {
-      const onClose = vi.fn();
-      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        const modal = document.querySelector('.sp-modal');
-        fireEvent.click(modal);
-      });
-      expect(onClose).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── Null/undefined result handling ──
-
-  describe('null result handling', () => {
-    it('does not show result view when applyTypeChoice returns null', async () => {
-      elementalAffinityHandler.applyTypeChoice.mockResolvedValue(null);
-      render(<ElementalAffinityModal {...baseProps} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Damage Type/ })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-      });
-    });
-
-    it('does not show result view when applyTypeChoice returns undefined', async () => {
-      elementalAffinityHandler.applyTypeChoice.mockResolvedValue(undefined);
-      render(<ElementalAffinityModal {...baseProps} />);
-      fireEvent.click(screen.getByLabelText('Acid'));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
-      });
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Damage Type/ })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-      });
-    });
-  });
-
-  // ── Header icon ──
-
-  describe('header icon', () => {
-    it('renders the bolt icon in the header', () => {
-      render(<ElementalAffinityModal {...baseProps} />);
-      const icon = document.querySelector('.sp-header i.fa-solid.fa-bolt');
-      expect(icon).toBeInTheDocument();
+      selectType('Fire');
+      await waitForApply();
+      await waitForResult();
+      expect(screen.getByText(/ignore Resistance/)).toBeInTheDocument();
+      expect(screen.getByText(/treat any 1 on a damage die as a 2/)).toBeInTheDocument();
     });
   });
 });

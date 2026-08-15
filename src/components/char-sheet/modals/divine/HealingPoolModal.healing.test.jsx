@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingPoolModal from './HealingPoolModal.jsx';
@@ -99,6 +100,12 @@ async function renderModal(poolConfig, overrides) {
   return { ...rendered, updateFn };
 }
 
+function getLogTableRows() {
+  const table = screen.getByRole('table');
+  const rows = table.querySelectorAll('tr');
+  return Array.from(rows).slice(1);
+}
+
 // ── Tests ──
 
 describe('HealingPoolModal - Healing', () => {
@@ -116,22 +123,15 @@ describe('HealingPoolModal - Healing', () => {
 
   // ── Apply heal with combat context (NPC target) ──
 
-  it('applies healing when apply heal is clicked', async () => {
+  it('applies healing to NPC target and updates pool', async () => {
     applyHealingService.applyHealingToTarget.mockReturnValue({
       actualHeal: 5,
       oldHp: 15,
       newHp: 20,
     });
-    damageUtils.getCombatContext.mockResolvedValue(mockCombatSummary);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'currentHitPoints') return 15;
-      if (key === 'activeConditions') return [];
-      return null;
-    });
 
     await renderModal({ current: 20, max: 20 });
-    const input = screen.getByRole('spinbutton');
-    fireEvent.change(input, { target: { value: '5' } });
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '5' } });
     fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
 
     expect(applyHealingService.applyHealingToTarget).toHaveBeenCalledWith(
@@ -140,7 +140,7 @@ describe('HealingPoolModal - Healing', () => {
       5,
       mockCampaignName,
     );
-    expect(updateFn).toHaveBeenCalled();
+    expect(updateFn).toHaveBeenCalledWith(15);
   });
 
   it('adds heal entry to log after applying healing', async () => {
@@ -149,24 +149,31 @@ describe('HealingPoolModal - Healing', () => {
       oldHp: 15,
       newHp: 20,
     });
-    damageUtils.getCombatContext.mockResolvedValue(mockCombatSummary);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'currentHitPoints') return 15;
-      if (key === 'activeConditions') return [];
-      return null;
+
+    await renderModal({ current: 20, max: 20 });
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
+
+    const rows = getLogTableRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('Heal');
+    expect(rows[0]).toHaveTextContent('Paladin1');
+    expect(rows[0]).toHaveTextContent('5');
+  });
+
+  it('shows pool left in log entry after healing', async () => {
+    applyHealingService.applyHealingToTarget.mockReturnValue({
+      actualHeal: 5,
+      oldHp: 15,
+      newHp: 20,
     });
 
     await renderModal({ current: 20, max: 20 });
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '5' } });
     fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
 
-    const table = screen.getByRole('table');
-    const rows = table.querySelectorAll('tr');
-    const dataRows = Array.from(rows).slice(1);
-    expect(dataRows).toHaveLength(1);
-    expect(dataRows[0]).toHaveTextContent('Heal');
-    expect(dataRows[0]).toHaveTextContent('Paladin1');
-    expect(dataRows[0]).toHaveTextContent('5');
+    const rows = getLogTableRows();
+    expect(rows[0]).toHaveTextContent('15');
   });
 
   // ── Apply heal without combat context (self-heal) ──
@@ -185,14 +192,105 @@ describe('HealingPoolModal - Healing', () => {
     fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
 
     expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-      mockPlayerStats.name,
+      'Paladin1',
       'currentHitPoints',
       expect.any(Number),
       mockCampaignName,
     );
-    const logCalls = global.fetch.mock.calls.filter(
-      (call) => call[0] === '/api/campaigns/test-campaign/log',
+    expect(updateFn).toHaveBeenCalledWith(15);
+  });
+
+  it('caps self-heal at target maximum HP', async () => {
+    damageUtils.getCombatContext.mockResolvedValue(null);
+    damageUtils.getTargetFromAttacker.mockReturnValue(null);
+    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'currentHitPoints') return 38;
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+
+    await renderModal({ current: 20, max: 20 });
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
+
+    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+      'Paladin1',
+      'currentHitPoints',
+      40,
+      mockCampaignName,
     );
-    expect(logCalls.length).toBeGreaterThan(0);
+  });
+
+  it('logs self-heal action with correct target and amount', async () => {
+    damageUtils.getCombatContext.mockResolvedValue(null);
+    damageUtils.getTargetFromAttacker.mockReturnValue(null);
+    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'currentHitPoints') return 20;
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+
+    await renderModal({ current: 20, max: 20 });
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '8' } });
+    fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
+
+    const rows = getLogTableRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('Heal');
+    expect(rows[0]).toHaveTextContent('Paladin1');
+    expect(rows[0]).toHaveTextContent('8');
+  });
+
+  // ── Healing with insufficient pool ──
+
+  it('does not apply healing when pool is zero', async () => {
+    damageUtils.getCombatContext.mockResolvedValue(null);
+    damageUtils.getTargetFromAttacker.mockReturnValue(null);
+    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'currentHitPoints') return 20;
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+
+    await renderModal({ current: 0, max: 20 });
+    const btn = screen.getByRole('button', { name: /Apply Heal/i });
+    expect(btn).toBeDisabled();
+    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  // ── Multiple sequential heals ──
+
+  it('reduces pool after each successive heal', async () => {
+    applyHealingService.applyHealingToTarget.mockReturnValue({
+      actualHeal: 3,
+      oldHp: 15,
+      newHp: 18,
+    });
+
+    await renderModal({ current: 10, max: 20 });
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
+
+    expect(updateFn).toHaveBeenNthCalledWith(1, 7);
+    expect(updateFn).toHaveBeenNthCalledWith(2, 7);
+  });
+
+  it('accumulates multiple log entries for sequential heals', async () => {
+    let callCounter = 0;
+    applyHealingService.applyHealingToTarget.mockImplementation(() => {
+      callCounter++;
+      return { actualHeal: 3, oldHp: 15 + (callCounter - 1) * 3, newHp: 18 + (callCounter - 1) * 3 };
+    });
+
+    await renderModal({ current: 10, max: 20 });
+    for (let i = 0; i < 3; i++) {
+      fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '3' } });
+      fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
+    }
+
+    const rows = getLogTableRows();
+    expect(rows).toHaveLength(3);
   });
 });

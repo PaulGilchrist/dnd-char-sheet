@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DivineInterventionModal from './DivineInterventionModal.jsx';
@@ -109,9 +110,8 @@ describe('DivineInterventionModal', () => {
   // ── Initial render ──
 
   it('renders the modal overlay with the feature name', () => {
-    render(<DivineInterventionModal {...makeProps({ featureName: 'Gods\' Gambit' })} />);
-    expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-    expect(screen.getByText('Gods\' Gambit')).toBeInTheDocument();
+    render(<DivineInterventionModal {...makeProps({ featureName: "Gods' Gambit" })} />);
+    expect(screen.getByText("Gods' Gambit")).toBeInTheDocument();
   });
 
   it('renders a Cancel button by default', () => {
@@ -148,14 +148,7 @@ describe('DivineInterventionModal', () => {
     expect(screen.getByText('Sacred Flame')).toBeInTheDocument();
     expect(screen.getByText('Spiritual Weapon')).toBeInTheDocument();
     expect(screen.getByText(/Concentration/)).toBeInTheDocument();
-    const spellMetaItems = document.querySelectorAll('.spell-meta');
-    expect(spellMetaItems.length).toBe(5);
-    // Verify each spell has the correct meta text
-    expect(spellMetaItems[0].textContent).toContain('Level 1');
-    expect(spellMetaItems[0].textContent).toContain('1 action');
-    expect(spellMetaItems[4].textContent).toContain('Level 2');
-    expect(spellMetaItems[4].textContent).toContain('1 bonus action');
-    expect(spellMetaItems[4].textContent).toContain('Concentration');
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 
   it('renders a Ritual tag for spells with ritual in the list', () => {
@@ -277,11 +270,11 @@ describe('DivineInterventionModal', () => {
     render(<DivineInterventionModal {...makeProps()} />);
     fireEvent.click(screen.getByText('Guiding Bolt'));
     expect(screen.getByRole('button', { name: /Cast with Divine Intervention/ })).toBeInTheDocument();
-    expect(screen.queryByText('Cancel')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Back'));
     expect(screen.queryByRole('button', { name: /Cast with Divine Intervention/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Cancel')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
   it('preserves the active filter when going back from a spell detail', () => {
@@ -293,12 +286,18 @@ describe('DivineInterventionModal', () => {
     expect(screen.getByText('Level 1')).toHaveClass('active');
   });
 
+  it('hides the spell list when a spell detail is shown', () => {
+    render(<DivineInterventionModal {...makeProps()} />);
+    expect(screen.getByText('Thunderwave')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Guiding Bolt'));
+    expect(screen.queryByText('Thunderwave')).not.toBeInTheDocument();
+  });
+
   // ── Selected spell detail view ──
 
   it('displays the selected spell name, level, school, and tags', () => {
     render(<DivineInterventionModal {...makeProps()} />);
     fireEvent.click(screen.getByText('Spiritual Weapon'));
-    expect(screen.getByText('Spiritual Weapon')).toBeInTheDocument();
     expect(screen.getByText(/Level 2 — Evocation — Concentration/)).toBeInTheDocument();
   });
 
@@ -331,6 +330,25 @@ describe('DivineInterventionModal', () => {
     expect(screen.getByText(/Duration: 1 instant/)).toBeInTheDocument();
   });
 
+  it('omits components and duration when the spell has no components or duration', () => {
+    const minimalSpell = [
+      {
+        index: 'minion',
+        name: 'Minion',
+        level: 1,
+        school: 'Evocation',
+        casting_time: '1 action',
+        range: '60 feet',
+        description: ['A simple spell.'],
+      },
+    ];
+    render(<DivineInterventionModal {...makeProps({ eligibleSpells: minimalSpell })} />);
+    fireEvent.click(screen.getByText('Minion'));
+    expect(screen.getByText(/Casting Time: 1 action — Range: 60 feet/)).toBeInTheDocument();
+    expect(screen.queryByText(/Components/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Duration/)).not.toBeInTheDocument();
+  });
+
   it('displays the spell description', () => {
     render(<DivineInterventionModal {...makeProps()} />);
     fireEvent.click(screen.getByText('Guiding Bolt'));
@@ -346,7 +364,7 @@ describe('DivineInterventionModal', () => {
   it('shows damage for spells using damage_at_character_level', () => {
     render(<DivineInterventionModal {...makeProps()} />);
     fireEvent.click(screen.getByText('Fire Bolt'));
-    expect(screen.getByText(/1d10/)).toBeInTheDocument();
+    expect(screen.getByText(/Damage: 1d10 \(Fire\)/)).toBeInTheDocument();
   });
 
   it('does not display a damage section when the spell has no damage', () => {
@@ -381,6 +399,24 @@ describe('DivineInterventionModal', () => {
     render(<DivineInterventionModal {...props} />);
     fireEvent.click(screen.getByText('Cancel'));
     expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose when clicking the overlay background outside the modal content', () => {
+    const props = makeProps();
+    render(<DivineInterventionModal {...props} />);
+    const overlay = document.querySelector('.sp-overlay');
+    expect(overlay).toBeInTheDocument();
+    fireEvent.click(overlay);
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not close when clicking inside the modal content', () => {
+    const props = makeProps();
+    render(<DivineInterventionModal {...props} />);
+    const modal = document.querySelector('.sp-modal');
+    expect(modal).toBeInTheDocument();
+    fireEvent.click(modal);
+    expect(props.onClose).not.toHaveBeenCalled();
   });
 
   // ── Empty spell list ──

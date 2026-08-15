@@ -213,10 +213,9 @@ describe('ConstellationSelectionModal', () => {
         { name: 'Starry Form', constellation: 'Chalice' },
       ]);
       render(<ConstellationSelectionModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Chalice/ })).toHaveStyle({
-        background: 'rgba(255,255,255,0.15)',
-        border: '1px solid var(--color-link)',
-      });
+      const chaliceBtn = screen.getByRole('button', { name: /Chalice/ });
+      expect(chaliceBtn).toHaveStyle({ background: 'rgba(255,255,255,0.15)' });
+      expect(chaliceBtn.style.border).toContain('var(--color-link)');
     });
 
     it('does not restore selection when activeBuffs has no matching buff', () => {

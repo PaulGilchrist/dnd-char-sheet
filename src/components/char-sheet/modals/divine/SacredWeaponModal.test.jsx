@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SacredWeaponModal from './SacredWeaponModal.jsx';
@@ -169,8 +170,7 @@ describe('SacredWeaponModal', () => {
       expect(screen.queryByLabelText('Radiant')).not.toBeInTheDocument();
       expect(screen.queryByText('Choose the damage type for Sacred Weapon:')).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-      const body = document.querySelector('.sp-body');
-      expect(body.innerHTML).toContain(description);
+      expect(screen.getByText(description)).toBeInTheDocument();
     });
   });
 
@@ -190,7 +190,22 @@ describe('SacredWeaponModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  // ── Edge cases: missing / empty / null automation ──
+  it('calls onClose when Cancel button is clicked', () => {
+    const onClose = vi.fn();
+    render(<SacredWeaponModal {...makeProps({ onClose })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose when overlay is clicked outside the modal', () => {
+    const onClose = vi.fn();
+    render(<SacredWeaponModal {...makeProps({ onClose })} />);
+    const overlay = document.querySelector('.sp-overlay');
+    fireEvent.click(overlay);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Edge cases: missing / empty / null / undefined automation ──
 
   it('renders without radio options when automation is missing, empty, null, or undefined', () => {
     const scenarios = [

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
@@ -73,9 +74,7 @@ vi.mock('./shared/CreatureSelectionModal.jsx', () => ({
 
 // ── Re-import mocked modules ──
 
-import * as diceRoller from '../../../services/dice/diceRoller.js';
 import * as combatData from '../../../services/encounters/combatData.js';
-import CreatureSelectionModal from './shared/CreatureSelectionModal.jsx';
 
 // ── Test fixtures ──
 
@@ -108,91 +107,125 @@ function renderModal(props = {}) {
 describe('ElementalAttunementModal ELEMENT_DATA structure', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
     });
 
-    describe('ELEMENT_DATA structure', () => {
-        it('has exactly 4 elements', () => {
+    // ── Unique: structure integrity (not tested elsewhere) ──
+
+    describe('ELEMENT_DATA structure integrity', () => {
+        it('exports exactly 4 elements', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             expect(screen.getByText('Cold')).toBeInTheDocument();
             expect(screen.getByText('Fire')).toBeInTheDocument();
             expect(screen.getByText('Lightning')).toBeInTheDocument();
             expect(screen.getByText('Thunder')).toBeInTheDocument();
+            expect(document.querySelectorAll('.sp-roll-btn').length).toBe(4);
         });
 
-        it('Cold uses DEX save type', async () => {
+        it('Cold element has no damage property (effect-only)', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             fireEvent.click(screen.getByText('Cold'));
+            await new Promise(r => setTimeout(r, 0));
             await waitFor(() => {
-                expect(CreatureSelectionModal.mock.calls[0][0].description).toContain('DEX');
+                const note = screen.getByTestId('cs-modal-note');
+                expect(note.textContent).not.toContain('damage');
+                expect(note.textContent).not.toContain('half');
             });
         });
 
-        it('Fire uses DEX save type', async () => {
+        it('Fire element has 1d10 fire damage with half-on-save', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             fireEvent.click(screen.getByText('Fire'));
+            await new Promise(r => setTimeout(r, 0));
             await waitFor(() => {
-                expect(CreatureSelectionModal.mock.calls[0][0].description).toContain('DEX');
+                const note = screen.getByTestId('cs-modal-note');
+                expect(note.textContent).toContain('1d10');
+                expect(note.textContent.toLowerCase()).toContain('fire');
+                expect(note.textContent).toContain('half');
             });
         });
 
-        it('Lightning uses DEX save type', async () => {
+        it('Lightning element has 1d8 lightning damage with half-on-save', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             fireEvent.click(screen.getByText('Lightning'));
+            await new Promise(r => setTimeout(r, 0));
             await waitFor(() => {
-                expect(CreatureSelectionModal.mock.calls[0][0].description).toContain('DEX');
+                const note = screen.getByTestId('cs-modal-note');
+                expect(note.textContent).toContain('1d8');
+                expect(note.textContent.toLowerCase()).toContain('lightning');
+                expect(note.textContent).toContain('half');
             });
         });
 
-        it('Thunder uses CON save type', async () => {
+        it('Thunder element has 1d6 thunder damage with half-on-save', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             fireEvent.click(screen.getByText('Thunder'));
+            await new Promise(r => setTimeout(r, 0));
             await waitFor(() => {
-                expect(CreatureSelectionModal.mock.calls[0][0].description).toContain('CON');
+                const note = screen.getByTestId('cs-modal-note');
+                expect(note.textContent).toContain('1d6');
+                expect(note.textContent.toLowerCase()).toContain('thunder');
+                expect(note.textContent).toContain('half');
             });
         });
 
-        it('Cold has no damage (speed_reduction effect only)', async () => {
+        it('Cold element uses DEX save type', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             fireEvent.click(screen.getByText('Cold'));
+            await new Promise(r => setTimeout(r, 0));
             await waitFor(() => {
-                expect(CreatureSelectionModal.mock.calls[0][0].note).toContain('Cold');
+                const desc = screen.getByTestId('cs-modal-description');
+                expect(desc.innerHTML).toContain('DEX');
             });
         });
 
-        it('Fire has 1d10 fire damage', async () => {
+        it('Fire element uses DEX save type', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             fireEvent.click(screen.getByText('Fire'));
+            await new Promise(r => setTimeout(r, 0));
             await waitFor(() => {
-                expect(CreatureSelectionModal.mock.calls[0][0].note).toContain('1d10');
-                expect(CreatureSelectionModal.mock.calls[0][0].note).toContain('fire');
+                const desc = screen.getByTestId('cs-modal-description');
+                expect(desc.innerHTML).toContain('DEX');
             });
         });
 
-        it('Lightning has 1d8 lightning damage', async () => {
+        it('Lightning element uses DEX save type', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             fireEvent.click(screen.getByText('Lightning'));
+            await new Promise(r => setTimeout(r, 0));
             await waitFor(() => {
-                expect(CreatureSelectionModal.mock.calls[0][0].note).toContain('1d8');
-                expect(CreatureSelectionModal.mock.calls[0][0].note).toContain('lightning');
+                const desc = screen.getByTestId('cs-modal-description');
+                expect(desc.innerHTML).toContain('DEX');
             });
         });
 
-        it('Thunder has 1d6 thunder damage plus push effect', async () => {
+        it('Thunder element uses CON save type', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             fireEvent.click(screen.getByText('Thunder'));
+            await new Promise(r => setTimeout(r, 0));
             await waitFor(() => {
-                expect(CreatureSelectionModal.mock.calls[0][0].note).toContain('1d6');
-                expect(CreatureSelectionModal.mock.calls[0][0].note).toContain('thunder');
+                const desc = screen.getByTestId('cs-modal-description');
+                expect(desc.innerHTML).toContain('CON');
             });
+        });
+
+        it('element data is not mutated by rendering', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
+            renderModal();
+            const elementCountBefore = document.querySelectorAll('.sp-roll-btn').length;
+            fireEvent.click(screen.getByText('Fire'));
+            await new Promise(r => setTimeout(r, 0));
+            renderModal();
+            const elementCountAfter = document.querySelectorAll('.sp-roll-btn').length;
+            expect(elementCountBefore).toBe(elementCountAfter);
         });
     });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
@@ -111,14 +112,14 @@ function renderModal(props = {}) {
 
 describe('ElementalAttunementModal NPC save resolution', () => {
     beforeEach(() => {
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
         diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
         vi.spyOn(global.Math, 'random').mockReturnValue(0.1);
     });
 
-    function setupNPC(name = 'Goblin1', saveBonuses = { dex: 2 }) {
+    function setupNPC(name = 'Goblin1', saveBonuses = { dex: 2 }, resistances = [], immunities = []) {
         combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-            { name, type: 'npc', saveBonuses, resistances: [], immunities: [] },
+            { name, type: 'npc', saveBonuses, resistances, immunities },
         ]));
         aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name, type: 'npc', currentHp: 7, maxHp: 7 } }]);
     }
@@ -133,18 +134,44 @@ describe('ElementalAttunementModal NPC save resolution', () => {
             });
         });
 
-        it('calls applyDamageToTarget for Fire element', async () => {
+        it('does not duplicate speed_reduction when already present', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(['speed_reduction']);
+            setupNPC('Goblin1', { dex: -10 });
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Cold'));
+            await waitFor(() => {
+                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                    'Goblin1',
+                    'activeConditions',
+                    ['speed_reduction'],
+                    'test-campaign'
+                );
+            });
+        });
+
+        it('calls applyDamageToTarget for Fire element with correct parameters', async () => {
             setupNPC();
             renderModal({ activeOverlay: { type: 'sphere' } });
             fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(applyDamage.applyDamageToTarget).toHaveBeenCalled());
+            await waitFor(() => {
+                expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
+                const callArgs = applyDamage.applyDamageToTarget.mock.calls[0];
+                expect(callArgs[1]).toBe('Goblin1');
+                expect(callArgs[3]).toEqual(['fire']);
+                expect(callArgs[4]).toBe('test-campaign');
+            });
         });
 
-        it('calls applyDamageToTarget for Thunder element', async () => {
+        it('calls applyDamageToTarget for Thunder element with correct parameters', async () => {
             setupNPC('Goblin1', { con: 2 });
             renderModal({ activeOverlay: { type: 'sphere' } });
             fireEvent.click(screen.getByText('Thunder'));
-            await waitFor(() => expect(applyDamage.applyDamageToTarget).toHaveBeenCalled());
+            await waitFor(() => {
+                expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
+                const callArgs = applyDamage.applyDamageToTarget.mock.calls[0];
+                expect(callArgs[1]).toBe('Goblin1');
+                expect(callArgs[3]).toEqual(['thunder']);
+            });
         });
 
         it('logs save-damage roll entry for NPC with Fire', async () => {
@@ -152,7 +179,14 @@ describe('ElementalAttunementModal NPC save resolution', () => {
             renderModal({ activeOverlay: { type: 'sphere' } });
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
-                expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({ type: 'roll', rollType: 'save-damage', saveType: 'dex' }));
+                expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                    type: 'roll',
+                    rollType: 'save-damage',
+                    saveType: 'dex',
+                    saveResult: expect.any(String),
+                    saveDc: 12,
+                    targetName: 'Goblin1',
+                }));
             });
         });
 
@@ -161,33 +195,45 @@ describe('ElementalAttunementModal NPC save resolution', () => {
             renderModal({ activeOverlay: { type: 'sphere' } });
             fireEvent.click(screen.getByText('Cold'));
             await waitFor(() => {
-                expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({ type: 'ability_use', abilityName: 'Elemental Attunement' }));
+                expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                    type: 'ability_use',
+                    abilityName: 'Elemental Attunement',
+                    saveDc: 12,
+                }));
             });
         });
 
-        it('calls persistAndNotify after resolving', async () => {
+        it('calls persistAndNotify with combat summary and campaign name after resolving', async () => {
             setupNPC();
             renderModal({ activeOverlay: { type: 'sphere' } });
             fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(areaEffectUtils.persistAndNotify).toHaveBeenCalled());
+            await waitFor(() => {
+                expect(areaEffectUtils.persistAndNotify).toHaveBeenCalled();
+                const callArgs = areaEffectUtils.persistAndNotify.mock.calls[0];
+                expect(callArgs[0]).toEqual(makeCombatSummary([
+                    expect.objectContaining({ name: 'Goblin1', type: 'npc' }),
+                ]));
+                expect(callArgs[1]).toBe('test-campaign');
+            });
+        });
+
+        it('handles NPC with no saveBonuses property', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Goblin1', type: 'npc' },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => {
+                expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                    type: 'roll',
+                    rollType: 'save-damage',
+                }));
+            });
         });
     });
 
     describe('Thunder push effect', () => {
-        it('shows thunder damage and push info in summary for failed Thunder saves', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: { con: -10 }, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
-            renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Thunder'));
-            await waitFor(() => {
-                const body = document.querySelector('.sp-body');
-                expect(body.textContent).toContain('thunder');
-                expect(body.textContent).toContain('Failed');
-            });
-        });
-
         it('logs thunder save-damage entry for NPC with push effect', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Goblin1', type: 'npc', saveBonuses: { con: -10 }, resistances: [], immunities: [] },
@@ -203,6 +249,7 @@ describe('ElementalAttunementModal NPC save resolution', () => {
                         rollType: 'save-damage',
                         saveType: 'con',
                         damageType: 'thunder',
+                        targetName: 'Goblin1',
                     })
                 );
             });
@@ -261,8 +308,7 @@ describe('ElementalAttunementModal NPC save resolution', () => {
             ]));
             aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
             renderModal({ activeOverlay: { type: 'sphere' } });
-            const btn = document.querySelector('.sp-roll-btn');
-            if (btn) fireEvent.click(btn);
+            fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
                 const body = document.querySelector('.sp-body');
                 expect(body.textContent).toContain('Saved');

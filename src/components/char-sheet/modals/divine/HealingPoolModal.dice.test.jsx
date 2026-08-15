@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingPoolModal from './HealingPoolModal.jsx';
@@ -56,11 +57,22 @@ const mockPlayerStats = {
 };
 const mockCampaignName = 'test-campaign';
 
+// Mutable pool state tracked via getter so the component always reads the latest value
+let currentVal = 15;
+let maxVal = 20;
 let updateFn;
 
 function setupPoolMock(current = 15, max = 20) {
-  updateFn = vi.fn();
-  useTrackedResource.mockReturnValue({ current, max, update: updateFn });
+  currentVal = current;
+  maxVal = max;
+  updateFn = vi.fn((newVal) => {
+    currentVal = newVal;
+  });
+  useTrackedResource.mockReturnValue({
+    get current() { return currentVal; },
+    get max() { return maxVal; },
+    update: updateFn,
+  });
 }
 
 function makeProps(overrides) {
@@ -100,7 +112,9 @@ describe('HealingPoolModal - Dice Pool', () => {
     setupPoolMock();
   });
 
-  it('dice pool displays pool as dice count and die type', async () => {
+  // ── Pool display ──
+
+  it('displays pool as dice count and die type', async () => {
     await renderModal({ current: 3, max: 4 }, {
       isDicePool: true,
       dieType: 12,
@@ -112,17 +126,27 @@ describe('HealingPoolModal - Dice Pool', () => {
     expect(p?.textContent).toBe('Pool: 3 / 4 d12');
   });
 
-  it('dice pool shows Roll a d12 button instead of Apply Heal', async () => {
+  it('shows remaining dice count after rolling', async () => {
     await renderModal({ current: 4, max: 4 }, {
       isDicePool: true,
       dieType: 12,
       name: 'Warrior of the Gods',
     });
-    expect(screen.getByText(/Roll a d12/)).toBeInTheDocument();
-    expect(screen.queryByText(/Apply Heal/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    expect(screen.getByText(/Remaining:.*dice/)).toBeInTheDocument();
   });
 
-  it('dice pool uses dynamic feature name in heading', async () => {
+  it('shows dice count and die type in heading', async () => {
+    await renderModal({ current: 4, max: 8 }, {
+      isDicePool: true,
+      dieType: 8,
+      name: 'Divine Fury',
+    });
+    expect(screen.getByText(/Roll Dice — .* \(.*\/.* HP\)/)).toBeInTheDocument();
+  });
+
+  it('uses dynamic feature name in heading', async () => {
     await renderModal({ current: 4, max: 4 }, {
       isDicePool: true,
       dieType: 12,
@@ -130,6 +154,18 @@ describe('HealingPoolModal - Dice Pool', () => {
     });
     expect(screen.getByText('Warrior of the Gods')).toBeInTheDocument();
     expect(screen.queryByText('Lay On Hands')).not.toBeInTheDocument();
+  });
+
+  // ── Roll button state ──
+
+  it('shows Roll a d12 button instead of Apply Heal', async () => {
+    await renderModal({ current: 4, max: 4 }, {
+      isDicePool: true,
+      dieType: 12,
+      name: 'Warrior of the Gods',
+    });
+    expect(screen.getByText(/Roll a d12/)).toBeInTheDocument();
+    expect(screen.queryByText(/Apply Heal/)).not.toBeInTheDocument();
   });
 
   it('dice pool Roll a d12 button disabled when pool is zero', async () => {
@@ -141,19 +177,101 @@ describe('HealingPoolModal - Dice Pool', () => {
     expect(btn).toBeDisabled();
   });
 
-  it('dice pool shows roll result after clicking Roll button', async () => {
+  it('dice pool Roll a d12 button disabled when max dice per use reached', async () => {
+    // CHA 3 => mod = 1 => effectiveMaxDicePerUse = 1 => disabled after 1 roll
+    await renderModal({ current: 4, max: 4 }, {
+      isDicePool: true,
+      dieType: 12,
+      maxDicePerUse: 1,
+      playerStats: { ...mockPlayerStats, abilities: { CHA: 3 } },
+    });
+
+    let btn = screen.getByRole('button', { name: /Roll a d12/i });
+    expect(btn).not.toBeDisabled();
+
+    fireEvent.click(btn);
+    btn = screen.getByRole('button', { name: /Roll a d12/i });
+    expect(btn).toBeDisabled();
+  });
+
+  // ── Dice roll behavior ──
+
+  it('dice pool deducts pool on each roll', async () => {
     await renderModal({ current: 3, max: 4 }, {
       isDicePool: true,
       dieType: 12,
       name: 'Warrior of the Gods',
     });
-    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
 
-    expect(screen.getByText(/HP to restore/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    expect(updateFn).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    expect(updateFn).toHaveBeenCalledTimes(2);
   });
 
-  it('dice pool accumulates total across multiple rolls', async () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.5); // yields roll ~6-7
+  it('dice pool deducts pool by exactly 1 per roll', async () => {
+    await renderModal({ current: 5, max: 10 }, {
+      isDicePool: true,
+      dieType: 12,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    expect(updateFn).toHaveBeenCalledWith(4);
+
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    expect(updateFn).toHaveBeenCalledWith(3);
+  });
+
+  it('dice pool deducts pool and shows updated remaining count', async () => {
+    await renderModal({ current: 4, max: 4 }, {
+      isDicePool: true,
+      dieType: 12,
+      name: 'Warrior of the Gods',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    expect(screen.getByText(/Remaining: 3 dice/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    expect(screen.getByText(/Remaining: 2 dice/)).toBeInTheDocument();
+  });
+
+  it('dice pool shows individual roll values in accumulated total', async () => {
+    let faceIndex = 0;
+    const faceValues = [7];
+    const originalRandom = Math.random;
+    Math.random = () => {
+      const targetFace = faceValues[faceIndex] ?? 1;
+      faceIndex++;
+      const dieType = 12;
+      const ratio = (targetFace - 1) / (dieType - 1);
+      return ratio + 0.001;
+    };
+
+    await renderModal({ current: 4, max: 4 }, {
+      isDicePool: true,
+      dieType: 12,
+      name: 'Warrior of the Gods',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    Math.random = originalRandom;
+
+    expect(screen.getByText(/Rolled 1d12:/)).toBeInTheDocument();
+  });
+
+  it('dice pool displays accumulated total with correct sum', async () => {
+    let faceIndex = 0;
+    const faceValues = [3, 5];
+    const originalRandom = Math.random;
+    Math.random = () => {
+      const targetFace = faceValues[faceIndex] ?? 1;
+      faceIndex++;
+      const dieType = 12;
+      const ratio = (targetFace - 1) / (dieType - 1);
+      return ratio + 0.001;
+    };
 
     await renderModal({ current: 4, max: 4 }, {
       isDicePool: true,
@@ -163,21 +281,68 @@ describe('HealingPoolModal - Dice Pool', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
     fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    Math.random = originalRandom;
 
-    const totalText = screen.getByText(/HP to restore/);
-    expect(totalText).toBeInTheDocument();
+    // The text is split across multiple elements: " = ", <strong>8</strong>, " HP to restore"
+    // Use a flexible matcher that finds "8" followed by "HP to restore"
+    const totalSpan = document.querySelector('.healing-total');
+    expect(totalSpan?.textContent).toContain('8');
   });
+
+  it('dice pool shows individual roll values separated by plus', async () => {
+    let faceIndex = 0;
+    const faceValues = [3, 5];
+    const originalRandom = Math.random;
+    Math.random = () => {
+      const targetFace = faceValues[faceIndex] ?? 1;
+      faceIndex++;
+      const dieType = 12;
+      const ratio = (targetFace - 1) / (dieType - 1);
+      return ratio + 0.001;
+    };
+
+    await renderModal({ current: 4, max: 4 }, {
+      isDicePool: true,
+      dieType: 12,
+      name: 'Warrior of the Gods',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    Math.random = originalRandom;
+
+    expect(screen.getByText(/3 \+ 5/)).toBeInTheDocument();
+  });
+
+  // ── Max dice per use ──
+
+  it('enables roll button again when max dice per use not reached', async () => {
+    // CHA 14 => mod = 6 => effectiveMaxDicePerUse = 6 => not disabled after 1 roll
+    await renderModal({ current: 4, max: 4 }, {
+      isDicePool: true,
+      dieType: 12,
+      maxDicePerUse: 1,
+    });
+
+    // Roll once — should still be enabled (cap is 6)
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    const btn = screen.getByRole('button', { name: /Roll a d12/i });
+    expect(btn).not.toBeDisabled();
+  });
+
+  // ── Done button behavior ──
 
   it('dice pool applies self-heal on Done button when rolls accumulated', async () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.5);
-
-    damageUtils.getCombatContext.mockResolvedValue(null);
-    damageUtils.getTargetFromAttacker.mockReturnValue(null);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'currentHitPoints') return 20;
-      if (key === 'activeConditions') return [];
-      return null;
-    });
+    let faceIndex = 0;
+    const faceValues = [5];
+    const originalRandom = Math.random;
+    Math.random = () => {
+      const targetFace = faceValues[faceIndex] ?? 1;
+      faceIndex++;
+      const dieType = 12;
+      const ratio = (targetFace - 1) / (dieType - 1);
+      return ratio + 0.001;
+    };
 
     await renderModal({ current: 4, max: 4 }, {
       isDicePool: true,
@@ -186,9 +351,16 @@ describe('HealingPoolModal - Dice Pool', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    Math.random = originalRandom;
+
     fireEvent.click(screen.getByRole('button', { name: /Done/i }));
 
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith('Paladin1', 'currentHitPoints', expect.any(Number), 'test-campaign');
+    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+      'Paladin1',
+      'currentHitPoints',
+      expect.any(Number),
+      'test-campaign',
+    );
     const logCalls = global.fetch.mock.calls.filter(
       (call) => call[0] === '/api/campaigns/test-campaign/log',
     );
@@ -212,24 +384,26 @@ describe('HealingPoolModal - Dice Pool', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Done/i }));
 
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalledWith('Paladin1', 'currentHitPoints', expect.any(Number), 'test-campaign');
+    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+      'Paladin1',
+      'currentHitPoints',
+      expect.any(Number),
+      'test-campaign',
+    );
   });
 
-  it('dice pool deducts pool on each roll', async () => {
-    await renderModal({ current: 3, max: 4 }, {
-      isDicePool: true,
-      dieType: 12,
-      name: 'Warrior of the Gods',
-    });
+  it('dice pool resets accumulated total after Done', async () => {
+    let faceIndex = 0;
+    const faceValues = [7];
+    const originalRandom = Math.random;
+    Math.random = () => {
+      const targetFace = faceValues[faceIndex] ?? 1;
+      faceIndex++;
+      const dieType = 12;
+      const ratio = (targetFace - 1) / (dieType - 1);
+      return ratio + 0.001;
+    };
 
-    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
-    expect(updateFn).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
-    expect(updateFn).toHaveBeenCalledTimes(2);
-  });
-
-  it('dice pool shows remaining dice count after rolling', async () => {
     await renderModal({ current: 4, max: 4 }, {
       isDicePool: true,
       dieType: 12,
@@ -237,29 +411,68 @@ describe('HealingPoolModal - Dice Pool', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
-    expect(screen.getByText(/Remaining:.*dice/)).toBeInTheDocument();
+    Math.random = originalRandom;
+
+    // Verify the roll result is displayed
+    const totalSpan = document.querySelector('.healing-total');
+    expect(totalSpan?.textContent).toContain('7');
+
+    fireEvent.click(screen.getByRole('button', { name: /Done/i }));
+
+    // After done, the accumulated total should be cleared
+    expect(screen.queryByText(/HP to restore/)).not.toBeInTheDocument();
   });
 
-  it('dice pool shows dice count and die type in heading', async () => {
-    await renderModal({ current: 4, max: 8 }, {
+  it('dice pool does not apply healing on Done when pool is zero', async () => {
+    await renderModal({ current: 0, max: 4 }, {
+      isDicePool: true,
+      dieType: 12,
+      name: 'Warrior of the Gods',
+    });
+
+    // Can't roll because pool is 0, so no accumulated total
+    fireEvent.click(screen.getByRole('button', { name: /Done/i }));
+
+    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+      'Paladin1',
+      'currentHitPoints',
+      expect.any(Number),
+      'test-campaign',
+    );
+  });
+
+  // ── Different die types ──
+
+  it('roll button text reflects the configured die type', async () => {
+    await renderModal({ current: 4, max: 4 }, {
       isDicePool: true,
       dieType: 8,
-      name: 'Divine Fury',
+      name: 'Test Feature',
     });
-    expect(screen.getByText(/Roll Dice — .* \(.*\/.* HP\)/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Roll a d8/i })).toBeInTheDocument();
   });
 
-  it('dice pool shows individual roll values in accumulated total', async () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.25);
+  it('roll display reflects the configured die type', async () => {
+    let faceIndex = 0;
+    const faceValues = [4];
+    const originalRandom = Math.random;
+    Math.random = () => {
+      const targetFace = faceValues[faceIndex] ?? 1;
+      faceIndex++;
+      const dieType = 6;
+      const ratio = (targetFace - 1) / (dieType - 1);
+      return ratio + 0.001;
+    };
 
     await renderModal({ current: 4, max: 4 }, {
       isDicePool: true,
-      dieType: 12,
-      name: 'Warrior of the Gods',
+      dieType: 6,
+      name: 'Test Feature',
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Roll a d6/i }));
+    Math.random = originalRandom;
 
-    expect(screen.getByText(/Rolled 1d12:/)).toBeInTheDocument();
+    expect(screen.getByText(/Rolled 1d6:/)).toBeInTheDocument();
   });
 });
