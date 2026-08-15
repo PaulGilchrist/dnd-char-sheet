@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -5,75 +6,105 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
-}));
-
-vi.mock('../../../rules/effects/expirations.js', () => ({
-  addExpiration: vi.fn(),
-}));
-
-vi.mock('../../../rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../../dice/diceRoller.js', () => ({
-  rollD20: vi.fn(),
-}));
-
-vi.mock('../../../shared/abilityLookup.js', () => ({
-  getAbilityModifier: vi.fn(),
-}));
-
-vi.mock('../../../combat/conditions/savePromptService.js', () => ({
-  sendSaveResult: vi.fn(),
-}));
-
-vi.mock('../../../ui/utils.js', () => ({
-  default: {
-    guid: vi.fn(),
-    getName: vi.fn((n) => n),
-  },
-}));
-
-vi.mock('../../../ui/storage.js', () => ({
-  default: {
-    set: vi.fn(),
-  },
-}));
-
-vi.mock('../../../rules/combat/rangeCheck.js', () => ({
-  isWithinRange: vi.fn().mockResolvedValue(true),
-}));
-
-vi.mock('../../../../hooks/useAllySelection.js', () => ({
-  getAllyList: vi.fn().mockReturnValue([]),
-}));
-
-vi.mock('../../../automation/common/savePrompt.js', () => ({
-  createSaveListener: vi.fn().mockReturnValue({
-    promptId: 'test-prompt-id',
-    promise: Promise.resolve({ success: false, roll: 12, total: 15 }),
-  }),
-  buildSaveDc: vi.fn().mockReturnValue(14),
-}));
-
 import { isAuraTarget } from './avengingAngelHandler.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
 const campaignName = 'test-campaign';
+const playerName = 'TestPaladin';
 
 describe('avengingAngelHandler.isAuraTarget', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should return true when target is in aura targets, false otherwise', () => {
-    getRuntimeValue.mockReturnValue(['Goblin1', 'Goblin2']);
-    expect(isAuraTarget('TestPaladin', 'Goblin1', campaignName)).toBe(true);
-    expect(isAuraTarget('TestPaladin', 'Goblin3', campaignName)).toBe(false);
+  function mockAuraTargets(targets) {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelAuraTargets') return targets;
+      return null;
+    });
+  }
 
-    getRuntimeValue.mockReturnValue([]);
-    expect(isAuraTarget('TestPaladin', 'Goblin1', campaignName)).toBe(false);
+  describe('target is in aura list', () => {
+    it('should return true when the target is the only entry', () => {
+      mockAuraTargets(['Goblin1']);
+      expect(isAuraTarget(playerName, 'Goblin1', campaignName)).toBe(true);
+    });
+
+    it('should return true when the target is one of multiple entries', () => {
+      mockAuraTargets(['Goblin1', 'Goblin2', 'Goblin3']);
+      expect(isAuraTarget(playerName, 'Goblin2', campaignName)).toBe(true);
+    });
+
+    it('should return true for the last entry in the list', () => {
+      mockAuraTargets(['Goblin1', 'Goblin2']);
+      expect(isAuraTarget(playerName, 'Goblin2', campaignName)).toBe(true);
+    });
+  });
+
+  describe('target is not in aura list', () => {
+    it('should return false when the target is absent from a non-empty list', () => {
+      mockAuraTargets(['Goblin1', 'Goblin3']);
+      expect(isAuraTarget(playerName, 'Goblin2', campaignName)).toBe(false);
+    });
+
+    it('should return false when the aura targets list is empty', () => {
+      mockAuraTargets([]);
+      expect(isAuraTarget(playerName, 'Goblin1', campaignName)).toBe(false);
+    });
+
+    it('should return false when the aura targets list is undefined', () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'avengingAngelAuraTargets') return undefined;
+        return null;
+      });
+      expect(isAuraTarget(playerName, 'Goblin1', campaignName)).toBe(false);
+    });
+
+    it('should return false when the aura targets list is null', () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'avengingAngelAuraTargets') return null;
+        return null;
+      });
+      expect(isAuraTarget(playerName, 'Goblin1', campaignName)).toBe(false);
+    });
+
+    it('should return false when the aura targets list is a non-array falsy value', () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'avengingAngelAuraTargets') return 0;
+        return null;
+      });
+      expect(isAuraTarget(playerName, 'Goblin1', campaignName)).toBe(false);
+    });
+  });
+
+  describe('different player names', () => {
+    it('should work with a different player name', () => {
+      mockAuraTargets(['Goblin1']);
+      expect(isAuraTarget('OtherPaladin', 'Goblin1', campaignName)).toBe(true);
+    });
+  });
+
+  describe('getRuntimeValue call verification', () => {
+    it('should call getRuntimeValue with the correct key', () => {
+      mockAuraTargets(['Goblin1']);
+      isAuraTarget(playerName, 'Goblin1', campaignName);
+
+      expect(getRuntimeValue).toHaveBeenCalledWith(
+        playerName,
+        'avengingAngelAuraTargets',
+        campaignName,
+      );
+    });
+
+    it('should pass playerName and campaignName through to getRuntimeValue', () => {
+      mockAuraTargets(['Goblin1']);
+      isAuraTarget('DifferentPlayer', 'Goblin1', 'different-campaign');
+
+      expect(getRuntimeValue).toHaveBeenCalledWith(
+        'DifferentPlayer',
+        'avengingAngelAuraTargets',
+        'different-campaign',
+      );
+    });
   });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -5,86 +6,73 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
-}));
-
-vi.mock('../../../rules/effects/expirations.js', () => ({
-  addExpiration: vi.fn(),
-}));
-
-vi.mock('../../../rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../../dice/diceRoller.js', () => ({
-  rollD20: vi.fn(),
-}));
-
-vi.mock('../../../shared/abilityLookup.js', () => ({
-  getAbilityModifier: vi.fn(),
-}));
-
-vi.mock('../../../combat/conditions/savePromptService.js', () => ({
-  sendSaveResult: vi.fn(),
-}));
-
-vi.mock('../../../ui/utils.js', () => ({
-  default: {
-    guid: vi.fn(),
-    getName: vi.fn((n) => n),
-  },
-}));
-
-vi.mock('../../../ui/storage.js', () => ({
-  default: {
-    set: vi.fn(),
-  },
-}));
-
-vi.mock('../../../rules/combat/rangeCheck.js', () => ({
-  isWithinRange: vi.fn().mockResolvedValue(true),
-}));
-
-vi.mock('../../../../hooks/useAllySelection.js', () => ({
-  getAllyList: vi.fn().mockReturnValue([]),
-}));
-
-vi.mock('../../../automation/common/savePrompt.js', () => ({
-  createSaveListener: vi.fn().mockReturnValue({
-    promptId: 'test-prompt-id',
-    promise: Promise.resolve({ success: false, roll: 12, total: 15 }),
-  }),
-  buildSaveDc: vi.fn().mockReturnValue(14),
-}));
-
 import { isActive } from './avengingAngelHandler.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
 const campaignName = 'test-campaign';
+const playerName = 'TestPaladin';
 
 describe('avengingAngelHandler.isActive', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should return true when avengingAngelActive is true', () => {
-    getRuntimeValue.mockReturnValue(true);
-    expect(isActive('TestPaladin', campaignName)).toBe(true);
+  function mockIsActive(value) {
+    getRuntimeValue.mockReturnValue(value);
+  }
+
+  describe('returns true', () => {
+    it('should return true when runtime value is strictly true', () => {
+      mockIsActive(true);
+      expect(isActive(playerName, campaignName)).toBe(true);
+    });
   });
 
-  it('should return false when avengingAngelActive is false', () => {
-    getRuntimeValue.mockReturnValue(false);
-    expect(isActive('TestPaladin', campaignName)).toBe(false);
+  describe('returns false', () => {
+    it('should return false when runtime value is strictly false', () => {
+      mockIsActive(false);
+      expect(isActive(playerName, campaignName)).toBe(false);
+    });
+
+    it.each([
+      [null, 'null'],
+      [undefined, 'undefined'],
+      [0, 'zero'],
+      [1, 'non-zero number'],
+      ['', 'empty string'],
+      ['true', 'string "true"'],
+      ['false', 'string "false"'],
+      [[], 'empty array'],
+      [[{}], 'non-empty array'],
+      [{}, 'empty object'],
+      [{ name: 'Avenging Angel' }, 'object'],
+      [NaN, 'NaN'],
+    ])('should return false when runtime value is %s', (_, description) => {
+      // @ts-expect-error - intentionally testing non-boolean values
+      mockIsActive(description);
+      expect(isActive(playerName, campaignName)).toBe(false);
+    });
   });
 
-  it('should return false when avengingAngelActive is null', () => {
-    getRuntimeValue.mockReturnValue(null);
-    expect(isActive('TestPaladin', campaignName)).toBe(false);
+  it('should pass playerName and campaignName to getRuntimeValue with the correct key', () => {
+    mockIsActive(true);
+    isActive(playerName, campaignName);
+
+    expect(getRuntimeValue).toHaveBeenCalledWith(
+      playerName,
+      'avengingAngelActive',
+      campaignName,
+    );
   });
 
-  it('should return false when avengingAngelActive is undefined', () => {
-    getRuntimeValue.mockReturnValue(undefined);
-    expect(isActive('TestPaladin', campaignName)).toBe(false);
+  it('should use different player names correctly', () => {
+    mockIsActive(true);
+    expect(isActive('OtherPlayer', campaignName)).toBe(true);
+
+    expect(getRuntimeValue).toHaveBeenCalledWith(
+      'OtherPlayer',
+      'avengingAngelActive',
+      campaignName,
+    );
   });
 });

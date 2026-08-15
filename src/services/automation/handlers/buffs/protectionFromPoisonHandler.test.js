@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────────────────
@@ -23,9 +24,8 @@ vi.mock('../../../encounters/combatData.js', () => ({
     getCombatSummary: vi.fn(),
 }));
 
-vi.mock('../../../combat/conditions/targetEffectDefinitions.js', () => ({
-    getEffectDefinition: vi.fn(),
-}));
+// NOTE: targetEffectDefinitions is NOT mocked — the handler never calls
+// getEffectDefinition. It uses a hardcoded EFFECT_KEY string instead.
 
 // ── Imports ────────────────────────────────────────────────────────────────
 
@@ -62,14 +62,16 @@ function makeAction(automation = {}) {
 describe('protectionFromPoisonHandler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Reset getRuntimeValue so tests can set their own return values.
         useRuntimeState.getRuntimeValue.mockReset();
-        useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
-        useRuntimeState.setRuntimeValue.mockReset();
-        logService.addEntry.mockResolvedValue(undefined);
-        concentrationService.addConcentration.mockReset();
-        expirations.addExpiration.mockReset();
-        combatData.getCombatSummary.mockReset();
+        logService.addEntry.mockReset().mockResolvedValue(undefined);
+        // Mock Date.now for deterministic timestamp assertions.
+        vi.spyOn(global.Date, 'now').mockReturnValue(1700000000000);
+        // Prevent the handler's window.dispatchEvent from firing real events.
+        vi.spyOn(window, 'dispatchEvent').mockImplementation(() => true);
     });
+
+
 
     describe('handle', () => {
         it('returns error popup when no combat context', async () => {
@@ -104,6 +106,35 @@ describe('protectionFromPoisonHandler', () => {
             expect(result.payload.creatureTargets[2]).toBe('Ally2');
         });
 
+        it('prepends caster when not already in creature list', async () => {
+            combatData.getCombatSummary.mockReturnValue({
+                creatures: [{ name: 'Ally1' }],
+            });
+
+            const action = makeAction();
+            const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, null);
+
+            expect(result.payload.creatureTargets).toHaveLength(2);
+            expect(result.payload.creatureTargets[0]).toBe(PLAYER_NAME);
+            expect(result.payload.creatureTargets[1]).toBe('Ally1');
+        });
+
+        it('does not duplicate caster when already in creature list', async () => {
+            combatData.getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: PLAYER_NAME },
+                    { name: 'Ally1' },
+                ],
+            });
+
+            const action = makeAction();
+            const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, null);
+
+            expect(result.payload.creatureTargets).toHaveLength(2);
+            expect(result.payload.creatureTargets[0]).toBe(PLAYER_NAME);
+            expect(result.payload.creatureTargets[1]).toBe('Ally1');
+        });
+
         it('passes automation and range through to payload with defaults', async () => {
             combatData.getCombatSummary.mockReturnValue({
                 creatures: [{ name: 'Ally1' }],
@@ -119,10 +150,33 @@ describe('protectionFromPoisonHandler', () => {
             });
             expect(result.payload.range).toBe('Touch');
         });
+
+        it('uses automation range when provided', async () => {
+            combatData.getCombatSummary.mockReturnValue({
+                creatures: [{ name: 'Ally1' }],
+            });
+
+            const action = makeAction({ range: '30 feet' });
+            const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, null);
+
+            expect(result.payload.range).toBe('30 feet');
+        });
+
+        it('handles action with no automation object', async () => {
+            combatData.getCombatSummary.mockReturnValue({
+                creatures: [{ name: 'Ally1' }],
+            });
+
+            const action = { name: 'Protection from Poison' };
+            const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, null);
+
+            expect(result.payload.range).toBe('Touch');
+            expect(result.payload.automation).toEqual({});
+        });
     });
 
     describe('applyProtectionFromPoison', () => {
-        it('returns null when no target provided', async () => {
+        it('returns null when no result provided', async () => {
             const action = makeAction();
             const result = await applyProtectionFromPoison(
                 action,
@@ -130,6 +184,45 @@ describe('protectionFromPoisonHandler', () => {
                 CAMPAIGN_NAME,
                 null,
                 null
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('returns null when result has no targetName', async () => {
+            const action = makeAction();
+            const result = await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
+                {}
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('returns null when result.targetName is empty string', async () => {
+            const action = makeAction();
+            const result = await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
+                { targetName: '' }
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('returns null when result is undefined', async () => {
+            const action = makeAction();
+            const result = await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
+                undefined
             );
 
             expect(result).toBeNull();
@@ -162,9 +255,50 @@ describe('protectionFromPoisonHandler', () => {
             expect(result.type).toBe('popup');
         });
 
-        it('applies buff with correct properties when none currently active', async () => {
+        it('removes only Poisoned condition, preserving others', async () => {
             useRuntimeState.getRuntimeValue
-                .mockReturnValueOnce(['poisoned'])
+                .mockReturnValueOnce(['poisoned', 'exhausted', 'frightened'])
+                .mockReturnValueOnce([]);
+
+            const action = makeAction();
+            await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
+                { targetName: PLAYER_NAME }
+            );
+
+            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+                PLAYER_NAME,
+                'activeConditions',
+                ['exhausted', 'frightened'],
+                CAMPAIGN_NAME
+            );
+        });
+
+        it('skips conditions update when no Poisoned condition present', async () => {
+            useRuntimeState.getRuntimeValue
+                .mockReturnValueOnce(['exhausted'])
+                .mockReturnValueOnce([]);
+
+            const action = makeAction();
+            await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
+                { targetName: PLAYER_NAME }
+            );
+
+            const conditionCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'activeConditions'
+            );
+            expect(conditionCalls).toHaveLength(0);
+        });
+
+        it('skips conditions update when activeConditions is empty array', async () => {
+            useRuntimeState.getRuntimeValue
                 .mockReturnValueOnce([])
                 .mockReturnValueOnce([]);
 
@@ -174,8 +308,31 @@ describe('protectionFromPoisonHandler', () => {
                 makePlayerStats(),
                 CAMPAIGN_NAME,
                 null,
+                { targetName: PLAYER_NAME }
+            );
+
+            const conditionCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'activeConditions'
+            );
+            expect(conditionCalls).toHaveLength(0);
+        });
+
+        it('applies buff with correct properties to new target', async () => {
+            useRuntimeState.getRuntimeValue
+                .mockReturnValueOnce(['poisoned'])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([]);
+
+            const action = makeAction();
+            const result = await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
                 { targetName: 'Ally1' }
             );
+
+            expect(result.type).toBe('popup');
 
             const buffCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
                 (c) => c[1] === 'activeBuffs'
@@ -194,76 +351,13 @@ describe('protectionFromPoisonHandler', () => {
             expect(poisonBuff.saveAdvantageTypes).toEqual(['poisoned']);
         });
 
-        it('registers target effect for badge rendering', async () => {
-            useRuntimeState.getRuntimeValue
-                .mockReturnValueOnce(['poisoned'])
-                .mockReturnValueOnce([])
-                .mockReturnValueOnce([])
-                .mockReturnValueOnce([]);
-
-            combatData.getCombatSummary.mockReturnValue({
-                creatures: [{ name: PLAYER_NAME }],
-            });
-
-            const action = makeAction();
-            await applyProtectionFromPoison(
-                action,
-                makePlayerStats(),
-                CAMPAIGN_NAME,
-                null,
-                { targetName: 'Ally1' }
-            );
-
-            const teCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
-                (c) => c[1] === 'targetEffects'
-            );
-            expect(teCalls.length).toBeGreaterThan(0);
-            const effects = teCalls[teCalls.length - 1][2];
-            const poisonEffect = effects.find(
-                (te) => te.effect === 'protection_from_poison'
-            );
-            expect(poisonEffect).toBeTruthy();
-            expect(poisonEffect.target).toBe('Ally1');
-            expect(poisonEffect.source).toBe(PLAYER_NAME);
-            expect(poisonEffect.duration).toBe('concentration');
-        });
-
-        it('registers concentration', async () => {
-            useRuntimeState.getRuntimeValue
-                .mockReturnValueOnce(['poisoned'])
-                .mockReturnValueOnce([])
-                .mockReturnValueOnce([])
-                .mockReturnValueOnce([]);
-
-            combatData.getCombatSummary.mockReturnValue({
-                creatures: [{ name: PLAYER_NAME }],
-            });
-
-            const action = makeAction();
-            await applyProtectionFromPoison(
-                action,
-                makePlayerStats(),
-                CAMPAIGN_NAME,
-                null,
-                { targetName: 'Ally1' }
-            );
-
-            expect(concentrationService.addConcentration).toHaveBeenCalledWith(
-                expect.objectContaining({ creatures: expect.any(Array) }),
-                PLAYER_NAME,
-                'Protection from Poison',
-                13, // spellSaveDc from playerStats
-                'Ally1'
-            );
-        });
-
-        it('registers expiration for initiative/rest cleanup', async () => {
+        it('uses default duration when automation lacks duration', async () => {
             useRuntimeState.getRuntimeValue
                 .mockReturnValueOnce(['poisoned'])
                 .mockReturnValueOnce([])
                 .mockReturnValueOnce([]);
 
-            const action = makeAction({ duration: '1 hour' });
+            const action = { name: 'Protection from Poison', automation: {} };
             await applyProtectionFromPoison(
                 action,
                 makePlayerStats(),
@@ -272,52 +366,13 @@ describe('protectionFromPoisonHandler', () => {
                 { targetName: PLAYER_NAME }
             );
 
-            expect(expirations.addExpiration).toHaveBeenCalledWith(
-                PLAYER_NAME,
-                PLAYER_NAME,
-                [
-                    {
-                        type: 'remove_active_buff',
-                        buffName: 'Protection from Poison',
-                    },
-                    {
-                        type: 'remove_target_effect',
-                        effectKey: 'protection_from_poison',
-                        source: PLAYER_NAME,
-                    },
-                ],
-                CAMPAIGN_NAME,
-                Infinity,
-                PLAYER_NAME
+            const buffCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'activeBuffs'
             );
+            expect(buffCalls[0][2][0].duration).toBe('1 hour');
         });
 
-        it('calls addEntry with correct log payload', async () => {
-            useRuntimeState.getRuntimeValue
-                .mockReturnValueOnce(['poisoned'])
-                .mockReturnValueOnce([])
-                .mockReturnValueOnce([]);
-
-            const action = makeAction();
-            await applyProtectionFromPoison(
-                action,
-                makePlayerStats(),
-                CAMPAIGN_NAME,
-                null,
-                { targetName: 'Ally1' }
-            );
-
-            expect(logService.addEntry).toHaveBeenCalledWith(CAMPAIGN_NAME, {
-                type: 'ability_use',
-                characterName: PLAYER_NAME,
-                abilityName: 'Protection from Poison',
-                description: expect.stringMatching(/Ally1.*Advantage.*Resistance/),
-                targetName: 'Ally1',
-                timestamp: expect.any(Number),
-            });
-        });
-
-        it('updates existing buff when already active', async () => {
+        it('updates existing buff duration when already active', async () => {
             useRuntimeState.getRuntimeValue
                 .mockReturnValueOnce(['poisoned'])
                 .mockReturnValueOnce([
@@ -333,13 +388,15 @@ describe('protectionFromPoisonHandler', () => {
                 ]);
 
             const action = makeAction({ duration: '1 hour' });
-            await applyProtectionFromPoison(
+            const result = await applyProtectionFromPoison(
                 action,
                 makePlayerStats(),
                 CAMPAIGN_NAME,
                 null,
                 { targetName: PLAYER_NAME }
             );
+
+            expect(result.type).toBe('popup');
 
             const buffCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
                 (c) => c[1] === 'activeBuffs'
@@ -384,40 +441,41 @@ describe('protectionFromPoisonHandler', () => {
                 })
             );
         });
-    });
 
-    describe('isProtectionFromPoisonActive', () => {
-        it('returns true when buff is active', () => {
-            useRuntimeState.getRuntimeValue.mockReturnValue([
-                { name: 'Protection from Poison', effect: 'protection_from_poison' },
-            ]);
+        it('registers target effect for badge rendering', async () => {
+            useRuntimeState.getRuntimeValue
+                .mockReturnValueOnce(['poisoned'])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([]);
 
-            expect(
-                isProtectionFromPoisonActive(PLAYER_NAME, CAMPAIGN_NAME)
-            ).toBe(true);
+            combatData.getCombatSummary.mockReturnValue({
+                creatures: [{ name: PLAYER_NAME }],
+            });
+
+            const action = makeAction();
+            await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
+                { targetName: 'Ally1' }
+            );
+
+            const teCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'targetEffects'
+            );
+            expect(teCalls.length).toBeGreaterThan(0);
+            const effects = teCalls[teCalls.length - 1][2];
+            const poisonEffect = effects.find(
+                (te) => te.effect === 'protection_from_poison'
+            );
+            expect(poisonEffect).toBeTruthy();
+            expect(poisonEffect.target).toBe('Ally1');
+            expect(poisonEffect.source).toBe(PLAYER_NAME);
+            expect(poisonEffect.duration).toBe('concentration');
         });
 
-        it('returns true alongside other buffs', () => {
-            useRuntimeState.getRuntimeValue.mockReturnValue([
-                { name: 'Mage Armor', effect: 'mage_armor' },
-                { name: 'Protection from Poison', effect: 'protection_from_poison' },
-                { name: 'Shield of Faith', effect: 'ac_bonus' },
-            ]);
-
-            expect(
-                isProtectionFromPoisonActive(PLAYER_NAME, CAMPAIGN_NAME)
-            ).toBe(true);
-        });
-
-        it('returns false when buff is not active', () => {
-            useRuntimeState.getRuntimeValue.mockReturnValue([]);
-            expect(
-                isProtectionFromPoisonActive(PLAYER_NAME, CAMPAIGN_NAME)
-            ).toBe(false);
-        });
-    });
-
-    describe('applyProtectionFromPoison - additional coverage', () => {
         it('handles targetEffects with array target format', async () => {
             useRuntimeState.getRuntimeValue
                 .mockReturnValueOnce(['poisoned'])
@@ -491,6 +549,125 @@ describe('protectionFromPoisonHandler', () => {
             expect(otherEffect).toBeTruthy();
         });
 
+        it('registers concentration with correct DC', async () => {
+            useRuntimeState.getRuntimeValue
+                .mockReturnValueOnce(['poisoned'])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([]);
+
+            combatData.getCombatSummary.mockReturnValue({
+                creatures: [{ name: PLAYER_NAME }],
+            });
+
+            const action = makeAction();
+            await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
+                { targetName: 'Ally1' }
+            );
+
+            expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+                expect.objectContaining({ creatures: expect.any(Array) }),
+                PLAYER_NAME,
+                'Protection from Poison',
+                13, // spellSaveDc from playerStats
+                'Ally1'
+            );
+        });
+
+        it('uses default spellSaveDc when playerStats lacks spellAbilities', async () => {
+            useRuntimeState.getRuntimeValue
+                .mockReturnValueOnce(['poisoned'])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([]);
+
+            combatData.getCombatSummary.mockReturnValue({
+                creatures: [{ name: PLAYER_NAME }],
+            });
+
+            const action = makeAction();
+            const statsNoSpellAbilities = { name: PLAYER_NAME, proficiency: 3 };
+            await applyProtectionFromPoison(
+                action,
+                statsNoSpellAbilities,
+                CAMPAIGN_NAME,
+                null,
+                { targetName: 'Ally1' }
+            );
+
+            expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+                expect.objectContaining({ creatures: expect.any(Array) }),
+                PLAYER_NAME,
+                'Protection from Poison',
+                11, // 8 + 3 (proficiency)
+                'Ally1'
+            );
+        });
+
+        it('registers expiration for initiative/rest cleanup', async () => {
+            useRuntimeState.getRuntimeValue
+                .mockReturnValueOnce(['poisoned'])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([]);
+
+            const action = makeAction({ duration: '1 hour' });
+            await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
+                { targetName: PLAYER_NAME }
+            );
+
+            expect(expirations.addExpiration).toHaveBeenCalledWith(
+                PLAYER_NAME,
+                PLAYER_NAME,
+                [
+                    {
+                        type: 'remove_active_buff',
+                        buffName: 'Protection from Poison',
+                    },
+                    {
+                        type: 'remove_target_effect',
+                        effectKey: 'protection_from_poison',
+                        source: PLAYER_NAME,
+                    },
+                ],
+                CAMPAIGN_NAME,
+                Infinity,
+                PLAYER_NAME
+            );
+        });
+
+        it('calls addEntry with correct log payload', async () => {
+            useRuntimeState.getRuntimeValue
+                .mockReturnValueOnce(['poisoned'])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([]);
+
+            const action = makeAction();
+            await applyProtectionFromPoison(
+                action,
+                makePlayerStats(),
+                CAMPAIGN_NAME,
+                null,
+                { targetName: 'Ally1' }
+            );
+
+            expect(logService.addEntry).toHaveBeenCalledWith(CAMPAIGN_NAME, {
+                type: 'ability_use',
+                characterName: PLAYER_NAME,
+                abilityName: 'Protection from Poison',
+                description: expect.stringMatching(/Ally1.*Advantage.*Resistance/),
+                targetName: 'Ally1',
+                timestamp: 1700000000000,
+            });
+        });
+
         it('handles addEntry rejection gracefully', async () => {
             const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
 
@@ -519,9 +696,10 @@ describe('protectionFromPoisonHandler', () => {
             consoleSpy.mockRestore();
         });
 
-        it('uses default spellSaveDc when playerStats lacks spellAbilities', async () => {
+        it('dispatches combat-summary-updated event when combat context exists', async () => {
             useRuntimeState.getRuntimeValue
                 .mockReturnValueOnce(['poisoned'])
+                .mockReturnValueOnce([])
                 .mockReturnValueOnce([])
                 .mockReturnValueOnce([]);
 
@@ -530,88 +708,98 @@ describe('protectionFromPoisonHandler', () => {
             });
 
             const action = makeAction();
-            const statsNoSpellAbilities = { name: PLAYER_NAME, proficiency: 3 };
             await applyProtectionFromPoison(
                 action,
-                statsNoSpellAbilities,
+                makePlayerStats(),
                 CAMPAIGN_NAME,
                 null,
                 { targetName: 'Ally1' }
             );
 
-            expect(concentrationService.addConcentration).toHaveBeenCalledWith(
-                expect.objectContaining({ creatures: expect.any(Array) }),
-                PLAYER_NAME,
-                'Protection from Poison',
-                11, // 8 + 3 (proficiency)
-                'Ally1'
+            expect(window.dispatchEvent).toHaveBeenCalledWith(
+                expect.objectContaining({ type: 'combat-summary-updated' })
             );
         });
 
-        it('skips activeConditions update when no Poisoned condition present', async () => {
+        it('returns result with correct popup payload shape', async () => {
             useRuntimeState.getRuntimeValue
-                .mockReturnValueOnce(['exhausted'])
-                .mockReturnValueOnce([]);
-
-            const action = makeAction();
-            await applyProtectionFromPoison(
-                action,
-                makePlayerStats(),
-                CAMPAIGN_NAME,
-                null,
-                { targetName: PLAYER_NAME }
-            );
-
-            const conditionCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
-                (c) => c[1] === 'activeConditions'
-            );
-            expect(conditionCalls).toHaveLength(0);
-        });
-
-        it('returns null when result has no targetName', async () => {
-            const action = makeAction();
-            const result = await applyProtectionFromPoison(
-                action,
-                makePlayerStats(),
-                CAMPAIGN_NAME,
-                null,
-                { targetName: '' }
-            );
-
-            expect(result).toBeNull();
-        });
-
-        it('returns null when result is undefined', async () => {
-            const action = makeAction();
-            const result = await applyProtectionFromPoison(
-                action,
-                makePlayerStats(),
-                CAMPAIGN_NAME,
-                null,
-                undefined
-            );
-
-            expect(result).toBeNull();
-        });
-
-        it('handles activeConditions as empty array', async () => {
-            useRuntimeState.getRuntimeValue
+                .mockReturnValueOnce(['poisoned'])
                 .mockReturnValueOnce([])
                 .mockReturnValueOnce([]);
 
-            const action = makeAction();
-            await applyProtectionFromPoison(
+            const action = makeAction({ type: 'buff' });
+            const result = await applyProtectionFromPoison(
                 action,
                 makePlayerStats(),
                 CAMPAIGN_NAME,
                 null,
-                { targetName: PLAYER_NAME }
+                { targetName: 'Ally1' }
             );
 
-            const conditionCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
-                (c) => c[1] === 'activeConditions'
-            );
-            expect(conditionCalls).toHaveLength(0);
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.name).toBe('Protection from Poison');
+            expect(result.payload.automationType).toBe('buff');
+            expect(result.payload.description).toContain('Ally1');
+            expect(result.payload.automation).toEqual({
+                duration: '1 hour',
+                range: 'Touch',
+                type: 'buff',
+            });
+        });
+    });
+
+    describe('isProtectionFromPoisonActive', () => {
+        it('returns true when buff is active', () => {
+            useRuntimeState.getRuntimeValue.mockReturnValue([
+                { name: 'Protection from Poison', effect: 'protection_from_poison' },
+            ]);
+
+            expect(
+                isProtectionFromPoisonActive(PLAYER_NAME, CAMPAIGN_NAME)
+            ).toBe(true);
+        });
+
+        it('returns true alongside other buffs', () => {
+            useRuntimeState.getRuntimeValue.mockReturnValue([
+                { name: 'Mage Armor', effect: 'mage_armor' },
+                { name: 'Protection from Poison', effect: 'protection_from_poison' },
+                { name: 'Shield of Faith', effect: 'ac_bonus' },
+            ]);
+
+            expect(
+                isProtectionFromPoisonActive(PLAYER_NAME, CAMPAIGN_NAME)
+            ).toBe(true);
+        });
+
+        it('returns false when buff is not active', () => {
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+            expect(
+                isProtectionFromPoisonActive(PLAYER_NAME, CAMPAIGN_NAME)
+            ).toBe(false);
+        });
+
+        it('returns false when activeBuffs is null', () => {
+            useRuntimeState.getRuntimeValue.mockReturnValue(null);
+            expect(
+                isProtectionFromPoisonActive(PLAYER_NAME, CAMPAIGN_NAME)
+            ).toBe(false);
+        });
+
+        it('returns false when activeBuffs is undefined', () => {
+            useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
+            expect(
+                isProtectionFromPoisonActive(PLAYER_NAME, CAMPAIGN_NAME)
+            ).toBe(false);
+        });
+
+        it('returns false when buff name matches but effect differs', () => {
+            useRuntimeState.getRuntimeValue.mockReturnValue([
+                { name: 'Protection from Poison', effect: 'some_other_effect' },
+            ]);
+            expect(
+                isProtectionFromPoisonActive(PLAYER_NAME, CAMPAIGN_NAME)
+            ).toBe(false);
         });
     });
 });

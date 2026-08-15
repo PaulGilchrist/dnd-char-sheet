@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -9,30 +10,61 @@ vi.mock('../../../combat/automation/automationService.js', () => ({
   evaluateAutoExpression: vi.fn(),
 }));
 
+vi.mock('./tempHpService.js', () => ({
+  setTempHp: vi.fn(),
+}));
+
 import { handle } from './tempHpBuffHandler.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as automationService from '../../../combat/automation/automationService.js';
+import * as tempHpService from './tempHpService.js';
 import { campaignName, makePlayerStats, makeAction } from './tempHpBuffTestHelpers.js';
 
 function resetMocks() {
   useRuntimeState.getRuntimeValue.mockClear();
   useRuntimeState.setRuntimeValue.mockClear();
   automationService.evaluateAutoExpression.mockClear();
+  tempHpService.setTempHp.mockClear();
 }
 
 describe('handle — missing tempHpExpression', () => {
   beforeEach(() => resetMocks());
 
-  it('returns popup with info type when tempHpExpression is empty', async () => {
+  it('returns popup with info type and correct metadata when tempHpExpression is empty', async () => {
     const ps = makePlayerStats();
+    const action = makeAction({});
 
-    const result = await handle(makeAction({}), ps, campaignName);
+    const result = await handle(action, ps, campaignName);
 
     expect(result.type).toBe('popup');
     expect(result.payload.type).toBe('automation_info');
+    expect(result.payload.name).toBe('Second Wind');
+    expect(result.payload.automationType).toBe('temp_hp_buff');
     expect(result.payload.description).toBe('Second Wind: No temp HP expression defined.');
     expect(automationService.evaluateAutoExpression).not.toHaveBeenCalled();
+    expect(tempHpService.setTempHp).not.toHaveBeenCalled();
     expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  it('returns popup when tempHpExpression is null', async () => {
+    const action = makeAction({ tempHpExpression: null });
+    const ps = makePlayerStats();
+
+    const result = await handle(action, ps, campaignName);
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toBe('Second Wind: No temp HP expression defined.');
+    expect(automationService.evaluateAutoExpression).not.toHaveBeenCalled();
+  });
+
+  it('returns popup when tempHpExpression is undefined', async () => {
+    const action = makeAction({ tempHpExpression: undefined });
+    const ps = makePlayerStats();
+
+    const result = await handle(action, ps, campaignName);
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toBe('Second Wind: No temp HP expression defined.');
   });
 });
 
@@ -51,16 +83,43 @@ describe('handle — invalid evaluation result', () => {
     const result = await handle(action, ps, campaignName);
 
     expect(result.type).toBe('popup');
+    expect(result.payload.type).toBe('automation_info');
+    expect(result.payload.name).toBe('Second Wind');
     expect(result.payload.description).toContain('Could not calculate temp HP');
-    expect(result.payload.description).toContain(expression);
+    expect(result.payload.description).toContain(String(expression));
+    expect(tempHpService.setTempHp).not.toHaveBeenCalled();
     expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  it('returns popup when evaluated amount is a non-number string', async () => {
+    const action = makeAction({ tempHpExpression: '1d6' });
+    const ps = makePlayerStats();
+    automationService.evaluateAutoExpression.mockReturnValue('1d6');
+
+    const result = await handle(action, ps, campaignName);
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toContain('Could not calculate temp HP');
+    expect(tempHpService.setTempHp).not.toHaveBeenCalled();
+  });
+
+  it('returns popup when evaluated amount is null', async () => {
+    const action = makeAction({ tempHpExpression: 'null_expr' });
+    const ps = makePlayerStats();
+    automationService.evaluateAutoExpression.mockReturnValue(null);
+
+    const result = await handle(action, ps, campaignName);
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toContain('Could not calculate temp HP');
+    expect(tempHpService.setTempHp).not.toHaveBeenCalled();
   });
 });
 
 describe('handle — successful temp HP', () => {
   beforeEach(() => resetMocks());
 
-  it('sets tempHp runtime value and returns popup with success description', async () => {
+  it('calls setTempHp and returns popup with success description', async () => {
     const action = makeAction({ tempHpExpression: 'level + 5' });
     const ps = makePlayerStats();
     automationService.evaluateAutoExpression.mockReturnValue(8);
@@ -69,10 +128,20 @@ describe('handle — successful temp HP', () => {
 
     expect(result.type).toBe('popup');
     expect(result.payload.type).toBe('automation_info');
+    expect(result.payload.name).toBe('Second Wind');
+    expect(result.payload.automationType).toBe('temp_hp_buff');
     expect(result.payload.description).toBe('Gained 8 temporary hit points from Second Wind.');
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-      'Grog', 'tempHp', 8, campaignName,
-    );
+    expect(tempHpService.setTempHp).toHaveBeenCalledWith('Grog', 8, campaignName);
+  });
+
+  it('uses the evaluated amount in the success description', async () => {
+    const action = makeAction({ tempHpExpression: '1d12 + 3' });
+    const ps = makePlayerStats();
+    automationService.evaluateAutoExpression.mockReturnValue(10);
+
+    const result = await handle(action, ps, campaignName);
+
+    expect(result.payload.description).toBe('Gained 10 temporary hit points from Second Wind.');
   });
 
   it('includes ongoing healing text and range when ongoingHealingExpression is set', async () => {
@@ -89,6 +158,7 @@ describe('handle — successful temp HP', () => {
     expect(result.payload.description).toContain('Gained 8 temporary hit points');
     expect(result.payload.description).toContain('At the start of each turn while raging');
     expect(result.payload.description).toContain('30 ft');
+    expect(tempHpService.setTempHp).toHaveBeenCalledWith('Grog', 8, campaignName);
   });
 
   it('uses default 10 ft range when ongoingHealingExpression is set but healingRange is empty', async () => {
@@ -103,5 +173,32 @@ describe('handle — successful temp HP', () => {
     const result = await handle(action, ps, campaignName);
 
     expect(result.payload.description).toContain('10 ft');
+  });
+
+  it('uses default 10 ft range when ongoingHealingExpression is set but healingRange is undefined', async () => {
+    const action = makeAction({
+      tempHpExpression: 'level + 5',
+      ongoingHealingExpression: '1d4',
+    });
+    const ps = makePlayerStats();
+    automationService.evaluateAutoExpression.mockReturnValue(8);
+
+    const result = await handle(action, ps, campaignName);
+
+    expect(result.payload.description).toContain('10 ft');
+  });
+
+  it('does not include ongoing healing text when ongoingHealingExpression is empty', async () => {
+    const action = makeAction({
+      tempHpExpression: 'level + 5',
+      ongoingHealingExpression: '',
+    });
+    const ps = makePlayerStats();
+    automationService.evaluateAutoExpression.mockReturnValue(8);
+
+    const result = await handle(action, ps, campaignName);
+
+    expect(result.payload.description).toBe('Gained 8 temporary hit points from Second Wind.');
+    expect(result.payload.description).not.toContain('At the start of each turn');
   });
 });

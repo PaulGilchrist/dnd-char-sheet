@@ -287,7 +287,7 @@ export function grantTempHpOnRage(action, playerStats, campaignName) {
     if (!tempHpExpression) return false;
 
     const amount = evaluateAutoExpression(tempHpExpression, playerStats);
-    if (typeof amount !== 'number' || amount <= 0) return false;
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) return false;
 
     setTempHp(playerStats.name, amount, campaignName);
 

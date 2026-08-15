@@ -1,12 +1,12 @@
+// @improved-by-ai
+
 import { screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import ReactDOM from 'react-dom/client';
+import * as ReactDOMClient from 'react-dom/client';
 
 // Mock the CSS imports (they have no runtime behavior in tests)
 vi.mock('./index.css', () => ({}));
 vi.mock('@fortawesome/fontawesome-free/css/all.css', () => ({}));
-
-
 
 vi.mock('./services/ui/dataLoader.js', async () => {
   const { dataLoaderMocks } = await import('./test/appTestState.js');
@@ -160,7 +160,10 @@ describe('main.jsx entry point', () => {
     it('throws when #root element does not exist in DOM', async () => {
       document.querySelectorAll('#root').forEach(el => el.remove());
 
-      expect(() => ReactDOM.createRoot(null)).toThrow();
+      // document.getElementById('root') returns null when #root doesn't exist,
+      // causing ReactDOM.createRoot(null) to throw.
+      expect(document.getElementById('root')).toBeNull();
+      expect(() => ReactDOMClient.createRoot(null)).toThrow();
     });
   });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
@@ -32,31 +33,32 @@ import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 
 const campaignName = 'TestCampaign';
 
+const defaultPlayerStats = {
+  name: 'Bard',
+  proficiency: 2,
+  abilities: [
+    { name: 'Dexterity', bonus: 3 },
+  ],
+};
+
+const defaultAction = {
+  name: 'Agile Strikes',
+  automation: {
+    type: 'agile_strike',
+    bardicDie: 8,
+  },
+};
+
 function makePlayerStats(overrides = {}) {
-  return {
-    name: 'Bard',
-    proficiency: 2,
-    abilities: [
-      { name: 'Dexterity', bonus: 3 },
-    ],
-    ...overrides,
-  };
+  return { ...defaultPlayerStats, ...overrides };
 }
 
 function makeAction(overrides = {}) {
-  return {
-    name: 'Agile Strikes',
-    automation: {
-      type: 'agile_strike',
-      bardicDie: 8,
-      ...overrides.automation,
-    },
-    ...overrides,
-  };
+  return { ...defaultAction, ...overrides };
 }
 
-function makeTarget(ac = 15) {
-  return { name: 'Goblin', ac, currentHp: 7, maxHp: 7 };
+function makeTarget(overrides = {}) {
+  return { name: 'Goblin', ac: 15, currentHp: 7, maxHp: 7, ...overrides };
 }
 
 // ── Tests ──────────────────────────────────────────────────────
@@ -69,25 +71,36 @@ describe('agileStrikeHandler.handle', () => {
   describe('error handling', () => {
     it('returns popup when combat context is null', async () => {
       damageUtils.getCombatContext.mockResolvedValue(null);
-      damageUtils.getTargetFromAttacker.mockReturnValue(null);
 
-      const ps = makePlayerStats();
-      const action = makeAction();
-
-      const result = await handle(action, ps, campaignName);
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Agile Strikes');
       expect(result.payload.description).toContain('No combat context available');
+      expect(damageUtils.getTargetFromAttacker).not.toHaveBeenCalled();
+      expect(diceRoller.rollD20).not.toHaveBeenCalled();
+      expect(logService.addEntry).not.toHaveBeenCalled();
     });
 
     it('returns popup when there is no target selected', async () => {
       damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
       damageUtils.getTargetFromAttacker.mockReturnValue(null);
 
-      const ps = makePlayerStats();
-      const action = makeAction();
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
-      const result = await handle(action, ps, campaignName);
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('No target selected');
+      expect(diceRoller.rollD20).not.toHaveBeenCalled();
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('returns popup when target has no name', async () => {
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [{}] });
+      damageUtils.getTargetFromAttacker.mockReturnValue({ ac: 12 });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('No target selected');
@@ -98,7 +111,7 @@ describe('agileStrikeHandler.handle', () => {
     it('hits and applies damage when total meets AC', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-      const target = makeTarget(15);
+      const target = makeTarget({ ac: 15 });
 
       damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
       damageUtils.getTargetFromAttacker.mockReturnValue(target);
@@ -109,14 +122,42 @@ describe('agileStrikeHandler.handle', () => {
       await handle(action, ps, campaignName);
 
       // DEX(3) + PROF(2) = 5 hit bonus, d20(12) + 5 = 17 >= 15 = HIT
-      expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
+      expect(diceRoller.rollD20).toHaveBeenCalledTimes(1);
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d8');
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+        expect.any(Object),
+        'Goblin',
+        10,
+        ['Bludgeoning'],
+        campaignName,
+        [],
+        false,
+        'Bard',
+      );
       expect(logService.addEntry).toHaveBeenCalled();
+    });
+
+    it('hits and applies damage when total equals AC exactly', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 17 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(12);
+      diceRoller.rollExpression.mockReturnValue({ total: 4, rolls: [4] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      // d20(12) + 5 = 17 === 17 = HIT
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
     });
 
     it('misses and skips damage when total is below AC', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-      const target = makeTarget(18);
+      const target = makeTarget({ ac: 18 });
 
       damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
       damageUtils.getTargetFromAttacker.mockReturnValue(target);
@@ -129,15 +170,52 @@ describe('agileStrikeHandler.handle', () => {
       // DEX(3) + PROF(2) = 5, d20(8) + 5 = 13 < 18 = MISS
       expect(result.payload.description).toContain('MISS');
       expect(result.payload.description).toContain('missed');
+      expect(result.payload.description).toContain('no damage');
       expect(applyDamage.applyDamageToTarget).not.toHaveBeenCalled();
+    });
+
+    it('misses with a natural 1', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 10 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(1);
+      diceRoller.rollExpression.mockReturnValue({ total: 3, rolls: [3] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      const result = await handle(action, ps, campaignName);
+
+      // d20(1) + 5 = 6 < 10 = MISS
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('MISS');
+      expect(applyDamage.applyDamageToTarget).not.toHaveBeenCalled();
+    });
+
+    it('uses default AC of 15 when target has no ac property', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: undefined });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(12);
+      diceRoller.rollExpression.mockReturnValue({ total: 7, rolls: [7] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      // d20(12) + 5 = 17 >= 15 (default) = HIT
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
     });
   });
 
   describe('popup description', () => {
-    it('includes roll details in popup description', async () => {
+    it('includes roll details in popup description on a hit', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-      const target = makeTarget(14);
+      const target = makeTarget({ ac: 14 });
 
       damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
       damageUtils.getTargetFromAttacker.mockReturnValue(target);
@@ -155,6 +233,44 @@ describe('agileStrikeHandler.handle', () => {
       expect(result.payload.description).toContain('14');
       expect(result.payload.description).toContain('1d8');
       expect(result.payload.description).toContain('+ 3');
+      expect(result.payload.description).toContain('HIT');
+    });
+
+    it('includes roll details in popup description on a miss', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 20 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(5);
+      diceRoller.rollExpression.mockReturnValue({ total: 2, rolls: [2] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      const result = await handle(action, ps, campaignName);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('d20(5)');
+      expect(result.payload.description).toContain('+ 5');
+      expect(result.payload.description).toContain('20');
+      expect(result.payload.description).toContain('MISS');
+    });
+
+    it('includes target name in popup description', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ name: 'Ogre' });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      const result = await handle(action, ps, campaignName);
+
+      expect(result.payload.description).toContain('Ogre');
+      expect(result.payload.description).toContain('Unarmed Strike');
     });
   });
 
@@ -162,7 +278,7 @@ describe('agileStrikeHandler.handle', () => {
     it('uses d6 when bardicDie is not specified', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ automation: { type: 'agile_strike' } });
-      const target = makeTarget(12);
+      const target = makeTarget({ ac: 12 });
 
       damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
       damageUtils.getTargetFromAttacker.mockReturnValue(target);
@@ -172,8 +288,164 @@ describe('agileStrikeHandler.handle', () => {
 
       await handle(action, ps, campaignName);
 
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d6');
       const logEntry = logService.addEntry.mock.calls[0][1];
       expect(logEntry.description).toContain('1d6');
+    });
+
+    it('uses d10 when bardicDie is 10', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ automation: { bardicDie: 10 } });
+      const target = makeTarget({ ac: 10 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue({ total: 6, rolls: [6] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d10');
+    });
+
+    it('uses d12 when bardicDie is 12', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ automation: { bardicDie: 12 } });
+      const target = makeTarget({ ac: 10 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue({ total: 8, rolls: [8] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d12');
+    });
+  });
+
+  describe('damage calculation', () => {
+    it('adds Dexterity modifier to damage roll', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 10 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue({ total: 4, rolls: [4] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      // roll 4 + dex 3 = 7 total damage
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+        expect.any(Object),
+        'Goblin',
+        7,
+        ['Bludgeoning'],
+        expect.any(String),
+        expect.any(Array),
+        expect.any(Boolean),
+        'Bard',
+      );
+    });
+
+    it('uses 0 when Dexterity ability is missing', async () => {
+      const ps = makePlayerStats({ abilities: [] });
+      const action = makeAction();
+      const target = makeTarget({ ac: 10 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue({ total: 4, rolls: [4] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      // roll 4 + dex 0 = 4 total damage
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+        expect.any(Object),
+        'Goblin',
+        4,
+        ['Bludgeoning'],
+        expect.any(String),
+        expect.any(Array),
+        expect.any(Boolean),
+        'Bard',
+      );
+    });
+
+    it('uses 0 when proficiency is missing', async () => {
+      const ps = makePlayerStats({ proficiency: undefined });
+      const action = makeAction();
+      const target = makeTarget({ ac: 15 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(12);
+      diceRoller.rollExpression.mockReturnValue({ total: 7, rolls: [7] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      // hit bonus = 3 + 0 = 3, d20(12) + 3 = 15 = HIT
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
+    });
+
+    it('handles null damage roll result', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 10 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue(null);
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      // rollExpression returns null, so damageTotal = 0 + 3 = 3
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+        expect.any(Object),
+        'Goblin',
+        3,
+        ['Bludgeoning'],
+        expect.any(String),
+        expect.any(Array),
+        expect.any(Boolean),
+        'Bard',
+      );
+    });
+
+    it('handles damage roll with zero total', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 10 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue({ total: 0, rolls: [0] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      // roll 0 + dex 3 = 3 total damage
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+        expect.any(Object),
+        'Goblin',
+        3,
+        ['Bludgeoning'],
+        expect.any(String),
+        expect.any(Array),
+        expect.any(Boolean),
+        'Bard',
+      );
     });
   });
 
@@ -181,7 +453,7 @@ describe('agileStrikeHandler.handle', () => {
     it('logs ability_use entry with full details', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-      const target = makeTarget(16);
+      const target = makeTarget({ ac: 16 });
 
       damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
       damageUtils.getTargetFromAttacker.mockReturnValue(target);
@@ -201,6 +473,122 @@ describe('agileStrikeHandler.handle', () => {
           timestamp: expect.any(Number),
         }),
       );
+    });
+
+    it('includes hit/miss and damage info in log description', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 14 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(9);
+      diceRoller.rollExpression.mockReturnValue({ total: 3, rolls: [3] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      const logEntry = logService.addEntry.mock.calls[0][1];
+      expect(logEntry.description).toContain('d20(9) + 5 = 14 vs AC 14');
+      expect(logEntry.description).toContain('HIT');
+      expect(logEntry.description).toContain('Bludgeoning damage');
+    });
+
+    it('includes miss info in log description when attack misses', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 20 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(5);
+      diceRoller.rollExpression.mockReturnValue({ total: 2, rolls: [2] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      const logEntry = logService.addEntry.mock.calls[0][1];
+      expect(logEntry.description).toContain('MISS');
+      expect(logEntry.description).toContain('no damage');
+    });
+
+    it('handles addEntry failure gracefully', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 14 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+      logService.addEntry.mockRejectedValue(new Error('Log service error'));
+
+      const result = await handle(action, ps, campaignName);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('HIT');
+    });
+  });
+
+  describe('result structure', () => {
+    it('returns popup with correct payload shape on hit', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 12 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      const result = await handle(action, ps, campaignName);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Agile Strikes');
+      expect(typeof result.payload.description).toBe('string');
+      expect(result.payload.automation).toEqual(action.automation);
+    });
+
+    it('returns popup with correct payload shape on miss', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const target = makeTarget({ ac: 22 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(1);
+      diceRoller.rollExpression.mockReturnValue({ total: 1, rolls: [1] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      const result = await handle(action, ps, campaignName);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Agile Strikes');
+      expect(typeof result.payload.description).toBe('string');
+      expect(result.payload.automation).toEqual(action.automation);
+    });
+  });
+
+  describe('action shape flexibility', () => {
+    it('uses action object directly when automation field is missing', async () => {
+      const ps = makePlayerStats();
+      const action = { name: 'Agile Strikes' };
+      const target = makeTarget({ ac: 12 });
+
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(target);
+      diceRoller.rollD20.mockReturnValue(10);
+      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
+      runtimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, ps, campaignName);
+
+      // action.automation is undefined, so auto = action, bardicDie defaults to 6
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d6');
     });
   });
 });

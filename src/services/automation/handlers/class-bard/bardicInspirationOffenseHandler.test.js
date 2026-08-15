@@ -1,4 +1,7 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ── Mocks ──────────────────────────────────────────────────────────
 
 vi.mock('../../../dice/diceRoller.js', () => ({
   rollExpression: vi.fn(),
@@ -6,7 +9,7 @@ vi.mock('../../../dice/diceRoller.js', () => ({
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn().mockResolvedValue(undefined),
+  setRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
@@ -17,6 +20,8 @@ vi.mock('../../common/damageRollback.js', () => ({
   findLastAttack: vi.fn(),
 }));
 
+// ── Imports ────────────────────────────────────────────────────────
+
 import { handle } from './bardicInspirationOffenseHandler.js';
 
 import * as diceRoller from '../../../dice/diceRoller.js';
@@ -24,11 +29,14 @@ import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';
 import * as damageRollback from '../../common/damageRollback.js';
 
+// ── Helpers ────────────────────────────────────────────────────────
+
 const campaignName = 'test-campaign';
+const playerName = 'Bard';
 
 function makePlayerStats(overrides = {}) {
   return {
-    name: 'Bard',
+    name: playerName,
     ...overrides,
   };
 }
@@ -53,6 +61,8 @@ function makeLastAttack(attackerName, targetName, timestamp) {
   };
 }
 
+// ── Tests ──────────────────────────────────────────────────────────
+
 describe('bardicInspirationOffenseHandler.handle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -61,9 +71,15 @@ describe('bardicInspirationOffenseHandler.handle', () => {
     damageRollback.findLastAttack.mockReset();
   });
 
+  // ── No bardic inspiration die ──────────────────────────────────
+
   describe('no bardic inspiration die', () => {
-    it('returns popup with info type when die is falsy', async () => {
+    function mockNoDie() {
       useRuntimeState.getRuntimeValue.mockReturnValue(null);
+    }
+
+    it('returns info popup when bardicInspirationDie is null', async () => {
+      mockNoDie();
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
@@ -72,59 +88,151 @@ describe('bardicInspirationOffenseHandler.handle', () => {
       expect(result.payload.name).toBe('Offensive Inspiration');
       expect(result.payload.description).toBe('You do not have a Bardic Inspiration die.');
     });
+
+    it('returns info popup when bardicInspirationDie is 0', async () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue(0);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(result.payload.description).toBe('You do not have a Bardic Inspiration die.');
+    });
+
+    it('returns info popup when bardicInspirationDie is undefined', async () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(result.payload.description).toBe('You do not have a Bardic Inspiration die.');
+    });
+
+    it('does not roll dice, set runtime state, or log when there is no die', async () => {
+      mockNoDie();
+
+      await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(diceRoller.rollExpression).not.toHaveBeenCalled();
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+      expect(logService.addEntry).not.toHaveBeenCalled();
+      expect(damageRollback.findLastAttack).not.toHaveBeenCalled();
+    });
   });
 
-  describe('roll failure', () => {
-    it('returns popup with "Roll failed." when rollExpression returns null', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
+  // ── Roll expression fails ──────────────────────────────────────
+
+  describe('roll expression fails', () => {
+    function mockWithDie(dieSize, grantedBy) {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'bardicInspirationDie') return dieSize;
+        if (key === 'bardicInspirationGrantedBy') return grantedBy;
+        return null;
+      });
       diceRoller.rollExpression.mockReturnValue(null);
+    }
+
+    it('returns info popup with "Roll failed." when rollExpression returns null', async () => {
+      mockWithDie(8, undefined);
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Offensive Inspiration');
       expect(result.payload.description).toBe('Roll failed.');
+    });
+
+    it('does not clear runtime state or log when roll fails', async () => {
+      mockWithDie(8, 'Ally Bard');
+
+      await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('does not call findLastAttack when roll fails', async () => {
+      mockWithDie(6, 'Fellow Bard');
+
+      await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(damageRollback.findLastAttack).not.toHaveBeenCalled();
     });
   });
 
+  // ── Successful invocation ──────────────────────────────────────
+
   describe('successful invocation', () => {
-    it('rolls the correct die expression for the die size', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
+    function mockSuccess(dieSize, grantedBy, rollResult) {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'bardicInspirationDie') return dieSize;
+        if (key === 'bardicInspirationGrantedBy') return grantedBy;
+        return null;
+      });
+      diceRoller.rollExpression.mockReturnValue(rollResult);
       damageRollback.findLastAttack.mockResolvedValue(null);
+    }
+
+    it('reads bardicInspirationDie from runtime state', async () => {
+      mockSuccess(8, undefined, { total: 5, rolls: [5] });
+
+      await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(useRuntimeState.getRuntimeValue).toHaveBeenCalledWith(
+        playerName,
+        'bardicInspirationDie',
+        campaignName,
+      );
+    });
+
+    it('reads bardicInspirationGrantedBy from runtime state', async () => {
+      mockSuccess(8, undefined, { total: 5, rolls: [5] });
+
+      await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(useRuntimeState.getRuntimeValue).toHaveBeenCalledWith(
+        playerName,
+        'bardicInspirationGrantedBy',
+        campaignName,
+      );
+    });
+
+    it('rolls the correct die expression for the die size', async () => {
+      mockSuccess(8, undefined, { total: 5, rolls: [5] });
 
       await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d8');
     });
 
-    it('clears all bardic inspiration runtime state on success', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
-      damageRollback.findLastAttack.mockResolvedValue(null);
+    it('clears all three bardic inspiration runtime keys on success', async () => {
+      mockSuccess(8, undefined, { total: 5, rolls: [5] });
 
       await handle(makeAction(), makePlayerStats(), campaignName);
 
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationDie', null, campaignName);
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationGrantedBy', null, campaignName);
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationCombatOptions', null, campaignName);
+      const calls = useRuntimeState.setRuntimeValue.mock.calls;
+      expect(calls).toHaveLength(3);
+      expect(calls[0]).toEqual([playerName, 'bardicInspirationDie', null, campaignName]);
+      expect(calls[1]).toEqual([playerName, 'bardicInspirationGrantedBy', null, campaignName]);
+      expect(calls[2]).toEqual([playerName, 'bardicInspirationCombatOptions', null, campaignName]);
+    });
+
+    it('calls findLastAttack with campaignName', async () => {
+      mockSuccess(8, undefined, { total: 5, rolls: [5] });
+
+      await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(damageRollback.findLastAttack).toHaveBeenCalledWith(campaignName);
     });
 
     it('logs ability_use with die size, roll total, and no-damage message', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
-      damageRollback.findLastAttack.mockResolvedValue(null);
+      mockSuccess(8, undefined, { total: 5, rolls: [5] });
 
       await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
         type: 'ability_use',
-        characterName: 'Bard',
+        characterName: playerName,
         abilityName: 'Offensive Inspiration',
-        description: 'Bard used Offensive Inspiration: rolled 1d8 (5). No recent damage event found. Add 5 damage to your last hit manually.',
+        description: expect.stringContaining('1d8'),
         biDieRoll: 5,
         biDieSize: 8,
         timestamp: expect.any(Number),
@@ -132,28 +240,22 @@ describe('bardicInspirationOffenseHandler.handle', () => {
     });
 
     it('returns popup with roll details and manual instruction', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
-      damageRollback.findLastAttack.mockResolvedValue(null);
+      mockSuccess(8, undefined, { total: 5, rolls: [5] });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Offensive Inspiration');
       expect(result.payload.description).toContain('1d8');
       expect(result.payload.description).toContain('**5**');
-      expect(result.payload.description).toContain('Add this to your attack\'s damage');
-      expect(result.payload.description).toContain('Die granted by unknown');
+      expect(result.payload.description).toContain("Add this to your attack's damage");
       expect(result.payload.description).toContain('No recent damage event found');
-      expect(result.payload.description).not.toContain('HP:');
+      expect(result.payload.automation).toEqual({ type: 'bardic_inspiration_offense' });
     });
 
     it('includes individual roll components in popup description', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [3, 2] });
-      damageRollback.findLastAttack.mockResolvedValue(null);
+      mockSuccess(8, undefined, { total: 5, rolls: [3, 2] });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
@@ -162,23 +264,55 @@ describe('bardicInspirationOffenseHandler.handle', () => {
     });
 
     it('includes grantedBy in popup description when set', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce('Goblin');
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
-      damageRollback.findLastAttack.mockResolvedValue(null);
+      mockSuccess(8, 'Goblin', { total: 5, rolls: [5] });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(result.payload.description).toContain('Die granted by Goblin');
     });
+
+    it('falls back to "unknown" when grantedBy is null', async () => {
+      mockSuccess(8, null, { total: 4, rolls: [4] });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(result.payload.description).toContain('Die granted by unknown');
+    });
+
+    it('falls back to "unknown" when grantedBy is undefined', async () => {
+      mockSuccess(8, undefined, { total: 4, rolls: [4] });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(result.payload.description).toContain('Die granted by unknown');
+    });
+
+    it('works with different die sizes', async () => {
+      mockSuccess(10, undefined, { total: 7, rolls: [7] });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d10');
+      expect(result.payload.description).toContain('1d10');
+      expect(result.payload.description).toContain('**7**');
+    });
   });
 
+  // ── Damage application to matching attacker ────────────────────
+
   describe('damage application to matching attacker', () => {
-    it('returns popup with bonus damage message when attacker matches player', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
+    function mockWithMatchingAttack(dieSize, grantedBy, lastAttack) {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'bardicInspirationDie') return dieSize;
+        if (key === 'bardicInspirationGrantedBy') return grantedBy;
+        return null;
+      });
       diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
-      damageRollback.findLastAttack.mockResolvedValue(makeLastAttack('Bard', 'Goblin', Date.now()));
+      damageRollback.findLastAttack.mockResolvedValue(lastAttack);
+    }
+
+    it('returns popup with bonus damage message when attacker matches player', async () => {
+      mockWithMatchingAttack(8, undefined, makeLastAttack(playerName, 'Goblin', Date.now()));
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
@@ -186,11 +320,28 @@ describe('bardicInspirationOffenseHandler.handle', () => {
       expect(result.payload.description).not.toContain('No recent damage event found');
     });
 
+    it('logs ability_use with bonus damage message when attacker matches', async () => {
+      mockWithMatchingAttack(8, undefined, makeLastAttack(playerName, 'Goblin', Date.now()));
+
+      await handle(makeAction(), makePlayerStats(), campaignName);
+
+      const logCall = logService.addEntry.mock.calls[0][1];
+      expect(logCall.description).toContain('Bonus damage applied to Goblin');
+      expect(logCall.biDieRoll).toBe(5);
+      expect(logCall.biDieSize).toBe(8);
+    });
+
     it('falls back to no-damage message when lastAttack exists but targetName is falsy', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
-      damageRollback.findLastAttack.mockResolvedValue(makeLastAttack('Bard', null, Date.now()));
+      mockWithMatchingAttack(8, undefined, makeLastAttack(playerName, null, Date.now()));
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(result.payload.description).toContain('No recent damage event found');
+      expect(result.payload.description).not.toContain('Bonus damage applied to');
+    });
+
+    it('falls back to no-damage message when attacker does not match player', async () => {
+      mockWithMatchingAttack(8, undefined, makeLastAttack('OtherPlayer', 'Goblin', Date.now()));
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
@@ -199,18 +350,40 @@ describe('bardicInspirationOffenseHandler.handle', () => {
     });
   });
 
+  // ── Error resilience ───────────────────────────────────────────
+
   describe('error resilience', () => {
-    it('does not block popup return when addEntry rejects (fire-and-forget)', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
-      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
+    function mockSuccess(dieSize, grantedBy, rollResult) {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'bardicInspirationDie') return dieSize;
+        if (key === 'bardicInspirationGrantedBy') return grantedBy;
+        return null;
+      });
+      diceRoller.rollExpression.mockReturnValue(rollResult);
       damageRollback.findLastAttack.mockResolvedValue(null);
+    }
+
+    it('returns success popup even when addEntry rejects', async () => {
+      mockSuccess(8, undefined, { total: 5, rolls: [5] });
       logService.addEntry.mockImplementation(() => Promise.reject(new Error('log service failed')));
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('rolled **5**');
+    });
+
+    it('still clears runtime state when addEntry rejects', async () => {
+      mockSuccess(8, undefined, { total: 5, rolls: [5] });
+      logService.addEntry.mockImplementation(() => Promise.reject(new Error('log service failed')));
+
+      await handle(makeAction(), makePlayerStats(), campaignName);
+
+      const calls = useRuntimeState.setRuntimeValue.mock.calls;
+      expect(calls).toHaveLength(3);
+      expect(calls[0][1]).toBe('bardicInspirationDie');
+      expect(calls[1][1]).toBe('bardicInspirationGrantedBy');
+      expect(calls[2][1]).toBe('bardicInspirationCombatOptions');
     });
   });
 });

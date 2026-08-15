@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -21,10 +22,11 @@ import * as logService from '../../../ui/logService.js';
 // ── Helpers ────────────────────────────────────────────────────
 
 const campaignName = 'TestCampaign';
+const playerName = 'TestBard';
 
 function makePlayerStats(overrides = {}) {
   return {
-    name: 'TestBard',
+    name: playerName,
     level: 5,
     abilities: [
       { name: 'Charisma', bonus: 3 },
@@ -77,7 +79,7 @@ describe('fontOfInspirationHandler.handle', () => {
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
 
-    it('should return info popup when stored value exceeds max', async () => {
+    it('should cap displayed value at max when stored exceeds max', async () => {
       const ps = makePlayerStats({ abilities: [{ name: 'Charisma', bonus: 2 }] });
       const action = makeAction();
       useRuntimeState.getRuntimeValue
@@ -104,7 +106,7 @@ describe('fontOfInspirationHandler.handle', () => {
       expect(result.payload.description).toContain('already at maximum');
     });
 
-    it('should handle missing or zero Charisma ability', async () => {
+    it('should handle missing Charisma ability (defaults to 0 max)', async () => {
       const ps = makePlayerStats({ abilities: [] });
       const action = makeAction();
       useRuntimeState.getRuntimeValue
@@ -117,6 +119,56 @@ describe('fontOfInspirationHandler.handle', () => {
         'Font of Inspiration: Bardic Inspiration uses are already at maximum (0/0).'
       );
     });
+
+    it('should handle undefined abilities array (defaults to 0 max)', async () => {
+      const ps = makePlayerStats({ abilities: undefined });
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(4);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.description).toBe(
+        'Font of Inspiration: Bardic Inspiration uses are already at maximum (0/0).'
+      );
+    });
+
+    it('should treat null bardic inspiration uses as max (defaults to Charisma bonus)', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue.mockReturnValueOnce(null);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.description).toBe(
+        'Font of Inspiration: Bardic Inspiration uses are already at maximum (3/3).'
+      );
+    });
+
+    it('should treat undefined bardic inspiration uses as max (defaults to Charisma bonus)', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.description).toBe(
+        'Font of Inspiration: Bardic Inspiration uses are already at maximum (3/3).'
+      );
+    });
+
+    it('should default feature name when action.name is an empty string', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ name: '' });
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(3)
+        .mockReturnValueOnce(4);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.name).toBe('Font of Inspiration');
+    });
   });
 
   describe('no spell slots available', () => {
@@ -125,6 +177,11 @@ describe('fontOfInspirationHandler.handle', () => {
       const action = makeAction();
       useRuntimeState.getRuntimeValue
         .mockReturnValueOnce(2)
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(0)
         .mockReturnValueOnce(0)
         .mockReturnValueOnce(0)
         .mockReturnValueOnce(0)
@@ -155,19 +212,61 @@ describe('fontOfInspirationHandler.handle', () => {
       );
     });
 
-    it('should skip levels with 0 stored and report next available', async () => {
+    it('should skip levels with 0 stored and use the next level with slots', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
       useRuntimeState.getRuntimeValue
         .mockReturnValueOnce(2)
         .mockReturnValueOnce(0)
         .mockReturnValueOnce(1)
+        .mockReturnValueOnce(1);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.description).toBe(
+        'Font of Inspiration: Expended a level 2 spell slot. Bardic Inspiration uses: 3/3.'
+      );
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+        1,
+        'TestBard',
+        'spell_slots_level_2',
+        0,
+        campaignName,
+      );
+    });
+
+    it('should report no slots when all levels are 0', async () => {
+      const ps = makePlayerStats({
+        spellAbilities: {
+          spell_slots_level_1: 2,
+          spell_slots_level_2: 1,
+        },
+      });
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(1)
+        .mockReturnValueOnce(0)
         .mockReturnValueOnce(0);
 
       const result = await handle(action, ps, campaignName, null);
 
       expect(result.payload.description).toBe(
-        'Font of Inspiration: No spell slots of level 2 available.'
+        'Font of Inspiration: No spell slots available to expend.'
+      );
+    });
+
+    it('should handle undefined spellAbilities (all levels default to 0)', async () => {
+      const ps = makePlayerStats({ spellAbilities: undefined });
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(1)
+        .mockReturnValueOnce(4)
+        .mockReturnValueOnce(0);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.description).toBe(
+        'Font of Inspiration: No spell slots of level 1 available.'
       );
     });
   });
@@ -201,6 +300,7 @@ describe('fontOfInspirationHandler.handle', () => {
       expect(result.payload.description).toBe(
         'Font of Inspiration: Expended a level 1 spell slot. Bardic Inspiration uses: 3/3.'
       );
+      expect(result.payload.automation).toEqual(action.automation);
     });
 
     it('should log the ability use with correct data', async () => {
@@ -294,6 +394,68 @@ describe('fontOfInspirationHandler.handle', () => {
         timestamp: expect.any(Number),
       });
     });
+
+    it('should use custom name in log characterName field', async () => {
+      const ps = makePlayerStats({ name: 'Lyra' });
+      const action = makeAction({ name: 'Lyra\'s Inspiration' });
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(1)
+        .mockReturnValueOnce(3)
+        .mockReturnValueOnce(3);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+        type: 'ability_use',
+        characterName: 'Lyra',
+        abilityName: 'Lyra\'s Inspiration',
+        description: 'Lyra used Lyra\'s Inspiration: expended a level 1 spell slot to regain 1 Bardic Inspiration use.',
+        timestamp: expect.any(Number),
+      });
+    });
+
+    it('should handle string numbers for bardic inspiration uses', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce('2')
+        .mockReturnValueOnce(4);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+        2,
+        'TestBard',
+        'bardicInspirationUses',
+        3,
+        campaignName,
+      );
+      expect(result.payload.description).toBe(
+        'Font of Inspiration: Expended a level 1 spell slot. Bardic Inspiration uses: 3/3.'
+      );
+    });
+
+    it('should handle string numbers for spell slots', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(2)
+        .mockReturnValueOnce(4)
+        .mockReturnValueOnce('3');
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+        1,
+        'TestBard',
+        'spell_slots_level_1',
+        2,
+        campaignName,
+      );
+      expect(result.payload.description).toBe(
+        'Font of Inspiration: Expended a level 1 spell slot. Bardic Inspiration uses: 3/3.'
+      );
+    });
   });
 
   describe('spell slot level selection', () => {
@@ -322,6 +484,7 @@ describe('fontOfInspirationHandler.handle', () => {
       const action = makeAction();
       useRuntimeState.getRuntimeValue
         .mockReturnValueOnce(2)
+        .mockReturnValueOnce(4)
         .mockReturnValueOnce(null);
 
       await handle(action, ps, campaignName, null);
@@ -357,6 +520,110 @@ describe('fontOfInspirationHandler.handle', () => {
         'spell_slots_level_2',
         2,
         campaignName,
+      );
+    });
+
+    it('should use the highest available spell slot when lower levels are exhausted', async () => {
+      const ps = makePlayerStats({
+        spellAbilities: {
+          spell_slots_level_1: 0,
+          spell_slots_level_2: 0,
+          spell_slots_level_3: 0,
+          spell_slots_level_4: 1,
+        },
+      });
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(1);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+        1,
+        'TestBard',
+        'spell_slots_level_4',
+        0,
+        campaignName,
+      );
+    });
+
+    it('should handle negative stored spell slot value (treats as 0)', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(2)
+        .mockReturnValueOnce(4)
+        .mockReturnValueOnce(-1);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.description).toBe(
+        'Font of Inspiration: No spell slots of level 1 available.'
+      );
+    });
+  });
+
+  describe('runtime value edge cases', () => {
+    it('should handle negative bardic inspiration uses (treats as below max)', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(-1)
+        .mockReturnValueOnce(4);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+        2,
+        'TestBard',
+        'bardicInspirationUses',
+        0,
+        campaignName,
+      );
+    });
+  });
+
+  describe('campaignName propagation', () => {
+    it('should pass campaignName to setRuntimeValue calls on success', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(2)
+        .mockReturnValueOnce(4);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestBard',
+        'spell_slots_level_1',
+        3,
+        campaignName,
+      );
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestBard',
+        'bardicInspirationUses',
+        3,
+        campaignName,
+      );
+    });
+
+    it('should pass campaignName to log entry on success', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(2)
+        .mockReturnValueOnce(4);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(logService.addEntry).toHaveBeenCalledWith(
+        campaignName,
+        expect.any(Object),
       );
     });
   });
