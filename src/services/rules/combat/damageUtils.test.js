@@ -117,6 +117,12 @@ describe('getResistanceNotice', () => {
     expect(getResistanceNotice([], [], [], 'Orc')).toBeNull();
   });
 
+  it('skips undefined or empty damage type entries', () => {
+    expect(getResistanceNotice([undefined], ['Fire'], [], 'Dragon')).toBeNull();
+    expect(getResistanceNotice([''], ['Fire'], [], 'Dragon')).toBeNull();
+    expect(getResistanceNotice([undefined, 'Fire'], [], ['fire'], 'Dragon')).toBe('Dragon is IMMUNE to Fire');
+  });
+
   it('reports immunity or resistance correctly, prioritizes immunity over resistance', () => {
     expect(getResistanceNotice(['Fire'], [], ['fire'], 'Dragon')).toBe('Dragon is IMMUNE to Fire');
     expect(getResistanceNotice(['Cold'], ['Cold'], [], 'Ice Golem')).toBe('Ice Golem resists Cold');

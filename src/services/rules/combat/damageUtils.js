@@ -23,6 +23,7 @@ export function getResistanceNotice(damageTypes, targetResistances, targetImmuni
   let immuneTypes = [];
   let resistedTypes = [];
   for (const dt of damageTypes) {
+    if (!dt) continue;
     const lower = dt.toLowerCase();
     if (targetImmunities?.some(i => i.toLowerCase() === lower))
       immuneTypes.push(dt);

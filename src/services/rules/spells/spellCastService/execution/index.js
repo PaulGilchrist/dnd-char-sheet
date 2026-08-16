@@ -565,7 +565,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         if (savePathResult) return savePathResult;
     } else {
         return await handleNoSavePath(spell, metaCtx, playerStats, campaignName, mapName, characters,
-            getTargetInfo, rollAttack, spellToHit);
+            getTargetInfo, rollAttack, spellToHit, effectiveDamageType);
     }
 
     // --- Post-cast triggers ---

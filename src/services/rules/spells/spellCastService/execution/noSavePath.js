@@ -3,7 +3,7 @@ import { isInnateSorceryActive } from '../../../../combat/buffs/buffService.js';
 import { isMagicMissile, executeMagicMissile } from './helpers.js';
 
 async function handleNoSavePath(spell, metaCtx, playerStats, campaignName, mapName, characters,
-    getTargetInfo, rollAttack, spellToHit) {
+    getTargetInfo, rollAttack, spellToHit, damageType) {
 
     if (isMagicMissile(spell)) {
         await executeMagicMissile(spell, metaCtx, { rollDamage: () => {}, playerStats, getTargetInfo, campaignName, mapName, characters });
@@ -22,6 +22,7 @@ async function handleNoSavePath(spell, metaCtx, playerStats, campaignName, mapNa
             attackName: spell.name,
             targetName: target?.name,
             attackerName: playerStats.name,
+            damageType: damageType || spell.damage?.damage_type,
             autoDamageFormula: finalFormula,
             autoDamageName: spell.name,
             spellName: spell.name,
