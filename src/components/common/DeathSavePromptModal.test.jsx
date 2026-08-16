@@ -259,6 +259,33 @@ describe('DeathSavePromptModal', () => {
     expect(setRuntimeValue).toHaveBeenCalledWith('target1', 'deathFailures', [false, false, false], 'test-campaign');
   });
 
+  it('sets isDead in runtime state when the roll results in death', async () => {
+    deathSaveRules.rollDeathSave.mockReturnValue(defaultRollResult({
+      roll: 3,
+      result: 'dead',
+      newSaves: [false, false, false],
+      newFailures: [true, true, true],
+    }));
+    render(<DeathSavePromptModal campaignName="test-campaign" />);
+    fireEvent.click(screen.getByTestId('trigger-prompt-1'));
+    await waitForPromptVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Death Save' }));
+    await waitForResultVisible();
+    expect(setRuntimeValue).toHaveBeenCalledWith('target1', 'isDead', 1, 'test-campaign');
+  });
+
+  it('does not set isDead when the roll is not a death', async () => {
+    render(<DeathSavePromptModal campaignName="test-campaign" />);
+    fireEvent.click(screen.getByTestId('trigger-prompt-1'));
+    await waitForPromptVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Death Save' }));
+    await waitForResultVisible();
+    const isDeadCalls = setRuntimeValue.mock.calls.filter(
+      (call) => call[1] === 'isDead',
+    );
+    expect(isDeadCalls).toHaveLength(0);
+  });
+
   it('reads saved death saves from runtime state before rolling', async () => {
     getRuntimeValue.mockImplementation((targetName, prop) => {
       if (targetName === 'target1' && prop === 'deathSaves') return [true, false, false];

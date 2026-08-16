@@ -1,28 +1,26 @@
 import React from 'react'
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
+import { setRuntimeValue, useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import { clearDeathSavePrompt } from '../../../services/combat/conditions/savePromptService.js'
 import * as deathSaveRules from '../../../services/combat/conditions/deathSaveRules.js'
 import { hasSaveModifier, hasBeaconOfHope } from '../../../services/combat/conditions/conditionEffects.js'
 import { addEntry } from '../../../services/ui/logService.js'
 import './CharSummary.css'
 
+const EMPTY_TRACK = [false, false, false]
+
 function DeathSavingThrows({ playerStats, campaignName, isLocalhost }) {
-    const [saves, setSaves] = React.useState([false, false, false])
-    const [failures, setFailures] = React.useState([false, false, false])
+    const name = playerStats.name
+    const storedSaves = useRuntimeValue(name, 'deathSaves', campaignName)
+    const storedFailures = useRuntimeValue(name, 'deathFailures', campaignName)
+    const saves = storedSaves ?? EMPTY_TRACK
+    const failures = storedFailures ?? EMPTY_TRACK
+    const isDead = !!useRuntimeValue(name, 'isDead', campaignName)
     const [lastRoll, setLastRoll] = React.useState(null)
-    const [isDead, setIsDead] = React.useState(false)
     const stableHealTimeoutRef = React.useRef(null)
 
     React.useEffect(() => {
-        const deadState = getRuntimeValue(playerStats.name, 'isDead')
-        if (deadState) setIsDead(true)
-    }, [playerStats.name])
-
-    React.useEffect(() => {
         const handler = (e) => {
-            if (!e.detail || e.detail.targetName !== playerStats.name) return;
-            setSaves(e.detail.newSaves);
-            setFailures(e.detail.newFailures);
+            if (!e.detail || e.detail.targetName !== name) return;
             setLastRoll({
                 roll: e.detail.roll,
                 success: e.detail.success,
@@ -30,13 +28,10 @@ function DeathSavingThrows({ playerStats, campaignName, isLocalhost }) {
                 isNat1: e.detail.isNat1,
             });
             setTimeout(() => setLastRoll(null), 2000);
-            if (e.detail.result === 'dead') {
-                setIsDead(true);
-            }
         };
         window.addEventListener('death-save-result', handler);
         return () => window.removeEventListener('death-save-result', handler);
-    }, [playerStats.name])
+    }, [name])
 
     React.useEffect(() => {
         return () => {
@@ -48,22 +43,19 @@ function DeathSavingThrows({ playerStats, campaignName, isLocalhost }) {
 
     const isStable = deathSaveRules.isStable(saves)
     const isDeadState = deathSaveRules.isDead(failures)
-    const hasAdvantage = hasSaveModifier(playerStats?.saveModifiers, 'death_saving_throws') || hasBeaconOfHope(playerStats.name, campaignName)
+    const hasAdvantage = hasSaveModifier(playerStats?.saveModifiers, 'death_saving_throws') || hasBeaconOfHope(name, campaignName)
 
     const logEntry = (entry) => {
         addEntry(campaignName, entry).catch((e) => { console.error("[DeathSavingThrows] Error:", e); })
     }
 
     const handleRemoveDead = () => {
-        setRuntimeValue(playerStats.name, 'isDead', 0, campaignName);
-        setRuntimeValue(playerStats.name, 'deathSaves', [false, false, false], campaignName);
-        setRuntimeValue(playerStats.name, 'deathFailures', [false, false, false], campaignName);
-        setIsDead(false);
-        setSaves([false, false, false]);
-        setFailures([false, false, false]);
+        setRuntimeValue(name, 'isDead', 0, campaignName);
+        setRuntimeValue(name, 'deathSaves', EMPTY_TRACK, campaignName);
+        setRuntimeValue(name, 'deathFailures', EMPTY_TRACK, campaignName);
         logEntry({
             type: 'death_save',
-            characterName: playerStats.name,
+            characterName: name,
             result: 'removed',
             totalSuccesses: 0,
             totalFailures: 0,
@@ -100,16 +92,16 @@ function DeathSavingThrows({ playerStats, campaignName, isLocalhost }) {
         });
 
         if (result.restoredToHp !== null) {
-            setRuntimeValue(playerStats.name, 'currentHitPoints', result.restoredToHp, campaignName);
+            setRuntimeValue(name, 'currentHitPoints', result.restoredToHp, campaignName);
         }
 
         if (result.result === 'stable') {
             stableHealTimeoutRef.current = setTimeout(() => {
-                setRuntimeValue(playerStats.name, 'currentHitPoints', 1, campaignName);
+                setRuntimeValue(name, 'currentHitPoints', 1, campaignName);
             }, 1500);
             logEntry({
                 type: 'death_save',
-                characterName: playerStats.name,
+                characterName: name,
                 result: 'stable',
                 totalSuccesses: 3,
                 totalFailures,
@@ -117,21 +109,19 @@ function DeathSavingThrows({ playerStats, campaignName, isLocalhost }) {
         }
 
         if (result.result === 'dead') {
-            setRuntimeValue(playerStats.name, 'isDead', 1, campaignName);
+            setRuntimeValue(name, 'isDead', 1, campaignName);
             logEntry({
                 type: 'death_save',
-                characterName: playerStats.name,
+                characterName: name,
                 result: 'dead',
                 totalSuccesses,
                 totalFailures: 3,
             });
         }
 
-        setSaves(result.newSaves);
-        setFailures(result.newFailures);
-        setRuntimeValue(playerStats.name, 'deathSaves', result.newSaves, campaignName);
-        setRuntimeValue(playerStats.name, 'deathFailures', result.newFailures, campaignName);
-        clearDeathSavePrompt(campaignName, playerStats.name);
+        setRuntimeValue(name, 'deathSaves', result.newSaves, campaignName);
+        setRuntimeValue(name, 'deathFailures', result.newFailures, campaignName);
+        clearDeathSavePrompt(campaignName, name);
     }
 
     if (isDead) {

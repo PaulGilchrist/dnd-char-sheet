@@ -71,6 +71,9 @@ function DeathSavePromptModal({ campaignName }) {
 
     setRuntimeValue(current.targetName, 'deathSaves', result.newSaves, campaignName);
     setRuntimeValue(current.targetName, 'deathFailures', result.newFailures, campaignName);
+    if (result.result === 'dead') {
+      setRuntimeValue(current.targetName, 'isDead', 1, campaignName);
+    }
     clearDeathSavePrompt(campaignName, current.targetName);
 
     if (result.restoredToHp !== null) {
