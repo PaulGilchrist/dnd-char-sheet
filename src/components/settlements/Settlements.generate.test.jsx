@@ -74,14 +74,6 @@ const makeSettlement = (name, overrides = {}) => ({
   ...overrides,
 });
 
-let consoleErrorSpy;
-
-const renderSettlements = () => render(<Settlements campaignName="test" onBack={() => {}} />);
-
-const clickGenerate = () => {
-  fireEvent.click(screen.getByRole('button', { name: /generate settlement/i }));
-};
-
 describe('Settlements - generate settlement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -89,7 +81,6 @@ describe('Settlements - generate settlement', () => {
     settlementMockStore.loading = false;
     settlementMockStore.loadItems.mockResolvedValue(undefined);
     vi.mocked(generateSettlement).mockResolvedValue(generatedSettlement);
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     // The component fetches settlement-descriptions.json on mount; no test here
     // changes the size select, so the response body is irrelevant.
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -102,23 +93,29 @@ describe('Settlements - generate settlement', () => {
     vi.restoreAllMocks();
   });
 
-  it('passes the current settlement list to the generator so it can avoid name collisions', async () => {
+  const renderSettlements = () => render(<Settlements campaignName="test" onBack={() => {}} />);
+
+  const clickGenerate = () => {
+    fireEvent.click(screen.getByRole('button', { name: /generate settlement/i }));
+  };
+
+  it('passes the current settlement list to the generator so it can avoid name collisions', () => {
     settlementMockStore.items = [makeSettlement('Existing Town')];
     renderSettlements();
     clickGenerate();
 
-    await waitFor(() => {
-      expect(generateSettlement).toHaveBeenCalledWith(
-        expect.arrayContaining([expect.objectContaining({ name: 'Existing Town' })]),
-      );
-    });
+    expect(generateSettlement).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ name: 'Existing Town' })]),
+    );
   });
 
   it('opens the new settlement modal prefilled with every generated field', async () => {
     renderSettlements();
     clickGenerate();
 
-    expect(await screen.findByRole('heading', { name: 'New Settlement' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'New Settlement' })).toBeInTheDocument();
+    });
 
     expect(screen.getByRole('textbox', { name: /name\s?\*/i })).toHaveValue('Generated Town');
     expect(screen.getByRole('combobox', { name: /size/i })).toHaveValue('town');
@@ -138,6 +135,7 @@ describe('Settlements - generate settlement', () => {
   });
 
   it('logs the error, keeps the modal closed, and re-enables the button when generation fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(generateSettlement).mockRejectedValueOnce(new Error('Generation failed'));
     renderSettlements();
     const genBtn = screen.getByRole('button', { name: /generate settlement/i });

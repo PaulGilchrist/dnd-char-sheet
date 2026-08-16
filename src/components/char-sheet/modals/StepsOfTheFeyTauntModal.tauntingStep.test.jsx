@@ -1,8 +1,10 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
 import { createSaveListener } from '../../../services/automation/common/savePrompt.js';
 import { addEntry } from '../../../services/ui/logService.js';
+import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('../../../services/automation/common/savePrompt.js', () => ({
     createSaveListener: vi.fn(({ targetName, saveType, saveDc }) => ({
@@ -72,9 +74,7 @@ async function selectTargetByName(name) {
         if (label.textContent.includes(name)) {
             const checkbox = label.querySelector('input[type="checkbox"]');
             if (checkbox) {
-                // Click the label to trigger toggleTarget via onClick
                 await act(async () => { fireEvent.click(label); });
-                // Verify the checkbox is now checked
                 expect(checkbox.checked).toBe(true);
                 return label;
             }
@@ -89,7 +89,7 @@ describe('StepsOfTheFeyTauntModal - Taunting Step', () => {
         localStorage.clear();
     });
 
-    describe('taunting step flow', () => {
+    describe('creature selection modal rendering', () => {
         it('shows CreatureSelectionModal when Taunting Step is selected', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
@@ -125,8 +125,10 @@ describe('StepsOfTheFeyTauntModal - Taunting Step', () => {
             fireEvent.click(tauntingOption);
             expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
         });
+    });
 
-        it('skips taunting step and shows result when Skip is clicked', async () => {
+    describe('skip flow', () => {
+        it('shows result view with "No targets selected" when Skip is clicked', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
             fireEvent.click(tauntingOption);
@@ -141,7 +143,7 @@ describe('StepsOfTheFeyTauntModal - Taunting Step', () => {
             });
         });
 
-        it('shows result with correct remaining count after skip', async () => {
+        it('shows correct remaining count after skipping', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 3 })} />);
             const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
             fireEvent.click(tauntingOption);
@@ -154,7 +156,27 @@ describe('StepsOfTheFeyTauntModal - Taunting Step', () => {
             });
         });
 
-        it('confirms targets and shows save prompt when Taunt is clicked', async () => {
+        it('does not decrement count when skipping', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 3, freeCastCountKey: 'stepsRemaining' })} />);
+            const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
+            fireEvent.click(tauntingOption);
+            const skipButton = screen.getByRole('button', { name: 'Skip' });
+            fireEvent.click(skipButton);
+
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+            });
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                'FeyTrickster',
+                'stepsRemaining',
+                expect.any(Number),
+                'test-campaign'
+            );
+        });
+    });
+
+    describe('confirm flow', () => {
+        it('creates a save listener for each selected target', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
             fireEvent.click(tauntingOption);
@@ -176,23 +198,7 @@ describe('StepsOfTheFeyTauntModal - Taunting Step', () => {
             });
         });
 
-        it('creates save listeners for all selected targets', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
-            fireEvent.click(tauntingOption);
-
-            await selectTargetByName('Goblin1');
-            await selectTargetByName('Orc1');
-
-            const tauntButton = screen.getByRole('button', { name: /Taunt/ });
-            fireEvent.click(tauntButton);
-
-            await waitFor(() => {
-                expect(createSaveListener).toHaveBeenCalledTimes(2);
-            });
-        });
-
-        it('logs ability_use entry when taunting is confirmed', async () => {
+        it('logs an ability_use entry when taunting is confirmed', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
             fireEvent.click(tauntingOption);
@@ -213,5 +219,26 @@ describe('StepsOfTheFeyTauntModal - Taunting Step', () => {
                 );
             });
         });
+
+        it('decrements free cast count when freeCastCountKey is provided', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 3, freeCastCountKey: 'stepsRemaining' })} />);
+            const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
+            fireEvent.click(tauntingOption);
+
+            await selectTargetByName('Goblin1');
+
+            const tauntButton = screen.getByRole('button', { name: /Taunt/ });
+            fireEvent.click(tauntButton);
+
+            await waitFor(() => {
+                expect(setRuntimeValue).toHaveBeenCalledWith(
+                    'FeyTrickster',
+                    'stepsRemaining',
+                    2,
+                    'test-campaign'
+                );
+            });
+        });
+
     });
 });

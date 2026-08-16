@@ -1,39 +1,77 @@
-import { describe, it, expect } from 'vitest';
+// @improved-by-ai
+import React from 'react';
 import { render } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import FirePitSVG from './FirePitSVG';
 
 describe('FirePitSVG', () => {
-  describe('rendering', () => {
-    it('should render an SVG group element', () => {
+  describe('props', () => {
+    it('renders a <g> element', () => {
       const { container } = render(<FirePitSVG />);
+      expect(container.querySelector('g')).toBeInTheDocument();
+    });
+
+    it('applies the id attribute to the group', () => {
+      const { container } = render(<FirePitSVG id="firepit-1" />);
+      expect(container.querySelector('g')).toHaveAttribute('id', 'firepit-1');
+    });
+
+    it('does not render id attribute when id is null', () => {
+      const { container } = render(<FirePitSVG id={null} />);
+      expect(container.querySelector('g')).not.toHaveAttribute('id');
+    });
+
+    it('applies className to the group', () => {
+      const { container } = render(<FirePitSVG className="custom-firepit" />);
+      expect(container.querySelector('g')).toHaveClass('custom-firepit');
+    });
+
+    it('does not render className attribute when className is undefined', () => {
+      const { container } = render(<FirePitSVG />);
+      expect(container.querySelector('g')).not.toHaveAttribute('class');
+    });
+
+    it('spreads additional props as attributes on the group', () => {
+      const { container } = render(
+        <FirePitSVG data-test="firepit-test" aria-label="Fire Pit" role="img" />,
+      );
       const g = container.querySelector('g');
-      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('data-test', 'firepit-test');
+      expect(g).toHaveAttribute('aria-label', 'Fire Pit');
+      expect(g).toHaveAttribute('role', 'img');
     });
 
-    it('should render SVG elements for glow, stone ring, flames, and sparks', () => {
-      const { container } = render(<FirePitSVG />);
-      const circles = container.querySelectorAll('circle');
-      const ellipses = container.querySelectorAll('ellipse');
-      const paths = container.querySelectorAll('path');
-
-      expect(circles.length).toBeGreaterThan(0);
-      expect(ellipses.length).toBeGreaterThan(0);
-      expect(paths.length).toBeGreaterThan(0);
+    it('accepts a ref via forwardRef', () => {
+      const ref = React.createRef();
+      render(<FirePitSVG ref={ref} />);
+      expect(ref.current).toBeTruthy();
+      expect(ref.current.tagName.toLowerCase()).toBe('g');
     });
 
-    it('should render ambient glow circles with correct positions and radii', () => {
-      const { container } = render(<FirePitSVG />);
-      const circles = container.querySelectorAll('circle');
+    it('combines id, className, rest props, and ref', () => {
+      const ref = React.createRef();
+      const { container } = render(
+        <FirePitSVG id="test-firepit" className="test-class" data-custom="value" ref={ref} />,
+      );
+      const g = container.querySelector('g');
+      expect(g).toHaveAttribute('id', 'test-firepit');
+      expect(g).toHaveClass('test-class');
+      expect(g).toHaveAttribute('data-custom', 'value');
+      expect(ref.current).toBe(g);
+    });
+  });
 
-      // Find glow circles by their characteristic positions (cy=10 and cy=18) with large radii
+  describe('ambient glow', () => {
+    it('renders 3 glow circles with correct attributes', () => {
+      const { container } = render(<FirePitSVG />);
+      const circles = container.querySelectorAll('circle[fill="#E87A20"]');
       const glowCircles = Array.from(circles).filter(
         (c) => {
           const cy = c.getAttribute('cy');
           const r = parseFloat(c.getAttribute('r'));
           return (cy === '10' || cy === '18') && r >= 14;
-        }
+        },
       );
-
       expect(glowCircles.length).toBe(3);
       expect(glowCircles[0]).toHaveAttribute('cx', '18');
       expect(glowCircles[0]).toHaveAttribute('r', '17');
@@ -44,115 +82,118 @@ describe('FirePitSVG', () => {
       expect(glowCircles[2]).toHaveAttribute('r', '18');
       expect(glowCircles[2]).toHaveAttribute('opacity', '0.03');
     });
+  });
 
-    it('should render the stone ring circle with correct styling', () => {
+  describe('stone ring', () => {
+    it('renders the stone ring circle with correct styling', () => {
       const { container } = render(<FirePitSVG />);
-      const circles = container.querySelectorAll('circle');
-      const stoneRing = Array.from(circles).find(
-        (c) => c.getAttribute('cx') === '18' && c.getAttribute('cy') === '20' && c.getAttribute('r') === '9'
+      const stoneRing = container.querySelector(
+        'circle[cx="18"][cy="20"][r="9"][fill="#555"][stroke="#333"]',
       );
       expect(stoneRing).toBeInTheDocument();
-      expect(stoneRing).toHaveAttribute('fill', '#555');
-      expect(stoneRing).toHaveAttribute('stroke', '#333');
       expect(stoneRing).toHaveAttribute('stroke-width', '1.5');
     });
+  });
 
-    it('should render ember ellipses and circles at the base', () => {
+  describe('embers', () => {
+    it('renders the ember ellipse at the base', () => {
       const { container } = render(<FirePitSVG />);
-      const ellipses = container.querySelectorAll('ellipse');
-      expect(ellipses.length).toBe(2);
-      const emberEllipse = Array.from(ellipses).find(
-        (e) => e.getAttribute('cx') === '18' && e.getAttribute('cy') === '20'
-      );
+      const emberEllipse = container.querySelector('ellipse[cx="18"][cy="20"][rx="6"][ry="2"]');
       expect(emberEllipse).toBeInTheDocument();
-      expect(emberEllipse).toHaveAttribute('rx', '6');
-      expect(emberEllipse).toHaveAttribute('ry', '2');
+      expect(emberEllipse).toHaveAttribute('fill', '#2a1510');
     });
 
-    it('should render flame paths with all expected color layers', () => {
+    it('renders 4 ember accent circles with correct attributes', () => {
+      const { container } = render(<FirePitSVG />);
+      const emberCircles = container.querySelectorAll('circle[fill="#8B3A1A"], circle[fill="#A04020"]');
+      expect(emberCircles.length).toBe(4);
+      emberCircles.forEach((circle) => {
+        expect(circle).toHaveAttribute('opacity');
+      });
+    });
+  });
+
+  describe('flames', () => {
+    it('renders flame paths with all expected color layers', () => {
       const { container } = render(<FirePitSVG />);
       const paths = container.querySelectorAll('path');
       const fillColors = new Set(Array.from(paths).map((p) => p.getAttribute('fill')));
 
-      // Should have outer flames (#D35400), mid flames (#E87A20), inner flames (#F5D060), core (#FFF8E0)
       expect(fillColors).toContain('#D35400');
       expect(fillColors).toContain('#E87A20');
       expect(fillColors).toContain('#F5D060');
       expect(fillColors).toContain('#FFF8E0');
     });
 
-    it('should render the white-hot core ellipse', () => {
+    it('renders the correct number of flame paths per layer', () => {
       const { container } = render(<FirePitSVG />);
-      const ellipses = container.querySelectorAll('ellipse');
-      const core = Array.from(ellipses).find(
-        (e) => e.getAttribute('cx') === '18' && e.getAttribute('cy') === '9'
-      );
+      const paths = container.querySelectorAll('path');
+      const outerFlames = Array.from(paths).filter((p) => p.getAttribute('fill') === '#D35400');
+      const midFlames = Array.from(paths).filter((p) => p.getAttribute('fill') === '#E87A20');
+      const innerFlames = Array.from(paths).filter((p) => p.getAttribute('fill') === '#F5D060');
+      const coreFlame = Array.from(paths).filter((p) => p.getAttribute('fill') === '#FFF8E0');
+
+      expect(outerFlames.length).toBe(7);
+      expect(midFlames.length).toBe(5);
+      expect(innerFlames.length).toBe(3);
+      expect(coreFlame.length).toBe(1);
+    });
+  });
+
+  describe('core', () => {
+    it('renders the white-hot core ellipse', () => {
+      const { container } = render(<FirePitSVG />);
+      const core = container.querySelector('ellipse[cx="18"][cy="9"][fill="#FFFFFF"]');
       expect(core).toBeInTheDocument();
-      expect(core).toHaveAttribute('fill', '#FFFFFF');
+      expect(core).toHaveAttribute('rx', '1.5');
+      expect(core).toHaveAttribute('ry', '2');
       expect(core).toHaveAttribute('opacity', '0.6');
     });
+  });
 
-    it('should render floating spark circles with opacity values', () => {
+  describe('sparks', () => {
+    it('renders spark circles with correct colors and opacities', () => {
       const { container } = render(<FirePitSVG />);
-      const circles = container.querySelectorAll('circle');
-      const sparkCircles = Array.from(circles).filter(
-        (c) => {
-          const cy = parseFloat(c.getAttribute('cy'));
-          const r = parseFloat(c.getAttribute('r'));
-          return cy < 10 && r < 2;
-        }
-      );
-      expect(sparkCircles.length).toBeGreaterThan(0);
-      sparkCircles.forEach((spark) => {
-        expect(spark).toHaveAttribute('opacity');
+      const sparkColors = ['#F5D060', '#E87A20', '#FFF8E0'];
+      const sparkCircles = Array.from(
+        container.querySelectorAll('circle'),
+      ).filter((c) => sparkColors.includes(c.getAttribute('fill')));
+      // 10 floating sparks + 3 ember circles (#F5D060, #E87A20, #FFF8E0) = 13
+      expect(sparkCircles.length).toBe(13);
+      sparkCircles.forEach((circle) => {
+        expect(circle).toHaveAttribute('opacity');
       });
     });
   });
 
-  describe('props', () => {
-    it('should apply the id prop to the group element', () => {
-      const { container } = render(<FirePitSVG id="custom-firepit" />);
+  describe('element structure', () => {
+    it('renders the expected number of child elements', () => {
+      const { container } = render(<FirePitSVG />);
       const g = container.querySelector('g');
-      expect(g).toHaveAttribute('id', 'custom-firepit');
+      const allElements = Array.from(g.children);
+      // 3 glow circles + 1 stone ring circle + 4 ember circles + 10 spark circles = 18 circles
+      // 1 ember ellipse + 1 core ellipse = 2 ellipses
+      // 7 outer flames + 5 mid flames + 3 inner flames + 1 core path = 16 paths
+      // total = 18 + 2 + 16 = 36
+      expect(allElements.length).toBe(36);
     });
 
-    it('should apply the className prop to the group element', () => {
-      const { container } = render(<FirePitSVG className="my-firepit-class" />);
+    it('renders the expected SVG element types', () => {
+      const { container } = render(<FirePitSVG />);
       const g = container.querySelector('g');
-      expect(g).toHaveAttribute('class', 'my-firepit-class');
-    });
+      const circles = g.querySelectorAll('circle');
+      const ellipses = g.querySelectorAll('ellipse');
+      const paths = g.querySelectorAll('path');
 
-    it('should pass through rest props as attributes', () => {
-      const { container } = render(<FirePitSVG data-test="firepit-test" aria-label="Fire Pit" />);
-      const g = container.querySelector('g');
-      expect(g).toHaveAttribute('data-test', 'firepit-test');
-      expect(g).toHaveAttribute('aria-label', 'Fire Pit');
+      expect(circles.length).toBe(18);
+      expect(ellipses.length).toBe(2);
+      expect(paths.length).toBe(16);
     });
+  });
 
-    it('should forward ref to the group element', () => {
-      const ref = { current: null };
-      render(<FirePitSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName.toLowerCase()).toBe('g');
-    });
-
-    it('should combine id, className, and rest props', () => {
-      const ref = { current: null };
-      const { container } = render(
-        <FirePitSVG id="test-id" className="test-class" data-custom="value" ref={ref} />
-      );
-      const g = container.querySelector('g');
-      expect(g).toHaveAttribute('id', 'test-id');
-      expect(g).toHaveAttribute('class', 'test-class');
-      expect(g).toHaveAttribute('data-custom', 'value');
-      expect(ref.current).toBe(g);
-    });
-
-    it('should handle null id and undefined className gracefully', () => {
-      const { container } = render(<FirePitSVG id={null} className={undefined} />);
-      const g = container.querySelector('g');
-      expect(g).not.toHaveAttribute('id');
-      expect(g).not.toHaveAttribute('class');
+  describe('displayName', () => {
+    it('has the correct displayName', () => {
+      expect(FirePitSVG.displayName).toBe('FirePitSVG');
     });
   });
 });

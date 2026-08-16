@@ -34,14 +34,14 @@ vi.mock('./HexMapToolbar.jsx', () => ({
             <button data-testid="toolbar-marching" onClick={() => setMarchingOrderOpen(true)}>Marching</button>
         </div>,
 }));
-vi.mock('./POILayer.jsx', () => ({ default: () => <g data-testid="poi-layer" /> }));
+vi.mock('./POILayer.jsx', () => ({ default: (props) => <g data-testid="poi-layer" {...props} /> }));
 vi.mock('./POIPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="poi-panel"><button data-testid="poi-panel-close" onClick={onClose}>Close</button></div> }));
 vi.mock('./POIContextMenu.jsx', () => ({ default: ({ selectedPoi, onClose }) => selectedPoi ? <g data-testid="poi-context-menu"><text onClick={onClose}>Close</text></g> : null }));
 vi.mock('./MarchingOrderPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="marching-panel"><button data-testid="marching-panel-close" onClick={onClose}>Close</button></div> }));
 vi.mock('./PartyMarkerLayer.jsx', () => ({ default: ({ position }) => position ? <g data-testid="party-marker" /> : null }));
 vi.mock('./RiverLayer.jsx', () => ({ default: () => <g data-testid="river-layer" /> }));
 vi.mock('./RoadLayer.jsx', () => ({ default: () => <g data-testid="road-layer" /> }));
-vi.mock('./TravelPathLayer.jsx', () => ({ default: () => <g data-testid="travel-path-layer" /> }));
+vi.mock('./TravelPathLayer.jsx', () => ({ default: ({ path }) => path && path.length > 0 ? <g data-testid="travel-path-layer" /> : null }));
 vi.mock('./WeatherOverlay.jsx', () => ({ default: ({ weather }) => weather ? <div data-testid="weather-overlay" /> : null }));
 vi.mock('./EventDialog.jsx', () => ({ default: ({ event, onAccept, onSkip, onReroll }) => event ? <div data-testid="event-dialog"><button data-testid="event-accept" onClick={onAccept}>Accept</button><button data-testid="event-skip" onClick={onSkip}>Skip</button><button data-testid="event-reroll" onClick={onReroll}>Reroll</button></div> : null }));
 vi.mock('./TravelPanel.jsx', () => ({ default: ({ isTravelActive }) => isTravelActive ? <div data-testid="travel-panel" /> : null }));
@@ -167,10 +167,6 @@ function makeEncounterGeneration(overrides = {}) {
     };
 }
 
-function makeHexMapSSESync(overrides = {}) {
-    return { handleSSEEvent: vi.fn(), ...overrides };
-}
-
 function makeTravelMgmt(overrides = {}) {
     return {
         travelMode: 'inactive', travelPace: 'normal',
@@ -203,7 +199,7 @@ function setupDefaultMocks() {
     usePoiManagement.mockReturnValue(makePoiManagement());
     useTravelManagement.mockReturnValue(makeTravelMgmt());
     useEncounterGeneration.mockReturnValue(makeEncounterGeneration());
-    useHexMapSSESync.mockReturnValue(makeHexMapSSESync());
+    useHexMapSSESync.mockReturnValue({ handleSSEEvent: vi.fn() });
     useMonstersData.mockReturnValue({ monsters: [], loading: false, error: null });
     useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry: vi.fn() });
     mapsService.formatMapName.mockReturnValue('Test Map');
@@ -237,6 +233,52 @@ describe('HexMap', () => {
             expect(screen.getByText('1 hex = 6 miles')).toBeInTheDocument();
             expect(screen.getByTestId('toolbar')).toBeInTheDocument();
             expect(mapSvg()).toBeInTheDocument();
+        });
+
+        it('renders the compass SVG and legend in loaded state', () => {
+            renderMap();
+            const compass = document.querySelector('.hex-map-compass svg');
+            expect(compass).toBeInTheDocument();
+            expect(compass).toHaveAttribute('viewBox', '0 0 48 48');
+            expect(compass).toHaveAttribute('width', '44');
+            expect(compass).toHaveAttribute('height', '44');
+            expect(screen.getByText('N')).toBeInTheDocument();
+            expect(screen.getByText('1 hex = 6 miles')).toBeInTheDocument();
+        });
+
+        it('renders all SVG defs for POI types', () => {
+            renderMap();
+            const defs = mapSvg().querySelector('defs');
+            expect(defs).toBeInTheDocument();
+            expect(defs.querySelector('#poi-camp')).toBeInTheDocument();
+            expect(defs.querySelector('#poi-city')).toBeInTheDocument();
+            expect(defs.querySelector('#poi-dungeon')).toBeInTheDocument();
+            expect(defs.querySelector('#poi-hazard')).toBeInTheDocument();
+            expect(defs.querySelector('#poi-landmark')).toBeInTheDocument();
+            expect(defs.querySelector('#poi-loreSite')).toBeInTheDocument();
+            expect(defs.querySelector('#poi-naturalWonder')).toBeInTheDocument();
+            expect(defs.querySelector('#poi-settlement')).toBeInTheDocument();
+            expect(defs.querySelector('#poi-tower')).toBeInTheDocument();
+        });
+
+        it('does not crash when onBack is not provided', () => {
+            expect(() => renderMap({ onBack: undefined })).not.toThrow();
+            expect(screen.getByTestId('toolbar')).toBeInTheDocument();
+        });
+    });
+
+    describe('SVG attributes', () => {
+        it('sets draggable to false on the map SVG', () => {
+            renderMap();
+            expect(mapSvg()).toHaveAttribute('draggable', 'false');
+        });
+
+        it('prevents drag start on the map SVG', () => {
+            renderMap();
+            const e = new Event('dragstart', { bubbles: true, cancelable: true });
+            const spy = vi.spyOn(e, 'preventDefault');
+            fireEvent(mapSvg(), e);
+            expect(spy).toHaveBeenCalled();
         });
     });
 
@@ -290,6 +332,17 @@ describe('HexMap', () => {
             expect(screen.queryByTestId('party-marker')).not.toBeInTheDocument();
         });
 
+        it('renders the travel path layer when a path exists', () => {
+            useTravelManagement.mockReturnValue(makeTravelMgmt({ path: [{ q: 10, r: 5 }, { q: 11, r: 5 }] }));
+            renderMap();
+            expect(screen.getByTestId('travel-path-layer')).toBeInTheDocument();
+        });
+
+        it('does not render the travel path layer when there is no path', () => {
+            renderMap();
+            expect(screen.queryByTestId('travel-path-layer')).not.toBeInTheDocument();
+        });
+
         it('opens and closes the POI panel from the toolbar', () => {
             renderMap();
             expect(screen.queryByTestId('poi-panel')).not.toBeInTheDocument();
@@ -311,6 +364,21 @@ describe('HexMap', () => {
         it('does not render the event dialog without a pending event', () => {
             renderMap();
             expect(screen.queryByTestId('event-dialog')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('POI layer props', () => {
+        it('passes validLinkedMaps to the POI layer', () => {
+            renderMap();
+            const poiLayer = screen.getByTestId('poi-layer');
+            expect(poiLayer).toHaveAttribute('validLinkedMaps');
+        });
+
+        it('passes partyPosition to the POI layer when set', () => {
+            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 } }));
+            renderMap();
+            const poiLayer = screen.getByTestId('poi-layer');
+            expect(poiLayer).toHaveAttribute('partyPosition');
         });
     });
 

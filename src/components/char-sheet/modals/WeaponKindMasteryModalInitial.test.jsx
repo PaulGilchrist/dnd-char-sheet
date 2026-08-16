@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/automation/index.js', () => ({
@@ -58,49 +59,46 @@ describe('WeaponKindMasteryModal', () => {
   });
 
   describe('initial render', () => {
-    it('renders the modal overlay with header, body, and action buttons', async () => {
+    it('renders the modal overlay structure with overlay, modal, header, body, and action buttons', () => {
       renderWithWeapons();
-      await waitFor(() => {
-        expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-        expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-        expect(document.querySelector('.sp-header')).toBeInTheDocument();
-        expect(document.querySelector('.sp-body')).toBeInTheDocument();
-        expect(document.querySelector('.sp-actions')).toBeInTheDocument();
-      });
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
+      expect(document.querySelector('.sp-header')).toBeInTheDocument();
+      expect(document.querySelector('.sp-body')).toBeInTheDocument();
+      expect(document.querySelector('.sp-actions')).toBeInTheDocument();
     });
 
-    it('renders the Weapon Mastery header with crosshairs icon', async () => {
+    it('renders the Weapon Mastery header with crosshairs icon and correct title', () => {
       renderWithWeapons();
-      await waitFor(() => {
-        expect(document.querySelector('.fa-solid.fa-crosshairs')).toBeInTheDocument();
-        const header = document.querySelector('.sp-header');
-        expect(header.textContent).toContain('Weapon Mastery');
-      });
+      const icon = document.querySelector('.fa-solid.fa-crosshairs');
+      expect(icon).toBeInTheDocument();
+      const header = document.querySelector('.sp-header');
+      expect(header.textContent).toContain('Weapon Mastery');
     });
 
-    it('renders the instruction text with maxKinds count', async () => {
+    it('renders the instruction text with the correct maxKinds count and pluralization', () => {
       renderWithWeapons();
-      await waitFor(() => {
-        const bodyP = document.querySelector('.sp-body p');
-        expect(bodyP.textContent).toContain('Choose up to');
-        expect(bodyP.textContent).toContain('2');
-        expect(bodyP.textContent).toContain('weapons');
-      });
+      const bodyP = document.querySelector('.sp-body p');
+      expect(bodyP.textContent).toContain('Choose up to');
+      expect(bodyP.textContent).toContain('2');
+      expect(bodyP.textContent).toContain('weapons');
     });
 
-    it('renders the Select and Skip buttons', async () => {
-      renderWithWeapons();
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-      });
+    it('renders the instruction text with "(Melee only)" suffix when meleeOnly is true', () => {
+      renderWithWeapons({ meleeOnly: true });
+      const bodyP = document.querySelector('.sp-body p');
+      expect(bodyP.textContent).toContain('Melee only');
     });
 
-    it('renders the Select button disabled when no weapons are selected', async () => {
+    it('renders Select and Skip buttons', () => {
       renderWithWeapons();
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Select' })).toBeDisabled();
-      });
+      expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+    });
+
+    it('disables the Select button when no weapons are selected', () => {
+      renderWithWeapons();
+      expect(screen.getByRole('button', { name: 'Select' })).toBeDisabled();
     });
   });
 });

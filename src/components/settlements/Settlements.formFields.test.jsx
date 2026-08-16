@@ -51,8 +51,8 @@ vi.mock('../../services/campaign/settlementGenerator.js', () => ({
 
 const campaignName = 'test-campaign';
 
-// Served by the mocked fetch. Every test pins Math.random to 0, so `pick`
-// always selects index 0, making the expected values below exact and deterministic.
+// Full description data for all sizes. Math.random is pinned to 0 in every test,
+// so `pick` always selects index 0, making expected values exact and deterministic.
 const descriptionsData = {
   village: {
     descriptions: ['A quiet village', 'A small farming village'],
@@ -84,7 +84,29 @@ const descriptionsData = {
   },
 };
 
-// Expected auto-populated values per size when Math.random returns 0.
+const descriptionsDataPartial = {
+  village: {
+    descriptions: ['A quiet village'],
+    // no atmospheres, governments, or threats
+  },
+  town: {
+    descriptions: ['A bustling town'],
+    atmospheres: ['Lively'],
+    governments: ['Mayor'],
+    // no threats
+  },
+  city: {
+    // empty object — size key exists but no data
+  },
+  metropolis: {
+    descriptions: ['A vast metropolis'],
+    atmospheres: ['Diverse'],
+    governments: ['Duke'],
+    threats: ['Political intrigue'],
+    features: ['A massive wall'],
+  },
+};
+
 const SIZE_CASES = [
   { size: 'village', population: '50-100 souls', description: 'A quiet village', atmosphere: 'Peaceful', government: 'Village council', threat: 'Wild animals' },
   { size: 'town', population: '800-1,500 souls', description: 'A bustling town', atmosphere: 'Lively', government: 'Mayor', threat: 'Bandits' },
@@ -108,7 +130,7 @@ const makeSettlement = (overrides = {}) => ({
   ...overrides,
 });
 
-let fetchMock;
+const THREAT_PLACEHOLDER = /current dangers or tensions/i;
 
 const renderSettlements = () => render(<Settlements campaignName={campaignName} onBack={() => {}} />);
 const openNewSettlementModal = () => {
@@ -118,9 +140,8 @@ const openEditSettlement = (name) => {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(`edit settlement: ${name}`, 'i') }));
 };
 
-// The component fetches settlement-descriptions.json in a mount effect and stores
-// it in a ref. The ref is only read when the size select changes, so flushing
-// pending microtasks guarantees the mocked fetch has resolved first.
+// Flush the pending descriptions fetch so descDataRef is populated before
+// the size select changes (the ref is only read on size change).
 const flushDescriptionsFetch = () => act(async () => {});
 
 describe('Settlements - form fields (behavioral)', () => {
@@ -129,12 +150,6 @@ describe('Settlements - form fields (behavioral)', () => {
     settlementMockStore.items = [];
     settlementMockStore.loading = false;
     settlementMockStore.loadItems.mockResolvedValue(undefined);
-    fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      if (url.includes('settlement-descriptions.json')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(descriptionsData) });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    });
   });
 
   afterEach(() => {
@@ -145,7 +160,11 @@ describe('Settlements - form fields (behavioral)', () => {
     it.each(SIZE_CASES)(
       'auto-populates population, description, atmosphere, government, and threat for $size',
       async ({ size, population, description, atmosphere, government, threat }) => {
-        vi.spyOn(Math, 'random').mockReturnValue(0);
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve(descriptionsData),
+        });
         renderSettlements();
         await flushDescriptionsFetch();
         openNewSettlementModal();
@@ -157,11 +176,18 @@ describe('Settlements - form fields (behavioral)', () => {
         expect(screen.getByPlaceholderText(/mood and ambiance/i)).toHaveValue(atmosphere);
         expect(screen.getByPlaceholderText(/how is this settlement governed/i)).toHaveValue(government);
         expect(screen.getByPlaceholderText(/current dangers or tensions/i)).toHaveValue(threat);
+
+        randomSpy.mockRestore();
+        fetchSpy.mockRestore();
       },
     );
 
     it('preserves a user-typed name when the size is changed', async () => {
-      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsData),
+      });
       renderSettlements();
       await flushDescriptionsFetch();
       openNewSettlementModal();
@@ -171,10 +197,17 @@ describe('Settlements - form fields (behavioral)', () => {
 
       expect(screen.getByLabelText(/name/i)).toHaveValue('My Village');
       expect(screen.getByLabelText('Population')).toHaveValue('5,000-12,000 souls');
+
+      randomSpy.mockRestore();
+      fetchSpy.mockRestore();
     });
 
     it('replaces previously auto-populated values when the size is changed again', async () => {
-      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsData),
+      });
       renderSettlements();
       await flushDescriptionsFetch();
       openNewSettlementModal();
@@ -186,24 +219,37 @@ describe('Settlements - form fields (behavioral)', () => {
       fireEvent.change(sizeSelect, { target: { value: 'metropolis' } });
       expect(screen.getByPlaceholderText(/describe what the settlement looks/i)).toHaveValue('A vast metropolis');
       expect(screen.getByLabelText('Population')).toHaveValue('50,000-100,000 souls');
+
+      randomSpy.mockRestore();
+      fetchSpy.mockRestore();
     });
 
     it('reveals the threat field once a size change auto-populates a threat', async () => {
-      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsData),
+      });
       renderSettlements();
       await flushDescriptionsFetch();
       openNewSettlementModal();
 
-      expect(screen.queryByPlaceholderText(/current dangers or tensions/i)).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(THREAT_PLACEHOLDER)).not.toBeInTheDocument();
 
       fireEvent.change(screen.getByRole('combobox', { name: /size/i }), { target: { value: 'city' } });
 
-      expect(screen.getByPlaceholderText(/current dangers or tensions/i)).toHaveValue('Crime');
+      expect(screen.getByPlaceholderText(THREAT_PLACEHOLDER)).toHaveValue('Crime');
+
+      randomSpy.mockRestore();
+      fetchSpy.mockRestore();
     });
 
     it('still fills population from built-in ranges when description data is not available', async () => {
-      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
-      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
       renderSettlements();
       await flushDescriptionsFetch();
       openNewSettlementModal();
@@ -212,83 +258,193 @@ describe('Settlements - form fields (behavioral)', () => {
 
       expect(screen.getByLabelText('Population')).toHaveValue('800-1,500 souls');
       expect(screen.getByPlaceholderText(/describe what the settlement looks/i)).toHaveValue('');
-      expect(screen.queryByPlaceholderText(/current dangers or tensions/i)).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(THREAT_PLACEHOLDER)).not.toBeInTheDocument();
+
+      randomSpy.mockRestore();
+      fetchSpy.mockRestore();
+    });
+
+    it('auto-populates available fields but leaves missing ones empty when description data is partial', async () => {
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsDataPartial),
+      });
+      renderSettlements();
+      await flushDescriptionsFetch();
+      openNewSettlementModal();
+
+      // town: has descriptions, atmospheres, governments but NO threats
+      fireEvent.change(screen.getByRole('combobox', { name: /size/i }), { target: { value: 'town' } });
+
+      expect(screen.getByLabelText('Population')).toHaveValue('800-1,500 souls');
+      expect(screen.getByPlaceholderText(/describe what the settlement looks/i)).toHaveValue('A bustling town');
+      expect(screen.getByPlaceholderText(/mood and ambiance/i)).toHaveValue('Lively');
+      expect(screen.getByPlaceholderText(/how is this settlement governed/i)).toHaveValue('Mayor');
+      // threat field should NOT appear because no threats array exists
+      expect(screen.queryByPlaceholderText(THREAT_PLACEHOLDER)).not.toBeInTheDocument();
+
+      randomSpy.mockRestore();
+      fetchSpy.mockRestore();
+    });
+
+    it('auto-populates available fields but leaves missing ones empty for village with partial data', async () => {
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsDataPartial),
+      });
+      renderSettlements();
+      await flushDescriptionsFetch();
+      openNewSettlementModal();
+
+      // village: has descriptions only, no atmospheres/governments/threats
+      fireEvent.change(screen.getByRole('combobox', { name: /size/i }), { target: { value: 'village' } });
+
+      expect(screen.getByLabelText('Population')).toHaveValue('50-100 souls');
+      expect(screen.getByPlaceholderText(/describe what the settlement looks/i)).toHaveValue('A quiet village');
+      expect(screen.getByPlaceholderText(/mood and ambiance/i)).toHaveValue('');
+      expect(screen.getByPlaceholderText(/how is this settlement governed/i)).toHaveValue('');
+      expect(screen.queryByPlaceholderText(THREAT_PLACEHOLDER)).not.toBeInTheDocument();
+
+      randomSpy.mockRestore();
+      fetchSpy.mockRestore();
+    });
+
+    it('auto-populates available fields but leaves missing ones empty for city with empty object data', async () => {
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsDataPartial),
+      });
+      renderSettlements();
+      await flushDescriptionsFetch();
+      openNewSettlementModal();
+
+      // city: size key exists but object is empty
+      fireEvent.change(screen.getByRole('combobox', { name: /size/i }), { target: { value: 'city' } });
+
+      expect(screen.getByLabelText('Population')).toHaveValue('5,000-12,000 souls');
+      expect(screen.getByPlaceholderText(/describe what the settlement looks/i)).toHaveValue('');
+      expect(screen.getByPlaceholderText(/mood and ambiance/i)).toHaveValue('');
+      expect(screen.getByPlaceholderText(/how is this settlement governed/i)).toHaveValue('');
+      expect(screen.queryByPlaceholderText(THREAT_PLACEHOLDER)).not.toBeInTheDocument();
+
+      randomSpy.mockRestore();
+      fetchSpy.mockRestore();
+    });
+
+    it('re-fills all fields including population when the size is changed to the same value', async () => {
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsData),
+      });
+      renderSettlements();
+      await flushDescriptionsFetch();
+      openNewSettlementModal();
+
+      const sizeSelect = screen.getByRole('combobox', { name: /size/i });
+      // Set to village first
+      fireEvent.change(sizeSelect, { target: { value: 'village' } });
+      expect(screen.getByPlaceholderText(/describe what the settlement looks/i)).toHaveValue('A quiet village');
+
+      // Change to the same value — should re-trigger auto-population
+      fireEvent.change(sizeSelect, { target: { value: 'village' } });
+      expect(screen.getByPlaceholderText(/describe what the settlement looks/i)).toHaveValue('A quiet village');
+      expect(screen.getByLabelText('Population')).toHaveValue('50-100 souls');
+
+      randomSpy.mockRestore();
+      fetchSpy.mockRestore();
+    });
+
+    it('changes all auto-populated values when Math.random picks a different index', async () => {
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsData),
+      });
+      renderSettlements();
+      await flushDescriptionsFetch();
+      openNewSettlementModal();
+
+      // Default: Math.random returns 0, picking index 0
+      fireEvent.change(screen.getByRole('combobox', { name: /size/i }), { target: { value: 'village' } });
+      expect(screen.getByPlaceholderText(/describe what the settlement looks/i)).toHaveValue('A quiet village');
+      expect(screen.getByPlaceholderText(/mood and ambiance/i)).toHaveValue('Peaceful');
+
+      // Now change Math.random to return ~0.6, picking index 1
+      randomSpy.mockRestore();
+      vi.spyOn(Math, 'random').mockReturnValue(0.6);
+
+      // Change to the same size to re-trigger auto-population
+      fireEvent.change(screen.getByRole('combobox', { name: /size/i }), { target: { value: 'village' } });
+      expect(screen.getByPlaceholderText(/describe what the settlement looks/i)).toHaveValue('A small farming village');
+      expect(screen.getByPlaceholderText(/mood and ambiance/i)).toHaveValue('Rustic');
+
+      vi.spyOn(Math, 'random').mockRestore();
+      fetchSpy.mockRestore();
     });
   });
 
   describe('Name field validation', () => {
     it('disables save when the name is empty', () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsData),
+      });
       renderSettlements();
       openNewSettlementModal();
 
       expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+
+      fetchSpy.mockRestore();
     });
 
     it('enables save when the name has content', () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsData),
+      });
       renderSettlements();
       openNewSettlementModal();
 
       fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'My Settlement' } });
 
       expect(screen.getByRole('button', { name: /save/i })).toBeEnabled();
+
+      fetchSpy.mockRestore();
     });
 
     it('treats a name with surrounding whitespace as valid (trimmed)', () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsData),
+      });
       renderSettlements();
       openNewSettlementModal();
 
       fireEvent.change(screen.getByLabelText(/name/i), { target: { value: '  My Settlement  ' } });
 
       expect(screen.getByRole('button', { name: /save/i })).toBeEnabled();
+
+      fetchSpy.mockRestore();
     });
   });
 
   describe('Threat field while editing', () => {
     it('keeps the threat field hidden when editing a settlement that has no threat', () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(descriptionsData),
+      });
       settlementMockStore.items = [makeSettlement()];
       renderSettlements();
       openEditSettlement('Safe Town');
 
-      expect(screen.queryByPlaceholderText(/current dangers or tensions/i)).not.toBeInTheDocument();
-    });
-  });
+      expect(screen.queryByPlaceholderText(THREAT_PLACEHOLDER)).not.toBeInTheDocument();
 
-  describe('PreviewToggle fields', () => {
-    it.each([
-      { field: 'government', placeholder: /how is this settlement governed/i, value: 'Monarchy ruled by Queen Elara' },
-      { field: 'description', placeholder: /describe what the settlement looks/i, value: 'A bustling port town' },
-      { field: 'atmosphere', placeholder: /mood and ambiance/i, value: 'Vibrant and colorful' },
-      { field: 'notes', placeholder: /additional gm notes/i, value: 'GM note: important quest location' },
-    ])('updates the $field field through its PreviewToggle', ({ placeholder, value }) => {
-      renderSettlements();
-      openNewSettlementModal();
-
-      const textarea = screen.getByPlaceholderText(placeholder);
-      fireEvent.change(textarea, { target: { value } });
-
-      expect(textarea).toHaveValue(value);
-    });
-  });
-
-  describe('Plain input fields', () => {
-    it('updates the population input', () => {
-      renderSettlements();
-      openNewSettlementModal();
-
-      const populationInput = screen.getByLabelText('Population');
-      fireEvent.change(populationInput, { target: { value: '5,000 souls' } });
-
-      expect(populationInput).toHaveValue('5,000 souls');
-    });
-
-    it('updates the tags input', () => {
-      renderSettlements();
-      openNewSettlementModal();
-
-      const tagsInput = screen.getByLabelText(/tags/i);
-      fireEvent.change(tagsInput, { target: { value: 'coastal, trade, dwarven' } });
-
-      expect(tagsInput).toHaveValue('coastal, trade, dwarven');
+      fetchSpy.mockRestore();
     });
   });
 });

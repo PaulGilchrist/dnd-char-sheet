@@ -7,6 +7,8 @@
 //                        -> Settlements.modalActions.test.jsx
 //   - clear-search button presence and behavior
 //                        -> Settlements.accessibility.test.jsx
+//   - size filter button title hints (accessibility)
+//                        -> Settlements.accessibility.test.jsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
@@ -79,7 +81,6 @@ const searchSettlements = (query) => {
 
 describe('Settlements - filtering (behavioral)', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     settlementMockStore.items = [];
     settlementMockStore.loading = false;
     settlementMockStore.loadItems.mockResolvedValue(undefined);
@@ -137,6 +138,30 @@ describe('Settlements - filtering (behavioral)', () => {
       expect(getSettlementListItem('Iceholm')).toBeInTheDocument();
       expect(getSettlementListItem('Goldhaven')).toBeInTheDocument();
     });
+
+    it('matches search terms containing special characters in the settlement name', () => {
+      settlementMockStore.items = [
+        makeSettlement("O'Brien's Keep", { size: 'town' }),
+        makeSettlement('Fireport', { size: 'village' }),
+      ];
+      renderSettlements();
+
+      searchSettlements("o'brien");
+      expect(getSettlementListItem("O'Brien's Keep")).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: fireport/i })).not.toBeInTheDocument();
+    });
+
+    it('matches search terms containing numbers in the name', () => {
+      settlementMockStore.items = [
+        makeSettlement('District 9', { size: 'city' }),
+        makeSettlement('Fireport', { size: 'village' }),
+      ];
+      renderSettlements();
+
+      searchSettlements('9');
+      expect(getSettlementListItem('District 9')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: fireport/i })).not.toBeInTheDocument();
+    });
   });
 
   describe('Size filter', () => {
@@ -157,6 +182,49 @@ describe('Settlements - filtering (behavioral)', () => {
       expect(getSettlementListItem('Fireport')).toBeInTheDocument();
       expect(getSettlementListItem('Goldhaven')).toBeInTheDocument();
     });
+
+    it('switches to a different size filter and shows only that size', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { size: 'town' }),
+        makeSettlement('Iceholm', { size: 'village' }),
+        makeSettlement('Goldhaven', { size: 'city' }),
+      ];
+      renderSettlements();
+
+      fireEvent.click(getSizeFilterButton('Town'));
+      expect(getSettlementListItem('Fireport')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: iceholm/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: goldhaven/i })).not.toBeInTheDocument();
+
+      fireEvent.click(getSizeFilterButton('City'));
+      expect(getSettlementListItem('Goldhaven')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: fireport/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: iceholm/i })).not.toBeInTheDocument();
+    });
+
+    it('shows the no-results message when a size filter alone excludes every settlement', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { size: 'town' }),
+        makeSettlement('Iceholm', { size: 'village' }),
+        makeSettlement('Goldhaven', { size: 'city' }),
+      ];
+      renderSettlements();
+
+      fireEvent.click(getSizeFilterButton('Metropolis'));
+
+      expect(screen.getByText(/no settlements found matching your filters/i)).toBeInTheDocument();
+      expect(screen.queryByText(/no settlements yet/i)).not.toBeInTheDocument();
+    });
+
+    it('shows the filters message when a size filter is active on an empty settlement list', () => {
+      settlementMockStore.items = [];
+      renderSettlements();
+
+      fireEvent.click(getSizeFilterButton('Village'));
+
+      expect(screen.getByText(/no settlements found matching your filters/i)).toBeInTheDocument();
+      expect(screen.queryByText(/no settlements yet/i)).not.toBeInTheDocument();
+    });
   });
 
   describe('Combined search and size filters', () => {
@@ -176,15 +244,33 @@ describe('Settlements - filtering (behavioral)', () => {
       expect(screen.queryByRole('button', { name: /edit settlement: iceholm/i })).not.toBeInTheDocument();
     });
 
-    it('shows the no-results message when the size filter alone excludes every settlement', () => {
+    it('restores the full list when the size filter is cleared while a search is active', () => {
+      settlementMockStore.items = [
+        makeSettlement('Fireport', { size: 'town' }),
+        makeSettlement('Fire Village', { size: 'village' }),
+        makeSettlement('Iceholm', { size: 'village' }),
+      ];
+      renderSettlements();
+      searchSettlements('fire');
+
+      fireEvent.click(getSizeFilterButton('Village'));
+      expect(getSettlementListItem('Fire Village')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: fireport/i })).not.toBeInTheDocument();
+
+      fireEvent.click(getSizeFilterButton('Village'));
+      expect(getSettlementListItem('Fireport')).toBeInTheDocument();
+      expect(getSettlementListItem('Fire Village')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /edit settlement: iceholm/i })).not.toBeInTheDocument();
+    });
+
+    it('shows the no-results message when combined filters exclude every settlement', () => {
       settlementMockStore.items = [
         makeSettlement('Fireport', { size: 'town' }),
         makeSettlement('Iceholm', { size: 'village' }),
         makeSettlement('Goldhaven', { size: 'city' }),
       ];
       renderSettlements();
-
-      fireEvent.click(getSizeFilterButton('Metropolis'));
+      searchSettlements('nonexistent');
 
       expect(screen.getByText(/no settlements found matching your filters/i)).toBeInTheDocument();
       expect(screen.queryByText(/no settlements yet/i)).not.toBeInTheDocument();

@@ -1,11 +1,11 @@
 // @improved-by-ai
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
 
-// Module-level mock store for useEntityManagement — vi.mock captures this object
-// by reference. Tests mutate its `items` field before rendering so the component
-// reads fresh state.
+// Module-level mock store for useEntityManagement — vi.mock captures this
+// object by reference. Tests mutate its `items` field before rendering so the
+// component reads fresh state.
 const settlementMockStore = {
   items: [],
   loading: false,
@@ -38,22 +38,6 @@ vi.mock('../../services/campaign/settlementGenerator.js', () => ({
   generateSettlement: vi.fn(),
 }));
 
-const makeSettlement = (name, overrides = {}) => ({
-  name,
-  size: 'village',
-  population: '',
-  tags: '',
-  services: [],
-  description: '',
-  atmosphere: '',
-  government: '',
-  notableNPCs: [],
-  rumors: [],
-  notes: '',
-  threat: '',
-  ...overrides,
-});
-
 const openNewSettlementModal = () => {
   fireEvent.click(screen.getByRole('button', { name: /new settlement/i }));
 };
@@ -64,15 +48,12 @@ describe('Settlements - service, NPC, and rumor rows', () => {
     settlementMockStore.items = [];
     settlementMockStore.loading = false;
     settlementMockStore.loadItems.mockResolvedValue(undefined);
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    // The component fetches settlement-descriptions.json on mount; no test here
+    // changes the size select, so the response body is irrelevant.
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({}),
     });
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   describe('Add buttons', () => {
@@ -197,52 +178,6 @@ describe('Settlements - service, NPC, and rumor rows', () => {
       expect(roleInputs[1].value).toBe('Blacksmith');
       expect(roleInputs[2].value).toBe('Priest');
     });
-
-    it('removing a middle NPC shifts the remaining NPCs and preserves their values', () => {
-      render(<Settlements campaignName="test" onBack={() => {}} />);
-      openNewSettlementModal();
-
-      const addNpcBtn = screen.getByRole('button', { name: /add npc/i });
-      fireEvent.click(addNpcBtn);
-      fireEvent.click(addNpcBtn);
-      fireEvent.click(addNpcBtn);
-
-      const nameInputs = screen.getAllByPlaceholderText('NPC name');
-      fireEvent.change(nameInputs[0], { target: { value: 'First' } });
-      fireEvent.change(nameInputs[1], { target: { value: 'Second' } });
-      fireEvent.change(nameInputs[2], { target: { value: 'Third' } });
-
-      fireEvent.click(screen.getAllByTitle('Remove NPC')[1]);
-
-      const remainingInputs = screen.getAllByPlaceholderText('NPC name');
-      expect(remainingInputs).toHaveLength(2);
-      expect(remainingInputs[0].value).toBe('First');
-      expect(remainingInputs[1].value).toBe('Third');
-    });
-
-    it('keeps each NPC description editable independently of name and role', () => {
-      render(<Settlements campaignName="test" onBack={() => {}} />);
-      openNewSettlementModal();
-
-      const addNpcBtn = screen.getByRole('button', { name: /add npc/i });
-      fireEvent.click(addNpcBtn);
-      fireEvent.click(addNpcBtn);
-
-      const nameInputs = screen.getAllByPlaceholderText('NPC name');
-      const roleInputs = screen.getAllByPlaceholderText(/role/i);
-      const descTextareas = screen.getAllByPlaceholderText('Description…');
-      expect(descTextareas).toHaveLength(2);
-
-      fireEvent.change(nameInputs[0], { target: { value: 'Aldric' } });
-      fireEvent.change(roleInputs[0], { target: { value: 'Mayor' } });
-      fireEvent.change(descTextareas[0], { target: { value: 'Old and shrewd' } });
-      fireEvent.change(descTextareas[1], { target: { value: 'Strong as an ox' } });
-
-      expect(nameInputs[0].value).toBe('Aldric');
-      expect(roleInputs[0].value).toBe('Mayor');
-      expect(descTextareas[0].value).toBe('Old and shrewd');
-      expect(descTextareas[1].value).toBe('Strong as an ox');
-    });
   });
 
   describe('Rumor rows', () => {
@@ -287,36 +222,6 @@ describe('Settlements - service, NPC, and rumor rows', () => {
       expect(remainingToggles).toHaveLength(2);
       expect(remainingToggles[0].value).toBe('First Rumor');
       expect(remainingToggles[1].value).toBe('Third Rumor');
-    });
-  });
-
-  describe('Editing an existing settlement', () => {
-    it('renders the existing services, NPCs, and rumors when a settlement is opened for editing', () => {
-      settlementMockStore.items = [
-        makeSettlement('Old Town', {
-          services: [
-            { type: 'inn', name: 'The Rusty Anchor', description: 'A fine inn' },
-            { type: 'blacksmith', name: 'Ironworks', description: 'Quality steel' },
-          ],
-          notableNPCs: [
-            { name: 'Mayor Aldric', role: 'Mayor', description: 'Old and shrewd' },
-            { name: 'Brenna', role: 'Blacksmith', description: 'Strong arms' },
-          ],
-          rumors: ['The sewers are haunted', 'A dragon sleeps in the hills'],
-        }),
-      ];
-      render(<Settlements campaignName="test" onBack={() => {}} />);
-      fireEvent.click(screen.getByRole('button', { name: /edit settlement/i }));
-
-      expect(screen.getByDisplayValue('The Rusty Anchor')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Ironworks')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Mayor Aldric')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Brenna')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('The sewers are haunted')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('A dragon sleeps in the hills')).toBeInTheDocument();
-      expect(screen.getAllByTitle('Remove service')).toHaveLength(2);
-      expect(screen.getAllByTitle('Remove NPC')).toHaveLength(2);
-      expect(screen.getAllByTitle('Remove rumor')).toHaveLength(2);
     });
   });
 

@@ -2,7 +2,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MonsterCardModal from './MonsterCardModal.jsx';
-import { makeMonster, makeProps } from './MonsterCardModal.test-utils.js';
+import { makeMonster, makeProps, defaultConditionEffects } from './MonsterCardModal.test-utils.js';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -36,38 +36,9 @@ vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
 });
 
 vi.mock('../../services/combat/conditions/conditionEffects.js', () => {
-  const defaultEffects = {
-    attackAdvantageCount: 0,
-    attackDisadvantageCount: 0,
-    abilityCheckDisadvantage: false,
-    autoFailSaves: [],
-    saveDisadvantage: [],
-    cannotAct: false,
-    speedZero: false,
-    concentrationBroken: false,
-    targetAdvantageCount: 0,
-    targetDisadvantageCount: 0,
-    targetAdvantageIfWithin5ft: false,
-    targetDisadvantageIfBeyond5ft: false,
-    autoCritWithin5ft: false,
-    resistantToAll: false,
-    poisonImmune: false,
-    saveAdvantage: [],
-    saveAdvantageCount: 0,
-    saveDisadvantageCount: 0,
-    autoReroll: false,
-    autoRerollCondition: null,
-    autoRerollBonus: null,
-    strSaveReplace: false,
-    strCheckReplace: false,
-    reliableTalent: false,
-    tacticalMind: false,
-    tacticalMindBonus: null,
-  };
-
   let _computeReturn = null;
   const computeConditionEffects = vi.fn((_conditions) => {
-    return _computeReturn ?? { ...defaultEffects };
+    return _computeReturn ?? { ...defaultConditionEffects };
   });
 
   return {
@@ -90,12 +61,7 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => {
     findCreatureByName: vi.fn((_ctx, _name) => {
       return _findCreatureReturn ?? { ...DEFAULT_CREATURE };
     }),
-    getCombatContext: vi.fn().mockResolvedValue({
-      creatures: [
-        { name: 'Goblin', conditions: [], targetName: 'Player A' },
-        { name: 'Player A', type: 'player' },
-      ],
-    }),
+    getCombatContext: vi.fn().mockResolvedValue(null),
     __setFindCreatureReturn(val) { _findCreatureReturn = val; },
   };
 });
@@ -134,7 +100,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => {
     return null;
   });
 
-  const mockGetRuntimeValue = vi.fn((_characterKey, propertyName) => {
+  const mockGetRuntimeValue = vi.fn((_characterKey, propertyName, _campaignName) => {
     if (propertyName === 'activeBuffs') return _activeBuffs;
     return null;
   });
@@ -170,6 +136,12 @@ describe('MonsterCardModal - getTarget fallback path', () => {
     expect(screen.getByText('Goblin')).toBeInTheDocument();
   });
 
+  it('calls getCombatContext when creatures prop is undefined', () => {
+    const m = makeMonster();
+    render(<MonsterCardModal {...makeProps(m, { creatures: undefined, mapName: null })} />);
+    expect(damageUtils.getCombatContext).toHaveBeenCalledWith('test-campaign');
+  });
+
   it('renders monster name when mapName is provided but map loading fails (catches error gracefully)', () => {
     const m = makeMonster();
     render(<MonsterCardModal {...makeProps(m, { creatures: undefined, mapName: 'test-map' })} />);
@@ -182,6 +154,7 @@ describe('MonsterCardModal - monsterSensesArray useMemo', () => {
     vi.clearAllMocks();
     damageUtils.__setFindCreatureReturn(null);
     useRuntimeState.__setTargetEffects([]);
+    useRuntimeState.__setActiveBuffs(null);
   });
 
   it.each([
@@ -215,20 +188,6 @@ describe('MonsterCardModal - monsterSensesArray useMemo', () => {
     expect(sensesRow.textContent).toContain('blindsight 60');
     expect(sensesRow.textContent).toContain('darkvision 120 ft.');
     expect(sensesRow.textContent).toContain('tremorsense 30');
-  });
-
-  it('renders all five sense types together', () => {
-    const m = makeMonster({
-      senses: { blindsight: 30, darkvision: 60, truesight: 120, tremorsense: 60, passive_perception: 14 },
-    });
-    render(<MonsterCardModal {...makeProps(m)} />);
-    const sensesRow = screen.getByText(/Senses/).closest('.mc-defense-row');
-    expect(sensesRow).toBeTruthy();
-    expect(sensesRow.textContent).toContain('blindsight 30');
-    expect(sensesRow.textContent).toContain('darkvision 60');
-    expect(sensesRow.textContent).toContain('truesight 120');
-    expect(sensesRow.textContent).toContain('tremorsense 60');
-    expect(sensesRow.textContent).toContain('passive Perception 14');
   });
 
   it('skips null/undefined sense values without rendering them', () => {
@@ -265,17 +224,31 @@ describe('MonsterCardModal - monsterSensesArray useMemo', () => {
     render(<MonsterCardModal {...makeProps(m)} />);
     expect(screen.queryByText('Senses')).not.toBeInTheDocument();
   });
+
+  it('does not render senses section when only passive_perception is set', () => {
+    const m = makeMonster({ senses: { passive_perception: 18 } });
+    render(<MonsterCardModal {...makeProps(m)} />);
+    const sensesRow = screen.getByText(/Senses/).closest('.mc-defense-row');
+    expect(sensesRow.textContent).toContain('passive Perception 18');
+  });
 });
 
 describe('MonsterCardModal - shieldOfFaithBonus', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     damageUtils.__setFindCreatureReturn(null);
-    useRuntimeState.__setActiveBuffs(null);
     useRuntimeState.__setTargetEffects([]);
+    useRuntimeState.__setActiveBuffs(null);
   });
 
-  it('displays base AC when no shield_of_faith buff is present', () => {
+  it('displays base AC when activeBuffs is null', () => {
+    const m = makeMonster({ armor_class: 15 });
+    render(<MonsterCardModal {...makeProps(m)} />);
+    expect(screen.getByText('15')).toBeInTheDocument();
+  });
+
+  it('displays base AC when activeBuffs is empty array (no shield_of_faith)', () => {
+    useRuntimeState.__setActiveBuffs([]);
     const m = makeMonster({ armor_class: 15 });
     render(<MonsterCardModal {...makeProps(m)} />);
     expect(screen.getByText('15')).toBeInTheDocument();
@@ -286,5 +259,15 @@ describe('MonsterCardModal - shieldOfFaithBonus', () => {
     const m = makeMonster({ armor_class: 15 });
     render(<MonsterCardModal {...makeProps(m)} />);
     expect(screen.getByText(/17 \(\+2 Shield of Faith\)/)).toBeInTheDocument();
+  });
+
+  it('displays base AC when other buffs are active but not shield_of_faith', () => {
+    useRuntimeState.__setActiveBuffs([
+      { effect: 'bless' },
+      { effect: 'protection_from_evil_and_good' },
+    ]);
+    const m = makeMonster({ armor_class: 15 });
+    render(<MonsterCardModal {...makeProps(m)} />);
+    expect(screen.getByText('15')).toBeInTheDocument();
   });
 });

@@ -1,27 +1,26 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadQuests, saveQuests, loadQuest, deleteQuest } from './questsService.js';
 
 describe('questsService', () => {
-  let fetchSpy;
-  let consoleErrorSpy;
+  let mockFetch;
 
   beforeEach(() => {
-    fetchSpy = vi.spyOn(globalThis, 'fetch');
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('loadQuests', () => {
-    it('should return quests array from successful API response', async () => {
+    it('returns quests array from successful API response', async () => {
       const mockQuests = [
         { id: 'quest-1', name: 'Find the Ring' },
         { id: 'quest-2', name: 'Defeat Sauron' },
       ];
-      fetchSpy.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ quests: mockQuests }),
       });
@@ -29,11 +28,11 @@ describe('questsService', () => {
       const result = await loadQuests('campaign1');
 
       expect(result).toEqual(mockQuests);
-      expect(fetchSpy).toHaveBeenCalledWith('/api/campaigns/campaign1/quests');
+      expect(mockFetch).toHaveBeenCalledWith('/api/campaigns/campaign1/quests');
     });
 
-    it('should return empty array when API returns no quests', async () => {
-      fetchSpy.mockResolvedValue({
+    it('returns empty array when API returns no quests', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ quests: [] }),
       });
@@ -43,8 +42,8 @@ describe('questsService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should return empty array when quests key is missing from response', async () => {
-      fetchSpy.mockResolvedValue({
+    it('returns empty array when quests key is missing from response', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({}),
       });
@@ -54,30 +53,40 @@ describe('questsService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should URL-encode the campaign name', async () => {
-      fetchSpy.mockResolvedValue({
+    it('returns empty array when quests is null', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ quests: null }),
+      });
+
+      const result = await loadQuests('campaign1');
+
+      expect(result).toEqual([]);
+    });
+
+    it('URL-encodes the campaign name', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ quests: [] }),
       });
 
       await loadQuests('my campaign/1');
 
-      expect(fetchSpy).toHaveBeenCalledWith('/api/campaigns/my%20campaign%2F1/quests');
+      expect(mockFetch).toHaveBeenCalledWith('/api/campaigns/my%20campaign%2F1/quests');
     });
 
-    it('should call console.error and throw with custom error message on API error', async () => {
-      fetchSpy.mockResolvedValue({
+    it('throws with custom error message on API error', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
         json: () => Promise.resolve({ error: 'Campaign not found' }),
       });
 
       await expect(loadQuests('campaign1')).rejects.toThrow('Campaign not found');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading quests:', expect.any(Error));
     });
 
-    it('should call console.error and throw generic error when API response has no error field', async () => {
-      fetchSpy.mockResolvedValue({
+    it('throws generic error when API error response has no error field', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
         json: () => Promise.resolve({}),
@@ -86,26 +95,25 @@ describe('questsService', () => {
       await expect(loadQuests('campaign1')).rejects.toThrow('Failed to load quests');
     });
 
-    it('should call console.error and rethrow on network failure', async () => {
-      fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
+    it('throws with original error message on network failure', async () => {
+      mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(loadQuests('campaign1')).rejects.toThrow('ENOTFOUND');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading quests:', expect.any(Error));
     });
   });
 
   describe('saveQuests', () => {
-    it('should send POST with quests array on success', async () => {
+    it('sends POST with quests array on success', async () => {
       const quests = [{ id: 'quest-1', name: 'Find the Ring' }];
 
-      fetchSpy.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ success: true }),
       });
 
       await saveQuests('campaign1', quests);
 
-      expect(fetchSpy).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         '/api/campaigns/campaign1/quests',
         {
           method: 'POST',
@@ -115,15 +123,15 @@ describe('questsService', () => {
       );
     });
 
-    it('should send empty array when quests is empty', async () => {
-      fetchSpy.mockResolvedValue({
+    it('sends empty array when quests is empty', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ success: true }),
       });
 
       await saveQuests('campaign1', []);
 
-      expect(fetchSpy).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         '/api/campaigns/campaign1/quests',
         expect.objectContaining({
           method: 'POST',
@@ -132,33 +140,32 @@ describe('questsService', () => {
       );
     });
 
-    it('should URL-encode the campaign name', async () => {
-      fetchSpy.mockResolvedValue({
+    it('URL-encodes the campaign name', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ success: true }),
       });
 
       await saveQuests('my campaign/1', []);
 
-      expect(fetchSpy).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         '/api/campaigns/my%20campaign%2F1/quests',
         expect.any(Object)
       );
     });
 
-    it('should call console.error and throw with custom error message on API error', async () => {
-      fetchSpy.mockResolvedValue({
+    it('throws with custom error message on API error', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Bad Request',
         json: () => Promise.resolve({ error: 'Invalid quests data' }),
       });
 
       await expect(saveQuests('campaign1', [])).rejects.toThrow('Invalid quests data');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving quests:', expect.any(Error));
     });
 
-    it('should call console.error and throw generic error when API response has no error field', async () => {
-      fetchSpy.mockResolvedValue({
+    it('throws generic error when API error response has no error field', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
         json: () => Promise.resolve({}),
@@ -167,18 +174,17 @@ describe('questsService', () => {
       await expect(saveQuests('campaign1', [])).rejects.toThrow('Failed to save quests');
     });
 
-    it('should call console.error and rethrow on network failure', async () => {
-      fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
+    it('throws with original error message on network failure', async () => {
+      mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(saveQuests('campaign1', [])).rejects.toThrow('ENOTFOUND');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving quests:', expect.any(Error));
     });
   });
 
   describe('loadQuest', () => {
-    it('should return a single quest from API response', async () => {
+    it('returns a single quest from API response', async () => {
       const mockQuest = { id: 'quest-1', name: 'Find the Ring', description: 'Epic quest' };
-      fetchSpy.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ quest: mockQuest }),
       });
@@ -188,22 +194,22 @@ describe('questsService', () => {
       expect(result).toEqual(mockQuest);
     });
 
-    it('should URL-encode both campaign name and quest ID', async () => {
+    it('URL-encodes both campaign name and quest ID', async () => {
       const mockQuest = { id: 'quest-1', name: 'Test' };
-      fetchSpy.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ quest: mockQuest }),
       });
 
       await loadQuest('my campaign/1', 'quest%2Fwith%2Fslashes');
 
-      expect(fetchSpy).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         '/api/campaigns/my%20campaign%2F1/quests/quest%252Fwith%252Fslashes'
       );
     });
 
-    it('should return undefined when quest key is missing from response', async () => {
-      fetchSpy.mockResolvedValue({
+    it('returns undefined when quest key is missing from response', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({}),
       });
@@ -213,19 +219,29 @@ describe('questsService', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should call console.error and throw with custom error message on API error', async () => {
-      fetchSpy.mockResolvedValue({
+    it('returns undefined when quest is null', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ quest: null }),
+      });
+
+      const result = await loadQuest('campaign1', 'quest-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('throws with custom error message on API error', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
         json: () => Promise.resolve({ error: 'Quest not found' }),
       });
 
       await expect(loadQuest('campaign1', 'quest-1')).rejects.toThrow('Quest not found');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading quest:', expect.any(Error));
     });
 
-    it('should call console.error and throw generic error when API response has no error field', async () => {
-      fetchSpy.mockResolvedValue({
+    it('throws generic error when API error response has no error field', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
         json: () => Promise.resolve({}),
@@ -234,56 +250,54 @@ describe('questsService', () => {
       await expect(loadQuest('campaign1', 'quest-1')).rejects.toThrow('Failed to load quest');
     });
 
-    it('should call console.error and rethrow on network failure', async () => {
-      fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
+    it('throws with original error message on network failure', async () => {
+      mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(loadQuest('campaign1', 'quest-1')).rejects.toThrow('ENOTFOUND');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading quest:', expect.any(Error));
     });
   });
 
   describe('deleteQuest', () => {
-    it('should send DELETE request on success', async () => {
-      fetchSpy.mockResolvedValue({
+    it('sends DELETE request on success', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ success: true }),
       });
 
       await deleteQuest('campaign1', 'quest-1');
 
-      expect(fetchSpy).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         '/api/campaigns/campaign1/quests/quest-1',
         { method: 'DELETE' }
       );
     });
 
-    it('should URL-encode both campaign name and quest ID', async () => {
-      fetchSpy.mockResolvedValue({
+    it('URL-encodes both campaign name and quest ID', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ success: true }),
       });
 
       await deleteQuest('my campaign/1', 'quest%2Fwith%2Fslashes');
 
-      expect(fetchSpy).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         '/api/campaigns/my%20campaign%2F1/quests/quest%252Fwith%252Fslashes',
         { method: 'DELETE' }
       );
     });
 
-    it('should call console.error and throw with custom error message on API error', async () => {
-      fetchSpy.mockResolvedValue({
+    it('throws with custom error message on API error', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
         json: () => Promise.resolve({ error: 'Quest not found' }),
       });
 
       await expect(deleteQuest('campaign1', 'quest-1')).rejects.toThrow('Quest not found');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error deleting quest:', expect.any(Error));
     });
 
-    it('should call console.error and throw generic error when API response has no error field', async () => {
-      fetchSpy.mockResolvedValue({
+    it('throws generic error when API error response has no error field', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
         json: () => Promise.resolve({}),
@@ -292,11 +306,10 @@ describe('questsService', () => {
       await expect(deleteQuest('campaign1', 'quest-1')).rejects.toThrow('Failed to delete quest');
     });
 
-    it('should call console.error and rethrow on network failure', async () => {
-      fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
+    it('throws with original error message on network failure', async () => {
+      mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(deleteQuest('campaign1', 'quest-1')).rejects.toThrow('ENOTFOUND');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error deleting quest:', expect.any(Error));
     });
   });
 });

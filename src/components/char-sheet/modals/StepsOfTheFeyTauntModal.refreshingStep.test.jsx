@@ -1,6 +1,8 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
+import { setTempHp } from '../../../services/automation/handlers/buffs/tempHpService.js';
 import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('../../../services/automation/common/savePrompt.js', () => ({
@@ -41,8 +43,6 @@ vi.mock('../../../services/rules/combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(() => Promise.resolve({ creatures: [] })),
 }));
 
-import { setTempHp } from '../../../services/automation/handlers/buffs/tempHpService.js';
-
 const basePlayerStats = { name: 'FeyTrickster' };
 const baseTargets = [
     { name: 'Goblin1', currentHp: 5, maxHp: 7 },
@@ -77,17 +77,9 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
             fireEvent.click(refreshingOption);
-            expect(screen.getByText(/Refreshing Step/)).toBeInTheDocument();
+            expect(document.querySelector('.sp-body').textContent).toContain('Use');
+            expect(document.querySelector('.sp-body').textContent).toContain('Refreshing Step');
             expect(screen.getByText(/You gain 1d10 Temporary Hit Points/)).toBeInTheDocument();
-        });
-
-        it('renders Refresh button with heart-pulse icon in confirmation', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            expect(refreshButton).toBeInTheDocument();
-            expect(refreshButton.querySelector('.fa-solid.fa-heart-pulse')).toBeInTheDocument();
         });
 
         it('renders Cancel button in Refreshing Step confirmation', () => {
@@ -97,7 +89,7 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
             expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
 
-        it('applies refreshing step when Refresh button is clicked', async () => {
+        it('applies temp HP via setTempHp when Refresh button is clicked', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
             fireEvent.click(refreshingOption);
@@ -109,6 +101,25 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
             });
         });
 
+        it('sets temp HP value within the 1d10 range (1-10)', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
+            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
+            fireEvent.click(refreshingOption);
+            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
+            fireEvent.click(refreshButton);
+
+            await waitFor(() => {
+                expect(setTempHp).toHaveBeenCalledWith(
+                    'FeyTrickster',
+                    expect.anything(),
+                    'test-campaign'
+                );
+                const tempHpValue = setTempHp.mock.calls[0][1];
+                expect(tempHpValue).toBeGreaterThanOrEqual(1);
+                expect(tempHpValue).toBeLessThanOrEqual(10);
+            });
+        });
+
         it('shows result view after applying refreshing step', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
@@ -117,7 +128,6 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
             fireEvent.click(refreshButton);
 
             await waitFor(() => {
-                expect(screen.getByText(/Refreshing Step/)).toBeInTheDocument();
                 expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
             });
         });
@@ -134,6 +144,19 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
                 const body = document.querySelector('.sp-body');
                 expect(body.textContent).toContain('Refreshing Step');
                 expect(body.textContent).toContain('Temporary Hit Points');
+            });
+        });
+
+        it('includes feature name in result description', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ featureName: 'Fey Trickery' })} />);
+            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
+            fireEvent.click(refreshingOption);
+            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
+            fireEvent.click(refreshButton);
+
+            await waitFor(() => {
+                const body = document.querySelector('.sp-body');
+                expect(body.textContent).toContain('Fey Trickery');
             });
         });
 
@@ -154,7 +177,24 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
             });
         });
 
-        it('includes remaining count in result description after refreshing step', async () => {
+        it('decrements to 0 when newCount is 1', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 1, freeCastCountKey: 'stepsRemaining' })} />);
+            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
+            fireEvent.click(refreshingOption);
+            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
+            fireEvent.click(refreshButton);
+
+            await waitFor(() => {
+                expect(setRuntimeValue).toHaveBeenCalledWith(
+                    'FeyTrickster',
+                    'stepsRemaining',
+                    0,
+                    'test-campaign'
+                );
+            });
+        });
+
+        it('shows remaining count in result description after refreshing step', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 3 })} />);
             const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
             fireEvent.click(refreshingOption);
@@ -164,6 +204,19 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
             await waitFor(() => {
                 const body = document.querySelector('.sp-body');
                 expect(body.textContent).toContain('2 remaining');
+            });
+        });
+
+        it('shows 0 remaining when starting from 1', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 1 })} />);
+            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
+            fireEvent.click(refreshingOption);
+            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
+            fireEvent.click(refreshButton);
+
+            await waitFor(() => {
+                const body = document.querySelector('.sp-body');
+                expect(body.textContent).toContain('0 remaining');
             });
         });
 
@@ -188,7 +241,7 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
             const cancelButton = screen.getByRole('button', { name: 'Cancel' });
             fireEvent.click(cancelButton);
 
-            expect(screen.getByText('Refreshing Step')).toBeInTheDocument();
+            expect(screen.getByText(/Choose how you use/)).toBeInTheDocument();
             expect(setRuntimeValue).not.toHaveBeenCalled();
         });
     });

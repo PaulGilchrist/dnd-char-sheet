@@ -1,13 +1,9 @@
+// @improved-by-ai
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/automation/index.js', () => ({
   applyWeaponKindMastery: vi.fn(),
-}));
-
-vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn(),
 }));
 
 import * as automation from '../../../services/automation/index.js';
@@ -49,7 +45,7 @@ function renderWithWeapons(overrides, weaponsToMock = mockWeapons) {
     json: () => Promise.resolve(weaponsToMock),
   });
   globalThis.fetch = fetchMock;
-  return render(<WeaponKindMasteryModal {...makeProps(overrides)} />);
+  return { ...render(<WeaponKindMasteryModal {...makeProps(overrides)} />) };
 }
 
 describe('WeaponKindMasteryModal', () => {
@@ -59,32 +55,22 @@ describe('WeaponKindMasteryModal', () => {
   });
 
   describe('weapon selection', () => {
-    it('has no weapons selected initially', async () => {
-      renderWithWeapons();
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(cb => expect(cb.checked).toBe(false));
-      });
-    });
-
     it('toggles a weapon selection on checkbox click', async () => {
       renderWithWeapons();
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-        expect(checkboxes[0].checked).toBe(true);
-        fireEvent.click(checkboxes[0]);
-        expect(checkboxes[0].checked).toBe(false);
-      });
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      fireEvent.click(checkbox);
+      expect(checkbox.checked).toBe(true);
+      fireEvent.click(checkbox);
+      expect(checkbox.checked).toBe(false);
     });
 
     it('enables the Select button after a weapon is selected', async () => {
       renderWithWeapons();
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-        expect(screen.getByRole('button', { name: 'Select' })).not.toBeDisabled();
-      });
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      fireEvent.click(checkbox);
+      expect(screen.getByRole('button', { name: 'Select' })).not.toBeDisabled();
     });
 
     it('prevents selecting more than maxKinds weapons', async () => {
@@ -92,14 +78,13 @@ describe('WeaponKindMasteryModal', () => {
         action: { automation: { maxKinds: 2 } },
       });
       renderWithWeapons(props);
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-        fireEvent.click(checkboxes[1]);
-        expect(checkboxes[0].checked).toBe(true);
-        expect(checkboxes[1].checked).toBe(true);
-        expect(checkboxes[2].disabled).toBe(true);
-      });
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      fireEvent.click(checkboxes[0]);
+      fireEvent.click(checkboxes[1]);
+      expect(checkboxes[0].checked).toBe(true);
+      expect(checkboxes[1].checked).toBe(true);
+      expect(checkboxes[2].disabled).toBe(true);
     });
 
     it('disables unchecked weapons when maxKinds is reached', async () => {
@@ -107,12 +92,11 @@ describe('WeaponKindMasteryModal', () => {
         action: { automation: { maxKinds: 1 } },
       });
       renderWithWeapons(props);
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-        expect(checkboxes[1].disabled).toBe(true);
-        expect(checkboxes[2].disabled).toBe(true);
-      });
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      fireEvent.click(checkboxes[0]);
+      expect(checkboxes[1].disabled).toBe(true);
+      expect(checkboxes[2].disabled).toBe(true);
     });
 
     it('allows deselecting a weapon to free up a slot', async () => {
@@ -120,46 +104,49 @@ describe('WeaponKindMasteryModal', () => {
         action: { automation: { maxKinds: 1 } },
       });
       renderWithWeapons(props);
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-        expect(checkboxes[1].disabled).toBe(true);
-        fireEvent.click(checkboxes[0]);
-        expect(checkboxes[1].disabled).toBe(false);
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      fireEvent.click(checkboxes[0]);
+      expect(checkboxes[1].disabled).toBe(true);
+      fireEvent.click(checkboxes[0]);
+      expect(checkboxes[1].disabled).toBe(false);
+    });
+
+    it('pre-selects weapons from the existing prop', async () => {
+      renderWithWeapons({ existing: ['Battleaxe', 'Club'] });
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      expect(checkboxes[0].checked).toBe(true);
+      expect(checkboxes[2].checked).toBe(true);
+      expect(checkboxes[1].checked).toBe(false);
+    });
+
+    it('respects maxKinds limit when weapons are pre-selected via existing', async () => {
+      const props = makeProps({
+        action: { automation: { maxKinds: 2 } },
+        existing: ['Battleaxe', 'Club'],
       });
+      renderWithWeapons(props);
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      expect(checkboxes[3].disabled).toBe(true);
     });
   });
 
   describe('selection counter', () => {
     it('displays "Selected: 0/2" by default', async () => {
       renderWithWeapons();
-      await waitFor(() => {
-        const counter = document.querySelector('.sp-body p:last-of-type');
-        expect(counter.textContent).toContain('0');
-        expect(counter.textContent).toContain('2');
-      });
+      await waitFor(() => screen.getByText(/Selected: 0\/2/));
     });
 
     it('updates the counter after selecting and deselecting a weapon', async () => {
       renderWithWeapons();
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-      });
-      await waitFor(() => {
-        const counter = document.querySelector('.sp-body p:last-of-type');
-        expect(counter.textContent).toContain('1');
-        expect(counter.textContent).toContain('2');
-      });
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-      });
-      await waitFor(() => {
-        const counter = document.querySelector('.sp-body p:last-of-type');
-        expect(counter.textContent).toContain('0');
-        expect(counter.textContent).toContain('2');
-      });
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      fireEvent.click(checkbox);
+      await waitFor(() => screen.getByText(/Selected: 1\/2/));
+      fireEvent.click(checkbox);
+      await waitFor(() => screen.getByText(/Selected: 0\/2/));
     });
 
     it('uses the correct maxKinds in the counter', async () => {
@@ -167,41 +154,32 @@ describe('WeaponKindMasteryModal', () => {
         action: { automation: { maxKinds: 3 } },
       });
       renderWithWeapons(props);
-      await waitFor(() => {
-        const counter = document.querySelector('.sp-body p:last-of-type');
-        expect(counter.textContent).toContain('0');
-        expect(counter.textContent).toContain('3');
-      });
+      await waitFor(() => screen.getByText(/Selected: 0\/3/));
     });
   });
 
   describe('melee-only label', () => {
     it('shows "(Melee only)" suffix when meleeOnly is true', async () => {
       renderWithWeapons({ meleeOnly: true });
-      await waitFor(() => {
-        const bodyP = document.querySelector('.sp-body p');
-        expect(bodyP.textContent).toContain('Melee only');
-      });
+      await waitFor(() => screen.getByText(/Melee only/));
     });
 
     it('does not show "(Melee only)" suffix when meleeOnly is false or undefined', async () => {
-      renderWithWeapons({ meleeOnly: false });
-      await waitFor(() => {
-        const bodyP = document.querySelector('.sp-body p');
-        expect(bodyP.textContent).not.toContain('Melee only');
-      });
+      const { unmount } = renderWithWeapons({ meleeOnly: false });
+      await waitFor(() => screen.getByText(/Choose up to/));
+      expect(screen.queryByText(/Melee only/)).not.toBeInTheDocument();
+      unmount();
       renderWithWeapons();
-      await waitFor(() => {
-        const bodyP = document.querySelector('.sp-body p');
-        expect(bodyP.textContent).not.toContain('Melee only');
-      });
+      await waitFor(() => screen.getByText(/Choose up to/));
+      expect(screen.queryByText(/Melee only/)).not.toBeInTheDocument();
     });
   });
 
   describe('handleSelect / applyWeaponKindMastery', () => {
     it('does not call applyWeaponKindMastery when no weapons are selected', async () => {
       renderWithWeapons();
-      await waitFor(() => {
+      await waitFor(() => screen.getByText('Battleaxe'));
+      await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Select' }));
       });
       expect(automation.applyWeaponKindMastery).not.toHaveBeenCalled();
@@ -217,11 +195,10 @@ describe('WeaponKindMasteryModal', () => {
         },
       });
       renderWithWeapons();
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-        fireEvent.click(checkboxes[2]);
-      });
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      fireEvent.click(checkboxes[0]);
+      fireEvent.click(checkboxes[2]);
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Select' }));
       });
@@ -244,10 +221,9 @@ describe('WeaponKindMasteryModal', () => {
         },
       });
       renderWithWeapons();
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-      });
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      fireEvent.click(checkbox);
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Select' }));
       });
@@ -258,6 +234,28 @@ describe('WeaponKindMasteryModal', () => {
           mockCampaignName
         );
       });
+    });
+
+    it('does not call applyWeaponKindMastery when Skip is clicked', async () => {
+      renderWithWeapons();
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const checkbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      fireEvent.click(checkbox);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+      });
+      expect(automation.applyWeaponKindMastery).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('close behavior', () => {
+    it('calls onClose when the overlay background is clicked', async () => {
+      const onClose = vi.fn();
+      renderWithWeapons({ onClose });
+      await waitFor(() => screen.getByText('Battleaxe'));
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });

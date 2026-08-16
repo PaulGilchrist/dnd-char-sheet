@@ -31,7 +31,7 @@ describe('resistancesValidation getResistanceInfo', () => {
   });
 
   describe('getResistanceInfo', () => {
-    it('identifies resistance source from race', async () => {
+    it('returns isGranted true and Race source when race grants the resistance', async () => {
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
         name: 'Tiefling',
         traits: [
@@ -45,23 +45,14 @@ describe('resistancesValidation getResistanceInfo', () => {
 
       const result = await getResistanceInfo('Fire', 'resistance', baseArgs({ race: { name: 'Tiefling' } }));
 
-      expect(result.isGranted).toBe(true);
-      expect(result.isPreSelected).toBe(true);
-      expect(result.source).toContain('Race');
+      expect(result).toEqual({
+        isGranted: true,
+        isPreSelected: true,
+        source: 'Race',
+      });
     });
 
-    it('returns isGranted false and Unknown source when resistance not granted', async () => {
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
-
-      const result = await getResistanceInfo('Fire', 'resistance', baseArgs());
-
-      expect(result.isGranted).toBe(false);
-      expect(result.isPreSelected).toBe(false);
-      expect(result.source).toBe('Unknown');
-    });
-
-    it('identifies immunity source from class', async () => {
+    it('returns isGranted true and Class source when class grants the immunity', async () => {
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         class_levels: [
@@ -83,12 +74,110 @@ describe('resistancesValidation getResistanceInfo', () => {
         baseArgs({ class: { name: 'Fighter' }, level: 1 }),
       );
 
-      expect(result.isGranted).toBe(true);
-      expect(result.isPreSelected).toBe(true);
-      expect(result.source).toContain('Class');
+      expect(result).toEqual({
+        isGranted: true,
+        isPreSelected: true,
+        source: 'Class',
+      });
     });
 
-    it('handles 2024 ruleset correctly', async () => {
+    it('returns isGranted true with combined Race, Class source when both grant', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
+        name: 'Tiefling',
+        traits: [
+          {
+            name: 'Hellish Resistance',
+            description: ['You have resistance to fire damage.'],
+          },
+        ],
+      });
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        class_levels: [
+          {
+            level: 1,
+            features: [
+              {
+                name: 'Fire Resistance',
+                description: 'You have resistance to fire damage.',
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await getResistanceInfo(
+        'Fire',
+        'resistance',
+        baseArgs({ race: { name: 'Tiefling' } }),
+      );
+
+      expect(result).toEqual({
+        isGranted: true,
+        isPreSelected: true,
+        source: 'Race',
+      });
+    });
+
+    it('returns isGranted false and Unknown source when nothing grants the type', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
+
+      const result = await getResistanceInfo('Fire', 'resistance', baseArgs());
+
+      expect(result).toEqual({
+        isGranted: false,
+        isPreSelected: false,
+        source: 'Unknown',
+      });
+    });
+
+    it('returns isGranted false when querying resistance category for an immunity-only grant', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        class_levels: [
+          {
+            level: 1,
+            features: [
+              {
+                name: 'Immunity',
+                description: 'You gain Immunity to Fire damage.',
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await getResistanceInfo('Fire', 'resistance', baseArgs());
+
+      expect(result).toEqual({
+        isGranted: false,
+        isPreSelected: false,
+        source: 'Unknown',
+      });
+    });
+
+    it('returns isGranted false when querying immunity category for a resistance-only grant', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
+        name: 'Tiefling',
+        traits: [
+          {
+            name: 'Hellish Resistance',
+            description: ['You have resistance to fire damage.'],
+          },
+        ],
+      });
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
+
+      const result = await getResistanceInfo('Fire', 'immunity', baseArgs({ race: { name: 'Tiefling' } }));
+
+      expect(result).toEqual({
+        isGranted: false,
+        isPreSelected: false,
+        source: 'Unknown',
+      });
+    });
+
+    it('extracts 2024 race resistances correctly', async () => {
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
         name: 'Aasimar',
         traits: [
@@ -106,85 +195,11 @@ describe('resistancesValidation getResistanceInfo', () => {
         baseArgs({ rules: '2024', race: { name: 'Aasimar' } }),
       );
 
-      expect(result.isGranted).toBe(true);
-      expect(result.isPreSelected).toBe(true);
-      expect(result.source).toContain('Race');
-    });
-
-    it('returns isGranted false for immunity when class has none', async () => {
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
-
-      const result = await getResistanceInfo('Fire', 'immunity', baseArgs());
-
-      expect(result.isGranted).toBe(false);
-      expect(result.isPreSelected).toBe(false);
-      expect(result.source).toBe('Unknown');
-    });
-
-    it('identifies 2024 immunity source from class', async () => {
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-        class_levels: [
-          {
-            level: 1,
-            features: [
-              {
-                name: 'Damage Immunity',
-                description: 'You gain Immunity to Fire damage.',
-              },
-            ],
-          },
-        ],
+      expect(result).toEqual({
+        isGranted: true,
+        isPreSelected: true,
+        source: 'Race',
       });
-
-      const result = await getResistanceInfo(
-        'Fire',
-        'immunity',
-        baseArgs({ rules: '2024', class: { name: 'Fighter' }, level: 1 }),
-      );
-
-      expect(result.isGranted).toBe(true);
-      expect(result.isPreSelected).toBe(true);
-      expect(result.source).toContain('Class');
-    });
-
-    it('reports resistance as not granted when queried as immunity category', async () => {
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
-        name: 'Tiefling',
-        traits: [
-          {
-            name: 'Hellish Resistance',
-            description: ['You have resistance to fire damage.'],
-          },
-        ],
-      });
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
-
-      const result = await getResistanceInfo('Fire', 'immunity', baseArgs({ race: { name: 'Tiefling' } }));
-
-      expect(result.isGranted).toBe(false);
-      expect(result.isPreSelected).toBe(false);
-      expect(result.source).toBe('Unknown');
-    });
-
-    it('identifies granted race resistance even when queried as immunity category returns false', async () => {
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
-        name: 'Tiefling',
-        traits: [
-          {
-            name: 'Hellish Resistance',
-            description: ['You have resistance to fire damage.'],
-          },
-        ],
-      });
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
-
-      // Querying a race-granted resistance as 'immunity' category should return isGranted=false
-      // because getResistanceInfo only checks class for immunities
-      const result = await getResistanceInfo('Fire', 'immunity', baseArgs({ race: { name: 'Tiefling' } }));
-
-      expect(result.isGranted).toBe(false);
     });
 
     it('handles null raceData gracefully', async () => {
@@ -193,11 +208,14 @@ describe('resistancesValidation getResistanceInfo', () => {
 
       const result = await getResistanceInfo('Fire', 'resistance', baseArgs({ race: { name: 'Nonexistent' } }));
 
-      expect(result.isGranted).toBe(false);
-      expect(result.source).toBe('Unknown');
+      expect(result).toEqual({
+        isGranted: false,
+        isPreSelected: false,
+        source: 'Unknown',
+      });
     });
 
-    it('handles missing level in form data', async () => {
+    it('defaults to level 1 when level is missing', async () => {
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         class_levels: [
@@ -219,7 +237,47 @@ describe('resistancesValidation getResistanceInfo', () => {
         baseArgs({ class: { name: 'Fighter' } }),
       );
 
+      expect(result).toEqual({
+        isGranted: true,
+        isPreSelected: true,
+        source: 'Class',
+      });
+    });
+
+    it('handles missing race and class objects entirely', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
+
+      const result = await getResistanceInfo('Fire', 'resistance', baseArgs({ race: null, class: null }));
+
+      expect(result).toEqual({
+        isGranted: false,
+        isPreSelected: false,
+        source: 'Unknown',
+      });
+    });
+
+    it('uses 2024 ruleset when specified', async () => {
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
+        name: 'Dwarf',
+        traits: [
+          {
+            name: 'Dwarven Resilience',
+            description: 'Resistance to Poison damage.',
+          },
+        ],
+      });
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
+
+      const result = await getResistanceInfo(
+        'Poison',
+        'resistance',
+        baseArgs({ rules: '2024', race: { name: 'Dwarf' } }),
+      );
+
       expect(result.isGranted).toBe(true);
+      expect(result.isPreSelected).toBe(true);
+      expect(result.source).toBe('Race');
     });
   });
 });

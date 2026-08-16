@@ -1,8 +1,6 @@
 // @improved-by-ai
-// Basic row-level CRUD for the NEW settlement modal (adding a service/NPC/rumor
-// row, removing it, and the last-row-hides-the-section behavior) is fully
-// covered in Settlements.serviceNPCRumor.test.jsx. This file intentionally
-// avoids duplicating those cases and instead covers the CRUD gaps left open
+// Row-level CRUD for the NEW settlement modal is covered in
+// Settlements.serviceNPCRumor.test.jsx. This file covers the CRUD gaps left
 // there: row manipulation while editing an existing settlement, removal that
 // targets the correct row when multiple rows of mixed types exist, removal
 // when rows contain identical content, and draft-discard semantics.
@@ -17,7 +15,6 @@ const settlementMockStore = {
   items: [],
   loading: false,
   loadItems: vi.fn(),
-  saveItems: vi.fn(),
   deleteItem: vi.fn(),
 };
 
@@ -120,6 +117,27 @@ describe('Settlements - CRUD operations (behavioral)', () => {
       expect(rumors[0]).toHaveValue('The sewers are haunted');
     });
 
+    it('allows editing the content of a pre-existing row while editing', () => {
+      settlementMockStore.items = [
+        makeSettlement('Old Town', {
+          services: [{ type: 'inn', name: 'The Rusty Anchor', description: 'A fine inn' }],
+        }),
+      ];
+      render(<Settlements campaignName={campaignName} onBack={() => {}} />);
+      openEditSettlement();
+
+      const nameInput = screen.getAllByPlaceholderText('Business name')[0];
+      const descTextarea = screen.getAllByPlaceholderText('Description…')[0];
+
+      fireEvent.change(nameInput, { target: { value: 'The Golden Anchor' } });
+      fireEvent.change(descTextarea, { target: { value: 'A cozy inn near the harbor' } });
+
+      expect(nameInput).toHaveValue('The Golden Anchor');
+      expect(descTextarea).toHaveValue('A cozy inn near the harbor');
+    });
+  });
+
+  describe('Row removal edge cases', () => {
     it('removes only the targeted pre-existing row, leaving siblings and other row types intact', () => {
       settlementMockStore.items = [
         makeSettlement('Old Town', {
@@ -142,10 +160,8 @@ describe('Settlements - CRUD operations (behavioral)', () => {
       expect(screen.getAllByPlaceholderText('NPC name')).toHaveLength(1);
       expect(screen.getByDisplayValue('Mayor Aldric')).toBeInTheDocument();
     });
-  });
 
-  describe('Row removal edge cases', () => {
-    it('removes exactly one row when two rows contain identical content', () => {
+    it('removes exactly one row when multiple rows contain identical content', () => {
       settlementMockStore.items = [makeSettlement('Old Town')];
       render(<Settlements campaignName={campaignName} onBack={() => {}} />);
       openEditSettlement();

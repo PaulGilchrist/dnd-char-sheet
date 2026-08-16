@@ -2,8 +2,8 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
-import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { DiceRollContext } from '../../hooks/combat/DiceRollContext.js';
+import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 
 const _syncedStore = new Map();
 
@@ -236,6 +236,14 @@ function makeDefaultWrapper(mockSetPopupHtml) {
   );
 }
 
+function makeWrapperWithPopupHtml(mockSetPopupHtml, popupHtmlValue) {
+  return ({ children }) => (
+    <DiceRollContext.Provider value={{ popupHtml: popupHtmlValue, setPopupHtml: mockSetPopupHtml }}>
+      {children}
+    </DiceRollContext.Provider>
+  );
+}
+
 // Helper to dispatch a custom event on window
 function dispatchCustomEvent(name, detail) {
   window.dispatchEvent(new CustomEvent(name, { detail }));
@@ -247,7 +255,6 @@ describe('CharActions window event listeners — integration behavior', () => {
     localStorage.clear();
     _syncedStore.clear();
     globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
-    getRuntimeValue.mockImplementation(() => null);
   });
 
   describe('healing-popup event listener', () => {
@@ -257,14 +264,12 @@ describe('CharActions window event listeners — integration behavior', () => {
 
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('healing-popup', {
-          targetName: 'Ally1',
-          healingName: 'Healing Word',
-          rollInfo: '7+3',
-          maximizeHealingDice: false,
-          popupText: 'Restores hit points',
-        });
+      dispatchCustomEvent('healing-popup', {
+        targetName: 'Ally1',
+        healingName: 'Healing Word',
+        rollInfo: '7+3',
+        maximizeHealingDice: false,
+        popupText: 'Restores hit points',
       });
 
       await waitFor(() => {
@@ -280,14 +285,12 @@ describe('CharActions window event listeners — integration behavior', () => {
 
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('healing-popup', {
-          targetName: 'Ally2',
-          healingName: 'Cure Wounds',
-          rollInfo: null,
-          maximizeHealingDice: true,
-          popupText: 'Maximized healing',
-        });
+      dispatchCustomEvent('healing-popup', {
+        targetName: 'Ally2',
+        healingName: 'Cure Wounds',
+        rollInfo: null,
+        maximizeHealingDice: true,
+        popupText: 'Maximized healing',
       });
 
       await waitFor(() => {
@@ -296,6 +299,28 @@ describe('CharActions window event listeners — integration behavior', () => {
         );
       });
     });
+
+    it('omits roll info brackets when rollInfo is null', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      dispatchCustomEvent('healing-popup', {
+        targetName: 'Ally3',
+        healingName: 'Lay on Hands',
+        rollInfo: null,
+        maximizeHealingDice: false,
+        popupText: 'Heals wounds',
+      });
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          '<b>Lay on Hands</b> on Ally3<br/><br/>Heals wounds'
+        );
+      });
+    });
+
   });
 
   describe('damage-popup event listener', () => {
@@ -305,13 +330,11 @@ describe('CharActions window event listeners — integration behavior', () => {
 
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('damage-popup', {
-          targetName: 'Goblin',
-          spellName: 'Fire Bolt',
-          popupText: 'Deals fire damage',
-          rollInfo: '5+4',
-        });
+      dispatchCustomEvent('damage-popup', {
+        targetName: 'Goblin',
+        spellName: 'Fire Bolt',
+        popupText: 'Deals fire damage',
+        rollInfo: '5+4',
       });
 
       await waitFor(() => {
@@ -320,6 +343,27 @@ describe('CharActions window event listeners — integration behavior', () => {
         );
       });
     });
+
+    it('omits roll info brackets when rollInfo is null', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      dispatchCustomEvent('damage-popup', {
+        targetName: 'Skeleton',
+        spellName: 'Ray of Frost',
+        popupText: 'Deals cold damage',
+        rollInfo: null,
+      });
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          '<b>Ray of Frost</b> on Skeleton<br/><br/>Deals cold damage'
+        );
+      });
+    });
+
   });
 
   describe('inspiring-smite-pending event listener', () => {
@@ -327,15 +371,11 @@ describe('CharActions window event listeners — integration behavior', () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = makeDefaultWrapper(mockSetPopupHtml);
 
-      _syncedStore.set('modalState', {});
-
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('inspiring-smite-pending', {
-          attackName: 'Longsword',
-          bonusDamage: '1d6',
-        });
+      dispatchCustomEvent('inspiring-smite-pending', {
+        attackName: 'Longsword',
+        bonusDamage: '1d6',
       });
 
       await waitFor(() => {
@@ -351,13 +391,9 @@ describe('CharActions window event listeners — integration behavior', () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = makeDefaultWrapper(mockSetPopupHtml);
 
-      _syncedStore.set('modalState', {});
-
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('soulstitch-modal-show', { spells: ['Magic Missile', 'Shield'] });
-      });
+      dispatchCustomEvent('soulstitch-modal-show', { spells: ['Magic Missile', 'Shield'] });
 
       await waitFor(() => {
         expect(_syncedStore.get('modalState')).toEqual(
@@ -371,27 +407,51 @@ describe('CharActions window event listeners — integration behavior', () => {
     it('opens secondary target modal for temp HP selection when event fires', async () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+      const mockGetCombatContext = vi.fn().mockResolvedValue({
+        creatures: [
+          { name: 'Ally1', type: 'player', currentHp: 15, maxHp: 20, size: 'Medium' },
+          { name: 'Ally2', type: 'npc', currentHp: 8, maxHp: 12, size: 'Small' },
+          { name: 'Goblin', type: 'monster', currentHp: 3, maxHp: 7, size: 'Small' },
+        ],
+      });
 
-      _syncedStore.set('modalState', {});
+      // Replace the mocked getCombatContext with our resolving mock
+      const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
+      getCombatContext.mockImplementation(mockGetCombatContext);
 
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('potent-spellcasting-temp-hp', {
-          title: 'Potent Spellcasting',
-          tempHp: 10,
-          campaignName: 'test-campaign',
-          attackerName: 'TestCharacter',
-          confirmLabel: 'Grant Temp HP',
-        });
+      dispatchCustomEvent('potent-spellcasting-temp-hp', {
+        title: 'Potent Spellcasting',
+        tempHp: 10,
+        campaignName: 'test-campaign',
+        attackerName: 'TestCharacter',
+        confirmLabel: 'Grant Temp HP',
       });
 
       await waitFor(() => {
         const modalState = _syncedStore.get('modalState');
         expect(modalState).toEqual(
-          expect.objectContaining({ secondaryTargetModal: expect.objectContaining({ title: 'Potent Spellcasting' }) })
+          expect.objectContaining({
+            secondaryTargetModal: expect.objectContaining({
+              title: 'Potent Spellcasting',
+              confirmLabel: 'Grant Temp HP',
+              onTargetSelected: expect.any(Function),
+              onSkip: expect.any(Function),
+            }),
+          })
         );
+        const targets = modalState.secondaryTargetModal.targets;
+        expect(targets).toHaveLength(3);
+        expect(targets[0].name).toBe('Ally1');
+        expect(targets[0].type).toBe('player');
+        expect(targets[1].name).toBe('Ally2');
+        expect(targets[1].type).toBe('npc');
+        expect(targets[2].name).toBe('Goblin');
+        expect(targets[2].type).toBe('monster');
       });
+
+      getCombatContext.mockRestore();
     });
   });
 
@@ -400,13 +460,9 @@ describe('CharActions window event listeners — integration behavior', () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = makeDefaultWrapper(mockSetPopupHtml);
 
-      _syncedStore.set('modalState', {});
-
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('sweeping-attack-modal-show', { attackName: 'Greatsword', targets: ['Goblin', 'Orc'] });
-      });
+      dispatchCustomEvent('sweeping-attack-modal-show', { attackName: 'Greatsword', targets: ['Goblin', 'Orc'] });
 
       await waitFor(() => {
         expect(_syncedStore.get('modalState')).toEqual(
@@ -421,13 +477,9 @@ describe('CharActions window event listeners — integration behavior', () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = makeDefaultWrapper(mockSetPopupHtml);
 
-      _syncedStore.set('modalState', {});
-
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('bait-and-switch-modal-show', { attackName: 'Shortsword', options: ['Attack', 'Disengage'] });
-      });
+      dispatchCustomEvent('bait-and-switch-modal-show', { attackName: 'Shortsword', options: ['Attack', 'Disengage'] });
 
       await waitFor(() => {
         expect(_syncedStore.get('modalState')).toEqual(
@@ -442,13 +494,9 @@ describe('CharActions window event listeners — integration behavior', () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = makeDefaultWrapper(mockSetPopupHtml);
 
-      _syncedStore.set('modalState', {});
-
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('commander-strike-modal-show', { attackName: 'Longbow', allyName: 'Rogue' });
-      });
+      dispatchCustomEvent('commander-strike-modal-show', { attackName: 'Longbow', allyName: 'Rogue' });
 
       await waitFor(() => {
         expect(_syncedStore.get('modalState')).toEqual(
@@ -463,18 +511,124 @@ describe('CharActions window event listeners — integration behavior', () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = makeDefaultWrapper(mockSetPopupHtml);
 
-      _syncedStore.set('modalState', {});
-
       await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
-      await act(async () => {
-        dispatchCustomEvent('rally-choice-modal-show', { attackName: 'War Cry', rallyAmount: 5 });
-      });
+      dispatchCustomEvent('rally-choice-modal-show', { attackName: 'War Cry', rallyAmount: 5 });
 
       await waitFor(() => {
         expect(_syncedStore.get('modalState')).toEqual(
           expect.objectContaining({ rallyChoiceModal: { attackName: 'War Cry', rallyAmount: 5 } })
         );
+      });
+    });
+  });
+
+  describe('damage-type-skip event listener', () => {
+    it('clears popupHtml when damage-type-skip fires and popupHtml.type is damage_type_choice', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const popupHtmlValue = {
+        type: 'damage_type_choice',
+        bonusFormula: '1d6',
+        bonusRolls: [3],
+        bonusTotal: 3,
+        usedKey: 'test_key',
+        currentRound: 1,
+        targetName: 'Goblin',
+        attackerName: 'TestCharacter',
+        name: 'Blessed Strikes',
+      };
+      const wrapper = makeWrapperWithPopupHtml(mockSetPopupHtml, popupHtmlValue);
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      dispatchCustomEvent('damage-type-skip');
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(null);
+      });
+    });
+
+    it('does not respond to damage-type-skip when popupHtml.type is not damage_type_choice', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      dispatchCustomEvent('damage-type-skip');
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('damage-type-choice event listener', () => {
+    it('calls rollDamage with chosen type and clears popupHtml when damage-type-choice fires', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const mockRollDamage = vi.fn();
+      const popupHtmlValue = {
+        type: 'damage_type_choice',
+        bonusFormula: '1d6',
+        bonusRolls: [3],
+        bonusTotal: 3,
+        usedKey: 'test_key',
+        currentRound: 1,
+        targetName: 'Goblin',
+        attackerName: 'TestCharacter',
+        name: 'Blessed Strikes',
+      };
+
+      const wrapper = ({ children }) => (
+        <DiceRollContext.Provider value={{ popupHtml: popupHtmlValue, setPopupHtml: mockSetPopupHtml }}>
+          {children}
+        </DiceRollContext.Provider>
+      );
+
+      // Replace the mocked rollDamage with our resolving mock
+      useLoggedDiceRoll.mockReturnValue({
+        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(),
+        rollDamage: mockRollDamage, rollSkillCheck: vi.fn(),
+        rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
+      });
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      dispatchCustomEvent('damage-type-choice', { chosenType: 'Radiant' });
+
+      await waitFor(() => {
+        expect(mockRollDamage).toHaveBeenCalledWith(
+          'Blessed Strikes',
+          '1d6',
+          3,
+          [3],
+          0,
+          expect.objectContaining({ damageType: 'Radiant', targetName: 'Goblin', attackerName: 'TestCharacter' })
+        );
+      });
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(null);
+      });
+    });
+
+    it('does not respond to damage-type-choice when popupHtml.type is not damage_type_choice', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const mockRollDamage = vi.fn();
+      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+
+      useLoggedDiceRoll.mockReturnValue({
+        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(),
+        rollDamage: mockRollDamage, rollSkillCheck: vi.fn(),
+        rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
+      });
+
+      await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
+
+      dispatchCustomEvent('damage-type-choice', { chosenType: 'Radiant' });
+
+      await waitFor(() => {
+        expect(mockRollDamage).not.toHaveBeenCalled();
+        expect(mockSetPopupHtml).not.toHaveBeenCalled();
       });
     });
   });
@@ -486,12 +640,44 @@ describe('CharActions event listeners — cleanup behavior', () => {
     localStorage.clear();
     _syncedStore.clear();
     globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
-    getRuntimeValue.mockImplementation(() => null);
   });
 
-  it('unregisters all event listeners on unmount', async () => {
+  it('removes all event listeners on unmount', async () => {
     const mockSetPopupHtml = vi.fn();
-    const wrapper = makeDefaultWrapper(mockSetPopupHtml);
+    const mockSetModalState = vi.fn();
+    const wrapper = ({ children }) => (
+      <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+        {children}
+      </DiceRollContext.Provider>
+    );
+
+    // Override setModalState to track calls directly
+    const { default: useCharActionModals } = await import('./useCharActionModals.js');
+    useCharActionModals.mockReturnValue({
+      pendingDamage: null,
+      modalState: {},
+      setModalState: mockSetModalState,
+      resolveAttackDamage: vi.fn(),
+      handleMasteryClose: vi.fn(),
+      handleWeaponMasteryChoice: vi.fn(),
+      handleWeaponKindMasteryClose: vi.fn(),
+      handleDivineFuryDamageType: vi.fn(),
+      handleDivineFurySkip: vi.fn(),
+      handleGenericDamageTypeChoice: vi.fn(),
+      handleGenericDamageTypeSkip: vi.fn(),
+      handleDamageTypeModifierChoice: vi.fn(),
+      handleDamageTypeModifierSkip: vi.fn(),
+      handleEnhancedUnarmedChoice: vi.fn(),
+      handleEnhancedUnarmedSkip: vi.fn(),
+      handleFeatureChoiceConfirm: vi.fn(),
+      handleFeatureChoiceSkip: vi.fn(),
+      handleConstellationSelect: vi.fn(),
+      combatSuperiorityModal: null,
+      setCombatSuperiorityModal: vi.fn(),
+      handleAttackRiderManeuverUse: vi.fn(),
+      handleAttackRiderManeuverSkip: vi.fn(),
+      handleCombatSuperiorityConfirm: vi.fn(),
+    });
 
     const { unmount } = await renderWithWrapper(<CharActions playerStats={createStats()} />, wrapper);
 
@@ -501,17 +687,27 @@ describe('CharActions event listeners — cleanup behavior', () => {
 
     unmount();
 
-    // After unmount, dispatching events should not call setPopupHtml
-    await act(async () => {
-      dispatchCustomEvent('healing-popup', {
-        targetName: 'Ally1',
-        healingName: 'Healing Word',
-        popupText: 'Should not appear',
-      });
+    // After unmount, dispatching events should not call any handlers
+    dispatchCustomEvent('healing-popup', {
+      targetName: 'Ally1',
+      healingName: 'Healing Word',
+      popupText: 'Should not appear',
+    });
+
+    dispatchCustomEvent('damage-popup', {
+      targetName: 'Goblin',
+      spellName: 'Fire Bolt',
+      popupText: 'Should not appear',
+    });
+
+    dispatchCustomEvent('inspiring-smite-pending', {
+      attackName: 'Longsword',
+      bonusDamage: '1d6',
     });
 
     await waitFor(() => {
       expect(mockSetPopupHtml).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
   });
 });

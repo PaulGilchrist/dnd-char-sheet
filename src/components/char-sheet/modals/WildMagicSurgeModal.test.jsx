@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import WildMagicSurgeModal from './WildMagicSurgeModal.jsx';
@@ -5,7 +6,6 @@ import * as handler from '../../../services/automation/handlers/class-sorcerer/w
 
 vi.mock('../../../services/automation/handlers/class-sorcerer/wildMagicSurgeHandler.js', () => ({
     onSurgeSelected: vi.fn(async () => null),
-    onDoubleRollSelected: vi.fn(async () => null),
     onTamedSurgeSelected: vi.fn(async () => null),
 }));
 
@@ -52,99 +52,178 @@ describe('WildMagicSurgeModal', () => {
         vi.clearAllMocks();
     });
 
-    describe('roll mode', () => {
-        it('shows the rolled number and effect', () => {
+    describe('default (roll) mode', () => {
+        it('displays the rolled number and its matched effect', () => {
             render(<WildMagicSurgeModal {...defaultProps} />);
-            expect(screen.getByText(/Effect 11/)).toBeInTheDocument();
-            const badges = document.querySelectorAll('.wms-roll-badge');
-            expect(badges.length).toBe(1);
+            expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
+            expect(screen.getByText('Effect 11')).toBeInTheDocument();
         });
 
-        it('shows Done button', () => {
+        it('displays the feature name in the header', () => {
+            render(<WildMagicSurgeModal {...defaultProps} featureName="Arcane Chaos" />);
+            expect(screen.getByText('Arcane Chaos')).toBeInTheDocument();
+        });
+
+        it('calls onClose when Done is clicked', async () => {
             render(<WildMagicSurgeModal {...defaultProps} />);
             const doneBtn = screen.getByRole('button', { name: 'Done' });
-            expect(doneBtn).toBeInTheDocument();
             fireEvent.click(doneBtn);
-            expect(defaultProps.onClose).toHaveBeenCalled();
+            await waitFor(() => {
+                expect(defaultProps.onClose).toHaveBeenCalled();
+            });
         });
 
-        it('Done button does not call onSurgeSelected', async () => {
-            render(<WildMagicSurgeModal {...defaultProps} />);
+        it('shows no effect when roll is outside the table range', () => {
+            render(<WildMagicSurgeModal {...defaultProps} roll={999} />);
+            expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
+            expect(screen.queryByText(/Effect \d+/)).not.toBeInTheDocument();
+        });
+    });
+
+    describe('controlledChaos mode', () => {
+        const controlledProps = {
+            ...defaultProps,
+            mode: 'controlledChaos',
+            roll1: 15,
+            roll2: 87,
+        };
+
+        it('displays both roll numbers with their matched effects', () => {
+            render(<WildMagicSurgeModal {...controlledProps} />);
+            expect(screen.getByText(/Roll 1: 15/)).toBeInTheDocument();
+            expect(screen.getByText(/Roll 2: 87/)).toBeInTheDocument();
+            expect(screen.getByText('Effect 4')).toBeInTheDocument();
+            expect(screen.getByText('Effect 22')).toBeInTheDocument();
+        });
+
+        it('displays "Choose your roll" instruction', () => {
+            render(<WildMagicSurgeModal {...controlledProps} />);
+            expect(screen.getByText('Controlled Chaos — Choose your roll:')).toBeInTheDocument();
+        });
+
+        it('renders only two roll badges, not the full table', () => {
+            render(<WildMagicSurgeModal {...controlledProps} />);
+            const badges = document.querySelectorAll('.wms-roll-badge');
+            expect(badges.length).toBe(2);
+        });
+
+        it('disables Done button when no roll is selected', () => {
+            render(<WildMagicSurgeModal {...controlledProps} />);
+            const doneBtn = screen.getByRole('button', { name: 'Done' });
+            expect(doneBtn).toBeDisabled();
+        });
+
+        it('enables Done button after a roll is selected', () => {
+            render(<WildMagicSurgeModal {...controlledProps} />);
+            const badges = document.querySelectorAll('.wms-roll-badge');
+            fireEvent.click(badges[0]);
+            const doneBtn = screen.getByRole('button', { name: 'Done' });
+            expect(doneBtn).not.toBeDisabled();
+        });
+
+        it('calls onSurgeSelected and onClose when Done is clicked after selection', async () => {
+            handler.onSurgeSelected.mockResolvedValue({ type: 'popup', payload: {} });
+            render(<WildMagicSurgeModal {...controlledProps} />);
+            const badges = document.querySelectorAll('.wms-roll-badge');
+            fireEvent.click(badges[0]);
+            const doneBtn = screen.getByRole('button', { name: 'Done' });
+            fireEvent.click(doneBtn);
+            await waitFor(() => {
+                expect(handler.onSurgeSelected).toHaveBeenCalledWith(
+                    'Wild Magic Surge',
+                    { name: 'TestSorcerer' },
+                    'test-campaign',
+                    15,
+                    expect.objectContaining({ effect: 'Effect 4' })
+                );
+                expect(defaultProps.onClose).toHaveBeenCalled();
+            });
+        });
+
+        it('does not call onSurgeSelected when Done is clicked without selection', async () => {
+            render(<WildMagicSurgeModal {...controlledProps} />);
             const doneBtn = screen.getByRole('button', { name: 'Done' });
             fireEvent.click(doneBtn);
             await waitFor(() => {
                 expect(handler.onSurgeSelected).not.toHaveBeenCalled();
             });
         });
-    });
 
-    describe('controlledChaos mode', () => {
-        it('displays both rolls', () => {
-            render(<WildMagicSurgeModal {...defaultProps} mode="controlledChaos" roll1={15} roll2={87} />);
-            expect(screen.getByText(/Roll 1: 15/)).toBeInTheDocument();
-            expect(screen.getByText(/Roll 2: 87/)).toBeInTheDocument();
-        });
-
-        it('does not show the full table', () => {
-            render(<WildMagicSurgeModal {...defaultProps} mode="controlledChaos" roll1={15} roll2={87} />);
-            const badges = document.querySelectorAll('.wms-roll-badge');
-            expect(badges.length).toBe(2);
-        });
-
-        it('allows selecting a roll', () => {
-            render(<WildMagicSurgeModal {...defaultProps} mode="controlledChaos" roll1={15} roll2={87} />);
-            const badges = document.querySelectorAll('.wms-roll-badge');
-            expect(badges.length).toBe(2);
-            fireEvent.click(badges[0]);
-            const doneBtn = screen.getByRole('button', { name: 'Done' });
-            expect(doneBtn).not.toBeDisabled();
-        });
-
-        it('Done button is disabled when no roll selected', () => {
-            render(<WildMagicSurgeModal {...defaultProps} mode="controlledChaos" roll1={15} roll2={87} />);
-            const doneBtn = screen.getByRole('button', { name: 'Done' });
-            expect(doneBtn).toBeDisabled();
-        });
-
-        it('calls onSurgeSelected when Done is clicked after selection', async () => {
-            handler.onSurgeSelected.mockResolvedValue({ type: 'popup', payload: {} });
-            render(<WildMagicSurgeModal {...defaultProps} mode="controlledChaos" roll1={15} roll2={87} />);
-            const badges = document.querySelectorAll('.wms-roll-badge');
-            fireEvent.click(badges[0]);
-            const doneBtn = screen.getByRole('button', { name: 'Done' });
-            fireEvent.click(doneBtn);
-            await waitFor(() => {
-                expect(handler.onSurgeSelected).toHaveBeenCalled();
-            });
+        it('shows no effect when both rolls are outside the table range', () => {
+            render(<WildMagicSurgeModal {...defaultProps} mode="controlledChaos" roll1={999} roll2={1000} />);
+            expect(screen.getByText(/Roll 1: 999/)).toBeInTheDocument();
+            expect(screen.getByText(/Roll 2: 1000/)).toBeInTheDocument();
+            expect(screen.queryByText(/Effect \d+/)).not.toBeInTheDocument();
         });
     });
 
     describe('tamedSurge mode', () => {
-        it('displays all entries except the last', () => {
-            render(<WildMagicSurgeModal {...defaultProps} mode="tamedSurge" />);
+        const tamedProps = {
+            ...defaultProps,
+            mode: 'tamedSurge',
+        };
+
+        it('displays all entries except the last one', () => {
+            render(<WildMagicSurgeModal {...tamedProps} />);
             const entries = document.querySelectorAll('.wms-entry-effect');
             expect(entries.length).toBe(24);
         });
 
-        it('allows selecting an effect', async () => {
+        it('displays the tamed surge instruction text', () => {
+            render(<WildMagicSurgeModal {...tamedProps} />);
+            expect(screen.getByText('Tamed Surge — Choose your effect:')).toBeInTheDocument();
+            expect(screen.getByText('Choose one effect from the Wild Magic Surge table.')).toBeInTheDocument();
+        });
+
+        it('disables Confirm button when no surge is selected', () => {
+            render(<WildMagicSurgeModal {...tamedProps} />);
+            const confirmBtn = screen.getByRole('button', { name: 'Confirm' });
+            expect(confirmBtn).toBeDisabled();
+        });
+
+        it('enables Confirm button after a surge is selected', async () => {
             handler.onTamedSurgeSelected.mockResolvedValue({ type: 'popup', payload: {} });
-            render(<WildMagicSurgeModal {...defaultProps} mode="tamedSurge" />);
+            render(<WildMagicSurgeModal {...tamedProps} />);
             const entries = document.querySelectorAll('.wms-entry');
-            expect(entries.length).toBe(24);
-            const firstEntry = entries[0];
-            fireEvent.click(firstEntry);
+            fireEvent.click(entries[0]);
             const confirmBtn = screen.getByRole('button', { name: 'Confirm' });
             expect(confirmBtn).not.toBeDisabled();
+        });
+
+        it('calls onTamedSurgeSelected and onClose when Confirm is clicked after selection', async () => {
+            handler.onTamedSurgeSelected.mockResolvedValue({ type: 'popup', payload: {} });
+            render(<WildMagicSurgeModal {...tamedProps} />);
+            const entries = document.querySelectorAll('.wms-entry');
+            fireEvent.click(entries[0]);
+            const confirmBtn = screen.getByRole('button', { name: 'Confirm' });
             fireEvent.click(confirmBtn);
             await waitFor(() => {
-                expect(handler.onTamedSurgeSelected).toHaveBeenCalled();
+                expect(handler.onTamedSurgeSelected).toHaveBeenCalledWith(
+                    expect.objectContaining({ name: 'Wild Magic Surge' }),
+                    { name: 'TestSorcerer' },
+                    'test-campaign',
+                    expect.objectContaining({ effect: 'Effect 1' })
+                );
+                expect(defaultProps.onClose).toHaveBeenCalled();
             });
         });
 
-        it('Confirm button is disabled when no selection', () => {
-            render(<WildMagicSurgeModal {...defaultProps} mode="tamedSurge" />);
-            const confirmBtn = screen.getByRole('button', { name: 'Confirm' });
-            expect(confirmBtn).toBeDisabled();
+        it('calls onClose when Cancel is clicked', async () => {
+            render(<WildMagicSurgeModal {...tamedProps} />);
+            const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
+            fireEvent.click(cancelBtn);
+            await waitFor(() => {
+                expect(defaultProps.onClose).toHaveBeenCalled();
+            });
+        });
+
+        it('does not call onTamedSurgeSelected when Cancel is clicked', async () => {
+            render(<WildMagicSurgeModal {...tamedProps} />);
+            const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
+            fireEvent.click(cancelBtn);
+            await waitFor(() => {
+                expect(handler.onTamedSurgeSelected).not.toHaveBeenCalled();
+            });
         });
     });
 });

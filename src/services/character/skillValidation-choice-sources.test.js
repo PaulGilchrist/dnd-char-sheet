@@ -1,4 +1,4 @@
-// // @improved-by-ai
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -57,7 +57,7 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
       ],
     };
 
-    it('should parse "Choose X: A, B or C" format from class skill_proficiencies', async () => {
+    it('should parse "Choose X:" format with "or" separator from class skill_proficiencies', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
       });
@@ -73,7 +73,7 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
       expect(result.fromClass.skills).toEqual(['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Nature', 'Religion']);
     });
 
-    it('should build skillChoiceSources for class and feat pools', async () => {
+    it('should build skillChoiceSources array with correct order and structure for class, background, and feat pools', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
       });
@@ -93,19 +93,49 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
 
       expect(result.allowed).toBe(6);
       expect(result.skillChoiceSources).toHaveLength(4);
+
+      // Background is non-choice, added first in 2024
       expect(result.skillChoiceSources[0]).toEqual({
         source: 'background',
         count: 2,
         skills: ['Deception', 'Persuasion'],
       });
+      // Class choice is added second
       expect(result.skillChoiceSources[1]).toEqual({
         source: 'class',
         count: 2,
         skills: ['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Nature', 'Religion'],
       });
+      // Feats are added after class/race
       expect(result.skillChoiceSources[2].source).toBe('feat');
       expect(result.skillChoiceSources[2].featName).toBe('Keen Mind');
+      expect(result.skillChoiceSources[2].count).toBe(1);
       expect(result.skillChoiceSources[3].featName).toBe('Observant');
+      expect(result.skillChoiceSources[3].count).toBe(1);
+    });
+
+    it('should return skillChoiceSources with only non-choice background when no sources provide choice pools', async () => {
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        skill_proficiencies: 'Insight',
+      });
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({});
+      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({
+        skill_proficiencies: 'Deception and Persuasion',
+      });
+
+      const result = await getSkillLimits({
+        rules: '2024',
+        class: { name: 'Wizard' },
+        race: { name: 'Human' },
+        background: 'Charlatan',
+      });
+
+      // Non-choice background skills are always added to skillChoiceSources
+      expect(result.skillChoiceSources).toEqual([{
+        source: 'background',
+        count: 2,
+        skills: ['Deception', 'Persuasion'],
+      }]);
     });
 
     it('should warn when selecting skills outside all allowed pools', async () => {
@@ -124,11 +154,13 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
         skillProficiencies: ['Nature', 'Perception', 'Athletics'],
       }, [keenMindFeat, observantFeat]);
 
-      expect(warnings.some((w) => w.message.includes('not available'))).toBe(true);
-      expect(warnings.some((w) => w.message.includes('Athletics'))).toBe(true);
+      const poolWarning = warnings.find((w) => w.type === 'warning' && w.message.includes('not available'));
+      expect(poolWarning).toBeDefined();
+      expect(poolWarning.message).toContain('Athletics');
+      expect(poolWarning.message).not.toContain('Nature');
     });
 
-    it('should allow valid selections within feat skill pools', async () => {
+    it('should return no pool-related warnings when all selections are within allowed feat pools', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
         skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
       });
@@ -144,7 +176,8 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
         skillProficiencies: ['Nature', 'Perception'],
       }, [keenMindFeat, observantFeat]);
 
-      expect(warnings.some((w) => w.message.includes('not available'))).toBe(false);
+      const poolWarnings = warnings.filter((w) => w.message.includes('not available'));
+      expect(poolWarnings).toHaveLength(0);
     });
 
     it('should warn when overlapping skill pools require more selections than available', async () => {
@@ -170,12 +203,7 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
     });
 
     it('should warn when too many skills selected from a single source pool', async () => {
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-        skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
-      });
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({});
-      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
-      vi.mocked(dataLoader.loadFeatData).mockResolvedValue([{
+      const testFeat = {
         name: 'Test Feat',
         index: 'test-feat',
         benefits: [
@@ -185,7 +213,14 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
             type: 'proficiency',
           },
         ],
-      }]);
+      };
+
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
+      });
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({});
+      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
+      vi.mocked(dataLoader.loadFeatData).mockResolvedValue([testFeat]);
 
       // Class allows 2, feat allows 1 = 3 total. Selecting 4 should trigger "too many" warning.
       const warnings = await validateSkills({
@@ -194,19 +229,85 @@ describe('skillValidation - Skill choice sources with restricted pools', () => {
         race: { name: 'Human' },
         feats: ['Test Feat'],
         skillProficiencies: ['Arcana', 'History', 'Insight', 'Nature'],
-      }, [{
-        name: 'Test Feat',
-        index: 'test-feat',
+      }, [testFeat]);
+
+      const allowWarning = warnings.find((w) => w.message.includes('Rules allow'));
+      expect(allowWarning).toBeDefined();
+      expect(allowWarning.type).toBe('warning');
+    });
+
+    it('should handle feat not found in allFeats array gracefully', async () => {
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        skill_proficiencies: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion',
+      });
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({});
+      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
+
+      const result = await getSkillLimits({
+        rules: '2024',
+        class: { name: 'Wizard' },
+        race: { name: 'Human' },
+        feats: ['Keen Mind'],
+      }, []);
+
+      expect(result.allowed).toBe(2);
+      expect(result.skillChoiceSources).toHaveLength(1);
+      expect(result.skillChoiceSources[0].source).toBe('class');
+    });
+
+    it('should parse "choose one" singular format without explicit number in feat descriptions', async () => {
+      const chooseOneFeat = {
+        name: 'Choose One Feat',
+        index: 'choose-one-feat',
         benefits: [
           {
-            name: 'Test',
-            description: 'Choose one of the following skills: Arcana, History, or Religion. If you lack proficiency in the chosen skill, you gain proficiency in it.',
+            name: 'Skill Choice',
+            description: 'Choose one of the following skills: Athletics, Acrobatics, or Stealth. You gain proficiency in the chosen skill.',
             type: 'proficiency',
           },
         ],
-      }]);
+      };
 
-      expect(warnings.some((w) => w.message.includes('Rules allow'))).toBe(true);
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        skill_proficiencies: 'Choose 2: Arcana, History',
+      });
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({});
+      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
+      vi.mocked(dataLoader.loadFeatData).mockResolvedValue([chooseOneFeat]);
+
+      const result = await getSkillLimits({
+        rules: '2024',
+        class: { name: 'Wizard' },
+        race: { name: 'Human' },
+        feats: ['Choose One Feat'],
+      }, [chooseOneFeat]);
+
+      expect(result.allowed).toBe(3);
+      expect(result.skillChoiceSources).toHaveLength(2);
+      expect(result.skillChoiceSources[1].source).toBe('feat');
+      expect(result.skillChoiceSources[1].featName).toBe('Choose One Feat');
+      expect(result.skillChoiceSources[1].skills).toEqual(['Athletics', 'Acrobatics', 'Stealth']);
+    });
+
+    it('should handle background with no skill_proficiencies field', async () => {
+      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
+        skill_proficiencies: 'Choose 2: Arcana, History, Insight',
+      });
+      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({});
+      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
+
+      const result = await getSkillLimits({
+        rules: '2024',
+        class: { name: 'Wizard' },
+        race: { name: 'Human' },
+        background: 'Unknown',
+        feats: ['Keen Mind'],
+      }, [keenMindFeat]);
+
+      expect(result.allowed).toBe(3);
+      expect(result.skillChoiceSources).toHaveLength(2);
+      expect(result.skillChoiceSources[0].source).toBe('class');
+      expect(result.skillChoiceSources[1].source).toBe('feat');
     });
   });
 });

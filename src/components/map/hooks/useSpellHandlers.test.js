@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import useSpellHandlers from './useSpellHandlers.js';
@@ -57,14 +58,16 @@ describe('useSpellHandlers', () => {
       expect(mocks.addOverlay).not.toHaveBeenCalled();
     });
 
-    it('should not set drag/rotate if hit-test matches sphere (no drag on sphere)', () => {
-      const { result } = getHook();
-      const sphereOnly = [mockOverlays[2]];
+    it('should drag existing sphere overlay (not rotate) when hit-tested', () => {
+      const sphereOverlay = createOverlay(OverlayShape.SPHERE, 5, 7, 0);
+      const { result, mocks } = getHook();
       const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0, clientX: 200, clientY: 200 };
       act(() => {
-        result.current.handleSpellPointerDown(mockEvent, null, sphereOnly);
+        result.current.handleSpellPointerDown(mockEvent, null, [sphereOverlay]);
       });
-      expect(result.current.dragOverlay).toBeNull();
+      expect(mocks.getGridFromEvent).toHaveBeenCalled();
+      expect(result.current.dragOverlay).not.toBeNull();
+      expect(result.current.dragOverlay.overlayId).toBe(sphereOverlay.id);
       expect(result.current.rotateOverlay).toBeNull();
     });
 
@@ -78,31 +81,60 @@ describe('useSpellHandlers', () => {
       expect(mocks.addOverlay).not.toHaveBeenCalled();
     });
 
-    it('should create sphere overlay and add it', () => {
+    it('should create sphere overlay and add it with correct properties', () => {
       const { result, mocks } = getHook();
       const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0 };
       act(() => {
         result.current.handleSpellPointerDown(mockEvent, OverlayShape.SPHERE, mockOverlays);
       });
       expect(mocks.addOverlay).toHaveBeenCalled();
+      expect(result.current.spellDraft).toBeNull();
       const overlay = mocks.addOverlay.mock.calls[0][0];
       expect(overlay.shape).toBe(OverlayShape.SPHERE);
       expect(overlay.startGridX).toBe(5);
       expect(overlay.startGridY).toBe(7);
+      expect(overlay.radiusFt).toBe(20);
+      expect(overlay.color).toBe('rgba(255,80,60,0.35)');
     });
 
-    it('should create cylinder overlay and add it', () => {
+    it('should create cylinder overlay instantly with no draft', () => {
       const { result, mocks } = getHook();
       const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0 };
       act(() => {
         result.current.handleSpellPointerDown(mockEvent, OverlayShape.CYLINDER, mockOverlays);
       });
       expect(mocks.addOverlay).toHaveBeenCalled();
+      expect(result.current.spellDraft).toBeNull();
       const overlay = mocks.addOverlay.mock.calls[0][0];
       expect(overlay.shape).toBe(OverlayShape.CYLINDER);
+      expect(overlay.radiusFt).toBe(20);
     });
 
-    it('should set spellDraft for cone shape', () => {
+    it('should create cube overlay and set spellDraft', () => {
+      const { result } = getHook();
+      const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0, clientX: 100, clientY: 200 };
+      act(() => {
+        result.current.handleSpellPointerDown(mockEvent, OverlayShape.CUBE, mockOverlays);
+      });
+      expect(result.current.spellDraft).not.toBeNull();
+      expect(result.current.spellDraft.startGridX).toBe(5);
+      expect(result.current.spellDraft.startGridY).toBe(7);
+      expect(result.current.spellDraft.angle).toBe(0);
+    });
+
+    it('should create line overlay and set spellDraft', () => {
+      const { result } = getHook();
+      const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0, clientX: 100, clientY: 200 };
+      act(() => {
+        result.current.handleSpellPointerDown(mockEvent, OverlayShape.LINE, mockOverlays);
+      });
+      expect(result.current.spellDraft).not.toBeNull();
+      expect(result.current.spellDraft.startGridX).toBe(5);
+      expect(result.current.spellDraft.startGridY).toBe(7);
+      expect(result.current.spellDraft.angle).toBe(0);
+    });
+
+    it('should set spellDraft for cone shape with correct screen coordinates', () => {
       const { result } = getHook();
       const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0, clientX: 100, clientY: 200 };
       act(() => {
@@ -125,6 +157,16 @@ describe('useSpellHandlers', () => {
       expect(mocks.getGridFromEvent).toHaveBeenCalled();
       expect(result.current.dragOverlay).not.toBeNull();
       expect(result.current.dragOverlay.overlayId).toBeDefined();
+    });
+
+    it('should call preventDefault and stopPropagation when hit-testing matching overlay', () => {
+      const { result } = getHook();
+      const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0, clientX: 200, clientY: 200 };
+      act(() => {
+        result.current.handleSpellPointerDown(mockEvent, null, mockOverlays);
+      });
+      expect(mockEvent.preventDefault).toHaveBeenCalled();
+      expect(mockEvent.stopPropagation).toHaveBeenCalled();
     });
 
     it('should set rotateOverlay for cone near edge', () => {
@@ -173,6 +215,41 @@ describe('useSpellHandlers', () => {
       expect(result.current.dragOverlay).toBeNull();
       expect(result.current.rotateOverlay).toBeNull();
     });
+
+    it('should not set pointer capture when svgRef.current is null during drag setup', () => {
+      const coneOverlay = createOverlay(OverlayShape.CONE, 0, 0, 0);
+      const { result, mocks } = getHook({ svgRef: { current: null } });
+      mocks.getGridFromEvent.mockReturnValue({ gridX: 5.3, gridY: 0.8 });
+      const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0, clientX: 200, clientY: 200, pointerId: 1 };
+      act(() => {
+        result.current.handleSpellPointerDown(mockEvent, null, [coneOverlay]);
+      });
+      expect(result.current.rotateOverlay).not.toBeNull();
+    });
+
+    it('should return early when clientToSVG returns null during hit-test', () => {
+      const { result, mocks } = getHook();
+      mocks.clientToSVG.mockReturnValue(null);
+      const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0, clientX: 200, clientY: 200 };
+      act(() => {
+        result.current.handleSpellPointerDown(mockEvent, null, mockOverlays);
+      });
+      expect(result.current.dragOverlay).toBeNull();
+      expect(result.current.rotateOverlay).toBeNull();
+    });
+
+    it('should create sphere overlay with custom shapeParams spread', () => {
+      const customParams = { radiusFt: 30, color: 'rgba(0,100,255,0.5)' };
+      const { result, mocks } = getHook({ shapeParams: customParams });
+      const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn(), button: 0 };
+      act(() => {
+        result.current.handleSpellPointerDown(mockEvent, OverlayShape.SPHERE, mockOverlays);
+      });
+      expect(mocks.addOverlay).toHaveBeenCalled();
+      const overlay = mocks.addOverlay.mock.calls[0][0];
+      expect(overlay.radiusFt).toBe(30);
+      expect(overlay.color).toBe('rgba(0,100,255,0.5)');
+    });
   });
 
   describe('handleSpellPointerMove', () => {
@@ -185,18 +262,20 @@ describe('useSpellHandlers', () => {
       expect(mocks.getGridFromEvent).not.toHaveBeenCalled();
     });
 
-    it('should update spellDraft angle on move', () => {
+    it('should update spellDraft angle on move and call preventDefault', () => {
       const { result } = getHook();
       const initialDraft = { startScreenX: 100, startScreenY: 100, startGridX: 5, startGridY: 7, angle: 0 };
       act(() => {
         result.current.setSpellDraft(initialDraft);
       });
-      const mockEvent = { preventDefault: vi.fn(), clientX: 200, clientY: 200 };
+      const mockEvent = { preventDefault: vi.fn(), clientX: 200, clientY: 50 };
       act(() => {
         result.current.handleSpellPointerMove(mockEvent, initialDraft);
       });
+      expect(mockEvent.preventDefault).toHaveBeenCalled();
       expect(result.current.spellDraft).not.toBeNull();
       expect(result.current.spellDraft.angle).toBeGreaterThan(0);
+      expect(result.current.spellDraft.angle).toBeLessThan(360);
     });
   });
 
@@ -224,6 +303,33 @@ describe('useSpellHandlers', () => {
       expect(overlay.startGridX).toBe(5);
       expect(overlay.startGridY).toBe(7);
       expect(result.current.spellDraft).toBeNull();
+    });
+
+    it('should create overlay with non-zero angle when cursor moved', () => {
+      const { result, mocks } = getHook();
+      const initialDraft = { startScreenX: 100, startScreenY: 100, startGridX: 5, startGridY: 7, angle: 0 };
+      const mockEvent = { preventDefault: vi.fn(), clientX: 200, clientY: 50 };
+      act(() => {
+        result.current.handleSpellPointerUp(mockEvent, initialDraft, OverlayShape.CONE, mocks.addOverlay, mocks.shapeParams);
+      });
+      expect(mocks.addOverlay).toHaveBeenCalled();
+      const overlay = mocks.addOverlay.mock.calls[0][0];
+      expect(overlay.angle).toBeGreaterThan(0);
+      expect(overlay.angle).toBeLessThan(360);
+    });
+
+    it('should create overlay with custom shapeParams spread', () => {
+      const customParams = { coneAngle: 90, distanceFt: 30 };
+      const { result, mocks } = getHook({ shapeParams: customParams });
+      const initialDraft = { startScreenX: 100, startScreenY: 100, startGridX: 5, startGridY: 7, angle: 0 };
+      const mockEvent = { preventDefault: vi.fn(), clientX: 200, clientY: 100 };
+      act(() => {
+        result.current.handleSpellPointerUp(mockEvent, initialDraft, OverlayShape.CONE, mocks.addOverlay, mocks.shapeParams);
+      });
+      expect(mocks.addOverlay).toHaveBeenCalled();
+      const overlay = mocks.addOverlay.mock.calls[0][0];
+      expect(overlay.coneAngle).toBe(90);
+      expect(overlay.distanceFt).toBe(30);
     });
 
     it('should clear spellDraft after creating overlay', () => {
@@ -262,6 +368,16 @@ describe('useSpellHandlers', () => {
       const updated = mocks.updateOverlay.mock.calls[0][0];
       expect(updated.startGridX).toBe(4);
       expect(updated.startGridY).toBe(5);
+    });
+
+    it('should call preventDefault when dragging overlay', () => {
+      const { result } = getHook();
+      const dragOv = { overlayId: mockOverlays[0].id, offsetX: 0, offsetY: 0 };
+      const mockEvent = { preventDefault: vi.fn() };
+      act(() => {
+        result.current.handleSpellDragMove(mockEvent, dragOv, null, mockOverlays);
+      });
+      expect(mockEvent.preventDefault).toHaveBeenCalled();
     });
 
     it('should update overlay angle for rotateOverlay', () => {
@@ -334,6 +450,17 @@ describe('useSpellHandlers', () => {
       const updated = mocks.updateOverlay.mock.calls[0][0];
       expect(updated.angle).toBeGreaterThanOrEqual(0);
       expect(updated.angle).toBeLessThan(360);
+    });
+
+    it('should return early if grid is null during drag move', () => {
+      const { result, mocks } = getHook();
+      mocks.getGridFromEvent.mockReturnValue(null);
+      const dragOv = { overlayId: mockOverlays[0].id, offsetX: 0, offsetY: 0 };
+      const mockEvent = { preventDefault: vi.fn() };
+      act(() => {
+        result.current.handleSpellDragMove(mockEvent, dragOv, null, mockOverlays);
+      });
+      expect(mocks.updateOverlay).not.toHaveBeenCalled();
     });
   });
 
@@ -460,6 +587,15 @@ describe('useSpellHandlers', () => {
       });
       expect(mocks.updateOverlayImmediate).not.toHaveBeenCalled();
       expect(result.current.rotateOverlay).toBeNull();
+    });
+
+    it('should do nothing when both dragOverlay and rotateOverlay are null', () => {
+      const { result, mocks } = getHook();
+      const mockEvent = { pointerId: 1, preventDefault: vi.fn() };
+      act(() => {
+        result.current.handleSpellDragEnd(mockEvent, null, null, mockOverlays, mocks.svgRef);
+      });
+      expect(mocks.updateOverlayImmediate).not.toHaveBeenCalled();
     });
   });
 });

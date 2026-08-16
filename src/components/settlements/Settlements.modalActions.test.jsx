@@ -71,18 +71,11 @@ describe('Settlements - modal actions', () => {
       tags: 'generated',
       threat: 'Bandits',
     }));
-    // Mock the descriptions data fetch; everything else stays inert.
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      if (url.includes('settlement-descriptions.json')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            village: { descriptions: ['A quiet village.'], atmospheres: ['Peaceful'], governments: ['Elder Council'], threats: ['Wild animals'], features: [] },
-            town: { descriptions: ['A busy town.'], atmospheres: ['Bustling'], governments: ['Mayor'], threats: ['Bandits'], features: [] },
-          }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    // The component fetches settlement-descriptions.json on mount; no test
+    // in this file changes the size select, so the response body is irrelevant.
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
     });
   });
 
@@ -117,6 +110,15 @@ describe('Settlements - modal actions', () => {
       expect(screen.queryByText('Hollow Oak')).not.toBeInTheDocument();
       fireEvent.click(screen.getByLabelText('Clear search'));
       expect(screen.getByText('Hollow Oak')).toBeInTheDocument();
+    });
+  });
+
+  describe('Generate settlement button', () => {
+    it('is visible and enabled on the main view before any generation', () => {
+      render(<Settlements campaignName={campaignName} onBack={() => {}} />);
+      const generateBtn = screen.getByRole('button', { name: /generate settlement/i });
+      expect(generateBtn).toBeEnabled();
+      expect(generateBtn).toHaveTextContent('Generate Settlement');
     });
   });
 
@@ -166,7 +168,7 @@ describe('Settlements - modal actions', () => {
     });
   });
 
-  describe('Generate settlement', () => {
+  describe('Generate settlement flow', () => {
     it('disables the generate button while generating and re-enables it when done', async () => {
       let resolveGenerate;
       vi.mocked(generateSettlement).mockImplementationOnce(() => new Promise((resolve) => {

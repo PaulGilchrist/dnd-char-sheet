@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EquipmentSearchModal from './EquipmentSearchModal.jsx';
@@ -69,21 +70,47 @@ describe('EquipmentSearchModal', () => {
       expect(screen.getByText('Close')).toBeInTheDocument();
     });
 
-    it('should render category filter buttons from uniqueCategories', () => {
+    it('should render category filter dropdown from uniqueCategories', () => {
       const props = createMockProps({
         uniqueCategories: ['All', 'Weapons', 'Armor', 'Potions'],
       });
       render(<EquipmentSearchModal {...props} />);
-      expect(screen.getByText('All')).toBeInTheDocument();
-      expect(screen.getByText('Weapons')).toBeInTheDocument();
-      expect(screen.getByText('Armor')).toBeInTheDocument();
-      expect(screen.getByText('Potions')).toBeInTheDocument();
+      const select = screen.getByRole('combobox');
+      expect(select).toBeInTheDocument();
+      expect(select.value).toBe('All');
+      const options = select.querySelectorAll('option');
+      expect(options).toHaveLength(4);
+      expect(options[0].textContent).toBe('All');
+      expect(options[3].textContent).toBe('Potions');
+    });
+
+    it('should default uniqueCategories to ["All"] when not provided', () => {
+      render(
+        <EquipmentSearchModal
+          showSearchModal={true}
+          onClose={vi.fn()}
+          filteredEquipment={[]}
+          searchQuery=""
+          onSearchChange={vi.fn()}
+          selectedCategory="All"
+          onCategoryChange={vi.fn()}
+          showOnlySelected={false}
+          onShowOnlySelectedChange={vi.fn()}
+          onEquipmentSelect={vi.fn()}
+          onAddCustomItem={vi.fn()}
+          currentItemCount={0}
+        />
+      );
+      const select = screen.getByRole('combobox');
+      expect(select.value).toBe('All');
     });
 
     it('should render search input with correct placeholder', () => {
       const props = createMockProps();
       render(<EquipmentSearchModal {...props} />);
-      expect(screen.getByPlaceholderText('Search equipment...')).toBeInTheDocument();
+      const input = screen.getByPlaceholderText('Search equipment...');
+      expect(input).toBeInTheDocument();
+      expect(input).toHaveAttribute('type', 'text');
     });
 
     it('should render the show-only-selected checkbox with item count', () => {
@@ -110,7 +137,7 @@ describe('EquipmentSearchModal', () => {
       expect(screen.getByText('12 lb')).toBeInTheDocument();
     });
 
-    it('should render equipment with partial cost data', () => {
+    it('should render equipment with missing cost (renders empty cost span)', () => {
       const itemWithoutCost = {
         index: 'rock',
         name: 'Rock',
@@ -121,6 +148,23 @@ describe('EquipmentSearchModal', () => {
       });
       render(<EquipmentSearchModal {...props} />);
       expect(screen.getByText('Rock')).toBeInTheDocument();
+      const details = screen.getByText('Rock').parentElement;
+      expect(details.querySelector('.equipment-item-cost')).toBeInTheDocument();
+    });
+
+    it('should render equipment with missing weight (no weight span)', () => {
+      const itemWithoutWeight = {
+        index: 'shield',
+        name: 'Shield',
+        equipment_category: 'Armor',
+        cost: { quantity: 10, unit: 'gp' },
+      };
+      const props = createMockProps({
+        filteredEquipment: [itemWithoutWeight],
+      });
+      render(<EquipmentSearchModal {...props} />);
+      expect(screen.getByText('Shield')).toBeInTheDocument();
+      expect(screen.queryByText(' lb')).not.toBeInTheDocument();
     });
   });
 
@@ -139,7 +183,7 @@ describe('EquipmentSearchModal', () => {
       );
     });
 
-    it('should highlight the selected category button', () => {
+    it('should reflect the selected category in the combobox value', () => {
       const props = createMockProps({ selectedCategory: 'Armor' });
       render(<EquipmentSearchModal {...props} />);
       const select = screen.getByRole('combobox');
@@ -164,7 +208,7 @@ describe('EquipmentSearchModal', () => {
       expect(props.onCategoryChange).toHaveBeenCalledWith('Weapons');
     });
 
-    it('should call onShowOnlySelectedChange when checkbox is toggled', () => {
+    it('should call onShowOnlySelectedChange with the new checked state when checkbox is toggled', () => {
       const props = createMockProps({ showOnlySelected: false });
       render(<EquipmentSearchModal {...props} />);
       fireEvent.click(screen.getByRole('checkbox'));
@@ -180,6 +224,16 @@ describe('EquipmentSearchModal', () => {
       expect(props.onEquipmentSelect).toHaveBeenCalledWith(mockEquipment[0]);
     });
 
+    it('should call onEquipmentSelect when clicking anywhere on the equipment item div', () => {
+      const props = createMockProps({
+        filteredEquipment: mockEquipment,
+      });
+      render(<EquipmentSearchModal {...props} />);
+      const itemDiv = screen.getByText('Club').closest('.equipment-item');
+      fireEvent.click(itemDiv);
+      expect(props.onEquipmentSelect).toHaveBeenCalledWith(mockEquipment[0]);
+    });
+
     it('should call onAddCustomItem with trimmed query when Enter is pressed', () => {
       const props = createMockProps({ searchQuery: '  sword  ' });
       render(<EquipmentSearchModal {...props} />);
@@ -188,8 +242,16 @@ describe('EquipmentSearchModal', () => {
       expect(props.onAddCustomItem).toHaveBeenCalledWith('sword');
     });
 
-    it('should not call onAddCustomItem when Enter is pressed with empty or whitespace-only searchQuery', () => {
+    it('should not call onAddCustomItem when Enter is pressed with empty searchQuery', () => {
       const props = createMockProps({ searchQuery: '' });
+      render(<EquipmentSearchModal {...props} />);
+      const searchInput = screen.getByPlaceholderText('Search equipment...');
+      fireEvent.keyDown(searchInput, { key: 'Enter' });
+      expect(props.onAddCustomItem).not.toHaveBeenCalled();
+    });
+
+    it('should not call onAddCustomItem when Enter is pressed with whitespace-only searchQuery', () => {
+      const props = createMockProps({ searchQuery: '   ' });
       render(<EquipmentSearchModal {...props} />);
       const searchInput = screen.getByPlaceholderText('Search equipment...');
       fireEvent.keyDown(searchInput, { key: 'Enter' });
@@ -204,10 +266,17 @@ describe('EquipmentSearchModal', () => {
       expect(props.onAddCustomItem).not.toHaveBeenCalled();
     });
 
-    it('should call onClose when close buttons are clicked', () => {
+    it('should call onClose when the ✕ close button is clicked', () => {
       const props = createMockProps();
       render(<EquipmentSearchModal {...props} />);
       fireEvent.click(screen.getByText('✕'));
+      expect(props.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onClose when the footer Close button is clicked', () => {
+      const props = createMockProps();
+      render(<EquipmentSearchModal {...props} />);
+      fireEvent.click(screen.getByText('Close'));
       expect(props.onClose).toHaveBeenCalledTimes(1);
     });
   });
@@ -232,6 +301,17 @@ describe('EquipmentSearchModal', () => {
       render(<EquipmentSearchModal {...props} />);
       expect(
         screen.getByText('Start typing to search equipment.')
+      ).toBeInTheDocument();
+    });
+
+    it('should show "No matches found" when searchQuery is whitespace-only and no results', () => {
+      const props = createMockProps({
+        searchQuery: '   ',
+        filteredEquipment: [],
+      });
+      render(<EquipmentSearchModal {...props} />);
+      expect(
+        screen.getByText('No matches found. Press Enter to add as custom item.')
       ).toBeInTheDocument();
     });
   });

@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
 
@@ -69,46 +70,77 @@ describe('StepsOfTheFeyTauntModal - Choice Step', () => {
         localStorage.clear();
     });
 
-    describe('choice step interactions', () => {
-        it('selects Refreshing Step when clicked', () => {
+    describe('choice step view transitions', () => {
+        it('transitions to Refreshing Step confirmation view when selected', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
             fireEvent.click(refreshingOption);
-            expect(screen.getByText(/Refreshing Step/)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Refresh/ })).toBeInTheDocument();
         });
 
-        it('selects Taunting Step when clicked', () => {
+        it('transitions to Taunting Step creature selection when selected', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
             fireEvent.click(tauntingOption);
-            expect(screen.getByText(/Taunting Step: Select creatures/)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Taunt/ })).toBeInTheDocument();
         });
 
-        it('selects Disappearing Step when clicked', () => {
+        it('transitions to Disappearing Step confirmation view when selected', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const disappearingOption = screen.getByText('Disappearing Step').closest('.clickable');
             fireEvent.click(disappearingOption);
-            expect(screen.getByText(/Disappearing Step/)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Disappear/ })).toBeInTheDocument();
         });
 
-        it('selects Dreadful Step when clicked', () => {
+        it('transitions to Dreadful Step creature selection when selected', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const dreadfulOption = screen.getByText('Dreadful Step').closest('.clickable');
             fireEvent.click(dreadfulOption);
-            expect(screen.getByText(/Dreadful Step: Select creatures/)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Dreadful/ })).toBeInTheDocument();
         });
 
-        it('allows re-selecting a different step after choosing one', () => {
+        it('returns to choice view when Cancel is clicked in Refreshing Step confirmation', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
             fireEvent.click(refreshingOption);
-            expect(screen.getByText(/Refreshing Step/)).toBeInTheDocument();
-
             const cancelButton = screen.getByRole('button', { name: 'Cancel' });
             fireEvent.click(cancelButton);
+            expect(screen.getByText(/Choose how you use/)).toBeInTheDocument();
+        });
 
-            expect(document.querySelector('.sp-header').querySelector('.fa-solid.fa-wand-sparkles')).toBeInTheDocument();
-            expect(screen.getByText('Refreshing Step')).toBeInTheDocument();
+        it('returns to choice view when Cancel is clicked in Disappearing Step confirmation', () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
+            const disappearingOption = screen.getByText('Disappearing Step').closest('.clickable');
+            fireEvent.click(disappearingOption);
+            const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+            fireEvent.click(cancelButton);
+            expect(screen.getByText(/Choose how you use/)).toBeInTheDocument();
+        });
+
+        it('transitions to result view when Skip is clicked in choice step', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
+            const skipButton = screen.getByRole('button', { name: 'Skip' });
+            fireEvent.click(skipButton);
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+            });
+        });
+
+        it('transitions to result view when overlay is clicked in choice step', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
+            const overlay = document.querySelector('.sp-overlay');
+            fireEvent.click(overlay);
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+            });
+        });
+
+        it('does not transition when modal content overlay is clicked', () => {
+            const onClose = vi.fn();
+            render(<StepsOfTheFeyTauntModal {...makeProps({ onClose })} />);
+            const modal = document.querySelector('.sp-modal');
+            fireEvent.click(modal);
+            expect(onClose).not.toHaveBeenCalled();
         });
     });
 });

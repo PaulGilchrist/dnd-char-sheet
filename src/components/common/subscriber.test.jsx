@@ -52,8 +52,6 @@ const { resetSSEClient, __getSources } = await import('../../services/ui/sseClie
 describe('Subscriber', () => {
   beforeEach(() => {
     resetSSEClient();
-    vi.clearAllMocks();
-    localStorage.clear();
   });
 
   describe('rendering', () => {
@@ -85,34 +83,51 @@ describe('Subscriber', () => {
       expect(entry.handlers.size).toBe(1);
     });
 
-    it('registers with an empty string key when campaignName is falsy', () => {
-      const handleEvent = vi.fn();
+    it('registers with an empty string key when campaignName is falsy (null, undefined, or empty string)', () => {
+      const nullHandleEvent = vi.fn();
+      const undefinedHandleEvent = vi.fn();
+      const emptyHandleEvent = vi.fn();
 
       render(
         <Subscriber
-          handleEvent={handleEvent}
+          handleEvent={nullHandleEvent}
           campaignName={null}
         />
       );
-
-      const entry = __getSources().get('');
-      expect(entry).toBeDefined();
-      expect(entry.handlers.size).toBe(1);
-    });
-
-    it('registers with an empty string key when campaignName is empty string', () => {
-      const handleEvent = vi.fn();
-
       render(
         <Subscriber
-          handleEvent={handleEvent}
+          handleEvent={undefinedHandleEvent}
+          campaignName={undefined}
+        />
+      );
+      render(
+        <Subscriber
+          handleEvent={emptyHandleEvent}
           campaignName=""
         />
       );
 
       const entry = __getSources().get('');
       expect(entry).toBeDefined();
+      expect(entry.handlers.size).toBe(3);
+    });
+
+    it('calls subscribeToSSE with the campaign key and a handler function', () => {
+      const handleEvent = vi.fn();
+
+      render(
+        <Subscriber
+          handleEvent={handleEvent}
+          campaignName="campaign-x"
+        />
+      );
+
+      const entry = __getSources().get('campaign-x');
+      expect(entry).toBeDefined();
       expect(entry.handlers.size).toBe(1);
+      // The handler stored is a function (the wrapper from useEffect).
+      var registeredHandler = Array.from(entry.handlers)[0];
+      expect(typeof registeredHandler).toBe('function');
     });
   });
 
@@ -156,6 +171,44 @@ describe('Subscriber', () => {
       entry.eventSource.onmessage({ data: JSON.stringify(complexData) });
 
       expect(handleEvent).toHaveBeenCalledWith(complexData);
+    });
+
+    it('delivers empty JSON object {} to the handler', () => {
+      const handleEvent = vi.fn();
+
+      render(
+        <Subscriber
+          handleEvent={handleEvent}
+          campaignName="test-campaign"
+        />
+      );
+
+      const entry = Array.from(__getSources().values())[0];
+      entry.eventSource.onmessage({ data: JSON.stringify({}) });
+
+      expect(handleEvent).toHaveBeenCalledWith({});
+    });
+
+    it('delivers the parsed object directly, not a re-stringified version', () => {
+      const handleEvent = vi.fn();
+
+      render(
+        <Subscriber
+          handleEvent={handleEvent}
+          campaignName="test-campaign"
+        />
+      );
+
+      const entry = Array.from(__getSources().values())[0];
+      const originalData = { key: 'test', value: 42 };
+      const jsonString = JSON.stringify(originalData);
+
+      entry.eventSource.onmessage({ data: jsonString });
+
+      // The handler should receive the parsed object (same structure),
+      // not a string or a re-stringified version.
+      expect(handleEvent).toHaveBeenCalledWith(originalData);
+      expect(typeof handleEvent.mock.calls[0][0]).toBe('object');
     });
 
     it('dispatches a shared SSE event to all subscribed handlers for the same campaign', () => {
@@ -212,6 +265,33 @@ describe('Subscriber', () => {
 
       expect(secondHandler).toHaveBeenCalledWith({ type: 'test' });
       expect(firstHandler).not.toHaveBeenCalled();
+    });
+
+    it('unsubscribes from the old campaign and subscribes to the new one when campaignName changes', () => {
+      const handlerA = vi.fn();
+      const handlerB = vi.fn();
+
+      const { rerender } = render(
+        <Subscriber
+          handleEvent={handlerA}
+          campaignName="campaign-a"
+        />
+      );
+
+      expect(__getSources().has('campaign-a')).toBe(true);
+      expect(__getSources().has('campaign-b')).toBe(false);
+
+      rerender(
+        <Subscriber
+          handleEvent={handlerB}
+          campaignName="campaign-b"
+        />
+      );
+
+      // After rerender: campaign-a subscription was cleaned up, campaign-b is active.
+      expect(__getSources().has('campaign-a')).toBe(false);
+      expect(__getSources().has('campaign-b')).toBe(true);
+      expect(__getSources().get('campaign-b').handlers.size).toBe(1);
     });
   });
 

@@ -8,9 +8,20 @@ const mockCascadingSelectProps = vi.fn();
 vi.mock('./CascadingSelect.jsx', () => {
   function MockCascadingSelect(props) {
     mockCascadingSelectProps(props);
-    const { label, childLabel, errorKey, errors, onInputChange, fieldName, formData, subOptionsSelector } = props;
+    const {
+      label,
+      childLabel,
+      errorKey,
+      errors,
+      onInputChange,
+      fieldName,
+      formData,
+      subOptionsSelector,
+    } = props;
     const selectedParentValue = formData?.[fieldName]?.name || '';
-    const availableSubOptions = subOptionsSelector ? subOptionsSelector(selectedParentValue) : [];
+    const availableSubOptions = subOptionsSelector
+      ? subOptionsSelector(selectedParentValue)
+      : [];
     return (
       <div data-testid={`cascading-select-${fieldName}`}>
         <label>{label} *</label>
@@ -27,7 +38,9 @@ vi.mock('./CascadingSelect.jsx', () => {
         </select>
         {availableSubOptions.length > 0 && (
           <div>
-            <span data-testid={`sub-options-count-${fieldName}`}>{availableSubOptions.length}</span>
+            <span data-testid={`sub-options-count-${fieldName}`}>
+              {availableSubOptions.length}
+            </span>
           </div>
         )}
         {errorKey && errors?.[errorKey] && (
@@ -79,14 +92,11 @@ describe('WizardStepRaceClass', () => {
       expect(screen.getByText(/Subclass \*/)).toBeInTheDocument();
     });
 
-    it('renders race and class CascadingSelect components with correct prop shapes', () => {
+    it('passes correct props to race CascadingSelect', () => {
       render(<WizardStepRaceClass {...makeProps()} />);
 
       const raceProps = mockCascadingSelectProps.mock.calls.find(
         (call) => call[0].fieldName === 'race'
-      );
-      const classProps = mockCascadingSelectProps.mock.calls.find(
-        (call) => call[0].fieldName === 'class'
       );
 
       expect(raceProps).toBeDefined();
@@ -95,7 +105,16 @@ describe('WizardStepRaceClass', () => {
       expect(raceProps[0].fieldName).toBe('race');
       expect(raceProps[0].childFieldName).toBe('subrace');
       expect(raceProps[0].errorKey).toBe('subrace');
-      expect(raceProps[0].options).toStrictEqual(makeRacesData());
+      expect(raceProps[0].loadingText).toBe('Loading races...');
+      expect(raceProps[0].childExtraFields).toEqual({ description: '' });
+    });
+
+    it('passes correct props to class CascadingSelect', () => {
+      render(<WizardStepRaceClass {...makeProps()} />);
+
+      const classProps = mockCascadingSelectProps.mock.calls.find(
+        (call) => call[0].fieldName === 'class'
+      );
 
       expect(classProps).toBeDefined();
       expect(classProps[0].label).toBe('Class');
@@ -104,12 +123,13 @@ describe('WizardStepRaceClass', () => {
       expect(classProps[0].childFieldName).toBe('subclass');
       expect(classProps[0].errorKey).toBe('subclass');
       expect(classProps[0].optionsKey).toBe('className');
-      expect(classProps[0].options).toStrictEqual(makeClassSubtypes());
+      expect(classProps[0].loadingText).toBe('Loading classes...');
+      expect(classProps[0].childExtraFields).toEqual({ type: '' });
     });
   });
 
-  describe('5e ruleset — no order selects', () => {
-    it('does not render Divine Order or Primal Order in 5e', () => {
+  describe('5e ruleset', () => {
+    it('does not render Divine Order or Primal Order selects', () => {
       render(<WizardStepRaceClass {...makeProps({ ruleset: '5e' })} />);
       expect(screen.queryByText('Divine Order')).not.toBeInTheDocument();
       expect(screen.queryByText('Primal Order')).not.toBeInTheDocument();
@@ -182,6 +202,21 @@ describe('WizardStepRaceClass', () => {
         />
       );
       expect(getDivineOrderSelect()).toHaveValue('Protector');
+    });
+
+    it('preserves existing class properties when updating divineOrder', () => {
+      render(
+        <WizardStepRaceClass
+          {...props()}
+          formData={{ race: '', subrace: '', class: { name: 'Cleric', divineOrder: 'Thaumaturge' } }}
+        />
+      );
+      const select = getDivineOrderSelect();
+      fireEvent.change(select, { target: { value: 'Protector' } });
+      expect(makeOnInputChange).toHaveBeenCalledWith('class', {
+        name: 'Cleric',
+        divineOrder: 'Protector',
+      });
     });
   });
 
@@ -271,7 +306,7 @@ describe('WizardStepRaceClass', () => {
   });
 
   describe('formData edge cases', () => {
-    it('renders without order selects when class is undefined or has empty name', () => {
+    it('renders without order selects when class is undefined', () => {
       render(
         <WizardStepRaceClass
           {...makeProps({
@@ -281,7 +316,21 @@ describe('WizardStepRaceClass', () => {
       );
       expect(screen.queryByText('Divine Order')).not.toBeInTheDocument();
       expect(screen.queryByText('Primal Order')).not.toBeInTheDocument();
+    });
 
+    it('renders without order selects when class is null', () => {
+      render(
+        <WizardStepRaceClass
+          {...makeProps({
+            formData: { race: '', subrace: '', class: null },
+          })}
+        />
+      );
+      expect(screen.queryByText('Divine Order')).not.toBeInTheDocument();
+      expect(screen.queryByText('Primal Order')).not.toBeInTheDocument();
+    });
+
+    it('renders without order selects when class name is empty string', () => {
       render(
         <WizardStepRaceClass
           {...makeProps({
@@ -301,22 +350,34 @@ describe('WizardStepRaceClass', () => {
           {...makeProps({
             racesData,
             classSubtypes,
-            formData: { race: 'Nonexistent', subrace: '', class: { name: 'Nonexistent' } },
+            formData: {
+              race: 'Nonexistent',
+              subrace: '',
+              class: { name: 'Nonexistent' },
+            },
           })}
         />
       );
       expect(screen.getByText('Step 3: Race & Class')).toBeInTheDocument();
+      expect(screen.getByTestId('cascading-select-race')).toBeInTheDocument();
+      expect(screen.getByTestId('cascading-select-class')).toBeInTheDocument();
     });
 
     it('renders with selected race subrace and divineOrder populated', () => {
       const racesData = [{ name: 'Human', subraces: ['Variant', 'Standard'] }];
-      const classSubtypes = [{ className: 'Cleric', subtypes: ['Order of the Keeper'] }];
+      const classSubtypes = [
+        { className: 'Cleric', subtypes: ['Order of the Keeper'] },
+      ];
       render(
         <WizardStepRaceClass
           {...makeProps({
             racesData,
             classSubtypes,
-            formData: { race: { name: 'Human' }, subrace: 'Variant', class: { name: 'Cleric', divineOrder: 'Thaumaturge' } },
+            formData: {
+              race: { name: 'Human' },
+              subrace: 'Variant',
+              class: { name: 'Cleric', divineOrder: 'Thaumaturge' },
+            },
             ruleset: '2024',
           })}
         />
@@ -324,6 +385,20 @@ describe('WizardStepRaceClass', () => {
       expect(screen.getByText('Step 3: Race & Class')).toBeInTheDocument();
       expect(screen.getByText('Divine Order *')).toBeInTheDocument();
       expect(screen.getByText('Thaumaturge')).toBeInTheDocument();
+    });
+
+    it('renders without errors when racesData and classSubtypes are empty arrays', () => {
+      render(
+        <WizardStepRaceClass
+          {...makeProps({
+            racesData: [],
+            classSubtypes: [],
+          })}
+        />
+      );
+      expect(screen.getByText('Step 3: Race & Class')).toBeInTheDocument();
+      expect(screen.getByTestId('cascading-select-race')).toBeInTheDocument();
+      expect(screen.getByTestId('cascading-select-class')).toBeInTheDocument();
     });
   });
 
@@ -423,10 +498,14 @@ describe('WizardStepRaceClass', () => {
     });
   });
 
-  describe('CascadingSelect prop validation', () => {
+  describe('prop forwarding', () => {
     it('passes errors and formData props to both CascadingSelect instances', () => {
       const errors = { race: 'Required', subrace: 'Required', subclass: 'Required' };
-      const formData = { race: { name: 'Human' }, subrace: { name: 'Variant' }, class: { name: 'Fighter' } };
+      const formData = {
+        race: { name: 'Human' },
+        subrace: { name: 'Variant' },
+        class: { name: 'Fighter' },
+      };
       render(<WizardStepRaceClass {...makeProps({ errors, formData })} />);
 
       const raceProps = mockCascadingSelectProps.mock.calls.find(

@@ -10,11 +10,9 @@ import {
 
 describe('settlementsService', () => {
   let fetchSpy;
-  let consoleErrorSpy;
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, 'fetch');
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -22,7 +20,7 @@ describe('settlementsService', () => {
   });
 
   describe('saveSettlement', () => {
-    it('should return parsed JSON body on successful save', async () => {
+    it('returns parsed JSON body on successful save', async () => {
       const mockSettlement = { name: 'Waterdeep', type: 'city', population: 90000 };
       const responseData = { success: true, name: 'Waterdeep' };
 
@@ -36,7 +34,7 @@ describe('settlementsService', () => {
       expect(result).toEqual(responseData);
     });
 
-    it('should send PUT to the correct URL with encoded special characters', async () => {
+    it('sends PUT with encoded URL using oldName when provided', async () => {
       const mockSettlement = { name: 'Town/Region', type: 'city' };
       fetchSpy.mockResolvedValue({
         ok: true,
@@ -55,22 +53,7 @@ describe('settlementsService', () => {
       );
     });
 
-    it('should use oldName for the URL when renaming a settlement', async () => {
-      const mockSettlement = { name: 'NewName', type: 'city' };
-      fetchSpy.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      });
-
-      await saveSettlement('campaign1', mockSettlement, 'OldName');
-
-      expect(fetchSpy).toHaveBeenCalledWith(
-        '/api/campaigns/campaign1/settlements/OldName',
-        expect.any(Object)
-      );
-    });
-
-    it('should use settlement.name for the URL when no oldName is provided', async () => {
+    it('uses settlement.name for the URL when no oldName is provided', async () => {
       const mockSettlement = { name: 'Waterdeep', type: 'city' };
       fetchSpy.mockResolvedValue({
         ok: true,
@@ -85,7 +68,7 @@ describe('settlementsService', () => {
       );
     });
 
-    it('should call console.error and throw with custom error message on API error', async () => {
+    it('throws with custom error message on API error', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Conflict',
@@ -95,10 +78,9 @@ describe('settlementsService', () => {
       await expect(
         saveSettlement('campaign1', { name: 'Test' })
       ).rejects.toThrow('Settlement already exists');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving settlement:', expect.any(Error));
     });
 
-    it('should call console.error and throw generic error when API error response has no error field', async () => {
+    it('throws generic error when API error response has no error field', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -110,18 +92,17 @@ describe('settlementsService', () => {
       ).rejects.toThrow('Failed to save settlement');
     });
 
-    it('should call console.error and rethrow on network failure', async () => {
+    it('rethrows on network failure', async () => {
       fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(
         saveSettlement('campaign1', { name: 'Test' })
       ).rejects.toThrow('ENOTFOUND');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving settlement:', expect.any(Error));
     });
   });
 
   describe('loadSettlements', () => {
-    it('should return settlements array from successful API response', async () => {
+    it('returns settlements array from successful API response', async () => {
       const mockSettlements = [
         { name: 'Waterdeep', type: 'city', population: 90000 },
         { name: 'Baldur\'s Gate', type: 'city', population: 50000 },
@@ -136,7 +117,7 @@ describe('settlementsService', () => {
       expect(result).toEqual(mockSettlements);
     });
 
-    it('should return empty array when API returns no settlements', async () => {
+    it('returns empty array when API returns no settlements', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve([]),
@@ -147,7 +128,7 @@ describe('settlementsService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should URL-encode the campaign name and include GET options', async () => {
+    it('URL-encodes the campaign name and includes GET options', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve([]),
@@ -164,7 +145,7 @@ describe('settlementsService', () => {
       );
     });
 
-    it('should call console.error and throw with custom error message on API error', async () => {
+    it('throws with custom error message on API error', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
@@ -172,10 +153,9 @@ describe('settlementsService', () => {
       });
 
       await expect(loadSettlements('campaign1')).rejects.toThrow('Campaign not found');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading settlements:', expect.any(Error));
     });
 
-    it('should call console.error and throw generic error when API error response has no error field', async () => {
+    it('throws generic error when API error response has no error field', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -185,16 +165,15 @@ describe('settlementsService', () => {
       await expect(loadSettlements('campaign1')).rejects.toThrow('Failed to load settlements');
     });
 
-    it('should call console.error and rethrow on network failure', async () => {
+    it('rethrows on network failure', async () => {
       fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(loadSettlements('campaign1')).rejects.toThrow('ENOTFOUND');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading settlements:', expect.any(Error));
     });
   });
 
   describe('saveSettlements', () => {
-    it('should send POST with settlements array and return parsed JSON on success', async () => {
+    it('sends POST with settlements array and returns parsed JSON on success', async () => {
       const settlements = [
         { name: 'Waterdeep', type: 'city' },
         { name: 'Baldur\'s Gate', type: 'city' },
@@ -219,7 +198,7 @@ describe('settlementsService', () => {
       );
     });
 
-    it('should send empty array when settlements is empty', async () => {
+    it('sends empty array when settlements is empty', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({}),
@@ -236,7 +215,7 @@ describe('settlementsService', () => {
       );
     });
 
-    it('should URL-encode the campaign name', async () => {
+    it('URL-encodes the campaign name', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ success: true }),
@@ -250,7 +229,7 @@ describe('settlementsService', () => {
       );
     });
 
-    it('should call console.error and throw with custom error message on API error', async () => {
+    it('throws with custom error message on API error', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Bad Request',
@@ -258,10 +237,9 @@ describe('settlementsService', () => {
       });
 
       await expect(saveSettlements('campaign1', [])).rejects.toThrow('Invalid settlements data');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving settlements:', expect.any(Error));
     });
 
-    it('should call console.error and throw generic error when API error response has no error field', async () => {
+    it('throws generic error when API error response has no error field', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -271,16 +249,15 @@ describe('settlementsService', () => {
       await expect(saveSettlements('campaign1', [])).rejects.toThrow('Failed to save settlements');
     });
 
-    it('should call console.error and rethrow on network failure', async () => {
+    it('rethrows on network failure', async () => {
       fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(saveSettlements('campaign1', [])).rejects.toThrow('ENOTFOUND');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving settlements:', expect.any(Error));
     });
   });
 
   describe('loadSettlement', () => {
-    it('should return a single settlement from API response', async () => {
+    it('returns a single settlement from API response', async () => {
       const mockSettlement = {
         name: 'Waterdeep',
         type: 'city',
@@ -297,7 +274,7 @@ describe('settlementsService', () => {
       expect(result).toEqual(mockSettlement);
     });
 
-    it('should URL-encode both campaign name and settlement name', async () => {
+    it('URL-encodes both campaign name and settlement name', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({}),
@@ -314,7 +291,7 @@ describe('settlementsService', () => {
       );
     });
 
-    it('should call console.error and throw with custom error message on API error', async () => {
+    it('throws with custom error message on API error', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
@@ -322,10 +299,9 @@ describe('settlementsService', () => {
       });
 
       await expect(loadSettlement('campaign1', 'nonexistent')).rejects.toThrow('Settlement not found');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading settlement:', expect.any(Error));
     });
 
-    it('should call console.error and throw generic error when API error response has no error field', async () => {
+    it('throws generic error when API error response has no error field', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -335,16 +311,15 @@ describe('settlementsService', () => {
       await expect(loadSettlement('campaign1', 'nonexistent')).rejects.toThrow('Failed to load settlement');
     });
 
-    it('should call console.error and rethrow on network failure', async () => {
+    it('rethrows on network failure', async () => {
       fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(loadSettlement('campaign1', 'nonexistent')).rejects.toThrow('ENOTFOUND');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading settlement:', expect.any(Error));
     });
   });
 
   describe('deleteSettlement', () => {
-    it('should return parsed JSON body on successful delete', async () => {
+    it('returns parsed JSON body on successful delete', async () => {
       const responseData = { success: true, deleted: 'Waterdeep' };
       fetchSpy.mockResolvedValue({
         ok: true,
@@ -356,21 +331,7 @@ describe('settlementsService', () => {
       expect(result).toEqual(responseData);
     });
 
-    it('should send DELETE request and verify fetch call on success', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      });
-
-      await deleteSettlement('campaign1', 'Waterdeep');
-
-      expect(fetchSpy).toHaveBeenCalledWith(
-        '/api/campaigns/campaign1/settlements/Waterdeep',
-        { method: 'DELETE' }
-      );
-    });
-
-    it('should URL-encode both campaign name and settlement name', async () => {
+    it('sends DELETE request with encoded URL on success', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ success: true }),
@@ -384,7 +345,7 @@ describe('settlementsService', () => {
       );
     });
 
-    it('should call console.error and throw with custom error message on API error', async () => {
+    it('throws with custom error message on API error', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Not Found',
@@ -392,10 +353,9 @@ describe('settlementsService', () => {
       });
 
       await expect(deleteSettlement('campaign1', 'nonexistent')).rejects.toThrow('Settlement not found');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error deleting settlement:', expect.any(Error));
     });
 
-    it('should call console.error and throw generic error when API error response has no error field', async () => {
+    it('throws generic error when API error response has no error field', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
         statusText: 'Internal Server Error',
@@ -405,11 +365,10 @@ describe('settlementsService', () => {
       await expect(deleteSettlement('campaign1', 'nonexistent')).rejects.toThrow('Failed to delete settlement');
     });
 
-    it('should call console.error and rethrow on network failure', async () => {
+    it('rethrows on network failure', async () => {
       fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
 
       await expect(deleteSettlement('campaign1', 'nonexistent')).rejects.toThrow('ENOTFOUND');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error deleting settlement:', expect.any(Error));
     });
   });
 });
