@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepSubrace from './WizardStepSubrace.jsx';
@@ -18,6 +19,14 @@ const mockRacesData = [
     traits: [],
     subraces: [],
   },
+  {
+    name: 'Elf',
+    speed: 30,
+    traits: [],
+    subraces: [
+      { name: 'High Elf', description: '', traits: [{ name: 'Cantrip', description: 'You learn one cantrip from the wizard spell list.' }] },
+    ],
+  },
 ];
 
 function createMockProps(overrides = {}) {
@@ -34,13 +43,13 @@ describe('WizardStepSubrace', () => {
     vi.clearAllMocks();
   });
 
-  describe('Render with subraces', () => {
+  describe('Rendering', () => {
     it('should display the step heading', () => {
       render(<WizardStepSubrace {...createMockProps()} />);
       expect(screen.getByText('Step 4: Subrace')).toBeInTheDocument();
     });
 
-    it('should show subrace dropdown when race has subraces', () => {
+    it('should show a default select option', () => {
       render(
         <WizardStepSubrace
           {...createMockProps({
@@ -48,9 +57,21 @@ describe('WizardStepSubrace', () => {
           })}
         />
       );
-      expect(screen.getByText('Subrace *')).toBeInTheDocument();
-      expect(screen.getByText('Red Dragonborn')).toBeInTheDocument();
-      expect(screen.getByText('Blue Dragonborn')).toBeInTheDocument();
+      const select = screen.getByRole('combobox');
+      expect(select).toHaveValue('');
+      expect(select.querySelector('option')).toHaveTextContent('Select a subrace');
+    });
+
+    it('should show selected subrace value in dropdown', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: 'Red Dragonborn' } } },
+          })}
+        />
+      );
+      const select = screen.getByRole('combobox');
+      expect(select).toHaveValue('Red Dragonborn');
     });
 
     it('should show no-subrace message when race has no subraces', () => {
@@ -63,10 +84,84 @@ describe('WizardStepSubrace', () => {
       );
       expect(screen.getByText(/Your selected race \(Human\) has no subraces/)).toBeInTheDocument();
     });
+
+    it('should show no-subrace message when race name is empty', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: '', subrace: { name: '' } } },
+          })}
+        />
+      );
+      expect(screen.getByText(/Your selected race \(\) has no subraces/)).toBeInTheDocument();
+    });
+
+    it('should show no-subrace message when race is not found in racesData', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Unknown Race', subrace: { name: '' } } },
+          })}
+        />
+      );
+      expect(screen.getByText(/Your selected race \(Unknown Race\) has no subraces/)).toBeInTheDocument();
+    });
+
+    it('should show no-subrace message when formData.race is undefined', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: undefined, subrace: { name: '' } },
+          })}
+        />
+      );
+      expect(screen.getByText(/Your selected race \(\) has no subraces/)).toBeInTheDocument();
+    });
+
+    it('should not show subrace dropdown when no subraces available', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Human', subrace: { name: '' } } },
+          })}
+        />
+      );
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Subrace dropdown options', () => {
+    it('should list all subrace names as options', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: '' } } },
+          })}
+        />
+      );
+      const select = screen.getByRole('combobox');
+      const options = select.querySelectorAll('option');
+      expect(options).toHaveLength(3); // "Select a subrace" + 2 subraces
+      expect(options[1]).toHaveTextContent('Red Dragonborn');
+      expect(options[2]).toHaveTextContent('Blue Dragonborn');
+    });
+
+    it('should list subrace options when race has subraces', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: '' } } },
+          })}
+        />
+      );
+      expect(screen.getByText('Subrace *')).toBeInTheDocument();
+      expect(screen.getByText('Red Dragonborn')).toBeInTheDocument();
+      expect(screen.getByText('Blue Dragonborn')).toBeInTheDocument();
+    });
   });
 
   describe('Expand/Collapse', () => {
-    it('should expand subrace details when clicked', () => {
+    it('should show expand button when details are collapsed', () => {
       render(
         <WizardStepSubrace
           {...createMockProps({
@@ -75,12 +170,9 @@ describe('WizardStepSubrace', () => {
         />
       );
       expect(screen.getByText('Show Details')).toBeInTheDocument();
-      const header = document.querySelector('.detail-card-header');
-      fireEvent.click(header);
-      expect(screen.getByText('Hide Details')).toBeInTheDocument();
     });
 
-    it('should show subrace description when expanded', () => {
+    it('should expand details when header is clicked', () => {
       render(
         <WizardStepSubrace
           {...createMockProps({
@@ -88,9 +180,182 @@ describe('WizardStepSubrace', () => {
           })}
         />
       );
-      const header = document.querySelector('.detail-card-header');
+      const header = screen.getByRole('button', { name: /show details/i });
+      fireEvent.click(header);
+      expect(screen.getByText('Hide Details')).toBeInTheDocument();
+    });
+
+    it('should collapse details when header is clicked again', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: 'Red Dragonborn' } } },
+          })}
+        />
+      );
+      const header = screen.getByRole('button', { name: /show details/i });
+      fireEvent.click(header);
+      fireEvent.click(header);
+      expect(screen.getByText('Show Details')).toBeInTheDocument();
+    });
+
+    it('should expand details when toggle button is clicked', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: 'Red Dragonborn' } } },
+          })}
+        />
+      );
+      const toggleButton = screen.getByRole('button', { name: 'Show Details' });
+      fireEvent.click(toggleButton);
+      expect(screen.getByText('Hide Details')).toBeInTheDocument();
+    });
+
+    it('should show subrace details header when expanded', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: 'Red Dragonborn' } } },
+          })}
+        />
+      );
+      const header = screen.getByRole('button', { name: /show details/i });
       fireEvent.click(header);
       expect(screen.getByText('Red Dragonborn Details')).toBeInTheDocument();
+    });
+
+    it('should not show detail card when no subrace is selected', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: '' } } },
+          })}
+        />
+      );
+      expect(screen.queryByText(/Details$/)).not.toBeInTheDocument();
+    });
+
+    it('should not show detail card when race has no subraces', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Human', subrace: { name: '' } } },
+          })}
+        />
+      );
+      expect(screen.queryByRole('button', { name: /show details/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Description rendering', () => {
+    it('should render sanitized HTML description when expanded', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: 'Red Dragonborn' } } },
+          })}
+        />
+      );
+      const header = screen.getByRole('button', { name: /show details/i });
+      fireEvent.click(header);
+      expect(screen.getByText('Description')).toBeInTheDocument();
+      expect(screen.getByText('Red dragonborn are fierce and passionate.')).toBeInTheDocument();
+    });
+
+    it('should not show description section when subrace has no description', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Elf', subrace: { name: 'High Elf' } } },
+          })}
+        />
+      );
+      const header = screen.getByRole('button', { name: /show details/i });
+      fireEvent.click(header);
+      expect(screen.queryByText('Description')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Trait display', () => {
+    it('should show damage resistance trait when expanded', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: 'Red Dragonborn' } } },
+          })}
+        />
+      );
+      const header = screen.getByRole('button', { name: /show details/i });
+      fireEvent.click(header);
+      expect(screen.getByText('Subrace Traits')).toBeInTheDocument();
+      expect(screen.getByText('Damage Resistance')).toBeInTheDocument();
+      expect(screen.getByText(/You have resistance to Fire damage/)).toBeInTheDocument();
+    });
+
+    it('should show non-damage-resistance traits when expanded', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Elf', subrace: { name: 'High Elf' } } },
+          })}
+        />
+      );
+      const header = screen.getByRole('button', { name: /show details/i });
+      fireEvent.click(header);
+      expect(screen.getByText('Subrace Traits')).toBeInTheDocument();
+      expect(screen.getByText('Cantrip')).toBeInTheDocument();
+      expect(screen.getByText(/You learn one cantrip from the wizard spell list/)).toBeInTheDocument();
+    });
+
+    it('should not show traits section when subrace has no traits or damage resistance', () => {
+      const racesNoTraits = [
+        {
+          name: 'TestRace',
+          speed: 30,
+          traits: [],
+          subraces: [
+            { name: 'EmptySubrace', description: '' },
+          ],
+        },
+      ];
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'TestRace', subrace: { name: 'EmptySubrace' } } },
+            racesData: racesNoTraits,
+          })}
+        />
+      );
+      const header = screen.getByRole('button', { name: /show details/i });
+      fireEvent.click(header);
+      expect(screen.queryByText('Subrace Traits')).not.toBeInTheDocument();
+    });
+
+    it('should render trait descriptions with HTML safely', () => {
+      const racesWithHtmlTrait = [
+        {
+          name: 'TestRace',
+          speed: 30,
+          traits: [],
+          subraces: [
+            { name: 'TestSubrace', description: '', traits: [{ name: 'HTML Trait', description: '<p>Has <strong>bold</strong> text.</p>' }] },
+          ],
+        },
+      ];
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'TestRace', subrace: { name: 'TestSubrace' } } },
+            racesData: racesWithHtmlTrait,
+          })}
+        />
+      );
+      const header = screen.getByRole('button', { name: /show details/i });
+      fireEvent.click(header);
+      expect(screen.getByText('HTML Trait')).toBeInTheDocument();
+      const traitDesc = document.querySelector('.trait-description');
+      expect(traitDesc).toHaveTextContent('Has bold text.');
     });
   });
 
@@ -105,17 +370,53 @@ describe('WizardStepSubrace', () => {
           })}
         />
       );
-      const select = document.querySelector('select');
+      const select = screen.getByRole('combobox');
       fireEvent.change(select, { target: { value: 'Blue Dragonborn' } });
       expect(mockOnChange).toHaveBeenCalledWith('race', {
         name: 'Dragonborn',
         subrace: { name: 'Blue Dragonborn' }
       });
     });
+
+    it('should call onInputChange when changing from one subrace to another', () => {
+      const mockOnChange = vi.fn();
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            onInputChange: mockOnChange,
+            formData: { race: { name: 'Dragonborn', subrace: { name: 'Red Dragonborn' } } },
+          })}
+        />
+      );
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'Blue Dragonborn' } });
+      expect(mockOnChange).toHaveBeenCalledWith('race', {
+        name: 'Dragonborn',
+        subrace: { name: 'Blue Dragonborn' }
+      });
+    });
+
+    it('should not call onInputChange when selecting empty option', () => {
+      const mockOnChange = vi.fn();
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            onInputChange: mockOnChange,
+            formData: { race: { name: 'Dragonborn', subrace: { name: 'Red Dragonborn' } } },
+          })}
+        />
+      );
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: '' } });
+      expect(mockOnChange).toHaveBeenCalledWith('race', {
+        name: 'Dragonborn',
+        subrace: { name: '' }
+      });
+    });
   });
 
   describe('Error display', () => {
-    it('should render error message and error class when subrace error exists', () => {
+    it('should render error message when subrace error exists', () => {
       render(
         <WizardStepSubrace
           {...createMockProps({
@@ -125,13 +426,22 @@ describe('WizardStepSubrace', () => {
         />
       );
       expect(screen.getByText('Subrace is required')).toBeInTheDocument();
-      const select = document.querySelector('select');
+    });
+
+    it('should apply error class to select when subrace error exists', () => {
+      render(
+        <WizardStepSubrace
+          {...createMockProps({
+            formData: { race: { name: 'Dragonborn', subrace: { name: '' } } },
+            errors: { subrace: 'Subrace is required' },
+          })}
+        />
+      );
+      const select = screen.getByRole('combobox');
       expect(select).toHaveClass('error');
     });
-  });
 
-  describe('Trait display', () => {
-    it('should show damage resistance trait when card expanded', () => {
+    it('should not apply error class when no subrace error exists', () => {
       render(
         <WizardStepSubrace
           {...createMockProps({
@@ -139,9 +449,8 @@ describe('WizardStepSubrace', () => {
           })}
         />
       );
-      const header = document.querySelector('.detail-card-header');
-      fireEvent.click(header);
-      expect(screen.getByText('Damage Resistance')).toBeInTheDocument();
+      const select = screen.getByRole('combobox');
+      expect(select).not.toHaveClass('error');
     });
   });
 });

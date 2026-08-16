@@ -247,10 +247,10 @@ vi.mock('../../services/rules/rulesFactory.js', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Tests — fanaticalFocusUsed runtime state
+// Tests — fanaticalFocusUsed initialization
 // ---------------------------------------------------------------------------
 
-describe('fanaticalFocusUsed runtime state', () => {
+describe('fanaticalFocusUsed initialization', () => {
   const props = createDefaultProps();
 
   beforeEach(() => {
@@ -258,7 +258,7 @@ describe('fanaticalFocusUsed runtime state', () => {
     mockStore.clear();
   });
 
-  it('sets fanaticalFocusUsed to false on render when not raging', async () => {
+  it('sets fanaticalFocusUsed to false on render when no rage buff is active', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
 
     render(<CharSheet {...props} />);
@@ -268,15 +268,31 @@ describe('fanaticalFocusUsed runtime state', () => {
     });
 
     const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-    expect(setRuntimeValue).toHaveBeenCalledWith(
-      'Test Character',
-      'fanaticalFocusUsed',
-      false,
-      'test-campaign'
+    const ffCalls = setRuntimeValue.mock.calls.filter(
+      (call) => call[1] === 'fanaticalFocusUsed'
     );
+    expect(ffCalls).toHaveLength(1);
+    expect(ffCalls[0][2]).toBe(false);
   });
 
-  it('does not set fanaticalFocusUsed when raging', async () => {
+  it('sets fanaticalFocusUsed to false when activeBuffs is an empty JSON array string', async () => {
+    mockStore.set('Test Character:activeBuffs', '[]');
+
+    render(<CharSheet {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const ffCalls = setRuntimeValue.mock.calls.filter(
+      (call) => call[1] === 'fanaticalFocusUsed'
+    );
+    expect(ffCalls).toHaveLength(1);
+    expect(ffCalls[0][2]).toBe(false);
+  });
+
+  it('does not set fanaticalFocusUsed when a rage buff (damageBonusExpression) is active', async () => {
     mockStore.set('Test Character:activeBuffs', JSON.stringify([
       { damageBonusExpression: '2d6' },
     ]));
@@ -288,18 +304,38 @@ describe('fanaticalFocusUsed runtime state', () => {
     });
 
     const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-    const fanaticalFocusCalls = setRuntimeValue.mock.calls.filter(
+    const ffCalls = setRuntimeValue.mock.calls.filter(
       (call) => call[1] === 'fanaticalFocusUsed'
     );
-    expect(fanaticalFocusCalls.length).toBe(0);
+    expect(ffCalls).toHaveLength(0);
+  });
+
+  it('does not set fanaticalFocusUsed when multiple buffs include a rage buff', async () => {
+    mockStore.set('Test Character:activeBuffs', JSON.stringify([
+      { effect: 'shield' },
+      { damageBonusExpression: '2d6' },
+      { effect: 'haste' },
+    ]));
+
+    render(<CharSheet {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const ffCalls = setRuntimeValue.mock.calls.filter(
+      (call) => call[1] === 'fanaticalFocusUsed'
+    );
+    expect(ffCalls).toHaveLength(0);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests — hitPoints sync
+// Tests — hitPoints runtime store sync
 // ---------------------------------------------------------------------------
 
-describe('hitPoints sync', () => {
+describe('hitPoints runtime store sync', () => {
   const props = createDefaultProps();
 
   beforeEach(() => {
@@ -307,7 +343,7 @@ describe('hitPoints sync', () => {
     mockStore.clear();
   });
 
-  it('sets hitPoints runtime value when playerStats is available', async () => {
+  it('writes hitPoints to the runtime store when playerStats loads', async () => {
     render(<CharSheet {...props} />);
 
     await waitFor(() => {
@@ -320,26 +356,5 @@ describe('hitPoints sync', () => {
     );
     expect(hpCalls.length).toBeGreaterThan(0);
     expect(hpCalls[0][2]).toEqual({ current: 40, max: 40 });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — CharSheet renders with all handler callbacks defined
-// ---------------------------------------------------------------------------
-
-describe('CharSheet renders with all handler callbacks', () => {
-  const props = createDefaultProps();
-
-  beforeEach(() => {
-    resetTestState(sharedPopupReturnValue);
-    mockStore.clear();
-  });
-
-  it('renders char sheet without errors when all handlers are defined', async () => {
-    render(<CharSheet {...props} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
   });
 });

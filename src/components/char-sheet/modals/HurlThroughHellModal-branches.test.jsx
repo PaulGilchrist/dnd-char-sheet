@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HurlThroughHellModal from './HurlThroughHellModal.jsx';
@@ -82,9 +83,9 @@ function waitForSaveResult(detail) {
   });
 }
 
-// ── Tests for uncovered branches ──
+// ── Tests for error handling and fallback branches ──
 
-describe('HurlThroughHellModal - error handling branches', () => {
+describe('HurlThroughHellModal - error handling and fallback branches', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     runtimeState.getRuntimeValue.mockImplementation((name, key) => {
@@ -108,8 +109,8 @@ describe('HurlThroughHellModal - error handling branches', () => {
     savePrompt.createSaveListener.mockImplementation(() => ({ promptId: 'test-prompt-id-123' }));
   });
 
-  describe('pact slot log entry error handling', () => {
-    it('handles addEntry rejection for pact slot expenditure log', async () => {
+  describe('pact slot expenditure error handling', () => {
+    it('decreases pact slot and continues flow when pact slot log entry fails', async () => {
       runtimeState.getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'currentTurn') return 'Turn5';
         if (key === 'spell_slots_level_2') return '3';
@@ -130,6 +131,31 @@ describe('HurlThroughHellModal - error handling branches', () => {
       fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
 
       await waitFor(() => {
+        // Pact slot should be decremented from 3 to 2
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'Throg',
+          'spell_slots_level_2',
+          2,
+          'test-campaign'
+        );
+      });
+
+      // hurlThroughHellUses should NOT be incremented (using pact slot instead)
+      const usesCalls = runtimeState.setRuntimeValue.mock.calls.filter(
+        c => c[1] === 'hurlThroughHellUses'
+      );
+      expect(usesCalls.length).toBe(0);
+
+      // Save listener should still be created
+      expect(savePrompt.createSaveListener).toHaveBeenCalledWith('test-campaign', {
+        targetName: 'Goblin1',
+        attackerName: 'Throg',
+        saveType: 'WIS',
+        saveDc: 16,
+      });
+
+      // Error should be logged
+      await waitFor(() => {
         expect(consoleError).toHaveBeenCalled();
       });
 
@@ -138,7 +164,7 @@ describe('HurlThroughHellModal - error handling branches', () => {
   });
 
   describe('ability_use log entry error handling', () => {
-    it('handles addEntry rejection for ability_use log', async () => {
+    it('continues flow when ability_use log entry fails', async () => {
       runtimeState.getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'currentTurn') return 'Turn5';
         return null;
@@ -151,6 +177,16 @@ describe('HurlThroughHellModal - error handling branches', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
 
+      // Save listener should still be created despite log failure
+      await waitFor(() => {
+        expect(savePrompt.createSaveListener).toHaveBeenCalledWith('test-campaign', {
+          targetName: 'Goblin1',
+          attackerName: 'Throg',
+          saveType: 'WIS',
+          saveDc: 16,
+        });
+      });
+
       await waitFor(() => {
         expect(consoleError).toHaveBeenCalled();
       });
@@ -160,7 +196,7 @@ describe('HurlThroughHellModal - error handling branches', () => {
   });
 
   describe('save-result handler error handling', () => {
-    it('handles addEntry rejection for save_result log on failed save', async () => {
+    it('applies incapacitated condition and target effects when save_result log fails', async () => {
       runtimeState.getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'currentTurn') return 'Turn5';
         if (key === 'activeConditions') return [];
@@ -181,6 +217,33 @@ describe('HurlThroughHellModal - error handling branches', () => {
         success: false,
       });
 
+      // Core functionality should still execute despite log failure
+      await waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'Goblin1',
+          'activeConditions',
+          expect.arrayContaining(['incapacitated']),
+          'test-campaign'
+        );
+      });
+
+      await waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'campaign',
+          'targetEffects',
+          expect.arrayContaining([
+            expect.objectContaining({
+              target: 'Goblin1',
+              effect: 'incapacitated',
+              teleport: true,
+              returnToSpace: true,
+            }),
+          ]),
+          'test-campaign'
+        );
+      });
+
+      // Error should be logged
       await waitFor(() => {
         expect(consoleError).toHaveBeenCalled();
       });
@@ -188,13 +251,13 @@ describe('HurlThroughHellModal - error handling branches', () => {
       consoleError.mockRestore();
     });
 
-    it('handles addEntry rejection for roll log on failed save', async () => {
+    it('applies damage when roll log entry fails after save_result succeeds', async () => {
       runtimeState.getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'currentTurn') return 'Turn5';
         if (key === 'activeConditions') return [];
         return null;
       });
-      // First call succeeds (ability_use), subsequent calls reject
+      // First call (save_result) succeeds, second call (roll) fails
       let callCount = 0;
       logService.addEntry.mockImplementation(() => {
         callCount++;
@@ -215,6 +278,20 @@ describe('HurlThroughHellModal - error handling branches', () => {
         success: false,
       });
 
+      // Damage should still be applied despite roll log failure
+      await waitFor(() => {
+        expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+          expect.any(Object),
+          'Goblin1',
+          22,
+          ['Psychic'],
+          'test-campaign',
+          expect.any(Array),
+          false,
+          'Throg'
+        );
+      });
+
       await waitFor(() => {
         expect(consoleError).toHaveBeenCalled();
       });
@@ -222,7 +299,7 @@ describe('HurlThroughHellModal - error handling branches', () => {
       consoleError.mockRestore();
     });
 
-    it('handles addEntry rejection for save_result log on fiend failed save', async () => {
+    it('applies incapacitated condition and skips damage for fiend target when save_result log fails', async () => {
       runtimeState.getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'currentTurn') return 'Turn5';
         if (key === 'activeConditions') return [];
@@ -249,6 +326,19 @@ describe('HurlThroughHellModal - error handling branches', () => {
         success: false,
       });
 
+      // Core functionality should still execute despite log failure
+      await waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'Orc Warrior',
+          'activeConditions',
+          expect.arrayContaining(['incapacitated']),
+          'test-campaign'
+        );
+      });
+
+      // Damage should NOT be applied to fiend
+      expect(applyDamage.applyDamageToTarget).not.toHaveBeenCalled();
+
       await waitFor(() => {
         expect(consoleError).toHaveBeenCalled();
       });
@@ -256,7 +346,7 @@ describe('HurlThroughHellModal - error handling branches', () => {
       consoleError.mockRestore();
     });
 
-    it('handles addEntry rejection for save_result log on successful save', async () => {
+    it('logs save_result when successful save log entry fails', async () => {
       runtimeState.getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'currentTurn') return 'Turn5';
         if (key === 'activeConditions') return [];
@@ -351,6 +441,8 @@ describe('HurlThroughHellModal - error handling branches', () => {
         );
       });
     });
+
+
   });
 
   describe('damage result fallback', () => {
@@ -400,13 +492,10 @@ describe('HurlThroughHellModal - error handling branches', () => {
       });
 
       await waitFor(() => {
-        // When storedConds is not an array, the ternary creates ['incapacitated']
         const calls = runtimeState.setRuntimeValue.mock.calls.filter(
           c => c[1] === 'activeConditions'
         );
         expect(calls.length).toBeGreaterThan(0);
-        // The ternary: Array.isArray(storedConds) ? [...storedConds, 'incapacitated'] : ['incapacitated']
-        // Since 'existing-condition' is not an array, it should be ['incapacitated']
         expect(calls[0][2]).toEqual(['incapacitated']);
       });
     });
@@ -433,7 +522,6 @@ describe('HurlThroughHellModal - error handling branches', () => {
       });
 
       await waitFor(() => {
-        // With no creatures, isFiend will be false, so damage is applied
         expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
       });
     });
@@ -458,7 +546,6 @@ describe('HurlThroughHellModal - error handling branches', () => {
       });
 
       await waitFor(() => {
-        // With no creatures, isFiend will be false, so damage is applied
         expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
       });
     });
@@ -505,10 +592,6 @@ describe('HurlThroughHellModal - error handling branches', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
 
-      // The code: getRuntimeValue(playerName, slotKey, campaignName) ?? playerStats.spellAbilities?.[slotKey] ?? 0
-      // Since getRuntimeValue returns null, it falls back to playerStats.spellAbilities
-      // But the props playerStats doesn't have spellAbilities, so it falls back to 0
-      // Then setRuntimeValue is called with 0 - 1 = -1
       await waitFor(() => {
         const slotCalls = runtimeState.setRuntimeValue.mock.calls.filter(
           c => c[1] === 'spell_slots_level_2'

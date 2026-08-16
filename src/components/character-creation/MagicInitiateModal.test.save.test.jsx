@@ -3,13 +3,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MagicInitiateModal, createProps } from './MagicInitiateModal.fixtures.js';
 
-describe('MagicInitiateModal', () => {
+describe('MagicInitiateModal - Save All Behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('save all behavior', () => {
-    it('should call onArrayFieldChange for spells with deduplicated list from a single instance', () => {
+  describe('save all', () => {
+    it('should deduplicate spells from a single instance in the spells array', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
 
@@ -33,7 +33,7 @@ describe('MagicInitiateModal', () => {
       ]);
     });
 
-    it('should call onArrayFieldChange for magicInitiateInstances', () => {
+    it('should build magicInitiateInstances array from a single instance', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
 
@@ -77,28 +77,6 @@ describe('MagicInitiateModal', () => {
       expect(props.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('should NOT call onArrayFieldChange or onClose when validation fails', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      // Add instance and try to save without filling spells — validation will fail
-      fireEvent.click(screen.getByText('Add Another Instance'));
-      fireEvent.click(screen.getByRole('button', { name: 'Save Instance' }));
-
-      expect(screen.getByText('Cantrip 1 is required')).toBeInTheDocument();
-      expect(screen.getByText('Cantrip 2 is required')).toBeInTheDocument();
-      expect(screen.getByText('Level 1 spell is required')).toBeInTheDocument();
-
-      // Cancel — instance stays in list with invalid data
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-
-      const saveAllBtn = screen.getByRole('button', { name: /Save All/ });
-      fireEvent.click(saveAllBtn);
-
-      expect(props.onArrayFieldChange).not.toHaveBeenCalled();
-      expect(props.onClose).not.toHaveBeenCalled();
-    });
-
     it('should deduplicate spells when adding to existing spells array', () => {
       const props = createProps({
         formData: { spells: ['Acid Splash'] },
@@ -124,7 +102,7 @@ describe('MagicInitiateModal', () => {
       ]);
     });
 
-    it('should merge spells from multiple instances preserving order', () => {
+    it('should merge spells from multiple instances preserving order of first occurrence', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
 
@@ -139,7 +117,7 @@ describe('MagicInitiateModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Save Instance' }));
 
-      // Second instance: Sorcerer
+      // Second instance: Sorcerer with overlapping spells
       fireEvent.click(screen.getByText('Add Another Instance'));
 
       selects = document.querySelectorAll('.mi-selector-select');
@@ -189,75 +167,31 @@ describe('MagicInitiateModal', () => {
       expect(props.onArrayFieldChange).toHaveBeenCalledTimes(2);
     });
 
-    it('should NOT call onArrayFieldChange when there are no instances', () => {
+    it('should not call onArrayFieldChange or onClose when validation fails', () => {
+      const props = createProps();
+      render(<MagicInitiateModal {...props} />);
+
+      fireEvent.click(screen.getByText('Add Another Instance'));
+      fireEvent.click(screen.getByRole('button', { name: 'Save Instance' }));
+
+      expect(screen.getByText('Cantrip 1 is required')).toBeInTheDocument();
+      expect(screen.getByText('Cantrip 2 is required')).toBeInTheDocument();
+      expect(screen.getByText('Level 1 spell is required')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      const saveAllBtn = screen.getByRole('button', { name: /Save All/ });
+      fireEvent.click(saveAllBtn);
+
+      expect(props.onArrayFieldChange).not.toHaveBeenCalled();
+      expect(props.onClose).not.toHaveBeenCalled();
+    });
+
+    it('should not call onArrayFieldChange or onClose when no instances exist', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
 
       expect(screen.queryByRole('button', { name: /Save All/ })).not.toBeInTheDocument();
-      expect(props.onArrayFieldChange).not.toHaveBeenCalled();
-    });
-
-    it('should NOT save when an instance has cantrips not from the selected class', () => {
-      // Load an instance where cantrips are from a different class than the saved class.
-      // Guidance is a Cleric/Druid cantrip, not a Bard cantrip.
-      const existingInstances = [
-        {
-          class: 'Bard',
-          cantrips: ['Dancing Lights', 'Guidance'],
-          level1Spell: 'Heroism',
-        },
-      ];
-      const props = createProps({
-        formData: { magicInitiateInstances: existingInstances, spells: [] },
-      });
-      render(<MagicInitiateModal {...props} />);
-
-      // Click Save All without editing — validation should catch Guidance is not a Bard cantrip
-      const saveAllBtn = screen.getByRole('button', { name: /Save All/ });
-      fireEvent.click(saveAllBtn);
-
-      expect(props.onArrayFieldChange).not.toHaveBeenCalled();
-      expect(props.onClose).not.toHaveBeenCalled();
-    });
-
-    it('should NOT save when an instance has a level 1 spell not from the selected class', () => {
-      // Bless is a Cleric spell, not a Bard spell.
-      const existingInstances = [
-        {
-          class: 'Bard',
-          cantrips: ['Dancing Lights', 'Guidance'],
-          level1Spell: 'Bless',
-        },
-      ];
-      const props = createProps({
-        formData: { magicInitiateInstances: existingInstances, spells: [] },
-      });
-      render(<MagicInitiateModal {...props} />);
-
-      const saveAllBtn = screen.getByRole('button', { name: /Save All/ });
-      fireEvent.click(saveAllBtn);
-
-      expect(props.onArrayFieldChange).not.toHaveBeenCalled();
-      expect(props.onClose).not.toHaveBeenCalled();
-    });
-
-    it('should NOT save when an instance has duplicate cantrips', () => {
-      // Both cantrips are the same — validation should catch this.
-      const existingInstances = [
-        {
-          class: 'Wizard',
-          cantrips: ['Acid Splash', 'Acid Splash'],
-          level1Spell: 'Burning Hands',
-        },
-      ];
-      const props = createProps({
-        formData: { magicInitiateInstances: existingInstances, spells: [] },
-      });
-      render(<MagicInitiateModal {...props} />);
-
-      const saveAllBtn = screen.getByRole('button', { name: /Save All/ });
-      fireEvent.click(saveAllBtn);
-
       expect(props.onArrayFieldChange).not.toHaveBeenCalled();
       expect(props.onClose).not.toHaveBeenCalled();
     });

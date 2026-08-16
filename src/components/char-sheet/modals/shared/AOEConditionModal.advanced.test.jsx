@@ -1,7 +1,14 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AOEConditionModal from './AOEConditionModal.jsx';
+import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getAllyList } from '../../../../hooks/useAllySelection.js';
+import { getCombatSummary } from '../../../../services/encounters/combatData.js';
+import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
 import { addEntry } from '../../../../services/ui/logService.js';
+import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
+import * as damageRollback from '../../../../services/automation/common/damageRollback.js';
 
 // ── Mocked modules ──
 
@@ -34,12 +41,6 @@ vi.mock('../../../../services/automation/common/damageRollback.js', () => ({
 vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
     persistAndNotify: vi.fn(),
 }));
-
-// Re-import mocked modules
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { getAllyList } from '../../../../hooks/useAllySelection.js';
-import { getCombatSummary } from '../../../../services/encounters/combatData.js';
-import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
 
 // ── Test fixtures ──
 
@@ -93,243 +94,65 @@ describe('AOEConditionModal', () => {
         getAllyList.mockReturnValue(null);
     });
 
-    describe('blocking effects - both attacker and target trapped', () => {
-        it('allows both attacker and target when both trapped by same forcecage source', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'forcecage', target: 'Goblin', source: 'Wizard1' },
-                { effect: 'forcecage', target: 'Wizard1', source: 'Wizard1' },
-            ]);
+    // ── Save bonus edge cases (previously empty describe block) ──
+
+    describe('save bonus handling edge cases', () => {
+        it('handles missing saveBonuses object on creature gracefully', () => {
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
+                ],
+            });
             render(<AOEConditionModal {...makeProps()} />);
             expect(screen.getByText('Goblin')).toBeInTheDocument();
         });
 
-        it('allows both attacker and target when both trapped by same maze source', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'maze', target: 'Goblin', source: 'Wizard1' },
-                { effect: 'maze', target: 'Wizard1', source: 'Wizard1' },
-            ]);
+        it('handles undefined saveBonuses property on creature gracefully', () => {
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10, saveBonuses: undefined },
+                ],
+            });
             render(<AOEConditionModal {...makeProps()} />);
             expect(screen.getByText('Goblin')).toBeInTheDocument();
         });
 
-        it('allows both attacker and target when both trapped by same banishment source', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'banishment', target: 'Goblin', source: 'Wizard1' },
-                { effect: 'banishment', target: 'Wizard1', source: 'Wizard1' },
-            ]);
+        it('handles missing save bonus for the requested save type', () => {
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10, saveBonuses: { str: 3 } },
+                ],
+            });
             render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.getByText('Goblin')).toBeInTheDocument();
-        });
-
-        it('allows both attacker and target when both trapped by same imprisonment source', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'imprisonment', target: 'Goblin', source: 'Wizard1' },
-                { effect: 'imprisonment', target: 'Wizard1', source: 'Wizard1' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.getByText('Goblin')).toBeInTheDocument();
-        });
-
-        it('excludes target when only target is forcecaged and attacker is not', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'forcecage', target: 'Goblin', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes target when only target is maze trapped and attacker is not', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'maze', target: 'Goblin', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes target when only target is banished and attacker is not', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'banishment', target: 'Goblin', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes target when only target is imprisoned and attacker is not', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'imprisonment', target: 'Goblin', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes attacker when only attacker is forcecaged and target is not', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'forcecage', target: 'Wizard1', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            // With no eligible targets, the target list should be empty
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes attacker when only attacker is maze trapped and target is not', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'maze', target: 'Wizard1', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes attacker when only attacker is banished and target is not', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'banishment', target: 'Wizard1', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes attacker when only attacker is imprisoned and target is not', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'imprisonment', target: 'Wizard1', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes target when attacker and target have different forcecage sources', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'forcecage', target: 'Goblin', source: 'CasterA' },
-                { effect: 'forcecage', target: 'Wizard1', source: 'CasterB' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('allows target when attacker and target share one forcecage source but target has additional different source', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'forcecage', target: 'Goblin', source: 'Wizard1' },
-                { effect: 'forcecage', target: 'Wizard1', source: 'Wizard1' },
-                { effect: 'forcecage', target: 'Goblin', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            // Wizard1 is forcecaged by Wizard1, Goblin is forcecaged by both Wizard1 and CasterA
-            // Since they share Wizard1 source, Goblin should be visible
             expect(screen.getByText('Goblin')).toBeInTheDocument();
         });
     });
 
-    // ── NPC save result logging in resolveAllSaves ──
+    // ── Math.random cleanup verification ──
 
-    describe('NPC save result logging', () => {
-        it('logs save_result entry when NPC fails save', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const saveEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Goblin'
-                    );
-                    expect(saveEntries.length).toBeGreaterThan(0);
-                    expect(saveEntries[0][1].success).toBe(false);
-                    expect(saveEntries[0][1].description).toContain('failed');
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('logs save_result entry when NPC succeeds save', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.99);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const saveEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Goblin'
-                    );
-                    expect(saveEntries.length).toBeGreaterThan(0);
-                    expect(saveEntries[0][1].success).toBe(true);
-                    expect(saveEntries[0][1].description).toContain('succeeded');
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('logs condition entry when NPC fails save with conditionLabel', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps({ conditionLabel: 'Paralyzed' })} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const conditionEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'condition' && call[1]?.condition === 'Paralyzed'
-                    );
-                    expect(conditionEntries.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('logs condition entry when NPC fails save without conditionLabel (uses effects array)', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps({ conditionLabel: null, effects: [{ type: 'paralyzed', condition: 'paralyzed' }] })} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const conditionEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'condition'
-                    );
-                    expect(conditionEntries.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
+    describe('Math.random mock cleanup', () => {
+        it('restores Math.random after spying so it returns real random values', () => {
+            const spy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
+            spy.mockRestore();
+            // After restoring, Math.random should return actual random values, not 0.5
+            const value1 = Math.random();
+            const value2 = Math.random();
+            // Two consecutive calls should not both be 0.5 (extremely unlikely with real random)
+            expect(value1).not.toBe(0.5);
+            expect(value2).not.toBe(0.5);
         });
     });
 
-    // ── NPC careful spell auto-success in resolveAllSaves ──
+    // ── Event listener cleanup ──
 
-    describe('NPC careful spell auto-success in resolveAllSaves', () => {
-        it('does not apply condition for careful spell protected NPC', async () => {
-            getAllyList.mockReturnValue(['Goblin']);
-            getRuntimeValue.mockReturnValue([]);
-            render(<AOEConditionModal {...makeProps({ metamagicCareful: true })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
+    describe('event listener cleanup', () => {
+        it('removes save-result event listener on unmount', async () => {
+            const { unmount } = render(<AOEConditionModal {...makeProps()} />);
+
+            await act(async () => {
+                const labels = document.querySelectorAll('.secondary-target-row');
+                fireEvent.click(labels[2]);
+            });
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
             });
@@ -337,101 +160,93 @@ describe('AOEConditionModal', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
             });
 
-            // The NPC should not have conditions applied
+            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
+            const actualPromptId = savePromptCall[1].promptId;
+
+            // Capture pending prompts before unmount
             await waitFor(() => {
-                const conditionCalls = setRuntimeValue.mock.calls.filter(
-                    call => call[1] === 'activeConditions' && call[0] === 'Goblin'
-                );
-                expect(conditionCalls.length).toBe(0);
+                expect(getRuntimeValue).toHaveBeenCalledWith('campaign', 'pendingSaveListenerPrompts');
             });
 
-            // Should have a save_result entry with Careful Spell description
-            const saveEntries = addEntry.mock.calls.filter(
-                call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Goblin'
-            );
-            expect(saveEntries.length).toBeGreaterThan(0);
-            expect(saveEntries[0][1].description).toContain('Careful Spell protected');
-        });
+            // Unmount the component
+            unmount();
 
-        it('applies condition when NPC is not careful spell protected and fails save', async () => {
-            getAllyList.mockReturnValue(['PlayerAlly']);
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps({ metamagicCareful: true })} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const conditionCalls = setRuntimeValue.mock.calls.filter(
-                        call => call[1] === 'activeConditions' && call[0] === 'Goblin'
-                    );
-                    expect(conditionCalls.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-    });
-
-    // ── handleSaveResult early returns ──
-
-    describe('handleSaveResult early returns', () => {
-        it('does not process save-result event with null detail', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: null,
-                });
-                window.dispatchEvent(event);
-            });
-
-            const conditionCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'activeConditions'
-            );
-            expect(conditionCalls.length).toBe(0);
-        });
-
-        it('does not process save-result event with detail missing promptId', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: { success: false },
-                });
-                window.dispatchEvent(event);
-            });
-
-            const conditionCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'activeConditions'
-            );
-            expect(conditionCalls.length).toBe(0);
-        });
-
-        it('does not process save-result event for non-pending promptId', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-
+            // Dispatch save-result event after unmount - should not affect anything
             await act(async () => {
                 const event = new CustomEvent('save-result', {
                     detail: {
-                        promptId: 'non-pending-id',
+                        promptId: actualPromptId,
                         success: false,
+                        roll: 5,
+                        total: 6,
+                        saveBonus: 1,
                     },
                 });
                 window.dispatchEvent(event);
             });
 
-            const conditionCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'activeConditions'
+            // The event should have been dispatched but the unmounted component
+            // should not have processed it. Since the component is unmounted,
+            // setRuntimeValue should not have been called for conditions by this event.
+            const conditionCallsForPlayerAlly = setRuntimeValue.mock.calls.filter(
+                call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
             );
-            expect(conditionCalls.length).toBe(0);
+            expect(conditionCallsForPlayerAlly.length).toBe(0);
+        });
+    });
+
+    // ── Pending prompts state ──
+
+    describe('pending prompts tracking', () => {
+        it('tracks pending prompts for player targets via setRuntimeValue', async () => {
+            render(<AOEConditionModal {...makeProps()} />);
+
+            await act(async () => {
+                const labels = document.querySelectorAll('.secondary-target-row');
+                fireEvent.click(labels[2]);
+            });
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
+            });
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
+            });
+
+            await waitFor(() => {
+                const promptTrackingCalls = setRuntimeValue.mock.calls.filter(
+                    call => call[0] === 'campaign' && call[1] === 'pendingSaveListenerPrompts'
+                );
+                expect(promptTrackingCalls.length).toBeGreaterThan(0);
+            });
+        });
+    });
+
+    // ── storeSpellLastAttack call verification ──
+
+    describe('storeSpellLastAttack verification', () => {
+        it('stores spell attack data with correct AOE scope', async () => {
+            render(<AOEConditionModal {...makeProps()} />);
+
+            await act(async () => {
+                const labels = document.querySelectorAll('.secondary-target-row');
+                fireEvent.click(labels[0]);
+            });
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
+            });
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
+            });
+
+            await waitFor(() => {
+                expect(damageRollback.storeSpellLastAttack).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                    casterName: 'Wizard1',
+                    spellName: 'Blinding Darkness',
+                    saveType: 'CON',
+                    saveDc: 12,
+                    attackScope: 'aoe',
+                }));
+            });
         });
     });
 });

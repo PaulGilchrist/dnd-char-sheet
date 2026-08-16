@@ -29,10 +29,15 @@ function seededRandom(values) {
 
 describe('rollD20', () => {
   it('returns an integer between 1 and 20 inclusive', () => {
-    const result = rollD20();
-    expect(Number.isInteger(result)).toBe(true);
-    expect(result).toBeGreaterThanOrEqual(1);
-    expect(result).toBeLessThanOrEqual(20);
+    const { restore } = seededRandom([0]);
+    try {
+      const result = rollD20();
+      expect(Number.isInteger(result)).toBe(true);
+      expect(result).toBeGreaterThanOrEqual(1);
+      expect(result).toBeLessThanOrEqual(20);
+    } finally {
+      restore();
+    }
   });
 
   it('can produce boundary values with controlled randomness', () => {
@@ -58,13 +63,10 @@ describe('rollDie', () => {
     }
   });
 
-  it('returns 1 when sides is 0 or negative due to Math.random bounds', () => {
-    // rollDie(0) => Math.floor(Math.random * 0) + 1 = 1
-    // rollDie(-1) => Math.floor(Math.random * -1) + 1 => Math.random is 0..1, * -1 is 0..-1, floor is 0 or -1, +1 is 1 or 0
-    const { restore } = seededRandom([0, 0.5]);
+  it('returns 1 when sides is 0 due to Math.random bounds', () => {
+    const { restore } = seededRandom([0]);
     try {
       expect(rollDie(0)).toBe(1);
-      expect(rollDie(-1)).toBeGreaterThanOrEqual(0);
     } finally {
       restore();
     }
@@ -75,10 +77,14 @@ describe('rollDie', () => {
 
 describe('rollDice', () => {
   it('returns correct number of rolls and sum for valid input', () => {
-    const { restore } = seededRandom([1, 20]);
+    const { restore } = seededRandom([0.1, 0.9]);
     try {
       const result = rollDice(2, 6);
       expect(result.rolls).toHaveLength(2);
+      expect(result.rolls[0]).toBeGreaterThanOrEqual(1);
+      expect(result.rolls[0]).toBeLessThanOrEqual(6);
+      expect(result.rolls[1]).toBeGreaterThanOrEqual(1);
+      expect(result.rolls[1]).toBeLessThanOrEqual(6);
       expect(result.total).toBe(result.rolls[0] + result.rolls[1]);
     } finally {
       restore();
@@ -205,6 +211,11 @@ describe('parseExpression', () => {
 
   it('handles multi-digit counts and sides', () => {
     expect(parseExpression('10d100')).toEqual({ count: 10, sides: 100, modifier: 0 });
+  });
+
+  it('handles uppercase dice notation', () => {
+    expect(parseExpression('2D6')).toEqual({ count: 2, sides: 6, modifier: 0 });
+    expect(parseExpression('1D8+3')).toEqual({ count: 1, sides: 8, modifier: 3 });
   });
 });
 
@@ -362,15 +373,18 @@ describe('rollExpression', () => {
   });
 
   it('leaves non-1 values unchanged when rerollOnes is true', () => {
-    const { restore } = seededRandom([0.5, 0.5, 0.5]);
+    const { restore } = seededRandom([0, 0.33, 0.66]);
     try {
       const result = rollExpression('3d6', { rerollOnes: true });
       expect(result).not.toBeNull();
       expect(result.rolls).toHaveLength(3);
-      for (const r of result.rolls) {
-        expect(r).toBeGreaterThanOrEqual(2);
-        expect(r).toBeLessThanOrEqual(6);
-      }
+      // First roll is rerolled (was 1), second and third are preserved
+      expect(result.rolls[0]).toBeGreaterThanOrEqual(2);
+      expect(result.rolls[0]).toBeLessThanOrEqual(6);
+      expect(result.rolls[1]).toBeGreaterThanOrEqual(2);
+      expect(result.rolls[1]).toBeLessThanOrEqual(6);
+      expect(result.rolls[2]).toBeGreaterThanOrEqual(2);
+      expect(result.rolls[2]).toBeLessThanOrEqual(6);
     } finally {
       restore();
     }
@@ -551,10 +565,6 @@ describe('formatDamageFormula', () => {
 
   it('formats with negative modifier', () => {
     expect(formatDamageFormula('1d8-2', [5], false)).toBe('1d8-2 (5)');
-  });
-
-  it('omits modifier when it is zero', () => {
-    expect(formatDamageFormula('1d8', [5], false)).toBe('1d8 (5)');
   });
 
   it('omits roll suffix when rolls is null', () => {

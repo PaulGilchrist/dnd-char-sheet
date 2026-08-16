@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EyebiteEffectModal from './EyebiteEffectModal.jsx';
@@ -113,9 +114,8 @@ describe('EyebiteEffectModal - NPC save', () => {
         it('calls storeSpellLastAttack when target is selected', async () => {
             render(<EyebiteEffectModal {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             expect(damageRollback.storeSpellLastAttack).toHaveBeenCalled();
             const call = damageRollback.storeSpellLastAttack.mock.calls[0][1];
@@ -129,9 +129,8 @@ describe('EyebiteEffectModal - NPC save', () => {
         it('logs ability_use entry on target selection', async () => {
             render(<EyebiteEffectModal {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             expect(logService.addEntry).toHaveBeenCalledWith(
                 expect.any(String),
@@ -143,12 +142,29 @@ describe('EyebiteEffectModal - NPC save', () => {
             );
         });
 
+        it('logs ability_use with description containing target, condition, and DC', async () => {
+            render(<EyebiteEffectModal {...makeProps()} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            const abilityUseCalls = logService.addEntry.mock.calls.filter(
+                c => c[1].type === 'ability_use'
+            );
+            expect(abilityUseCalls.length).toBeGreaterThan(0);
+            const description = abilityUseCalls[0][1].description;
+            expect(description).toContain('Witch1 casts Eyebite (Asleep)');
+            expect(description).toContain('Goblin1');
+            expect(description).toContain('WIS save');
+            expect(description).toContain('DC 13');
+            expect(description).toContain('Unconscious');
+        });
+
         it('rolls d20 for NPC save', async () => {
             render(<EyebiteEffectModal {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             expect(diceRoller.rollD20).toHaveBeenCalled();
         });
@@ -156,11 +172,9 @@ describe('EyebiteEffectModal - NPC save', () => {
         it('uses NPC save bonus (WIS) in save calculation', async () => {
             render(<EyebiteEffectModal {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
-            // Goblin1 has wis: 2, rollD20 returns 15, total = 17, DC = 13, success
             expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
                 'test-campaign',
                 'Goblin1',
@@ -173,6 +187,17 @@ describe('EyebiteEffectModal - NPC save', () => {
             );
         });
 
+        it('calls sendSaveResult with promptId and rawRolls', async () => {
+            render(<EyebiteEffectModal {...makeProps()} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            const saveResultCall = savePromptService.sendSaveResult.mock.calls[0][2];
+            expect(saveResultCall.promptId).toBe('test-guid-123');
+            expect(saveResultCall.rawRolls).toEqual([15, 15]);
+        });
+
         it('uses 0 as saveBonus when creature has no saveBonuses.wis', async () => {
             render(<EyebiteEffectModal {...makeProps({
                 combatSummary: {
@@ -182,9 +207,8 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             expect(diceRoller.rollD20).toHaveBeenCalled();
             expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
@@ -205,9 +229,8 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
                 'test-campaign',
@@ -230,9 +253,8 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
                 'Goblin1',
@@ -246,11 +268,13 @@ describe('EyebiteEffectModal - NPC save', () => {
                 expect.objectContaining({
                     targetName: 'Goblin1',
                     saveResult: 'immune',
+                    roll: 0,
+                    total: 0,
                 })
             );
         });
 
-        it('logs save_result for immune targets', async () => {
+        it('does not call sendSaveResult for immune targets', async () => {
             automationService.playerIsImmuneToCondition.mockReturnValue(true);
             render(<EyebiteEffectModal {...makeProps({
                 combatSummary: {
@@ -260,17 +284,127 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
-            expect(logService.addEntry).toHaveBeenCalledWith(
-                expect.any(String),
+            expect(savePromptService.sendSaveResult).not.toHaveBeenCalled();
+        });
+
+        it('does not call sendSavePrompt for NPC immune targets', async () => {
+            automationService.playerIsImmuneToCondition.mockReturnValue(true);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 2 } },
+                    ],
+                },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            expect(savePromptService.sendSavePrompt).not.toHaveBeenCalled();
+        });
+
+        it('calls storeSpellLastAttack for immune targets', async () => {
+            automationService.playerIsImmuneToCondition.mockReturnValue(true);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 2 } },
+                    ],
+                },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            expect(damageRollback.storeSpellLastAttack).toHaveBeenCalled();
+        });
+
+        it('logs save_result for immune targets with correct description', async () => {
+            automationService.playerIsImmuneToCondition.mockReturnValue(true);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 2 } },
+                    ],
+                },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            const saveResultCalls = logService.addEntry.mock.calls.filter(
+                c => c[1].type === 'save_result'
+            );
+            expect(saveResultCalls.length).toBeGreaterThan(0);
+            const lastSaveResult = saveResultCalls[saveResultCalls.length - 1][1];
+            expect(lastSaveResult).toEqual(
                 expect.objectContaining({
                     type: 'save_result',
                     success: true,
+                    targetName: 'Goblin1',
+                    saveType: 'WIS',
                 })
             );
+            expect(lastSaveResult.description).toContain('immune');
+            expect(lastSaveResult.description).toContain('unconscious');
+            expect(lastSaveResult.description).toContain('succeeds');
+        });
+
+        it('shows popup for immune targets', async () => {
+            automationService.playerIsImmuneToCondition.mockReturnValue(true);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 2 } },
+                    ],
+                },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            await waitFor(() => {
+                expect(screen.getByText(/Goblin1/)).toBeInTheDocument();
+                expect(screen.getByText(/immune/)).toBeInTheDocument();
+            });
+        });
+
+        it('calls onClose after immune target resolution', async () => {
+            automationService.playerIsImmuneToCondition.mockReturnValue(true);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 2 } },
+                    ],
+                },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            expect(baseProps.onClose).toHaveBeenCalled();
+        });
+
+        it('does not log condition entry for immune targets', async () => {
+            automationService.playerIsImmuneToCondition.mockReturnValue(true);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 2 } },
+                    ],
+                },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            const conditionCalls = logService.addEntry.mock.calls.filter(
+                c => c[1].type === 'condition'
+            );
+            expect(conditionCalls.length).toBe(0);
         });
     });
 
@@ -285,9 +419,8 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             await waitFor(() => {
                 expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
@@ -299,7 +432,56 @@ describe('EyebiteEffectModal - NPC save', () => {
             });
         });
 
-        it('calls addExpiration with caster, target, condition', async () => {
+        it('preserves existing conditions when applying new one', async () => {
+            diceRoller.rollD20.mockReturnValue(1);
+            runtimeState.getRuntimeValue.mockReturnValue(['frightened', 'poisoned']);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 0 } },
+                    ],
+                },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            await waitFor(() => {
+                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                    'Goblin1',
+                    'activeConditions',
+                    expect.arrayContaining(['frightened', 'poisoned', 'unconscious']),
+                    'test-campaign'
+                );
+            });
+        });
+
+        it('does not duplicate condition if already present', async () => {
+            diceRoller.rollD20.mockReturnValue(1);
+            runtimeState.getRuntimeValue.mockReturnValue(['unconscious']);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 0 } },
+                    ],
+                },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            await waitFor(() => {
+                const conditionsCall = runtimeState.setRuntimeValue.mock.calls.find(
+                    c => c[0] === 'Goblin1' && c[1] === 'activeConditions'
+                );
+                expect(conditionsCall).toBeDefined();
+                const conditions = conditionsCall[2];
+                const unconsciousCount = conditions.filter(c => String(c).toLowerCase() === 'unconscious').length;
+                expect(unconsciousCount).toBe(1);
+            });
+        });
+
+        it('calls addExpiration with correct condition array structure', async () => {
             diceRoller.rollD20.mockReturnValue(1);
             render(<EyebiteEffectModal {...makeProps({
                 combatSummary: {
@@ -309,15 +491,19 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             await waitFor(() => {
                 expect(expirations.addExpiration).toHaveBeenCalledWith(
                     'Witch1',
                     'Goblin1',
-                    expect.any(Array),
+                    expect.arrayContaining([
+                        expect.objectContaining({
+                            type: 'unconscious',
+                            condition: 'unconscious',
+                        }),
+                    ]),
                     'test-campaign'
                 );
             });
@@ -333,9 +519,8 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             await waitFor(() => {
                 const targetEffectsCall = runtimeState.setRuntimeValue.mock.calls.find(
@@ -355,7 +540,7 @@ describe('EyebiteEffectModal - NPC save', () => {
             });
         });
 
-        it('calls addTargetResult for rollback tracking', async () => {
+        it('calls addTargetResult with roll and total for failure', async () => {
             diceRoller.rollD20.mockReturnValue(1);
             render(<EyebiteEffectModal {...makeProps({
                 combatSummary: {
@@ -365,9 +550,8 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             await waitFor(() => {
                 expect(damageRollback.addTargetResult).toHaveBeenCalledWith(
@@ -375,13 +559,16 @@ describe('EyebiteEffectModal - NPC save', () => {
                     expect.objectContaining({
                         targetName: 'Goblin1',
                         saveResult: 'failure',
+                        roll: 1,
+                        total: 1,
                         conditions: ['unconscious'],
+                        appliedDamage: 0,
                     })
                 );
             });
         });
 
-        it('logs save_result entry on failure', async () => {
+        it('logs save_result entry on failure with all fields', async () => {
             diceRoller.rollD20.mockReturnValue(1);
             render(<EyebiteEffectModal {...makeProps({
                 combatSummary: {
@@ -391,26 +578,32 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             await waitFor(() => {
                 const saveResultCalls = logService.addEntry.mock.calls.filter(
-                    c => c[1].type === 'save_result'
+                    c => c[1].type === 'save_result' && c[1].targetName === 'Goblin1'
                 );
                 expect(saveResultCalls.length).toBeGreaterThan(0);
-                expect(saveResultCalls[saveResultCalls.length - 1][1]).toEqual(
+                const lastSaveResult = saveResultCalls[saveResultCalls.length - 1][1];
+                expect(lastSaveResult).toEqual(
                     expect.objectContaining({
                         targetName: 'Goblin1',
                         success: false,
                         type: 'save_result',
+                        saveDc: 13,
+                        saveType: 'WIS',
+                        rollType: 'save-eyebite',
+                        characterName: 'Witch1',
                     })
                 );
+                expect(lastSaveResult.description).toContain('failed WIS save');
+                expect(lastSaveResult.description).toContain('Eyebite');
             });
         });
 
-        it('logs condition entry on failure', async () => {
+        it('logs condition entry on failure with all fields', async () => {
             diceRoller.rollD20.mockReturnValue(1);
             render(<EyebiteEffectModal {...makeProps({
                 combatSummary: {
@@ -420,22 +613,26 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             await waitFor(() => {
                 const conditionCalls = logService.addEntry.mock.calls.filter(
                     c => c[1].type === 'condition'
                 );
                 expect(conditionCalls.length).toBeGreaterThan(0);
-                expect(conditionCalls[conditionCalls.length - 1][1]).toEqual(
+                const lastCondition = conditionCalls[conditionCalls.length - 1][1];
+                expect(lastCondition).toEqual(
                     expect.objectContaining({
                         characterName: 'Goblin1',
                         condition: 'Unconscious',
                         type: 'condition',
+                        action: 'applied',
+                        reason: 'Eyebite spell',
                     })
                 );
+                expect(lastCondition.note).toContain('Goblin1');
+                expect(lastCondition.note).toContain('Unconscious');
             });
         });
     });
@@ -451,9 +648,8 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             await waitFor(() => {
                 expect(screen.getByText(/Goblin1/)).toBeInTheDocument();
@@ -462,16 +658,46 @@ describe('EyebiteEffectModal - NPC save', () => {
             });
         });
 
+        it('shows popup with exact failure description format', async () => {
+            diceRoller.rollD20.mockReturnValue(1);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 0 } },
+                    ],
+                },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            await waitFor(() => {
+                const popupDesc = screen.getByText(/Goblin1 failed on WIS save/);
+                expect(popupDesc).toHaveTextContent('Goblin1 failed on WIS save against Eyebite. Goblin1 gains the Unconscious condition.');
+            });
+        });
+
         it('shows popup with creature name, spell name, and save result on NPC success', async () => {
             render(<EyebiteEffectModal {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             await waitFor(() => {
                 expect(screen.getByText(/Goblin1/)).toBeInTheDocument();
                 expect(screen.getByText(/succeeded on WIS save/)).toBeInTheDocument();
+            });
+        });
+
+        it('shows popup with exact success description format', async () => {
+            render(<EyebiteEffectModal {...makeProps()} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            await act(async () => {
+                fireEvent.click(screen.getByTestId('stm-confirm'));
+            });
+            await waitFor(() => {
+                const popupDesc = screen.getByText(/Goblin1 succeeded on WIS save/);
+                expect(popupDesc).toHaveTextContent('Goblin1 succeeded on WIS save against Eyebite. Unaffected.');
             });
         });
 
@@ -485,9 +711,8 @@ describe('EyebiteEffectModal - NPC save', () => {
                 },
             })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const confirmBtn = screen.getByTestId('stm-confirm');
             await act(async () => {
-                fireEvent.click(confirmBtn);
+                fireEvent.click(screen.getByTestId('stm-confirm'));
             });
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();

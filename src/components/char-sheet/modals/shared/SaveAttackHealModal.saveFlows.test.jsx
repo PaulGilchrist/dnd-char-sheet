@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackHealModal from './SaveAttackHealModal.jsx';
 
 // ── Mocked modules ──
@@ -21,11 +22,14 @@ vi.mock('../../../../services/dice/diceRoller.js', () => ({
   rollExpression: vi.fn(() => ({ total: 10, rolls: [10], modifier: 0, formula: '1d20' })),
 }));
 
-vi.mock('../../../../services/ui/utils.js', () => ({
-  default: {
-    guid: vi.fn(() => 'test-guid-123'),
-  },
-}));
+vi.mock('../../../../services/ui/utils.js', () => {
+  let counter = 0;
+  return {
+    default: {
+      guid: vi.fn(() => `test-guid-${++counter}`),
+    },
+  };
+});
 
 vi.mock('../../../../services/ui/storage.js', () => ({
   default: {
@@ -39,13 +43,18 @@ vi.mock('../../../../services/automation/common/healingRoll.js', () => ({
   logHealingToSSE: vi.fn(),
 }));
 
+vi.mock('../../../../services/encounters/combatData.js', () => ({
+  setCombatSummaryCache: vi.fn(),
+}));
+
 // ── Re-import mocked modules ──
 
 import * as savePromptService from '../../../../services/combat/conditions/savePromptService.js';
 import * as logService from '../../../../services/ui/logService.js';
 import * as diceRoller from '../../../../services/dice/diceRoller.js';
-import utils from '../../../../services/ui/utils.js';
+import * as applyDamage from '../../../../services/rules/combat/applyDamage.js';
 import storage from '../../../../services/ui/storage.js';
+import * as combatData from '../../../../services/encounters/combatData.js';
 
 // ── Test fixtures ──
 
@@ -57,7 +66,7 @@ import { makeProps, getCheckboxByName } from './SaveAttackHealModal.test-utils.j
  * Select the given target name(s) and click the apply button.
  * Returns the rendered result for further queries.
  */
-async function applyFeature(getByRole, targetNames) {
+async function applySaves(getByRole, targetNames) {
   for (const name of targetNames) {
     fireEvent.click(getCheckboxByName(name));
   }
@@ -72,27 +81,20 @@ describe('SaveAttackHealModal — save flows', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     diceRoller.rollExpression.mockReturnValue({ total: 10, rolls: [10], modifier: 0, formula: '1d20' });
-    utils.guid.mockReturnValue('test-guid-123');
-    localStorage.clear();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: vi.fn() });
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   // ── Apply saves flow: NPC vs player routing ──
 
   it('sends save result for NPC targets and save prompt for player targets', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A', 'Player One']);
+    await applySaves(getByRole, ['Goblin A', 'Player One']);
     expect(savePromptService.sendSaveResult).toHaveBeenCalledTimes(1);
     expect(savePromptService.sendSavePrompt).toHaveBeenCalledTimes(1);
   });
 
   it('sends save result for all NPC targets when multiple are selected', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A', 'Goblin B']);
+    await applySaves(getByRole, ['Goblin A', 'Goblin B']);
     expect(savePromptService.sendSaveResult).toHaveBeenCalledTimes(2);
   });
 
@@ -105,7 +107,7 @@ describe('SaveAttackHealModal — save flows', () => {
         ],
       },
     })} />);
-    await applyFeature(getByRole, ['Player One', 'Player Two']);
+    await applySaves(getByRole, ['Player One', 'Player Two']);
     expect(savePromptService.sendSavePrompt).toHaveBeenCalledTimes(2);
   });
 
@@ -119,11 +121,21 @@ describe('SaveAttackHealModal — save flows', () => {
 
   it('sets processing state, hides checkboxes and apply button, shows cancel after apply', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A']);
+    await applySaves(getByRole, ['Goblin A']);
     expect(screen.getByText(/Resolving.*CON.*saving throws/)).toBeInTheDocument();
     expect(document.querySelectorAll('input[type="checkbox"]').length).toBe(0);
     expect(screen.queryByRole('button', { name: /Divine Smite/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('calls onClose when Cancel is clicked during processing', async () => {
+    const onClose = vi.fn();
+    const { getByRole } = render(<SaveAttackHealModal {...makeProps({ onClose })} />);
+    await applySaves(getByRole, ['Goblin A']);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('shows target count in initial apply button label', () => {
@@ -135,33 +147,46 @@ describe('SaveAttackHealModal — save flows', () => {
 
   // ── Apply saves flow: dice rolling & service calls ──
 
-  it('calls rollExpression twice per NPC target (once for save, once for damage)', async () => {
+  it('rolls dice for both save and damage per NPC target', async () => {
     diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
     const { getByRole } = render(<SaveAttackHealModal {...makeProps({
       combatSummary: { creatures: [{ name: 'Goblin A', type: 'npc', saveBonuses: { con: 0 } }, { name: 'Goblin B', type: 'npc', saveBonuses: { con: 0 } }] },
     })} />);
-    await applyFeature(getByRole, ['Goblin A', 'Goblin B']);
-    // 2 save rolls + 2 damage rolls = 4 total (all fail save with roll 5 < DC 10)
+    await applySaves(getByRole, ['Goblin A', 'Goblin B']);
     expect(diceRoller.rollExpression).toHaveBeenCalledTimes(4);
   });
 
   it('does not call rollExpression for player targets', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Player One']);
+    await applySaves(getByRole, ['Player One']);
     expect(diceRoller.rollExpression).not.toHaveBeenCalled();
   });
 
   it('calls sendSaveResult with correct campaign name, target name, and promptId', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A']);
-    expect(savePromptService.sendSaveResult).toHaveBeenCalledWith('test-campaign', 'Goblin A', expect.objectContaining({
-      promptId: 'test-guid-123',
-    }));
+    await applySaves(getByRole, ['Goblin A']);
+    expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
+      'test-campaign',
+      'Goblin A',
+      expect.objectContaining({ promptId: expect.stringMatching(/test-guid-\d+/) })
+    );
+  });
+
+  it('includes saveBonus in sendSaveResult when creature has a non-zero bonus', async () => {
+    const { getByRole } = render(<SaveAttackHealModal {...makeProps({
+      combatSummary: { creatures: [{ name: 'Goblin A', type: 'npc', saveBonuses: { con: 3 } }] },
+    })} />);
+    await applySaves(getByRole, ['Goblin A']);
+    expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
+      'test-campaign',
+      'Goblin A',
+      expect.objectContaining({ saveBonus: 3 })
+    );
   });
 
   it('calls sendSaveResult with correct target name per target', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A', 'Goblin B']);
+    await applySaves(getByRole, ['Goblin A', 'Goblin B']);
     const calledTargets = savePromptService.sendSaveResult.mock.calls.map(c => c[1]);
     expect(calledTargets).toContain('Goblin A');
     expect(calledTargets).toContain('Goblin B');
@@ -170,7 +195,7 @@ describe('SaveAttackHealModal — save flows', () => {
   it('calls sendSaveResult with success when roll meets DC', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
     diceRoller.rollExpression.mockReturnValue({ total: 12, rolls: [12], modifier: 0, formula: '1d20' });
-    await applyFeature(getByRole, ['Goblin A']);
+    await applySaves(getByRole, ['Goblin A']);
     expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
       'test-campaign',
       'Goblin A',
@@ -181,7 +206,7 @@ describe('SaveAttackHealModal — save flows', () => {
   it('calls sendSaveResult with failure when roll is below DC', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
     diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
-    await applyFeature(getByRole, ['Goblin A']);
+    await applySaves(getByRole, ['Goblin A']);
     expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
       'test-campaign',
       'Goblin A',
@@ -191,14 +216,17 @@ describe('SaveAttackHealModal — save flows', () => {
 
   it('calls sendSavePrompt with correct parameters for player targets', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Player One']);
-    expect(savePromptService.sendSavePrompt).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-      promptId: 'test-guid-123',
-      targetName: 'Player One',
-      saveType: 'CON',
-      saveDc: 10,
-      sourceName: 'Cleric1',
-    }));
+    await applySaves(getByRole, ['Player One']);
+    expect(savePromptService.sendSavePrompt).toHaveBeenCalledWith(
+      'test-campaign',
+      expect.objectContaining({
+        promptId: expect.stringMatching(/test-guid-\d+/),
+        targetName: 'Player One',
+        saveType: 'CON',
+        saveDc: 10,
+        sourceName: 'Cleric1',
+      })
+    );
   });
 
   // ── Apply saves flow: log entries ──
@@ -206,7 +234,7 @@ describe('SaveAttackHealModal — save flows', () => {
   it('adds a roll log entry for NPC save result with saveResult, saveDc, and timestamp', async () => {
     diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A']);
+    await applySaves(getByRole, ['Goblin A']);
     const rollCall = logService.addEntry.mock.calls.find(c => c[1].type === 'roll' && c[1].targetName === 'Goblin A');
     expect(rollCall[1]).toEqual(expect.objectContaining({
       type: 'roll',
@@ -222,14 +250,14 @@ describe('SaveAttackHealModal — save flows', () => {
 
   it('does not log save entry for pending player targets', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Player One']);
+    await applySaves(getByRole, ['Player One']);
     const rollCalls = logService.addEntry.mock.calls.filter(c => c[1].type === 'roll' && c[1].targetName === 'Player One');
     expect(rollCalls).toHaveLength(0);
   });
 
   it('adds one log entry per NPC target', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A', 'Goblin B']);
+    await applySaves(getByRole, ['Goblin A', 'Goblin B']);
     const rollEntries = logService.addEntry.mock.calls.filter(c => c[1].type === 'roll');
     // 2 save entries + 2 damage entries = 4 (damage rolled for all targets)
     expect(rollEntries).toHaveLength(4);
@@ -237,12 +265,13 @@ describe('SaveAttackHealModal — save flows', () => {
 
   // ── Apply saves flow: storage & events ──
 
-  it('saves combatSummary to storage and dispatches event after apply', async () => {
+  it('saves combatSummary to storage, updates cache, and dispatches event after apply', async () => {
     const listener = vi.fn();
     window.addEventListener('combat-summary-updated', listener);
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A']);
+    await applySaves(getByRole, ['Goblin A']);
     expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
+    expect(combatData.setCombatSummaryCache).toHaveBeenCalled();
     expect(listener).toHaveBeenCalled();
     window.removeEventListener('combat-summary-updated', listener);
   });
@@ -252,25 +281,24 @@ describe('SaveAttackHealModal — save flows', () => {
   it('displays NPC save result with success or failure status and roll details', async () => {
     diceRoller.rollExpression.mockReturnValue({ total: 15, rolls: [15], modifier: 0, formula: '1d20' });
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A']);
+    await applySaves(getByRole, ['Goblin A']);
     await waitFor(() => {
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Goblin A');
-      expect(body.textContent).toContain('takes 7');
-      expect(body.textContent).toContain('rolled 15');
-      expect(body.textContent).toContain('halved');
+      const resultsList = document.querySelector('.abjure-results-list');
+      expect(resultsList.textContent).toContain('Goblin A');
+      expect(resultsList.textContent).toContain('takes 7');
+      expect(resultsList.textContent).toContain('rolled 15');
+      expect(resultsList.textContent).toContain('halved');
     });
   });
 
   it('displays NPC save failure with damage expression and type', async () => {
     diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A']);
+    await applySaves(getByRole, ['Goblin A']);
     await waitFor(() => {
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Failed');
-      expect(body.textContent).toContain('5');
-      expect(body.textContent).toContain('Radiant');
+      expect(screen.getByText(/Failed/)).toBeInTheDocument();
+      expect(screen.getByText(/5/)).toBeInTheDocument();
+      expect(screen.getByText(/Radiant/)).toBeInTheDocument();
     });
   });
 
@@ -279,17 +307,16 @@ describe('SaveAttackHealModal — save flows', () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps({
       combatSummary: { creatures: [{ name: 'Goblin A', type: 'npc', saveBonuses: { con: 2 } }] },
     })} />);
-    await applyFeature(getByRole, ['Goblin A']);
+    await applySaves(getByRole, ['Goblin A']);
     await waitFor(() => {
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('takes 8');
-      expect(body.textContent).toContain('rolled 17');
+      expect(screen.getByText(/takes 8/)).toBeInTheDocument();
+      expect(screen.getByText(/rolled 17/)).toBeInTheDocument();
     });
   });
 
   it('displays pending status for player targets', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Player One']);
+    await applySaves(getByRole, ['Player One']);
     await waitFor(() => {
       expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument();
     });
@@ -298,53 +325,88 @@ describe('SaveAttackHealModal — save flows', () => {
   it('shows both NPC results and pending player prompts together', async () => {
     diceRoller.rollExpression.mockReturnValue({ total: 12, rolls: [12], modifier: 0, formula: '1d20' });
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Goblin A', 'Player One']);
+    await applySaves(getByRole, ['Goblin A', 'Player One']);
     await waitFor(() => {
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Goblin A');
-      expect(body.textContent).toContain('Saved');
-      expect(body.textContent).toContain('Player One');
-      expect(body.textContent).toContain('Waiting for save roll');
+      const resultsList = document.querySelector('.abjure-results-list');
+      expect(resultsList.textContent).toContain('Goblin A');
+      expect(resultsList.textContent).toContain('Saved');
+      expect(resultsList.textContent).toContain('Player One');
+      expect(resultsList.textContent).toContain('Waiting for save roll');
     });
   });
 
   // ── Save result event handling (player saves) ──
 
-  it('handles save-result event for pending player target with success or failure', async () => {
+  it('handles save-result event for pending player target with success', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Player One']);
+    await applySaves(getByRole, ['Player One']);
+
+    const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
 
     await act(async () => {
       await new Promise(r => setTimeout(r, 50));
       const saveEvent = new CustomEvent('save-result', {
-        detail: { promptId: 'test-guid-123', success: true, total: 12, roll: 10, saveBonus: 2 },
+        detail: { promptId, success: true, total: 12, roll: 10, saveBonus: 2 },
       });
       window.dispatchEvent(saveEvent);
     });
 
     await waitFor(() => {
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Player One');
-      expect(body.textContent).toContain('Saved');
+      const resultsList = document.querySelector('.abjure-results-list');
+      expect(resultsList.textContent).toContain('Player One');
+      expect(resultsList.textContent).toContain('Saved');
       expect(screen.queryByText(/Waiting for save roll/)).not.toBeInTheDocument();
     });
   });
 
-  it('adds roll log entry when save-result event is received', async () => {
+  it('handles save-result event for pending player target with failure and applies damage', async () => {
+    // Mock applyDamageToTarget to prevent unhandled rejection from
+    // missing currentHitPoints in the mock combatSummary
+    const spy = vi.spyOn(applyDamage, 'applyDamageToTarget').mockReturnValue({ finalDamage: 0 });
+
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Player One']);
+    await applySaves(getByRole, ['Player One']);
+
+    const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
 
     await act(async () => {
       await new Promise(r => setTimeout(r, 50));
       const saveEvent = new CustomEvent('save-result', {
-        detail: { promptId: 'test-guid-123', success: true, total: 12, roll: 10, saveBonus: 2 },
+        detail: { promptId, success: false, total: 5, roll: 3, saveBonus: 2 },
       });
       window.dispatchEvent(saveEvent);
     });
 
     await waitFor(() => {
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Player One');
+      const resultsList = document.querySelector('.abjure-results-list');
+      expect(resultsList.textContent).toContain('Player One');
+      expect(resultsList.textContent).toContain('Failed');
+    });
+
+    const rollCall = logService.addEntry.mock.calls.find(c => c[1].targetName === 'Player One' && c[1].saveResult === 'failure');
+    expect(rollCall).toBeDefined();
+    expect(rollCall[1].rollType).toBe('save-damage');
+
+    spy.mockRestore();
+  });
+
+  it('adds roll log entry when save-result event is received for success', async () => {
+    const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
+    await applySaves(getByRole, ['Player One']);
+
+    const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 50));
+      const saveEvent = new CustomEvent('save-result', {
+        detail: { promptId, success: true, total: 12, roll: 10, saveBonus: 2 },
+      });
+      window.dispatchEvent(saveEvent);
+    });
+
+    await waitFor(() => {
+      const resultsList = document.querySelector('.abjure-results-list');
+      expect(resultsList.textContent).toContain('Player One');
     });
     const rollCall = logService.addEntry.mock.calls.find(c => c[1].targetName === 'Player One' && c[1].saveResult === 'success');
     expect(rollCall).toBeDefined();
@@ -352,7 +414,7 @@ describe('SaveAttackHealModal — save flows', () => {
 
   it('ignores save-result event with unknown promptId', async () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Player One']);
+    await applySaves(getByRole, ['Player One']);
 
     await act(async () => {
       await new Promise(r => setTimeout(r, 50));
@@ -363,8 +425,8 @@ describe('SaveAttackHealModal — save flows', () => {
     });
 
     await waitFor(() => {
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).not.toContain('takes');
+      const resultsList = document.querySelector('.abjure-results-list');
+      expect(resultsList.textContent).toContain('Waiting for save roll');
     });
   });
 
@@ -374,12 +436,14 @@ describe('SaveAttackHealModal — save flows', () => {
     const listener = vi.fn();
     window.addEventListener('combat-summary-updated', listener);
     const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Player One']);
+    await applySaves(getByRole, ['Player One']);
+
+    const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
 
     await act(async () => {
       await new Promise(r => setTimeout(r, 50));
       const saveEvent = new CustomEvent('save-result', {
-        detail: { promptId: 'test-guid-123', success: true, total: 12, roll: 10, saveBonus: 2 },
+        detail: { promptId, success: true, total: 12, roll: 10, saveBonus: 2 },
       });
       window.dispatchEvent(saveEvent);
     });
@@ -395,24 +459,50 @@ describe('SaveAttackHealModal — save flows', () => {
     const { getByRole } = render(<SaveAttackHealModal {...makeProps({
       combatSummary: { creatures: [{ name: 'Mystery Creature' }] },
     })} />);
-    await applyFeature(getByRole, ['Mystery Creature']);
+    await applySaves(getByRole, ['Mystery Creature']);
     await waitFor(() => {
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Mystery Creature');
-      expect(body.textContent).toContain('Waiting for save roll');
+      expect(screen.getByText(/Mystery Creature/)).toBeInTheDocument();
+      expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument();
     });
   });
 
-  it('shows all resolved targets as "All targets resolved" when all players respond', async () => {
-    const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
-    await applyFeature(getByRole, ['Player One']);
+  it('shows pending status when not all player targets have responded', async () => {
+    const { getByRole } = render(<SaveAttackHealModal {...makeProps({
+      combatSummary: {
+        creatures: [
+          { name: 'Player One', type: 'player' },
+          { name: 'Player Two', type: 'player' },
+        ],
+      },
+    })} />);
+    await applySaves(getByRole, ['Player One', 'Player Two']);
+
+    const promptId1 = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
 
     await act(async () => {
       await new Promise(r => setTimeout(r, 50));
-      const saveEvent = new CustomEvent('save-result', {
-        detail: { promptId: 'test-guid-123', success: true, total: 12, roll: 10, saveBonus: 2 },
-      });
-      window.dispatchEvent(saveEvent);
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId: promptId1, success: true, total: 12, roll: 10, saveBonus: 2 },
+      }));
+    });
+
+    // One target responded, the other is still pending
+    await waitFor(() => {
+      expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows all resolved message when a single player target responds', async () => {
+    const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
+    await applySaves(getByRole, ['Player One']);
+
+    const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 50));
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId, success: true, total: 12, roll: 10, saveBonus: 2 },
+      }));
     });
 
     await waitFor(() => {

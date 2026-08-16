@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FearModal from './FearModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -76,6 +77,19 @@ function makeProps(overrides = {}) {
     };
 }
 
+async function selectAndConfirm(props = {}) {
+    const { container } = render(<FearModal {...makeProps(props)} />);
+    const labels = container.querySelectorAll('.secondary-target-row');
+    await act(async () => { fireEvent.click(labels[0]); });
+    await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
+    });
+    await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
+    });
+    return { container };
+}
+
 beforeEach(() => {
     vi.resetAllMocks();
     getCombatSummary.mockReturnValue(baseCombatSummary);
@@ -85,124 +99,28 @@ beforeEach(() => {
     getAllyList.mockReturnValue(null);
 });
 
-afterEach(() => {
-    vi.clearAllMocks();
-});
-
 describe('FearModal NPC saves', () => {
-    // ── NPC save resolution ──
-
-    describe('NPC save resolution', () => {
-        it('calls storeSpellLastAttack when targets are selected', async () => {
+    describe('NPC failed save flow', () => {
+        it('applies frightened condition, expiration, and fear effect on failed NPC save', async () => {
             getRuntimeValue.mockReturnValue([]);
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
-
-                // storeSpellLastAttack is called inside resolveAllSaves
-                // We verify the runtime state was set
-                expect(setRuntimeValue).toHaveBeenCalled();
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('logs ability_use entry when targets are selected', async () => {
-            render(<FearModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-            });
-
-            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                type: 'ability_use',
-                characterName: 'Wizard1',
-                abilityName: 'Bane',
-                description: expect.stringContaining('Selecting 1 target'),
-            }));
-        });
-
-        it('applies frightened condition on failed NPC save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
+                await selectAndConfirm();
 
                 await waitFor(() => {
                     const conditionCalls = setRuntimeValue.mock.calls.filter(
                         call => call[1] === 'activeConditions' && call[0] === 'Goblin'
                     );
                     expect(conditionCalls.length).toBeGreaterThan(0);
-                    const conditions = conditionCalls[0][2];
-                    expect(conditions).toContain('frightened');
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('calls addExpiration with frightened condition on failed NPC save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
+                    expect(conditionCalls[0][2]).toContain('frightened');
                 });
 
-                await waitFor(() => {
-                    if (addExpiration.mock.calls.length > 0) {
-                        const [caster, target, effects] = addExpiration.mock.calls[0];
-                        expect(caster).toBe('Wizard1');
-                        expect(target).toBe('Goblin');
-                        expect(effects).toEqual([
-                            { type: 'condition', condition: 'frightened' },
-                        ]);
-                    }
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('tracks fear effect on targetEffects when NPC fails save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
+                expect(addExpiration).toHaveBeenCalledWith(
+                    'Wizard1',
+                    'Goblin',
+                    [{ type: 'condition', condition: 'frightened' }],
+                    campaignName,
+                );
 
                 await waitFor(() => {
                     const targetEffectCalls = setRuntimeValue.mock.calls.filter(
@@ -222,68 +140,46 @@ describe('FearModal NPC saves', () => {
             }
         });
 
-        it('logs condition entries on failed NPC save', async () => {
+        it('logs ability_use, save_result, and condition entries on failed NPC save', async () => {
             getRuntimeValue.mockReturnValue([]);
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
+                await selectAndConfirm();
 
-                await waitFor(() => {
-                    const conditionEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'condition' && call[1]?.condition === 'Frightened'
-                    );
-                    expect(conditionEntries.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
+                expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                    type: 'ability_use',
+                    characterName: 'Wizard1',
+                    abilityName: 'Bane',
+                }));
 
-        it('logs save_result entry for NPC saves', async () => {
-            render(<FearModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-            });
-
-            await waitFor(() => {
                 const saveEntries = addEntry.mock.calls.filter(
                     call => call[1]?.type === 'save_result'
                 );
                 expect(saveEntries.length).toBeGreaterThan(0);
-                expect(saveEntries[0][1]).toEqual(expect.objectContaining({
+                expect(saveEntries[0][1]).toMatchObject({
                     type: 'save_result',
                     saveType: 'CHA',
                     saveDc: 14,
-                }));
-            });
-        });
+                    success: false,
+                    targetName: 'Goblin',
+                });
 
-        it('does not apply condition on successful NPC save', async () => {
+                const conditionEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'condition' && call[1]?.condition === 'Frightened'
+                );
+                expect(conditionEntries.length).toBeGreaterThan(0);
+            } finally {
+                vi.restoreAllMocks();
+            }
+        });
+    });
+
+    describe('NPC successful save', () => {
+        it('does not apply condition and logs success when NPC passes save', async () => {
             getRuntimeValue.mockReturnValue([]);
             vi.spyOn(Math, 'random').mockReturnValue(0.99);
             try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
+                await selectAndConfirm();
 
                 await waitFor(() => {
                     const conditionCalls = setRuntimeValue.mock.calls.filter(
@@ -291,54 +187,23 @@ describe('FearModal NPC saves', () => {
                     );
                     expect(conditionCalls.length).toBe(0);
                 });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
 
-        it('logs save_result success when NPC passes save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.99);
-            try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
-
-                await waitFor(() => {
-                    const saveEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'save_result' && call[1]?.success === true
-                    );
-                    expect(saveEntries.length).toBeGreaterThan(0);
-                });
+                const saveEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'save_result' && call[1]?.success === true && call[1]?.targetName === 'Goblin'
+                );
+                expect(saveEntries.length).toBeGreaterThan(0);
             } finally {
                 vi.restoreAllMocks();
             }
         });
     });
 
-    // ── Careful Spell protection ──
-
     describe('careful spell protection for NPCs', () => {
-        it('automatically succeeds for careful spell protected NPCs', async () => {
+        it('automatically succeeds and logs for careful spell protected NPCs', async () => {
             getAllyList.mockReturnValue(['Goblin']);
             getRuntimeValue.mockReturnValue([]);
-            render(<FearModal {...makeProps({ metamagicCareful: true })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-            });
+            await selectAndConfirm({ metamagicCareful: true });
 
-            // Goblin should have logged success but no condition applied
             await waitFor(() => {
                 const conditionCalls = setRuntimeValue.mock.calls.filter(
                     call => call[1] === 'activeConditions' && call[0] === 'Goblin'
@@ -346,61 +211,26 @@ describe('FearModal NPC saves', () => {
                 expect(conditionCalls.length).toBe(0);
             });
 
-            // Should log that they succeeded due to Careful Spell
             const saveEntries = addEntry.mock.calls.filter(
                 call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Goblin'
             );
             expect(saveEntries.length).toBeGreaterThan(0);
             expect(saveEntries[0][1].description).toContain('Careful Spell protected');
         });
-
-        it('logs condition entry for careful spell protected target', async () => {
-            getAllyList.mockReturnValue(['Goblin']);
-            getRuntimeValue.mockReturnValue([]);
-            render(<FearModal {...makeProps({ metamagicCareful: true })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-            });
-
-            await waitFor(() => {
-                const conditionEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Goblin'
-                );
-                expect(conditionEntries.length).toBeGreaterThan(0);
-                expect(conditionEntries[0][1].success).toBe(true);
-            });
-        });
     });
 
-    // ── Condition deduplication ──
-
     describe('condition deduplication', () => {
-        it('does not add duplicate frightened condition', async () => {
-            // Start with frightened already in conditions
+        it('does not add duplicate frightened condition when already present', async () => {
             getRuntimeValue.mockReturnValue([{ name: 'frightened' }]);
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
+                await selectAndConfirm();
 
                 await waitFor(() => {
                     const conditionCalls = setRuntimeValue.mock.calls.filter(
                         call => call[1] === 'activeConditions' && call[0] === 'Goblin'
                     );
                     expect(conditionCalls.length).toBeGreaterThan(0);
-                    // Should have exactly one frightened (filtered out then re-added)
                     const conditions = conditionCalls[0][2];
                     const frightenedCount = conditions.filter(c => String(c).toLowerCase() === 'frightened').length;
                     expect(frightenedCount).toBe(1);
@@ -411,37 +241,8 @@ describe('FearModal NPC saves', () => {
         });
     });
 
-    // ── Fear effect tracking ──
-
     describe('fear effect tracking', () => {
-        it('creates new fear effect when none exists', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
-
-                await waitFor(() => {
-                    const targetEffectCalls = setRuntimeValue.mock.calls.filter(
-                        call => call[1] === 'targetEffects' && call[0] === 'campaign'
-                    );
-                    expect(targetEffectCalls.length).toBeGreaterThan(0);
-                    const effects = targetEffectCalls[0][2];
-                    expect(effects.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('updates existing fear effect when one already exists', async () => {
+        it('updates existing fear effect with new caster and DC', async () => {
             const existingEffect = {
                 target: 'Goblin',
                 effect: 'fear_end_on_los',
@@ -453,15 +254,7 @@ describe('FearModal NPC saves', () => {
             getRuntimeValue.mockReturnValue([existingEffect]);
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
+                await selectAndConfirm();
 
                 await waitFor(() => {
                     const targetEffectCalls = setRuntimeValue.mock.calls.filter(
@@ -469,10 +262,8 @@ describe('FearModal NPC saves', () => {
                     );
                     expect(targetEffectCalls.length).toBeGreaterThan(0);
                     const effects = targetEffectCalls[0][2];
-                    // Should have one effect (updated, not duplicated)
                     const fearEffects = effects.filter(e => e.effect === 'fear_end_on_los');
                     expect(fearEffects.length).toBe(1);
-                    // Should be updated with new caster
                     expect(fearEffects[0].source).toBe('Wizard1');
                     expect(fearEffects[0].dc).toBe(14);
                 });

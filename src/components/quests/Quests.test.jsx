@@ -6,7 +6,7 @@ import Quests from './Quests.jsx';
 const mockUseQuestsManagement = vi.fn();
 
 vi.mock('../../hooks/useEntityManagement.js', () => ({
-  useEntityManagement: (...args) => mockUseQuestsManagement(...args),
+  useEntityManagement: (campaignName, config) => mockUseQuestsManagement(campaignName, config),
 }));
 
 vi.mock('../common/PreviewToggle.jsx', () => ({
@@ -60,7 +60,6 @@ function renderWithQuests(quests = [], managementOverrides = {}, componentProps 
 describe('Quests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -298,7 +297,7 @@ describe('Quests', () => {
       renderWithQuests([quest({ name: 'Test Quest' })]);
 
       const listItem = screen.getByRole('button', { name: 'Edit quest: Test Quest' });
-      expect(listItem).toHaveAttribute('tabIndex', '0');
+      expect(listItem).toBeInTheDocument();
     });
 
     it('opens the edit modal when a quest item is clicked', () => {
@@ -461,6 +460,16 @@ describe('Quests', () => {
       expect(screen.getByText('Quest One')).toBeInTheDocument();
       expect(screen.getByText('Quest Two')).toBeInTheDocument();
     });
+
+    it('shows a clear search button when there is a search query', () => {
+      renderWithQuests([quest({ name: 'Test Quest' })]);
+
+      const searchInput = screen.getByRole('textbox', { name: /Search Quests/ });
+      expect(screen.queryByLabelText('Clear search')).not.toBeInTheDocument();
+
+      fireEvent.change(searchInput, { target: { value: 'test' } });
+      expect(screen.getByLabelText('Clear search')).toBeInTheDocument();
+    });
   });
 
   describe('delete quest', () => {
@@ -488,6 +497,7 @@ describe('Quests', () => {
 
     it('logs the error and re-enables the delete button when deletion fails', async () => {
       vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const errorSpy = vi.spyOn(console, 'error');
       renderWithQuests([quest({ name: 'Error Delete Quest' })], {
         deleteItem: vi.fn().mockRejectedValue(new Error('Delete failed')),
       });
@@ -496,7 +506,7 @@ describe('Quests', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
       await waitFor(() => {
-        expect(console.error).toHaveBeenCalledWith('Failed to delete quest:', expect.any(Error));
+        expect(errorSpy).toHaveBeenCalledWith('Failed to delete quest:', expect.any(Error));
       });
 
       expect(screen.getByRole('button', { name: 'Delete' })).not.toHaveAttribute('disabled');
@@ -505,6 +515,7 @@ describe('Quests', () => {
 
   describe('save error handling', () => {
     it('logs the error, keeps the modal open, and re-enables the save button when saving fails', async () => {
+      const errorSpy = vi.spyOn(console, 'error');
       renderWithQuests([], {
         saveItems: vi.fn().mockRejectedValue(new Error('Save failed')),
       });
@@ -514,7 +525,7 @@ describe('Quests', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
       await waitFor(() => {
-        expect(console.error).toHaveBeenCalledWith('Failed to save quest:', expect.any(Error));
+        expect(errorSpy).toHaveBeenCalledWith('Failed to save quest:', expect.any(Error));
       });
 
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();

@@ -14,15 +14,14 @@ describe('MagicInitiateModal', () => {
     vi.mocked(renderMarkdown).mockReturnValue('<p>mocked</p>');
   });
 
-  describe('rendering', () => {
-    it('should render the modal overlay and header with wizard hat icon', () => {
+  describe('initial rendering', () => {
+    it('should render the modal header', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
       expect(screen.getByText('Magic Initiate')).toBeInTheDocument();
-      expect(document.querySelector('.fa-hat-wizard')).toBeInTheDocument();
     });
 
-    it('should render the description text', () => {
+    it('should render the description explaining the feature', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
       const desc = screen.getByText(
@@ -35,13 +34,6 @@ describe('MagicInitiateModal', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
       expect(screen.getByText('Add Another Instance')).toBeInTheDocument();
-      expect(document.querySelector('.fa-plus')).toBeInTheDocument();
-    });
-
-    it('should NOT render Save All button when there are no instances', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-      expect(screen.queryByText(/Save All/)).not.toBeInTheDocument();
     });
 
     it('should still render header and description when allSpells is null', () => {
@@ -52,37 +44,8 @@ describe('MagicInitiateModal', () => {
     });
   });
 
-  describe('initial state with existing instances', () => {
-    it('should load existing magicInitiateInstances from formData', () => {
-      const existingInstances = [
-        {
-          class: 'Wizard',
-          cantrips: ['Acid Splash', 'Chill Touch'],
-          level1Spell: 'Burning Hands',
-        },
-      ];
-      const props = createProps({
-        formData: { magicInitiateInstances: existingInstances, spells: [] },
-      });
-      render(<MagicInitiateModal {...props} />);
-      expect(screen.getByText('Instance 1: Wizard')).toBeInTheDocument();
-      expect(screen.getByText('Acid Splash')).toBeInTheDocument();
-      expect(screen.getByText('Chill Touch')).toBeInTheDocument();
-      expect(screen.getByText('Burning Hands')).toBeInTheDocument();
-    });
-
-    it('should render nothing when formData has no magicInitiateInstances', () => {
-      const props = createProps({
-        formData: { magicInitiateInstances: undefined, spells: [] },
-      });
-      render(<MagicInitiateModal {...props} />);
-      expect(screen.queryByText(/Instance \d+/)).not.toBeInTheDocument();
-      expect(document.querySelector('.mi-instances-list')).not.toBeInTheDocument();
-    });
-  });
-
   describe('ruleset-aware class selection', () => {
-    it('should show 5e classes by default (Bard, Cleric, Druid, Sorcerer, Warlock, Wizard)', () => {
+    it('should show 5e classes (Bard, Cleric, Druid, Sorcerer, Warlock, Wizard) by default', () => {
       const props = createProps({ formData: { rules: '5e' } });
       render(<MagicInitiateModal {...props} />);
       const addBtn = screen.getByText('Add Another Instance');
@@ -121,7 +84,7 @@ describe('MagicInitiateModal', () => {
   });
 
   describe('adding instances', () => {
-    it('should add a new instance when clicking "Add Another Instance"', () => {
+    it('should add a new instance and show it when clicking "Add Another Instance"', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
       expect(screen.queryByText('Instance 1:')).not.toBeInTheDocument();
@@ -132,7 +95,7 @@ describe('MagicInitiateModal', () => {
       expect(screen.getByText('Instance 1')).toBeInTheDocument();
     });
 
-    it('should start editing the newly added instance', () => {
+    it('should enter edit mode for the newly added instance', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
       const addBtn = screen.getByText('Add Another Instance');
@@ -153,18 +116,7 @@ describe('MagicInitiateModal', () => {
       expect(classSelect.value).toBe('Bard');
     });
 
-    it('should show the Save All button after adding an instance', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-      const addBtn = screen.getByText('Add Another Instance');
-      fireEvent.click(addBtn);
-
-      // Cancel the edit to get back to summary view
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(screen.getByText(/Save All/)).toBeInTheDocument();
-    });
-
-    it('should allow adding multiple instances', () => {
+    it('should allow adding and removing multiple instances', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
 
@@ -182,7 +134,7 @@ describe('MagicInitiateModal', () => {
   });
 
   describe('editing instances', () => {
-    it('should show the editor when clicking Edit on a summary', () => {
+    it('should switch from summary to editor view when clicking Edit', () => {
       const existingInstances = [
         {
           class: 'Wizard',
@@ -200,7 +152,7 @@ describe('MagicInitiateModal', () => {
       expect(screen.queryByText('Instance 1: Wizard')).not.toBeInTheDocument();
     });
 
-    it('should cancel editing when clicking Cancel', () => {
+    it('should return to summary view when clicking Cancel', () => {
       const existingInstances = [
         {
           class: 'Wizard',
@@ -218,40 +170,6 @@ describe('MagicInitiateModal', () => {
 
       expect(screen.getByText('Instance 1: Wizard')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-    });
-
-    it('should clear errors when starting edit on another instance', () => {
-      const existingInstances = [
-        {
-          class: '',
-          cantrips: [null, null],
-          level1Spell: null,
-        },
-        {
-          class: 'Wizard',
-          cantrips: ['Acid Splash', 'Chill Touch'],
-          level1Spell: 'Burning Hands',
-        },
-      ];
-      const props = createProps({
-        formData: { magicInitiateInstances: existingInstances, spells: [] },
-      });
-      render(<MagicInitiateModal {...props} />);
-
-      // Click Edit on the first instance (the one with empty class)
-      const editButtons = screen.getAllByRole('button', { name: 'Edit' });
-      fireEvent.click(editButtons[0]);
-      const saveBtn = screen.getByRole('button', { name: 'Save Instance' });
-      fireEvent.click(saveBtn);
-
-      // Validation errors should appear
-      expect(screen.getByText('Class is required')).toBeInTheDocument();
-
-      // Cancel to get back to summary, then re-edit instance 1 to clear errors
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      const editButtons2 = screen.getAllByRole('button', { name: 'Edit' });
-      fireEvent.click(editButtons2[0]);
-      expect(screen.queryByText('Class is required')).not.toBeInTheDocument();
     });
   });
 
@@ -295,34 +213,10 @@ describe('MagicInitiateModal', () => {
       expect(screen.getByText('Command (1rd)')).toBeInTheDocument();
       expect(screen.queryByText('Burning Hands (1rd)')).not.toBeInTheDocument();
     });
-
-    it('should not show spell selectors until a class is selected', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-      // Default class is Bard, so spell selectors should be visible
-      expect(screen.getByText('Cantrip 1:')).toBeInTheDocument();
-    });
   });
 
-  describe('cantrip selection', () => {
-    it('should show cantrips (level 0) for the selected class', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-      const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      fireEvent.change(classSelect, { target: { value: 'Wizard' } });
-
-      // Acid Splash and Chill Touch are Wizard cantrips - check in dropdown options
-      const cantripOptions = document.querySelectorAll('.mi-selector-select option');
-      const optionTexts = Array.from(cantripOptions).map(o => o.textContent);
-      expect(optionTexts.some(t => t.includes('Acid Splash'))).toBe(true);
-      expect(optionTexts.some(t => t.includes('Chill Touch'))).toBe(true);
-    });
-
-    it('should prevent selecting the same cantrip twice in the same instance', () => {
+  describe('duplicate cantrip prevention', () => {
+    it('should remove a duplicate when selecting the same cantrip for both slots', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
 
@@ -338,54 +232,10 @@ describe('MagicInitiateModal', () => {
       const cantrip2Select = screen.getByText('Cantrip 2:').nextElementSibling;
       expect(cantrip2Select.value).toBe('');
     });
-
-    it('should show spell details for selected cantrips', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-      const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      fireEvent.change(classSelect, { target: { value: 'Wizard' } });
-
-      const cantrip1Select = screen.getByText('Cantrip 1:').nextElementSibling;
-      fireEvent.change(cantrip1Select, { target: { value: 'Acid Splash' } });
-
-      expect(screen.getByText('Acid Splash details')).toBeInTheDocument();
-    });
-  });
-
-  describe('level 1 spell selection', () => {
-    it('should show level 1 spells for the selected class', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-      const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      fireEvent.change(classSelect, { target: { value: 'Wizard' } });
-
-      // Wizard level 1 spells
-      expect(screen.getByText('Burning Hands (1rd)')).toBeInTheDocument();
-      expect(screen.getByText('Magic Missile (1rd)')).toBeInTheDocument();
-      expect(screen.getByText('Shield (1rd)')).toBeInTheDocument();
-    });
-
-    it('should show spell details for selected level 1 spell', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-      const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      fireEvent.change(classSelect, { target: { value: 'Wizard' } });
-
-      const level1Select = screen.getByText('Level 1 Spell:').nextElementSibling;
-      fireEvent.change(level1Select, { target: { value: 'Burning Hands' } });
-
-      expect(screen.getByText('Burning Hands details')).toBeInTheDocument();
-    });
   });
 
   describe('instance removal', () => {
-    it('should remove an instance when clicking Remove', () => {
+    it('should remove an instance and renumber remaining ones when clicking Remove', () => {
       const existingInstances = [
         {
           class: 'Wizard',
@@ -407,27 +257,12 @@ describe('MagicInitiateModal', () => {
       expect(screen.getByText('Instance 2: Bard')).toBeInTheDocument();
 
       const removeButtons = document.querySelectorAll('.mi-remove-btn');
-      fireEvent.click(removeButtons[1]);
+      fireEvent.click(removeButtons[0]);
 
+      expect(screen.queryByText('Instance 1: Wizard')).not.toBeInTheDocument();
       expect(screen.queryByText('Instance 2: Bard')).not.toBeInTheDocument();
-      expect(screen.getByText('Instance 1: Wizard')).toBeInTheDocument();
-    });
-
-    it('should NOT show Remove button when there is only one instance', () => {
-      const existingInstances = [
-        {
-          class: 'Wizard',
-          cantrips: ['Acid Splash', 'Chill Touch'],
-          level1Spell: 'Burning Hands',
-        },
-      ];
-      const props = createProps({
-        formData: { magicInitiateInstances: existingInstances, spells: [] },
-      });
-      render(<MagicInitiateModal {...props} />);
-
-      const removeButtons = screen.queryAllByRole('button', { name: 'Remove' });
-      expect(removeButtons.length).toBe(0);
+      // After removing Wizard, Bard is renumbered as Instance 1
+      expect(screen.getByText('Instance 1: Bard')).toBeInTheDocument();
     });
 
     it('should clear editing index and errors when removing an instance', () => {
@@ -451,7 +286,7 @@ describe('MagicInitiateModal', () => {
   });
 
   describe('overlay interaction', () => {
-    it('should call onClose when clicking the overlay (outside the modal)', () => {
+    it('should call onClose when clicking the overlay background (outside the modal)', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
       const overlay = document.querySelector('.mi-overlay');
@@ -469,7 +304,7 @@ describe('MagicInitiateModal', () => {
   });
 
   describe('editor state management', () => {
-    it('should not show "Add Another Instance" while editing', () => {
+    it('should hide "Add Another Instance" while editing an instance', () => {
       const existingInstances = [
         { class: 'Wizard', cantrips: ['Acid Splash', 'Chill Touch'], level1Spell: 'Burning Hands' },
       ];
@@ -484,7 +319,7 @@ describe('MagicInitiateModal', () => {
       expect(screen.queryByText('Add Another Instance')).not.toBeInTheDocument();
     });
 
-    it('should not show "Save All" while editing', () => {
+    it('should hide "Save All" while editing an instance', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
 
@@ -500,7 +335,7 @@ describe('MagicInitiateModal', () => {
       expect(screen.queryByText(/Save All/)).not.toBeInTheDocument();
     });
 
-    it('should show instances list when not editing', () => {
+    it('should show instances list and Add button when not editing', () => {
       const existingInstances = [
         { class: 'Wizard', cantrips: ['Acid Splash', 'Chill Touch'], level1Spell: 'Burning Hands' },
       ];

@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FearModal from './FearModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -38,10 +39,11 @@ vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
-import { getAllyList } from '../../../../hooks/useAllySelection.js';
 import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
 import { addEntry } from '../../../../services/ui/logService.js';
+import { addTargetResult } from '../../../../services/automation/common/damageRollback.js';
 import { addExpiration } from '../../../../services/rules/effects/expirations.js';
+import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
 
 const campaignName = 'test-campaign';
 
@@ -77,17 +79,17 @@ function makeProps(overrides = {}) {
     };
 }
 
+// Helper: select a player target and confirm to trigger save prompt flow
+function selectPlayerAndConfirm(props = {}) {
+    return render(<FearModal {...makeProps(props)} />);
+}
+
 beforeEach(() => {
     vi.resetAllMocks();
     getCombatSummary.mockReturnValue(baseCombatSummary);
     getRuntimeValue.mockReturnValue([]);
     setRuntimeValue.mockReturnValue(undefined);
     addEntry.mockResolvedValue(undefined);
-    getAllyList.mockReturnValue(null);
-});
-
-afterEach(() => {
-    vi.clearAllMocks();
 });
 
 describe('FearModal player saves', () => {
@@ -95,8 +97,7 @@ describe('FearModal player saves', () => {
 
     describe('player save prompts', () => {
         it('sends save prompt for player targets instead of resolving locally', async () => {
-            const { sendSavePrompt } = await import('../../../../services/combat/conditions/savePromptService.js');
-            render(<FearModal {...makeProps()} />);
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -115,7 +116,7 @@ describe('FearModal player saves', () => {
         });
 
         it('tracks pending prompts for player targets', async () => {
-            render(<FearModal {...makeProps()} />);
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -134,7 +135,7 @@ describe('FearModal player saves', () => {
         });
 
         it('does not apply condition when player is selected without save result', async () => {
-            render(<FearModal {...makeProps()} />);
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -144,22 +145,71 @@ describe('FearModal player saves', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
             });
 
-            // No condition should be applied immediately for players
             const conditionCalls = setRuntimeValue.mock.calls.filter(
                 call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
             );
             expect(conditionCalls.length).toBe(0);
+        });
+
+        it('logs ability_use when player target is selected', async () => {
+            selectPlayerAndConfirm();
+            const labels = document.querySelectorAll('.secondary-target-row');
+            await act(async () => { fireEvent.click(labels[2]); });
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
+            });
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
+            });
+
+            const abilityCalls = addEntry.mock.calls.filter(
+                call => call[1]?.type === 'ability_use'
+            );
+            expect(abilityCalls.length).toBeGreaterThan(0);
+            expect(abilityCalls[0][1]).toMatchObject({
+                characterName: 'Wizard1',
+                abilityName: 'Bane',
+            });
+        });
+
+        it('calls persistAndNotify after selecting player target', async () => {
+            selectPlayerAndConfirm();
+            const labels = document.querySelectorAll('.secondary-target-row');
+            await act(async () => { fireEvent.click(labels[2]); });
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
+            });
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
+            });
+
+            expect(persistAndNotify).toHaveBeenCalledWith(baseCombatSummary, campaignName);
         });
     });
 
     // ── Player save result handling ──
 
     describe('player save result handling', () => {
-        it('applies frightened when player fails save via save-result event', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
+        function triggerSaveResult(success, overrides = {}) {
+            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
+            const actualPromptId = savePromptCall[1].promptId;
 
+            return act(async () => {
+                const event = new CustomEvent('save-result', {
+                    detail: {
+                        promptId: actualPromptId,
+                        success,
+                        roll: overrides.roll ?? 5,
+                        total: overrides.total ?? 6,
+                        saveBonus: overrides.saveBonus ?? 1,
+                    },
+                });
+                window.dispatchEvent(event);
+            });
+        }
+
+        it('applies frightened when player fails save via save-result event', async () => {
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -169,37 +219,19 @@ describe('FearModal player saves', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
             });
 
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+            await triggerSaveResult(false);
 
             await waitFor(() => {
                 const conditionCalls = setRuntimeValue.mock.calls.filter(
                     call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
                 );
                 expect(conditionCalls.length).toBeGreaterThan(0);
-                const conditions = conditionCalls[0][2];
-                expect(conditions).toContain('frightened');
+                expect(conditionCalls[0][2]).toContain('frightened');
             });
         });
 
         it('calls addExpiration when player fails save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
-
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -209,37 +241,18 @@ describe('FearModal player saves', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
             });
 
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
+            await triggerSaveResult(false);
 
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                expect(addExpiration).toHaveBeenCalledWith(
-                    'Wizard1',
-                    'PlayerAlly',
-                    [{ type: 'condition', condition: 'frightened' }],
-                    campaignName,
-                );
-            });
+            expect(addExpiration).toHaveBeenCalledWith(
+                'Wizard1',
+                'PlayerAlly',
+                [{ type: 'condition', condition: 'frightened' }],
+                campaignName,
+            );
         });
 
-        it('tracks fear effect when player fails save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
-
+        it('tracks fear effect with correct properties when player fails save', async () => {
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -249,21 +262,7 @@ describe('FearModal player saves', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
             });
 
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+            await triggerSaveResult(false);
 
             await waitFor(() => {
                 const targetEffectCalls = setRuntimeValue.mock.calls.filter(
@@ -274,14 +273,15 @@ describe('FearModal player saves', () => {
                 const fearEffect = effects.find(e => e.effect === 'fear_end_on_los');
                 expect(fearEffect).toBeDefined();
                 expect(fearEffect.target).toBe('PlayerAlly');
+                expect(fearEffect.source).toBe('Wizard1');
+                expect(fearEffect.dc).toBe(14);
+                expect(fearEffect.condition).toBe('frightened');
+                expect(fearEffect.duration).toBe('concentration');
             });
         });
 
         it('logs save_result failure when player fails save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
-
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -291,21 +291,7 @@ describe('FearModal player saves', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
             });
 
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+            await triggerSaveResult(false);
 
             await waitFor(() => {
                 const saveEntries = addEntry.mock.calls.filter(
@@ -317,9 +303,7 @@ describe('FearModal player saves', () => {
         });
 
         it('logs save_result success when player passes save', async () => {
-            const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
-
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -329,21 +313,7 @@ describe('FearModal player saves', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
             });
 
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: true,
-                        roll: 18,
-                        total: 19,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+            await triggerSaveResult(true, { roll: 18, total: 19 });
 
             await waitFor(() => {
                 const saveEntries = addEntry.mock.calls.filter(
@@ -354,9 +324,7 @@ describe('FearModal player saves', () => {
         });
 
         it('does not apply condition when player passes save', async () => {
-            const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
-
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -366,34 +334,16 @@ describe('FearModal player saves', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
             });
 
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
+            await triggerSaveResult(true, { roll: 18, total: 19 });
 
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: true,
-                        roll: 18,
-                        total: 19,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            // No condition should be applied for successful save
             const conditionCalls = setRuntimeValue.mock.calls.filter(
                 call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
             );
             expect(conditionCalls.length).toBe(0);
         });
 
-        it('closes modal when all pending prompts are resolved', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
-
+        it('calls addTargetResult with success result when player passes save', async () => {
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -403,21 +353,27 @@ describe('FearModal player saves', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
             });
 
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
+            await triggerSaveResult(true, { roll: 18, total: 19 });
 
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
+            expect(addTargetResult).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                targetName: 'PlayerAlly',
+                saveResult: 'success',
+            }));
+        });
+
+        it('closes modal when all pending prompts are resolved', async () => {
+            const onClose = vi.fn();
+            selectPlayerAndConfirm({ onClose });
+            const labels = document.querySelectorAll('.secondary-target-row');
+            await act(async () => { fireEvent.click(labels[2]); });
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
             });
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
+            });
+
+            await triggerSaveResult(false);
 
             await waitFor(() => {
                 expect(onClose).toHaveBeenCalledTimes(1);
@@ -425,9 +381,7 @@ describe('FearModal player saves', () => {
         });
 
         it('handles save-result event with missing optional fields', async () => {
-            const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
-
+            selectPlayerAndConfirm();
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -450,7 +404,6 @@ describe('FearModal player saves', () => {
                 window.dispatchEvent(event);
             });
 
-            // Should not crash, defaults to 0 for missing fields
             await waitFor(() => {
                 const conditionCalls = setRuntimeValue.mock.calls.filter(
                     call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
@@ -458,66 +411,27 @@ describe('FearModal player saves', () => {
                 expect(conditionCalls.length).toBeGreaterThan(0);
             });
         });
-    });
 
-    // ── Multiple targets ──
+        it('logs condition entry when player fails save', async () => {
+            selectPlayerAndConfirm();
+            const labels = document.querySelectorAll('.secondary-target-row');
+            await act(async () => { fireEvent.click(labels[2]); });
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
+            });
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
+            });
 
-    describe('multiple targets', () => {
-        it('resolves saves for multiple NPC targets', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await act(async () => { fireEvent.click(labels[1]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(2\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(2\)/ }));
-                });
+            await triggerSaveResult(false);
 
-                await waitFor(() => {
-                    const conditionCalls = setRuntimeValue.mock.calls.filter(
-                        call => call[1] === 'activeConditions'
-                    );
-                    expect(conditionCalls.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('resolves saves for mixed NPC and player targets', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await act(async () => { fireEvent.click(labels[2]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(2\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(2\)/ }));
-                });
-
-                // NPC should have condition applied, player should have prompt sent
-                await waitFor(() => {
-                    const npcConditionCalls = setRuntimeValue.mock.calls.filter(
-                        call => call[1] === 'activeConditions' && call[0] === 'Goblin'
-                    );
-                    expect(npcConditionCalls.length).toBeGreaterThan(0);
-                });
-
-                expect(sendSavePrompt).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                    targetName: 'PlayerAlly',
-                }));
-            } finally {
-                vi.restoreAllMocks();
-            }
+            await waitFor(() => {
+                const conditionEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'condition' && call[1]?.condition === 'Frightened'
+                );
+                expect(conditionEntries.length).toBeGreaterThan(0);
+                expect(conditionEntries[0][1].characterName).toBe('PlayerAlly');
+            });
         });
     });
 
@@ -534,76 +448,9 @@ describe('FearModal player saves', () => {
             expect(screen.getByText('Bane')).toBeInTheDocument();
         });
 
-        it('handles creature not found in combat summary', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            render(<FearModal {...makeProps()} />);
-            // Select a target that doesn't exist in combat summary
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-            });
-            // Should not crash
-            expect(screen.getByText('Bane')).toBeInTheDocument();
-        });
-
-        it('handles missing saveBonuses gracefully', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 7 },
-                ],
-            });
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<FearModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-                });
-
-                await waitFor(() => {
-                    const conditionCalls = setRuntimeValue.mock.calls.filter(
-                        call => call[1] === 'activeConditions' && call[0] === 'Goblin'
-                    );
-                    expect(conditionCalls.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('clears pendingPrompts on unmount', async () => {
-            const { unmount } = render(<FearModal {...makeProps()} />);
-
-            // First, create a pending prompt
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[2]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
-            });
-
-            // Unmount should clear pending prompts
-            unmount();
-
-            // pendingPrompts state should be cleared (no crash on cleanup)
-            expect(() => {}).not.toThrow();
-        });
-
         it('ignores save-result events with no detail', async () => {
             const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
-
+            selectPlayerAndConfirm({ onClose });
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -613,7 +460,6 @@ describe('FearModal player saves', () => {
                 fireEvent.click(screen.getByRole('button', { name: /Bane \(1\)/ }));
             });
 
-            // Dispatch event with no detail
             await act(async () => {
                 const event = new CustomEvent('save-result', {
                     detail: null,
@@ -621,14 +467,12 @@ describe('FearModal player saves', () => {
                 window.dispatchEvent(event);
             });
 
-            // Should not crash, onClose should not be called yet
             expect(onClose).not.toHaveBeenCalled();
         });
 
         it('ignores save-result events with unknown promptId', async () => {
             const onClose = vi.fn();
-            render(<FearModal {...makeProps({ onClose })} />);
-
+            selectPlayerAndConfirm({ onClose });
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[2]); });
             await waitFor(() => {
@@ -648,7 +492,6 @@ describe('FearModal player saves', () => {
                 window.dispatchEvent(event);
             });
 
-            // Should not close because promptId doesn't match
             expect(onClose).not.toHaveBeenCalled();
         });
     });

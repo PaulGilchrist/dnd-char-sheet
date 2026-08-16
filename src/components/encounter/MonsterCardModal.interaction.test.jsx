@@ -1,49 +1,4 @@
-// Tests removed (redundant with other test files):
-//
-//   "clicking saving throw dice link calls rollSavingThrow"
-//     → MonsterCardModal.save-modifier.test.jsx "uses creature.saving_throws
-//       when player has no abilities array" covers save click with full
-//       argument assertions
-//
-//   "clicking attack bonus calls rollAttack"
-//     → MonsterCardModal.attack-logic.test.jsx has 9 tests covering
-//       rollAttack with detailed argument assertions (coverAcBonus,
-//       forcedMode, grazeDamage, autoDamageFormula, saveDc, etc.)
-//
-//   "clicking damage dice link calls rollDamage"
-//     → MonsterCardModal.save-modifier.test.jsx "handleDamage with save DC
-//       context" covers damage click with full argument assertions
-//
-//   "clicking extra damage dice link calls rollDamage"
-//     → MonsterCardModal.attack-logic.test.jsx "passes autoDamageSecondaryFormula"
-//       covers secondary damage with full argument assertions
-//
-//   "does not render initiative dice link when initiative_details has no
-//     parseable bonus"
-//     → MonsterCardModal.rendering.test.jsx "does not render initiative
-//       section when data is absent" covers initiative absence; the
-//       positive interaction test covers the click handler
-//
-//   "displays multiple speed types when available"
-//     → MonsterCardModal.rendering.test.jsx "shows multiple speed entries"
-//       covers the same rendering behavior
-//
-//   "renders multiple damage options separated by 'or'"
-//     → MonsterCardModal.rendering.test.jsx "renders attack bonus, damage
-//       dice, and save DC in actions" covers damage dice rendering
-//
-// Kept (unique behavioral coverage):
-//
-//   "clicking ability modifier calls rollAbilityCheck" — only test verifying
-//     ability modifier dice links trigger rollAbilityCheck
-//
-//   "clicking skill dice link calls rollSkillCheck" — only test verifying
-//     skill dice links trigger rollSkillCheck
-//
-//   "clicking initiative dice link calls rollInitiative" — only test verifying
-//     initiative dice link click handler fires with correct bonus
-//
-
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MonsterCardModal from './MonsterCardModal.jsx';
@@ -141,22 +96,49 @@ vi.mock('../../services/maps/mapsService.js', () => ({
   loadMapData: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
-  useRuntimeValue: vi.fn((_characterKey, _propertyName, _campaignName) => null),
-  getRuntimeValue: vi.fn((_characterKey, _propertyName) => null),
-}));
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => {
+  let _targetEffects = [];
+  let _tempHp = null;
+
+  const mockUseRuntimeValue = vi.fn((_characterKey, propertyName, _campaignName) => {
+    if (propertyName === 'targetEffects') return _targetEffects;
+    if (propertyName === 'tempHp') return _tempHp;
+    return null;
+  });
+
+  const mockGetRuntimeValue = vi.fn((_characterKey, propertyName) => {
+    if (propertyName === 'tempHp') return _tempHp;
+    return null;
+  });
+
+  return {
+    useRuntimeValue: mockUseRuntimeValue,
+    getRuntimeValue: mockGetRuntimeValue,
+    __setTargetEffects(val) { _targetEffects = val; },
+    __setTempHp(val) { _tempHp = val; },
+  };
+});
 
 // ── Re-import mocked modules ----
 import * as useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 import * as conditionEffects from '../../services/combat/conditions/conditionEffects.js';
 import * as damageUtils from '../../services/rules/combat/damageUtils.js';
+import * as useRuntimeState from '../../hooks/runtime/useRuntimeState.js';
 
 const rollAbilityCheck = useLoggedDiceRoll._rollAbilityCheck;
+const rollSavingThrow = useLoggedDiceRoll._rollSavingThrow;
 const rollSkillCheck = useLoggedDiceRoll._rollSkillCheck;
 const rollInitiative = useLoggedDiceRoll._rollInitiative;
+
+// ── Helpers ----
+
+/**
+ * Find a dice link element by exact visible text content.
+ */
+function findDiceLinkByText(text) {
+  const links = document.querySelectorAll('.mc-dice-link');
+  return Array.from(links).find((el) => el.textContent.trim() === text) || null;
+}
 
 // ── Tests ----
 
@@ -165,47 +147,236 @@ describe('MonsterCardModal interaction / game rules', () => {
     vi.clearAllMocks();
     conditionEffects.__setComputeReturn(null);
     damageUtils.__setFindCreatureReturn(null);
+    useRuntimeState.__setTargetEffects([]);
   });
 
   // ════════════════════════════════════════════
-  // Dice link click handlers (unique interaction coverage)
+  // Ability modifier dice link → rollAbilityCheck
   // ════════════════════════════════════════════
 
-  it('clicking ability modifier calls rollAbilityCheck with correct ability and modifier', () => {
-    render(<MonsterCardModal {...makeProps(makeMonster())} />);
-    const mods = document.querySelectorAll('.mc-ability-mod');
-    expect(mods.length).toBe(6);
-    // STR has modifier -1 — context is undefined when no ray debuff on monster
-    fireEvent.click(mods[0]);
-    expect(rollAbilityCheck).toHaveBeenCalledWith('Strength', -1, undefined);
+  describe('ability modifier dice links', () => {
+    it('clicking ability modifier calls rollAbilityCheck with correct ability and modifier', () => {
+      render(<MonsterCardModal {...makeProps(makeMonster())} />);
+      const mods = document.querySelectorAll('.mc-ability-mod');
+      expect(mods.length).toBe(6);
+      // STR has modifier -1 — context is undefined when no ray debuff on monster
+      fireEvent.click(mods[0]);
+      expect(rollAbilityCheck).toHaveBeenCalledWith('Strength', -1, undefined);
+    });
+
+    it('clicking ability modifier passes forcedMode disadvantage when ray_of_enfeeble_debuff targets the monster and ability is STR', () => {
+      useRuntimeState.__setTargetEffects([{ target: 'Goblin', effect: 'ray_of_enfeeble_debuff' }]);
+      render(<MonsterCardModal {...makeProps(makeMonster())} />);
+      const mods = document.querySelectorAll('.mc-ability-mod');
+      fireEvent.click(mods[0]);
+      expect(rollAbilityCheck).toHaveBeenCalledWith('Strength', -1, { forcedMode: 'disadvantage' });
+    });
+
+    it('clicking a non-STR ability does not pass forcedMode even with ray debuff', () => {
+      useRuntimeState.__setTargetEffects([{ target: 'Goblin', effect: 'ray_of_enfeeble_debuff' }]);
+      render(<MonsterCardModal {...makeProps(makeMonster())} />);
+      const mods = document.querySelectorAll('.mc-ability-mod');
+      // DEX is index 1
+      fireEvent.click(mods[1]);
+      expect(rollAbilityCheck).toHaveBeenCalledWith('Dexterity', 2, undefined);
+    });
   });
 
-  it('clicking skill dice link calls rollSkillCheck', () => {
-    const m = makeMonster({ skills: { stealth: { modifier: 3 } } });
-    render(<MonsterCardModal {...makeProps(m)} />);
+  // ════════════════════════════════════════════
+  // Save modifier dice link → rollSavingThrow
+  // ════════════════════════════════════════════
 
-    const rows = document.querySelectorAll('.mc-defense-row');
-    let skillRow = null;
-    for (const row of rows) {
-      if (row.querySelector('.mc-defense-label')?.textContent === 'Skills') {
-        skillRow = row;
-        break;
+  describe('save modifier dice links', () => {
+    it('clicking save modifier dice link calls rollSavingThrow with ability abbreviation and modifier', () => {
+      const m = makeMonster({
+        saving_throws: { str: { modifier: 2 }, dex: { modifier: 1 } },
+      });
+      render(<MonsterCardModal {...makeProps(m)} />);
+      // Save modifier links use className "mc-dice-link" inside save rows
+      const saveLinks = document.querySelectorAll('.mc-dice-link');
+      // Find the STR save link (contains "STR" or the abbreviation)
+      const strSaveLink = Array.from(saveLinks).find((el) => el.textContent.includes('STR'));
+      expect(strSaveLink).toBeTruthy();
+      fireEvent.click(strSaveLink);
+      expect(rollSavingThrow).toHaveBeenCalledWith('STR', 2);
+    });
+
+    it('clicking save modifier with negative value passes the negative modifier', () => {
+      const m = makeMonster({
+        saving_throws: { con: { modifier: -3 } },
+      });
+      render(<MonsterCardModal {...makeProps(m)} />);
+      const conSaveLink = Array.from(document.querySelectorAll('.mc-dice-link')).find((el) => el.textContent.includes('CON'));
+      expect(conSaveLink).toBeTruthy();
+      fireEvent.click(conSaveLink);
+      expect(rollSavingThrow).toHaveBeenCalledWith('CON', -3);
+    });
+  });
+
+  // ════════════════════════════════════════════
+  // Skill dice link → rollSkillCheck
+  // ════════════════════════════════════════════
+
+  describe('skill dice links', () => {
+    it('clicking skill dice link calls rollSkillCheck with skill name and modifier', () => {
+      const m = makeMonster({ skills: { stealth: { modifier: 3 }, athletics: { modifier: 1 } } });
+      render(<MonsterCardModal {...makeProps(m, { creatureName: 'Goblin' })} />);
+
+      const rows = document.querySelectorAll('.mc-defense-row');
+      let skillRow = null;
+      for (const row of rows) {
+        if (row.querySelector('.mc-defense-label')?.textContent === 'Skills') {
+          skillRow = row;
+          break;
+        }
       }
-    }
-    expect(skillRow).toBeTruthy();
-    const link = skillRow.querySelector('.mc-dice-link');
-    expect(link).toBeTruthy();
-    fireEvent.click(link);
-    expect(rollSkillCheck).toHaveBeenCalled();
+      expect(skillRow).toBeTruthy();
+      const links = skillRow.querySelectorAll('.mc-dice-link');
+      expect(links.length).toBeGreaterThan(0);
+      fireEvent.click(links[0]);
+      expect(rollSkillCheck).toHaveBeenCalled();
+    });
+
+    it('clicking skill dice link does not pass forcedMode because skill key is lowercase', () => {
+      useRuntimeState.__setTargetEffects([{ target: 'Goblin', effect: 'ray_of_enfeeble_debuff' }]);
+      const m = makeMonster({ skills: { athletics: { modifier: 1 } } });
+      render(<MonsterCardModal {...makeProps(m, { creatureName: 'Goblin' })} />);
+
+      const rows = document.querySelectorAll('.mc-defense-row');
+      let skillRow = null;
+      for (const row of rows) {
+        if (row.querySelector('.mc-defense-label')?.textContent === 'Skills') {
+          skillRow = row;
+          break;
+        }
+      }
+      const links = skillRow.querySelectorAll('.mc-dice-link');
+      fireEvent.click(links[0]);
+      // The code checks name === 'Athletics' but the key is 'athletics' (lowercase),
+      // so forcedMode is undefined
+      expect(rollSkillCheck).toHaveBeenCalledWith('athletics', 1, undefined);
+    });
   });
 
-  it('clicking initiative dice link calls rollInitiative when initiative_details has a bonus', () => {
-    const m = makeMonster({ initiative_details: '+5' });
-    render(<MonsterCardModal {...makeProps(m)} />);
-    expect(screen.getByText('+5')).toBeInTheDocument();
-    const initLink = screen.getByText('+5');
-    expect(initLink.closest('.mc-dice-link')).toBeTruthy();
-    fireEvent.click(initLink);
-    expect(rollInitiative).toHaveBeenCalledWith(5);
+  // ════════════════════════════════════════════
+  // Initiative dice link → rollInitiative
+  // ════════════════════════════════════════════
+
+  describe('initiative dice links', () => {
+    it('clicking initiative dice link calls rollInitiative with parsed positive bonus', () => {
+      const m = makeMonster({ initiative_details: '+5' });
+      render(<MonsterCardModal {...makeProps(m)} />);
+      expect(screen.getByText('+5')).toBeInTheDocument();
+      const initLink = screen.getByText('+5');
+      expect(initLink.closest('.mc-dice-link')).toBeTruthy();
+      fireEvent.click(initLink);
+      expect(rollInitiative).toHaveBeenCalledWith(5);
+    });
+
+    it('clicking initiative dice link calls rollInitiative with negative bonus', () => {
+      const m = makeMonster({ initiative_details: '-2' });
+      render(<MonsterCardModal {...makeProps(m)} />);
+      const initLink = screen.getByText('-2');
+      fireEvent.click(initLink);
+      expect(rollInitiative).toHaveBeenCalledWith(-2);
+    });
+
+    it('renders initiative text without a clickable dice link when bonus is not parseable', () => {
+      const m = makeMonster({ initiative_details: 'advantage' });
+      render(<MonsterCardModal {...makeProps(m)} />);
+      const initSection = screen.getByText('Initiative').closest('.mc-stat');
+      expect(initSection).toBeTruthy();
+      const initValue = initSection.querySelector('.mc-stat-value');
+      expect(initValue.textContent).toBe('advantage');
+      expect(initValue.querySelector('.mc-dice-link')).toBeFalsy();
+    });
+  });
+
+  // ════════════════════════════════════════════
+  // Attacker cannot act — attack blocking
+  // ════════════════════════════════════════════
+
+  describe('attacker cannot act', () => {
+    it('does not render attack links when the attacker has an incapacitating condition', () => {
+      damageUtils.__setFindCreatureReturn({
+        name: 'Goblin',
+        conditions: [{ key: 'incapacitated' }],
+        targetName: 'Player A',
+      });
+
+      const m = makeMonster({
+        actions: [{ name: 'Club', attack_bonus: 4, description: 'Melee Attack.', reach: '5 ft.' }],
+      });
+      render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
+
+      // When attacker cannot act, the attack dice link is not rendered
+      const attackLink = findDiceLinkByText('+4');
+      expect(attackLink).toBeFalsy();
+      // The incapacitated label should be visible
+      expect(screen.getByText('(Incapacitated)')).toBeInTheDocument();
+    });
+  });
+
+  // ════════════════════════════════════════════
+  // Psychic Strike validation
+  // ════════════════════════════════════════════
+
+  describe('Psychic Strike validation', () => {
+    it('alerts when Psychic Strike is used without a target', () => {
+      const m = makeMonster({
+        actions: [{ name: 'Psychic Strike', attack_bonus: 5, description: 'Melee Attack.', reach: '5 ft.' }],
+      });
+      render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin' }] })} />);
+
+      const attackLink = findDiceLinkByText('+5');
+      expect(attackLink).toBeTruthy();
+
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      fireEvent.click(attackLink);
+      expect(alertSpy).toHaveBeenCalledWith('Psychic Strike requires a target to be selected.');
+      alertSpy.mockRestore();
+    });
+
+    it('alerts when Psychic Strike is used on a target without hex', () => {
+      damageUtils.__setFindCreatureReturn({
+        name: 'Goblin',
+        conditions: [],
+        targetName: 'Player A',
+      });
+      const m = makeMonster({
+        actions: [{ name: 'Psychic Strike', attack_bonus: 5, description: 'Melee Attack.', reach: '5 ft.' }],
+      });
+      render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
+
+      const attackLink = findDiceLinkByText('+5');
+      expect(attackLink).toBeTruthy();
+
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      fireEvent.click(attackLink);
+      expect(alertSpy).toHaveBeenCalledWith('Psychic Strike can only be used on a creature under the warlock\'s Hex spell.');
+      alertSpy.mockRestore();
+    });
+  });
+
+  // ════════════════════════════════════════════
+  // Evasion modal flow
+  // ════════════════════════════════════════════
+
+  describe('evasion modal integration', () => {
+    it('renders a save DC dice link that calls handleSaveRoll when clicked', () => {
+      const m = makeMonster({
+        actions: [{ name: 'Fireball', save_dc: 15, save_type: 'Dexterity', damage_dice_primary: '8d6', damage_type_primary: 'fire' }],
+      });
+      render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
+
+      // When action has damage_dice_primary, the save link uses mc-dice-link class
+      const saveLinks = document.querySelectorAll('.mc-dice-link');
+      const fireballSave = Array.from(saveLinks).find((el) => el.textContent.includes('8d6'));
+      expect(fireballSave).toBeTruthy();
+      fireEvent.click(fireballSave);
+
+      // handleSaveRoll is called which internally calls rollSavingThrow
+      expect(rollSavingThrow).toHaveBeenCalled();
+    });
   });
 });

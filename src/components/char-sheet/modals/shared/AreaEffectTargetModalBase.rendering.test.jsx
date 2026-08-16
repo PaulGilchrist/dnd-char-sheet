@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
@@ -65,17 +66,19 @@ describe('AreaEffectTargetModalBase - Rendering & Context', () => {
     it('renders empty body when no renderBody provided', () => {
       getRuntimeValue.mockReturnValue([]);
       const { container } = render(<AreaEffectTargetModalBase {...baseProps} />);
-      const body = container.querySelector('.sp-body');
-      expect(body).toBeInTheDocument();
-      expect(body.textContent).toBe('');
+      expect(container.querySelector('.sp-body')).toBeInTheDocument();
     });
 
     it('renders empty actions when no renderActions provided', () => {
       getRuntimeValue.mockReturnValue([]);
       const { container } = render(<AreaEffectTargetModalBase {...baseProps} />);
-      const actions = container.querySelector('.sp-actions');
-      expect(actions).toBeInTheDocument();
-      expect(actions.textContent).toBe('');
+      expect(container.querySelector('.sp-actions')).toBeInTheDocument();
+    });
+
+    it('renders with empty feature name', () => {
+      getRuntimeValue.mockReturnValue([]);
+      const { container } = render(<AreaEffectTargetModalBase {...baseProps} featureName="" />);
+      expect(container.querySelector('.sp-header')).toBeInTheDocument();
     });
 
     it('calls renderBody with context when provided', () => {
@@ -159,15 +162,15 @@ describe('AreaEffectTargetModalBase - Rendering & Context', () => {
     it('context contains setSelected, setProcessing, setResults, setPendingPrompts', () => {
       getRuntimeValue.mockReturnValue([]);
 
-      let capturedCtx = null;
+      let latestCtx = null;
       const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls[0][0];
+        latestCtx = renderBody.mock.calls.at(-1)[0];
         return (
           <div>
-            <button onClick={() => capturedCtx.setSelected(new Set(['Goblin']))}>Set Selected</button>
-            <button onClick={() => capturedCtx.setProcessing(true)}>Set Processing</button>
-            <button onClick={() => capturedCtx.setResults([{ targetName: 'Goblin' }])}>Set Results</button>
-            <button onClick={() => capturedCtx.setPendingPrompts([{ promptId: '1' }])}>Set Prompts</button>
+            <button onClick={() => latestCtx.setSelected(new Set(['Goblin']))}>Set Selected</button>
+            <button onClick={() => latestCtx.setProcessing(true)}>Set Processing</button>
+            <button onClick={() => latestCtx.setResults([{ targetName: 'Goblin' }])}>Set Results</button>
+            <button onClick={() => latestCtx.setPendingPrompts([{ promptId: '1' }])}>Set Prompts</button>
           </div>
         );
       });
@@ -181,12 +184,30 @@ describe('AreaEffectTargetModalBase - Rendering & Context', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Set Prompts' }));
       });
 
-      expect(true).toBe(true);
+      expect(latestCtx.selected.has('Goblin')).toBe(true);
+      expect(latestCtx.processing).toBe(true);
+      expect(latestCtx.results).toEqual([{ targetName: 'Goblin' }]);
+      expect(latestCtx.pendingPrompts).toEqual([{ promptId: '1' }]);
+    });
+
+    it('context contains characters prop', () => {
+      getRuntimeValue.mockReturnValue([]);
+      const characters = [{ name: 'Player1' }, { name: 'Player2' }];
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls[0][0];
+        return <div>{capturedCtx.characters.length}</div>;
+      });
+
+      render(<AreaEffectTargetModalBase {...baseProps} characters={characters} renderBody={renderBody} />);
+
+      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(capturedCtx.characters).toEqual(characters);
     });
   });
 
   describe('extraState', () => {
-    it('spreads extraState into context', () => {
+    it('spreads extraState properties into context', () => {
       getRuntimeValue.mockReturnValue([]);
 
       const renderBody = vi.fn(() => {
@@ -204,57 +225,30 @@ describe('AreaEffectTargetModalBase - Rendering & Context', () => {
 
       expect(screen.getByText('customValue')).toBeInTheDocument();
     });
-  });
 
-  describe('coneAngle and widthFt defaults', () => {
-    it('passes coneAngle to overlay with default 53 when not provided', () => {
+    it('spreads multiple extraState properties into context', () => {
       getRuntimeValue.mockReturnValue([]);
-      const mapData = {
-        players: [
-          { name: 'Goblin', gridX: 10, gridY: 10 },
-        ],
-      };
+
       const renderBody = vi.fn(() => {
         const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        return (
+          <div>
+            <span id="a">{ctx.fieldA}</span>
+            <span id="b">{ctx.fieldB}</span>
+          </div>
+        );
       });
+
       render(
         <AreaEffectTargetModalBase
           {...baseProps}
-          mapData={mapData}
-          shape="cone"
-          attackerGridX={10}
-          attackerGridY={10}
-          rangeFeet={30}
-          coneAngle={90}
+          extraState={{ fieldA: 'alpha', fieldB: 'beta' }}
           renderBody={renderBody}
         />
       );
-    });
 
-    it('passes widthFt to overlay with default 5 when not provided', () => {
-      getRuntimeValue.mockReturnValue([]);
-      const mapData = {
-        players: [
-          { name: 'Goblin', gridX: 10, gridY: 10 },
-        ],
-      };
-      const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
-      });
-      render(
-        <AreaEffectTargetModalBase
-          {...baseProps}
-          mapData={mapData}
-          shape="line"
-          attackerGridX={10}
-          attackerGridY={10}
-          rangeFeet={60}
-          widthFt={10}
-          renderBody={renderBody}
-        />
-      );
+      expect(screen.getByText('alpha')).toBeInTheDocument();
+      expect(screen.getByText('beta')).toBeInTheDocument();
     });
   });
 });

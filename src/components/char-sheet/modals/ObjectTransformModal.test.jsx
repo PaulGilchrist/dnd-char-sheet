@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ObjectTransformModal from './ObjectTransformModal.jsx';
@@ -15,15 +16,15 @@ function makeProps(overrides) {
   };
 }
 
-const OBJECT_TYPE_LABELS = [
-  'Stone Block',
-  'Iron Chain',
-  'Wooden Crate',
-  'Iron Bars',
-  'Glass Vial',
-  'Leather Book',
-  'Bronze Statue',
-  'Other Object',
+const OBJECT_TYPES = [
+  { value: 'stone_block', label: 'Stone Block', icon: 'fa-cube' },
+  { value: 'iron_chain', label: 'Iron Chain', icon: 'fa-link' },
+  { value: 'wooden_crate', label: 'Wooden Crate', icon: 'fa-box' },
+  { value: 'iron_bars', label: 'Iron Bars', icon: 'fa-grip-lines' },
+  { value: 'glass_vial', label: 'Glass Vial', icon: 'fa-flask' },
+  { value: 'leather_book', label: 'Leather Book', icon: 'fa-book' },
+  { value: 'bronze_statue', label: 'Bronze Statue', icon: 'fa-statue' },
+  { value: 'other', label: 'Other Object', icon: 'fa-circle' },
 ];
 
 // ── Helpers ──
@@ -32,12 +33,20 @@ function renderModal(props) {
   return render(<ObjectTransformModal {...makeProps(props)} />);
 }
 
+function getSelectedButton() {
+  return document.querySelector('.object-type-btn.selected');
+}
+
+function clickButton(label) {
+  const btn = screen.getByText(label).closest('.object-type-btn');
+  fireEvent.click(btn);
+}
+
 // ── Tests ──
 
 describe('ObjectTransformModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
   });
 
   // ── Initial render ──
@@ -52,125 +61,66 @@ describe('ObjectTransformModal', () => {
     it('renders the header with title and icon', () => {
       renderModal();
       expect(screen.getByText('Creature into Object')).toBeInTheDocument();
-      const icon = document.querySelector('.sp-header i.fa-solid.fa-paw');
-      expect(icon).toBeInTheDocument();
+      expect(document.querySelector('.sp-header i.fa-solid.fa-paw')).toBeInTheDocument();
     });
 
     it('renders the instruction text', () => {
       renderModal();
-      expect(
-        screen.getByText('Select the object form for the transformation:')
-      ).toBeInTheDocument();
+      expect(screen.getByText('Select the object form for the transformation:')).toBeInTheDocument();
     });
 
-    it('renders all 8 object type buttons', () => {
+    it('renders all 8 object type buttons with correct icons', () => {
       renderModal();
-      OBJECT_TYPE_LABELS.forEach((label) => {
-        expect(screen.getByText(label)).toBeInTheDocument();
+      OBJECT_TYPES.forEach(({ label, icon }) => {
+        const btn = screen.getByText(label).closest('.object-type-btn');
+        expect(btn).toBeInTheDocument();
+        expect(btn.querySelector(`i.fa-solid.${icon}`)).toBeInTheDocument();
       });
-    });
-
-    it('renders Font Awesome icons on each object type button', () => {
-      renderModal();
-      const icons = document.querySelectorAll('.object-type-btn i.fa-solid');
-      expect(icons.length).toBe(8);
     });
 
     it('selects Stone Block by default', () => {
       renderModal();
-      const selectedBtn = document.querySelector(
-        '.object-type-btn.selected'
-      );
-      expect(selectedBtn).toHaveTextContent('Stone Block');
+      expect(getSelectedButton()).toHaveTextContent('Stone Block');
     });
 
-    it('renders Cancel button', () => {
+    it('renders Cancel and Transform buttons', () => {
       renderModal();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
-    it('renders Transform button with icon', () => {
-      renderModal();
-      const transformBtn = screen.getByRole('button', { name: 'Transform' });
-      expect(transformBtn).toBeInTheDocument();
-      const icon = transformBtn.querySelector('i.fa-solid.fa-paw');
-      expect(icon).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Transform' })).toBeInTheDocument();
     });
 
     it('does not render custom object input on initial render', () => {
       renderModal();
-      expect(
-        document.querySelector('.custom-object-input input')
-      ).not.toBeInTheDocument();
+      expect(document.querySelector('.custom-object-input input')).not.toBeInTheDocument();
     });
   });
 
   // ── Object type selection ──
 
   describe('object type selection', () => {
-    it('selects a different object type when its button is clicked', () => {
+    it.each(OBJECT_TYPES.filter(t => t.value !== 'stone_block'))('selects $label when its button is clicked', ({ label }) => {
       renderModal();
-      const chainBtn = screen.getByText('Iron Chain').closest('.object-type-btn');
-      fireEvent.click(chainBtn);
-      expect(
-        document.querySelector('.object-type-btn.selected')
-      ).toHaveTextContent('Iron Chain');
-    });
-
-    it('updates selection when clicking Wooden Crate', () => {
-      renderModal();
-      const crateBtn = screen.getByText('Wooden Crate').closest('.object-type-btn');
-      fireEvent.click(crateBtn);
-      expect(
-        document.querySelector('.object-type-btn.selected')
-      ).toHaveTextContent('Wooden Crate');
-    });
-
-    it('updates selection when clicking Glass Vial', () => {
-      renderModal();
-      const vialBtn = screen.getByText('Glass Vial').closest('.object-type-btn');
-      fireEvent.click(vialBtn);
-      expect(
-        document.querySelector('.object-type-btn.selected')
-      ).toHaveTextContent('Glass Vial');
-    });
-
-    it('updates selection when clicking Bronze Statue', () => {
-      renderModal();
-      const statueBtn = screen.getByText('Bronze Statue').closest('.object-type-btn');
-      fireEvent.click(statueBtn);
-      expect(
-        document.querySelector('.object-type-btn.selected')
-      ).toHaveTextContent('Bronze Statue');
+      clickButton(label);
+      expect(getSelectedButton()).toHaveTextContent(label);
     });
 
     it('shows custom object input when Other Object is selected', () => {
       renderModal();
-      const otherBtn = screen.getByText('Other Object').closest('.object-type-btn');
-      fireEvent.click(otherBtn);
-      expect(
-        document.querySelector('.custom-object-input input')
-      ).toBeInTheDocument();
+      clickButton('Other Object');
+      expect(document.querySelector('.custom-object-input input')).toBeInTheDocument();
     });
 
-    it('hides custom object input when a non-Other type is selected after Other', () => {
+    it('hides custom object input when switching away from Other Object', () => {
       renderModal();
-      const otherBtn = screen.getByText('Other Object').closest('.object-type-btn');
-      const stoneBtn = screen.getByText('Stone Block').closest('.object-type-btn');
-      fireEvent.click(otherBtn);
-      expect(
-        document.querySelector('.custom-object-input input')
-      ).toBeInTheDocument();
-      fireEvent.click(stoneBtn);
-      expect(
-        document.querySelector('.custom-object-input input')
-      ).not.toBeInTheDocument();
+      clickButton('Other Object');
+      expect(document.querySelector('.custom-object-input input')).toBeInTheDocument();
+      clickButton('Stone Block');
+      expect(document.querySelector('.custom-object-input input')).not.toBeInTheDocument();
     });
 
     it('renders the custom input with correct placeholder', () => {
       renderModal();
-      const otherBtn = screen.getByText('Other Object').closest('.object-type-btn');
-      fireEvent.click(otherBtn);
+      clickButton('Other Object');
       const input = document.querySelector('.custom-object-input input');
       expect(input).toHaveAttribute('placeholder', 'Enter object description...');
       expect(input).toHaveAttribute('type', 'text');
@@ -178,8 +128,7 @@ describe('ObjectTransformModal', () => {
 
     it('updates custom input value on change', () => {
       renderModal();
-      const otherBtn = screen.getByText('Other Object').closest('.object-type-btn');
-      fireEvent.click(otherBtn);
+      clickButton('Other Object');
       const input = document.querySelector('.custom-object-input input');
       fireEvent.change(input, { target: { value: 'Ancient Rune Stone' } });
       expect(input).toHaveValue('Ancient Rune Stone');
@@ -189,24 +138,22 @@ describe('ObjectTransformModal', () => {
   // ── Confirm behavior ──
 
   describe('confirm behavior', () => {
-    it('calls onConfirm with selected type when Transform is clicked (default stone_block)', () => {
+    it('calls onConfirm with stone_block when Transform is clicked (default)', () => {
       renderModal();
       fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
       expect(mockOnConfirm).toHaveBeenCalledWith('stone_block');
     });
 
-    it('calls onConfirm with selected type value when a preset object is clicked', () => {
+    it.each(OBJECT_TYPES.filter(t => t.value !== 'other'))('calls onConfirm with $value when $label is selected', ({ value }) => {
       renderModal();
-      const chainBtn = screen.getByText('Iron Chain').closest('.object-type-btn');
-      fireEvent.click(chainBtn);
+      clickButton(value === 'stone_block' ? 'Stone Block' : OBJECT_TYPES.find(t => t.value === value).label);
       fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('iron_chain');
+      expect(mockOnConfirm).toHaveBeenCalledWith(value);
     });
 
     it('calls onConfirm with custom type when Other is selected and input has text', () => {
       renderModal();
-      const otherBtn = screen.getByText('Other Object').closest('.object-type-btn');
-      fireEvent.click(otherBtn);
+      clickButton('Other Object');
       const input = document.querySelector('.custom-object-input input');
       fireEvent.change(input, { target: { value: 'Ancient Rune Stone' } });
       fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
@@ -215,60 +162,36 @@ describe('ObjectTransformModal', () => {
 
     it('calls onConfirm with "Stone Block" fallback when Other is selected but input is empty', () => {
       renderModal();
-      const otherBtn = screen.getByText('Other Object').closest('.object-type-btn');
-      fireEvent.click(otherBtn);
+      clickButton('Other Object');
       fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
       expect(mockOnConfirm).toHaveBeenCalledWith('Stone Block');
     });
 
-    it('calls onConfirm with trimmed custom type when input has surrounding whitespace', () => {
+    it('trims surrounding whitespace from custom input', () => {
       renderModal();
-      const otherBtn = screen.getByText('Other Object').closest('.object-type-btn');
-      fireEvent.click(otherBtn);
+      clickButton('Other Object');
       const input = document.querySelector('.custom-object-input input');
       fireEvent.change(input, { target: { value: '  Magic Orb  ' } });
       fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
       expect(mockOnConfirm).toHaveBeenCalledWith('Magic Orb');
     });
 
-    it('calls onConfirm with glass_vial when Glass Vial is selected', () => {
+    it('treats whitespace-only input as empty (falls back to Stone Block)', () => {
       renderModal();
-      const vialBtn = screen.getByText('Glass Vial').closest('.object-type-btn');
-      fireEvent.click(vialBtn);
+      clickButton('Other Object');
+      const input = document.querySelector('.custom-object-input input');
+      fireEvent.change(input, { target: { value: '   ' } });
       fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('glass_vial');
+      expect(mockOnConfirm).toHaveBeenCalledWith('Stone Block');
     });
 
-    it('calls onConfirm with leather_book when Leather Book is selected', () => {
+    it('passes through custom type with internal spaces', () => {
       renderModal();
-      const bookBtn = screen.getByText('Leather Book').closest('.object-type-btn');
-      fireEvent.click(bookBtn);
+      clickButton('Other Object');
+      const input = document.querySelector('.custom-object-input input');
+      fireEvent.change(input, { target: { value: 'Iron Chain Link' } });
       fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('leather_book');
-    });
-
-    it('calls onConfirm with wooden_crate when Wooden Crate is selected', () => {
-      renderModal();
-      const crateBtn = screen.getByText('Wooden Crate').closest('.object-type-btn');
-      fireEvent.click(crateBtn);
-      fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('wooden_crate');
-    });
-
-    it('calls onConfirm with iron_bars when Iron Bars is selected', () => {
-      renderModal();
-      const barsBtn = screen.getByText('Iron Bars').closest('.object-type-btn');
-      fireEvent.click(barsBtn);
-      fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('iron_bars');
-    });
-
-    it('calls onConfirm with bronze_statue when Bronze Statue is selected', () => {
-      renderModal();
-      const statueBtn = screen.getByText('Bronze Statue').closest('.object-type-btn');
-      fireEvent.click(statueBtn);
-      fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('bronze_statue');
+      expect(mockOnConfirm).toHaveBeenCalledWith('Iron Chain Link');
     });
   });
 
@@ -322,30 +245,6 @@ describe('ObjectTransformModal', () => {
       unmount();
       fireEvent.keyDown(document, { key: 'Escape' });
       expect(mockOnCancel).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── Custom type whitespace handling ──
-
-  describe('custom type whitespace handling', () => {
-    it('treats whitespace-only input as empty (falls back to Stone Block)', () => {
-      renderModal();
-      const otherBtn = screen.getByText('Other Object').closest('.object-type-btn');
-      fireEvent.click(otherBtn);
-      const input = document.querySelector('.custom-object-input input');
-      fireEvent.change(input, { target: { value: '   ' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('Stone Block');
-    });
-
-    it('passes through custom type with internal spaces', () => {
-      renderModal();
-      const otherBtn = screen.getByText('Other Object').closest('.object-type-btn');
-      fireEvent.click(otherBtn);
-      const input = document.querySelector('.custom-object-input input');
-      fireEvent.change(input, { target: { value: 'Iron Chain Link' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('Iron Chain Link');
     });
   });
 });

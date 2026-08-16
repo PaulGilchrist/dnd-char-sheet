@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NaturalRecoveryModal from './NaturalRecoveryModal.jsx';
@@ -13,6 +14,8 @@ vi.mock('../../../services/ui/logService.js', () => ({
 
 import * as useRuntimeState from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../services/ui/logService.js';
+
+const mockOnClose = vi.fn();
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -30,17 +33,16 @@ function makePlayerStats(overrides = {}) {
   };
 }
 
-function renderModal(playerStats, campaignName, onClose) {
-  const handleClose = onClose ?? vi.fn();
+function renderModal(playerStats, campaignName) {
   return {
     ...render(
       <NaturalRecoveryModal
         playerStats={playerStats ?? makePlayerStats()}
         campaignName={campaignName ?? 'test-campaign'}
-        onClose={handleClose}
+        onClose={mockOnClose}
       />
     ),
-    handleClose,
+    onClose: mockOnClose,
   };
 }
 
@@ -50,100 +52,200 @@ describe('NaturalRecoveryModal', () => {
     useRuntimeState.getRuntimeValue.mockImplementation(() => null);
   });
 
-  it('renders the modal with title', () => {
-    renderModal();
-    expect(screen.getByText(/Natural Recovery/)).toBeInTheDocument();
-    expect(screen.getByText(/Free Cast/)).toBeInTheDocument();
-  });
-
-  it('shows only Always-prepared circle spells (level 1+)', () => {
-    renderModal();
-    expect(screen.getByText('Moonbeam')).toBeInTheDocument();
-    expect(screen.getByText('Cure Wounds')).toBeInTheDocument();
-    expect(screen.queryByText('Healing Word')).not.toBeInTheDocument();
-    expect(screen.queryByText('Druidcraft')).not.toBeInTheDocument();
-  });
-
-  it('sets naturalRecoveryFreeCast when a spell is selected', () => {
-    renderModal();
-    fireEvent.click(screen.getByText('Moonbeam'));
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-      'Druid1',
-      'naturalRecoveryFreeCast',
-      ['Moonbeam'],
-      'test-campaign'
-    );
-  });
-
-  it('logs the ability use when a spell is selected', () => {
-    renderModal();
-    fireEvent.click(screen.getByText('Cure Wounds'));
-    expect(addEntry).toHaveBeenCalledWith(
-      'test-campaign',
-      expect.objectContaining({
-        type: 'ability_use',
-        characterName: 'Druid1',
-        abilityName: 'Natural Recovery',
-        description: 'Granted free cast: Cure Wounds',
-      })
-    );
-  });
-
-  it('calls onClose after selecting a spell', () => {
-    const { handleClose } = renderModal();
-    fireEvent.click(screen.getByText('Moonbeam'));
-    expect(handleClose).toHaveBeenCalled();
-  });
-
-  it('shows granted message when free cast is already granted', () => {
-    useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'naturalRecoveryFreeCast') return ['Moonbeam'];
-      return null;
+  describe('rendering', () => {
+    it('renders the modal title and subtitle', () => {
+      renderModal();
+      expect(screen.getByText('Natural Recovery')).toBeInTheDocument();
+      expect(screen.getByText(/Free Cast — 1\/Long Rest/)).toBeInTheDocument();
     });
-    renderModal();
-    expect(screen.getByText(/Free cast granted to/)).toBeInTheDocument();
-    expect(screen.getByText('Moonbeam')).toBeInTheDocument();
-  });
 
-  it('shows used message when free cast is already used', () => {
-    useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'naturalRecoveryFreeCastUsed') return true;
-      return null;
+    it('renders a Cancel button when no free cast is active', () => {
+      renderModal();
+      expect(screen.getByRole('button', { name: /Cancel/ })).toBeInTheDocument();
     });
-    renderModal();
-    expect(screen.getByText(/already used this long rest/)).toBeInTheDocument();
-  });
 
-  it('shows close button when already granted', () => {
-    useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'naturalRecoveryFreeCast') return ['Moonbeam'];
-      return null;
+    it('renders a Close button when a free cast is already granted', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCast') return ['Moonbeam'];
+        return null;
+      });
+      renderModal();
+      expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
-    renderModal();
-    expect(screen.getByText('Close')).toBeInTheDocument();
+
+    it('renders a Close button when free cast is already used', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCastUsed') return true;
+        return null;
+      });
+      renderModal();
+      expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    });
+
+    it('renders no spell selection buttons when free cast is already granted', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCast') return ['Moonbeam'];
+        return null;
+      });
+      renderModal();
+      expect(screen.queryByRole('button', { name: 'Moonbeam' })).not.toBeInTheDocument();
+    });
+
+    it('renders no spell selection buttons when free cast is already used', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCastUsed') return true;
+        return null;
+      });
+      renderModal();
+      expect(screen.queryByRole('button', { name: 'Moonbeam' })).not.toBeInTheDocument();
+    });
   });
 
-  it('shows cancel button when not yet granted', () => {
-    renderModal();
-    expect(screen.getByText(/Cancel/)).toBeInTheDocument();
+  describe('already granted state', () => {
+    it('displays the granted spell name', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCast') return ['Cure Wounds'];
+        return null;
+      });
+      renderModal();
+      expect(screen.getByText(/Free cast granted to:/)).toBeInTheDocument();
+      expect(screen.getByText('Cure Wounds')).toBeInTheDocument();
+    });
+
+    it('displays the hint about casting without expending a spell slot', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCast') return ['Moonbeam'];
+        return null;
+      });
+      renderModal();
+      expect(screen.getByText(/Cast this spell without expending a spell slot/)).toBeInTheDocument();
+    });
   });
 
-  it('calls onClose when cancel is clicked', () => {
-    const { handleClose } = renderModal();
-    fireEvent.click(screen.getByText(/Cancel/));
-    expect(handleClose).toHaveBeenCalled();
+  describe('already used state', () => {
+    it('displays a blocked message when free cast is already used', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCastUsed') return true;
+        return null;
+      });
+      renderModal();
+      expect(screen.getByText(/already used this long rest/)).toBeInTheDocument();
+    });
   });
 
-  it('calls onClose when overlay is clicked', () => {
-    const { handleClose } = renderModal();
-    fireEvent.click(screen.getByText(/Natural Recovery/).closest('.nr-overlay'));
-    expect(handleClose).toHaveBeenCalled();
+  describe('spell selection', () => {
+    it('shows only Always-prepared circle spells at level 1+', () => {
+      renderModal();
+      expect(screen.getByText('Moonbeam')).toBeInTheDocument();
+      expect(screen.getByText('Cure Wounds')).toBeInTheDocument();
+      expect(screen.queryByText('Healing Word')).not.toBeInTheDocument();
+      expect(screen.queryByText('Druidcraft')).not.toBeInTheDocument();
+    });
+
+    it('calls setRuntimeValue with the selected spell when a spell button is clicked', () => {
+      renderModal();
+      fireEvent.click(screen.getByText('Moonbeam'));
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Druid1',
+        'naturalRecoveryFreeCast',
+        ['Moonbeam'],
+        'test-campaign'
+      );
+    });
+
+    it('logs an ability_use entry when a spell is selected', () => {
+      renderModal();
+      fireEvent.click(screen.getByText('Cure Wounds'));
+      expect(addEntry).toHaveBeenCalledWith(
+        'test-campaign',
+        expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'Druid1',
+          abilityName: 'Natural Recovery',
+          description: 'Granted free cast: Cure Wounds',
+        })
+      );
+    });
+
+    it('closes the modal after selecting a spell', () => {
+      renderModal();
+      fireEvent.click(screen.getByText('Moonbeam'));
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not show spell selection when free cast is already granted', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCast') return ['Moonbeam'];
+        return null;
+      });
+      renderModal();
+      expect(screen.queryByRole('button', { name: 'Moonbeam' })).not.toBeInTheDocument();
+    });
+
+    it('does not show spell selection when free cast is already used', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCastUsed') return true;
+        return null;
+      });
+      renderModal();
+      expect(screen.queryByRole('button', { name: 'Moonbeam' })).not.toBeInTheDocument();
+    });
   });
 
-  it('calls onClose on Escape key', () => {
-    const { handleClose } = renderModal();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(handleClose).toHaveBeenCalled();
+  describe('close behavior', () => {
+    it('calls onClose when the Cancel button is clicked', () => {
+      renderModal();
+      fireEvent.click(screen.getByRole('button', { name: /Cancel/ }));
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onClose when the Close button is clicked', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCast') return ['Moonbeam'];
+        return null;
+      });
+      renderModal();
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onClose when the overlay background is clicked', () => {
+      renderModal();
+      const overlay = document.querySelector('.nr-overlay');
+      fireEvent.click(overlay);
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onClose when the modal content is clicked', () => {
+      renderModal();
+      const modal = document.querySelector('.nr-modal');
+      fireEvent.click(modal);
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it('calls onClose when Escape key is pressed', () => {
+      renderModal();
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('no eligible spells', () => {
+    it('displays a blocked message when there are no eligible spells', () => {
+      const stats = makePlayerStats({
+        spellAbilities: { spells: [] },
+      });
+      renderModal(stats);
+      expect(screen.getByText(/No eligible spells found/)).toBeInTheDocument();
+    });
+
+    it('does not show spell buttons when there are no eligible spells', () => {
+      const stats = makePlayerStats({
+        spellAbilities: { spells: [] },
+      });
+      renderModal(stats);
+      expect(screen.queryByRole('button', { name: 'Moonbeam' })).not.toBeInTheDocument();
+    });
   });
 
   describe('Circle of the Land — Arid filtering', () => {
@@ -201,6 +303,25 @@ describe('NaturalRecoveryModal', () => {
       renderModal(stats);
       expect(screen.queryByText('Fire Bolt')).not.toBeInTheDocument();
       expect(screen.getByText('Burning Hands')).toBeInTheDocument();
+    });
+
+    it('shows no eligible spells when no land spells match the type', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_circleOfTheLandType') return 'arid';
+        return null;
+      });
+      const stats = makePlayerStats({
+        class: { major: { name: 'Circle of the Land', spells: [
+          { name: 'Fog Cloud', level: 3, landType: 'polar' },
+        ] } },
+        spellAbilities: {
+          spells: [
+            { name: 'Fog Cloud', level: 3, prepared: 'Always' },
+          ],
+        },
+      });
+      renderModal(stats);
+      expect(screen.getByText(/No eligible spells found/)).toBeInTheDocument();
     });
   });
 

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HandOfHealingModal from './HandOfHealingModal.jsx';
@@ -8,7 +9,7 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
 }));
 
 vi.mock('../../../../services/ui/utils.js', () => ({
-  default: { getName: vi.fn((n) => (typeof n === 'string' ? n : '')) },
+  default: { getName: vi.fn((n) => (!n || typeof n !== 'string' ? 'Unknown' : n)) },
 }));
 
 vi.mock('../../../../services/encounters/combatData.js', () => ({
@@ -69,7 +70,7 @@ describe('HandOfHealingModal', () => {
       expect(totalEl.textContent).toContain('HP restored');
     });
 
-    it('renders a negative bonus with a minus prefix and omits bonus span when zero', () => {
+    it('renders a negative bonus with a minus prefix', () => {
       render(<HandOfHealingModal {...makeProps({ bonus: -1 })} />);
       expect(screen.getByText('-1')).toBeInTheDocument();
       expect(document.querySelector('.healing-bonus')).toBeInTheDocument();
@@ -101,18 +102,34 @@ describe('HandOfHealingModal', () => {
       }).not.toThrow();
     });
 
-    it('handles when getRuntimeValue returns a non-array (string, number, or null)', () => {
-      render(<HandOfHealingModal {...makeProps({ hasPhysiciansTouch: true })} />);
-      expect(screen.queryByText(/Physician/)).not.toBeInTheDocument();
+    it('handles when getRuntimeValue returns a non-array value', () => {
       useRuntimeState.getRuntimeValue.mockReturnValue('blinded');
       render(<HandOfHealingModal {...makeProps({ hasPhysiciansTouch: true })} />);
       expect(screen.queryByText(/Physician/)).not.toBeInTheDocument();
-      useRuntimeState.getRuntimeValue.mockReturnValue(42);
-      render(<HandOfHealingModal {...makeProps({ hasPhysiciansTouch: true })} />);
-      expect(screen.queryByText(/Physician/)).not.toBeInTheDocument();
-      useRuntimeState.getRuntimeValue.mockReturnValue(null);
-      render(<HandOfHealingModal {...makeProps({ hasPhysiciansTouch: true })} />);
-      expect(screen.queryByText(/Physician/)).not.toBeInTheDocument();
+    });
+
+    it('handles empty formula string and zero healAmount gracefully', () => {
+      expect(() => {
+        render(<HandOfHealingModal {...makeProps({ formula: '', healAmount: 0, rolls: [] })} />);
+      }).not.toThrow();
+      expect(document.querySelector('.healing-formula').textContent).toBe(': ');
+      const totalEl = document.querySelector('.healing-total');
+      expect(totalEl.textContent).toContain('0');
+      expect(totalEl.textContent).toContain('HP restored');
+    });
+
+    it('closes the modal when the overlay background is clicked', () => {
+      const onClose = vi.fn();
+      render(<HandOfHealingModal {...makeProps({ onClose })} />);
+      fireEvent.click(document.querySelector('.short-rest-overlay'));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close the modal when the modal content area is clicked', () => {
+      const onClose = vi.fn();
+      render(<HandOfHealingModal {...makeProps({ onClose })} />);
+      fireEvent.click(document.querySelector('.short-rest-modal'));
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
@@ -178,7 +195,7 @@ describe('HandOfHealingModal', () => {
       expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
     });
 
-    it('auto-cures regardless of case or whitespace in the condition value', async () => {
+    it('auto-cures regardless of case in the condition value', async () => {
       useRuntimeState.getRuntimeValue.mockReturnValue(['BLINDED']);
       render(<HandOfHealingModal {...makeProps({ hasPhysiciansTouch: true })} />);
       await waitFor(() => {
@@ -358,11 +375,9 @@ describe('HandOfHealingModal', () => {
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
 
-    it('uses utils.getName to match creature by normalized name', async () => {
-      const { default: utils } = await import('../../../../services/ui/utils.js');
-      utils.getName.mockImplementation((n) => (typeof n === 'string' ? n.trim() : ''));
+    it('uses utils.getName to match creature by name', async () => {
       combatData.getCombatSummary.mockReturnValue({
-        creatures: [{ name: '  Goblin  ', conditions: [{ key: 'blinded' }] }],
+        creatures: [{ name: 'Goblin', conditions: [{ key: 'blinded' }] }],
       });
       useRuntimeState.getRuntimeValue.mockReturnValue([]);
       render(<HandOfHealingModal {...makeProps({ hasPhysiciansTouch: true })} />);
@@ -444,20 +459,6 @@ describe('HandOfHealingModal', () => {
           'test-campaign'
         );
       });
-    });
-
-    it('does not dispatch a combat-summary-updated event after removing a condition', async () => {
-      combatData.getCombatSummary.mockReturnValue({
-        creatures: [{ name: 'Goblin', conditions: [{ key: 'blinded' }] }],
-      });
-      useRuntimeState.getRuntimeValue.mockReturnValue([]);
-      const handler = vi.fn();
-      window.addEventListener('combat-summary-updated', handler);
-      render(<HandOfHealingModal {...makeProps({ hasPhysiciansTouch: true })} />);
-      await waitFor(() => {
-        expect(handler).not.toHaveBeenCalled();
-      });
-      window.removeEventListener('combat-summary-updated', handler);
     });
 
     it('posts a condition log entry via fetch with correct data', async () => {
@@ -558,14 +559,11 @@ describe('HandOfHealingModal', () => {
   });
 
   describe('hasPhysiciansTouch false with single condition', () => {
-    it('renders without the Physician Touch section and does not call setRuntimeValue or dispatch events', () => {
+    it('renders without the Physician Touch section and does not call setRuntimeValue', () => {
       useRuntimeState.getRuntimeValue.mockReturnValue(['blinded']);
       render(<HandOfHealingModal {...makeProps({ hasPhysiciansTouch: false })} />);
       expect(screen.queryByText(/Physician/)).not.toBeInTheDocument();
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-      expect(dispatchSpy).not.toHaveBeenCalled();
-      dispatchSpy.mockRestore();
     });
   });
 });

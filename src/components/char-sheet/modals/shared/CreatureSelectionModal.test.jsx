@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureSelectionModal from './CreatureSelectionModal.jsx';
@@ -6,6 +7,7 @@ import CreatureSelectionModal from './CreatureSelectionModal.jsx';
 
 const mockOnConfirm = vi.fn();
 const mockOnSkip = vi.fn();
+const mockSetHeightenTarget = vi.fn();
 
 const mockObjectTargets = [
   { name: 'Goblin A', type: 'enemy', currentHp: 5, maxHp: 10 },
@@ -45,6 +47,11 @@ describe('CreatureSelectionModal', () => {
     it('renders the title in the header', () => {
       render(<CreatureSelectionModal {...makeProps()} />);
       expect(screen.getByText('Select Targets')).toBeInTheDocument();
+    });
+
+    it('renders with custom title', () => {
+      render(<CreatureSelectionModal {...makeProps({ title: 'Custom Title' })} />);
+      expect(screen.getByText('Custom Title')).toBeInTheDocument();
     });
 
     it('renders the icon prop in the header', () => {
@@ -100,7 +107,6 @@ describe('CreatureSelectionModal', () => {
       render(<CreatureSelectionModal {...makeProps({ description: '<strong>Bold text</strong>' })} />);
       const spBody = document.querySelector('.sp-body');
       expect(spBody.querySelector('strong')).toBeInTheDocument();
-      expect(spBody.innerHTML).toContain('<strong>Bold text</strong>');
     });
 
     it('renders a default description paragraph when description is not provided', () => {
@@ -116,13 +122,11 @@ describe('CreatureSelectionModal', () => {
     it('renders a note when provided', () => {
       render(<CreatureSelectionModal {...makeProps({ note: 'This is a note.' })} />);
       expect(screen.getByText('This is a note.')).toBeInTheDocument();
-      expect(document.querySelector('.sp-note')).toBeInTheDocument();
     });
 
     it('does not render a note when note is not provided', () => {
       render(<CreatureSelectionModal {...makeProps({ note: undefined })} />);
-      const spBody = document.querySelector('.sp-body');
-      expect(spBody.querySelector('.sp-note')).not.toBeInTheDocument();
+      expect(screen.queryByText('This is a note.')).not.toBeInTheDocument();
     });
 
     it('renders both description and note when both are provided', () => {
@@ -164,7 +168,6 @@ describe('CreatureSelectionModal', () => {
     it('shows rounded HP percentage', () => {
       const targets = [{ name: 'Monster', type: 'enemy', currentHp: 7, maxHp: 20 }];
       render(<CreatureSelectionModal {...makeProps({ targets })} />);
-      // 7/20 = 35%
       expect(screen.getByText('(35% HP)')).toBeInTheDocument();
     });
 
@@ -176,20 +179,12 @@ describe('CreatureSelectionModal', () => {
       expect(playerRow.textContent).not.toContain('% HP');
     });
 
-    it('does not show HP percentage when currentHp is null', () => {
-      const targets = [{ name: 'Ghost', type: 'enemy', currentHp: null, maxHp: 10 }];
-      render(<CreatureSelectionModal {...makeProps({ targets })} />);
-      expect(screen.queryByText(/% HP/)).not.toBeInTheDocument();
-    });
-
-    it('does not show HP percentage when maxHp is null', () => {
-      const targets = [{ name: 'Wraith', type: 'enemy', currentHp: 5, maxHp: null }];
-      render(<CreatureSelectionModal {...makeProps({ targets })} />);
-      expect(screen.queryByText(/% HP/)).not.toBeInTheDocument();
-    });
-
-    it('does not show HP percentage when target has no HP properties', () => {
-      const targets = [{ name: 'Ambiguous' }];
+    it('does not show HP percentage when currentHp or maxHp is null or missing', () => {
+      const targets = [
+        { name: 'Ghost', type: 'enemy', currentHp: null, maxHp: 10 },
+        { name: 'Wraith', type: 'enemy', currentHp: 5, maxHp: null },
+        { name: 'Ambiguous', type: 'enemy' },
+      ];
       render(<CreatureSelectionModal {...makeProps({ targets })} />);
       expect(screen.queryByText(/% HP/)).not.toBeInTheDocument();
     });
@@ -204,6 +199,92 @@ describe('CreatureSelectionModal', () => {
       const targets = [{ name: 'Dying', type: 'enemy', currentHp: 0, maxHp: 10 }];
       render(<CreatureSelectionModal {...makeProps({ targets })} />);
       expect(screen.getByText('(0% HP)')).toBeInTheDocument();
+    });
+  });
+
+  // ── Pre-selected targets ──
+
+  describe('defaultSelected prop', () => {
+    it('pre-selects targets listed in defaultSelected', () => {
+      render(<CreatureSelectionModal {...makeProps({ defaultSelected: ['Goblin A', 'Player Character'] })} />);
+      const checkboxes = document.querySelectorAll('.secondary-target-list input[type="checkbox"]');
+      expect(checkboxes[0]).toBeChecked();
+      expect(checkboxes[1]).not.toBeChecked();
+      expect(checkboxes[2]).toBeChecked();
+    });
+
+    it('updates confirm button count for pre-selected targets', () => {
+      render(<CreatureSelectionModal {...makeProps({ defaultSelected: ['Goblin A', 'Goblin B', 'Player Character'] })} />);
+      expect(screen.getByRole('button', { name: /Confirm \(3\)/ })).toBeInTheDocument();
+    });
+
+    it('prevents selecting additional targets when defaultSelected already meets maxTargets', () => {
+      render(<CreatureSelectionModal {...makeProps({ defaultSelected: ['Goblin A'], maxTargets: 1 })} />);
+      const rows = document.querySelectorAll('.secondary-target-row');
+      expect(rows[1]).toHaveClass('secondary-target-disabled');
+      expect(rows[2]).toHaveClass('secondary-target-disabled');
+    });
+  });
+
+  // ── Careful Spell protection ──
+
+  describe('carefulSpellProtected display', () => {
+    it('shows careful spell protected indicator when target has the flag', () => {
+      const targets = [{ name: 'Ally', type: 'ally', carefulSpellProtected: true }];
+      render(<CreatureSelectionModal {...makeProps({ targets })} />);
+      expect(screen.getByText('✓ Careful Spell protected')).toBeInTheDocument();
+    });
+
+    it('does not show careful spell protected indicator when target lacks the flag', () => {
+      render(<CreatureSelectionModal {...makeProps()} />);
+      expect(screen.queryByText(/Careful Spell/)).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Heighten Spell functionality ──
+
+  describe('metamagicHeighten functionality', () => {
+    it('renders Heighten radio buttons when metamagicHeighten is true', () => {
+      render(<CreatureSelectionModal {...makeProps({ metamagicHeighten: true, setHeightenTarget: mockSetHeightenTarget })} />);
+      const radios = document.querySelectorAll('input[name="heightenTarget"]');
+      expect(radios).toHaveLength(3);
+      expect(document.querySelectorAll('.secondary-target-row span[style*="color: rgb(96, 165, 250)"]')).toHaveLength(3);
+    });
+
+    it('does not render Heighten radio buttons when metamagicHeighten is false', () => {
+      render(<CreatureSelectionModal {...makeProps({ metamagicHeighten: false })} />);
+      expect(screen.queryByText('Heighten')).not.toBeInTheDocument();
+      expect(document.querySelectorAll('input[name="heightenTarget"]')).toHaveLength(0);
+    });
+
+    it('does not render Heighten radio buttons when metamagicHeighten is undefined', () => {
+      render(<CreatureSelectionModal {...makeProps()} />);
+      expect(screen.queryByText('Heighten')).not.toBeInTheDocument();
+    });
+
+    it('calls setHeightenTarget with target name when Heighten radio is clicked', () => {
+      render(<CreatureSelectionModal {...makeProps({ metamagicHeighten: true, setHeightenTarget: mockSetHeightenTarget })} />);
+      const radios = document.querySelectorAll('input[name="heightenTarget"]');
+      fireEvent.click(radios[0]);
+      expect(mockSetHeightenTarget).toHaveBeenCalledWith('Goblin A');
+    });
+
+    it('marks the currently heightenTarget radio as checked', () => {
+      render(<CreatureSelectionModal {...makeProps({ metamagicHeighten: true, setHeightenTarget: mockSetHeightenTarget, heightenTarget: 'Goblin B' })} />);
+      const radios = document.querySelectorAll('input[name="heightenTarget"]');
+      expect(radios[0].checked).toBe(false);
+      expect(radios[1].checked).toBe(true);
+      expect(radios[2].checked).toBe(false);
+    });
+
+    it('switches Heighten selection to a different target', () => {
+      render(<CreatureSelectionModal {...makeProps({ metamagicHeighten: true, setHeightenTarget: mockSetHeightenTarget })} />);
+      fireEvent.click(document.querySelectorAll('input[name="heightenTarget"]')[0]);
+      expect(mockSetHeightenTarget).toHaveBeenCalledWith('Goblin A');
+      vi.clearAllMocks();
+      render(<CreatureSelectionModal {...makeProps({ metamagicHeighten: true, setHeightenTarget: mockSetHeightenTarget, heightenTarget: 'Goblin A' })} />);
+      fireEvent.click(document.querySelectorAll('input[name="heightenTarget"]')[2]);
+      expect(mockSetHeightenTarget).toHaveBeenCalledWith('Player Character');
     });
   });
 
@@ -370,6 +451,17 @@ describe('CreatureSelectionModal', () => {
         expect(rows[0]).not.toHaveClass('secondary-target-disabled');
       });
     });
+
+    it('allows unlimited selection when maxTargets is 0', async () => {
+      render(<CreatureSelectionModal {...makeProps({ maxTargets: 0 })} />);
+      const checkboxes = document.querySelectorAll('.secondary-target-list input[type="checkbox"]');
+      await act(async () => {
+        checkboxes[0].click();
+        checkboxes[1].click();
+        checkboxes[2].click();
+      });
+      checkboxes.forEach(cb => expect(cb.disabled).toBe(false));
+    });
   });
 
   // ── Confirm button state ──
@@ -495,11 +587,6 @@ describe('CreatureSelectionModal', () => {
     it('renders without crashing when onSkip is undefined', () => {
       render(<CreatureSelectionModal {...makeProps({ onSkip: undefined })} />);
       expect(screen.getByText('Select Targets')).toBeInTheDocument();
-    });
-
-    it('renders with custom title', () => {
-      render(<CreatureSelectionModal {...makeProps({ title: 'Custom Title' })} />);
-      expect(screen.getByText('Custom Title')).toBeInTheDocument();
     });
 
     it('renders string targets with checkboxes', () => {

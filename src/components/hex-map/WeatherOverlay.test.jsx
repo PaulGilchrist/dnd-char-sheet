@@ -1,22 +1,28 @@
+// @improved-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import WeatherOverlay from './WeatherOverlay.jsx';
 
 describe('WeatherOverlay', () => {
-    describe('null/invalid weather handling', () => {
+    describe('renders nothing for absent or unrecognized weather', () => {
         it.each([
-            [null, 'null'],
-            [undefined, 'undefined'],
-            [{ condition: null }, 'condition null'],
-            [{ condition: undefined }, 'condition undefined'],
-            [{ condition: 'blizzard' }, 'unknown condition'],
-        ])('should return null when weather is %s (%s)', (weather) => {
+            [null, 'null weather'],
+            [undefined, 'undefined weather'],
+            [{ condition: null }, 'null condition'],
+            [{ condition: undefined }, 'undefined condition'],
+            [{ condition: 'blizzard' }, 'unrecognized condition'],
+        ])('renders nothing for %s', (weather) => {
             const { container } = render(<WeatherOverlay weather={weather} />);
+            expect(container.innerHTML).toBe('');
+        });
+
+        it('renders nothing for the clear condition, which has no overlay effect', () => {
+            const { container } = render(<WeatherOverlay weather={{ condition: 'clear' }} />);
             expect(container.innerHTML).toBe('');
         });
     });
 
-    describe('overlay class names per condition', () => {
+    describe('overlay class per condition', () => {
         const conditionsWithClasses = [
             ['cloudy', 'weather-cloudy'],
             ['rain', 'weather-rain'],
@@ -29,39 +35,32 @@ describe('WeatherOverlay', () => {
         ];
 
         it.each(conditionsWithClasses)(
-            'should render weather-overlay with %s class for %s condition',
+            'adds %s class for the %s condition',
             (condition, expectedClass) => {
                 const { container } = render(<WeatherOverlay weather={{ condition }} />);
-                const overlay = container.querySelector('.weather-overlay');
-                expect(overlay).toHaveClass(expectedClass);
+                expect(container.querySelector('.weather-overlay')).toHaveClass(expectedClass);
             },
         );
     });
 
     describe('particle effects per condition', () => {
         it.each([
-            ['rain', '.rain-drop'],
-            ['snow', '.snow-flake'],
-            ['wind', '.wind-line'],
-            ['fog', '.fog-patch'],
-            ['mist', '.fog-patch'],
-            ['cloudy', '.cloud-shadow'],
-        ])('should render %s particles for %s condition', (condition, particleSelector) => {
+            ['rain drops', 'rain', '.rain-drop'],
+            ['rain drops', 'storm', '.rain-drop'],
+            ['snow flakes', 'snow', '.snow-flake'],
+            ['wind lines', 'wind', '.wind-line'],
+            ['fog patches', 'fog', '.fog-patch'],
+            ['fog patches', 'mist', '.fog-patch'],
+            ['cloud shadows', 'cloudy', '.cloud-shadow'],
+        ])('renders %s for the %s condition', (particleName, condition, particleSelector) => {
             const { container } = render(<WeatherOverlay weather={{ condition }} />);
             const particles = container.querySelector('.weather-particles');
             expect(particles).toBeInTheDocument();
             expect(particles.querySelectorAll(particleSelector).length).toBeGreaterThan(0);
         });
 
-        it('should render rain particles for storm condition', () => {
-            const { container } = render(<WeatherOverlay weather={{ condition: 'storm' }} />);
-            const particles = container.querySelector('.weather-particles');
-            expect(particles).toBeInTheDocument();
-            expect(particles.querySelectorAll('.rain-drop').length).toBeGreaterThan(0);
-        });
-
         it.each(['clear', 'extreme'])(
-            'should not render particles for %s condition',
+            'renders no particles for the %s condition',
             (condition) => {
                 const { container } = render(<WeatherOverlay weather={{ condition }} />);
                 expect(container.querySelector('.weather-particles')).not.toBeInTheDocument();
@@ -70,39 +69,35 @@ describe('WeatherOverlay', () => {
     });
 
     describe('lightning effect', () => {
-        it('should render lightning flashes for storm condition', () => {
+        it('renders lightning flashes for the storm condition', () => {
             const { container } = render(<WeatherOverlay weather={{ condition: 'storm' }} />);
-            const flashes = container.querySelectorAll('.lightning-flash');
-            expect(flashes.length).toBeGreaterThan(0);
+            expect(container.querySelectorAll('.lightning-flash').length).toBeGreaterThan(0);
         });
 
-        it('should not render lightning flashes for rain condition', () => {
-            const { container } = render(<WeatherOverlay weather={{ condition: 'rain' }} />);
-            const flashes = container.querySelectorAll('.lightning-flash');
-            expect(flashes.length).toBe(0);
-        });
+        it.each(['cloudy', 'rain', 'fog', 'mist', 'snow', 'wind', 'extreme'])(
+            'renders no lightning flashes for the %s condition',
+            (condition) => {
+                const { container } = render(<WeatherOverlay weather={{ condition }} />);
+                expect(container.querySelectorAll('.lightning-flash').length).toBe(0);
+            },
+        );
     });
 
     describe('accessibility', () => {
-        it('should render particles with aria-hidden="true"', () => {
+        it('marks particle containers as aria-hidden', () => {
             const { container } = render(<WeatherOverlay weather={{ condition: 'rain' }} />);
-            const particles = container.querySelectorAll('.weather-particles');
-            particles.forEach(p => expect(p.getAttribute('aria-hidden')).toBe('true'));
-        });
-    });
-
-    describe('structure and robustness', () => {
-        it('should render exactly one weather-overlay div', () => {
-            const { container } = render(<WeatherOverlay weather={{ condition: 'rain' }} />);
-            expect(container.querySelectorAll('.weather-overlay').length).toBe(1);
+            container.querySelectorAll('.weather-particles').forEach(particles =>
+                expect(particles).toHaveAttribute('aria-hidden', 'true'));
         });
 
-        it('should render storm with both rain particles and lightning', () => {
+        it('marks the lightning container as aria-hidden', () => {
             const { container } = render(<WeatherOverlay weather={{ condition: 'storm' }} />);
-            const rainDrops = container.querySelectorAll('.rain-drop');
-            const flashes = container.querySelectorAll('.lightning-flash');
-            expect(rainDrops.length).toBeGreaterThan(0);
-            expect(flashes.length).toBeGreaterThan(0);
+            expect(container.querySelector('.lightning-flashes')).toHaveAttribute('aria-hidden', 'true');
+        });
+
+        it('hides nothing when the condition has no decorative effects', () => {
+            const { container } = render(<WeatherOverlay weather={{ condition: 'extreme' }} />);
+            expect(container.querySelector('[aria-hidden]')).toBeNull();
         });
     });
 });

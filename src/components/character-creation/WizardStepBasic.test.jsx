@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepBasic from './WizardStepBasic.jsx';
@@ -27,6 +28,7 @@ function createMockProps(overrides = {}) {
     },
     errors: overrides.errors || {},
     onInputChange: overrides.onInputChange || vi.fn(),
+    campaignName: overrides.campaignName || undefined,
     ...overrides,
   };
 }
@@ -54,7 +56,7 @@ describe('WizardStepBasic', () => {
 
       expect(screen.getByDisplayValue('Test Character')).toBeInTheDocument();
       await waitFor(() => {
-        expect(document.querySelector('select')).toHaveValue('Lawful Good');
+        expect(screen.getByRole('combobox')).toHaveValue('Lawful Good');
       });
     });
 
@@ -71,13 +73,44 @@ describe('WizardStepBasic', () => {
     ])('should render image preview from %s', ({ formData }) => {
       render(<WizardStepBasic {...createMockProps({ formData })} />);
 
-      const preview = document.querySelector('.image-preview');
-      expect(preview.querySelector('img')).toBeInTheDocument();
-      expect(preview.querySelector('img')).toHaveAttribute('src', formData.image || formData.imagePath);
+      const preview = screen.getByRole('img');
+      expect(preview).toBeInTheDocument();
+      expect(preview).toHaveAttribute('src', formData.image || formData.imagePath);
       expect(screen.queryByText('Click to upload')).not.toBeInTheDocument();
     });
 
-    it('should show remove button when an image is set', () => {
+    it('should use campaignName to construct image path when imagePath is a relative path', async () => {
+      render(
+        <WizardStepBasic
+          {...createMockProps({
+            campaignName: 'my-campaign',
+            formData: { imagePath: 'portraits/hero.jpg' },
+          })}
+        />
+      );
+
+      const preview = screen.getByRole('img');
+      expect(preview).toHaveAttribute(
+        'src',
+        'campaigns/my-campaign/portraits/hero.jpg',
+      );
+    });
+
+    it('should not prepend campaigns/ when imagePath is an absolute URL', () => {
+      render(
+        <WizardStepBasic
+          {...createMockProps({
+            campaignName: 'my-campaign',
+            formData: { imagePath: 'https://example.com/hero.jpg' },
+          })}
+        />
+      );
+
+      const preview = screen.getByRole('img');
+      expect(preview).toHaveAttribute('src', 'https://example.com/hero.jpg');
+    });
+
+    it('should render remove button when an image is set', () => {
       render(
         <WizardStepBasic
           {...createMockProps({
@@ -101,26 +134,42 @@ describe('WizardStepBasic', () => {
       expect(mockOnChange).toHaveBeenCalledWith('name', 'New Name');
     });
 
-    it('should call onInputChange with parsed integer level when the level input changes', () => {
-      const mockOnChange = vi.fn();
-      render(<WizardStepBasic {...createMockProps({ onInputChange: mockOnChange })} />);
+    it.each([
+      { input: '10', expected: 10, label: 'parses valid integer' },
+      { input: '', expected: NaN, label: 'returns NaN for empty string' },
+      { input: 'abc', expected: NaN, label: 'returns NaN for non-numeric string' },
+      { input: '0', expected: 0, label: 'parses zero' },
+      { input: '-5', expected: -5, label: 'parses negative number' },
+    ])(
+      'should call onInputChange with parsed integer level when level input changes (%s)',
+      ({ input, expected }) => {
+        const mockOnChange = vi.fn();
+        render(
+          <WizardStepBasic
+            {...createMockProps({
+              formData: { level: 1 },
+              onInputChange: mockOnChange,
+            })}
+          />
+        );
 
-      const levelInput = document.querySelector('input[type="number"]');
-      fireEvent.change(levelInput, { target: { value: '10' } });
+        const levelInput = document.querySelector('input[type="number"]');
+        fireEvent.change(levelInput, { target: { value: input } });
 
-      expect(mockOnChange).toHaveBeenCalledWith('level', 10);
-    });
+        expect(mockOnChange).toHaveBeenCalledWith('level', expected);
+      },
+    );
 
     it('should call onInputChange with alignment when the alignment select changes', async () => {
       const mockOnChange = vi.fn();
       render(<WizardStepBasic {...createMockProps({ onInputChange: mockOnChange })} />);
 
       await waitFor(() => {
-        const alignmentSelect = document.querySelector('select');
+        const alignmentSelect = screen.getByRole('combobox');
         expect(alignmentSelect).toBeInTheDocument();
       });
 
-      const alignmentSelect = document.querySelector('select');
+      const alignmentSelect = screen.getByRole('combobox');
       fireEvent.change(alignmentSelect, { target: { value: 'Chaotic Neutral' } });
 
       expect(mockOnChange).toHaveBeenCalledWith('alignment', 'Chaotic Neutral');
@@ -129,22 +178,25 @@ describe('WizardStepBasic', () => {
 
   describe('Validation errors', () => {
     it.each([
-      { field: 'name', error: 'Name is required', getInput: () => screen.getByDisplayValue('Test Character') },
-      { field: 'level', error: 'Level is required', getInput: () => document.querySelector('input[type="number"]') },
-      { field: 'alignment', error: 'Alignment is required', getInput: () => document.querySelector('select') },
-    ])('should render error message and error class for the %s field', ({ field, error, getInput }) => {
-      render(
-        <WizardStepBasic
-          {...createMockProps({
-            errors: { [field]: error },
-          })}
-        />
-      );
+      { field: 'name', error: 'Name is required', getQuery: () => screen.getByDisplayValue('Test Character') },
+      { field: 'level', error: 'Level is required', getQuery: () => document.querySelector('input[type="number"]') },
+      { field: 'alignment', error: 'Alignment is required', getQuery: () => screen.getByRole('combobox') },
+    ])(
+      'should render error message and error class for the %s field',
+      ({ field, error, getQuery }) => {
+        render(
+          <WizardStepBasic
+            {...createMockProps({
+              errors: { [field]: error },
+            })}
+          />
+        );
 
-      expect(screen.getByText(error)).toBeInTheDocument();
-      const input = getInput();
-      expect(input).toHaveClass('error');
-    });
+        expect(screen.getByText(error)).toBeInTheDocument();
+        const input = getQuery();
+        expect(input).toHaveClass('error');
+      },
+    );
   });
 
   describe('Image removal', () => {
@@ -173,62 +225,38 @@ describe('WizardStepBasic', () => {
   describe('Image upload', () => {
     it('should read the selected file via FileReader and call onInputChange', () => {
       const mockOnChange = vi.fn();
-      const originalFileReader = global.FileReader;
-      let capturedOnload = null;
+      const mockResult = 'data:image/png;base64,mockdata';
 
-      global.FileReader = class {
-        constructor() {
-          this._onload = null;
+      const readAsDataURLSpy = vi.spyOn(FileReader.prototype, 'readAsDataURL').mockImplementation(function () {
+        // Simulate successful read
+        Object.defineProperty(this, 'result', { value: mockResult, writable: true, configurable: true });
+        if (this.onload) {
+          this.onload({ target: this });
         }
-        get onload() {
-          return this._onload;
-        }
-        set onload(fn) {
-          this._onload = fn;
-          capturedOnload = fn;
-        }
-        readAsDataURL() {
-          /* no-op; we trigger onload manually */
-        }
-      };
+      });
 
-      try {
-        render(<WizardStepBasic {...createMockProps({ onInputChange: mockOnChange })} />);
+      render(<WizardStepBasic {...createMockProps({ onInputChange: mockOnChange })} />);
 
-        const fileInput = document.querySelector('input[type="file"]');
-        const file = new File(['test'], 'test-image.png', { type: 'image/png' });
+      const fileInput = document.querySelector('input[type="file"]');
+      const file = new File(['test'], 'test-image.png', { type: 'image/png' });
 
-        fireEvent.change(fileInput, { target: { files: [file] } });
+      fireEvent.change(fileInput, { target: { files: [file] } });
 
-        capturedOnload({ target: { result: 'data:image/png;base64,mockdata' } });
+      expect(mockOnChange).toHaveBeenCalledWith('image', mockResult);
+      expect(mockOnChange).toHaveBeenCalledWith('imageName', 'test-image.png');
 
-        expect(mockOnChange).toHaveBeenCalledWith('image', 'data:image/png;base64,mockdata');
-        expect(mockOnChange).toHaveBeenCalledWith('imageName', 'test-image.png');
-      } finally {
-        global.FileReader = originalFileReader;
-      }
+      readAsDataURLSpy.mockRestore();
     });
 
     it('should do nothing when no file is selected', () => {
       const mockOnChange = vi.fn();
-      const originalFileReader = global.FileReader;
 
-      global.FileReader = class {
-        readAsDataURL() {
-          /* no-op */
-        }
-      };
+      render(<WizardStepBasic {...createMockProps({ onInputChange: mockOnChange })} />);
 
-      try {
-        render(<WizardStepBasic {...createMockProps({ onInputChange: mockOnChange })} />);
+      const fileInput = document.querySelector('input[type="file"]');
+      fireEvent.change(fileInput, { target: { files: [] } });
 
-        const fileInput = document.querySelector('input[type="file"]');
-        fireEvent.change(fileInput, { target: { files: [] } });
-
-        expect(mockOnChange).not.toHaveBeenCalled();
-      } finally {
-        global.FileReader = originalFileReader;
-      }
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
   });
 
@@ -248,6 +276,17 @@ describe('WizardStepBasic', () => {
 
       expect(screen.getByText('Step 2: Basic Information')).toBeInTheDocument();
       consoleSpy.mockRestore();
+    });
+
+    it('should render an empty alignment select when fetch fails', async () => {
+      setupFetchFailure();
+      render(<WizardStepBasic {...createMockProps()} />);
+
+      await waitFor(() => {
+        const select = screen.getByRole('combobox');
+        expect(select).toBeInTheDocument();
+        expect(select.options.length).toBe(0);
+      });
     });
   });
 });

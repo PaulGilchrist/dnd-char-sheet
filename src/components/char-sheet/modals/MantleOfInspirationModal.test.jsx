@@ -1,11 +1,17 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import MantleOfInspirationModal from './MantleOfInspirationModal.jsx';
 
 // ── Test fixtures ──
 
 const mockOnConfirm = vi.fn();
 const mockOnSkip = vi.fn();
+
+afterEach(() => {
+    mockOnConfirm.mockClear();
+    mockOnSkip.mockClear();
+});
 
 const mockCreatureTargets = [
     { name: 'Ally1', type: 'player', currentHp: 20, maxHp: 30 },
@@ -34,63 +40,70 @@ function makeProps(overrides) {
 // ── Tests ──
 
 describe('MantleOfInspirationModal', () => {
+
     // ── Rendering ──
 
     describe('initial render', () => {
-        it('renders the Mantle of Inspiration title', () => {
+        it('renders the title, feather icon, targets, buttons, description, and note', () => {
             render(<MantleOfInspirationModal {...makeProps()} />);
+
             expect(screen.getByText('Mantle of Inspiration')).toBeInTheDocument();
-        });
-
-        it('renders the feather icon in the header', () => {
-            render(<MantleOfInspirationModal {...makeProps()} />);
             expect(document.querySelector('.sp-header .fa-solid.fa-feather')).toBeInTheDocument();
-        });
-
-        it('renders all creature targets from creatureTargets prop', () => {
-            render(<MantleOfInspirationModal {...makeProps()} />);
             expect(screen.getByText('Ally1')).toBeInTheDocument();
             expect(screen.getByText('Ally2')).toBeInTheDocument();
-        });
-
-        it('renders the confirm button with "Inspire" label', () => {
-            render(<MantleOfInspirationModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: /Inspire \(0\)/ })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+            expect(screen.getByText(/Choose up to 2 allies to grant temporary hit points/)).toBeInTheDocument();
+            expect(screen.getByText(/Rolled 4 on 1d6:/)).toBeInTheDocument();
         });
 
-        it('renders the feather icon on the confirm button', () => {
+        it('renders the confirm button with a feather icon', () => {
             render(<MantleOfInspirationModal {...makeProps()} />);
             const btn = screen.getByRole('button', { name: /Inspire/ });
             expect(btn.querySelector('.fa-solid.fa-feather')).toBeInTheDocument();
         });
 
-        it('renders the Skip button', () => {
+        it('renders the confirm button with type="button"', () => {
             render(<MantleOfInspirationModal {...makeProps()} />);
-            expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+            const btn = screen.getByRole('button', { name: /Inspire/ });
+            expect(btn).toHaveAttribute('type', 'button');
+        });
+
+        it('renders the skip button with type="button"', () => {
+            render(<MantleOfInspirationModal {...makeProps()} />);
+            const btn = screen.getByRole('button', { name: 'Skip' });
+            expect(btn).toHaveAttribute('type', 'button');
+        });
+
+        it('disables the confirm button when no targets are selected', () => {
+            render(<MantleOfInspirationModal {...makeProps()} />);
+            expect(screen.getByRole('button', { name: /Inspire \(0\)/ })).toBeDisabled();
+        });
+
+        it('shows "No targets available." when creatureTargets is empty', () => {
+            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [] })} />);
+            expect(screen.getByText('No targets available.')).toBeInTheDocument();
         });
     });
 
     // ── Description rendering ──
 
     describe('description rendering', () => {
-        it('renders the description with maxTargets when provided', () => {
-            render(<MantleOfInspirationModal {...makeProps()} />);
-            expect(screen.getByText(/Choose up to 2 allies to grant temporary hit points/)).toBeInTheDocument();
+        it('renders "up to N" when maxTargets is a positive number', () => {
+            render(<MantleOfInspirationModal {...makeProps({ maxTargets: 5 })} />);
+            expect(screen.getByText(/Choose up to 5 allies/)).toBeInTheDocument();
         });
 
-        it('renders the description without maxTargets when maxTargets is falsy', () => {
-            render(<MantleOfInspirationModal {...makeProps({ maxTargets: 0 })} />);
+        it.each([
+            [0],
+            [null],
+            [undefined],
+            [false],
+            [NaN],
+        ])('renders without "up to" when maxTargets is %s', (mt) => {
+            render(<MantleOfInspirationModal {...makeProps({ maxTargets: mt })} />);
             expect(screen.getByText(/Choose allies to grant temporary hit points/)).toBeInTheDocument();
-        });
-
-        it('renders the description without maxTargets when maxTargets is null', () => {
-            render(<MantleOfInspirationModal {...makeProps({ maxTargets: null })} />);
-            expect(screen.getByText(/Choose allies to grant temporary hit points/)).toBeInTheDocument();
-        });
-
-        it('renders the description without maxTargets when maxTargets is undefined', () => {
-            render(<MantleOfInspirationModal {...makeProps({ maxTargets: undefined })} />);
-            expect(screen.getByText(/Choose allies to grant temporary hit points/)).toBeInTheDocument();
+            expect(screen.queryByText(/Choose up to/)).not.toBeInTheDocument();
         });
     });
 
@@ -116,45 +129,31 @@ describe('MantleOfInspirationModal', () => {
             render(<MantleOfInspirationModal {...makeProps()} />);
             expect(document.querySelector('.sp-note')).toBeInTheDocument();
         });
+
+        it('reflects different die roll and bardic die size values', () => {
+            render(<MantleOfInspirationModal {...makeProps({ dieRoll: 1, bardicDieSize: 8 })} />);
+            expect(screen.getByText(/Rolled 1 on 1d8:/)).toBeInTheDocument();
+        });
+
+        it('reflects different temp HP values', () => {
+            render(<MantleOfInspirationModal {...makeProps({ tempHp: 1 })} />);
+            expect(screen.getByText(/Each target gains 1 temp HP/)).toBeInTheDocument();
+        });
     });
 
     // ── Dynamic values ──
 
     describe('dynamic values', () => {
-        it('reflects different die roll values in the note', () => {
-            render(<MantleOfInspirationModal {...makeProps({ dieRoll: 1 })} />);
-            expect(screen.getByText(/Rolled 1 on 1d6:/)).toBeInTheDocument();
-        });
-
-        it('reflects different bardic die sizes in the note', () => {
-            render(<MantleOfInspirationModal {...makeProps({ bardicDieSize: 8 })} />);
-            expect(screen.getByText(/Rolled 4 on 1d8:/)).toBeInTheDocument();
-        });
-
-        it('reflects different temp HP values in the note', () => {
-            render(<MantleOfInspirationModal {...makeProps({ tempHp: 1 })} />);
-            expect(screen.getByText(/Each target gains 1 temp HP/)).toBeInTheDocument();
-        });
-
-        it('reflects different maxTargets in both description and note', () => {
+        it('reflects maxTargets in both description and confirm button count', () => {
             render(<MantleOfInspirationModal {...makeProps({ maxTargets: 5 })} />);
-            expect(screen.getByText(/Choose up to 5 allies to grant temporary hit points/)).toBeInTheDocument();
-        });
-    });
-
-    // ── Empty targets ──
-
-    describe('empty targets', () => {
-        it('shows "No targets available." when creatureTargets is empty', () => {
-            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [] })} />);
-            expect(screen.getByText('No targets available.')).toBeInTheDocument();
+            expect(screen.getByText(/Choose up to 5 allies/)).toBeInTheDocument();
         });
     });
 
     // ── Callback passthrough ──
 
     describe('callback passthrough', () => {
-        it('renders without crashing with no callbacks', () => {
+        it('renders without crashing when callbacks are undefined', () => {
             render(<MantleOfInspirationModal {...makeProps({ onConfirm: undefined, onSkip: undefined })} />);
             expect(screen.getByText('Mantle of Inspiration')).toBeInTheDocument();
         });
@@ -181,14 +180,9 @@ describe('MantleOfInspirationModal', () => {
 
         it('shows the confirm button count updating when a target is selected', () => {
             render(<MantleOfInspirationModal {...makeProps()} />);
-            let confirmBtn = screen.getByRole('button', { name: /Inspire \(0\)/ });
-            expect(confirmBtn).toBeInTheDocument();
-
             const ally1Row = screen.getByText('Ally1').closest('.secondary-target-row');
             fireEvent.click(ally1Row);
-
-            confirmBtn = screen.getByRole('button', { name: /Inspire \(1\)/ });
-            expect(confirmBtn).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Inspire \(1\)/ })).toBeInTheDocument();
         });
 
         it('selects multiple targets when clicking on each', () => {
@@ -225,6 +219,16 @@ describe('MantleOfInspirationModal', () => {
             expect(ally1Row).not.toHaveClass('secondary-target-selected');
             expect(ally2Row).not.toHaveClass('secondary-target-disabled');
         });
+
+        it('disables the checkbox when at max targets', () => {
+            render(<MantleOfInspirationModal {...makeProps({ maxTargets: 1 })} />);
+            const ally1Row = screen.getByText('Ally1').closest('.secondary-target-row');
+            const ally2Row = screen.getByText('Ally2').closest('.secondary-target-row');
+
+            fireEvent.click(ally1Row);
+            const ally2Checkbox = ally2Row.querySelector('input[type="checkbox"]');
+            expect(ally2Checkbox.disabled).toBe(true);
+        });
     });
 
     // ── Confirm behavior ──
@@ -235,12 +239,6 @@ describe('MantleOfInspirationModal', () => {
             const confirmBtn = screen.getByRole('button', { name: /Inspire \(0\)/ });
             fireEvent.click(confirmBtn);
             expect(mockOnConfirm).not.toHaveBeenCalled();
-        });
-
-        it('disables the confirm button when no targets are selected', () => {
-            render(<MantleOfInspirationModal {...makeProps()} />);
-            const confirmBtn = screen.getByRole('button', { name: /Inspire \(0\)/ });
-            expect(confirmBtn).toBeDisabled();
         });
 
         it('calls onConfirm with selected target names when confirm is clicked', () => {
@@ -268,6 +266,36 @@ describe('MantleOfInspirationModal', () => {
 
             expect(mockOnConfirm).toHaveBeenCalledWith(['Ally1']);
         });
+
+        it('calls onConfirm with all target names when all are selected', () => {
+            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: ['X', 'Y', 'Z'], maxTargets: 3 })} />);
+            const rows = [
+                screen.getByText('X').closest('.secondary-target-row'),
+                screen.getByText('Y').closest('.secondary-target-row'),
+                screen.getByText('Z').closest('.secondary-target-row'),
+            ];
+
+            rows.forEach(row => fireEvent.click(row));
+
+            const confirmBtn = screen.getByRole('button', { name: /Inspire \(3\)/ });
+            fireEvent.click(confirmBtn);
+
+            expect(mockOnConfirm).toHaveBeenCalledWith(['X', 'Y', 'Z']);
+        });
+
+        it('calls onConfirm with string target names when confirmed', () => {
+            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: ['AllyA', 'AllyB'] })} />);
+            const allyARow = screen.getByText('AllyA').closest('.secondary-target-row');
+            const allyBRow = screen.getByText('AllyB').closest('.secondary-target-row');
+
+            fireEvent.click(allyARow);
+            fireEvent.click(allyBRow);
+
+            const confirmBtn = screen.getByRole('button', { name: /Inspire \(2\)/ });
+            fireEvent.click(confirmBtn);
+
+            expect(mockOnConfirm).toHaveBeenCalledWith(['AllyA', 'AllyB']);
+        });
     });
 
     // ── Skip behavior ──
@@ -294,6 +322,12 @@ describe('MantleOfInspirationModal', () => {
             fireEvent.click(modal);
             expect(freshOnSkip).not.toHaveBeenCalled();
         });
+
+        it('does not throw when clicking overlay with undefined onSkip', () => {
+            render(<MantleOfInspirationModal {...makeProps({ onSkip: undefined })} />);
+            const overlay = document.querySelector('.sp-overlay');
+            expect(() => fireEvent.click(overlay)).not.toThrow();
+        });
     });
 
     // ── HP display ──
@@ -301,12 +335,32 @@ describe('MantleOfInspirationModal', () => {
     describe('HP display', () => {
         it('does not show HP percentage for player-type targets', () => {
             render(<MantleOfInspirationModal {...makeProps({ creatureTargets: mockCreatureTargets })} />);
-            expect(screen.queryByText('(67% HP)')).not.toBeInTheDocument();
+            expect(screen.queryByText(/\(\d+% HP\)/)).not.toBeInTheDocument();
         });
 
         it('shows HP percentage for non-player targets', () => {
             render(<MantleOfInspirationModal {...makeProps({ creatureTargets: mockNonPlayerTargets })} />);
             expect(screen.getByText('(50% HP)')).toBeInTheDocument();
+        });
+
+        it('shows 100% HP for fully healed non-player targets', () => {
+            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [{ name: 'NPC1', type: 'npc', currentHp: 30, maxHp: 30 }] })} />);
+            expect(screen.getByText('(100% HP)')).toBeInTheDocument();
+        });
+
+        it('shows 0% HP for depleted non-player targets', () => {
+            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [{ name: 'NPC1', type: 'npc', currentHp: 0, maxHp: 20 }] })} />);
+            expect(screen.getByText('(0% HP)')).toBeInTheDocument();
+        });
+
+        it('does not show HP percentage when currentHp is null', () => {
+            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [{ name: 'NPC1', type: 'npc', maxHp: 20 }] })} />);
+            expect(screen.queryByText(/\(\d+% HP\)/)).not.toBeInTheDocument();
+        });
+
+        it('does not show HP percentage when maxHp is null', () => {
+            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [{ name: 'NPC1', type: 'npc', currentHp: 10 }] })} />);
+            expect(screen.queryByText(/\(\d+% HP\)/)).not.toBeInTheDocument();
         });
     });
 
@@ -317,20 +371,6 @@ describe('MantleOfInspirationModal', () => {
             render(<MantleOfInspirationModal {...makeProps({ creatureTargets: ['AllyA', 'AllyB'] })} />);
             expect(screen.getByText('AllyA')).toBeInTheDocument();
             expect(screen.getByText('AllyB')).toBeInTheDocument();
-        });
-
-        it('calls onConfirm with string target names when confirmed', () => {
-            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: ['AllyA', 'AllyB'] })} />);
-            const allyARow = screen.getByText('AllyA').closest('.secondary-target-row');
-            const allyBRow = screen.getByText('AllyB').closest('.secondary-target-row');
-
-            fireEvent.click(allyARow);
-            fireEvent.click(allyBRow);
-
-            const confirmBtn = screen.getByRole('button', { name: /Inspire \(2\)/ });
-            fireEvent.click(confirmBtn);
-
-            expect(mockOnConfirm).toHaveBeenCalledWith(['AllyA', 'AllyB']);
         });
     });
 
@@ -357,36 +397,6 @@ describe('MantleOfInspirationModal', () => {
         });
     });
 
-    // ── Checkbox interactions ──
-
-    describe('checkbox interactions', () => {
-        it('renders checkboxes for each target', () => {
-            render(<MantleOfInspirationModal {...makeProps()} />);
-            const checkboxes = screen.getAllByRole('checkbox');
-            expect(checkboxes.length).toBe(2);
-        });
-
-        it('checks the checkbox when a target row is clicked', () => {
-            render(<MantleOfInspirationModal {...makeProps()} />);
-            const ally1Row = screen.getByText('Ally1').closest('.secondary-target-row');
-            const checkbox = ally1Row.querySelector('input[type="checkbox"]');
-            expect(checkbox.checked).toBe(false);
-
-            fireEvent.click(ally1Row);
-            expect(checkbox.checked).toBe(true);
-        });
-
-        it('disables the checkbox when at max targets', () => {
-            render(<MantleOfInspirationModal {...makeProps({ maxTargets: 1 })} />);
-            const ally1Row = screen.getByText('Ally1').closest('.secondary-target-row');
-            const ally2Row = screen.getByText('Ally2').closest('.secondary-target-row');
-
-            fireEvent.click(ally1Row);
-            const ally2Checkbox = ally2Row.querySelector('input[type="checkbox"]');
-            expect(ally2Checkbox.disabled).toBe(true);
-        });
-    });
-
     // ── Max targets edge cases ──
 
     describe('max targets edge cases', () => {
@@ -402,7 +412,7 @@ describe('MantleOfInspirationModal', () => {
             rows.forEach(row => fireEvent.click(row));
 
             rows.forEach(row => expect(row).toHaveClass('secondary-target-selected'));
-            expect(screen.queryByRole('button', { name: /Inspire \(4\)/ })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Inspire \(4\)/ })).toBeInTheDocument();
         });
 
         it('allows selecting exactly maxTargets targets', () => {
@@ -422,70 +432,6 @@ describe('MantleOfInspirationModal', () => {
         it('disables the confirm button when maxTargets is 0', () => {
             render(<MantleOfInspirationModal {...makeProps({ maxTargets: 0 })} />);
             expect(screen.getByRole('button', { name: /Inspire \(0\)/ })).toBeDisabled();
-        });
-    });
-
-    // ── Overlay click with undefined onSkip ──
-
-    describe('overlay click with undefined onSkip', () => {
-        it('does not throw when clicking overlay with undefined onSkip', () => {
-            render(<MantleOfInspirationModal {...makeProps({ onSkip: undefined })} />);
-            const overlay = document.querySelector('.sp-overlay');
-            expect(() => fireEvent.click(overlay)).not.toThrow();
-        });
-    });
-
-    // ── Confirm button type ──
-
-    describe('confirm button attributes', () => {
-        it('renders the confirm button with type="button"', () => {
-            render(<MantleOfInspirationModal {...makeProps()} />);
-            const btn = screen.getByRole('button', { name: /Inspire/ });
-            expect(btn).toHaveAttribute('type', 'button');
-        });
-    });
-
-    // ── All targets selected ──
-
-    describe('all targets selected', () => {
-        it('calls onConfirm with all target names when all are selected', () => {
-            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: ['X', 'Y', 'Z'], maxTargets: 3 })} />);
-            const rows = [
-                screen.getByText('X').closest('.secondary-target-row'),
-                screen.getByText('Y').closest('.secondary-target-row'),
-                screen.getByText('Z').closest('.secondary-target-row'),
-            ];
-
-            rows.forEach(row => fireEvent.click(row));
-
-            const confirmBtn = screen.getByRole('button', { name: /Inspire \(3\)/ });
-            fireEvent.click(confirmBtn);
-
-            expect(mockOnConfirm).toHaveBeenCalledWith(['X', 'Y', 'Z']);
-        });
-    });
-
-    // ── HP display edge cases ──
-
-    describe('HP display edge cases', () => {
-        it('shows 100% HP for fully healed non-player targets', () => {
-            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [{ name: 'NPC1', type: 'npc', currentHp: 30, maxHp: 30 }] })} />);
-            expect(screen.getByText('(100% HP)')).toBeInTheDocument();
-        });
-
-        it('shows 0% HP for depleted non-player targets', () => {
-            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [{ name: 'NPC1', type: 'npc', currentHp: 0, maxHp: 20 }] })} />);
-            expect(screen.getByText('(0% HP)')).toBeInTheDocument();
-        });
-
-        it('does not show HP percentage when currentHp is null', () => {
-            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [{ name: 'NPC1', type: 'npc', maxHp: 20 }] })} />);
-            expect(screen.queryByText(/\(\d+% HP\)/)).not.toBeInTheDocument();
-        });
-
-        it('does not show HP percentage when maxHp is null', () => {
-            render(<MantleOfInspirationModal {...makeProps({ creatureTargets: [{ name: 'NPC1', type: 'npc', currentHp: 10 }] })} />);
-            expect(screen.queryByText(/\(\d+% HP\)/)).not.toBeInTheDocument();
         });
     });
 });

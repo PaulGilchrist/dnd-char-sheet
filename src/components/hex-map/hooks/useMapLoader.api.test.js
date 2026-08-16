@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import useMapLoader from './useMapLoader.js';
 
 vi.mock('../../../services/maps/mapsService.js', () => ({
@@ -28,6 +29,14 @@ vi.mock('../../../config/outdoorConfig.js', () => ({
 import * as mapsService from '../../../services/maps/mapsService.js';
 import { hexKey } from '../../../services/maps/hexMapUtils.js';
 
+const CAMPAIGN = 'test-campaign';
+const MAP = 'test-map';
+
+const characters = [
+    { name: 'Thorin' },
+    { name: 'Gandalf' },
+];
+
 const baseMapData = {
     terrain: {},
     rivers: [],
@@ -43,10 +52,14 @@ const baseMapData = {
     travelState: {},
 };
 
-const characters = [
-    { name: 'Thorin' },
-    { name: 'Gandalf' },
-];
+// Renders the hook against an already-loaded map and waits for the load to
+// finish so tests exercise the post-load API deterministically (no raw timers).
+const renderLoadedHook = async () => {
+    mapsService.loadMapData.mockResolvedValue(baseMapData);
+    const utils = renderHook(() => useMapLoader(CAMPAIGN, MAP, characters));
+    await waitFor(() => expect(utils.result.current.loading).toBe(false));
+    return utils;
+};
 
 describe('useMapLoader - API surface', () => {
     beforeEach(() => {
@@ -55,12 +68,8 @@ describe('useMapLoader - API surface', () => {
     });
 
     describe('setTravelStateRef', () => {
-        it('updates travelSaveVersion and travelStateRef when called', async () => {
-            mapsService.loadMapData.mockResolvedValue(baseMapData);
-
-            const { result } = renderHook(() => useMapLoader('test-campaign', 'test-map', characters));
-
-            await new Promise(r => setTimeout(r, 50));
+        it('updates travelStateRef and bumps travelSaveVersion', async () => {
+            const { result } = await renderLoadedHook();
 
             const initialVersion = result.current.travelSaveVersion;
 
@@ -71,51 +80,65 @@ describe('useMapLoader - API surface', () => {
             expect(result.current.travelSaveVersion).toBe(initialVersion + 1);
             expect(result.current.travelStateRef.current).toEqual({ travelMode: 'active' });
         });
-    });
 
-    describe('refs', () => {
-        it('returns refs with .current property', async () => {
-            mapsService.loadMapData.mockResolvedValue(null);
+        it('persists the updated travel state via the save effect', async () => {
+            const { result } = await renderLoadedHook();
+            mapsService.saveMapData.mockClear();
 
-            const { result } = renderHook(() => useMapLoader('test-campaign', 'test-map', characters));
+            act(() => {
+                result.current.setTravelStateRef({ travelMode: 'active', destination: 'City A' });
+            });
 
-            await new Promise(r => setTimeout(r, 50));
-
-            expect(result.current.needsResetViewRef).toHaveProperty('current');
-            expect(result.current.hexMapNameRef).toHaveProperty('current');
-            expect(result.current.hexMapDisplayNameRef).toHaveProperty('current');
-            expect(result.current.travelStateRef).toHaveProperty('current');
+            await waitFor(() => {
+                expect(mapsService.saveMapData).toHaveBeenCalledWith(
+                    CAMPAIGN,
+                    MAP,
+                    expect.objectContaining({ travelState: { travelMode: 'active', destination: 'City A' } })
+                );
+            });
         });
     });
 
-    describe('loading state', () => {
-        it('starts as true and transitions to false after data loads', async () => {
-            mapsService.loadMapData.mockResolvedValue(baseMapData);
+    describe('state setters', () => {
+        it.each([
+            ['terrain', { '5,5': 'mountain' }],
+            ['rivers', [{ hexes: ['0,0'] }]],
+            ['roads', [{ hexes: ['1,1'] }]],
+            ['pois', [{ name: 'Camp' }]],
+            ['gridSize', 20],
+            ['zoom', 5],
+            ['panX', 100],
+            ['panY', 50],
+            ['marchingOrder', ['Thorin']],
+            ['partyPosition', { q: 3, r: 4 }],
+            ['weather', 'rain'],
+            ['mapData', { type: 'outdoor' }],
+            ['travelInit', { travelMode: 'active' }],
+        ])('exposes a setter that updates $state', async (state, value) => {
+            const { result } = await renderLoadedHook();
 
-            const { result } = renderHook(() => useMapLoader('test-campaign', 'test-map', characters));
+            act(() => {
+                result.current[`set${state[0].toUpperCase()}${state.slice(1)}`](value);
+            });
 
-            expect(result.current.loading).toBe(true);
-
-            await new Promise(r => setTimeout(r, 50));
-
-            expect(result.current.loading).toBe(false);
+            expect(result.current[state]).toEqual(value);
         });
-    });
 
-    describe('mapData', () => {
-        it('is populated from loadMapData result', async () => {
-            const loadedData = {
-                ...baseMapData,
-                terrain: { '0,0': 'mountain' },
-                displayName: 'Test Map',
-            };
-            mapsService.loadMapData.mockResolvedValue(loadedData);
+        it('persists setter-driven state changes via the save effect', async () => {
+            const { result } = await renderLoadedHook();
+            mapsService.saveMapData.mockClear();
 
-            const { result } = renderHook(() => useMapLoader('test-campaign', 'test-map', characters));
+            act(() => {
+                result.current.setTerrain({ '3,4': 'forest' });
+            });
 
-            await new Promise(r => setTimeout(r, 50));
-
-            expect(result.current.mapData).toEqual(loadedData);
+            await waitFor(() => {
+                expect(mapsService.saveMapData).toHaveBeenCalledWith(
+                    CAMPAIGN,
+                    MAP,
+                    expect.objectContaining({ terrain: { '3,4': 'forest' } })
+                );
+            });
         });
     });
 });

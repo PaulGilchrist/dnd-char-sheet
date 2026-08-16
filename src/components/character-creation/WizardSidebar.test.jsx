@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardSidebar from './WizardSidebar.jsx';
@@ -5,7 +6,7 @@ import WizardSidebar from './WizardSidebar.jsx';
 const createProps = (overrides = {}) => ({
   currentStep: 2,
   isEditing: false,
-  getStepEnabled: () => true,
+  getStepEnabled: overrides.getStepEnabled ?? (() => true),
   goToStep: vi.fn(),
   isSaveEnabled: true,
   onSave: vi.fn(),
@@ -14,18 +15,39 @@ const createProps = (overrides = {}) => ({
 
 const renderSidebar = (props = {}) => render(<WizardSidebar {...createProps(props)} />);
 
+const findByTabTitle = (title) => screen.getByText(title).closest('.sidebar-tab');
+const findSaveButton = () => screen.getByText('Save').closest('.sidebar-save');
+
 describe('WizardSidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('rendering', () => {
-    it('renders step tabs with correct titles', () => {
+    it('renders all visible step tabs with correct titles for 5e when not editing', () => {
       renderSidebar();
-      expect(screen.getByText('Basic Information')).toBeInTheDocument();
-      expect(screen.getByText('Race')).toBeInTheDocument();
-      expect(screen.getByText('Subclass / Major')).toBeInTheDocument();
-      expect(screen.getByText('Special Actions')).toBeInTheDocument();
+      const visibleStepTitles = [
+        'Ruleset',
+        'Basic Information',
+        'Race',
+        'Subrace',
+        'Class',
+        'Subclass / Major',
+        'Feats',
+        'Ability Scores',
+        'Skill Proficiencies',
+        'Tool Proficiencies',
+        'Languages & Fighting Styles',
+        'Resistances & Immunities',
+        'Spells',
+        'Magic Items',
+        'Inventory',
+        'Special Actions',
+      ];
+      for (const title of visibleStepTitles) {
+        expect(screen.getByText(title)).toBeInTheDocument();
+      }
+      expect(screen.queryByText('Background')).not.toBeInTheDocument();
     });
 
     it('hides step 1 (Ruleset) when editing', () => {
@@ -34,51 +56,91 @@ describe('WizardSidebar', () => {
       expect(screen.getByText('Basic Information')).toBeInTheDocument();
     });
 
-    it('hides step 5 (Background) for 5e', () => {
+    it('hides step 5 (Background) when ruleset is 5e', () => {
       renderSidebar({ ruleset: '5e' });
       expect(screen.queryByText('Background')).not.toBeInTheDocument();
     });
 
-    it('shows step 5 (Background) for 2024', () => {
+    it('hides step 5 (Background) when ruleset is undefined', () => {
+      renderSidebar({ ruleset: undefined });
+      expect(screen.queryByText('Background')).not.toBeInTheDocument();
+    });
+
+    it('shows step 5 (Background) when ruleset is 2024', () => {
       renderSidebar({ ruleset: '2024' });
       expect(screen.getByText('Background')).toBeInTheDocument();
+    });
+
+    it('hides step 1 when editing even with 2024 ruleset', () => {
+      renderSidebar({ isEditing: true, ruleset: '2024' });
+      expect(screen.queryByText('Ruleset')).not.toBeInTheDocument();
+      expect(screen.getByText('Background')).toBeInTheDocument();
+    });
+
+    it('renders step numbers for each tab', () => {
+      renderSidebar();
+      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getByText('17')).toBeInTheDocument();
+    });
+
+    it('renders the save button with checkmark', () => {
+      renderSidebar();
+      expect(screen.getByText('Save')).toBeInTheDocument();
+      expect(screen.getByText('✓')).toBeInTheDocument();
     });
   });
 
   describe('active state', () => {
-    it('highlights the current step as active and others as inactive', () => {
+    it('marks the current step tab as active', () => {
       renderSidebar({ currentStep: 3 });
-      const activeTab = screen.getByText('Race').closest('.sidebar-tab');
+      const activeTab = findByTabTitle('Race');
       expect(activeTab).toHaveClass('active');
-      const inactiveTab = screen.getByText('Basic Information').closest('.sidebar-tab');
+    });
+
+    it('marks non-current tabs as not active', () => {
+      renderSidebar({ currentStep: 3 });
+      const inactiveTab = findByTabTitle('Basic Information');
       expect(inactiveTab).not.toHaveClass('active');
+    });
+
+    it('handles currentStep outside valid range without crashing', () => {
+      renderSidebar({ currentStep: 99 });
+      expect(screen.getByText('Basic Information')).toBeInTheDocument();
     });
   });
 
   describe('disabled state', () => {
-    it('disables tabs based on getStepEnabled', () => {
+    it('applies disabled class and disabled property to tabs where getStepEnabled returns false', () => {
       renderSidebar({ getStepEnabled: (step) => step !== 3 });
-      const disabledTab = screen.getByText('Race').closest('.sidebar-tab');
+      const disabledTab = findByTabTitle('Race');
       expect(disabledTab).toHaveClass('disabled');
-      expect(disabledTab).toHaveAttribute('disabled');
-      const enabledTab = screen.getByText('Basic Information').closest('.sidebar-tab');
+      expect(disabledTab).toBeDisabled();
+      const enabledTab = findByTabTitle('Basic Information');
       expect(enabledTab).not.toHaveClass('disabled');
+      expect(enabledTab).not.toBeDisabled();
     });
 
-    it('disables the save button when isSaveEnabled is false', () => {
+    it('applies disabled class and disabled property to save button when isSaveEnabled is false', () => {
       renderSidebar({ isSaveEnabled: false });
-      const saveButton = screen.getByText('Save').closest('.sidebar-save');
+      const saveButton = findSaveButton();
       expect(saveButton).toHaveClass('disabled');
       expect(saveButton).toBeDisabled();
     });
   });
 
   describe('navigation interaction', () => {
-    it('calls goToStep with the correct step number when a tab is clicked', () => {
+    it('calls goToStep with the correct step number when an enabled tab is clicked', () => {
       const props = createProps();
       render(<WizardSidebar {...props} />);
-      fireEvent.click(screen.getByText('Race').closest('.sidebar-tab'));
+      fireEvent.click(findByTabTitle('Race'));
       expect(props.goToStep).toHaveBeenCalledWith(3);
+    });
+
+    it('does not call goToStep when a disabled tab is clicked', () => {
+      const props = createProps({ getStepEnabled: (step) => step !== 3 });
+      render(<WizardSidebar {...props} />);
+      fireEvent.click(findByTabTitle('Race'));
+      expect(props.goToStep).not.toHaveBeenCalled();
     });
   });
 
@@ -86,8 +148,15 @@ describe('WizardSidebar', () => {
     it('calls onSave when the save button is clicked', () => {
       const props = createProps();
       render(<WizardSidebar {...props} />);
-      fireEvent.click(screen.getByText('Save').closest('.sidebar-save'));
+      fireEvent.click(findSaveButton());
       expect(props.onSave).toHaveBeenCalled();
+    });
+
+    it('does not call onSave when the save button is disabled', () => {
+      const props = createProps({ isSaveEnabled: false });
+      render(<WizardSidebar {...props} />);
+      fireEvent.click(findSaveButton());
+      expect(props.onSave).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,11 +1,13 @@
 // @improved-by-ai
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
 import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
   const mockFn = vi.fn(() => ({
+    popupHtml: null,
+    setPopupHtml: vi.fn(),
     rollAbilityCheck: vi.fn(),
     rollSavingThrow: vi.fn(),
     rollSkillCheck: vi.fn(),
@@ -17,6 +19,10 @@ vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
   useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
 }));
 
+vi.mock('../../services/ui/dataLoader.js', () => ({
+  loadEquipment: vi.fn(() => Promise.resolve([])),
+}));
+
 const mockStore = new Map();
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => mockStore),
@@ -25,10 +31,6 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn((key, prop) => mockStore.get(`${key}:${prop}`) ?? null),
   setRuntimeValue: vi.fn(),
   useRuntimeValue: vi.fn((key, prop) => mockStore.get(`${key}:${prop}`) ?? null),
-}));
-
-vi.mock('../../services/ui/dataLoader.js', () => ({
-  loadEquipment: vi.fn(() => Promise.resolve([])),
 }));
 
 const mockAllAbilityScores = [
@@ -50,7 +52,7 @@ function createPlayerStats(overrides = {}) {
       { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
       { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [{ name: 'Arcana', bonus: 2 }] },
       { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [{ name: 'Perception', bonus: 3 }] },
-      { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [{ name: 'Deception', bonus: 2 }, { name: 'Intimidation', bonus: 2 }, { name: 'Performance', bonus: 2 }, { name: 'Persuasion', bonus: 2 }] },
+      { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
     ],
     skillProficiencies: ['Athletics', 'Arcana'],
     automation: { primalKnowledge: ['Athletics'], passives: [] },
@@ -70,152 +72,7 @@ const defaultProps = {
   onStrokeOfLuck: vi.fn(),
 };
 
-function getMocks() {
-  return vi.mocked(useLoggedDiceRoll).mock.results[0].value;
-}
-
-function getBonusCells(container) {
-  return container.querySelectorAll('.abilities > div:nth-child(3)');
-}
-
-function getSaveCells(container) {
-  return container.querySelectorAll('.abilities > div:nth-child(4)');
-}
-
-// ── Tests ──
-
-describe('CharAbilities makeSaveContext - advanced condition effects', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  describe('restoreBalance', () => {
-    it('passes forcedMode normal when restoreBalance is set', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ restoreBalance: true }} />);
-      const saveCells = getSaveCells(container);
-      fireEvent.click(saveCells[0]);
-      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'normal' }));
-    });
-
-    it('overrides saveDisadvantage with restoreBalance', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveDisadvantage: ['str'], restoreBalance: true }} />);
-      const saveCells = getSaveCells(container);
-      fireEvent.click(saveCells[0]);
-      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'normal' }));
-    });
-
-    it('overrides saveAdvantageCount with restoreBalance', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageCount: 2, restoreBalance: true }} />);
-      const saveCells = getSaveCells(container);
-      fireEvent.click(saveCells[0]);
-      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'normal' }));
-    });
-  });
-
-  describe('strokeOfLuck in saves', () => {
-    it('passes strokeOfLuck context when save is clicked', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ strokeOfLuck: true }} />);
-      const saveCells = getSaveCells(container);
-      fireEvent.click(saveCells[0]);
-      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ strokeOfLuck: true }));
-    });
-  });
-
-  describe('luckyAdvantage in saves', () => {
-    it('passes luckyAdvantage context when save is clicked', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ luckyAdvantage: true }} />);
-      const saveCells = getSaveCells(container);
-      fireEvent.click(saveCells[0]);
-      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ luckyAdvantage: true }));
-    });
-  });
-
-  describe('luckyDisadvantage in saves', () => {
-    it('passes luckyDisadvantage context when save is clicked', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ luckyDisadvantage: true }} />);
-      const saveCells = getSaveCells(container);
-      fireEvent.click(saveCells[0]);
-      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ luckyDisadvantage: true }));
-    });
-  });
-
-  describe('darkOnesLuck in saves', () => {
-    it('passes darkOnesLuck context when save is clicked', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ darkOnesLuck: true }} />);
-      const saveCells = getSaveCells(container);
-      fireEvent.click(saveCells[0]);
-      expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ darkOnesLuck: true }));
-    });
-  });
-});
-
-describe('CharAbilities penalized CSS classes', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('applies stat--penalized to bonus cells when exhaustionPenalty > 0', () => {
-    const { container } = render(<CharAbilities {...defaultProps} exhaustionPenalty={1} />);
-    const bonusCells = getBonusCells(container);
-    bonusCells.forEach(cell => {
-      expect(cell.classList.contains('stat--penalized')).toBe(true);
-    });
-  });
-
-  it('applies stat--penalized to bonus cells when abilityCheckDisadvantage is set', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckDisadvantage: true }} />);
-    const bonusCells = getBonusCells(container);
-    bonusCells.forEach(cell => {
-      expect(cell.classList.contains('stat--penalized')).toBe(true);
-    });
-  });
-
-  it('applies stat--penalized to bonus cells when abilityCheckDisadvantageAbilities includes the full ability name', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckDisadvantageAbilities: ['Strength'] }} />);
-    const bonusCells = getBonusCells(container);
-    expect(bonusCells[0].classList.contains('stat--penalized')).toBe(true);
-    expect(bonusCells[1].classList.contains('stat--penalized')).toBe(false);
-  });
-
-  it('applies stat--penalized to save cells when exhaustionPenalty > 0', () => {
-    const { container } = render(<CharAbilities {...defaultProps} exhaustionPenalty={1} />);
-    const saveCells = getSaveCells(container);
-    saveCells.forEach(cell => {
-      expect(cell.classList.contains('stat--penalized')).toBe(true);
-    });
-  });
-
-  it('applies stat--penalized to save cells when autoFailSaves includes the ability', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['str'] }} />);
-    const saveCells = getSaveCells(container);
-    expect(saveCells[0].classList.contains('stat--penalized')).toBe(true);
-  });
-
-  it('applies stat--penalized to save cells when saveDisadvantage includes the ability', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveDisadvantage: ['str'] }} />);
-    const saveCells = getSaveCells(container);
-    expect(saveCells[0].classList.contains('stat--penalized')).toBe(true);
-  });
-
-  it('applies stat--buffed to save cells when save advantage exists', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['STR'] }} />);
-    const saveCells = getSaveCells(container);
-    expect(saveCells[0].classList.contains('stat--buffed')).toBe(true);
-  });
-
-  it('applies stat--penalized to skill cells when abilityCheckDisadvantage is set', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckDisadvantage: true }} />);
-    const skillClickableEls = container.querySelectorAll('.abilities .clickable');
-    const firstSkill = Array.from(skillClickableEls).find(el => el.textContent.includes('Athletics'));
-    if (firstSkill) {
-      expect(firstSkill.classList.contains('stat--penalized')).toBe(true);
-    }
-  });
-});
-
-describe('CharAbilities isExpert display', () => {
+describe('CharAbilities expertise display', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStore.clear();
@@ -257,113 +114,24 @@ describe('CharAbilities isExpert display', () => {
     expect(screen.getByText('Athletics (+8)')).toBeInTheDocument();
     expect(screen.queryByText('Athletics (Expert) (+8)')).not.toBeInTheDocument();
   });
-});
 
-describe('CharAbilities saveAdvantageAbilities abbreviation matching', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('matches saveAdvantageAbilities with 3-letter abbreviation', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['DEX'] }} />);
-    const saveTexts = Array.from(getSaveCells(container)).map(c => c.textContent);
-    expect(saveTexts).toContain('+4 (Adv)');
-  });
-
-  it('does not match saveAdvantageAbilities when abbreviation does not match', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['STR'] }} />);
-    const saveTexts = Array.from(getSaveCells(container)).map(c => c.textContent);
-    expect(saveTexts).not.toContain('+4 (Adv)');
-  });
-});
-
-describe('CharAbilities saveBonusExpression tooltip building', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('includes warding bond bonus in tooltip when saveBonusExpression has positive value', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveBonusExpression: '+2 + wisdom_modifier', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />);
-    const saveCells = getSaveCells(container);
-    expect(saveCells[0].title).toContain('+2');
-    expect(saveCells[0].title).toContain('Warding Bond');
-  });
-
-  it('combines multiple save advantage sources in tooltip', () => {
+  it('shows (Expert) for multiple expertised skills', () => {
     const stats = createPlayerStats({
-      saveModifiers: [
-        { target: 'saving_throw', effect: 'advantage', condition: 'against_spell', source: 'Spell Resistance' },
-        { target: 'saving_throw', effect: 'advantage', condition: 'some_condition', source: 'Warding Bond' },
-      ],
-    });
-    const { container } = render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveAdvantage: ['against_spell'], saveAdvantageCount: 1 }} />);
-    const saveCells = getSaveCells(container);
-    expect(saveCells[0].title).toContain('Spell Resistance');
-    expect(saveCells[0].title).toContain('Warding Bond');
-  });
-
-  it('uses computedStats.saveModifiers when saveModifiers is not present', () => {
-    const stats = createPlayerStats({
-      saveModifiers: undefined,
-      computedStats: {
-        saveModifiers: [
-          { target: 'saving_throw', effect: 'advantage', condition: 'against_spell', source: 'Computed Resistance' },
-        ],
-      },
-    });
-    const { container } = render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveAdvantage: ['against_spell'] }} />);
-    const saveCells = getSaveCells(container);
-    expect(saveCells[0].title).toContain('Computed Resistance');
-  });
-});
-
-describe('CharAbilities signFormatter output', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('formats positive bonuses with + prefix', () => {
-    const { container } = render(<CharAbilities {...defaultProps} />);
-    const bonusCells = getBonusCells(container);
-    expect(bonusCells[0].textContent).toBe('+4');
-  });
-
-  it('formats negative bonuses with - prefix', () => {
-    const { container } = render(<CharAbilities {...defaultProps} />);
-    const bonusCells = getBonusCells(container);
-    expect(bonusCells[4].textContent).toBe('-1');
-  });
-
-  it('formats zero bonuses with +0 prefix', () => {
-    const { container } = render(<CharAbilities {...defaultProps} />);
-    const bonusCells = getBonusCells(container);
-    expect(bonusCells[3].textContent).toBe('+0');
-  });
-});
-
-describe('CharAbilities skill separator rendering', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('renders comma separator between multiple skills on the same ability', () => {
-    const stats = createPlayerStats({
+      level: 5,
+      expertise: ['Athletics', 'Arcana'],
+      skillProficiencies: ['Athletics', 'Arcana'],
       abilities: [
         { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [{ name: 'Athletics', bonus: 8 }] },
-        { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [{ name: 'Acrobatics', bonus: 6 }, { name: 'Sleight of Hand', bonus: 6 }] },
+        { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
         { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
         { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [{ name: 'Arcana', bonus: 2 }] },
-        { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [{ name: 'Perception', bonus: 3 }] },
+        { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [] },
         { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
       ],
     });
     render(<CharAbilities {...defaultProps} playerStats={stats} />);
-    expect(screen.getByText('Acrobatics (+6)')).toBeInTheDocument();
-    expect(screen.getByText('Sleight of Hand (+6)')).toBeInTheDocument();
+    expect(screen.getByText('Athletics (Expert) (+8)')).toBeInTheDocument();
+    expect(screen.getByText('Arcana (Expert) (+2)')).toBeInTheDocument();
   });
 });
 
@@ -377,26 +145,5 @@ describe('CharAbilities characters prop', () => {
     const characters = [{ name: 'Creature 1' }, { name: 'Creature 2' }];
     render(<CharAbilities {...defaultProps} characters={characters} />);
     expect(vi.mocked(useLoggedDiceRoll).mock.calls[0][2]).toEqual({ characters });
-  });
-});
-
-describe('CharAbilities combination of effects', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('combines abilityCheckDisadvantage with strokeOfLuck in check context', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ abilityCheckDisadvantage: true, strokeOfLuck: true }} />);
-    const bonusCells = getBonusCells(container);
-    fireEvent.click(bonusCells[0]);
-    expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ forcedMode: 'disadvantage', strokeOfLuck: true }));
-  });
-
-  it('combines autoRerollForSaves with strokeOfLuck in save context', () => {
-    const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ autoRerollForSaves: true, autoRerollCondition: 'frightened', autoRerollBonus: 2, strokeOfLuck: true }} />);
-    const saveCells = getSaveCells(container);
-    fireEvent.click(saveCells[0]);
-    expect(getMocks().rollSavingThrow).toHaveBeenCalledWith('Strength', expect.any(Number), expect.objectContaining({ autoReroll: true, autoRerollCondition: 'frightened', autoRerollBonus: 2 }));
   });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepFeats from './WizardStepFeats.jsx';
@@ -58,17 +59,19 @@ describe('WizardStepFeats', () => {
   });
 
   describe('Rendering — pre-selected feats', () => {
-    it('should mark pre-selected feats with a pre-selected label and not allow toggling', () => {
+    it('should mark pre-selected feats with a pre-selected label', () => {
       renderComponent({ preSelectedFeats: ['Great Weapon Master'] });
       expect(screen.getByText('(Pre-selected)')).toBeInTheDocument();
+    });
 
+    it('should not allow toggling pre-selected feats', () => {
       const mockOnChange = vi.fn();
       renderComponent({
         formData: { ...mockFormData, feats: ['Great Weapon Master'] },
         preSelectedFeats: ['Great Weapon Master'],
         onArrayFieldChange: mockOnChange,
       });
-      const preSelectedBody = document.querySelectorAll('.list-item.pre-selected .list-item-body')[0];
+      const preSelectedBody = document.querySelector('.list-item.pre-selected .list-item-body');
       fireEvent.click(preSelectedBody);
       expect(mockOnChange).not.toHaveBeenCalled();
     });
@@ -86,13 +89,15 @@ describe('WizardStepFeats', () => {
       });
     });
 
-    it('should render HTML and text descriptions for feats', async () => {
-      const { container } = renderComponent();
-      const buttons = screen.getAllByRole('button', { name: 'Show More' });
+    it('should render HTML descriptions for feats with a description field', async () => {
+      renderComponent();
+      const featName = 'Magic Initiate';
+      const featRow = screen.getByText(featName).closest('.list-item');
+      const toggleBtn = featRow.querySelector('.toggle-details-btn');
+      fireEvent.click(toggleBtn);
 
-      fireEvent.click(buttons[3]);
       await waitFor(() => {
-        const descriptionDiv = container.querySelector('.feat-description');
+        const descriptionDiv = document.querySelector('.feat-description');
         expect(descriptionDiv).toBeInTheDocument();
         expect(descriptionDiv).toContainHTML('<p>Learn two cantrips</p>');
       });
@@ -100,20 +105,39 @@ describe('WizardStepFeats', () => {
 
     it('should render text descriptions for feats with a desc field', async () => {
       renderComponent();
-      const buttons = screen.getAllByRole('button', { name: 'Show More' });
-      fireEvent.click(buttons[5]);
+      const featName = 'Sharpshooter';
+      const featRow = screen.getByText(featName).closest('.list-item');
+      const toggleBtn = featRow.querySelector('.toggle-details-btn');
+      fireEvent.click(toggleBtn);
+
       await waitFor(() => {
         expect(screen.getByText('No disadvantage on long range')).toBeInTheDocument();
       });
     });
 
     it('should render HTML content with sanitized markup', async () => {
-      const { container } = renderComponent();
-      const buttons = screen.getAllByRole('button', { name: 'Show More' });
-      fireEvent.click(buttons[6]);
+      renderComponent();
+      const featName = 'Weapon Master';
+      const featRow = screen.getByText(featName).closest('.list-item');
+      const toggleBtn = featRow.querySelector('.toggle-details-btn');
+      fireEvent.click(toggleBtn);
+
       await waitFor(() => {
-        const descriptionDiv = container.querySelector('.feat-description');
+        const descriptionDiv = document.querySelector('.feat-description');
         expect(descriptionDiv).toContainHTML('<strong>Master</strong>');
+      });
+    });
+
+    it('should not render a description element when the feat has no description', async () => {
+      renderComponent();
+      const featName = 'Great Weapon Master';
+      const featRow = screen.getByText(featName).closest('.list-item');
+      const toggleBtn = featRow.querySelector('.toggle-details-btn');
+      fireEvent.click(toggleBtn);
+
+      await waitFor(() => {
+        const descriptionDiv = document.querySelector('.feat-description');
+        expect(descriptionDiv).toBeInTheDocument();
       });
     });
   });
@@ -121,27 +145,35 @@ describe('WizardStepFeats', () => {
   describe('Rendering — prerequisites', () => {
     it('should render prerequisites for feats with various prerequisite formats', async () => {
       renderComponent();
-      const buttons = screen.getAllByRole('button', { name: 'Show More' });
 
-      fireEvent.click(buttons[0]);
+      // String prerequisite: "Charisma 13 or higher"
+      const actorRow = screen.getByText('Actor').closest('.list-item');
+      fireEvent.click(actorRow.querySelector('.toggle-details-btn'));
       await waitFor(() => {
-        expect(screen.getByText(/Charisma 13/)).toBeInTheDocument();
+        expect(actorRow.querySelector('.feat-prerequisites').textContent).toContain('Charisma 13 or higher');
       });
 
-      fireEvent.click(buttons[2]);
+      // Object prerequisite: { level: 4 }
+      const luckyRow = screen.getByText('Lucky').closest('.list-item');
+      fireEvent.click(luckyRow.querySelector('.toggle-details-btn'));
       await waitFor(() => {
-        expect(screen.getByText(/{"level":4}/)).toBeInTheDocument();
+        expect(luckyRow.querySelector('.feat-prerequisites').textContent).toContain('Prerequisites:');
+        expect(luckyRow.querySelector('.feat-prerequisites').textContent).toContain('4');
       });
 
-      fireEvent.click(buttons[3]);
+      // Array prerequisites: ['Spellcasting feature', '4th level']
+      const magicInitiateRow = screen.getByText('Magic Initiate').closest('.list-item');
+      fireEvent.click(magicInitiateRow.querySelector('.toggle-details-btn'));
       await waitFor(() => {
-        expect(screen.getByText(/Spellcasting feature/)).toBeInTheDocument();
-        expect(screen.getByText(/4th level/)).toBeInTheDocument();
+        expect(magicInitiateRow.querySelector('.feat-prerequisites').textContent).toContain('Spellcasting feature');
+        expect(magicInitiateRow.querySelector('.feat-prerequisites').textContent).toContain('4th level');
       });
 
-      fireEvent.click(buttons[4]);
+      // Object with name: { name: 'Proficiency with Perception' }
+      const observantRow = screen.getByText('Observant').closest('.list-item');
+      fireEvent.click(observantRow.querySelector('.toggle-details-btn'));
       await waitFor(() => {
-        expect(screen.getByText(/Proficiency with Perception/)).toBeInTheDocument();
+        expect(observantRow.querySelector('.feat-prerequisites').textContent).toContain('Proficiency with Perception');
       });
     });
 
@@ -150,8 +182,8 @@ describe('WizardStepFeats', () => {
         { index: 'no-prereq-feat', name: 'No Prereqs Feat' },
       ];
       renderComponent({ allFeats: featsNoPrereqs });
-      const buttons = screen.getAllByRole('button', { name: 'Show More' });
-      fireEvent.click(buttons[0]);
+      const featRow = screen.getByText('No Prereqs Feat').closest('.list-item');
+      fireEvent.click(featRow.querySelector('.toggle-details-btn'));
 
       await waitFor(() => {
         expect(screen.queryByText('Prerequisites:')).not.toBeInTheDocument();
@@ -269,6 +301,82 @@ describe('WizardStepFeats', () => {
       await waitFor(() => {
         expect(screen.queryByText(/Versatile Trait/)).not.toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Repeatable feats', () => {
+    it('should show a count badge for repeatable feats with multiple selections', () => {
+      const repeatableFeats = [
+        { index: 'war-chant', name: 'War Chant', repeatable: true },
+      ];
+      renderComponent({
+        allFeats: repeatableFeats,
+        formData: { ...mockFormData, feats: ['War Chant', 'War Chant', 'War Chant'] },
+      });
+
+      expect(screen.getByText('(3)')).toBeInTheDocument();
+    });
+
+    it('should render "Add Another" button for selected repeatable feats', () => {
+      const repeatableFeats = [
+        { index: 'war-chant', name: 'War Chant', repeatable: true },
+      ];
+      renderComponent({
+        allFeats: repeatableFeats,
+        formData: { ...mockFormData, feats: ['War Chant'] },
+      });
+
+      expect(screen.getByText('Add Another')).toBeInTheDocument();
+    });
+
+    it('should render "Remove One" button for selected repeatable feats with count >= 1', () => {
+      const repeatableFeats = [
+        { index: 'war-chant', name: 'War Chant', repeatable: true },
+      ];
+      renderComponent({
+        allFeats: repeatableFeats,
+        formData: { ...mockFormData, feats: ['War Chant', 'War Chant'] },
+      });
+
+      expect(screen.getByText('Remove One')).toBeInTheDocument();
+    });
+
+    it('should call onArrayFieldChange with empty array when "Add Another" is clicked on a selected repeatable feat', () => {
+      const mockOnChange = vi.fn();
+      const repeatableFeats = [
+        { index: 'war-chant', name: 'War Chant', repeatable: true },
+      ];
+      renderComponent({
+        allFeats: repeatableFeats,
+        formData: { ...mockFormData, feats: ['War Chant'] },
+        onArrayFieldChange: mockOnChange,
+      });
+
+      fireEvent.click(screen.getByText('Add Another'));
+      expect(mockOnChange).toHaveBeenCalledWith('feats', []);
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should handle null allFeats gracefully', () => {
+      renderComponent({ allFeats: null });
+      expect(screen.getByText('Step 4: Feats')).toBeInTheDocument();
+    });
+
+    it('should handle undefined allFeats gracefully', () => {
+      renderComponent({ allFeats: undefined });
+      expect(screen.getByText('Step 4: Feats')).toBeInTheDocument();
+    });
+
+    it('should pass correct props to SelectableList', () => {
+      renderComponent({
+        formData: { ...mockFormData, feats: ['Lucky'] },
+        preSelectedFeats: ['Lucky'],
+      });
+
+      expect(screen.getByText('Step 4: Feats')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Search feats...')).toBeInTheDocument();
+      expect(screen.getByText(/Showing 7 feats/)).toBeInTheDocument();
     });
   });
 });

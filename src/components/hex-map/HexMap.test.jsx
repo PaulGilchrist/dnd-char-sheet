@@ -1,3 +1,8 @@
+// @improved-by-ai
+// HexMap integration tests: rendering, toolbar wiring, panel/overlay visibility,
+// SVG pointer interaction, background-click state cleanup, and POI drag-and-drop.
+// Travel-tool/advance behavior lives in HexMap.travel.test.jsx and event-handler
+// behavior lives in HexMap.additional.test.jsx; this file does not duplicate those.
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -16,19 +21,23 @@ if (!globalThis.PointerEvent) {
 vi.mock('./TerrainLayer.jsx', () => ({ default: () => <g data-testid="terrain-layer" /> }));
 vi.mock('./HexGridLayer.jsx', () => ({ default: () => <g data-testid="hex-grid-layer" /> }));
 vi.mock('./HexMapToolbar.jsx', () => ({
-    default: ({ onBack, mapName, zoomIn, zoomOut, resetView }) =>
+    default: ({ onBack, mapName, zoomIn, zoomOut, resetView, setTool, setPoiPanelOpen, setMarchingOrderOpen }) =>
         <div data-testid="toolbar">
             <button data-testid="toolbar-back" onClick={onBack}>Back</button>
             <span data-testid="toolbar-name">{mapName}</span>
             <button data-testid="toolbar-zoomin" onClick={zoomIn}>+</button>
             <button data-testid="toolbar-zoomout" onClick={zoomOut}>-</button>
             <button data-testid="toolbar-resetview" onClick={resetView}>Reset</button>
+            <button data-testid="toolbar-paint" onClick={() => setTool('paint')}>Paint</button>
+            <button data-testid="toolbar-road" onClick={() => setTool('road')}>Road</button>
+            <button data-testid="toolbar-poi-panel" onClick={() => setPoiPanelOpen(true)}>POIs</button>
+            <button data-testid="toolbar-marching" onClick={() => setMarchingOrderOpen(true)}>Marching</button>
         </div>,
 }));
 vi.mock('./POILayer.jsx', () => ({ default: () => <g data-testid="poi-layer" /> }));
-vi.mock('./POIPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="poi-panel"><button onClick={onClose}>Close</button></div> }));
+vi.mock('./POIPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="poi-panel"><button data-testid="poi-panel-close" onClick={onClose}>Close</button></div> }));
 vi.mock('./POIContextMenu.jsx', () => ({ default: ({ selectedPoi, onClose }) => selectedPoi ? <g data-testid="poi-context-menu"><text onClick={onClose}>Close</text></g> : null }));
-vi.mock('./MarchingOrderPanel.jsx', () => ({ default: () => <div data-testid="marching-panel" /> }));
+vi.mock('./MarchingOrderPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="marching-panel"><button data-testid="marching-panel-close" onClick={onClose}>Close</button></div> }));
 vi.mock('./PartyMarkerLayer.jsx', () => ({ default: ({ position }) => position ? <g data-testid="party-marker" /> : null }));
 vi.mock('./RiverLayer.jsx', () => ({ default: () => <g data-testid="river-layer" /> }));
 vi.mock('./RoadLayer.jsx', () => ({ default: () => <g data-testid="road-layer" /> }));
@@ -200,6 +209,13 @@ function setupDefaultMocks() {
     mapsService.formatMapName.mockReturnValue('Test Map');
 }
 
+/** Renders the map in its default (loaded, idle) state. */
+function renderMap(props = {}) {
+    render(<HexMap campaignName="test" mapName="test-map" {...props} />);
+}
+
+const mapSvg = () => document.querySelector('.hex-svg');
+
 describe('HexMap', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -207,68 +223,99 @@ describe('HexMap', () => {
     });
 
     describe('Rendering', () => {
-        it('shows loading state', () => {
+        it('shows a loading message but keeps the toolbar while loading', () => {
             useMapLoader.mockReturnValue(makeMapLoader({ loading: true }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
+            renderMap();
             expect(screen.getByText('Loading map...')).toBeInTheDocument();
             expect(screen.getByTestId('toolbar')).toBeInTheDocument();
+            expect(mapSvg()).not.toBeInTheDocument();
         });
 
-        it('renders full canvas when loaded', () => {
-            render(<HexMap campaignName="test" mapName="test-map" />);
+        it('renders the full canvas once loaded', () => {
+            renderMap();
             expect(screen.queryByText('Loading map...')).not.toBeInTheDocument();
             expect(screen.getByText('1 hex = 6 miles')).toBeInTheDocument();
             expect(screen.getByTestId('toolbar')).toBeInTheDocument();
+            expect(mapSvg()).toBeInTheDocument();
         });
+    });
 
-        it('passes onBack to toolbar', () => {
+    describe('Toolbar wiring', () => {
+        it('calls onBack when the back button is clicked', () => {
             const onBack = vi.fn();
-            render(<HexMap campaignName="test" mapName="test-map" onBack={onBack} />);
+            renderMap({ onBack });
             fireEvent.click(screen.getByTestId('toolbar-back'));
-            expect(onBack).toHaveBeenCalled();
+            expect(onBack).toHaveBeenCalledTimes(1);
         });
 
-        it('passes mapName to toolbar', () => {
+        it('formats and passes the map name to the toolbar', () => {
             mapsService.formatMapName.mockReturnValue('My Map');
-            render(<HexMap campaignName="test" mapName="test-map" />);
+            renderMap();
+            expect(mapsService.formatMapName).toHaveBeenCalledWith('test-map');
             expect(screen.getByTestId('toolbar-name')).toHaveTextContent('My Map');
         });
     });
 
-    describe('Weather overlay', () => {
-        it('renders when weather is set', () => {
+    describe('Panels and overlays', () => {
+        it('renders the weather overlay when weather is set', () => {
             useMapLoader.mockReturnValue(makeMapLoader({ weather: { condition: 'rain' } }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
+            renderMap();
             expect(screen.getByTestId('weather-overlay')).toBeInTheDocument();
         });
-    });
 
-    describe('Panels and overlays', () => {
-        it('renders POI context menu when selectedPoiMenu set', () => {
+        it('does not render the weather overlay without weather', () => {
+            renderMap();
+            expect(screen.queryByTestId('weather-overlay')).not.toBeInTheDocument();
+        });
+
+        it('renders the POI context menu when a POI is selected', () => {
             usePoiManagement.mockReturnValue(makePoiManagement({ selectedPoiMenu: { id: 'poi-1', q: 0, r: 0 } }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
+            renderMap();
             expect(screen.getByTestId('poi-context-menu')).toBeInTheDocument();
         });
 
-        it('renders travel panel when travel active', () => {
-            useTravelManagement.mockReturnValue(makeTravelMgmt({
-                isTravelActive: true, travelMode: 'traveling',
-            }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            expect(screen.getByTestId('travel-panel')).toBeInTheDocument();
+        it('does not render the POI context menu without a selection', () => {
+            renderMap();
+            expect(screen.queryByTestId('poi-context-menu')).not.toBeInTheDocument();
         });
 
-        it('renders event dialog when pending event', () => {
-            useTravelManagement.mockReturnValue(makeTravelMgmt({
-                pendingEvent: { type: 'combat', title: 'Ambush' },
-            }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            expect(screen.getByTestId('event-dialog')).toBeInTheDocument();
+        it('renders the party marker when a party position is set', () => {
+            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 } }));
+            renderMap();
+            expect(screen.getByTestId('party-marker')).toBeInTheDocument();
+        });
+
+        it('does not render the party marker without a party position', () => {
+            renderMap();
+            expect(screen.queryByTestId('party-marker')).not.toBeInTheDocument();
+        });
+
+        it('opens and closes the POI panel from the toolbar', () => {
+            renderMap();
+            expect(screen.queryByTestId('poi-panel')).not.toBeInTheDocument();
+            fireEvent.click(screen.getByTestId('toolbar-poi-panel'));
+            expect(screen.getByTestId('poi-panel')).toBeInTheDocument();
+            fireEvent.click(screen.getByTestId('poi-panel-close'));
+            expect(screen.queryByTestId('poi-panel')).not.toBeInTheDocument();
+        });
+
+        it('opens and closes the marching order panel from the toolbar', () => {
+            renderMap();
+            expect(screen.queryByTestId('marching-panel')).not.toBeInTheDocument();
+            fireEvent.click(screen.getByTestId('toolbar-marching'));
+            expect(screen.getByTestId('marching-panel')).toBeInTheDocument();
+            fireEvent.click(screen.getByTestId('marching-panel-close'));
+            expect(screen.queryByTestId('marching-panel')).not.toBeInTheDocument();
+        });
+
+        it('does not render the event dialog without a pending event', () => {
+            renderMap();
+            expect(screen.queryByTestId('event-dialog')).not.toBeInTheDocument();
         });
     });
 
-    describe('SVG pointer events', () => {
-        it('calls pointer move handlers', () => {
+    describe('SVG interaction events', () => {
+        it('routes pointer move to the pan, terrain, POI, and hover handlers', () => {
             const zp = makeZoomPan();
             const tp = makeTerrainPainting();
             const pm = makePoiManagement();
@@ -277,29 +324,29 @@ describe('HexMap', () => {
             useTerrainPainting.mockReturnValue(tp);
             usePoiManagement.mockReturnValue(pm);
             useHexHover.mockReturnValue(hh);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent(document.querySelector('.hex-svg'), new MouseEvent('pointermove', { bubbles: true }));
-            expect(zp.handlePanMove).toHaveBeenCalled();
-            expect(tp.handleTerrainPointerMove).toHaveBeenCalled();
-            expect(pm.handlePoiPointerMove).toHaveBeenCalled();
-            expect(hh.handleHexHover).toHaveBeenCalled();
+            renderMap();
+            fireEvent.pointerMove(mapSvg());
+            expect(zp.handlePanMove).toHaveBeenCalledTimes(1);
+            expect(tp.handleTerrainPointerMove).toHaveBeenCalledTimes(1);
+            expect(pm.handlePoiPointerMove).toHaveBeenCalledTimes(1);
+            expect(hh.handleHexHover).toHaveBeenCalledTimes(1);
         });
 
-        it('calls pointer up handlers', () => {
+        it('routes pointer up to the pan, terrain, and POI handlers', () => {
             const zp = makeZoomPan();
             const tp = makeTerrainPainting();
             const pm = makePoiManagement();
             useZoomPan.mockReturnValue(zp);
             useTerrainPainting.mockReturnValue(tp);
             usePoiManagement.mockReturnValue(pm);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent(document.querySelector('.hex-svg'), new MouseEvent('pointerup', { bubbles: true }));
-            expect(zp.handlePanEnd).toHaveBeenCalled();
-            expect(tp.handleTerrainPointerUp).toHaveBeenCalled();
-            expect(pm.handlePoiPointerUp).toHaveBeenCalled();
+            renderMap();
+            fireEvent.pointerUp(mapSvg());
+            expect(zp.handlePanEnd).toHaveBeenCalledTimes(1);
+            expect(tp.handleTerrainPointerUp).toHaveBeenCalledTimes(1);
+            expect(pm.handlePoiPointerUp).toHaveBeenCalledTimes(1);
         });
 
-        it('clears hovered hex on pointer leave', () => {
+        it('clears the hovered hex on pointer leave without ending gestures', () => {
             const hh = makeHexHover();
             const zp = makeZoomPan();
             const tp = makeTerrainPainting();
@@ -308,94 +355,108 @@ describe('HexMap', () => {
             useZoomPan.mockReturnValue(zp);
             useTerrainPainting.mockReturnValue(tp);
             usePoiManagement.mockReturnValue(pm);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.pointerLeave(document.querySelector('.hex-svg'));
+            renderMap();
+            fireEvent.pointerLeave(mapSvg());
             expect(hh.setHoveredHex).toHaveBeenCalledWith(null);
             expect(zp.handlePanEnd).not.toHaveBeenCalled();
             expect(tp.handleTerrainPointerUp).not.toHaveBeenCalled();
             expect(pm.handlePoiPointerUp).not.toHaveBeenCalled();
         });
+
+        it('routes wheel events to the zoom/pan handler', () => {
+            const zp = makeZoomPan();
+            useZoomPan.mockReturnValue(zp);
+            renderMap();
+            fireEvent.wheel(mapSvg());
+            expect(zp.handleWheel).toHaveBeenCalledTimes(1);
+        });
+
+        it('prevents the browser context menu on the map', () => {
+            renderMap();
+            const e = new Event('contextmenu', { bubbles: true, cancelable: true });
+            const spy = vi.spyOn(e, 'preventDefault');
+            fireEvent(mapSvg(), e);
+            expect(spy).toHaveBeenCalled();
+        });
     });
 
-    describe('Click handler clears POI menu, rename, road state', () => {
-        it('clears menus on click', () => {
+    describe('Map background click', () => {
+        it('clears the POI menu and rename panel when the map is clicked', () => {
             const pm = makePoiManagement();
             usePoiManagement.mockReturnValue(pm);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.click(document.querySelector('.hex-svg'));
+            renderMap();
+            fireEvent.click(mapSvg());
             expect(pm.setSelectedPoiMenu).toHaveBeenCalledWith(null);
             expect(pm.setShowRename).toHaveBeenCalledWith(null);
             expect(pm.setRoadStartPoiId).not.toHaveBeenCalled();
         });
+
+        it('clears the pending road connection when the road tool is active', () => {
+            const pm = makePoiManagement();
+            usePoiManagement.mockReturnValue(pm);
+            renderMap();
+            fireEvent.click(screen.getByTestId('toolbar-road'));
+            fireEvent.click(mapSvg());
+            expect(pm.setRoadStartPoiId).toHaveBeenCalledWith(null);
+        });
     });
 
-    describe('Drag and drop', () => {
-        it('processes POI drop with valid hex and adds POI via setPois', () => {
-            const dt = { getData: vi.fn(() => 'city') };
-            const hh = makeHexHover({ getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })) });
-            const ml = makeMapLoader();
-            useHexHover.mockReturnValue(hh);
+    describe('POI drag and drop', () => {
+        function dropOnMap({ dragData, getHexFromEvent, mapOverrides = {} }) {
+            const dt = { getData: vi.fn(() => dragData) };
+            const ml = makeMapLoader(mapOverrides);
+            useHexHover.mockReturnValue(makeHexHover({ getHexFromEvent }));
             useMapLoader.mockReturnValue(ml);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.drop(document.querySelector('.hex-svg'), { dataTransfer: dt });
-            expect(hh.getHexFromEvent).toHaveBeenCalled();
-            expect(ml.setPois).toHaveBeenCalled();
-            const poisArg = ml.setPois.mock.calls[0][0];
-            expect(typeof poisArg).toBe('function');
-            const newPois = poisArg([]);
-            expect(newPois).toHaveLength(1);
-            expect(newPois[0].type).toBe('city');
-            expect(newPois[0].q).toBe(10);
-            expect(newPois[0].r).toBe(5);
+            renderMap();
+            fireEvent.drop(mapSvg(), { dataTransfer: dt });
+            return { dt, ml };
+        }
+
+        it('adds the dropped POI to the map, preserving existing POIs', () => {
+            const { dt, ml } = dropOnMap({
+                dragData: 'city',
+                getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
+            });
+            expect(dt.getData).toHaveBeenCalledWith('text/plain');
+            expect(ml.setPois).toHaveBeenCalledTimes(1);
+
+            const existingPois = [{ id: 'poi-0', q: 0, r: 0, type: 'camp', visible: true, label: 'Camp' }];
+            const newPois = ml.setPois.mock.calls[0][0](existingPois);
+            expect(newPois).toHaveLength(2);
+            expect(newPois[0]).toBe(existingPois[0]);
+            expect(newPois[1]).toMatchObject({ type: 'city', q: 10, r: 5, visible: true });
+            expect(newPois[1].id).toBeTruthy();
         });
 
-        it('prevents default on dragover', () => {
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            const svg = document.querySelector('.hex-svg');
-            const e = new Event('dragover', { bubbles: true, cancelable: true });
-            const spy = vi.spyOn(e, 'preventDefault');
-            fireEvent(svg, e);
-            expect(spy).toHaveBeenCalled();
-        });
-
-        it('does not add POI when hex already has a POI', () => {
-            const dt = { getData: vi.fn(() => 'city') };
-            const hh = makeHexHover({ getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })) });
-            const ml = makeMapLoader({ pois: [{ q: 10, r: 5, type: 'camp' }] });
-            useHexHover.mockReturnValue(hh);
-            useMapLoader.mockReturnValue(ml);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.drop(document.querySelector('.hex-svg'), { dataTransfer: dt });
-            expect(hh.getHexFromEvent).toHaveBeenCalled();
+        it('does not add a POI when the drop hex already has one', () => {
+            const { ml } = dropOnMap({
+                dragData: 'city',
+                getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
+                mapOverrides: { pois: [{ q: 10, r: 5, type: 'camp' }] },
+            });
             expect(ml.setPois).not.toHaveBeenCalled();
         });
-    });
 
-    describe('Event button handlers', () => {
-        it('calls accept/skip/reroll from event dialog', () => {
-            const tm = makeTravelMgmt({ pendingEvent: { type: 'combat', title: 'Ambush' } });
-            useTravelManagement.mockReturnValue(tm);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.click(screen.getByTestId('event-accept'));
-            expect(tm.acceptEvent).toHaveBeenCalled();
-            fireEvent.click(screen.getByTestId('event-skip'));
-            expect(tm.skipEvent).toHaveBeenCalled();
-            fireEvent.click(screen.getByTestId('event-reroll'));
-            expect(tm.rerollEvent).toHaveBeenCalled();
+        it('prevents default on dragover so the drop is accepted', () => {
+            renderMap();
+            const e = new Event('dragover', { bubbles: true, cancelable: true });
+            const spy = vi.spyOn(e, 'preventDefault');
+            fireEvent(mapSvg(), e);
+            expect(spy).toHaveBeenCalled();
         });
     });
 
     describe('Zoom and view controls', () => {
-        it('calls toolbar zoom/pan actions when buttons are clicked', () => {
+        it('calls the toolbar zoom/pan actions when their buttons are clicked', () => {
             const zp = makeZoomPan();
             useZoomPan.mockReturnValue(zp);
-            render(<HexMap campaignName="test" mapName="test-map" />);
+            renderMap();
             fireEvent.click(screen.getByTestId('toolbar-zoomin'));
-            expect(zp.zoomIn).toHaveBeenCalled();
+            expect(zp.zoomIn).toHaveBeenCalledTimes(1);
             fireEvent.click(screen.getByTestId('toolbar-zoomout'));
-            expect(zp.zoomOut).toHaveBeenCalled();
+            expect(zp.zoomOut).toHaveBeenCalledTimes(1);
             fireEvent.click(screen.getByTestId('toolbar-resetview'));
-            expect(zp.resetView).toHaveBeenCalled();
+            expect(zp.resetView).toHaveBeenCalledTimes(1);
         });
     });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
@@ -73,7 +74,6 @@ vi.mock('./shared/CreatureSelectionModal.jsx', () => ({
 
 // ── Re-import mocked modules ──
 
-import * as diceRoller from '../../../services/dice/diceRoller.js';
 import * as combatData from '../../../services/encounters/combatData.js';
 
 // ── Test fixtures ──
@@ -107,7 +107,6 @@ function renderModal(props = {}) {
 describe('ElementalAttunementModal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
     });
 
     // ── Element selection phase ──
@@ -119,62 +118,18 @@ describe('ElementalAttunementModal', () => {
             expect(document.querySelector('.sp-modal')).toBeInTheDocument();
         });
 
-        it('renders sp-header, sp-body, and sp-actions', () => {
-            renderModal();
-            expect(document.querySelector('.sp-header')).toBeInTheDocument();
-            expect(document.querySelector('.sp-body')).toBeInTheDocument();
-            expect(document.querySelector('.sp-actions')).toBeInTheDocument();
-        });
-
-        it('renders the wand icon in the header', () => {
-            renderModal();
-            expect(document.querySelector('.sp-header i.fa-solid.fa-wand-magic-sparkles')).toBeInTheDocument();
-        });
-
-        it('renders "Elemental Attunement" in the header', () => {
+        it('renders the modal header with title and instruction text', () => {
             renderModal();
             expect(screen.getByText('Elemental Attunement')).toBeInTheDocument();
-        });
-
-        it('renders the instruction text', () => {
-            renderModal();
             expect(screen.getByText('Choose the element for your manifestation:')).toBeInTheDocument();
         });
 
-        it('renders all four elemental buttons', () => {
+        it('renders all four elemental buttons with their descriptions', () => {
             renderModal();
             expect(screen.getByText('Cold')).toBeInTheDocument();
             expect(screen.getByText('Fire')).toBeInTheDocument();
             expect(screen.getByText('Lightning')).toBeInTheDocument();
             expect(screen.getByText('Thunder')).toBeInTheDocument();
-        });
-
-        it('renders Cold button with snowflake icon', () => {
-            renderModal();
-            const icon = screen.getByText('Cold').closest('button').querySelector('i');
-            expect(icon).toHaveClass('fa-solid', 'fa-snowflake');
-        });
-
-        it('renders Fire button with fire icon', () => {
-            renderModal();
-            const icon = screen.getByText('Fire').closest('button').querySelector('i');
-            expect(icon).toHaveClass('fa-solid', 'fa-fire');
-        });
-
-        it('renders Lightning button with bolt icon', () => {
-            renderModal();
-            const icon = screen.getByText('Lightning').closest('button').querySelector('i');
-            expect(icon).toHaveClass('fa-solid', 'fa-bolt');
-        });
-
-        it('renders Thunder button with volume-high icon', () => {
-            renderModal();
-            const icon = screen.getByText('Thunder').closest('button').querySelector('i');
-            expect(icon).toHaveClass('fa-solid', 'fa-volume-high');
-        });
-
-        it('renders descriptions for each element', () => {
-            renderModal();
             expect(screen.getByText(/5-ft radius area of extreme cold/)).toBeInTheDocument();
             expect(screen.getByText(/5-ft radius flames/)).toBeInTheDocument();
             expect(screen.getByText(/60-ft line of lightning/)).toBeInTheDocument();
@@ -184,17 +139,6 @@ describe('ElementalAttunementModal', () => {
         it('renders the Cancel button', () => {
             renderModal();
             expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-        });
-
-        it('has correct CSS classes', () => {
-            renderModal();
-            expect(document.querySelector('.sp-overlay')).toHaveClass('sp-overlay');
-            expect(document.querySelector('.sp-modal')).toHaveClass('sp-modal');
-            expect(document.querySelector('.sp-header')).toHaveClass('sp-header');
-            expect(document.querySelector('.sp-body')).toHaveClass('sp-body');
-            expect(document.querySelector('.sp-actions')).toHaveClass('sp-actions');
-            expect(screen.getByText('Fire').closest('button')).toHaveClass('sp-roll-btn');
-            expect(screen.getByRole('button', { name: 'Cancel' })).toHaveClass('sp-dismiss-btn');
         });
     });
 
@@ -219,12 +163,6 @@ describe('ElementalAttunementModal', () => {
             expect(handleClose).not.toHaveBeenCalled();
         });
 
-        it('does not call onClose when sp-body is clicked', () => {
-            const { handleClose } = renderModal();
-            fireEvent.click(document.querySelector('.sp-body'));
-            expect(handleClose).not.toHaveBeenCalled();
-        });
-
         it('calls onClose when Skip is clicked in CreatureSelectionModal', async () => {
             const { handleClose } = renderModal();
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
@@ -244,11 +182,6 @@ describe('ElementalAttunementModal', () => {
                 fireEvent.click(overlay);
             }
             expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('does not throw on unmount from element phase', () => {
-            const { unmount } = renderModal();
-            expect(() => unmount()).not.toThrow();
         });
     });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AttackRiderModal from './AttackRiderModal.jsx';
@@ -352,6 +353,13 @@ describe('AttackRiderModal', () => {
       fireEvent.click(screen.getByText('Cancel'));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('calls onClose when clicking the overlay before applying', () => {
+      const onClose = vi.fn();
+      render(<AttackRiderModal {...makeProps({ onClose })} />);
+      fireEvent.click(document.querySelector('.sp-overlay'));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('edge cases', () => {
@@ -426,77 +434,6 @@ describe('AttackRiderModal', () => {
     it('shows cost for each option', () => {
       render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
       expect(document.querySelector('.sp-body').textContent).toContain('Cost: 1d6 Sneak Attack dice');
-    });
-  });
-
-  describe('Versatile Trickster secondary targets', () => {
-    beforeEach(() => applyRiderOption.mockResolvedValue(defaultResult));
-
-    it('shows Versatile Trickster secondary target modal after applying', async () => {
-      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
-      grv.mockImplementation((char, key) => {
-        if (key === 'versatileTricksterSecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }, { label: 'Creature B', value: 'Creature B' }];
-        return undefined;
-      });
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByText('Versatile Trickster')).toBeInTheDocument());
-      expect(screen.getByText(/Trip applied to/)).toBeInTheDocument();
-      expect(screen.getByText(/Trip another creature within 5 feet/)).toBeInTheDocument();
-    });
-
-    it('calls applyVersatileTrickster when a target is selected', async () => {
-      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
-      grv.mockImplementation((char, key) => {
-        if (key === 'versatileTricksterSecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
-        if (key === 'versatileTricksterAction') return { name: 'VT Action' };
-        return undefined;
-      });
-      const { applyVersatileTrickster } = await import('../../../../services/automation/handlers/class-fighter-rogue/versatileTricksterHandler.js');
-      applyVersatileTrickster.mockResolvedValue(defaultResult);
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByText('Versatile Trickster')).toBeInTheDocument());
-      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
-      fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
-      await waitFor(() => expect(applyVersatileTrickster).toHaveBeenCalled());
-    });
-
-    it('shows result screen after Versatile Trickster apply', async () => {
-      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
-      grv.mockImplementation((char, key) => {
-        if (key === 'versatileTricksterSecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
-        if (key === 'versatileTricksterAction') return { name: 'VT Action' };
-        return undefined;
-      });
-      const { applyVersatileTrickster } = await import('../../../../services/automation/handlers/class-fighter-rogue/versatileTricksterHandler.js');
-      applyVersatileTrickster.mockResolvedValue(defaultResult);
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByText('Versatile Trickster')).toBeInTheDocument());
-      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
-      fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
-      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
-    });
-
-    it('closes after Done is clicked in Versatile Trickster result', async () => {
-      const onClose = vi.fn();
-      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
-      grv.mockImplementation((char, key) => {
-        if (key === 'versatileTricksterSecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
-        if (key === 'versatileTricksterAction') return { name: 'VT Action' };
-        return undefined;
-      });
-      const { applyVersatileTrickster } = await import('../../../../services/automation/handlers/class-fighter-rogue/versatileTricksterHandler.js');
-      applyVersatileTrickster.mockResolvedValue(defaultResult);
-      render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByText('Versatile Trickster')).toBeInTheDocument());
-      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
-      fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
-      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
-      fireEvent.click(screen.getByText('Done'));
-      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 

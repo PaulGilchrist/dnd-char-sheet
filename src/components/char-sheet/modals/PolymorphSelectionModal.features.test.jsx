@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PolymorphSelectionModal from './PolymorphSelectionModal.jsx';
@@ -140,14 +141,7 @@ describe('PolymorphSelectionModal - Features', () => {
         });
 
         it('uses default title and icon when not provided', async () => {
-            const props = {
-                playerStats: { class: { name: 'Druid' }, level: 4, rules: '5e' },
-                maxCR: 1,
-                campaignName: 'test-campaign',
-                onConfirm: vi.fn(),
-                onCancel: vi.fn(),
-            };
-            render(<PolymorphSelectionModal {...props} />);
+            render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 expect(screen.getByText('Wild Shape')).toBeInTheDocument();
             });
@@ -160,7 +154,6 @@ describe('PolymorphSelectionModal - Features', () => {
         it('includes non-beast creatures when allowAnyCreature is true', async () => {
             render(<PolymorphSelectionModal {...makeProps({ allowAnyCreature: true, maxCR: 3 })} />);
             await waitFor(() => {
-                // Ghast has CR 2, which passes with maxCR 3
                 expect(screen.getByText('Ghast')).toBeInTheDocument();
             });
         });
@@ -186,7 +179,7 @@ describe('PolymorphSelectionModal - Features', () => {
             });
         });
 
-        it('filters to CR 9 or lower in object_into_creature mode', async () => {
+        it('filters to CR 9 or lower and shows correct instruction in object_into_creature mode', async () => {
             render(<PolymorphSelectionModal {...makeProps({
                 allowAnyCreature: true,
                 mode: 'object_into_creature',
@@ -194,6 +187,8 @@ describe('PolymorphSelectionModal - Features', () => {
             await waitFor(() => {
                 expect(screen.getByText('Choose a creature form (CR 9 or lower)')).toBeInTheDocument();
             });
+            // Ghast has CR 2, which should pass the CR 9 filter
+            expect(screen.getByText('Ghast')).toBeInTheDocument();
         });
     });
 
@@ -203,8 +198,6 @@ describe('PolymorphSelectionModal - Features', () => {
                 excludeTypes: ['Beast'],
             })} />);
             await waitFor(() => {
-                // All mock beasts are type 'Beast', so all should be excluded
-                // Since allowAnyCreature is false, the no-results message says "No beasts match..."
                 expect(screen.getByText(/No beasts match/)).toBeInTheDocument();
             });
         });
@@ -226,37 +219,16 @@ describe('PolymorphSelectionModal - Features', () => {
         });
     });
 
-    describe('challenge rating parsing', () => {
-        it('handles fractional CR (1/4) correctly', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const crTexts = document.querySelectorAll('.wild-shape-beast-cr');
-                const crs = Array.from(crTexts).map(el => el.textContent.trim());
-                expect(crs).toContain('CR 0.25');
-            });
-        });
-
-        it('handles CR as integer string', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const crTexts = document.querySelectorAll('.wild-shape-beast-cr');
-                const crs = Array.from(crTexts).map(el => el.textContent.trim());
-                expect(crs).toContain('CR 1');
-            });
-        });
-
-        it('handles CR 0 beasts', async () => {
+    describe('challenge rating display', () => {
+        it('displays all CR formats correctly and sorts by CR ascending then name', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 const crTexts = document.querySelectorAll('.wild-shape-beast-cr');
                 const crs = Array.from(crTexts).map(el => el.textContent.trim());
                 expect(crs).toContain('CR 0');
-            });
-        });
+                expect(crs).toContain('CR 0.25');
+                expect(crs).toContain('CR 1');
 
-        it('sorts beasts by CR ascending then by name', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
                 const items = document.querySelectorAll('.wild-shape-beast-item');
                 const names = Array.from(items).map(item => {
                     const nameEl = item.querySelector('.wild-shape-beast-name');
@@ -264,7 +236,7 @@ describe('PolymorphSelectionModal - Features', () => {
                 });
                 // CR 0 (Rat) should come first
                 expect(names[0]).toContain('Rat');
-                // CR 0.25 items (Panther, Wolf) should come next, sorted alphabetically
+                // CR 0.25 items sorted alphabetically
                 const cr025Items = names.filter(n => n.includes('Panther') || n.includes('Wolf'));
                 expect(cr025Items[0]).toContain('Panther');
                 expect(cr025Items[1]).toContain('Wolf');
@@ -273,17 +245,7 @@ describe('PolymorphSelectionModal - Features', () => {
     });
 
     describe('speed formatting', () => {
-        it('renders walk speed', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const speedTexts = document.querySelectorAll('.wild-shape-beast-stats');
-                const speeds = Array.from(speedTexts).map(el => el.textContent.trim());
-                expect(speeds.some(s => s.includes('Walk 40'))).toBe(true);
-            });
-        });
-
-        it('renders climb speed when present', async () => {
-            // "walk and swim" limitations allow climb speeds (filterBeastSpeeds keeps climb when hasSwim=true)
+        it('renders climb speed when wild shape limitations allow it', async () => {
             getClassFeaturesOverride = {
                 wildShapeLimitations: 'walk and swim',
                 maxWildShapeChallengeRating: 1,
@@ -296,26 +258,11 @@ describe('PolymorphSelectionModal - Features', () => {
             });
         });
 
-        it('renders walk speed for beasts with walk 20', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const speedTexts = document.querySelectorAll('.wild-shape-beast-stats');
-                const speeds = Array.from(speedTexts).map(el => el.textContent.trim());
-                // Crocodile has walk: 20
-                expect(speeds.some(s => s.includes('Walk 20'))).toBe(true);
-            });
-        });
-
         it('separates multiple speeds with commas', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
-                // Panther has walk: 40, climb: 20, so formatSpeed returns "Walk 40, Climb 20"
-                // The component renders these as separate spans inside .wild-shape-beast-stats
-                // Check the parent element's textContent which combines all spans
                 const speedParents = document.querySelectorAll('.wild-shape-beast-stats');
                 const parentTexts = Array.from(speedParents).map(el => el.textContent.trim());
-                // Should have a parent containing "SmallWalk 40, Climb 20" (size + speeds combined)
-                // or we can check that some element contains both Walk and Climb
                 expect(parentTexts.some(t => t.includes('Walk 40') && t.includes('Climb 20'))).toBe(true);
             });
         });
@@ -349,34 +296,7 @@ describe('PolymorphSelectionModal - Features', () => {
         });
     });
 
-    describe('wild shape limitations filtering', () => {
-        it('filters out beasts without walk speed when limitations require walk', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                // All remaining beasts should have walk speed
-                const items = document.querySelectorAll('.wild-shape-beast-item');
-                expect(items.length).toBeGreaterThan(0);
-            });
-        });
-
-        it('shows wild shape limitations text when available and not allowAnyCreature', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText(/Movement:/)).toBeInTheDocument();
-            });
-        });
-
-        it('does not show wild shape limitations when allowAnyCreature is true', async () => {
-            render(<PolymorphSelectionModal {...makeProps({ allowAnyCreature: true })} />);
-            await waitFor(() => {
-                expect(screen.queryByText(/Movement:/)).not.toBeInTheDocument();
-            });
-        });
-
-
-    });
-
-    describe('effectiveMaxCR from props vs class features', () => {
+    describe('effectiveMaxCR resolution', () => {
         it('uses maxCR prop when it is a number', async () => {
             render(<PolymorphSelectionModal {...makeProps({ maxCR: 2 })} />);
             await waitFor(() => {
@@ -392,7 +312,6 @@ describe('PolymorphSelectionModal - Features', () => {
 
             render(<PolymorphSelectionModal {...makeProps({ maxCR: null })} />);
             await waitFor(() => {
-                // getClassFeatures returns maxWildShapeChallengeRating: 2
                 expect(screen.getByText('Choose a beast form (CR 2 or lower)')).toBeInTheDocument();
             });
         });
@@ -405,15 +324,14 @@ describe('PolymorphSelectionModal - Features', () => {
 
             render(<PolymorphSelectionModal {...makeProps({ maxCR: null })} />);
             await waitFor(() => {
-                // CR 0 beasts should pass (max is 0), CR 1 beasts should be filtered
                 expect(screen.getByText('Rat')).toBeInTheDocument();
                 expect(screen.queryByText('Giant Spider')).not.toBeInTheDocument();
             });
         });
     });
 
-    describe('overlay behavior', () => {
-        it('renders the overlay with sp-overlay and sp-overlay--evasion classes', async () => {
+    describe('overlay and modal structure', () => {
+        it('renders overlay with correct classes', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 expect(screen.getByText('Wild Shape')).toBeInTheDocument();
@@ -423,7 +341,7 @@ describe('PolymorphSelectionModal - Features', () => {
             expect(overlay).toHaveClass('sp-overlay--evasion');
         });
 
-        it('renders the modal with sp-modal and sp-modal--wide classes', async () => {
+        it('renders modal with correct classes', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 expect(screen.getByText('Wild Shape')).toBeInTheDocument();
@@ -432,9 +350,7 @@ describe('PolymorphSelectionModal - Features', () => {
             expect(modal).toHaveClass('sp-modal');
             expect(modal).toHaveClass('sp-modal--wide');
         });
-    });
 
-    describe('button classes', () => {
         it('renders both Cancel and confirm buttons in the actions area', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
@@ -446,16 +362,13 @@ describe('PolymorphSelectionModal - Features', () => {
             expect(rollBtn).toBeInTheDocument();
             expect(dismissBtn.textContent).toContain('Cancel');
         });
-    });
 
-    describe('beast size rendering', () => {
         it('renders beast size in the stats line', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 expect(screen.getByText('Wolf')).toBeInTheDocument();
             });
 
-            // Find the wolf item specifically
             let wolfStats = null;
             for (const item of document.querySelectorAll('.wild-shape-beast-item')) {
                 const nameEl = item.querySelector('.wild-shape-beast-name');

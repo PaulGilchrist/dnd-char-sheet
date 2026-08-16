@@ -1,4 +1,5 @@
-import { renderHook, act } from '@testing-library/react';
+// @improved-by-ai
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import useNpcImageCache from './useNpcImageCache.js';
 
@@ -10,11 +11,14 @@ import { getMonsterImageUrl } from '../../../services/npcs/monsterUtils.js';
 
 describe('useNpcImageCache', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   const getHook = (placedItems, campaignName) => {
-    const { result } = renderHook(() => useNpcImageCache(placedItems, campaignName));
+    const { result } = renderHook(
+      ({ items, campaignName }) => useNpcImageCache(items, campaignName),
+      { initialProps: { items: placedItems, campaignName } },
+    );
     return result;
   };
 
@@ -29,13 +33,39 @@ describe('useNpcImageCache', () => {
 
       getHook(placedItems);
 
-      await act(async () => {
-        await Promise.resolve();
+      await waitFor(() => {
+        expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
       });
 
-      expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
-      expect(getMonsterImageUrl).toHaveBeenCalledWith('Goblin', null, undefined);
-      expect(getMonsterImageUrl).toHaveBeenCalledWith('Orc', null, undefined);
+      expect(getMonsterImageUrl).toHaveBeenNthCalledWith(1, 'Goblin', null, undefined);
+      expect(getMonsterImageUrl).toHaveBeenNthCalledWith(2, 'Orc', null, undefined);
+    });
+
+    it('should make no calls when placedItems is empty', () => {
+      getHook([]);
+
+      expect(getMonsterImageUrl).not.toHaveBeenCalled();
+    });
+
+    it('should store null for npc items without a name property', async () => {
+      const placedItems = [
+        { type: 'npc' },
+        { type: 'npc', name: 'Goblin' },
+      ];
+      getMonsterImageUrl
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce('https://example.com/goblin.jpg');
+
+      const result = getHook(placedItems);
+
+      await waitFor(() => {
+        expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
+      });
+
+      expect(result.current.npcImages).toEqual({
+        [undefined]: null,
+        Goblin: 'https://example.com/goblin.jpg',
+      });
     });
   });
 
@@ -51,8 +81,8 @@ describe('useNpcImageCache', () => {
 
       const result = getHook(placedItems);
 
-      await act(async () => {
-        await Promise.resolve();
+      await waitFor(() => {
+        expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
       });
 
       expect(result.current.npcImages).toEqual({
@@ -61,7 +91,7 @@ describe('useNpcImageCache', () => {
       });
     });
 
-    it('should handle duplicate NPC names by overwriting', async () => {
+    it('should handle duplicate NPC names by keeping the last resolved URL', async () => {
       const placedItems = [
         { type: 'npc', name: 'Goblin' },
         { type: 'npc', name: 'Goblin' },
@@ -72,8 +102,8 @@ describe('useNpcImageCache', () => {
 
       const result = getHook(placedItems);
 
-      await act(async () => {
-        await Promise.resolve();
+      await waitFor(() => {
+        expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
       });
 
       expect(result.current.npcImages).toEqual({
@@ -81,14 +111,14 @@ describe('useNpcImageCache', () => {
       });
     });
 
-    it('should return null URL for unknown monsters', async () => {
+    it('should store null for unknown monsters', async () => {
       const placedItems = [{ type: 'npc', name: 'UnknownMonster' }];
       getMonsterImageUrl.mockResolvedValue(null);
 
       const result = getHook(placedItems);
 
-      await act(async () => {
-        await Promise.resolve();
+      await waitFor(() => {
+        expect(getMonsterImageUrl).toHaveBeenCalledTimes(1);
       });
 
       expect(result.current.npcImages).toEqual({
@@ -98,35 +128,60 @@ describe('useNpcImageCache', () => {
   });
 
   describe('reactivity', () => {
-    it('should call getMonsterImageUrl again with new items on rerender', async () => {
+    it('should re-fetch only new npc items when placedItems changes', async () => {
       const placedItems1 = [{ type: 'npc', name: 'Goblin' }];
       const placedItems2 = [{ type: 'npc', name: 'Orc' }];
       getMonsterImageUrl
         .mockResolvedValueOnce('https://example.com/goblin.jpg')
         .mockResolvedValueOnce('https://example.com/orc.jpg');
 
-      const { rerender } = renderHook(({ items }) => useNpcImageCache(items), {
-        initialProps: { items: placedItems1 },
-      });
+      const { rerender } = renderHook(
+        ({ items }) => useNpcImageCache(items, undefined),
+        { initialProps: { items: placedItems1 } },
+      );
 
-      await act(async () => {
-        await Promise.resolve();
+      await waitFor(() => {
+        expect(getMonsterImageUrl).toHaveBeenCalledTimes(1);
       });
 
       rerender({ items: placedItems2 });
 
-      await act(async () => {
-        await Promise.resolve();
+      await waitFor(() => {
+        expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
       });
 
-      expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
       expect(getMonsterImageUrl).toHaveBeenLastCalledWith('Orc', null, undefined);
+    });
+
+    it('should re-fetch with the new campaignName when it changes', async () => {
+      const placedItems = [{ type: 'npc', name: 'Goblin' }];
+      getMonsterImageUrl.mockResolvedValue('https://example.com/goblin.jpg');
+
+      const { rerender } = renderHook(
+        ({ items, campName }) => useNpcImageCache(items, campName),
+        { initialProps: { items: placedItems, campName: 'campaign-a' } },
+      );
+
+      await waitFor(() => {
+        expect(getMonsterImageUrl).toHaveBeenCalledTimes(1);
+      });
+
+      expect(getMonsterImageUrl).toHaveBeenLastCalledWith('Goblin', null, 'campaign-a');
+
+      rerender({ items: placedItems, campName: 'campaign-b' });
+
+      await waitFor(() => {
+        expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
+      });
+
+      expect(getMonsterImageUrl).toHaveBeenLastCalledWith('Goblin', null, 'campaign-b');
     });
   });
 
   describe('setNpcImages overrides', () => {
     it('should allow setNpcImages to override the cache', () => {
-      const result = getHook([]);
+      const { result } = renderHook(() => useNpcImageCache([], undefined));
+
       expect(result.current.npcImages).toEqual({});
 
       act(() => {

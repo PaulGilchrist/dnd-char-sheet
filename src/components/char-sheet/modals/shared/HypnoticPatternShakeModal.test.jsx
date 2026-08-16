@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import HypnoticPatternShakeModal from './HypnoticPatternShakeModal.jsx';
 
 vi.mock('../../../../services/automation/index.js', () => ({
@@ -9,6 +10,8 @@ vi.mock('../../../../services/automation/index.js', () => ({
 vi.mock('../../../../services/ui/logService.js', () => ({
   addEntry: vi.fn().mockResolvedValue(undefined),
 }));
+
+vi.mock('../../../../services/ui/consoleLogger.js', () => ({}));
 
 import { executeHandler } from '../../../../services/automation/index.js';
 import { addEntry } from '../../../../services/ui/logService.js';
@@ -25,12 +28,6 @@ const baseProps = {
 function makeProps(overrides) {
   return { ...baseProps, ...(overrides || {}) };
 }
-
-beforeEach(() => {
-  vi.resetAllMocks();
-  executeHandler.mockResolvedValue(undefined);
-  addEntry.mockResolvedValue(undefined);
-});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -65,9 +62,22 @@ describe('HypnoticPatternShakeModal', () => {
       expect(screen.getByText('Custom Shake')).toBeInTheDocument();
     });
 
-    it('uses a default feature name when featureName is undefined', () => {
+    it('shows default feature name when featureName is undefined', () => {
       render(<HypnoticPatternShakeModal {...makeProps({ featureName: undefined })} />);
       expect(screen.getByText('Shake Out Stupor')).toBeInTheDocument();
+    });
+
+    it('renders no target options when targets array is empty', () => {
+      render(<HypnoticPatternShakeModal {...makeProps({ targets: [] })} />);
+      expect(screen.getByText(/Select a creature/)).toBeInTheDocument();
+      expect(screen.queryAllByRole('radio')).toHaveLength(0);
+      expect(screen.getByRole('button', { name: 'Shake Free (none)' })).toBeDisabled();
+    });
+
+    it('renders a single target when only one is provided', () => {
+      render(<HypnoticPatternShakeModal {...makeProps({ targets: ['Goblin A'] })} />);
+      expect(screen.getByText('Goblin A')).toBeInTheDocument();
+      expect(screen.queryByRole('radio', { name: 'Orc Warrior' })).not.toBeInTheDocument();
     });
   });
 
@@ -97,6 +107,12 @@ describe('HypnoticPatternShakeModal', () => {
       expect(selectedRow).toBeInTheDocument();
       expect(selectedRow.textContent).toContain('Goblin A');
     });
+
+    it('updates button label when a different target is selected', () => {
+      render(<HypnoticPatternShakeModal {...makeProps()} />);
+      fireEvent.click(document.querySelectorAll('input[type="radio"]')[2]);
+      expect(screen.getByRole('button', { name: 'Shake Free (Goblin B)' })).toBeInTheDocument();
+    });
   });
 
   describe('close behavior', () => {
@@ -109,16 +125,16 @@ describe('HypnoticPatternShakeModal', () => {
 
     it('closes when the overlay background is clicked', () => {
       const onClose = vi.fn();
-      render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
-      const overlay = document.querySelector('.sp-overlay');
+      const { container } = render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
+      const overlay = container.querySelector('.sp-overlay');
       fireEvent.click(overlay);
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('does not close when the modal inner content is clicked', () => {
       const onClose = vi.fn();
-      render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
-      const modal = document.querySelector('.sp-modal');
+      const { container } = render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
+      const modal = container.querySelector('.sp-modal');
       fireEvent.click(modal);
       expect(onClose).not.toHaveBeenCalled();
     });
@@ -157,7 +173,8 @@ describe('HypnoticPatternShakeModal', () => {
 
     it('calls addEntry with correct log data on success', async () => {
       executeHandler.mockResolvedValue({ success: true });
-      render(<HypnoticPatternShakeModal {...makeProps()} />);
+      const onClose = vi.fn();
+      render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
       const radios = document.querySelectorAll('input[type="radio"]');
       fireEvent.click(radios[2]);
       fireEvent.click(screen.getByRole('button', { name: 'Shake Free (Goblin B)' }));
@@ -173,10 +190,10 @@ describe('HypnoticPatternShakeModal', () => {
       });
     });
 
-    it('uses custom props (campaignName, attackerName, featureName, range) in executeHandler and log', async () => {
+    it('uses custom campaignName, attackerName, featureName, and range in executeHandler and log', async () => {
       executeHandler.mockResolvedValue({ success: true });
       render(<HypnoticPatternShakeModal {...makeProps({
-        campaignName: 'test-campaign',
+        campaignName: 'my-campaign',
         attackerName: 'Sorcerer3',
         featureName: 'Custom Shake',
         rangeFeet: 45,
@@ -191,10 +208,10 @@ describe('HypnoticPatternShakeModal', () => {
             name: 'Custom Shake',
           },
           { name: 'Sorcerer3' },
-          'test-campaign',
+          'my-campaign',
           null
         );
-        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+        expect(addEntry).toHaveBeenCalledWith('my-campaign', expect.objectContaining({
           characterName: 'Sorcerer3',
           abilityName: 'Shake Out Stupor',
           targetName: 'Orc Warrior',
@@ -233,7 +250,8 @@ describe('HypnoticPatternShakeModal', () => {
 
     it('does not call addEntry when executeHandler resolves to falsy', async () => {
       executeHandler.mockResolvedValue(null);
-      render(<HypnoticPatternShakeModal {...makeProps()} />);
+      const onClose = vi.fn();
+      render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
       const radios = document.querySelectorAll('input[type="radio"]');
       fireEvent.click(radios[0]);
       fireEvent.click(screen.getByRole('button', { name: 'Shake Free (Orc Warrior)' }));
@@ -241,6 +259,5 @@ describe('HypnoticPatternShakeModal', () => {
         expect(addEntry).not.toHaveBeenCalled();
       });
     });
-
   });
 });

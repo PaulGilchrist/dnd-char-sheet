@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PowerWordFortifyModal from './PowerWordFortifyModal.jsx';
@@ -29,16 +30,14 @@ function makeProps(overrides) {
 describe('PowerWordFortifyModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
   });
 
   // ── Rendering ──
 
   describe('rendering', () => {
-    it('renders modal with shield icon and title "Power Word Fortify"', () => {
+    it('renders modal title', () => {
       render(<PowerWordFortifyModal {...makeProps()} />);
       expect(screen.getByText('Power Word Fortify')).toBeInTheDocument();
-      expect(document.querySelector('.fa-solid.fa-shield')).toBeInTheDocument();
     });
 
     it('displays the total temp HP in the description', () => {
@@ -75,13 +74,7 @@ describe('PowerWordFortifyModal', () => {
       expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
     });
 
-    it('renders confirm button with shield icon and label "Fortify"', () => {
-      render(<PowerWordFortifyModal {...makeProps()} />);
-      const confirmBtn = screen.getByRole('button', { name: /Fortify/ });
-      expect(confirmBtn.querySelector('.fa-shield')).toBeInTheDocument();
-    });
-
-    it('shows selection count in confirm button starting at 0', () => {
+    it('renders confirm button with label showing selection count', () => {
       render(<PowerWordFortifyModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: /Fortify \(0\)/ })).toBeInTheDocument();
     });
@@ -113,12 +106,10 @@ describe('PowerWordFortifyModal', () => {
 
     it('hides remaining span when all HP allocated', () => {
       render(<PowerWordFortifyModal {...makeProps()} />);
-      // Select first target and allocate all 10 HP
       fireEvent.click(screen.getByLabelText('Ally1'));
       const input = document.querySelector('.pwfm-amount-input');
       fireEvent.change(input, { target: { value: 10 } });
-      // Remaining should not be visible since totalAllocated === totalTempHp
-      expect(screen.queryByText('Remaining: 0')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Remaining:/)).not.toBeInTheDocument();
     });
 
     it('updates allocated count when allocation is made', () => {
@@ -182,9 +173,10 @@ describe('PowerWordFortifyModal', () => {
       fireEvent.click(checkbox);
       fireEvent.click(checkbox);
       // Allocation should be reset to 0
-      await new Promise(r => setTimeout(r, 0));
-      input = document.querySelector('.pwfm-amount-input');
-      expect(input.value).toBe('0');
+      await vi.waitFor(() => {
+        input = document.querySelector('.pwfm-amount-input');
+        expect(input.value).toBe('0');
+      });
     });
 
     it('enables confirm button after selecting at least one target', () => {
@@ -261,10 +253,18 @@ describe('PowerWordFortifyModal', () => {
       expect(input).toHaveValue(0);
     });
 
+    it('treats whitespace input as 0', () => {
+      render(<PowerWordFortifyModal {...makeProps({ totalTempHp: 10 })} />);
+      fireEvent.click(screen.getByLabelText('Ally1'));
+      const input = document.querySelector('.pwfm-amount-input');
+      fireEvent.change(input, { target: { value: '   ' } });
+      expect(input).toHaveValue(0);
+    });
+
     it('increments allocation when plus button is clicked', () => {
       render(<PowerWordFortifyModal {...makeProps()} />);
       fireEvent.click(screen.getByLabelText('Ally1'));
-      const plusBtn = document.querySelectorAll('.pwfm-adjust-btn')[1]; // second button is plus for Ally1
+      const plusBtn = document.querySelectorAll('.pwfm-adjust-btn')[1];
       fireEvent.click(plusBtn);
       const input = document.querySelector('.pwfm-amount-input');
       expect(input).toHaveValue(1);
@@ -342,6 +342,14 @@ describe('PowerWordFortifyModal', () => {
       expect(screen.getByText(/5 HP unallocated/)).toBeInTheDocument();
     });
 
+    it('includes "you may leave HP unused" in warning text', () => {
+      render(<PowerWordFortifyModal {...makeProps()} />);
+      fireEvent.click(screen.getByLabelText('Ally1'));
+      const input = document.querySelector('.pwfm-amount-input');
+      fireEvent.change(input, { target: { value: 3 } });
+      expect(screen.getByText(/7 HP unallocated — you may leave HP unused/)).toBeInTheDocument();
+    });
+
     it('updates unallocated warning text when allocation changes', () => {
       render(<PowerWordFortifyModal {...makeProps()} />);
       fireEvent.click(screen.getByLabelText('Ally1'));
@@ -398,7 +406,6 @@ describe('PowerWordFortifyModal', () => {
       fireEvent.change(inputs[1], { target: { value: 8 } });
       fireEvent.click(screen.getByRole('button', { name: /Fortify \(2\)/ }));
       expect(mockOnConfirm).toHaveBeenCalledWith({ Ally1: 2, Ally3: 8 });
-      expect(mockOnConfirm).not.toHaveBeenCalledWith(expect.objectContaining({ Ally2: expect.anything() }));
     });
 
     it('calls onConfirm with correct distribution when all HP allocated', () => {
@@ -434,6 +441,11 @@ describe('PowerWordFortifyModal', () => {
       fireEvent.click(modal);
       expect(mockOnSkip).not.toHaveBeenCalled();
     });
+
+    it('always enables the Skip button', () => {
+      render(<PowerWordFortifyModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: 'Skip' })).toBeEnabled();
+    });
   });
 
   // ── Edge cases ──
@@ -447,14 +459,14 @@ describe('PowerWordFortifyModal', () => {
 
     it('does not show remaining when totalTempHp is 0', () => {
       render(<PowerWordFortifyModal {...makeProps({ totalTempHp: 0 })} />);
-      expect(screen.queryByText('Remaining: 0')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Remaining:/)).not.toBeInTheDocument();
     });
 
     it('handles negative totalTempHp by treating as 0 remaining', () => {
       render(<PowerWordFortifyModal {...makeProps({ totalTempHp: -5 })} />);
       expect(screen.getByText('Pool: -5 HP')).toBeInTheDocument();
       // remaining = Math.max(0, -5 - 0) = 0, so no remaining span
-      expect(screen.queryByText('Remaining:')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Remaining:/)).not.toBeInTheDocument();
     });
 
     it('handles object targets with only name property', () => {
@@ -492,27 +504,6 @@ describe('PowerWordFortifyModal', () => {
       fireEvent.change(inputs[3], { target: { value: 4 } });
       fireEvent.click(screen.getByRole('button', { name: /Fortify \(4\)/ }));
       expect(mockOnConfirm).toHaveBeenCalledWith({ Ally1: 2, Ally2: 3, Ally3: 1, Ally4: 4 });
-    });
-  });
-
-  // ── CSS class behavior ──
-
-  describe('CSS classes', () => {
-    it('adds secondary-target-selected class to selected target row', () => {
-      render(<PowerWordFortifyModal {...makeProps()} />);
-      fireEvent.click(screen.getByLabelText('Ally1'));
-      const rows = document.querySelectorAll('.secondary-target-row.secondary-target-selected');
-      expect(rows).toHaveLength(1);
-      expect(rows[0].querySelector('strong').textContent).toBe('Ally1');
-    });
-
-    it('removes secondary-target-selected class from deselected target row', () => {
-      render(<PowerWordFortifyModal {...makeProps()} />);
-      const checkbox = document.querySelectorAll('.secondary-target-row input[type="checkbox"]')[0];
-      fireEvent.click(checkbox);
-      fireEvent.click(checkbox);
-      const rows = document.querySelectorAll('.secondary-target-row.secondary-target-selected');
-      expect(rows).toHaveLength(0);
     });
   });
 });

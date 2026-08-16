@@ -1,20 +1,7 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import POILayer from './POILayer.jsx';
-
-vi.mock('../../config/outdoorConfig.js', () => ({
-    HEX_SIZE: 30,
-}));
-
-vi.mock('../../services/maps/hexMapUtils.js', () => ({
-    hexToPixel: vi.fn((q, r, size) => ({
-        x: size * Math.sqrt(3) * (q + r / 2),
-        y: size * 3 / 2 * r,
-    })),
-    hexDistance: vi.fn((a, b) =>
-        (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2
-    ),
-}));
 
 describe('POILayer', () => {
     let props;
@@ -42,104 +29,155 @@ describe('POILayer', () => {
         return render(<POILayer {...props} {...overrideProps} />);
     }
 
+    function createEnterablePoi(overrides = {}) {
+        return { id: 'enterable-poi', type: 'dungeon', q: 0, r: 1, visible: true, linkedMap: 'dungeon-map.json', ...overrides };
+    }
+
     describe('basic rendering', () => {
-        it('should render POI items and labels for each POI', () => {
+        it('renders a POI item and label for every POI', () => {
             const { container } = renderLayer();
-            expect(container.querySelectorAll('g.poi-item').length).toBe(3);
-            expect(screen.getByText('City A')).toBeInTheDocument();
-            expect(screen.getByText('Camp B')).toBeInTheDocument();
-            expect(screen.getByText('Dungeon C')).toBeInTheDocument();
+            expect(container.querySelectorAll('.poi-item')).toHaveLength(3);
+            for (const label of ['City A', 'Camp B', 'Dungeon C']) {
+                expect(screen.getByText(label)).toBeInTheDocument();
+            }
         });
 
-        it('should not render POI items when pois is empty', () => {
+        it('renders nothing when the POI list is empty', () => {
             const { container } = renderLayer({ pois: [] });
-            expect(container.querySelectorAll('g.poi-item').length).toBe(0);
+            expect(container.querySelectorAll('.poi-item')).toHaveLength(0);
         });
 
-        it('should not render label text when POI has no label', () => {
+        it('omits the label when a POI has no label', () => {
             renderLayer({ pois: [{ id: 'poi-1', type: 'city', q: 0, r: 0, visible: true }] });
             expect(screen.queryByText('City A')).not.toBeInTheDocument();
         });
     });
 
     describe('visibility', () => {
-        it('should hide hidden POIs from non-localhost users but show them to localhost', () => {
-            const hiddenPoi = { id: 'hidden-poi', type: 'city', q: 0, r: 0, visible: false };
-
-            const { container: nonLocalhostContainer } = renderLayer({
+        it('does not render invisible POIs for non-localhost users', () => {
+            const { container } = renderLayer({
                 isLocalhost: false,
-                pois: [hiddenPoi],
+                pois: [{ id: 'hidden-poi', type: 'city', q: 0, r: 0, visible: false }],
             });
-            expect(nonLocalhostContainer.querySelectorAll('g.poi-item').length).toBe(0);
+            expect(container.querySelectorAll('.poi-item')).toHaveLength(0);
+        });
 
-            const { container: localhostContainer } = renderLayer({
-                isLocalhost: true,
-                pois: [hiddenPoi],
+        it('renders invisible POIs faded out for the localhost GM', () => {
+            const { container } = renderLayer({
+                pois: [{ id: 'hidden-poi', type: 'city', q: 0, r: 0, visible: false }],
             });
-            expect(localhostContainer.querySelectorAll('g.poi-item').length).toBe(1);
+            expect(container.querySelector('.poi-item').getAttribute('opacity')).toBe('0.4');
+        });
+
+        it('renders visible POIs at full opacity', () => {
+            const { container } = renderLayer({
+                pois: [{ id: 'visible-poi', type: 'city', q: 0, r: 0, visible: true }],
+            });
+            expect(container.querySelector('.poi-item').getAttribute('opacity')).toBe('1');
         });
     });
 
     describe('interaction callbacks', () => {
-        it('should call onPoiPointerDown when non-enterable POI is pressed', () => {
-            renderLayer();
-            const poiItems = document.querySelectorAll('g.poi-item');
-            const nonEnterableRect = poiItems[0].querySelector('rect[fill="transparent"]');
-            fireEvent.pointerDown(nonEnterableRect, { preventDefault: () => {} });
+        it('calls onPoiPointerDown with the POI id when a non-enterable POI is pressed', () => {
+            const { container } = renderLayer();
+            const hitArea = container.querySelectorAll('.poi-item')[0].querySelector('rect[fill="transparent"]');
+            fireEvent.pointerDown(hitArea);
             expect(props.onPoiPointerDown).toHaveBeenCalledWith('poi-1', expect.any(Object));
         });
 
-        it('should call onPoiContextMenu on right-click', () => {
-            renderLayer();
-            const poiItems = document.querySelectorAll('g.poi-item');
-            const nonEnterableRect = poiItems[0].querySelector('rect[fill="transparent"]');
-            fireEvent.contextMenu(nonEnterableRect, { preventDefault: () => {}, stopPropagation: () => {} });
+        it('does not call onPoiEnter when a non-enterable POI is clicked', () => {
+            const { container } = renderLayer();
+            const hitArea = container.querySelectorAll('.poi-item')[0].querySelector('rect[fill="transparent"]');
+            fireEvent.click(hitArea);
+            expect(props.onPoiEnter).not.toHaveBeenCalled();
+        });
+
+        it('calls onPoiContextMenu with the POI id on right-click of a non-enterable POI', () => {
+            const { container } = renderLayer();
+            const hitArea = container.querySelectorAll('.poi-item')[0].querySelector('rect[fill="transparent"]');
+            fireEvent.contextMenu(hitArea, { preventDefault: () => {}, stopPropagation: () => {} });
             expect(props.onPoiContextMenu).toHaveBeenCalledWith('poi-1', expect.any(Object));
         });
     });
 
     describe('enterable POIs', () => {
-        function createEnterablePoi() {
-            return { id: 'enterable-poi', type: 'dungeon', q: 0, r: 1, visible: true, linkedMap: 'dungeon-map.json' };
+        function renderEnterable(overrides = {}) {
+            return renderLayer({
+                partyPosition: { q: 0, r: 0 },
+                validLinkedMaps: new Set(['dungeon-map.json']),
+                pois: [createEnterablePoi()],
+                ...overrides,
+            });
         }
 
-        it('should render enterable POI with Enter badge and glow when adjacent to party with valid linkedMap', () => {
-            const validMaps = new Set(['dungeon-map.json']);
-            const { container } = renderLayer({
-                partyPosition: { q: 0, r: 0 },
-                validLinkedMaps: validMaps,
-                pois: [createEnterablePoi()],
-            });
+        it('shows an Enter badge and glow ring when adjacent to the party with a valid linked map', () => {
+            const { container } = renderEnterable();
             expect(screen.getByText('Enter')).toBeInTheDocument();
             expect(container.querySelector('.poi-item-enterable')).toBeInTheDocument();
+            expect(container.querySelector('circle[stroke="#FFD700"]')).toBeInTheDocument();
         });
 
         it.each([
-            ['not adjacent to party', { partyPosition: { q: 10, r: 10 }, validLinkedMaps: new Set(['dungeon-map.json']) }],
-            ['has no linkedMap', { partyPosition: { q: 0, r: 1 }, pois: [{ id: 'no-link-poi', type: 'city', q: 0, r: 1, visible: true, linkedMap: null }] }],
-            ['linkedMap not in validLinkedMaps', { partyPosition: { q: 0, r: 1 }, validLinkedMaps: new Set(['other-map.json']) }],
-            ['is hidden', { partyPosition: { q: 0, r: 1 }, validLinkedMaps: new Set(['dungeon-map.json']), pois: [{ ...createEnterablePoi(), visible: false }] }],
-            ['has null partyPosition', { partyPosition: null, validLinkedMaps: new Set(['dungeon-map.json']) }],
-        ])('should not render enterable indicators when POI is %s', (_, overrides) => {
-            const { container } = renderLayer({
-                ...overrides,
-                pois: overrides.pois || [createEnterablePoi()],
-            });
+            ['not adjacent to the party', { partyPosition: { q: 10, r: 10 } }],
+            ['missing a linked map', { pois: [createEnterablePoi({ linkedMap: null })] }],
+            ['linked to a map not in validLinkedMaps', { validLinkedMaps: new Set(['other-map.json']) }],
+            ['marked invisible', { pois: [createEnterablePoi({ visible: false })] }],
+            ['when the party has no position', { partyPosition: null }],
+        ])('does not show enterable indicators when the POI is %s', (_desc, overrides) => {
+            const { container } = renderEnterable(overrides);
             expect(screen.queryByText('Enter')).not.toBeInTheDocument();
-            expect(container.querySelectorAll('.poi-item-enterable').length).toBe(0);
+            expect(container.querySelectorAll('.poi-item-enterable')).toHaveLength(0);
         });
 
-        it('should call onPoiEnter when enterable POI is clicked', () => {
-            const validMaps = new Set(['dungeon-map.json']);
-            renderLayer({
-                partyPosition: { q: 0, r: 0 },
-                validLinkedMaps: validMaps,
-                pois: [createEnterablePoi()],
-            });
-            const enterableItem = document.querySelector('g.poi-item-enterable');
-            const enterRect = enterableItem.querySelector('rect[fill="transparent"]');
-            fireEvent.click(enterRect);
+        it('calls onPoiEnter with the POI when clicked, and not onPoiPointerDown', () => {
+            const { container } = renderEnterable();
+            const hitArea = container.querySelector('.poi-item-enterable rect[fill="transparent"]');
+            fireEvent.click(hitArea);
             expect(props.onPoiEnter).toHaveBeenCalledWith(expect.objectContaining({ id: 'enterable-poi' }));
+            expect(props.onPoiPointerDown).not.toHaveBeenCalled();
+        });
+
+        it('still opens the context menu on right-click', () => {
+            const { container } = renderEnterable();
+            const hitArea = container.querySelector('.poi-item-enterable rect[fill="transparent"]');
+            fireEvent.contextMenu(hitArea, { preventDefault: () => {}, stopPropagation: () => {} });
+            expect(props.onPoiContextMenu).toHaveBeenCalledWith('enterable-poi', expect.any(Object));
+        });
+    });
+
+    describe('road-start selection ring', () => {
+        it('draws a selection ring on the POI whose id matches roadStartPoiId', () => {
+            const { container } = renderLayer({ roadStartPoiId: 'poi-1' });
+            expect(container.querySelector('circle[stroke="#A08060"]')).toBeInTheDocument();
+        });
+
+        it('draws no selection ring when no road start is selected', () => {
+            const { container } = renderLayer({ roadStartPoiId: null });
+            expect(container.querySelector('circle[stroke="#A08060"]')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('drag state', () => {
+        it('highlights the POI whose id matches the active drag', () => {
+            const { container } = renderLayer({ poiDragging: { poiId: 'poi-1' } });
+            expect(container.querySelector('.poi-item rect[stroke="#FFD700"]')).toBeInTheDocument();
+        });
+
+        it('highlights nothing when no POI is being dragged', () => {
+            const { container } = renderLayer({ poiDragging: null });
+            expect(container.querySelector('rect[stroke="#FFD700"]')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('placement drop preview', () => {
+        it('draws a drop-preview box at the hovered position', () => {
+            const { container } = renderLayer({ poiHover: { x: 45, y: 50 } });
+            expect(container.querySelector('rect[fill="rgba(255,215,0,0.2)"]')).toBeInTheDocument();
+        });
+
+        it('draws no preview when nothing is hovered', () => {
+            const { container } = renderLayer({ poiHover: null });
+            expect(container.querySelector('rect[fill="rgba(255,215,0,0.2)"]')).not.toBeInTheDocument();
         });
     });
 });

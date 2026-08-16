@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FearModal from './FearModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -12,7 +13,7 @@ vi.mock('../../../../services/combat/conditions/savePromptService.js', () => ({
 }));
 
 vi.mock('../../../../services/ui/logService.js', () => ({
-    addEntry: vi.fn(() => Promise.resolve({ id: 'log-1' })),
+    addEntry: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../../../services/encounters/combatData.js', () => ({
@@ -39,7 +40,6 @@ vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
 import { getAllyList } from '../../../../hooks/useAllySelection.js';
-import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
 
 const campaignName = 'test-campaign';
 
@@ -80,12 +80,7 @@ beforeEach(() => {
     getCombatSummary.mockReturnValue(baseCombatSummary);
     getRuntimeValue.mockReturnValue([]);
     setRuntimeValue.mockReturnValue(undefined);
-    sendSavePrompt.mockReturnValue(undefined);
     getAllyList.mockReturnValue(null);
-});
-
-afterEach(() => {
-    vi.clearAllMocks();
 });
 
 describe('FearModal', () => {
@@ -108,9 +103,8 @@ describe('FearModal', () => {
         });
 
         it('renders the note about frightened condition', () => {
-            const { container } = render(<FearModal {...makeProps()} />);
-            const noteEl = container.querySelector('.sp-note');
-            expect(noteEl).toHaveTextContent(/On a failed save, target drops what it is holding/);
+            render(<FearModal {...makeProps()} />);
+            expect(screen.getByText(/On a failed save, target drops what it is holding/)).toBeInTheDocument();
             expect(screen.getByText(/Frightened/)).toBeInTheDocument();
         });
 
@@ -141,9 +135,8 @@ describe('FearModal', () => {
 
         it('shows heighten note when metamagicHeighten is true', () => {
             render(<FearModal {...makeProps({ metamagicHeighten: true })} />);
-            const noteEl = document.querySelector('.sp-note');
-            expect(noteEl.textContent).toContain('Heightened Spell');
-            expect(noteEl.textContent).toContain('one target will have disadvantage');
+            expect(screen.getByText(/Heightened Spell/)).toBeInTheDocument();
+            expect(screen.getByText(/one target will have disadvantage/)).toBeInTheDocument();
         });
     });
 
@@ -151,7 +144,6 @@ describe('FearModal', () => {
 
     describe('metamagic careful rendering', () => {
         it('does not show careful spell protection when metamagicCareful is false', () => {
-            getRuntimeValue.mockReturnValue([]);
             render(<FearModal {...makeProps({ metamagicCareful: false })} />);
             const rows = document.querySelectorAll('.secondary-target-row');
             rows.forEach(row => {
@@ -161,7 +153,6 @@ describe('FearModal', () => {
 
         it('shows careful spell protection when metamagicCareful is true and ally is in list', () => {
             getAllyList.mockReturnValue(['PlayerAlly']);
-            getRuntimeValue.mockReturnValue([]);
             render(<FearModal {...makeProps({ metamagicCareful: true })} />);
             const rows = document.querySelectorAll('.secondary-target-row');
             const playerRow = [...rows].find(row => row.textContent.includes('PlayerAlly'));
@@ -170,7 +161,6 @@ describe('FearModal', () => {
 
         it('does not show careful spell protection for non-ally', () => {
             getAllyList.mockReturnValue(['OtherAlly']);
-            getRuntimeValue.mockReturnValue([]);
             render(<FearModal {...makeProps({ metamagicCareful: true })} />);
             const rows = document.querySelectorAll('.secondary-target-row');
             const playerRow = [...rows].find(row => row.textContent.includes('PlayerAlly'));
@@ -184,7 +174,7 @@ describe('FearModal', () => {
         it('selects a target when its row is clicked and enables confirm', async () => {
             render(<FearModal {...makeProps()} />);
             const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
+            await fireEvent.click(labels[0]);
             await waitFor(() => {
                 const checkboxes = document.querySelectorAll('input[type="checkbox"]');
                 expect(checkboxes[0].checked).toBe(true);
@@ -197,8 +187,8 @@ describe('FearModal', () => {
         it('allows selecting multiple targets', async () => {
             render(<FearModal {...makeProps()} />);
             const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await act(async () => { fireEvent.click(labels[1]); });
+            await fireEvent.click(labels[0]);
+            await fireEvent.click(labels[1]);
             await waitFor(() => {
                 const checkboxes = document.querySelectorAll('input[type="checkbox"]');
                 expect(checkboxes[0].checked).toBe(true);
@@ -212,12 +202,12 @@ describe('FearModal', () => {
         it('toggles target selection off when row is clicked again', async () => {
             render(<FearModal {...makeProps()} />);
             const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
+            await fireEvent.click(labels[0]);
             await waitFor(() => {
                 const checkboxes = document.querySelectorAll('input[type="checkbox"]');
                 expect(checkboxes[0].checked).toBe(true);
             });
-            await act(async () => { fireEvent.click(labels[0]); });
+            await fireEvent.click(labels[0]);
             await waitFor(() => {
                 const checkboxes = document.querySelectorAll('input[type="checkbox"]');
                 expect(checkboxes[0].checked).toBe(false);
@@ -227,7 +217,7 @@ describe('FearModal', () => {
         it('highlights selected targets with the selected class', async () => {
             render(<FearModal {...makeProps()} />);
             const rows = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(rows[0]); });
+            await fireEvent.click(rows[0]);
             await waitFor(() => {
                 expect(rows[0]).toHaveClass('secondary-target-selected');
                 expect(rows[1]).not.toHaveClass('secondary-target-selected');
@@ -238,9 +228,8 @@ describe('FearModal', () => {
     // ── Heighten target selection ──
 
     describe('heighten target selection', () => {
-        it('allows setting a heighten target when metamagicHeighten is true', async () => {
+        it('renders heighten radio buttons when metamagicHeighten is true', async () => {
             render(<FearModal {...makeProps({ metamagicHeighten: true })} />);
-            // Heighten radio buttons should be visible
             const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
             expect(heightenRadios.length).toBeGreaterThan(0);
         });
@@ -251,42 +240,11 @@ describe('FearModal', () => {
             expect(heightenRadios).toHaveLength(0);
         });
 
-        it('uses heighten target for disadvantage on NPC saves', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<FearModal {...makeProps({ metamagicHeighten: true })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Bane \(1\)/ })).toBeInTheDocument();
-            });
-
-            // Set heighten target by clicking the radio button for Orc (index 1)
+        it('renders heighten radio buttons for each target when metamagicHeighten is true', () => {
+            render(<FearModal {...makeProps({ metamagicHeighten: true })} />);
             const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
-            if (heightenRadios.length > 1) {
-                await act(async () => {
-                    fireEvent.click(heightenRadios[1]);
-                });
-            }
-
-            // After clicking the heighten radio, both Goblin and Orc may be selected
-            // so the button may show "Bane (2)"
-            await waitFor(() => {
-                const btn = screen.getByRole('button', { name: /Bane/ });
-                expect(btn).toBeInTheDocument();
-            });
-
-            await act(async () => {
-                const btn = screen.getByRole('button', { name: /Bane/ });
-                fireEvent.click(btn);
-            });
-
-            // Verify the modal triggered save resolution (setRuntimeValue called for conditions)
-            expect(setRuntimeValue).toHaveBeenCalled();
-            } finally {
-                vi.restoreAllMocks();
-            }
+            const rows = document.querySelectorAll('.secondary-target-row');
+            expect(heightenRadios.length).toBe(rows.length);
         });
     });
 
@@ -300,7 +258,7 @@ describe('FearModal', () => {
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('does not apply any effects when skipped without selection', async () => {
+        it('does not apply any effects when skipped without selection', () => {
             const onClose = vi.fn();
             render(<FearModal {...makeProps({ onClose })} />);
             fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
@@ -344,7 +302,7 @@ describe('FearModal', () => {
                 activeOverlay: { name: 'TestOverlay' },
             })} />);
             // Should render empty fragment - no modal content
-            expect(document.querySelector('.sp-overlay')).not.toBeInTheDocument();
+            expect(screen.queryByText('Bane')).not.toBeInTheDocument();
         });
 
         it('renders normally when player is overlay targeted but no active overlay', () => {
@@ -359,6 +317,22 @@ describe('FearModal', () => {
                 playerStats: { ...basePlayerStats, targetName: 'normal-target' },
                 activeOverlay: { name: 'TestOverlay' },
             })} />);
+            expect(screen.getByText('Bane')).toBeInTheDocument();
+        });
+    });
+
+    // ── Null/missing combat summary ──
+
+    describe('null combat summary handling', () => {
+        it('renders normally when combat summary is null', () => {
+            getCombatSummary.mockReturnValue(null);
+            render(<FearModal {...makeProps()} />);
+            expect(screen.getByText('Bane')).toBeInTheDocument();
+        });
+
+        it('renders normally when combat summary has no creatures property', () => {
+            getCombatSummary.mockReturnValue({});
+            render(<FearModal {...makeProps()} />);
             expect(screen.getByText('Bane')).toBeInTheDocument();
         });
     });

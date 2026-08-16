@@ -25,62 +25,58 @@ describe('classRules', () => {
       },
     ];
 
-    it('returns merged class data for a valid class', () => {
-      const playerSummary = { class: { name: 'Wizard' } };
-      const result = classRules.getClass(mockClasses, playerSummary);
-
+    it('returns merged class data with full ability names for saving_throws when class is found', () => {
+      const result = classRules.getClass(mockClasses, { class: { name: 'Wizard' } });
       expect(result.name).toBe('Wizard');
       expect(result.saving_throws).toEqual(['Intelligence']);
       expect(result.subclass).toBeNull();
       expect(result.subclasses).toBeUndefined();
     });
 
-    it('converts all saving_throws abbreviations to full names', () => {
-      const playerSummary = { class: { name: 'Fighter' } };
-      const result = classRules.getClass(mockClasses, playerSummary);
+    it('converts multiple saving_throws abbreviations to full names', () => {
+      const result = classRules.getClass(mockClasses, { class: { name: 'Fighter' } });
       expect(result.saving_throws).toEqual(['Strength', 'Constitution']);
     });
 
-    it('includes subclass when specified in playerSummary', () => {
-      const playerSummary = { class: { name: 'Wizard', subclass: { name: 'Abjuration' } } };
-      const result = classRules.getClass(mockClasses, playerSummary);
+    it('merges subclass data from playerSummary onto found subclass', () => {
+      const result = classRules.getClass(
+        mockClasses,
+        { class: { name: 'Wizard', subclass: { name: 'Abjuration', customProp: 'x' } } },
+      );
       expect(result.subclass.name).toBe('Abjuration');
+      expect(result.subclass.customProp).toBe('x');
+      expect(result.subclass.class_levels).toEqual([]);
     });
 
-    it('sets subclass to null when not specified', () => {
-      const playerSummary = { class: { name: 'Wizard' } };
-      const result = classRules.getClass(mockClasses, playerSummary);
+    it('sets subclass to null when not specified in playerSummary', () => {
+      const result = classRules.getClass(mockClasses, { class: { name: 'Wizard' } });
       expect(result.subclass).toBeNull();
     });
 
     it('merges playerSummary class properties onto base class', () => {
-      const playerSummary = { class: { name: 'Wizard', customProperty: 'custom value' } };
-      const result = classRules.getClass(mockClasses, playerSummary);
+      const result = classRules.getClass(
+        mockClasses,
+        { class: { name: 'Wizard', customProperty: 'custom value' } },
+      );
       expect(result.customProperty).toBe('custom value');
     });
 
-    it('returns empty class_levels when class is not found', () => {
-      const playerSummary = { class: { name: 'NonExistent' } };
-      const result = classRules.getClass(mockClasses, playerSummary);
+    it('returns default class_levels when class is not found', () => {
+      const result = classRules.getClass(mockClasses, { class: { name: 'NonExistent' } });
       expect(result).toEqual({ class_levels: [] });
     });
 
-    it('returns empty class_levels when allClasses is empty', () => {
-      const playerSummary = { class: { name: 'Wizard' } };
-      const result = classRules.getClass([], playerSummary);
+    it('returns default class_levels when allClasses is empty', () => {
+      const result = classRules.getClass([], { class: { name: 'Wizard' } });
       expect(result).toEqual({ class_levels: [] });
+    });
+
+    it('throws when playerSummary.class is null', () => {
+      expect(() => classRules.getClass(mockClasses, { class: null })).toThrow(TypeError);
     });
 
     it('throws when playerSummary.class is missing', () => {
       expect(() => classRules.getClass(mockClasses, {})).toThrow(TypeError);
-    });
-
-    it('deep-merges subclass data from playerSummary onto found subclass', () => {
-      const playerSummary = { class: { name: 'Wizard', subclass: { name: 'Abjuration', customProp: 'x' } } };
-      const result = classRules.getClass(mockClasses, playerSummary);
-      expect(result.subclass.name).toBe('Abjuration');
-      expect(result.subclass.customProp).toBe('x');
-      expect(result.subclass.class_levels).toEqual([]);
     });
 
     it('does not mutate the original allClasses array', () => {
@@ -102,17 +98,23 @@ describe('classRules', () => {
       expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(1 / 2);
     });
 
-    it('returns 1 for Circle of Moon Druid levels 2-5', () => {
-      const playerStats = { class: { name: 'Druid', subclass: { name: 'Circle of the Moon' } }, level: 4 };
+    it('returns 1 for Circle of the Moon Druid levels 2-5', () => {
+      const playerStats = {
+        class: { name: 'Druid', subclass: { name: 'Circle of the Moon' } },
+        level: 4,
+      };
       expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(1);
     });
 
-    it('returns floor(level/3) for Circle of Moon Druid level 6+', () => {
-      const playerStats = { class: { name: 'Druid', subclass: { name: 'Circle of the Moon' } }, level: 9 };
+    it('returns floor(level/3) for Circle of the Moon Druid level 6+', () => {
+      const playerStats = {
+        class: { name: 'Druid', subclass: { name: 'Circle of the Moon' } },
+        level: 9,
+      };
       expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(3);
     });
 
-    it('prefers class_specific over Moon subclass modifier', () => {
+    it('prefers class_specific wild_shape_max_cr over Moon subclass modifier', () => {
       const playerStats = {
         class: {
           name: 'Druid',
@@ -124,8 +126,24 @@ describe('classRules', () => {
       expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(1);
     });
 
-    it('returns 0 when playerStats.class is missing', () => {
-      expect(classRules.getDruidMaxWildShapeChallengeRating({})).toBe(0);
+    it('returns non-Moon subclass wild_shape_max_cr at level > 5', () => {
+      const playerStats = {
+        class: {
+          name: 'Druid',
+          subclass: { name: 'Land' },
+          class_levels: [{ level: 8, class_specific: { wild_shape_max_cr: 1 / 2 } }],
+        },
+        level: 8,
+      };
+      expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(1 / 2);
+    });
+
+    it('returns 0 for level 1 even with Moon subclass', () => {
+      const playerStats = {
+        class: { name: 'Druid', subclass: { name: 'Circle of the Moon' } },
+        level: 1,
+      };
+      expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(0);
     });
 
     it('returns 0 when class_levels is missing', () => {
@@ -133,26 +151,14 @@ describe('classRules', () => {
       expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(0);
     });
 
-    it('returns 0 for non-Moon subclass at level > 5', () => {
-      const playerStats = {
-        class: { name: 'Druid', subclass: { name: 'Land' }, class_levels: [{ level: 8, class_specific: { wild_shape_max_cr: 1 / 2 } }] },
-        level: 8,
-      };
-      expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(1 / 2);
-    });
-
-    it('returns 0 for level 1 even with Moon subclass', () => {
-      const playerStats = { class: { name: 'Druid', subclass: { name: 'Circle of the Moon' } }, level: 1 };
-      expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(0);
+    it('returns 0 when playerStats.class is missing', () => {
+      expect(classRules.getDruidMaxWildShapeChallengeRating({})).toBe(0);
     });
   });
 
   describe('getDruidWildShapeUses', () => {
-    it('always returns 2 per 5e rules', () => {
+    it('always returns 2 regardless of arguments (5e rules)', () => {
       expect(classRules.getDruidWildShapeUses()).toBe(2);
-    });
-
-    it('returns 2 regardless of playerStats arguments', () => {
       expect(classRules.getDruidWildShapeUses({})).toBe(2);
       expect(classRules.getDruidWildShapeUses(null)).toBe(2);
       expect(classRules.getDruidWildShapeUses(undefined)).toBe(2);
@@ -160,11 +166,8 @@ describe('classRules', () => {
   });
 
   describe('getDruidBeastKnownForms', () => {
-    it('always returns 0 per 5e rules', () => {
+    it('always returns 0 regardless of arguments (5e rules)', () => {
       expect(classRules.getDruidBeastKnownForms()).toBe(0);
-    });
-
-    it('returns 0 regardless of playerStats arguments', () => {
       expect(classRules.getDruidBeastKnownForms({})).toBe(0);
     });
   });
@@ -172,7 +175,10 @@ describe('classRules', () => {
   describe('getDruidBeastFlySpeed', () => {
     it('returns true when wild_shape_fly is true', () => {
       const playerStats = {
-        class: { name: 'Druid', class_levels: [{ level: 4, class_specific: { wild_shape_fly: true } }] },
+        class: {
+          name: 'Druid',
+          class_levels: [{ level: 4, class_specific: { wild_shape_fly: true } }],
+        },
         level: 4,
       };
       expect(classRules.getDruidBeastFlySpeed(playerStats)).toBe(true);
@@ -180,7 +186,10 @@ describe('classRules', () => {
 
     it('returns false when wild_shape_fly is false', () => {
       const playerStats = {
-        class: { name: 'Druid', class_levels: [{ level: 1, class_specific: { wild_shape_fly: false } }] },
+        class: {
+          name: 'Druid',
+          class_levels: [{ level: 1, class_specific: { wild_shape_fly: false } }],
+        },
         level: 1,
       };
       expect(classRules.getDruidBeastFlySpeed(playerStats)).toBe(false);
@@ -188,7 +197,10 @@ describe('classRules', () => {
 
     it('returns undefined when wild_shape_fly is not set', () => {
       const playerStats = {
-        class: { name: 'Druid', class_levels: [{ level: 1, class_specific: {} }] },
+        class: {
+          name: 'Druid',
+          class_levels: [{ level: 1, class_specific: {} }],
+        },
         level: 1,
       };
       expect(classRules.getDruidBeastFlySpeed(playerStats)).toBeUndefined();
@@ -205,7 +217,7 @@ describe('classRules', () => {
   });
 
   describe('getFeatures', () => {
-    it('returns categorized features from class levels up to player level', () => {
+    it('returns categorized features object with all category keys', () => {
       const playerStats = {
         class: {
           name: 'Fighter',
@@ -241,8 +253,11 @@ describe('classRules', () => {
       };
       const result = classRules.getFeatures(playerStats);
       const allFeatureNames = [
-        ...result.actions, ...result.bonusActions, ...result.reactions,
-        ...result.specialActions, ...result.characterAdvancement,
+        ...result.actions,
+        ...result.bonusActions,
+        ...result.reactions,
+        ...result.specialActions,
+        ...result.characterAdvancement,
       ].map((f) => f.name);
       expect(allFeatureNames).toContain('Second Wind');
       expect(allFeatureNames).not.toContain('Action Surge');
@@ -262,8 +277,11 @@ describe('classRules', () => {
       };
       const result = classRules.getFeatures(playerStats);
       const allFeatureNames = [
-        ...result.actions, ...result.bonusActions, ...result.reactions,
-        ...result.specialActions, ...result.characterAdvancement,
+        ...result.actions,
+        ...result.bonusActions,
+        ...result.reactions,
+        ...result.specialActions,
+        ...result.characterAdvancement,
       ].map((f) => f.name);
       expect(allFeatureNames).toContain('Weapon Training');
       expect(allFeatureNames).toContain('Combat Maneuvers');
@@ -288,7 +306,7 @@ describe('classRules', () => {
       expect(() => classRules.getFeatures(playerStats)).toThrow(TypeError);
     });
 
-    it('does not include subclass features when subclass is null', () => {
+    it('excludes subclass features when subclass is null', () => {
       const playerStats = {
         class: {
           name: 'Fighter',
@@ -299,8 +317,11 @@ describe('classRules', () => {
       };
       const result = classRules.getFeatures(playerStats);
       const allFeatureNames = [
-        ...result.actions, ...result.bonusActions, ...result.reactions,
-        ...result.specialActions, ...result.characterAdvancement,
+        ...result.actions,
+        ...result.bonusActions,
+        ...result.reactions,
+        ...result.specialActions,
+        ...result.characterAdvancement,
       ].map((f) => f.name);
       expect(allFeatureNames).toEqual(['Weapon Training']);
     });
@@ -312,11 +333,14 @@ describe('classRules', () => {
       expect(classRules.getHighestSubclassLevel(playerStats)).toBe(0);
     });
 
-    it('returns highest subclass level object <= player level', () => {
+    it('returns highest subclass level capped at player level', () => {
       const playerStats = {
         class: {
           name: 'Wizard',
-          subclass: { name: 'Abjuration', class_levels: [{ level: 2 }, { level: 3 }, { level: 4 }, { level: 5 }] },
+          subclass: {
+            name: 'Abjuration',
+            class_levels: [{ level: 2 }, { level: 3 }, { level: 4 }, { level: 5 }],
+          },
         },
         level: 4,
       };
@@ -422,27 +446,30 @@ describe('classRules', () => {
     });
 
     it('sets wildShapeLimitations based on fly flag', () => {
-      const flyStats = {
+      const playerStats = {
         class: { name: 'Druid', class_levels: [{ level: 4, class_specific: { wild_shape_fly: true } }] },
         level: 4,
       };
-      expect(classRules.getDruidFeatures(flyStats).wildShapeLimitations).toBe('walk, swim, or fly');
+      expect(classRules.getDruidFeatures(playerStats).wildShapeLimitations).toBe('walk, swim, or fly');
     });
 
     it('sets wildShapeLimitations based on swim flag when fly is absent', () => {
-      const swimStats = {
+      const playerStats = {
         class: { name: 'Druid', class_levels: [{ level: 4, class_specific: { wild_shape_swim: true } }] },
         level: 4,
       };
-      expect(classRules.getDruidFeatures(swimStats).wildShapeLimitations).toBe('walk or swim only (no fly)');
+      expect(classRules.getDruidFeatures(playerStats).wildShapeLimitations).toBe('walk or swim only (no fly)');
     });
 
     it('prefers fly over swim when both are set', () => {
-      const bothStats = {
-        class: { name: 'Druid', class_levels: [{ level: 4, class_specific: { wild_shape_fly: true, wild_shape_swim: true } }] },
+      const playerStats = {
+        class: {
+          name: 'Druid',
+          class_levels: [{ level: 4, class_specific: { wild_shape_fly: true, wild_shape_swim: true } }],
+        },
         level: 4,
       };
-      expect(classRules.getDruidFeatures(bothStats).wildShapeLimitations).toBe('walk, swim, or fly');
+      expect(classRules.getDruidFeatures(playerStats).wildShapeLimitations).toBe('walk, swim, or fly');
     });
 
     it('returns defaults when class_levels is missing', () => {
@@ -477,6 +504,11 @@ describe('classRules', () => {
       expect(classRules.getPaladinFeatures(playerStats).extraAttacks).toBe(0);
     });
 
+    it('returns 1 extraAttacks when level > 4 without class_levels', () => {
+      const playerStats = { class: { name: 'Paladin' }, level: 5 };
+      expect(classRules.getPaladinFeatures(playerStats).extraAttacks).toBe(1);
+    });
+
     it('returns default auraRange when not set in class_specific', () => {
       const playerStats = { class: { name: 'Paladin', class_levels: [{ level: 5, class_specific: {} }] }, level: 5 };
       expect(classRules.getPaladinFeatures(playerStats).auraRange).toBeNull();
@@ -487,7 +519,7 @@ describe('classRules', () => {
       expect(classRules.getPaladinFeatures(playerStats)).toEqual({ maxChannelDivinity: 0, auraRange: null, extraAttacks: 1 });
     });
 
-    it('returns defaults when class is missing', () => {
+    it('returns defaults when class is missing (level also undefined)', () => {
       expect(classRules.getPaladinFeatures({})).toEqual({ maxChannelDivinity: 0, auraRange: null, extraAttacks: 0 });
     });
   });
@@ -497,7 +529,16 @@ describe('classRules', () => {
       const playerStats = {
         class: {
           name: 'Sorcerer',
-          class_levels: [{ level: 3, class_specific: { sorcery_points: 3, metamagic_known: 2, creating_spell_slots: [{ sorcery_point_cost: 2 }] } }],
+          class_levels: [
+            {
+              level: 3,
+              class_specific: {
+                sorcery_points: 3,
+                metamagic_known: 2,
+                creating_spell_slots: [{ sorcery_point_cost: 2 }],
+              },
+            },
+          ],
         },
         level: 3,
       };
@@ -538,7 +579,9 @@ describe('classRules', () => {
       const playerStats = {
         class: {
           name: 'Warlock',
-          class_levels: [{ level: 13, class_specific: { invocations_known: 10, mystic_arcanum_level_6: 5 } }],
+          class_levels: [
+            { level: 13, class_specific: { invocations_known: 10, mystic_arcanum_level_6: 5 } },
+          ],
         },
         level: 13,
       };
@@ -601,22 +644,15 @@ describe('classRules', () => {
         class: { name: 'Wizard', class_levels: [{ level: 4, class_specific: { arcane_recovery_levels: 3 } }] },
         level: 4,
       };
-      expect(classRules.getWizardFeatures(playerStats)).toEqual({ arcaneRecoveryLevels: 3, arcaneWard: false, arcaneWardMax: 0, showWizardFeatures: true });
+      expect(classRules.getWizardFeatures(playerStats)).toEqual({
+        arcaneRecoveryLevels: 3,
+        arcaneWard: false,
+        arcaneWardMax: 0,
+        showWizardFeatures: true,
+      });
     });
 
-    it('returns arcaneWard: true for Abjurer with automation passive', () => {
-      const playerStats = {
-        class: { name: 'Wizard', subclass: { name: 'Abjuration' }, class_levels: [{ level: 4 }] },
-        level: 4,
-        abilities: [{ name: 'Intelligence', bonus: 3 }],
-        automation: { passives: [{ type: 'arcane_ward', name: 'Arcane Ward' }] },
-      };
-      const result = classRules.getWizardFeatures(playerStats);
-      expect(result.arcaneWard).toBe(true);
-      expect(result.arcaneWardMax).toBe(11);
-    });
-
-    it('calculates arcaneWardMax with INT bonus', () => {
+    it('calculates arcaneWardMax with INT bonus for Abjurer with arcane_ward passive', () => {
       const playerStats = {
         class: { name: 'Wizard', subclass: { name: 'Abjuration' }, class_levels: [{ level: 7 }] },
         level: 7,
@@ -624,8 +660,19 @@ describe('classRules', () => {
         automation: { passives: [{ type: 'arcane_ward' }] },
       };
       const result = classRules.getWizardFeatures(playerStats);
-      // (2 * 7) + 5 = 19
+      expect(result.arcaneWard).toBe(true);
       expect(result.arcaneWardMax).toBe(19);
+    });
+
+    it('defaults intMod to 0 when Intelligence ability is missing', () => {
+      const playerStats = {
+        class: { name: 'Wizard', subclass: { name: 'Abjuration' }, class_levels: [{ level: 4 }] },
+        level: 4,
+        abilities: [{ name: 'Strength', bonus: 3 }],
+        automation: { passives: [{ type: 'arcane_ward' }] },
+      };
+      const result = classRules.getWizardFeatures(playerStats);
+      expect(result.arcaneWardMax).toBe(8);
     });
 
     it('returns arcaneWard: false when automation passives is missing', () => {
@@ -639,18 +686,6 @@ describe('classRules', () => {
       expect(result.arcaneWardMax).toBe(0);
     });
 
-    it('defaults intMod to 0 when Intelligence ability is missing', () => {
-      const playerStats = {
-        class: { name: 'Wizard', subclass: { name: 'Abjuration' }, class_levels: [{ level: 4 }] },
-        level: 4,
-        abilities: [{ name: 'Strength', bonus: 3 }],
-        automation: { passives: [{ type: 'arcane_ward' }] },
-      };
-      const result = classRules.getWizardFeatures(playerStats);
-      // (2 * 4) + 0 = 8
-      expect(result.arcaneWardMax).toBe(8);
-    });
-
     it('returns defaults when class is missing', () => {
       const result = classRules.getWizardFeatures({});
       expect(result.arcaneRecoveryLevels).toBe(0);
@@ -661,24 +696,32 @@ describe('classRules', () => {
   });
 
   describe('getMonkFeatures', () => {
-    it('returns hardcoded values', () => {
+    it('returns hardcoded values regardless of arguments', () => {
       expect(classRules.getMonkFeatures()).toEqual({
-        martialArtsDie: 4, unarmoredMovementIncrease: 0, maxFocusPoints: 0, wisdomBonus: 0,
+        martialArtsDie: 4,
+        unarmoredMovementIncrease: 0,
+        maxFocusPoints: 0,
+        wisdomBonus: 0,
       });
-    });
-
-    it('returns the same values regardless of arguments', () => {
-      expect(classRules.getMonkFeatures({})).toEqual({ martialArtsDie: 4, unarmoredMovementIncrease: 0, maxFocusPoints: 0, wisdomBonus: 0 });
-      expect(classRules.getMonkFeatures(null)).toEqual({ martialArtsDie: 4, unarmoredMovementIncrease: 0, maxFocusPoints: 0, wisdomBonus: 0 });
+      expect(classRules.getMonkFeatures({})).toEqual({
+        martialArtsDie: 4,
+        unarmoredMovementIncrease: 0,
+        maxFocusPoints: 0,
+        wisdomBonus: 0,
+      });
+      expect(classRules.getMonkFeatures(null)).toEqual({
+        martialArtsDie: 4,
+        unarmoredMovementIncrease: 0,
+        maxFocusPoints: 0,
+        wisdomBonus: 0,
+      });
     });
   });
 
   describe('getRangerFeatures', () => {
-    it('returns extraAttacks based on level', () => {
-      const highLevel = { class: { name: 'Ranger' }, level: 5 };
-      expect(classRules.getRangerFeatures(highLevel).extraAttacks).toBe(1);
-      const lowLevel = { class: { name: 'Ranger' }, level: 3 };
-      expect(classRules.getRangerFeatures(lowLevel).extraAttacks).toBe(0);
+    it('returns extraAttacks based on level threshold', () => {
+      expect(classRules.getRangerFeatures({ class: { name: 'Ranger' }, level: 5 }).extraAttacks).toBe(1);
+      expect(classRules.getRangerFeatures({ class: { name: 'Ranger' }, level: 3 }).extraAttacks).toBe(0);
     });
 
     it('returns favoredEnemies: 0', () => {
@@ -694,9 +737,13 @@ describe('classRules', () => {
   });
 
   describe('getRogueFeatures', () => {
-    it('returns sneakAttack and expertise', () => {
+    it('returns sneakAttack and expertise from playerStats', () => {
       const playerStats = {
-        class: { name: 'Rogue', expertise: ['Stealth'], class_levels: [{ level: 5, class_specific: { sneak_attack: { dice_count: 5, dice_value: 6 } } }] },
+        class: {
+          name: 'Rogue',
+          expertise: ['Stealth'],
+          class_levels: [{ level: 5, class_specific: { sneak_attack: { dice_count: 5, dice_value: 6 } } }],
+        },
         level: 5,
         expertise: ['Stealth'],
       };
@@ -723,7 +770,10 @@ describe('classRules', () => {
       const playerStats = {
         class: {
           name: 'Bard',
-          subclass: { name: 'Lore', class_levels: [{ level: 6, subclass_specific: { additional_magical_secrets_max_lvl: 2 } }] },
+          subclass: {
+            name: 'Lore',
+            class_levels: [{ level: 6, subclass_specific: { additional_magical_secrets_max_lvl: 2 } }],
+          },
           class_levels: [{ level: 6, class_specific: { bardic_inspiration_die: 'd8' } }],
         },
         level: 6,
@@ -751,7 +801,10 @@ describe('classRules', () => {
       const playerStats = {
         class: {
           name: 'Bard',
-          subclass: { name: 'Lore', class_levels: [{ level: 6, subclass_specific: { additional_magical_secrets_max_lvl: 2 } }] },
+          subclass: {
+            name: 'Lore',
+            class_levels: [{ level: 6, subclass_specific: { additional_magical_secrets_max_lvl: 2 } }],
+          },
           class_levels: [{ level: 2, class_specific: { bardic_inspiration_die: 'd6' } }],
         },
         level: 2,

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
@@ -79,6 +80,7 @@ import * as savePromptService from '../../../services/combat/conditions/saveProm
 import * as aoeService from '../../../services/rules/combat/aoeService.js';
 import * as combatData from '../../../services/encounters/combatData.js';
 import * as logService from '../../../services/ui/logService.js';
+import * as applyDamage from '../../../services/rules/combat/applyDamage.js';
 
 // ── Test fixtures ──
 
@@ -114,8 +116,8 @@ describe('ElementalAttunementModal player save handling', () => {
         diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
     });
 
-    describe('player save prompts', () => {
-        it('calls sendSavePrompt for Fire on player targets', async () => {
+    describe('save prompt parameters', () => {
+        it('sends save prompt with rawDamage for Fire element on player targets', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
             ]));
@@ -123,9 +125,15 @@ describe('ElementalAttunementModal player save handling', () => {
             renderModal({ activeOverlay: { type: 'sphere' } });
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const [campaign, promptData] = savePromptService.sendSavePrompt.mock.calls[0];
+            expect(campaign).toBe('test-campaign');
+            expect(promptData.targetName).toBe('Player1');
+            expect(promptData.saveType).toBe('DEX');
+            expect(promptData.saveDc).toBe(12);
+            expect(promptData.rawDamage).toBe(5);
         });
 
-        it('calls sendSavePrompt for Cold speed_reduction on player targets', async () => {
+        it('sends save prompt without rawDamage for Cold element on player targets', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
             ]));
@@ -133,11 +141,33 @@ describe('ElementalAttunementModal player save handling', () => {
             renderModal({ activeOverlay: { type: 'sphere' } });
             fireEvent.click(screen.getByText('Cold'));
             await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const [campaign, promptData] = savePromptService.sendSavePrompt.mock.calls[0];
+            expect(campaign).toBe('test-campaign');
+            expect(promptData.targetName).toBe('Player1');
+            expect(promptData.saveType).toBe('DEX');
+            expect(promptData.saveDc).toBe(12);
+            expect(promptData.rawDamage).toBeUndefined();
+        });
+
+        it('sends save prompt with correct rawDamage for Lightning element on player targets', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Lightning'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const [campaign, promptData] = savePromptService.sendSavePrompt.mock.calls[0];
+            expect(campaign).toBe('test-campaign');
+            expect(promptData.targetName).toBe('Player1');
+            expect(promptData.saveType).toBe('DEX');
+            expect(promptData.saveDc).toBe(12);
+            expect(promptData.rawDamage).toBe(5);
         });
     });
 
-    describe('save-result event listener', () => {
-        it('handles save-result event for player targets', async () => {
+    describe('save-result event handling', () => {
+        it('records successful save result with damage data for Fire element', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
             ]));
@@ -153,9 +183,35 @@ describe('ElementalAttunementModal player save handling', () => {
                 }));
             });
             await waitFor(() => expect(screen.getByText(/Results/)).toBeInTheDocument());
+            const body = document.querySelector('.sp-body');
+            expect(body.textContent).toContain('Player1');
+            expect(body.textContent).toContain('Saved');
+            expect(body.textContent).toContain('2 fire');
         });
 
-        it('handles save-result event for Cold speed_reduction on player failure', async () => {
+        it('records failed save result with damage data for Lightning element', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: -10 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Lightning'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+            await waitFor(() => expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument());
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: { promptId, targetName: 'Player1', success: false, roll: 5, saveBonus: -10, total: -5, rawDamage: 5 },
+                }));
+            });
+            await waitFor(() => expect(screen.getByText(/Results/)).toBeInTheDocument());
+            const body = document.querySelector('.sp-body');
+            expect(body.textContent).toContain('Player1');
+            expect(body.textContent).toContain('Failed');
+            expect(body.textContent).toContain('5 lightning');
+        });
+
+        it('applies speed_reduction condition on player Cold save failure', async () => {
             runtimeState.getRuntimeValue.mockReturnValue([]);
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Player1', type: 'player', saveBonuses: { dex: -10 }, resistances: [], immunities: [] },
@@ -181,7 +237,7 @@ describe('ElementalAttunementModal player save handling', () => {
             });
         });
 
-        it('handles save-result event for Cold speed_reduction on player success', async () => {
+        it('does not apply speed_reduction condition on player Cold save success', async () => {
             runtimeState.getRuntimeValue.mockReturnValue([]);
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Player1', type: 'player', saveBonuses: { dex: 10 }, resistances: [], immunities: [] },
@@ -197,16 +253,61 @@ describe('ElementalAttunementModal player save handling', () => {
                     detail: { promptId, targetName: 'Player1', success: true, roll: 15, saveBonus: 10, total: 25, rawDamage: 0 },
                 }));
             });
-            await waitFor(() => {
-                expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
-                    'Player1',
-                    'activeConditions',
-                    expect.arrayContaining(['speed_reduction']),
-                    'test-campaign'
-                );
-            });
+            await waitFor(() => expect(screen.getByText(/Results/)).toBeInTheDocument());
+            const body = document.querySelector('.sp-body');
+            expect(body.textContent).toContain('no effect');
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+                'Player1',
+                'activeConditions',
+                expect.arrayContaining(['speed_reduction']),
+                'test-campaign'
+            );
         });
 
+        it('records result with effect field for Cold element save', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue([]);
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: -10 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Cold'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+            await waitFor(() => expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument());
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: { promptId, targetName: 'Player1', success: false, roll: 5, saveBonus: -10, total: -5, rawDamage: 0 },
+                }));
+            });
+            await waitFor(() => expect(screen.getByText(/Results/)).toBeInTheDocument());
+            const body = document.querySelector('.sp-body');
+            expect(body.textContent).toContain('speed reduced by 15 ft');
+        });
+
+        it('calls applyDamageToTarget for player Fire save result', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: { promptId, targetName: 'Player1', success: false, roll: 10, saveBonus: 3, total: 13, rawDamage: 5 },
+                }));
+            });
+            await waitFor(() => expect(applyDamage.applyDamageToTarget).toHaveBeenCalled());
+            const callArgs = applyDamage.applyDamageToTarget.mock.calls[0];
+            expect(callArgs[1]).toBe('Player1');
+            expect(callArgs[3]).toEqual(['fire']);
+            expect(callArgs[4]).toBe('test-campaign');
+        });
+    });
+
+    describe('save-result listener lifecycle', () => {
         it('removes save-result listener on unmount', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
@@ -221,7 +322,39 @@ describe('ElementalAttunementModal player save handling', () => {
             spy.mockRestore();
         });
 
-        it('handles save-result error for player damage path', async () => {
+        it('ignores save-result events with unknown promptId', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: { promptId: 'nonexistent-id', targetName: 'Player1', success: true, roll: 15, saveBonus: 3, total: 18, rawDamage: 5 },
+                }));
+            });
+            await waitFor(() => expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument());
+        });
+
+        it('ignores save-result events with no detail', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', { detail: null }));
+            });
+            expect(screen.queryByText(/Results/)).not.toBeInTheDocument();
+        });
+    });
+
+    describe('save-result error handling', () => {
+        it('logs error and records result when addEntry rejects for player damage path', async () => {
             logService.addEntry.mockRejectedValue(new Error('network error'));
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
@@ -241,10 +374,12 @@ describe('ElementalAttunementModal player save handling', () => {
             await waitFor(() => {
                 expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging player save:', expect.any(Error));
             });
+            const body = document.querySelector('.sp-body');
+            expect(body.textContent).toContain('Player1');
             consoleSpy.mockRestore();
         });
 
-        it('handles save-result error for player effect path (Cold speed_reduction)', async () => {
+        it('logs error and records effect when addEntry rejects for player effect path', async () => {
             logService.addEntry.mockRejectedValue(new Error('network error'));
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             runtimeState.getRuntimeValue.mockReturnValue([]);
@@ -265,7 +400,69 @@ describe('ElementalAttunementModal player save handling', () => {
             await waitFor(() => {
                 expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging player effect:', expect.any(Error));
             });
+            const body = document.querySelector('.sp-body');
+            expect(body.textContent).toContain('Player1');
             consoleSpy.mockRestore();
+        });
+
+        it('removes pending prompt after save-result even when logging fails', async () => {
+            logService.addEntry.mockRejectedValue(new Error('network error'));
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+            await waitFor(() => expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument());
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: { promptId, targetName: 'Player1', success: false, roll: 5, saveBonus: 3, total: 8, rawDamage: 5 },
+                }));
+            });
+            await waitFor(() => {
+                expect(screen.queryByText(/Waiting for save roll/)).not.toBeInTheDocument();
+            });
+            consoleSpy.mockRestore();
+        });
+    });
+
+    describe('multiple player targets', () => {
+        it('sends save prompts for all player targets', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
+                { name: 'Player2', type: 'player', saveBonuses: { dex: 5 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([
+                { creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } },
+                { creature: { name: 'Player2', type: 'player', currentHp: 8, maxHp: 8 } },
+            ]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => {
+                expect(savePromptService.sendSavePrompt).toHaveBeenCalledTimes(2);
+            });
+        });
+
+        it('shows pending prompts for all player targets', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
+                { name: 'Player2', type: 'player', saveBonuses: { dex: 5 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([
+                { creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } },
+                { creature: { name: 'Player2', type: 'player', currentHp: 8, maxHp: 8 } },
+            ]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => {
+                const body = document.querySelector('.sp-body');
+                expect(body.textContent).toContain('Player1');
+                expect(body.textContent).toContain('Player2');
+                expect(body.textContent).toContain('Waiting for save roll');
+            });
         });
     });
 });

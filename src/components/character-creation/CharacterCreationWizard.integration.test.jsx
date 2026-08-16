@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharacterCreationWizard from './CharacterCreationWizard.jsx';
 import useWizardNavigation from '../../hooks/wizard/useWizardNavigation.js';
@@ -86,6 +87,14 @@ vi.mock('../../hooks/wizard/useWizardSkills.js', () => ({
     expertiseLimits: null,
     skillWarnings: [],
     preSelectedSkills: [],
+  })),
+}));
+
+vi.mock('../../hooks/wizard/useWizardTools.js', () => ({
+  default: vi.fn(() => ({
+    toolLimits: null,
+    toolWarnings: [],
+    preSelectedTools: [],
   })),
 }));
 
@@ -289,20 +298,66 @@ describe('CharacterCreationWizard - Integration', () => {
     validateFinalFormData.mockImplementation(() => ({}));
   });
 
-  it('renders step 1 (Ruleset) by default', () => {
+  it('renders the wizard header with correct title for new character creation', () => {
     render(<CharacterCreationWizard {...defaultProps} />);
-    expect(screen.getByTestId('step-ruleset')).toBeInTheDocument();
+    expect(screen.getByText('Create New Character')).toBeInTheDocument();
   });
 
-  it('updates tempInventory when onTempInventoryChange is called from step', async () => {
+  it('renders the wizard header with edit title when isEditing is true', () => {
+    render(<CharacterCreationWizard {...defaultProps} isEditing={true} />);
+    expect(screen.getByText('Edit Character')).toBeInTheDocument();
+  });
+
+  it('renders the progress bar showing correct step count', () => {
     render(<CharacterCreationWizard {...defaultProps} />);
-    expect(screen.getByTestId('temp-inventory-count').textContent).toBe('0');
-    const updateBtn = screen.getByText('Update Inventory');
+    expect(screen.getByTestId('wizard-progress-bar')).toBeInTheDocument();
+  });
+
+  it('renders the footer with next button enabled on the first step', () => {
+    render(<CharacterCreationWizard {...defaultProps} />);
+    const footer = screen.getByTestId('wizard-footer');
+    const nextButton = footer.querySelector('.btn-primary');
+    expect(nextButton).toBeInTheDocument();
+    expect(nextButton.disabled).toBe(false);
+  });
+
+  it('navigates to the selected step when sidebar navigation button is clicked', async () => {
+    render(<CharacterCreationWizard {...defaultProps} />);
     await act(async () => {
-      fireEvent.click(updateBtn);
+      fireEvent.click(screen.getByText('Go Step 6'));
     });
-    await waitFor(() => {
-      expect(screen.getByTestId('temp-inventory-count').textContent).toBe('1');
+    expect(mockGoToStep).toHaveBeenCalledWith(6);
+  });
+
+  it('updates form data and navigates when ruleset is changed', async () => {
+    render(<CharacterCreationWizard {...defaultProps} />);
+    await act(async () => {
+      fireEvent.click(screen.getByText('Change Ruleset'));
     });
+    expect(mockSetFormData).toHaveBeenCalled();
+    expect(mockGoToStep).toHaveBeenCalledWith(2);
+  });
+
+  it('calls submit handler when create character button is clicked on the last step', async () => {
+    useWizardNavigation.mockImplementation(() => ({
+      currentStep: 12,
+      isNextDisabled: false,
+      navigateNext: mockNavigateNext,
+      navigatePrevious: mockNavigatePrevious,
+      goToStep: mockGoToStep,
+      getStepEnabled: mockGetStepEnabled,
+      isSaveEnabled: true,
+    }));
+    render(<CharacterCreationWizard {...defaultProps} />);
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create Character'));
+    });
+    expect(mockSetErrors).not.toHaveBeenCalled();
+  });
+
+  it('enables the save button in sidebar when isSaveEnabled is true', () => {
+    render(<CharacterCreationWizard {...defaultProps} />);
+    const saveEnabled = screen.getByTestId('sidebar-save-enabled');
+    expect(saveEnabled.textContent).toBe('true');
   });
 });

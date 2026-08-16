@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FeyReinforcementsModal from './FeyReinforcementsModal.jsx';
@@ -36,15 +37,10 @@ describe('FeyReinforcementsModal', () => {
     });
 
     describe('initial render', () => {
-        it('renders the modal overlay with the action name', () => {
+        it('renders the modal overlay with the action name and leaf icon', () => {
             render(<FeyReinforcementsModal {...makeProps()} />);
             expect(screen.getByText('Fey Reinforcements')).toBeInTheDocument();
-        });
-
-        it('renders the leaf icon in the header', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            const icon = document.querySelector('.sp-header .fa-solid.fa-leaf');
-            expect(icon).toBeInTheDocument();
+            expect(document.querySelector('.sp-header .fa-solid.fa-leaf')).toBeInTheDocument();
         });
 
         it('renders the description about casting without components', () => {
@@ -62,16 +58,10 @@ describe('FeyReinforcementsModal', () => {
             ).toBeInTheDocument();
         });
 
-        it('renders the concentration skip checkbox', () => {
+        it('renders the concentration skip checkbox and both description variants', () => {
             render(<FeyReinforcementsModal {...makeProps()} />);
-            const label = screen.getByText(/Skip Concentration/);
-            expect(label).toBeInTheDocument();
-            const checkbox = document.querySelector('input[type="checkbox"]');
+            const checkbox = screen.getByRole('checkbox', { name: /Skip Concentration/ });
             expect(checkbox).not.toBeChecked();
-        });
-
-        it('renders the default description when checkbox is unchecked', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
             expect(
                 screen.getByText(/require Concentration and last up to 1 hour/)
             ).toBeInTheDocument();
@@ -80,43 +70,34 @@ describe('FeyReinforcementsModal', () => {
             ).not.toBeInTheDocument();
         });
 
-        it('renders the Summon Fey button', () => {
+        it('renders the Summon Fey and Cancel buttons', () => {
             render(<FeyReinforcementsModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: /Summon Fey/ })).toBeInTheDocument();
-        });
-
-        it('renders the Cancel button', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
     });
 
     describe('checkbox interaction', () => {
-        it('toggles the checkbox state', () => {
+        it('toggles the checkbox state and updates the description', () => {
             render(<FeyReinforcementsModal {...makeProps()} />);
-            const checkbox = document.querySelector('input[type="checkbox"]');
+            const checkbox = screen.getByRole('checkbox', { name: /Skip Concentration/ });
+
             expect(checkbox.checked).toBe(false);
+            expect(
+                screen.getByText(/require Concentration and last up to 1 hour/)
+            ).toBeInTheDocument();
+
             fireEvent.click(checkbox);
             expect(checkbox.checked).toBe(true);
-        });
-
-        it('shows the no-concentration description when checked', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            const checkbox = document.querySelector('input[type="checkbox"]');
-            fireEvent.click(checkbox);
             expect(
                 screen.getByText(/will not require Concentration and will last 1 minute/)
             ).toBeInTheDocument();
             expect(
                 screen.queryByText(/require Concentration and last up to 1 hour/)
             ).not.toBeInTheDocument();
-        });
 
-        it('shows the concentration description when unchecked', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            const checkbox = document.querySelector('input[type="checkbox"]');
             fireEvent.click(checkbox);
-            fireEvent.click(checkbox);
+            expect(checkbox.checked).toBe(false);
             expect(
                 screen.getByText(/require Concentration and last up to 1 hour/)
             ).toBeInTheDocument();
@@ -145,7 +126,7 @@ describe('FeyReinforcementsModal', () => {
             );
         });
 
-        it('calls confirmFeyReinforcement with noConcentration=true when checked', async () => {
+        it('calls confirmFeyReinforcement with noConcentration=true when checkbox is checked', async () => {
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
                 payload: {
@@ -155,7 +136,7 @@ describe('FeyReinforcementsModal', () => {
                 },
             });
             render(<FeyReinforcementsModal {...makeProps()} />);
-            const checkbox = document.querySelector('input[type="checkbox"]');
+            const checkbox = screen.getByRole('checkbox', { name: /Skip Concentration/ });
             fireEvent.click(checkbox);
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
@@ -168,7 +149,7 @@ describe('FeyReinforcementsModal', () => {
             );
         });
 
-        it('shows the result after confirmation', async () => {
+        it('displays the result and transitions to the result state', async () => {
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
                 payload: {
@@ -184,9 +165,13 @@ describe('FeyReinforcementsModal', () => {
             await waitFor(() => {
                 expect(screen.getByText('Fey Reinforcements: Free cast of Summon Fey (0 remaining).')).toBeInTheDocument();
             });
+            expect(screen.queryByText(/Cast .* without material components/)).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Summon Fey/ })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
         });
 
-        it('shows the result description with dangerouslySetInnerHTML content', async () => {
+        it('renders HTML content from dangerouslySetInnerHTML in the result', async () => {
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
                 payload: {
@@ -206,18 +191,7 @@ describe('FeyReinforcementsModal', () => {
             });
         });
 
-        it('shows "Does not require Concentration" in result when noConcentration=true', async () => {
-            handler.confirmFeyReinforcement.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Fey Reinforcements',
-                    description: 'Test',
-                },
-            });
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            const checkbox = document.querySelector('input[type="checkbox"]');
-            fireEvent.click(checkbox);
+        it('includes concentration info in the result when noConcentration=true', async () => {
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
                 payload: {
@@ -227,6 +201,9 @@ describe('FeyReinforcementsModal', () => {
                         'Fey Reinforcements: Free cast of Summon Fey (0 remaining). Does not require Concentration. Duration: 1 minute.',
                 },
             });
+            render(<FeyReinforcementsModal {...makeProps()} />);
+            const checkbox = screen.getByRole('checkbox', { name: /Skip Concentration/ });
+            fireEvent.click(checkbox);
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
             });
@@ -236,138 +213,13 @@ describe('FeyReinforcementsModal', () => {
             });
         });
 
-        it('shows normal concentration label in result when noConcentration=false', async () => {
-            handler.confirmFeyReinforcement.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Fey Reinforcements',
-                    description:
-                        'Fey Reinforcements: Free cast of Summon Fey (0 remaining).',
-                },
-            });
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
-            });
-            await waitFor(() => {
-                expect(screen.getByText(/Fey Reinforcements: Free cast of Summon Fey/)).toBeInTheDocument();
-            });
-        });
-    });
-
-    describe('cancel/close', () => {
-        it('calls onClose when Cancel is clicked', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-            expect(mockOnClose).toHaveBeenCalled();
-        });
-
-        it('calls onClose when Done is clicked after confirmation', async () => {
-            handler.confirmFeyReinforcement.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Fey Reinforcements',
-                    description: 'Test result',
-                },
-            });
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
-            });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-            });
-            fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-            expect(mockOnClose).toHaveBeenCalled();
-        });
-
-        it('calls onClose when clicking the overlay background', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            fireEvent.click(document.querySelector('.sp-overlay'));
-            expect(mockOnClose).toHaveBeenCalled();
-        });
-
-        it('does not close when clicking inside the modal content', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            const modal = document.querySelector('.sp-modal');
-            fireEvent.click(modal);
-            expect(mockOnClose).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('result state', () => {
-        it('renders the result modal with leaf icon', async () => {
-            handler.confirmFeyReinforcement.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Fey Reinforcements',
-                    description: 'Test result',
-                },
-            });
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
-            });
-            await waitFor(() => {
-                const icon = document.querySelector('.sp-header .fa-solid.fa-leaf');
-                expect(icon).toBeInTheDocument();
-            });
-        });
-
-        it('hides the initial form after confirmation', async () => {
-            handler.confirmFeyReinforcement.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Fey Reinforcements',
-                    description: 'Test result',
-                },
-            });
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
-            });
-            await waitFor(() => {
-                expect(screen.queryByText(/Cast .* without material components/)).not.toBeInTheDocument();
-                expect(screen.queryByRole('button', { name: /Summon Fey/ })).not.toBeInTheDocument();
-                expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-            });
-        });
-
-        it('renders the result modal with correct classes', async () => {
-            handler.confirmFeyReinforcement.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Fey Reinforcements',
-                    description: 'Test result',
-                },
-            });
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
-            });
-            await waitFor(() => {
-                expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-                expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-                expect(document.querySelector('.sp-header')).toBeInTheDocument();
-                expect(document.querySelector('.sp-body')).toBeInTheDocument();
-                expect(document.querySelector('.sp-actions')).toBeInTheDocument();
-            });
-        });
-    });
-
-    describe('custom action name', () => {
         it('renders with a custom action name', () => {
             const customAction = { ...baseAction, name: 'Custom Fey Summon' };
             render(<FeyReinforcementsModal {...makeProps({ action: customAction })} />);
             expect(screen.getByText('Custom Fey Summon')).toBeInTheDocument();
         });
 
-        it('shows custom action name in result header', async () => {
+        it('shows custom action name in the result header', async () => {
             const customAction = { ...baseAction, name: 'Custom Fey Summon' };
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
@@ -384,6 +236,75 @@ describe('FeyReinforcementsModal', () => {
             await waitFor(() => {
                 expect(screen.getByText('Custom Fey Summon')).toBeInTheDocument();
             });
+        });
+    });
+
+    describe('cancel / close', () => {
+        it('calls onClose when Cancel button is clicked', () => {
+            render(<FeyReinforcementsModal {...makeProps()} />);
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+            expect(mockOnClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('calls onClose when Done button is clicked after confirmation', async () => {
+            handler.confirmFeyReinforcement.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Fey Reinforcements',
+                    description: 'Test result',
+                },
+            });
+            render(<FeyReinforcementsModal {...makeProps()} />);
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
+            });
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+            });
+            fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+            expect(mockOnClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('calls onClose when clicking the overlay background', () => {
+            render(<FeyReinforcementsModal {...makeProps()} />);
+            fireEvent.click(document.querySelector('.sp-overlay'));
+            expect(mockOnClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not close when clicking inside the modal content', () => {
+            render(<FeyReinforcementsModal {...makeProps()} />);
+            const modal = document.querySelector('.sp-modal');
+            fireEvent.click(modal);
+            expect(mockOnClose).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('edge cases', () => {
+        it('handles the "no free casts remaining" result from the handler', async () => {
+            handler.confirmFeyReinforcement.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Fey Reinforcements',
+                    description: 'No free casts remaining. Finish a Long Rest to regain them.',
+                },
+            });
+            render(<FeyReinforcementsModal {...makeProps()} />);
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
+            });
+            await waitFor(() => {
+                expect(screen.getByText('No free casts remaining. Finish a Long Rest to regain them.')).toBeInTheDocument();
+            });
+            expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+        });
+
+        it('renders the leaf icon when action.name is undefined', () => {
+            const actionWithoutName = { automation: baseAction.automation };
+            render(<FeyReinforcementsModal {...makeProps({ action: actionWithoutName })} />);
+            expect(document.querySelector('.sp-header .fa-solid.fa-leaf')).toBeInTheDocument();
+            expect(screen.queryByText('Fey Reinforcements')).not.toBeInTheDocument();
         });
     });
 });

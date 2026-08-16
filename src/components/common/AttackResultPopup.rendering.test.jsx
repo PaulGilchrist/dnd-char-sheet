@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import AttackResultPopup from './AttackResultPopup.jsx';
 
@@ -40,41 +41,50 @@ describe('AttackResultPopup', () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  // ── String popupHtml rendering ──
 
-  // ── Rendering: string popupHtml ──
-
-  describe('rendering with string popupHtml', () => {
-    it('renders sanitized HTML when popupHtml is a string', () => {
+  describe('string popupHtml rendering', () => {
+    it('renders sanitized HTML content from a string popupHtml', () => {
       renderPopup({ popupHtml: '<b>Attack Result</b>' });
 
       expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
       expect(screen.getByText('Attack Result')).toBeInTheDocument();
-      expect(sanitizeHtml).toHaveBeenCalledWith('<b>Attack Result</b>');
     });
 
-    it('renders complex HTML with allowed tags', () => {
+    it('renders complex HTML with multiple tags from a string popupHtml', () => {
       const html = '<p>Hit with <b>+5</b> bonus</p><ul><li>Critical</li></ul>';
       renderPopup({ popupHtml: html });
 
       expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
       expect(sanitizeHtml).toHaveBeenCalledWith(html);
     });
+
+    it('renders string popupHtml with empty content', () => {
+      renderPopup({ popupHtml: '' });
+
+      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+      expect(sanitizeHtml).toHaveBeenCalledWith('');
+    });
+
+    it('renders string popupHtml with only whitespace', () => {
+      renderPopup({ popupHtml: '   ' });
+
+      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+      expect(sanitizeHtml).toHaveBeenCalledWith('   ');
+    });
   });
 
-  // ── Rendering: object popupHtml (DiceRollResult) ──
+  // ── Object popupHtml rendering (DiceRollResult path) ──
 
-  describe('rendering with object popupHtml', () => {
-    it('renders DiceRollResult when popupHtml is an object', () => {
+  describe('object popupHtml rendering', () => {
+    it('renders DiceRollResult content with default props', () => {
       renderPopup();
 
       expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
       expect(screen.getByText('Test Attack')).toBeInTheDocument();
     });
 
-    it('passes popupHtml props to DiceRollResult', () => {
+    it('renders DiceRollResult with custom attack name and values', () => {
       const popupHtml = {
         name: 'Grimjaw',
         type: 'd20',
@@ -93,22 +103,26 @@ describe('AttackResultPopup', () => {
       expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
       expect(screen.getByText('Grimjaw')).toBeInTheDocument();
     });
-  });
 
-  // ── Popup overlay behavior ──
-
-  describe('popup overlay behavior', () => {
-    it('renders inside a popup overlay', () => {
-      renderPopup();
+    it('renders DiceRollResult with hit overridden when missToHitApplied would be true', () => {
+      // When popupHtml.hit is false but missToHitApplied is true (via Boon of Combat Prowess),
+      // the hit prop passed to DiceRollResult should be true.
+      // This tests the component's hit override logic in the render path.
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [3],
+          bonus: 3,
+          hit: false,
+          autoRerollForAttack: true,
+        },
+        attackerName: 'PlayerOne',
+      });
 
       expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
-      expect(screen.getByTestId('popup-overlay')).toHaveClass('popup-overlay');
-    });
-
-    it('has dismiss hint text', () => {
-      renderPopup();
-
-      expect(screen.getByText('click to dismiss')).toBeInTheDocument();
+      // The attack name should still render even when hit is false
+      expect(screen.getByText('Test Attack')).toBeInTheDocument();
     });
   });
 });

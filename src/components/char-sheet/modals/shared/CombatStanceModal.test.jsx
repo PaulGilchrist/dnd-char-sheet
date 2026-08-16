@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CombatStanceModal from './CombatStanceModal.jsx';
@@ -38,6 +39,17 @@ function makeProps(overrides = {}) {
     onClose: vi.fn(),
     ...overrides,
   };
+}
+
+function mockAppliedStance(onClose = vi.fn(), description = 'Bear chosen.') {
+  combatStanceHandler.applyStanceOption.mockResolvedValue({
+    type: 'popup',
+    payload: { type: 'automation_info', name: 'Rage', description },
+  });
+  render(<CombatStanceModal {...makeProps({ onClose })} />);
+  const radios = document.querySelectorAll('input[type="radio"]');
+  fireEvent.click(radios[0]);
+  fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
 }
 
 describe('CombatStanceModal', () => {
@@ -83,13 +95,6 @@ describe('CombatStanceModal', () => {
   });
 
   describe('selection behavior', () => {
-    it('selects an option when its radio is clicked', () => {
-      render(<CombatStanceModal {...makeProps()} />);
-      const radios = document.querySelectorAll('input[type="radio"]');
-      fireEvent.click(radios[2]);
-      expect(radios[2].checked).toBe(true);
-    });
-
     it('switches selection when a different option is clicked', () => {
       render(<CombatStanceModal {...makeProps()} />);
       const radios = document.querySelectorAll('input[type="radio"]');
@@ -125,7 +130,7 @@ describe('CombatStanceModal', () => {
       combatStanceHandler.applyStanceOption.mockClear();
     });
 
-    it('calls applyStanceOption with correct arguments and option name', async () => {
+    it('calls applyStanceOption with correct arguments and selected option name', async () => {
       combatStanceHandler.applyStanceOption.mockResolvedValue({
         type: 'popup',
         payload: { type: 'automation_info', name: 'Rage', description: 'Bear chosen.' },
@@ -157,29 +162,36 @@ describe('CombatStanceModal', () => {
       const btn = screen.getByRole('button', { name: /Activate Movement/ });
       expect(btn.querySelector('.fa-solid.fa-wind')).toBeInTheDocument();
     });
-  });
 
-  describe('applied state', () => {
-    function applyStanceWith(onClose = vi.fn(), description = 'Bear chosen.') {
-      combatStanceHandler.applyStanceOption.mockResolvedValue({
-        type: 'popup',
-        payload: { type: 'automation_info', name: 'Rage', description },
-      });
-      render(<CombatStanceModal {...makeProps({ onClose })} />);
+    it('handles error when applyStanceOption throws', async () => {
+      combatStanceHandler.applyStanceOption.mockRejectedValue(new Error('Failed to apply stance'));
+
+      render(<CombatStanceModal {...makeProps()} />);
       const radios = document.querySelectorAll('input[type="radio"]');
       fireEvent.click(radios[0]);
       fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
-    }
+
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+        expect(screen.queryByText(/Bear chosen/)).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('applied state', () => {
+    beforeEach(() => {
+      combatStanceHandler.applyStanceOption.mockClear();
+    });
 
     it('shows the result description after applying', async () => {
-      applyStanceWith();
+      mockAppliedStance();
       await waitFor(() => {
         expect(screen.getByText(/Bear chosen/)).toBeInTheDocument();
       });
     });
 
     it('replaces selection UI with result and Done button', async () => {
-      applyStanceWith();
+      mockAppliedStance();
       await waitFor(() => {
         expect(screen.queryByText(/Choose a primal aspect/)).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Activate Rage/ })).not.toBeInTheDocument();
@@ -200,8 +212,9 @@ describe('CombatStanceModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
 
       await waitFor(() => {
-        const bodyDiv = document.querySelector('.sp-body');
-        expect(bodyDiv.innerHTML).toContain('<strong>Bear</strong>');
+        const strongEl = document.querySelector('.sp-body strong');
+        expect(strongEl).toBeInTheDocument();
+        expect(strongEl.textContent).toBe('Bear');
       });
     });
 
@@ -221,12 +234,25 @@ describe('CombatStanceModal', () => {
 
     it('calls onClose when Done button is clicked in applied state', async () => {
       const onClose = vi.fn();
-      applyStanceWith(onClose);
+      mockAppliedStance(onClose);
       await waitFor(() => {
         expect(screen.getByText('Done')).toBeInTheDocument();
       });
       fireEvent.click(screen.getByText('Done'));
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not show applied state when result has no payload', async () => {
+      combatStanceHandler.applyStanceOption.mockResolvedValue({ type: 'popup' });
+
+      render(<CombatStanceModal {...makeProps()} />);
+      const radios = document.querySelectorAll('input[type="radio"]');
+      fireEvent.click(radios[0]);
+      fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+      });
     });
   });
 
@@ -247,22 +273,6 @@ describe('CombatStanceModal', () => {
       });
     });
 
-    it('selects and applies Ram stance', async () => {
-      combatStanceHandler.applyStanceOption.mockResolvedValue({
-        type: 'popup',
-        payload: { type: 'automation_info', name: 'Rage', description: 'Ram chosen.' },
-      });
-
-      render(<CombatStanceModal {...makeProps()} />);
-      const radios = document.querySelectorAll('input[type="radio"]');
-      fireEvent.click(radios[5]);
-      fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/Ram chosen/)).toBeInTheDocument();
-      });
-    });
-
     it('shows effects descriptions for each stance option', () => {
       render(<CombatStanceModal {...makeProps()} />);
       expect(screen.getByText(/Resistance to all damage except Force, Necrotic, Psychic, Radiant/)).toBeInTheDocument();
@@ -278,34 +288,29 @@ describe('CombatStanceModal', () => {
       expect(screen.getByText(/Ice Walk: Walk across icy\/water surfaces without checks; ignore ice\/snow difficult terrain/)).toBeInTheDocument();
     });
 
-    it('shows Fire elemental movement effects with configurable and default speed bonus', () => {
+    it('applies Fire stance with configurable speed bonus', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Fire', speedBonus: 15 }] } }) })} />);
       expect(screen.getByText(/Speed Boost: \+15 feet to Speed/)).toBeInTheDocument();
     });
 
-    it('shows Fire elemental movement effects with default speed bonus', () => {
+    it('applies Fire stance with default speed bonus', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Fire' }] } }) })} />);
       expect(screen.getByText(/Speed Boost: \+10 feet to Speed/)).toBeInTheDocument();
     });
 
-    it('shows Lightning elemental movement effects', () => {
+    it('applies Lightning stance', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Lightning' }] } }) })} />);
       expect(screen.getByText(/Fly Speed equal to your Speed for 1 round/)).toBeInTheDocument();
     });
 
-    it('shows Thunder elemental movement effects with configurable and default teleport distance', () => {
+    it('applies Thunder stance with configurable teleport distance', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Thunder', teleportDistance: '60 ft' }] } }) })} />);
       expect(screen.getByText(/Teleport up to 60 ft to an unoccupied space you can see/)).toBeInTheDocument();
     });
 
-    it('shows Thunder elemental movement effects with default teleport distance', () => {
+    it('applies Thunder stance with default teleport distance', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Thunder' }] } }) })} />);
       expect(screen.getByText(/Teleport up to 30 ft to an unoccupied space you can see/)).toBeInTheDocument();
-    });
-
-    it('renders options with no effects cleanly', () => {
-      render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Lightning' }] } }) })} />);
-      expect(screen.getByText('Lightning')).toBeInTheDocument();
     });
   });
 

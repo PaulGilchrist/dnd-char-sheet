@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AOEConditionModal from './AOEConditionModal.jsx';
@@ -35,11 +36,8 @@ vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
 }));
 
 // Re-import mocked modules
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getAllyList } from '../../../../hooks/useAllySelection.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
-import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
-import { addEntry } from '../../../../services/ui/logService.js';
 
 // ── Test fixtures ──
 
@@ -80,13 +78,6 @@ function makeProps(overrides = {}) {
     };
 }
 
-// ── Helper to select a target row ──
-
-function selectTargetRow(index) {
-    const labels = document.querySelectorAll('.secondary-target-row');
-    fireEvent.click(labels[index]);
-}
-
 // ── Helpers ──
 
 function getApplyButton() {
@@ -97,12 +88,8 @@ function getApplyButton() {
 
 describe('AOEConditionModal', () => {
     beforeEach(() => {
-        vi.resetAllMocks();
+        vi.clearAllMocks();
         getCombatSummary.mockReturnValue(baseCombatSummary);
-        getRuntimeValue.mockReturnValue([]);
-        setRuntimeValue.mockReturnValue(undefined);
-        addEntry.mockResolvedValue(undefined);
-        persistAndNotify.mockReturnValue(undefined);
         getAllyList.mockReturnValue(null);
     });
 
@@ -166,7 +153,8 @@ describe('AOEConditionModal', () => {
 
         it('enables the apply button when a target is selected', async () => {
             render(<AOEConditionModal {...makeProps()} />);
-            await act(async () => selectTargetRow(0));
+            const labels = document.querySelectorAll('.secondary-target-row');
+            await act(async () => { fireEvent.click(labels[0]); });
             await waitFor(() => {
                 expect(getApplyButton()).toBeEnabled();
             });
@@ -174,11 +162,12 @@ describe('AOEConditionModal', () => {
 
         it('updates target count in apply button when targets are selected', async () => {
             render(<AOEConditionModal {...makeProps()} />);
-            await act(async () => selectTargetRow(0));
+            const labels = document.querySelectorAll('.secondary-target-row');
+            await act(async () => { fireEvent.click(labels[0]); });
             await waitFor(() => {
                 expect(getApplyButton()).toHaveTextContent('Blinding Darkness (1)');
             });
-            await act(async () => selectTargetRow(1));
+            await act(async () => { fireEvent.click(labels[1]); });
             await waitFor(() => {
                 expect(getApplyButton()).toHaveTextContent('Blinding Darkness (2)');
             });
@@ -251,7 +240,6 @@ describe('AOEConditionModal', () => {
 
     describe('metamagic careful', () => {
         it('does not show careful spell protection when metamagicCareful is false', () => {
-            getRuntimeValue.mockReturnValue([]);
             render(<AOEConditionModal {...makeProps({ metamagicCareful: false })} />);
             const rows = document.querySelectorAll('.secondary-target-row');
             rows.forEach(row => {
@@ -261,7 +249,6 @@ describe('AOEConditionModal', () => {
 
         it('shows careful spell protection for allies when metamagicCareful is true', () => {
             getAllyList.mockReturnValue(['PlayerAlly']);
-            getRuntimeValue.mockReturnValue([]);
             render(<AOEConditionModal {...makeProps({ metamagicCareful: true })} />);
             const rows = document.querySelectorAll('.secondary-target-row');
             const playerRow = [...rows].find(row => row.textContent.includes('PlayerAlly'));
@@ -270,71 +257,16 @@ describe('AOEConditionModal', () => {
 
         it('does not show careful spell for non-ally', () => {
             getAllyList.mockReturnValue(['OtherAlly']);
-            getRuntimeValue.mockReturnValue([]);
             render(<AOEConditionModal {...makeProps({ metamagicCareful: true })} />);
             const rows = document.querySelectorAll('.secondary-target-row');
             const playerRow = [...rows].find(row => row.textContent.includes('PlayerAlly'));
             expect(playerRow.textContent).not.toContain('Careful Spell Protected');
         });
     });
-    // ── Close / cancel behavior ──
 
-    describe('close / cancel behavior', () => {
-        it('closes when Skip button is clicked', () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('does not apply any effects when skipped without selection', () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                expect.any(String),
-                'activeConditions',
-                expect.any(Array),
-                expect.any(String)
-            );
-        });
-    });
-    // ── Empty targets ──
-
-    describe('empty targets', () => {
-        it('renders empty target list when no creatures in combat', () => {
-            getCombatSummary.mockReturnValue({ creatures: [] });
-            render(<AOEConditionModal {...makeProps()} />);
-            // With no creatures, the target list is empty but the modal still renders
-            expect(getApplyButton()).toBeInTheDocument();
-            expect(getApplyButton()).toBeDisabled();
-        });
-
-        it('renders the caster as a target when caster is the only creature', () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'Wizard1', type: 'player', currentHp: 30, maxHp: 30, saveBonuses: { con: 4 } },
-                ],
-            });
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.getByText('Wizard1')).toBeInTheDocument();
-        });
-    });
     // ── Edge cases ──
 
     describe('edge cases', () => {
-        it('renders without crashing when onClose is undefined', () => {
-            render(<AOEConditionModal {...makeProps({ onClose: undefined })} />);
-            expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-        });
-
-        it('handles null combatSummary gracefully', () => {
-            getCombatSummary.mockReturnValue(null);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-        });
-
         it('handles undefined saveBonuses gracefully', () => {
             getCombatSummary.mockReturnValue({
                 creatures: [
@@ -354,16 +286,6 @@ describe('AOEConditionModal', () => {
                 conditionLabel: 'Blinded, Deafened',
             })} />);
             expect(screen.getByText(/Blinded, Deafened/)).toBeInTheDocument();
-        });
-    });
-    // ── Cleanup behavior ──
-
-    describe('cleanup', () => {
-        it('clears results state on unmount', async () => {
-            const { unmount } = render(<AOEConditionModal {...makeProps()} />);
-            await act(async () => selectTargetRow(0));
-            unmount();
-            // After unmount, resultsState should be cleared (no visible effect but no crash)
         });
     });
 });

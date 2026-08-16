@@ -1,34 +1,65 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import useTravelToolSync from './useTravelToolSync.js';
 import {
     TOOL_TRAVEL,
     TOOL_NONE,
     TOOL_PAINT,
+    TOOL_ERASE,
+    TOOL_POI,
+    TOOL_RIVER,
+    TOOL_PAN,
     TOOL_ROAD,
 } from '../../../config/outdoorConfig.js';
 
-describe('useTravelToolSync', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+const NON_TRAVEL_TOOLS = [TOOL_NONE, TOOL_PAINT, TOOL_ERASE, TOOL_POI, TOOL_RIVER, TOOL_PAN, TOOL_ROAD];
+const ACTIVE_TRAVEL_MODES = ['active', 'planning', 'traveling', 'paused'];
 
-    const createTravelMgmt = (travelMode = 'inactive', isTravelActive = false) => ({
+describe('useTravelToolSync', () => {
+    // Mirrors useTravelManagement: isTravelActive is derived from travelMode.
+    const createTravelMgmt = (travelMode = 'inactive', isTravelActive = travelMode !== 'inactive') => ({
         travelMode,
         isTravelActive,
         startPlanning: vi.fn(),
         cancelTravel: vi.fn(),
     });
 
+    // Threads every hook argument through props (like the real HexMap), so a
+    // fresh travelMgmt object can be passed to simulate a travel-state change.
+    const renderSync = ({ tool, travelMgmt, handleGenerateWeather = vi.fn(), setTool = vi.fn() }) => {
+        const state = { tool, travelMgmt, handleGenerateWeather, setTool };
+        const utils = renderHook(
+            ({ tool, travelMgmt, weatherHandler, setTool }) =>
+                useTravelToolSync(tool, travelMgmt, weatherHandler, setTool),
+            { initialProps: { tool, travelMgmt, weatherHandler: handleGenerateWeather, setTool } }
+        );
+        const rerender = (changes) => {
+            Object.assign(state, changes);
+            act(() => {
+                utils.rerender({
+                    tool: state.tool,
+                    travelMgmt: state.travelMgmt,
+                    weatherHandler: state.handleGenerateWeather,
+                    setTool: state.setTool,
+                });
+            });
+        };
+        return { ...utils, rerender };
+    };
+
     describe('initial render', () => {
-        it('does not trigger any actions on initial render regardless of tool or travel mode', () => {
-            const travelMgmt = createTravelMgmt('inactive', false);
+        it.each`
+            scenario                                                      | tool           | travelMode
+            ${'the travel tool is selected and travel is inactive'}       | ${TOOL_TRAVEL} | ${'inactive'}
+            ${'the travel tool is selected and travel is planning'}       | ${TOOL_TRAVEL} | ${'planning'}
+            ${'a non-travel tool is selected and travel is active'}       | ${TOOL_PAINT}  | ${'active'}
+        `('does not trigger any actions when $scenario', ({ tool, travelMode }) => {
+            const travelMgmt = createTravelMgmt(travelMode);
             const handleGenerateWeather = vi.fn();
             const setTool = vi.fn();
 
-            renderHook(() =>
-                useTravelToolSync(TOOL_TRAVEL, travelMgmt, handleGenerateWeather, setTool)
-            );
+            renderSync({ tool, travelMgmt, handleGenerateWeather, setTool });
 
             expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
             expect(travelMgmt.cancelTravel).not.toHaveBeenCalled();
@@ -37,175 +68,143 @@ describe('useTravelToolSync', () => {
         });
     });
 
-    describe('activating travel tool', () => {
-        it('calls startPlanning and handleGenerateWeather when tool changes from non-travel to travel with inactive mode', () => {
-            const travelMgmt = createTravelMgmt('inactive', false);
-            const handleGenerateWeather = vi.fn();
-            const setTool = vi.fn();
-
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: TOOL_NONE } }
-            );
-
-            act(() => {
-                rerender({ tool: TOOL_TRAVEL });
-            });
-
-            expect(travelMgmt.startPlanning).toHaveBeenCalledTimes(1);
-            expect(handleGenerateWeather).toHaveBeenCalledTimes(1);
-        });
-
-        it.each`
-            fromTool
-            ${TOOL_NONE}
-            ${TOOL_PAINT}
-            ${TOOL_ROAD}
-        `(
-            'calls startPlanning and handleGenerateWeather when switching from $fromTool to travel with inactive mode',
-            ({ fromTool }) => {
-                const travelMgmt = createTravelMgmt('inactive', false);
+    describe('activating the travel tool', () => {
+        it.each(NON_TRAVEL_TOOLS)(
+            'starts planning and generates weather when switching from %s to travel while inactive',
+            (fromTool) => {
+                const travelMgmt = createTravelMgmt('inactive');
                 const handleGenerateWeather = vi.fn();
                 const setTool = vi.fn();
 
-                const { rerender } = renderHook(
-                    ({ tool }) =>
-                        useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                    { initialProps: { tool: fromTool } }
-                );
-
-                act(() => {
-                    rerender({ tool: TOOL_TRAVEL });
+                const { rerender } = renderSync({
+                    tool: fromTool,
+                    travelMgmt,
+                    handleGenerateWeather,
+                    setTool,
                 });
+
+                rerender({ tool: TOOL_TRAVEL });
 
                 expect(travelMgmt.startPlanning).toHaveBeenCalledTimes(1);
                 expect(handleGenerateWeather).toHaveBeenCalledTimes(1);
+                expect(travelMgmt.cancelTravel).not.toHaveBeenCalled();
+                expect(setTool).not.toHaveBeenCalled();
             }
         );
 
-        it('does not call startPlanning when travelMode is already active', () => {
-            const travelMgmt = createTravelMgmt('active', true);
-            const handleGenerateWeather = vi.fn();
-            const setTool = vi.fn();
+        it.each(ACTIVE_TRAVEL_MODES)(
+            'does not start planning when switching to travel while travelMode is %s',
+            (mode) => {
+                const travelMgmt = createTravelMgmt(mode);
+                const handleGenerateWeather = vi.fn();
+                const setTool = vi.fn();
 
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: TOOL_NONE } }
-            );
+                const { rerender } = renderSync({
+                    tool: TOOL_NONE,
+                    travelMgmt,
+                    handleGenerateWeather,
+                    setTool,
+                });
 
-            act(() => {
                 rerender({ tool: TOOL_TRAVEL });
-            });
 
-            expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
-            expect(handleGenerateWeather).not.toHaveBeenCalled();
-        });
-
-        it('does not call startPlanning when travelMode is planning', () => {
-            const travelMgmt = createTravelMgmt('planning', false);
-            const handleGenerateWeather = vi.fn();
-            const setTool = vi.fn();
-
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: TOOL_NONE } }
-            );
-
-            act(() => {
-                rerender({ tool: TOOL_TRAVEL });
-            });
-
-            expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
-            expect(handleGenerateWeather).not.toHaveBeenCalled();
-        });
+                expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
+                expect(travelMgmt.cancelTravel).not.toHaveBeenCalled();
+                expect(handleGenerateWeather).not.toHaveBeenCalled();
+                expect(setTool).not.toHaveBeenCalled();
+            }
+        );
     });
 
-    describe('canceling active travel when switching away', () => {
-        it.each`
-            toTool
-            ${TOOL_NONE}
-            ${TOOL_PAINT}
-            ${TOOL_ROAD}
-        `('calls cancelTravel when switching from travel to $toTool with active travel', ({ toTool }) => {
-            const travelMgmt = createTravelMgmt('active', true);
-            const handleGenerateWeather = vi.fn();
-            const setTool = vi.fn();
+    describe('switching away from the travel tool', () => {
+        it.each(NON_TRAVEL_TOOLS)(
+            'cancels travel when switching from travel to %s while travel is active',
+            (toTool) => {
+                const travelMgmt = createTravelMgmt('active');
+                const handleGenerateWeather = vi.fn();
+                const setTool = vi.fn();
 
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: TOOL_TRAVEL } }
-            );
+                const { rerender } = renderSync({
+                    tool: TOOL_TRAVEL,
+                    travelMgmt,
+                    handleGenerateWeather,
+                    setTool,
+                });
 
-            act(() => {
                 rerender({ tool: toTool });
+
+                expect(travelMgmt.cancelTravel).toHaveBeenCalledTimes(1);
+                expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
+                expect(handleGenerateWeather).not.toHaveBeenCalled();
+                expect(setTool).not.toHaveBeenCalled();
+            }
+        );
+
+        it('does not cancel travel when switching away while travel is inactive', () => {
+            const travelMgmt = createTravelMgmt('inactive');
+            const handleGenerateWeather = vi.fn();
+            const setTool = vi.fn();
+
+            const { rerender } = renderSync({
+                tool: TOOL_TRAVEL,
+                travelMgmt,
+                handleGenerateWeather,
+                setTool,
             });
 
-            expect(travelMgmt.cancelTravel).toHaveBeenCalledTimes(1);
+            rerender({ tool: TOOL_PAINT });
+
+            expect(travelMgmt.cancelTravel).not.toHaveBeenCalled();
+            expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
             expect(handleGenerateWeather).not.toHaveBeenCalled();
+            expect(setTool).not.toHaveBeenCalled();
         });
 
-        it('does not call cancelTravel when staying on travel tool with active travel', () => {
-            const travelMgmt = createTravelMgmt('active', true);
-            const handleGenerateWeather = vi.fn();
-            const setTool = vi.fn();
+        it.each`
+            travelMode     | isTravelActive | expectedCancelCalls
+            ${'inactive'}  | ${true}        | ${1}
+            ${'active'}    | ${false}       | ${0}
+        `(
+            'keys cancellation off isTravelActive (travelMode: $travelMode, isTravelActive: $isTravelActive)',
+            ({ travelMode, isTravelActive, expectedCancelCalls }) => {
+                const travelMgmt = createTravelMgmt(travelMode, isTravelActive);
+                const handleGenerateWeather = vi.fn();
+                const setTool = vi.fn();
 
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: TOOL_TRAVEL } }
-            );
+                const { rerender } = renderSync({
+                    tool: TOOL_TRAVEL,
+                    travelMgmt,
+                    handleGenerateWeather,
+                    setTool,
+                });
 
-            act(() => {
-                rerender({ tool: TOOL_TRAVEL });
-            });
-
-            expect(travelMgmt.cancelTravel).not.toHaveBeenCalled();
-        });
-
-        it('does not call cancelTravel when switching from travel to paint with inactive mode', () => {
-            const travelMgmt = createTravelMgmt('inactive', false);
-            const handleGenerateWeather = vi.fn();
-            const setTool = vi.fn();
-
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: TOOL_TRAVEL } }
-            );
-
-            act(() => {
                 rerender({ tool: TOOL_PAINT });
-            });
 
-            expect(travelMgmt.cancelTravel).not.toHaveBeenCalled();
-        });
+                expect(travelMgmt.cancelTravel).toHaveBeenCalledTimes(expectedCancelCalls);
+            }
+        );
     });
 
     describe('switching between non-travel tools', () => {
         it.each`
-            fromTool    | toTool
-            ${TOOL_PAINT} | ${TOOL_ROAD}
-            ${TOOL_ROAD}  | ${TOOL_PAINT}
-            ${TOOL_PAINT} | ${TOOL_PAINT}
-            ${TOOL_ROAD}  | ${TOOL_ROAD}
+            fromTool       | toTool
+            ${TOOL_PAINT}  | ${TOOL_ROAD}
+            ${TOOL_ROAD}   | ${TOOL_PAINT}
+            ${TOOL_PAINT}  | ${TOOL_PAINT}
+            ${TOOL_ROAD}   | ${TOOL_ROAD}
         `('does nothing when switching from $fromTool to $toTool', ({ fromTool, toTool }) => {
-            const travelMgmt = createTravelMgmt('inactive', false);
+            const travelMgmt = createTravelMgmt('inactive');
             const handleGenerateWeather = vi.fn();
             const setTool = vi.fn();
 
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: fromTool } }
-            );
-
-            act(() => {
-                rerender({ tool: toTool });
+            const { rerender } = renderSync({
+                tool: fromTool,
+                travelMgmt,
+                handleGenerateWeather,
+                setTool,
             });
+
+            rerender({ tool: toTool });
 
             expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
             expect(travelMgmt.cancelTravel).not.toHaveBeenCalled();
@@ -214,111 +213,145 @@ describe('useTravelToolSync', () => {
         });
     });
 
-    describe('travel mode changes without tool change', () => {
-        it('does not trigger actions when travelMode changes but tool is not travel', () => {
-            const travelMgmt = createTravelMgmt('inactive', false);
+    describe('travel state changes while the tool stays the same', () => {
+        it('forces the travel tool off when travelMode becomes inactive while the travel tool is selected', () => {
+            const initialTravelMgmt = createTravelMgmt('active');
             const handleGenerateWeather = vi.fn();
             const setTool = vi.fn();
 
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: TOOL_PAINT } }
-            );
-
-            act(() => {
-                travelMgmt.travelMode = 'planning';
-                rerender({ tool: TOOL_PAINT });
+            const { rerender } = renderSync({
+                tool: TOOL_TRAVEL,
+                travelMgmt: initialTravelMgmt,
+                handleGenerateWeather,
+                setTool,
             });
 
-            expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
+            rerender({ travelMgmt: createTravelMgmt('inactive') });
+
+            expect(setTool).toHaveBeenCalledWith(TOOL_NONE);
+            expect(initialTravelMgmt.startPlanning).not.toHaveBeenCalled();
+            expect(initialTravelMgmt.cancelTravel).not.toHaveBeenCalled();
             expect(handleGenerateWeather).not.toHaveBeenCalled();
         });
 
-        it('does not cancel travel when travelMode changes but tool remains travel', () => {
-            const travelMgmt = createTravelMgmt('active', true);
+        it('does nothing when travelMode becomes active while the travel tool is selected', () => {
+            const initialTravelMgmt = createTravelMgmt('inactive');
             const handleGenerateWeather = vi.fn();
             const setTool = vi.fn();
 
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: TOOL_TRAVEL } }
-            );
-
-            act(() => {
-                travelMgmt.travelMode = 'inactive';
-                rerender({ tool: TOOL_TRAVEL });
+            const { rerender } = renderSync({
+                tool: TOOL_TRAVEL,
+                travelMgmt: initialTravelMgmt,
+                handleGenerateWeather,
+                setTool,
             });
 
+            const travelMgmt = createTravelMgmt('planning');
+            rerender({ travelMgmt });
+
+            expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
             expect(travelMgmt.cancelTravel).not.toHaveBeenCalled();
+            expect(initialTravelMgmt.startPlanning).not.toHaveBeenCalled();
+            expect(initialTravelMgmt.cancelTravel).not.toHaveBeenCalled();
+            expect(handleGenerateWeather).not.toHaveBeenCalled();
+            expect(setTool).not.toHaveBeenCalled();
+        });
+
+        it('cancels travel when travelMode becomes active while a non-travel tool is selected', () => {
+            const initialTravelMgmt = createTravelMgmt('inactive');
+            const handleGenerateWeather = vi.fn();
+            const setTool = vi.fn();
+
+            const { rerender } = renderSync({
+                tool: TOOL_PAINT,
+                travelMgmt: initialTravelMgmt,
+                handleGenerateWeather,
+                setTool,
+            });
+
+            const travelMgmt = createTravelMgmt('planning');
+            rerender({ travelMgmt });
+
+            expect(travelMgmt.cancelTravel).toHaveBeenCalledTimes(1);
+            expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
+            expect(handleGenerateWeather).not.toHaveBeenCalled();
+            expect(setTool).not.toHaveBeenCalled();
         });
     });
 
     describe('handleGenerateWeather callback identity', () => {
-        it('calls the new handleGenerateWeather when it changes and tool activates travel', () => {
-            const travelMgmt = createTravelMgmt('inactive', false);
+        it('uses the latest handleGenerateWeather when its identity changes alongside the tool', () => {
+            const travelMgmt = createTravelMgmt('inactive');
             const handleGenerateWeather1 = vi.fn();
             const handleGenerateWeather2 = vi.fn();
             const setTool = vi.fn();
 
-            const { rerender } = renderHook(
-                ({ tool, weatherHandler }) =>
-                    useTravelToolSync(tool, travelMgmt, weatherHandler, setTool),
-                { initialProps: { tool: TOOL_NONE, weatherHandler: handleGenerateWeather1 } }
-            );
-
-            act(() => {
-                rerender({ tool: TOOL_TRAVEL, weatherHandler: handleGenerateWeather2 });
+            const { rerender } = renderSync({
+                tool: TOOL_NONE,
+                travelMgmt,
+                handleGenerateWeather: handleGenerateWeather1,
+                setTool,
             });
+
+            rerender({ tool: TOOL_TRAVEL, handleGenerateWeather: handleGenerateWeather2 });
 
             expect(handleGenerateWeather2).toHaveBeenCalledTimes(1);
             expect(handleGenerateWeather1).not.toHaveBeenCalled();
+            expect(travelMgmt.startPlanning).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not trigger actions when only handleGenerateWeather changes', () => {
+            const travelMgmt = createTravelMgmt('inactive');
+            const handleGenerateWeather1 = vi.fn();
+            const handleGenerateWeather2 = vi.fn();
+            const setTool = vi.fn();
+
+            const { rerender } = renderSync({
+                tool: TOOL_PAINT,
+                travelMgmt,
+                handleGenerateWeather: handleGenerateWeather1,
+                setTool,
+            });
+
+            rerender({ handleGenerateWeather: handleGenerateWeather2 });
+
+            expect(handleGenerateWeather1).not.toHaveBeenCalled();
+            expect(handleGenerateWeather2).not.toHaveBeenCalled();
+            expect(travelMgmt.startPlanning).not.toHaveBeenCalled();
+            expect(travelMgmt.cancelTravel).not.toHaveBeenCalled();
+            expect(setTool).not.toHaveBeenCalled();
         });
     });
 
     describe('multiple tool changes in sequence', () => {
-        it('handles travel -> paint -> travel sequence correctly', () => {
-            const travelMgmt = createTravelMgmt('inactive', false);
+        it('stays in sync through a travel -> paint -> travel -> road sequence', () => {
             const handleGenerateWeather = vi.fn();
             const setTool = vi.fn();
+            const idle = createTravelMgmt('inactive');
+            const active = createTravelMgmt('active');
+            const idleAfterCancel = createTravelMgmt('inactive');
 
-            const { rerender } = renderHook(
-                ({ tool }) =>
-                    useTravelToolSync(tool, travelMgmt, handleGenerateWeather, setTool),
-                { initialProps: { tool: TOOL_NONE } }
-            );
-
-            // Activate travel
-            act(() => {
-                rerender({ tool: TOOL_TRAVEL });
+            const { rerender } = renderSync({
+                tool: TOOL_NONE,
+                travelMgmt: idle,
+                handleGenerateWeather,
+                setTool,
             });
-            expect(travelMgmt.startPlanning).toHaveBeenCalledTimes(1);
+
+            rerender({ tool: TOOL_TRAVEL });
+            expect(idle.startPlanning).toHaveBeenCalledTimes(1);
             expect(handleGenerateWeather).toHaveBeenCalledTimes(1);
 
-            // Switch to paint (travel is active, so cancel)
-            act(() => {
-                travelMgmt.travelMode = 'active';
-                travelMgmt.isTravelActive = true;
-                rerender({ tool: TOOL_PAINT });
-            });
-            expect(travelMgmt.cancelTravel).toHaveBeenCalledTimes(1);
+            rerender({ tool: TOOL_PAINT, travelMgmt: active });
+            expect(active.cancelTravel).toHaveBeenCalledTimes(1);
 
-            // Reactivate travel
-            act(() => {
-                travelMgmt.travelMode = 'inactive';
-                travelMgmt.isTravelActive = false;
-                rerender({ tool: TOOL_TRAVEL });
-            });
-            expect(travelMgmt.startPlanning).toHaveBeenCalledTimes(2);
+            rerender({ tool: TOOL_TRAVEL, travelMgmt: idleAfterCancel });
+            expect(idleAfterCancel.startPlanning).toHaveBeenCalledTimes(1);
             expect(handleGenerateWeather).toHaveBeenCalledTimes(2);
 
-            // Switch to road (travel is inactive, nothing happens)
-            act(() => {
-                rerender({ tool: TOOL_ROAD });
-            });
-            expect(travelMgmt.cancelTravel).toHaveBeenCalledTimes(1);
+            rerender({ tool: TOOL_ROAD });
+            expect(idleAfterCancel.cancelTravel).not.toHaveBeenCalled();
+            expect(setTool).not.toHaveBeenCalled();
         });
     });
-
 });

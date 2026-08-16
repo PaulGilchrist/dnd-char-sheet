@@ -1,24 +1,18 @@
+// @improved-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import RoadLayer from './RoadLayer.jsx';
-
-vi.mock('../../config/outdoorConfig.js', () => ({
-    HEX_SIZE: 30,
-}));
-
-vi.mock('../../services/maps/hexMapUtils.js', () => ({
-    parseHexKey: vi.fn((key) => {
-        const [q, r] = key.split(',').map(Number);
-        return { q, r };
-    }),
-    buildWindingPathDescriptor: vi.fn(() => ({
-        path: 'M0,0 Q15,10 30,0',
-        stroke: '#A08060',
-        strokeWidth: 2,
-    })),
-}));
-
+import { HEX_SIZE } from '../../config/outdoorConfig.js';
 import { parseHexKey, buildWindingPathDescriptor } from '../../services/maps/hexMapUtils.js';
+
+vi.mock('../../services/maps/hexMapUtils.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        parseHexKey: vi.fn(actual.parseHexKey),
+        buildWindingPathDescriptor: vi.fn(actual.buildWindingPathDescriptor),
+    };
+});
 
 describe('RoadLayer', () => {
     let roads;
@@ -31,64 +25,69 @@ describe('RoadLayer', () => {
         ];
     });
 
-    const renderLayer = (layerProps) => {
-        return render(<RoadLayer {...layerProps} />);
-    };
+    const renderLayer = (layerProps) => render(<RoadLayer {...layerProps} />);
+
+    const getLayer = (container) => container.querySelector('g.road-layer');
+    const getRoadGroups = (container) => container.querySelectorAll('g.road-layer > g');
+    const pathInGroupWithStroke = (group, stroke) =>
+        [...group.querySelectorAll('path')].find(path => path.getAttribute('stroke') === stroke);
 
     describe('rendering', () => {
         it('should render the road-layer group', () => {
             const { container } = renderLayer({ roads });
-            const layer = container.querySelector('g.road-layer');
-            expect(layer).toBeInTheDocument();
+            expect(getLayer(container)).toBeInTheDocument();
         });
 
-        it('should render null when roads is null, undefined, or empty', () => {
-            expect(renderLayer({ roads: null }).container.firstChild).toBeNull();
-            expect(renderLayer({ roads: undefined }).container.firstChild).toBeNull();
-            expect(renderLayer({ roads: [] }).container.firstChild).toBeNull();
+        it.each([
+            ['null', null],
+            ['undefined', undefined],
+            ['an empty array', []],
+        ])('should render nothing when roads is %s', (_label, value) => {
+            const { container } = renderLayer({ roads: value });
+            expect(getLayer(container)).not.toBeInTheDocument();
         });
 
-        it('should render a group per valid road', () => {
+        it('should render one group per valid road with all three path layers', () => {
             const { container } = renderLayer({ roads });
-            const layer = container.querySelector('g.road-layer');
-            const groups = layer.querySelectorAll(':scope > g');
-            expect(groups.length).toBe(2);
+            const groups = getRoadGroups(container);
+            expect(groups).toHaveLength(2);
+            groups.forEach(group => {
+                expect(group.querySelectorAll('path')).toHaveLength(3);
+            });
         });
     });
 
-    describe('filtering invalid roads', () => {
-        it('should skip roads with fewer than 2 hexes, no hexes property, null hexes, or undefined hexes', () => {
+    describe('filtering', () => {
+        it('should skip roads with fewer than 2 hexes or no hexes property', () => {
             const invalidRoads = [
                 { id: 'road-short', hexes: ['0,0'] },
+                { id: 'road-empty', hexes: [] },
                 { id: 'road-no-hexes' },
                 { id: 'road-null', hexes: null },
                 { id: 'road-undef', hexes: undefined },
             ];
             const { container } = renderLayer({ roads: invalidRoads });
-            const layer = container.querySelector('g.road-layer');
-            const groups = layer.querySelectorAll(':scope > g');
-            expect(groups.length).toBe(0);
+            expect(getRoadGroups(container)).toHaveLength(0);
         });
 
-        it('should skip roads when buildWindingPathDescriptor returns no path', () => {
-            vi.mocked(buildWindingPathDescriptor).mockImplementationOnce(() => null).mockImplementation(() => ({
-                path: 'M0,0 Q15,10 30,0',
-                stroke: '#A08060',
-                strokeWidth: 2,
-            }));
+        it('should skip a road when the path descriptor returns null', () => {
+            vi.mocked(buildWindingPathDescriptor).mockImplementationOnce(() => null);
             const mixedRoads = [
                 { id: 'road-bad', hexes: ['0,0', '1,0'] },
                 { id: 'road-good', hexes: ['2,0', '3,0'] },
             ];
             const { container } = renderLayer({ roads: mixedRoads });
-            const layer = container.querySelector('g.road-layer');
-            const groups = layer.querySelectorAll(':scope > g');
-            expect(groups.length).toBe(1);
+            expect(getRoadGroups(container)).toHaveLength(1);
+            expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(2);
+            expect(buildWindingPathDescriptor).toHaveBeenCalledWith(
+                [{ q: 2, r: 0 }, { q: 3, r: 0 }],
+                HEX_SIZE, '#A08060', 2, 10
+            );
         });
 
-        it('should render only valid road groups when one road has an empty path', () => {
-            vi.mocked(buildWindingPathDescriptor).mockImplementationOnce(() => ({ path: '' })).mockImplementation(() => ({
-                path: 'M0,0 Q15,10 30,0',
+        it('should skip a road when the path descriptor returns an empty path', () => {
+            vi.mocked(buildWindingPathDescriptor).mockImplementationOnce(() => ({
+                path: '',
                 stroke: '#A08060',
                 strokeWidth: 2,
             }));
@@ -97,113 +96,128 @@ describe('RoadLayer', () => {
                 { id: 'road-good', hexes: ['2,0', '3,0'] },
             ];
             const { container } = renderLayer({ roads: mixedRoads });
-            const layer = container.querySelector('g.road-layer');
-            const groups = layer.querySelectorAll(':scope > g');
-            expect(groups.length).toBe(1);
-        });
-
-        it('should handle a mix of valid and invalid roads', () => {
-            const mixedRoads = [
-                { id: 'road-short', hexes: ['0,0'] },
-                { id: 'road-good', hexes: ['1,0', '2,0'] },
-                { id: 'road-no-hexes' },
-                { id: 'road-also-good', hexes: ['3,0', '4,0'] },
-            ];
-            const { container } = renderLayer({ roads: mixedRoads });
-            const layer = container.querySelector('g.road-layer');
-            const groups = layer.querySelectorAll(':scope > g');
-            expect(groups.length).toBe(2);
+            expect(getRoadGroups(container)).toHaveLength(1);
+            expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(2);
+            expect(buildWindingPathDescriptor).toHaveBeenCalledWith(
+                [{ q: 2, r: 0 }, { q: 3, r: 0 }],
+                HEX_SIZE, '#A08060', 2, 10
+            );
         });
     });
 
-    describe('utility calls', () => {
-        it('should call parseHexKey for each hex in every valid road', () => {
+    describe('path derivation', () => {
+        it('should parse every hex of every valid road', () => {
             renderLayer({ roads });
-            expect(parseHexKey).toHaveBeenCalledWith('0,0');
-            expect(parseHexKey).toHaveBeenCalledWith('1,0');
-            expect(parseHexKey).toHaveBeenCalledWith('2,0');
-            expect(parseHexKey).toHaveBeenCalledWith('3,0');
-            expect(parseHexKey).toHaveBeenCalledWith('4,0');
-            expect(parseHexKey).toHaveBeenCalledWith('5,0');
+            expect(parseHexKey).toHaveBeenCalledTimes(6);
+            ['0,0', '1,0', '2,0', '3,0', '4,0', '5,0'].forEach(key => {
+                expect(parseHexKey).toHaveBeenCalledWith(key);
+            });
         });
 
-        it('should not call parseHexKey for roads with fewer than 2 hexes', () => {
-            const shortRoads = [{ id: 'road-short', hexes: ['0,0'] }];
-            renderLayer({ roads: shortRoads });
-            expect(parseHexKey).not.toHaveBeenCalled();
-        });
-
-        it('should call buildWindingPathDescriptor once per valid road', () => {
+        it('should pass ordered parsed coordinates and road styling to the descriptor', () => {
             renderLayer({ roads });
             expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(2);
+            expect(buildWindingPathDescriptor).toHaveBeenCalledWith(
+                [{ q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }],
+                HEX_SIZE, '#A08060', 2, 10
+            );
+            expect(buildWindingPathDescriptor).toHaveBeenCalledWith(
+                [{ q: 3, r: 0 }, { q: 4, r: 0 }, { q: 5, r: 0 }],
+                HEX_SIZE, '#A08060', 2, 10
+            );
         });
 
-        it('should not call buildWindingPathDescriptor for invalid roads', () => {
-            const shortRoads = [{ id: 'road-short', hexes: ['0,0'] }];
-            renderLayer({ roads: shortRoads });
+        it('should not touch hex utils for invalid roads', () => {
+            renderLayer({
+                roads: [
+                    { id: 'road-short', hexes: ['0,0'] },
+                    { id: 'road-empty', hexes: [] },
+                    { id: 'road-no-hexes' },
+                ],
+            });
+            expect(parseHexKey).not.toHaveBeenCalled();
             expect(buildWindingPathDescriptor).not.toHaveBeenCalled();
         });
-    });
 
-    describe('shadow path (roadbed)', () => {
-        it('should render shadow path with correct attributes', () => {
+        it('should render all three paths of a road over the same winding path', () => {
             const { container } = renderLayer({ roads });
-            const shadowPaths = container.querySelectorAll('path[stroke="rgba(0,0,0,0.2)"]');
-            expect(shadowPaths.length).toBe(2);
-            shadowPaths.forEach(path => {
-                expect(path.getAttribute('stroke-width')).toBe('4');
-                expect(path.getAttribute('transform')).toBe('translate(0, 1)');
+            getRoadGroups(container).forEach(group => {
+                const [shadow, main, centerline] = group.querySelectorAll('path');
+                const d = shadow.getAttribute('d');
+                expect(d).toBeTruthy();
+                expect(main.getAttribute('d')).toBe(d);
+                expect(centerline.getAttribute('d')).toBe(d);
             });
         });
     });
 
-    describe('main road path', () => {
-        it('should render main road path with correct attributes', () => {
+    describe('road styling', () => {
+        it('should render the shadow roadbed offset beneath every road', () => {
             const { container } = renderLayer({ roads });
-            const mainPaths = container.querySelectorAll('path[stroke="#A08060"]');
-            expect(mainPaths.length).toBe(2);
-            mainPaths.forEach(path => {
-                expect(path.getAttribute('stroke-width')).toBe('2');
-                expect(path.hasAttribute('transform')).toBe(false);
-                expect(path.getAttribute('stroke-dasharray')).toBe('none');
+            getRoadGroups(container).forEach(group => {
+                const shadow = pathInGroupWithStroke(group, 'rgba(0,0,0,0.2)');
+                expect(shadow).toBeTruthy();
+                expect(shadow).toHaveAttribute('stroke-width', '4');
+                expect(shadow).toHaveAttribute('transform', 'translate(0, 1)');
+                expect(shadow).toHaveAttribute('fill', 'none');
             });
         });
-    });
 
-    describe('dashed centerline', () => {
-        it('should render dashed centerline with correct attributes', () => {
+        it('should render the main road stroke over every road', () => {
             const { container } = renderLayer({ roads });
-            const centerlines = container.querySelectorAll('path[stroke="#C4A882"]');
-            expect(centerlines.length).toBe(2);
-            centerlines.forEach(path => {
-                expect(path.getAttribute('stroke-dasharray')).toBe('3 4');
-                expect(path.getAttribute('opacity')).toBe('0.5');
-                expect(path.getAttribute('stroke-width')).toBe('0.6');
+            getRoadGroups(container).forEach(group => {
+                const main = pathInGroupWithStroke(group, '#A08060');
+                expect(main).toBeTruthy();
+                expect(main).toHaveAttribute('stroke-width', '2');
+                expect(main).toHaveAttribute('stroke-dasharray', 'none');
+                expect(main.hasAttribute('transform')).toBe(false);
             });
         });
-    });
 
-    describe('shared path attributes', () => {
-        it('should render all paths with common SVG attributes', () => {
+        it('should render the dashed centerline over every road', () => {
             const { container } = renderLayer({ roads });
-            const allPaths = container.querySelectorAll('path');
-            allPaths.forEach(path => {
-                expect(path.getAttribute('stroke-linecap')).toBe('round');
-                expect(path.getAttribute('stroke-linejoin')).toBe('round');
-                expect(path.getAttribute('fill')).toBe('none');
+            getRoadGroups(container).forEach(group => {
+                const centerline = pathInGroupWithStroke(group, '#C4A882');
+                expect(centerline).toBeTruthy();
+                expect(centerline).toHaveAttribute('stroke-width', '0.6');
+                expect(centerline).toHaveAttribute('stroke-dasharray', '3 4');
+                expect(centerline).toHaveAttribute('opacity', '0.5');
+            });
+        });
+
+        it('should render a real winding path for every road', () => {
+            const { container } = renderLayer({ roads });
+            getRoadGroups(container).forEach(group => {
+                group.querySelectorAll('path').forEach(path => {
+                    expect(path.getAttribute('d')).toMatch(/^M/);
+                });
+            });
+        });
+
+        it('should apply round caps and no fill to all paths', () => {
+            const { container } = renderLayer({ roads });
+            container.querySelectorAll('path').forEach(path => {
+                expect(path).toHaveAttribute('stroke-linecap', 'round');
+                expect(path).toHaveAttribute('stroke-linejoin', 'round');
+                expect(path).toHaveAttribute('fill', 'none');
             });
         });
     });
 
     describe('memoization', () => {
-        it('should memoize when roads reference is unchanged and recompute when it changes', () => {
+        it('should reuse the cached rendering when the roads reference is unchanged', () => {
             const sameRoads = [{ id: 'road-1', hexes: ['0,0', '1,0', '2,0'] }];
             const { rerender } = renderLayer({ roads: sameRoads });
-            rerender(<RoadLayer roads={sameRoads} />);
             expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(1);
 
-            const roads2 = [{ id: 'road-2', hexes: ['3,0', '4,0', '5,0'] }];
-            rerender(<RoadLayer roads={roads2} />);
+            rerender(<RoadLayer roads={sameRoads} />);
+            expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(1);
+        });
+
+        it('should recompute when the roads reference changes', () => {
+            const firstRoads = [{ id: 'road-1', hexes: ['0,0', '1,0', '2,0'] }];
+            const { rerender } = renderLayer({ roads: firstRoads });
+            rerender(<RoadLayer roads={[{ id: 'road-2', hexes: ['3,0', '4,0', '5,0'] }]} />);
             expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(2);
         });
     });

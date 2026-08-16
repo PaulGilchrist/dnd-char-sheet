@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MoonlightStepResourceModal from './MoonlightStepResourceModal.jsx';
@@ -45,6 +46,10 @@ function getRadios() {
 
 function getConvertBtn() {
   return screen.getByRole('button', { name: /Expend Level \d+ Slot/ });
+}
+
+function getOverlay() {
+  return document.querySelector('.resource-pool-overlay');
 }
 
 describe('MoonlightStepResourceModal', () => {
@@ -150,6 +155,21 @@ describe('MoonlightStepResourceModal', () => {
       fireEvent.keyDown(document, { key: 'Escape' });
       expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('closes the modal when the overlay background is clicked', () => {
+      const onClose = vi.fn();
+      render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
+      const overlay = getOverlay();
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the modal when the Cancel button is clicked', () => {
+      const onClose = vi.fn();
+      render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('conversion flow', () => {
@@ -207,6 +227,8 @@ describe('MoonlightStepResourceModal', () => {
       render(<MoonlightStepResourceModal {...makeProps({ playerStatsOverrides: stats })} />);
       const convertBtn = getConvertBtn();
       expect(convertBtn).toBeDisabled();
+      const radios = getRadios();
+      radios.forEach((radio) => expect(radio).toBeDisabled());
     });
 
     it('handles missing _trackedResources, defaulting maxUses to 0', () => {
@@ -215,9 +237,11 @@ describe('MoonlightStepResourceModal', () => {
       expect(screen.getByText(/Current uses: 0\/0/)).toBeInTheDocument();
     });
 
-    it('handles undefined or empty automation.conversionRate, defaulting to level_2_plus', () => {
+    it('defaults conversionRate to level_2_plus when automation is an empty object', () => {
       render(<MoonlightStepResourceModal {...makeProps({ automation: {} })} />);
-      expect(screen.getByText('Moonlight Step — Restore Uses')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Expend a level 2\+ spell slot to regain 1 use of Moonlight Step/)
+      ).toBeInTheDocument();
     });
 
     it('disables all radios and the convert button when no slots exist at any level', () => {

@@ -1,15 +1,16 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MassHealModal from './MassHealModal.jsx';
 
 // ── Mocked modules ──
 
+const mockGetRuntimeValue = vi.fn();
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn(() => null),
+  getRuntimeValue: (...args) => mockGetRuntimeValue(...args),
 }));
 
-// ── Re-import mocked modules ──
-import * as useRuntimeState from '../../../hooks/runtime/useRuntimeState.js';
+
 
 // ── Test helpers ──
 
@@ -35,12 +36,20 @@ function makeProps(overrides) {
 }
 
 function setupRuntimeMock(returnValues) {
-  useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+  mockGetRuntimeValue.mockImplementation((name, key, _campaign) => {
     if (returnValues[name] && returnValues[name][key] !== undefined) {
       return returnValues[name][key];
     }
     return null;
   });
+}
+
+function getFirstCheckbox() {
+  return document.querySelector('input[type="checkbox"]');
+}
+
+function getNumberInputs() {
+  return document.querySelectorAll('input[type="number"]');
 }
 
 // ── Tests ──
@@ -53,42 +62,28 @@ describe('MassHealModal', () => {
   // ── Rendering ──
 
   describe('rendering', () => {
-    it('renders with default title and icon', () => {
+    it('renders title and icon', () => {
       render(<MassHealModal {...makeProps()} />);
       expect(screen.getByText('Mass Heal')).toBeInTheDocument();
-    });
-
-    it('renders with custom title', () => {
-      render(<MassHealModal {...makeProps({ title: 'Custom Heal' })} />);
-      expect(screen.getByText('Custom Heal')).toBeInTheDocument();
-    });
-
-    it('renders with default icon', () => {
-      render(<MassHealModal {...makeProps()} />);
       expect(document.querySelector('.fa-tree')).toBeInTheDocument();
     });
 
-    it('renders with custom icon', () => {
-      render(<MassHealModal {...makeProps({ icon: 'fa-heart' })} />);
+    it('renders custom title and icon', () => {
+      render(<MassHealModal {...makeProps({ title: 'Custom Heal', icon: 'fa-heart' })} />);
+      expect(screen.getByText('Custom Heal')).toBeInTheDocument();
       expect(document.querySelector('.fa-heart')).toBeInTheDocument();
     });
 
-    it('renders with default confirm label', () => {
-      render(<MassHealModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Heal/ })).toBeInTheDocument();
-    });
-
-    it('renders with custom confirm label and icon', () => {
+    it('renders custom confirm label with icon', () => {
       render(<MassHealModal {...makeProps({ confirmLabel: 'Restore', confirmIcon: 'fa-hand-holding-heart' })} />);
       expect(screen.getByRole('button', { name: /Restore/ })).toBeInTheDocument();
       expect(document.querySelector('.fa-hand-holding-heart')).toBeInTheDocument();
     });
 
-    it('renders the description with pool and max targets', () => {
+    it('renders description with pool and max targets', () => {
       render(<MassHealModal {...makeProps({ pool: 15, maxTargets: 4 })} />);
       expect(screen.getByText(/Choose up to 4 allies to heal/)).toBeInTheDocument();
-      expect(screen.queryByText(/20 HP/)).not.toBeInTheDocument();
-      expect(document.body.textContent).toContain('15 HP');
+      expect(screen.getByText(/Pool: 15 HP/)).toBeInTheDocument();
     });
 
     it('renders default description curing conditions when no custom description', () => {
@@ -150,13 +145,12 @@ describe('MassHealModal', () => {
       expect(screen.getByText(/Remaining: 20/)).toBeInTheDocument();
     });
 
-    it('hides remaining when all HP is allocated', () => {
+    it('hides remaining when all HP is allocated', async () => {
       render(<MassHealModal {...makeProps({ pool: 10 })} />);
-      // Select first target and allocate full pool
-      const checkbox = document.querySelector('input[type="checkbox"]');
-      fireEvent.click(checkbox);
-      const input = document.querySelector('input[type="number"]');
-      fireEvent.change(input, { target: { value: 10 } });
+      const checkbox = getFirstCheckbox();
+      await act(async () => fireEvent.click(checkbox));
+      const input = getNumberInputs()[0];
+      await act(async () => fireEvent.change(input, { target: { value: 10 } }));
 
       expect(screen.queryByText(/Remaining: 0/)).not.toBeInTheDocument();
     });
@@ -165,61 +159,39 @@ describe('MassHealModal', () => {
   // ── Target selection ──
 
   describe('target selection', () => {
-    it('allows selecting a target via checkbox', async () => {
+    it('selects a target via checkbox', async () => {
       render(<MassHealModal {...makeProps()} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
       expect(checkbox.checked).toBe(true);
     });
 
     it('shows allocation controls when target is selected', async () => {
       render(<MassHealModal {...makeProps()} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
-      // Minus button with fa-minus icon should appear
       expect(document.querySelector('.fa-minus')).toBeInTheDocument();
-      // Number input should appear
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      expect(numberInputs.length).toBeGreaterThan(0);
+      expect(getNumberInputs().length).toBeGreaterThan(0);
     });
 
     it('hides allocation controls when target is deselected', async () => {
       render(<MassHealModal {...makeProps()} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
-      // Now deselect
       await act(async () => fireEvent.click(checkbox));
-      expect(checkbox.checked).toBe(false);
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      expect(numberInputs.length).toBe(0);
+      expect(getNumberInputs().length).toBe(0);
     });
 
     it('limits number of checkboxes to maxTargets', () => {
       render(<MassHealModal {...makeProps({ maxTargets: 1, creatureTargets: ['A', 'B'] })} />);
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      expect(checkboxes.length).toBe(1);
+      expect(document.querySelectorAll('input[type="checkbox"]').length).toBe(1);
     });
 
-    it('respects maxTargets limit on selection', async () => {
-      render(
-        <MassHealModal {...makeProps({ maxTargets: 2, creatureTargets: ['A', 'B', 'C', 'D'] })} />
-      );
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-
-      // Only maxTargets checkboxes should be rendered
-      expect(checkboxes.length).toBe(2);
-    });
-
-    it('does not show more checkboxes than maxTargets even with many creatures', async () => {
-      render(
-        <MassHealModal {...makeProps({ maxTargets: 2, creatureTargets: ['A', 'B', 'C', 'D', 'E'] })} />
-      );
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-
-      // Only 2 checkboxes should be rendered regardless of how many creatures
-      expect(checkboxes.length).toBe(2);
+    it('respects maxTargets limit on selection count', async () => {
+      render(<MassHealModal {...makeProps({ maxTargets: 2, creatureTargets: ['A', 'B', 'C', 'D'] })} />);
+      expect(document.querySelectorAll('input[type="checkbox"]').length).toBe(2);
     });
   });
 
@@ -228,31 +200,30 @@ describe('MassHealModal', () => {
   describe('allocation controls', () => {
     it('starts allocation at 0 for a newly selected target', async () => {
       render(<MassHealModal {...makeProps()} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      expect(numberInputs[0].value).toBe('0');
+      expect(getNumberInputs()[0].value).toBe('0');
     });
 
-    it('allows increasing allocation with plus button (via direct input)', async () => {
+    it('allows increasing allocation via direct input', async () => {
       render(<MassHealModal {...makeProps({ pool: 20 })} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '5' } }));
+      const input = getNumberInputs()[0];
+      await act(async () => fireEvent.change(input, { target: { value: '5' } }));
 
       expect(screen.getByText(/Allocated: 5 \/ 20/)).toBeInTheDocument();
     });
 
     it('allows decreasing allocation with minus button', async () => {
       render(<MassHealModal {...makeProps({ pool: 20 })} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '5' } }));
+      const input = getNumberInputs()[0];
+      await act(async () => fireEvent.change(input, { target: { value: '5' } }));
 
       const minusBtn = document.querySelector('.sp-dismiss-btn');
       await act(async () => fireEvent.click(minusBtn));
@@ -262,33 +233,33 @@ describe('MassHealModal', () => {
 
     it('clamps allocation to pool maximum', async () => {
       render(<MassHealModal {...makeProps({ pool: 10 })} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '999' } }));
+      const input = getNumberInputs()[0];
+      await act(async () => fireEvent.change(input, { target: { value: '999' } }));
 
       expect(screen.getByText(/Allocated: 10 \/ 10/)).toBeInTheDocument();
     });
 
     it('clamps allocation to 0 minimum', async () => {
       render(<MassHealModal {...makeProps({ pool: 10 })} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '-50' } }));
+      const input = getNumberInputs()[0];
+      await act(async () => fireEvent.change(input, { target: { value: '-50' } }));
 
       expect(screen.getByText(/Allocated: 0 \/ 10/)).toBeInTheDocument();
     });
 
     it('handles invalid input (non-numeric) as 0', async () => {
       render(<MassHealModal {...makeProps({ pool: 10 })} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: 'abc' } }));
+      const input = getNumberInputs()[0];
+      await act(async () => fireEvent.change(input, { target: { value: 'abc' } }));
 
       expect(screen.getByText(/Allocated: 0 \/ 10/)).toBeInTheDocument();
     });
@@ -300,22 +271,37 @@ describe('MassHealModal', () => {
       await act(async () => fireEvent.click(checkboxes[0]));
       await act(async () => fireEvent.click(checkboxes[1]));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '5' } }));
-      await act(async () => fireEvent.change(numberInputs[1], { target: { value: '10' } }));
+      const inputs = getNumberInputs();
+      await act(async () => fireEvent.change(inputs[0], { target: { value: '5' } }));
+      await act(async () => fireEvent.change(inputs[1], { target: { value: '10' } }));
 
       expect(screen.getByText(/Allocated: 15 \/ 30/)).toBeInTheDocument();
     });
 
     it('shows remaining HP decreasing as allocations increase', async () => {
       render(<MassHealModal {...makeProps({ pool: 20 })} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '7' } }));
+      const input = getNumberInputs()[0];
+      await act(async () => fireEvent.change(input, { target: { value: '7' } }));
 
       expect(screen.getByText(/Remaining: 13/)).toBeInTheDocument();
+    });
+
+    it('allocates per-target independently with shared pool', async () => {
+      render(<MassHealModal {...makeProps({ pool: 20 })} />);
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+      await act(async () => fireEvent.click(checkboxes[0]));
+      await act(async () => fireEvent.click(checkboxes[1]));
+
+      const inputs = getNumberInputs();
+      await act(async () => fireEvent.change(inputs[0], { target: { value: '8' } }));
+      await act(async () => fireEvent.change(inputs[1], { target: { value: '7' } }));
+
+      expect(screen.getByText(/Allocated: 15 \/ 20/)).toBeInTheDocument();
+      expect(screen.getByText(/Remaining: 5/)).toBeInTheDocument();
     });
   });
 
@@ -336,7 +322,7 @@ describe('MassHealModal', () => {
           })}
         />
       );
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
       const burstBtn = document.querySelector('.sp-roll-btn i.fa-burst');
@@ -362,7 +348,7 @@ describe('MassHealModal', () => {
           })}
         />
       );
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
       const burstBtn = document.querySelector('.sp-roll-btn i.fa-burst');
@@ -388,7 +374,7 @@ describe('MassHealModal', () => {
           })}
         />
       );
-      const checkbox = document.querySelector('input[type="checkbox"]');
+      const checkbox = getFirstCheckbox();
       await act(async () => fireEvent.click(checkbox));
 
       const burstBtn = document.querySelector('.sp-roll-btn i.fa-burst');
@@ -407,18 +393,16 @@ describe('MassHealModal', () => {
       await act(async () => fireEvent.click(checkboxes[0]));
       await act(async () => fireEvent.click(checkboxes[1]));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      // Allocate 10 to first target
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '10' } }));
+      const inputs = getNumberInputs();
+      await act(async () => fireEvent.change(inputs[0], { target: { value: '10' } }));
 
-      // Burst on second target with no combatSummary: sets to pool (30)
       const burstBtn = document.querySelectorAll('.sp-roll-btn i.fa-burst')[1];
       const parentDiv = burstBtn.closest('div');
       const burstButton = parentDiv.querySelector('button.sp-roll-btn');
       await act(async () => fireEvent.click(burstButton));
 
-      // Without combatSummary, burst defaults to pool value; Ally2=30, Ally1=10, total=40 but capped at pool=30 per-allocation
-      expect(document.body.textContent).toContain('Allocated:');
+      // Without combatSummary, burst sets per-target to pool (30); total = 10 + 30 = 40
+      expect(screen.getByText(/Allocated: 40 \/ 30/)).toBeInTheDocument();
     });
   });
 
@@ -443,7 +427,7 @@ describe('MassHealModal', () => {
     });
 
     it('falls back to combatSummary HP values when runtime values are null', () => {
-      useRuntimeState.getRuntimeValue.mockImplementation((_, __) => null);
+      mockGetRuntimeValue.mockReturnValue(null);
 
       render(
         <MassHealModal
@@ -475,9 +459,8 @@ describe('MassHealModal', () => {
       expect(screen.getByText(/50%/)).toBeInTheDocument();
     });
 
-    it('only shows HP info for player-type creatures', async () => {
-      setupRuntimeMock({});
-      useRuntimeState.getRuntimeValue.mockImplementation((_, __) => null);
+    it('only shows HP info for player-type creatures', () => {
+      mockGetRuntimeValue.mockReturnValue(null);
 
       render(
         <MassHealModal
@@ -530,6 +513,27 @@ describe('MassHealModal', () => {
       // Runtime value 20 should be used, not combatSummary 5
       expect(screen.getByText(/20 \/ 30 HP/)).toBeInTheDocument();
     });
+
+    it('treats empty string runtime values as null', () => {
+      mockGetRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'currentHitPoints' || key === 'hitPoints') return '';
+        return null;
+      });
+
+      render(
+        <MassHealModal
+          {...makeProps({
+            combatSummary: {
+              creatures: [
+                { name: 'Ally1', type: 'player', currentHp: 10, maxHp: 20 },
+              ],
+            },
+          })}
+        />
+      );
+      // Should fall back to combatSummary values
+      expect(screen.getByText(/10 \/ 20 HP/)).toBeInTheDocument();
+    });
   });
 
   // ── Unallocated HP warning ──
@@ -540,8 +544,8 @@ describe('MassHealModal', () => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       await act(async () => fireEvent.click(checkbox));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '5' } }));
+      const inputs = getNumberInputs();
+      await act(async () => fireEvent.change(inputs[0], { target: { value: '5' } }));
 
       expect(screen.getByText(/5 HP unallocated/)).toBeInTheDocument();
     });
@@ -556,8 +560,8 @@ describe('MassHealModal', () => {
       const checkbox = container.querySelector('input[type="checkbox"]');
       await act(async () => fireEvent.click(checkbox));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '10' } }));
+      const inputs = getNumberInputs();
+      await act(async () => fireEvent.change(inputs[0], { target: { value: '10' } }));
 
       expect(screen.queryByText(/HP unallocated/)).not.toBeInTheDocument();
     });
@@ -578,19 +582,21 @@ describe('MassHealModal', () => {
       expect(mockOnSkip).toHaveBeenCalledTimes(1);
     });
 
-    it('does not call onConfirm when confirm clicked with no allocation', async () => {
-      const { container } = render(<MassHealModal {...makeProps()} />);
-      const checkbox = container.querySelector('input[type="checkbox"]');
-      await act(async () => fireEvent.click(checkbox));
-      // Allocation stays at 0
-
-      fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
-      expect(mockOnConfirm).not.toHaveBeenCalled();
-    });
-
     it('does not call onConfirm when confirm clicked with no targets selected', () => {
       render(<MassHealModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: /Heal \(0\)/ }));
+      expect(mockOnConfirm).not.toHaveBeenCalled();
+    });
+
+    it('does not call onConfirm when confirm clicked with targets but zero allocation', async () => {
+      render(<MassHealModal {...makeProps({ pool: 30 })} />);
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+      await act(async () => fireEvent.click(checkboxes[0]));
+      await act(async () => fireEvent.click(checkboxes[1]));
+
+      // Allocation stays at 0 for both
+      fireEvent.click(screen.getByRole('button', { name: /Heal \(2\)/ }));
       expect(mockOnConfirm).not.toHaveBeenCalled();
     });
 
@@ -601,9 +607,9 @@ describe('MassHealModal', () => {
       await act(async () => fireEvent.click(checkboxes[0]));
       await act(async () => fireEvent.click(checkboxes[1]));
 
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[0], { target: { value: '10' } }));
-      await act(async () => fireEvent.change(numberInputs[1], { target: { value: '15' } }));
+      const inputs = getNumberInputs();
+      await act(async () => fireEvent.change(inputs[0], { target: { value: '10' } }));
+      await act(async () => fireEvent.change(inputs[1], { target: { value: '15' } }));
 
       fireEvent.click(screen.getByRole('button', { name: /Heal \(2\)/ }));
 
@@ -620,8 +626,8 @@ describe('MassHealModal', () => {
       await act(async () => fireEvent.click(checkboxes[1]));
 
       // Ally1 stays at 0, Ally2 gets 10
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      await act(async () => fireEvent.change(numberInputs[1], { target: { value: '10' } }));
+      const inputs = getNumberInputs();
+      await act(async () => fireEvent.change(inputs[1], { target: { value: '10' } }));
 
       fireEvent.click(screen.getByRole('button', { name: /Heal \(2\)/ }));
 
@@ -644,37 +650,6 @@ describe('MassHealModal', () => {
         expect(screen.getByRole('button', { name: /Heal \(2\)/ })).toBeInTheDocument();
       });
     });
-
-    it('does not send runtime values with empty string as currentHitPoints', async () => {
-      setupRuntimeMock({ Ally1: { currentHitPoints: '', hitPoints: '' } });
-      render(
-        <MassHealModal
-          {...makeProps({
-            combatSummary: {
-              creatures: [
-                { name: 'Ally1', type: 'player', currentHp: 10, maxHp: 20 },
-              ],
-            },
-          })}
-        />
-      );
-      // Should fall back to combatSummary values
-      expect(screen.getByText(/10 \/ 20 HP/)).toBeInTheDocument();
-    });
-  });
-
-  // ── Visual selection state ──
-
-  describe('visual selection state', () => {
-    it('applies selection highlight style when target is selected', async () => {
-      render(<MassHealModal {...makeProps()} />);
-      const checkbox = document.querySelector('input[type="checkbox"]');
-      await act(async () => fireEvent.click(checkbox));
-
-      // Selected target should have the allocation controls visible
-      const numberInputs = document.querySelectorAll('input[type="number"]');
-      expect(numberInputs.length).toBeGreaterThan(0);
-    });
   });
 
   // ── Edge cases ──
@@ -682,7 +657,6 @@ describe('MassHealModal', () => {
   describe('edge cases', () => {
     it('handles null combatSummary gracefully', () => {
       render(<MassHealModal {...makeProps({ combatSummary: null })} />);
-      // Should render without errors, targets just won't have HP info
       expect(screen.getByText('Ally1')).toBeInTheDocument();
     });
 
@@ -706,8 +680,29 @@ describe('MassHealModal', () => {
 
     it('renders target with empty name string without crashing', () => {
       render(<MassHealModal {...makeProps({ creatureTargets: [''] })} />);
-      // Should render without errors
       expect(screen.getByText('Mass Heal')).toBeInTheDocument();
+    });
+
+    it('preserves allocation value when target is deselected', async () => {
+      render(<MassHealModal {...makeProps({ pool: 20 })} />);
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+      await act(async () => fireEvent.click(checkboxes[0]));
+      await act(async () => fireEvent.click(checkboxes[1]));
+
+      const inputs = getNumberInputs();
+      await act(async () => fireEvent.change(inputs[0], { target: { value: '10' } }));
+      await act(async () => fireEvent.change(inputs[1], { target: { value: '5' } }));
+
+      expect(screen.getByText(/Allocated: 15 \/ 20/)).toBeInTheDocument();
+
+      // Deselect first target
+      await act(async () => fireEvent.click(checkboxes[0]));
+
+      // Allocation for Ally1 persists in total (15), but Ally1 is no longer selected (1 target)
+      await waitFor(() => {
+        expect(screen.getByText(/Heal \(1\)/)).toBeInTheDocument();
+      });
     });
   });
 });

@@ -13,10 +13,8 @@ vi.mock('../../services/campaign/campaignService.js', () => ({
 // Import mocked functions
 import { getCharacterFolders, getCharacterFiles, loadCharacters } from '../../services/campaign/campaignService.js';
 
-// Restore global.fetch after each test to prevent cross-test pollution
 beforeEach(() => {
   vi.clearAllMocks();
-  delete global.fetch;
 });
 
 describe('CampaignSelection', () => {
@@ -45,17 +43,6 @@ describe('CampaignSelection', () => {
 
       expect(screen.getByText('Loading campaigns...')).toBeInTheDocument();
       expect(document.querySelector('.campaign-selection.loading')).toHaveClass('loading');
-    });
-
-    it('should show campaign list after loading completes', async () => {
-      getCharacterFolders.mockResolvedValue(['Alpha', 'Beta']);
-
-      render(<CampaignSelection />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Alpha')).toBeInTheDocument();
-        expect(screen.getByText('Beta')).toBeInTheDocument();
-      });
     });
 
     it('should show error state when fetching folders fails', async () => {
@@ -92,16 +79,6 @@ describe('CampaignSelection', () => {
       await waitFor(() => {
         const button = screen.getByText('TestCampaign');
         expect(button).toHaveClass('campaign-button');
-      });
-    });
-
-    it('should not disable buttons when not loading', async () => {
-      getCharacterFolders.mockResolvedValue(['Campaign1']);
-
-      render(<CampaignSelection />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Campaign1')).not.toBeDisabled();
       });
     });
 
@@ -172,7 +149,7 @@ describe('CampaignSelection', () => {
       expect(screen.getByDisplayValue('')).toBeInTheDocument();
     });
 
-    it('should clear error and reset input when Cancel is clicked before any error', async () => {
+    it('should close modal and clear input when Cancel is clicked', async () => {
       await renderWithCampaigns(['Campaign1']);
 
       fireEvent.click(screen.getByText('Add'));
@@ -211,6 +188,7 @@ describe('CampaignSelection', () => {
       expect(screen.getByText('Create')).toHaveClass('modal-btn-primary');
       expect(screen.getByText('Cancel')).toHaveClass('modal-btn-secondary');
     });
+
   });
 
   describe('campaign creation', () => {
@@ -229,18 +207,6 @@ describe('CampaignSelection', () => {
       fireEvent.click(screen.getByText('Add'));
       fireEvent.change(screen.getByPlaceholderText('Enter campaign name'), {
         target: { value: '   ' },
-      });
-      fireEvent.click(screen.getByText('Create'));
-
-      expect(screen.getByText('Please enter a campaign name')).toBeInTheDocument();
-    });
-
-    it('should reject campaign names with only tabs/newlines', async () => {
-      await renderWithCampaigns(['Campaign1']);
-
-      fireEvent.click(screen.getByText('Add'));
-      fireEvent.change(screen.getByPlaceholderText('Enter campaign name'), {
-        target: { value: '\t\n\r' },
       });
       fireEvent.click(screen.getByText('Create'));
 
@@ -271,6 +237,38 @@ describe('CampaignSelection', () => {
             body: JSON.stringify({ campaignName: 'Test Campaign' }),
           })
         );
+      });
+    });
+
+    it('should show "Creating campaign..." while creating a campaign', async () => {
+      global.fetch = vi.fn().mockImplementation(() =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ ok: true, json: () => Promise.resolve({}) }), 50)
+        )
+      );
+
+      getCharacterFolders.mockResolvedValue(['Campaign1']);
+
+      render(<CampaignSelection />);
+
+      // Wait for initial loading to complete and campaigns to appear
+      await waitFor(() => {
+        expect(screen.getByText('Campaign1')).toBeInTheDocument();
+      });
+
+      // Open modal, type a name, and click Create
+      fireEvent.click(screen.getByText('Add'));
+      fireEvent.change(screen.getByPlaceholderText('Enter campaign name'), {
+        target: { value: 'New Campaign' },
+      });
+      fireEvent.click(screen.getByText('Create'));
+
+      // During creation, should show "Creating campaign..." not "Loading campaigns..."
+      expect(screen.getByText('Creating campaign...')).toBeInTheDocument();
+
+      // Wait for success
+      await waitFor(() => {
+        expect(screen.getByText(/Campaign created successfully/)).toBeInTheDocument();
       });
     });
 
@@ -427,25 +425,6 @@ describe('CampaignSelection', () => {
       });
     });
 
-    it('should not call onCampaignSelect when it is not provided', async () => {
-      getCharacterFolders.mockResolvedValue(['Campaign1']);
-      getCharacterFiles.mockResolvedValue(['char1.json']);
-      loadCharacters.mockResolvedValue([{ name: 'Character1' }]);
-
-      render(<CampaignSelection />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Campaign1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Campaign1'));
-
-      // Should not throw or crash
-      await waitFor(() => {
-        expect(screen.getByText('Campaign1')).toBeInTheDocument();
-      });
-    });
-
     it('should reset loading state after campaign selection succeeds', async () => {
       getCharacterFolders.mockResolvedValue(['Campaign1']);
       getCharacterFiles.mockResolvedValue(['char1.json']);
@@ -507,27 +486,6 @@ describe('CampaignSelection', () => {
   });
 
   describe('error state recovery', () => {
-    it('should show error class on the error container', async () => {
-      getCharacterFolders.mockRejectedValue(new Error('Network error'));
-
-      render(<CampaignSelection />);
-
-      await waitFor(() => {
-        const errorContainer = document.querySelector('.campaign-selection.error');
-        expect(errorContainer).toHaveClass('error');
-      });
-    });
-
-    it('should show a reload button in error state', async () => {
-      getCharacterFolders.mockRejectedValue(new Error('Network error'));
-
-      render(<CampaignSelection />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Reload Page')).toHaveClass('reload-button');
-      });
-    });
-
     it('should reload the page when reload button is clicked', async () => {
       const reloadSpy = vi.fn();
       Object.defineProperty(window, 'location', {

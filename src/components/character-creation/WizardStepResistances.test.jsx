@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepResistances from './WizardStepResistances.jsx';
@@ -32,28 +33,21 @@ function createMockProps(overrides = {}) {
 
 function setupFetchMock(data) {
   global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
     json: () => Promise.resolve(data),
   });
 }
 
-function getResistanceSection() {
+function getSectionByLabelText(text) {
   const formGroups = document.querySelectorAll('.wizard-step .form-group');
-  const resistanceGroup = Array.from(formGroups).find((g) =>
-    g.querySelector('label')?.textContent?.includes('Resistances')
+  return Array.from(formGroups).find((g) =>
+    g.querySelector('label')?.textContent?.includes(text)
   );
-  return resistanceGroup;
 }
 
-function getImmunitySection() {
-  const formGroups = document.querySelectorAll('.wizard-step .form-group');
-  const immunityGroup = Array.from(formGroups).find((g) =>
-    g.querySelector('label')?.textContent?.includes('Immunities')
-  );
-  return immunityGroup;
-}
-
-function findCheckboxInSection(section, typeName) {
-  const labels = section.querySelectorAll('label');
+function getCheckboxForType(section, typeName) {
+  const labels = section?.querySelectorAll('label') || [];
   const targetLabel = Array.from(labels).find(
     (l) => l.querySelector('input[type="checkbox"]') && l.textContent.includes(typeName)
   );
@@ -66,7 +60,7 @@ describe('WizardStepResistances', () => {
     setupFetchMock(mockResistancesData);
   });
 
-  describe('Render', () => {
+  describe('Rendering', () => {
     it('should render the step header, resistances and immunities labels', () => {
       render(<WizardStepResistances {...createMockProps()} />);
       expect(screen.getByText('Step 8: Resistances & Immunities')).toBeInTheDocument();
@@ -77,8 +71,8 @@ describe('WizardStepResistances', () => {
     it('should render checkboxes for each resistance type in both sections', async () => {
       render(<WizardStepResistances {...createMockProps()} />);
       await waitFor(() => {
-        const resistanceSection = getResistanceSection();
-        const immunitySection = getImmunitySection();
+        const resistanceSection = getSectionByLabelText('Resistances');
+        const immunitySection = getSectionByLabelText('Immunities');
         expect(resistanceSection.querySelectorAll('input[type="checkbox"]').length).toBe(mockResistancesData.length);
         expect(immunitySection.querySelectorAll('input[type="checkbox"]').length).toBe(mockResistancesData.length);
       });
@@ -87,18 +81,56 @@ describe('WizardStepResistances', () => {
     it('should render all resistance type names in both sections', async () => {
       render(<WizardStepResistances {...createMockProps()} />);
       await waitFor(() => {
-        const resistanceSection = getResistanceSection();
-        const immunitySection = getImmunitySection();
+        const resistanceSection = getSectionByLabelText('Resistances');
+        const immunitySection = getSectionByLabelText('Immunities');
         for (const type of mockResistancesData) {
           expect(resistanceSection.textContent).toContain(type);
           expect(immunitySection.textContent).toContain(type);
         }
       });
     });
+
+    it('should render no checkboxes when data array is empty', async () => {
+      setupFetchMock([]);
+      render(<WizardStepResistances {...createMockProps()} />);
+      await waitFor(() => {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        expect(checkboxes.length).toBe(0);
+      });
+      expect(screen.getByText('Step 8: Resistances & Immunities')).toBeInTheDocument();
+    });
   });
 
   describe('Selected values', () => {
-    it('should check the checkbox when a value is in formData', async () => {
+    it('should check the checkbox when a value is in formData resistances', async () => {
+      render(
+        <WizardStepResistances
+          {...createMockProps({
+            formData: { resistances: ['Fire'], immunities: [] },
+          })}
+        />
+      );
+      await waitFor(() => {
+        const resistanceSection = getSectionByLabelText('Resistances');
+        expect(getCheckboxForType(resistanceSection, 'Fire').checked).toBe(true);
+      });
+    });
+
+    it('should check the checkbox when a value is in formData immunities', async () => {
+      render(
+        <WizardStepResistances
+          {...createMockProps({
+            formData: { resistances: [], immunities: ['Cold'] },
+          })}
+        />
+      );
+      await waitFor(() => {
+        const immunitySection = getSectionByLabelText('Immunities');
+        expect(getCheckboxForType(immunitySection, 'Cold').checked).toBe(true);
+      });
+    });
+
+    it('should mark selected items with the "selected" CSS class', async () => {
       render(
         <WizardStepResistances
           {...createMockProps({
@@ -107,26 +139,8 @@ describe('WizardStepResistances', () => {
         />
       );
       await waitFor(() => {
-        const resistanceSection = getResistanceSection();
-        const immunitySection = getImmunitySection();
-        expect(findCheckboxInSection(resistanceSection, 'Fire').checked).toBe(true);
-        expect(findCheckboxInSection(immunitySection, 'Cold').checked).toBe(true);
-      });
-    });
-
-    it('should check multiple selected resistances and immunities', async () => {
-      render(
-        <WizardStepResistances
-          {...createMockProps({
-            formData: { resistances: ['Fire', 'Cold'], immunities: ['Acid'] },
-          })}
-        />
-      );
-      await waitFor(() => {
-        const checkedCheckboxes = document.querySelectorAll(
-          'input[type="checkbox"]:checked'
-        );
-        expect(checkedCheckboxes.length).toBe(3);
+        const selectedItems = document.querySelectorAll('.multi-select-item.selected');
+        expect(selectedItems.length).toBe(2);
       });
     });
   });
@@ -142,10 +156,8 @@ describe('WizardStepResistances', () => {
         />
       );
       await waitFor(() => {
-        const resistanceSection = getResistanceSection();
-        const immunitySection = getImmunitySection();
-        expect(resistanceSection.textContent).toContain('Acid (Granted)');
-        expect(immunitySection.textContent).toContain('Cold (Granted)');
+        expect(screen.getByText('Acid (Granted)')).toBeInTheDocument();
+        expect(screen.getByText('Cold (Granted)')).toBeInTheDocument();
       });
     });
 
@@ -159,8 +171,10 @@ describe('WizardStepResistances', () => {
         />
       );
       await waitFor(() => {
-        const resistanceSection = getResistanceSection();
-        expect(findCheckboxInSection(resistanceSection, 'Fire').disabled).toBe(true);
+        const resistanceSection = getSectionByLabelText('Resistances');
+        const fireCheckbox = getCheckboxForType(resistanceSection, 'Fire');
+        expect(fireCheckbox.disabled).toBe(true);
+        expect(fireCheckbox.checked).toBe(true);
       });
     });
 
@@ -174,8 +188,9 @@ describe('WizardStepResistances', () => {
         />
       );
       await waitFor(() => {
-        const resistanceSection = getResistanceSection();
-        expect(findCheckboxInSection(resistanceSection, 'Fire').disabled).toBe(false);
+        const resistanceSection = getSectionByLabelText('Resistances');
+        const fireCheckbox = getCheckboxForType(resistanceSection, 'Fire');
+        expect(fireCheckbox.disabled).toBe(false);
       });
     });
 
@@ -193,33 +208,62 @@ describe('WizardStepResistances', () => {
         expect(preSelectedLabel.textContent).toContain('Acid');
       });
     });
+
+    it('should handle undefined preSelectedResistances gracefully', () => {
+      const props = createMockProps();
+      props.preSelectedResistances = undefined;
+      props.preSelectedImmunities = undefined;
+      render(<WizardStepResistances {...props} />);
+      expect(screen.getByText('Step 8: Resistances & Immunities')).toBeInTheDocument();
+    });
+
+    it('should handle undefined formData gracefully', () => {
+      const props = createMockProps();
+      props.formData = undefined;
+      render(<WizardStepResistances {...props} />);
+      expect(screen.getByText('Step 8: Resistances & Immunities')).toBeInTheDocument();
+    });
   });
 
   describe('Toggle interactions', () => {
-    it('should call the correct toggle callback when a checkbox is clicked', async () => {
-      const mockResistanceToggle = vi.fn();
-      const mockImmunityToggle = vi.fn();
+    it('should call onResistanceToggle when a resistance checkbox is clicked', async () => {
+      const mockOnResistanceToggle = vi.fn();
       render(
         <WizardStepResistances
           {...createMockProps({
-            onResistanceToggle: mockResistanceToggle,
-            onImmunityToggle: mockImmunityToggle,
+            onResistanceToggle: mockOnResistanceToggle,
+            formData: { resistances: [], immunities: [] },
           })}
         />
       );
       await waitFor(() => {
-        const resistanceSection = getResistanceSection();
-        const immunitySection = getImmunitySection();
-        const fireResistCheckbox = findCheckboxInSection(resistanceSection, 'Fire');
-        const fireImmunityCheckbox = findCheckboxInSection(immunitySection, 'Fire');
-        expect(fireResistCheckbox).not.toBeNull();
-        expect(fireImmunityCheckbox).not.toBeNull();
-        fireEvent.click(fireResistCheckbox);
-        fireEvent.click(fireImmunityCheckbox);
+        const resistanceSection = getSectionByLabelText('Resistances');
+        const fireCheckbox = getCheckboxForType(resistanceSection, 'Fire');
+        expect(fireCheckbox).not.toBeNull();
+        fireEvent.click(fireCheckbox);
       });
 
-      expect(mockResistanceToggle).toHaveBeenCalledWith('Fire');
-      expect(mockImmunityToggle).toHaveBeenCalledWith('Fire');
+      expect(mockOnResistanceToggle).toHaveBeenCalledWith('Fire');
+    });
+
+    it('should call onImmunityToggle when an immunity checkbox is clicked', async () => {
+      const mockOnImmunityToggle = vi.fn();
+      render(
+        <WizardStepResistances
+          {...createMockProps({
+            onImmunityToggle: mockOnImmunityToggle,
+            formData: { resistances: [], immunities: [] },
+          })}
+        />
+      );
+      await waitFor(() => {
+        const immunitySection = getSectionByLabelText('Immunities');
+        const fireCheckbox = getCheckboxForType(immunitySection, 'Fire');
+        expect(fireCheckbox).not.toBeNull();
+        fireEvent.click(fireCheckbox);
+      });
+
+      expect(mockOnImmunityToggle).toHaveBeenCalledWith('Fire');
     });
 
     it('should keep the checkbox checked when a disabled pre-selected checkbox is clicked', async () => {
@@ -232,8 +276,8 @@ describe('WizardStepResistances', () => {
         />
       );
       await waitFor(() => {
-        const resistanceSection = getResistanceSection();
-        const fireCheckbox = findCheckboxInSection(resistanceSection, 'Fire');
+        const resistanceSection = getSectionByLabelText('Resistances');
+        const fireCheckbox = getCheckboxForType(resistanceSection, 'Fire');
         expect(fireCheckbox.disabled).toBe(true);
         expect(fireCheckbox.checked).toBe(true);
         fireEvent.click(fireCheckbox);
@@ -259,8 +303,13 @@ describe('WizardStepResistances', () => {
       expect(screen.getByText('Consider your class limitations')).toBeInTheDocument();
     });
 
-    it('should not render warnings container when warnings is falsy or empty', () => {
+    it('should not render warnings container when warnings is null', () => {
       render(<WizardStepResistances {...createMockProps({ warnings: null })} />);
+      expect(document.querySelector('.warning-container')).not.toBeInTheDocument();
+    });
+
+    it('should not render warnings container when warnings is empty', () => {
+      render(<WizardStepResistances {...createMockProps({ warnings: [] })} />);
       expect(document.querySelector('.warning-container')).not.toBeInTheDocument();
     });
   });

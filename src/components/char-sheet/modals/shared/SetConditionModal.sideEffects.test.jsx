@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import SetConditionModal from './SetConditionModal.jsx';
@@ -56,6 +57,7 @@ import * as savePromptService from '../../../../services/combat/conditions/saveP
 import * as storage from '../../../../services/ui/storage.js';
 import * as logService from '../../../../services/ui/logService.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
+import * as automationService from '../../../../services/combat/automation/automationService.js';
 
 // ── Test fixtures ──
 
@@ -115,7 +117,6 @@ describe('SetConditionModal - Side Effects & Edge Cases', () => {
     fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
 
     const sentPrompt = savePromptService.sendSavePrompt.mock.calls[0][1];
-    storage.default.set.mockClear();
 
     window.dispatchEvent(
       new CustomEvent('save-result', {
@@ -170,6 +171,17 @@ describe('SetConditionModal - Side Effects & Edge Cases', () => {
     expect(orcConditions).toHaveLength(0);
   });
 
+  it('does not call setRuntimeValue when all selected NPCs succeed', () => {
+    diceRoller.rollD20.mockReturnValue(20);
+
+    render(<SetConditionModal {...makeProps()} />);
+    fireEvent.click(screen.getAllByRole('checkbox')[0]); // Goblin A
+    fireEvent.click(screen.getAllByRole('checkbox')[1]); // Goblin B
+    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(2 targets\)/ }));
+
+    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+  });
+
   it('calls setRuntimeValue with activeConditions on player failure', async () => {
     diceRoller.rollD20.mockReturnValue(15);
 
@@ -207,18 +219,98 @@ describe('SetConditionModal - Side Effects & Edge Cases', () => {
     fireEvent.click(screen.getAllByRole('checkbox')[0]); // Goblin A
     fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
 
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledTimes(4);
-    const calls = useRuntimeState.setRuntimeValue.mock.calls;
-    expect(calls[0][0]).toBe('Goblin A');
-    expect(calls[0][1]).toBe('activeConditions');
+    const calls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+      call => call[0] === 'Goblin A' && call[1] === 'activeConditions'
+    );
+    expect(calls).toHaveLength(2);
     expect(calls[0][2]).toContain('frightened');
-    expect(calls[1][0]).toBe('Goblin A');
-    expect(calls[1][1]).toBe('activeConditionMeta');
-    expect(calls[2][0]).toBe('Goblin A');
-    expect(calls[2][1]).toBe('activeConditions');
-    expect(calls[2][2]).toContain('blinded');
-    expect(calls[3][0]).toBe('Goblin A');
-    expect(calls[3][1]).toBe('activeConditionMeta');
+    expect(calls[1][2]).toContain('blinded');
+  });
+
+  // ── Additional condition on player targets ──
+
+  it('applies both conditions to player via setRuntimeValue on failure', async () => {
+    diceRoller.rollD20.mockReturnValue(15);
+
+    const characters = [
+      { name: 'Player Ally', computedStats: { name: 'Player Ally' } },
+    ];
+
+    render(<SetConditionModal {...makeProps({ characters, conditionName: 'frightened', additionalCondition: 'blinded' })} />);
+    fireEvent.click(screen.getAllByRole('checkbox')[2]); // Player Ally
+    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
+
+    const sentPrompt = savePromptService.sendSavePrompt.mock.calls[0][1];
+    window.dispatchEvent(
+      new CustomEvent('save-result', {
+        detail: { promptId: sentPrompt.promptId, targetName: 'Player Ally', success: false, total: 8, roll: 8, saveBonus: 0 },
+      })
+    );
+
+    await waitFor(() => {
+      const calls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+        call => call[0] === 'Player Ally' && call[1] === 'activeConditions'
+      );
+      expect(calls).toHaveLength(2);
+      expect(calls[0][2]).toContain('frightened');
+      expect(calls[1][2]).toContain('blinded');
+    });
+  });
+
+  // ── Immunity handling ──
+
+  it('does not apply condition when player is immune', async () => {
+    diceRoller.rollD20.mockReturnValue(15);
+    automationService.playerIsImmuneToCondition.mockReturnValue(true);
+
+    const characters = [
+      { name: 'Player Ally', computedStats: { name: 'Player Ally' } },
+    ];
+
+    render(<SetConditionModal {...makeProps({ characters })} />);
+    fireEvent.click(screen.getAllByRole('checkbox')[2]); // Player Ally
+    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
+
+    const sentPrompt = savePromptService.sendSavePrompt.mock.calls[0][1];
+    window.dispatchEvent(
+      new CustomEvent('save-result', {
+        detail: { promptId: sentPrompt.promptId, targetName: 'Player Ally', success: false, total: 8, roll: 8, saveBonus: 0 },
+      })
+    );
+
+    await waitFor(() => {
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Channel divinity charges decrement ──
+
+  it('decrements channelDivinityCharges when provided', () => {
+    diceRoller.rollD20.mockReturnValue(15);
+
+    render(<SetConditionModal {...makeProps({ channelDivinityCharges: 3 })} />);
+    fireEvent.click(screen.getAllByRole('checkbox')[0]); // Goblin A
+    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
+
+    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+      'Attacker',
+      'channelDivinityCharges',
+      2,
+      'test-campaign'
+    );
+  });
+
+  it('does not decrement channelDivinityCharges when not provided', () => {
+    diceRoller.rollD20.mockReturnValue(15);
+
+    render(<SetConditionModal {...makeProps()} />);
+    fireEvent.click(screen.getAllByRole('checkbox')[0]); // Goblin A
+    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
+
+    const chargeCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+      call => call[1] === 'channelDivinityCharges'
+    );
+    expect(chargeCalls).toHaveLength(0);
   });
 
   // ── Log condition format validation ──

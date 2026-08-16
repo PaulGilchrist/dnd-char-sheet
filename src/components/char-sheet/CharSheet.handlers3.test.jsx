@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSheet from './CharSheet';
 import {
   createMockStore,
+  createDefaultProps,
   createSharedPopupReturnValue,
   resetTestState,
 } from './CharSheet.test-utils';
@@ -194,9 +195,9 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
     if (prop === 'exhaustionLevel') return 0;
     if (prop === 'bardicInspirationDie') return mockStore.get(`${key}:bardicInspirationDie`) ?? null;
     if (prop === 'bardicInspirationCombatOptions') return mockStore.get(`${key}:bardicInspirationCombatOptions`) ?? null;
-    if (prop === 'activeConditions') return [];
+    if (prop === 'activeConditions') return mockStore.get(`${key}:activeConditions`) ?? [];
     if (prop === 'activeBuffs') return mockStore.get(`${key}:activeBuffs`) ? JSON.parse(mockStore.get(`${key}:activeBuffs`)) : [];
-    if (prop === 'targetEffects') return [];
+    if (prop === 'targetEffects') return mockStore.get(`${key}:targetEffects`) ?? [];
     if (prop === 'preparedSpells') return mockStore.get(`${key}:preparedSpells`) ?? null;
     if (prop === 'aspectOfTheWildsOption') return mockStore.get(`${key}:aspectOfTheWildsOption`) ?? null;
     if (prop === 'bardicInspirationGrantedBy') return mockStore.get(`${key}:bardicInspirationGrantedBy`) ?? 'unknown';
@@ -256,107 +257,12 @@ vi.mock('../../services/rules/rulesFactory.js', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const defaultProps = {
-  allAbilityScores: [],
-  allClasses: [],
-  allClasses2024: [],
-  allEquipment: [],
-  allMagicItems: [],
-  allRaces: [],
-  allSpells: [],
-  allSpells2024: [],
-  playerSummary: { name: 'Test Character', rules: '5e' },
-  allRaces2024: [],
-  allMagicItems2024: [],
-  campaignName: 'test-campaign',
-  activeMapName: null,
-  characters: [],
-  onDeleteCharacter: vi.fn(),
-  onEditCharacter: vi.fn(),
-  onUploadClick: vi.fn(),
-  onSaveClick: vi.fn(),
-};
-
-// ---------------------------------------------------------------------------
-// Tests — handleReroll — fanaticalFocusUsed reset on render
-// ---------------------------------------------------------------------------
-
-describe('handleReroll — fanaticalFocusUsed reset on render', () => {
-  beforeEach(() => {
-    resetTestState(sharedPopupReturnValue);
-    mockStore.clear();
-  });
-
-  it('sets fanaticalFocusUsed to false when not raging', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([]));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-    const focusSetCalls = setRuntimeValue.mock.calls.filter(
-      (call) => call[1] === 'fanaticalFocusUsed'
-    );
-    expect(focusSetCalls.length).toBeGreaterThan(0);
-    expect(focusSetCalls[0][2]).toBe(false);
-  });
-
-  it('does not set fanaticalFocusUsed when raging', async () => {
-    mockStore.set('Test Character:activeBuffs', JSON.stringify([
-      { damageBonusExpression: '2d6' },
-    ]));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-    const focusSetCalls = setRuntimeValue.mock.calls.filter(
-      (call) => call[1] === 'fanaticalFocusUsed'
-    );
-    expect(focusSetCalls.length).toBe(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — hitPoints sync
-// ---------------------------------------------------------------------------
-
-describe('hitPoints sync', () => {
-  beforeEach(() => {
-    resetTestState(sharedPopupReturnValue);
-    mockStore.clear();
-  });
-
-  it('sets hitPoints runtime value when playerStats is available', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-    const hpCalls = setRuntimeValue.mock.calls.filter(
-      (call) => call[1] === 'hitPoints'
-    );
-    expect(hpCalls.length).toBeGreaterThan(0);
-    expect(hpCalls[0][2]).toEqual({ current: 40, max: 40 });
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Tests — bardic inspiration runtime value subscriptions
 // ---------------------------------------------------------------------------
 
 describe('bardic inspiration runtime value subscriptions', () => {
+  const props = createDefaultProps();
+
   beforeEach(() => {
     resetTestState(sharedPopupReturnValue);
     mockStore.clear();
@@ -366,7 +272,7 @@ describe('bardic inspiration runtime value subscriptions', () => {
     mockStore.set('Test Character:bardicInspirationDie', 'd6');
     mockStore.set('Test Character:bardicInspirationGrantedBy', 'Bard');
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
@@ -376,7 +282,7 @@ describe('bardic inspiration runtime value subscriptions', () => {
     const biDieCalls = useRuntimeValue.mock.calls.filter(
       (call) => call[1] === 'bardicInspirationDie'
     );
-    expect(biDieCalls.length).toBeGreaterThan(0);
+    expect(biDieCalls.length).toBeGreaterThanOrEqual(1);
     expect(biDieCalls[0][0]).toBe('Test Character');
     expect(biDieCalls[0][2]).toBe('test-campaign');
   });
@@ -384,7 +290,7 @@ describe('bardic inspiration runtime value subscriptions', () => {
   it('subscribes to bardicInspirationCombatOptions via useRuntimeValue', async () => {
     mockStore.set('Test Character:bardicInspirationCombatOptions', JSON.stringify(['defense_add_to_ac']));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
@@ -394,13 +300,13 @@ describe('bardic inspiration runtime value subscriptions', () => {
     const biOptCalls = useRuntimeValue.mock.calls.filter(
       (call) => call[1] === 'bardicInspirationCombatOptions'
     );
-    expect(biOptCalls.length).toBeGreaterThan(0);
+    expect(biOptCalls.length).toBeGreaterThanOrEqual(1);
   });
 
   it('does not subscribe to bardicInspirationUses via useRuntimeValue (handler reads via getRuntimeValue)', async () => {
     mockStore.set('Test Character:bardicInspirationUses', 3);
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
@@ -410,9 +316,7 @@ describe('bardic inspiration runtime value subscriptions', () => {
     const biUsesCalls = useRuntimeValue.mock.calls.filter(
       (call) => call[1] === 'bardicInspirationUses'
     );
-    // bardicInspirationUses is read by handleBardicInspirationOffense via getRuntimeValue,
-    // not subscribed via useRuntimeValue in the component
-    expect(biUsesCalls.length).toBe(0);
+    expect(biUsesCalls).toHaveLength(0);
   });
 });
 
@@ -421,6 +325,8 @@ describe('bardic inspiration runtime value subscriptions', () => {
 // ---------------------------------------------------------------------------
 
 describe('handleEmpoweredSpell — popupHtml flow', () => {
+  const props = createDefaultProps();
+
   beforeEach(() => {
     resetTestState(sharedPopupReturnValue);
     mockStore.clear();
@@ -429,13 +335,12 @@ describe('handleEmpoweredSpell — popupHtml flow', () => {
   it('passes popupHtml to empowered spell handler via shared popup context', async () => {
     sharedPopupReturnValue.popupHtml = { empoweredSpellChaMod: 3 };
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
-    // Verify the popup context was set up with the empowered spell data
     expect(sharedPopupReturnValue.popupHtml).toEqual({ empoweredSpellChaMod: 3 });
   });
 });
@@ -445,6 +350,8 @@ describe('handleEmpoweredSpell — popupHtml flow', () => {
 // ---------------------------------------------------------------------------
 
 describe('special feature runtime value subscriptions', () => {
+  const props = createDefaultProps();
+
   beforeEach(() => {
     resetTestState(sharedPopupReturnValue);
     mockStore.clear();
@@ -453,7 +360,7 @@ describe('special feature runtime value subscriptions', () => {
   it('subscribes to spellThiefStolenList via useRuntimeValue', async () => {
     mockStore.set('Test Character:_spellThiefStolenList', JSON.stringify(['Fireball']));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
@@ -463,13 +370,15 @@ describe('special feature runtime value subscriptions', () => {
     const thiefCalls = useRuntimeValue.mock.calls.filter(
       (call) => call[1] === '_spellThiefStolenList'
     );
-    expect(thiefCalls.length).toBeGreaterThan(0);
+    expect(thiefCalls.length).toBeGreaterThanOrEqual(1);
+    expect(thiefCalls[0][0]).toBe('Test Character');
+    expect(thiefCalls[0][2]).toBe('test-campaign');
   });
 
   it('subscribes to spellThiefCasterBlock via useRuntimeValue', async () => {
     mockStore.set('Test Character:_spellThiefCasterBlock', JSON.stringify(['Ally1']));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
@@ -479,13 +388,13 @@ describe('special feature runtime value subscriptions', () => {
     const blockCalls = useRuntimeValue.mock.calls.filter(
       (call) => call[1] === '_spellThiefCasterBlock'
     );
-    expect(blockCalls.length).toBeGreaterThan(0);
+    expect(blockCalls.length).toBeGreaterThanOrEqual(1);
   });
 
   it('subscribes to circleOfTheLandType via useRuntimeValue', async () => {
     mockStore.set('Test Character:_circleOfTheLandType', 'arctic');
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
@@ -495,13 +404,13 @@ describe('special feature runtime value subscriptions', () => {
     const cotlCalls = useRuntimeValue.mock.calls.filter(
       (call) => call[1] === '_circleOfTheLandType'
     );
-    expect(cotlCalls.length).toBeGreaterThan(0);
+    expect(cotlCalls.length).toBeGreaterThanOrEqual(1);
   });
 
   it('subscribes to fiendishResilienceType via useRuntimeValue', async () => {
     mockStore.set('Test Character:_Fiendish_Resilience_chosenType', 'fire');
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
@@ -511,13 +420,13 @@ describe('special feature runtime value subscriptions', () => {
     const fiendishCalls = useRuntimeValue.mock.calls.filter(
       (call) => call[1] === '_Fiendish_Resilience_chosenType'
     );
-    expect(fiendishCalls.length).toBeGreaterThan(0);
+    expect(fiendishCalls.length).toBeGreaterThanOrEqual(1);
   });
 
   it('subscribes to boonEnergyResistanceTypes via useRuntimeValue', async () => {
     mockStore.set('Test Character:_Energy_Resistances_chosenTypes', JSON.stringify(['fire', 'cold']));
 
-    render(<CharSheet {...defaultProps} />);
+    render(<CharSheet {...props} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
@@ -527,6 +436,6 @@ describe('special feature runtime value subscriptions', () => {
     const boonCalls = useRuntimeValue.mock.calls.filter(
       (call) => call[1] === '_Energy_Resistances_chosenTypes'
     );
-    expect(boonCalls.length).toBeGreaterThan(0);
+    expect(boonCalls.length).toBeGreaterThanOrEqual(1);
   });
 });

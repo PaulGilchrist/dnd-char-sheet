@@ -1,7 +1,8 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// JSDOM PointerEvent polyfill
+// JSDOM PointerEvent polyfill (needed for React 19 onPointerLeave handlers)
 if (!globalThis.PointerEvent) {
     globalThis.PointerEvent = class PointerEvent extends MouseEvent {
         constructor(type, init = {}) {
@@ -12,20 +13,30 @@ if (!globalThis.PointerEvent) {
     };
 }
 
+// Props of the mocked child components, captured on every render so tests can
+// drive handlers that live inside HexMap and inspect values it forwards.
+const { poiLayerProps } = vi.hoisted(() => ({ poiLayerProps: { current: null } }));
+
 // ── Mock child components ──
 vi.mock('./TerrainLayer.jsx', () => ({ default: () => <g data-testid="terrain-layer" /> }));
 vi.mock('./HexGridLayer.jsx', () => ({ default: () => <g data-testid="hex-grid-layer" /> }));
 vi.mock('./HexMapToolbar.jsx', () => ({
-    default: ({ onBack, mapName, zoomIn, zoomOut, resetView }) =>
+    default: ({ onBack, mapName, zoomIn, zoomOut, resetView, setTool }) =>
         <div data-testid="toolbar">
             <button data-testid="toolbar-back" onClick={onBack}>Back</button>
             <span data-testid="toolbar-name">{mapName}</span>
             <button data-testid="toolbar-zoomin" onClick={zoomIn}>+</button>
             <button data-testid="toolbar-zoomout" onClick={zoomOut}>-</button>
             <button data-testid="toolbar-resetview" onClick={resetView}>Reset</button>
+            <button data-testid="tool-paint" onClick={() => setTool('paint')}>Paint</button>
         </div>,
 }));
-vi.mock('./POILayer.jsx', () => ({ default: () => <g data-testid="poi-layer" /> }));
+vi.mock('./POILayer.jsx', () => ({
+    default: (props) => {
+        poiLayerProps.current = props;
+        return <g data-testid="poi-layer" />;
+    },
+}));
 vi.mock('./POIPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="poi-panel"><button onClick={onClose}>Close</button></div> }));
 vi.mock('./POIContextMenu.jsx', () => ({ default: ({ selectedPoi, onClose }) => selectedPoi ? <g data-testid="poi-context-menu"><text onClick={onClose}>Close</text></g> : null }));
 vi.mock('./MarchingOrderPanel.jsx', () => ({ default: () => <div data-testid="marching-panel" /> }));
@@ -75,7 +86,7 @@ vi.mock('../../hooks/runtime/useLog.js', () => ({ default: vi.fn() }));
 vi.mock('../../hooks/runtime/useSSEEqualityGuard.js', () => ({ default: vi.fn((setter) => setter) }));
 vi.mock('../../services/maps/mapsService.js', () => ({
     loadMaps: vi.fn(() => Promise.resolve({ maps: [] })),
-    loadMapData: vi.fn(() => Promise.resolve(null)),
+    loadMapData: vi.fn(() => Promise.resolve({})),
     saveMapData: vi.fn(() => Promise.resolve({})),
     createMap: vi.fn(() => Promise.resolve({ name: 'test', alreadyExists: false })),
     formatMapName: vi.fn((name) => name || ''),
@@ -190,17 +201,43 @@ function setupDefaultMocks() {
     useMonstersData.mockReturnValue({ monsters: [], loading: false, error: null });
     useTravelManagement.mockReturnValue(makeTravelMgmt());
     useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry: vi.fn() });
-    mapsService.formatMapName.mockReturnValue('Test Map');
+    mapsService.formatMapName.mockImplementation((name) => name || '');
+    // Linked maps are "valid" by default; tests opt into the failure path with
+    // mockRejectedValue so the Promise.allSettled filter is exercised honestly.
+    mapsService.loadMapData.mockImplementation(() => Promise.resolve({}));
+}
+
+/**
+ * Renders HexMap with a pending event and an active travel session, then clicks
+ * the dialog's Accept button. `acceptEvent` returns the same pendingEvent by
+ * default (matching how the component reads `evt`). Returns `{ tm, addEntry }`.
+ */
+function renderEventAccept({ pendingEvent, travelOverrides = {}, mapOverrides = {}, encounter }) {
+    const addEntry = vi.fn();
+    const tm = makeTravelMgmt({
+        isTravelActive: true,
+        pendingEvent,
+        acceptEvent: vi.fn(() => pendingEvent),
+        currentPosition: { q: 10, r: 5 },
+        ...travelOverrides,
+    });
+    useTravelManagement.mockReturnValue(tm);
+    useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
+    useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 }, ...mapOverrides }));
+    if (encounter) useEncounterGeneration.mockReturnValue(encounter);
+    render(<HexMap campaignName="test" mapName="test-map" />);
+    return { tm, addEntry };
 }
 
 describe('HexMap additional coverage', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        poiLayerProps.current = null;
         setupDefaultMocks();
     });
 
     describe('Force camp handler', () => {
-        it('calls forceCamp, generates weather, and logs camp action', () => {
+        it('forces camp, regenerates weather, and logs the camp with the party location', () => {
             const addEntry = vi.fn();
             const tm = makeTravelMgmt({
                 isTravelActive: true,
@@ -212,238 +249,250 @@ describe('HexMap additional coverage', () => {
             useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 }, weather: { label: 'Clear' } }));
             render(<HexMap campaignName="test" mapName="test-map" />);
             fireEvent.click(screen.getByTestId('btn-camp'));
-            expect(tm.forceCamp).toHaveBeenCalled();
+            expect(tm.forceCamp).toHaveBeenCalledTimes(1);
             expect(generateWeather).toHaveBeenCalled();
-            expect(addEntry).toHaveBeenCalled();
-            expect(addEntry.mock.calls[0][0].action).toBe('camp');
+            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'camp', hex: { q: 15, r: 8 }, weather: 'Clear',
+            }));
         });
     });
 
     describe('POI enter handler', () => {
-        it('calls onPoiEntered when POI has valid linked map', () => {
-            const onPoiEntered = vi.fn();
-            const pois = [{ id: 'poi-1', q: 10, r: 5, type: 'city', linkedMap: 'dungeon-1', visible: true }];
-            const ml = makeMapLoader({ pois });
-            useMapLoader.mockReturnValue(ml);
+        function renderWithPoi({ linkedMap, onPoiEntered }) {
+            useMapLoader.mockReturnValue(makeMapLoader({
+                pois: [{ id: 'poi-1', q: 10, r: 5, type: 'dungeon', visible: true, ...(linkedMap ? { linkedMap } : {}) }],
+            }));
             render(<HexMap campaignName="test" mapName="test-map" onPoiEntered={onPoiEntered} />);
-            // POI enter is triggered by POILayer interaction, not mount.
-            // The validLinkedMaps ref is populated asynchronously via useEffect.
-            // Verify the handler is wired by checking that onPoiEntered is not called
-            // when no POI interaction occurs (default state).
-            expect(onPoiEntered).not.toHaveBeenCalled();
-        });
+        }
 
-        it('does not call onPoiEntered when linked map is invalid', async () => {
+        it('enters a POI whose linked map was validated', async () => {
             const onPoiEntered = vi.fn();
-            const pois = [{ id: 'poi-1', q: 10, r: 5, type: 'city', linkedMap: 'nonexistent-map', visible: true }];
-            const ml = makeMapLoader({ pois });
-            useMapLoader.mockReturnValue(ml);
-            mapsService.loadMapData.mockResolvedValue(null);
-            render(<HexMap campaignName="test" mapName="test-map" onPoiEntered={onPoiEntered} />);
+            renderWithPoi({ linkedMap: 'dungeon-1', onPoiEntered });
             await vi.waitFor(() => {
-                expect(onPoiEntered).not.toHaveBeenCalled();
+                expect(poiLayerProps.current.validLinkedMaps.has('dungeon-1')).toBe(true);
             });
+            poiLayerProps.current.onPoiEnter({ id: 'poi-1', linkedMap: 'dungeon-1' });
+            expect(onPoiEntered).toHaveBeenCalledWith('dungeon-1');
         });
 
-        it('does not call onPoiEntered when POI has no linked map', () => {
+        it('does not enter a POI whose linked map failed to load', async () => {
             const onPoiEntered = vi.fn();
-            const pois = [{ id: 'poi-1', q: 10, r: 5, type: 'camp', visible: true }];
-            const ml = makeMapLoader({ pois });
-            useMapLoader.mockReturnValue(ml);
-            render(<HexMap campaignName="test" mapName="test-map" onPoiEntered={onPoiEntered} />);
+            mapsService.loadMapData.mockRejectedValue(new Error('Map not found'));
+            renderWithPoi({ linkedMap: 'missing', onPoiEntered });
+            await vi.waitFor(() => {
+                expect(mapsService.loadMapData).toHaveBeenCalledWith('test', 'missing');
+            });
+            expect(poiLayerProps.current.validLinkedMaps.has('missing')).toBe(false);
+            poiLayerProps.current.onPoiEnter({ id: 'poi-1', linkedMap: 'missing' });
             expect(onPoiEntered).not.toHaveBeenCalled();
+        });
+
+        it('does not enter a POI without a linked map', () => {
+            const onPoiEntered = vi.fn();
+            renderWithPoi({ linkedMap: null, onPoiEntered });
+            poiLayerProps.current.onPoiEnter({ id: 'poi-1' });
+            expect(onPoiEntered).not.toHaveBeenCalled();
+        });
+
+        it('does not crash when no onPoiEntered handler is provided', async () => {
+            renderWithPoi({ linkedMap: 'dungeon-1', onPoiEntered: undefined });
+            await vi.waitFor(() => {
+                expect(poiLayerProps.current.validLinkedMaps.has('dungeon-1')).toBe(true);
+            });
+            expect(() => poiLayerProps.current.onPoiEnter({ id: 'poi-1', linkedMap: 'dungeon-1' })).not.toThrow();
         });
     });
 
-    describe('Valid linked maps loading', () => {
-        it('loads and validates linked maps on mount', async () => {
+    describe('Linked map validation', () => {
+        it('loads each linked map and exposes only the valid ones to the POI layer', async () => {
             const pois = [
                 { id: 'poi-1', q: 10, r: 5, type: 'city', linkedMap: 'dungeon-1', visible: true },
                 { id: 'poi-2', q: 20, r: 10, type: 'dungeon', linkedMap: 'dungeon-2', visible: true },
             ];
-            const ml = makeMapLoader({ pois });
-            useMapLoader.mockReturnValue(ml);
-            mapsService.loadMapData.mockResolvedValue({});
+            useMapLoader.mockReturnValue(makeMapLoader({ pois }));
             render(<HexMap campaignName="test" mapName="test-map" />);
             await vi.waitFor(() => {
-                expect(mapsService.loadMapData).toHaveBeenCalledWith('test', 'dungeon-1');
-                expect(mapsService.loadMapData).toHaveBeenCalledWith('test', 'dungeon-2');
+                expect([...poiLayerProps.current.validLinkedMaps].sort()).toEqual(['dungeon-1', 'dungeon-2']);
             });
+            expect(mapsService.loadMapData).toHaveBeenCalledWith('test', 'dungeon-1');
+            expect(mapsService.loadMapData).toHaveBeenCalledWith('test', 'dungeon-2');
         });
 
-        it('filters out invalid linked maps', async () => {
+        it('excludes linked maps that fail to load', async () => {
             const pois = [
                 { id: 'poi-1', q: 10, r: 5, type: 'city', linkedMap: 'dungeon-1', visible: true },
-                { id: 'poi-2', q: 20, r: 10, type: 'dungeon', linkedMap: 'nonexistent', visible: true },
+                { id: 'poi-2', q: 20, r: 10, type: 'dungeon', linkedMap: 'missing', visible: true },
             ];
-            const ml = makeMapLoader({ pois });
-            useMapLoader.mockReturnValue(ml);
             mapsService.loadMapData.mockImplementation((campaign, name) => {
                 if (name === 'dungeon-1') return Promise.resolve({});
-                return Promise.resolve(null);
+                return Promise.reject(new Error('Map not found'));
             });
+            useMapLoader.mockReturnValue(makeMapLoader({ pois }));
             render(<HexMap campaignName="test" mapName="test-map" />);
             await vi.waitFor(() => {
-                expect(mapsService.loadMapData).toHaveBeenCalled();
+                expect([...poiLayerProps.current.validLinkedMaps]).toEqual(['dungeon-1']);
             });
+            expect(mapsService.loadMapData).toHaveBeenCalledWith('test', 'dungeon-1');
+            expect(mapsService.loadMapData).toHaveBeenCalledWith('test', 'missing');
         });
     });
 
     describe('POI drop edge cases', () => {
-        it('does not add POI when drag data is not a valid POI type', () => {
-            const dt = { getData: vi.fn(() => 'invalid-type') };
-            const hh = makeHexHover({ getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })) });
-            const ml = makeMapLoader();
+        function drop(ml, hh, dragData) {
             useHexHover.mockReturnValue(hh);
             useMapLoader.mockReturnValue(ml);
             render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.drop(document.querySelector('.hex-svg'), { dataTransfer: dt });
+            fireEvent.drop(document.querySelector('.hex-svg'), { dataTransfer: { getData: () => dragData } });
+        }
+
+        it.each([
+            ['drag data that is not a POI type', 'invalid-type'],
+            ['empty drag data', ''],
+        ])('does not add a POI for %s', (_label, dragData) => {
+            const ml = makeMapLoader();
+            drop(ml, makeHexHover({ getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })) }), dragData);
             expect(ml.setPois).not.toHaveBeenCalled();
         });
 
-        it('does not add POI when hex is out of bounds', () => {
-            const hh = makeHexHover({ getHexFromEvent: vi.fn() });
-            const dt = { getData: vi.fn(() => 'city') };
-            hh.getHexFromEvent.mockReturnValueOnce({ q: 999, r: 5 });
+        it.each([
+            ['a negative column', { q: -1, r: 5 }],
+            ['a negative row', { q: 10, r: -1 }],
+            ['an out-of-range column', { q: 999, r: 5 }],
+            ['an out-of-range row', { q: 10, r: 999 }],
+        ])('does not add a POI dropped on %s', (_label, dropHex) => {
             const ml = makeMapLoader();
-            useHexHover.mockReturnValue(hh);
-            useMapLoader.mockReturnValue(ml);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.drop(document.querySelector('.hex-svg'), { dataTransfer: dt });
-            expect(ml.setPois).not.toHaveBeenCalled();
-
-            hh.getHexFromEvent.mockReturnValueOnce({ q: 10, r: 999 });
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.drop(document.querySelector('.hex-svg'), { dataTransfer: dt });
+            drop(ml, makeHexHover({ getHexFromEvent: vi.fn(() => dropHex) }), 'city');
             expect(ml.setPois).not.toHaveBeenCalled();
         });
 
-        it('does not add POI when drop data is empty', () => {
-            const dt = { getData: vi.fn(() => '') };
-            const hh = makeHexHover({ getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })) });
+        it('does not add a POI when the drop does not resolve to a hex', () => {
             const ml = makeMapLoader();
-            useHexHover.mockReturnValue(hh);
-            useMapLoader.mockReturnValue(ml);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.drop(document.querySelector('.hex-svg'), { dataTransfer: dt });
+            drop(ml, makeHexHover({ getHexFromEvent: vi.fn(() => null) }), 'city');
             expect(ml.setPois).not.toHaveBeenCalled();
         });
 
-        it('does not add POI when getHexFromEvent returns null', () => {
-            const dt = { getData: vi.fn(() => 'city') };
-            const hh = makeHexHover({ getHexFromEvent: vi.fn(() => null) });
-            const ml = makeMapLoader();
-            useHexHover.mockReturnValue(hh);
-            useMapLoader.mockReturnValue(ml);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.drop(document.querySelector('.hex-svg'), { dataTransfer: dt });
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
+        it('adds a dropped character to the marching order and places the party at the drop hex', () => {
+            const ml = makeMapLoader({ marchingOrder: ['Legolas'] });
+            drop(ml, makeHexHover({ getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })) }), 'character:Thorin');
 
-        it('does not duplicate character in marching order when already present', () => {
-            const dt = { getData: vi.fn(() => 'character:Thorin') };
-            const hh = makeHexHover({ getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })) });
-            const ml = makeMapLoader({ marchingOrder: ['Thorin', 'Legolas'] });
-            useHexHover.mockReturnValue(hh);
-            useMapLoader.mockReturnValue(ml);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.drop(document.querySelector('.hex-svg'), { dataTransfer: dt });
-            const marchingOrderArg = ml.setMarchingOrder.mock.calls[0][0];
-            expect(typeof marchingOrderArg).toBe('function');
-            const newOrder = marchingOrderArg(['Thorin', 'Legolas']);
-            expect(newOrder).toEqual(['Thorin', 'Legolas']);
-            expect(newOrder.filter(n => n === 'Thorin')).toHaveLength(1);
+            const orderUpdater = ml.setMarchingOrder.mock.calls[0][0];
+            expect(orderUpdater).toEqual(expect.any(Function));
+            expect(orderUpdater(['Legolas'])).toEqual(['Legolas', 'Thorin']);
+            expect(orderUpdater(['Legolas', 'Thorin'])).toEqual(['Legolas', 'Thorin']);
+
+            const posUpdater = ml.setPartyPosition.mock.calls[0][0];
+            expect(posUpdater(null)).toEqual({ q: 10, r: 5 });
+            expect(posUpdater({ q: 3, r: 3 })).toEqual({ q: 3, r: 3 });
+
+            expect(ml.setPois).not.toHaveBeenCalled();
         });
     });
 
-    describe('Event acceptance with combat', () => {
-        it('calls handleStartEncounter with monster placements for combat events', () => {
-            const addEntry = vi.fn();
-            const handleStartEncounter = vi.fn();
+    describe('Event acceptance', () => {
+        it('starts an encounter with generated monster placements for a combat event', () => {
             const generateMonsterPlacements = vi.fn(() => [{ id: 'mon-1', name: 'goblin' }]);
-            const tm = makeTravelMgmt({
-                isTravelActive: true,
-                pendingEvent: { type: 'combat', encounter: { monsters: [{ name: 'goblin', qty: 2 }] } },
-                acceptEvent: vi.fn(() => ({ type: 'combat', encounter: { monsters: [{ name: 'goblin', qty: 2 }] } })),
-                currentPosition: { q: 15, r: 8 },
+            const handleStartEncounter = vi.fn();
+            const pendingEvent = { type: 'combat', encounter: { monsters: [{ name: 'goblin', qty: 2 }] } };
+            const { tm, addEntry } = renderEventAccept({
+                pendingEvent,
+                travelOverrides: { currentPosition: { q: 15, r: 8 } },
+                mapOverrides: { partyPosition: { q: 15, r: 8 }, terrain: { '15,8': 'plains' } },
+                encounter: { generateMonsterPlacements, handleStartEncounter },
             });
-            useTravelManagement.mockReturnValue(tm);
-            useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
-            useEncounterGeneration.mockReturnValue({ generateMonsterPlacements, handleStartEncounter });
-            useMapLoader.mockReturnValue(makeMapLoader({
-                partyPosition: { q: 15, r: 8 },
-                terrain: { '15,8': 'plains' },
-            }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
             fireEvent.click(screen.getByTestId('event-accept'));
             expect(tm.acceptEvent).toHaveBeenCalled();
-            expect(generateMonsterPlacements).toHaveBeenCalledWith([
-                { name: 'goblin', qty: 2 }
-            ], 30);
-            expect(handleStartEncounter).toHaveBeenCalledWith(15, 8, expect.arrayContaining([{ id: 'mon-1', name: 'goblin' }]));
-            expect(addEntry).toHaveBeenCalled();
-            expect(addEntry.mock.calls[0][0].action).toBe('event_accept');
+            expect(generateMonsterPlacements).toHaveBeenCalledWith([{ name: 'goblin', qty: 2 }], 30);
+            expect(handleStartEncounter).toHaveBeenCalledWith(15, 8, [{ id: 'mon-1', name: 'goblin' }]);
+            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'event_accept', hex: { q: 15, r: 8 }, terrain: 'plains',
+            }));
         });
 
-        it('calls handleStartEncounter without monster placements when encounter has no monsters', () => {
-            const addEntry = vi.fn();
+        it('starts an encounter without monster placements when a combat event has no monster list', () => {
             const handleStartEncounter = vi.fn();
-            const tm = makeTravelMgmt({
-                isTravelActive: true,
+            const { addEntry } = renderEventAccept({
                 pendingEvent: { type: 'combat' },
-                acceptEvent: vi.fn(() => ({ type: 'combat' })),
-                currentPosition: { q: 10, r: 5 },
+                encounter: { generateMonsterPlacements: vi.fn(), handleStartEncounter },
             });
-            useTravelManagement.mockReturnValue(tm);
-            useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
-            useEncounterGeneration.mockReturnValue({ generateMonsterPlacements: vi.fn(), handleStartEncounter });
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 }, terrain: { '10,5': 'forest' } }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
             fireEvent.click(screen.getByTestId('event-accept'));
             expect(handleStartEncounter).toHaveBeenCalledWith(10, 5);
+            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'event_accept', hex: { q: 10, r: 5 }, terrain: 'plains',
+            }));
         });
 
-        it('regenerates weather and changes pace for weatherChange events', () => {
-            const addEntry = vi.fn();
-            const tm = makeTravelMgmt({
-                isTravelActive: true,
-                travelPace: 'normal',
-                changePace: vi.fn(),
+        it('regenerates weather and resumes the current pace for a weather change event', () => {
+            const { tm, addEntry } = renderEventAccept({
                 pendingEvent: { type: 'weatherChange' },
-                acceptEvent: vi.fn(() => ({ type: 'weatherChange' })),
-                currentPosition: { q: 10, r: 5 },
+                mapOverrides: { terrain: { '10,5': 'plains' } },
             });
-            useTravelManagement.mockReturnValue(tm);
-            useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 }, terrain: { '10,5': 'plains' } }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
             fireEvent.click(screen.getByTestId('event-accept'));
             expect(generateWeather).toHaveBeenCalled();
             expect(tm.changePace).toHaveBeenCalledWith('normal');
-            expect(addEntry).toHaveBeenCalled();
-            expect(addEntry.mock.calls[0][0].action).toBe('event_accept');
+            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'event_accept', eventType: 'weatherChange',
+            }));
         });
 
-        it('logs event_accept when no travel is active', () => {
-            const addEntry = vi.fn();
-            const tm = makeTravelMgmt({
-                isTravelActive: false,
+        it('logs event acceptance when no travel session is active', () => {
+            const { tm, addEntry } = renderEventAccept({
                 pendingEvent: { type: 'skirmish' },
-                acceptEvent: vi.fn(() => ({ type: 'skirmish' })),
-                currentPosition: { q: 10, r: 5 },
+                travelOverrides: { isTravelActive: false },
+                mapOverrides: { terrain: { '10,5': 'desert' } },
             });
-            useTravelManagement.mockReturnValue(tm);
-            useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 }, terrain: { '10,5': 'desert' } }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
             fireEvent.click(screen.getByTestId('event-accept'));
-            expect(addEntry).toHaveBeenCalled();
-            expect(addEntry.mock.calls[0][0].action).toBe('event_accept');
+            expect(tm.acceptEvent).toHaveBeenCalled();
+            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'event_accept', hex: { q: 10, r: 5 }, terrain: 'desert', eventType: 'skirmish',
+            }));
+        });
+
+        it('does not resume the pace when a weather change event is accepted outside travel', () => {
+            const { tm } = renderEventAccept({
+                pendingEvent: { type: 'weatherChange' },
+                travelOverrides: { isTravelActive: false },
+            });
+            fireEvent.click(screen.getByTestId('event-accept'));
+            expect(generateWeather).toHaveBeenCalled();
+            expect(tm.changePace).not.toHaveBeenCalled();
+        });
+
+        describe('with no party position', () => {
+            it('does not start an encounter for a combat event', () => {
+                const handleStartEncounter = vi.fn();
+                const generateMonsterPlacements = vi.fn();
+                const { tm, addEntry } = renderEventAccept({
+                    pendingEvent: { type: 'combat', encounter: { monsters: [{ name: 'goblin', qty: 2 }] } },
+                    travelOverrides: { currentPosition: null },
+                    mapOverrides: { partyPosition: null },
+                    encounter: { generateMonsterPlacements, handleStartEncounter },
+                });
+                fireEvent.click(screen.getByTestId('event-accept'));
+                expect(tm.acceptEvent).toHaveBeenCalled();
+                expect(generateMonsterPlacements).not.toHaveBeenCalled();
+                expect(handleStartEncounter).not.toHaveBeenCalled();
+                expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                    action: 'event_accept', hex: null,
+                }));
+            });
+
+            it('logs event acceptance without crashing for a non-combat event', () => {
+                const { tm, addEntry } = renderEventAccept({
+                    pendingEvent: { type: 'skirmish' },
+                    travelOverrides: { currentPosition: null },
+                    mapOverrides: { partyPosition: null },
+                });
+                fireEvent.click(screen.getByTestId('event-accept'));
+                expect(tm.acceptEvent).toHaveBeenCalled();
+                expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                    action: 'event_accept', hex: null,
+                }));
+            });
         });
     });
 
     describe('Event skip handler', () => {
-        it('calls skipEvent and logs event_skip', () => {
+        it('skips the pending event and logs the skip with the event details', () => {
             const addEntry = vi.fn();
             const tm = makeTravelMgmt({
                 isTravelActive: true,
@@ -452,19 +501,17 @@ describe('HexMap additional coverage', () => {
             });
             useTravelManagement.mockReturnValue(tm);
             useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 } }));
             render(<HexMap campaignName="test" mapName="test-map" />);
             fireEvent.click(screen.getByTestId('event-skip'));
             expect(tm.skipEvent).toHaveBeenCalled();
-            expect(addEntry).toHaveBeenCalled();
-            expect(addEntry.mock.calls[0][0].action).toBe('event_skip');
-            expect(addEntry.mock.calls[0][0].eventType).toBe('skirmish');
-            expect(addEntry.mock.calls[0][0].eventTitle).toBe('Goblin Ambush');
+            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'event_skip', eventType: 'skirmish', eventTitle: 'Goblin Ambush',
+            }));
         });
     });
 
     describe('Event reroll handler', () => {
-        it('calls rerollEvent and logs event_reroll', () => {
+        it('rerolls the pending event and logs the reroll with the event details', () => {
             const addEntry = vi.fn();
             const tm = makeTravelMgmt({
                 isTravelActive: true,
@@ -473,18 +520,17 @@ describe('HexMap additional coverage', () => {
             });
             useTravelManagement.mockReturnValue(tm);
             useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 } }));
             render(<HexMap campaignName="test" mapName="test-map" />);
             fireEvent.click(screen.getByTestId('event-reroll'));
             expect(tm.rerollEvent).toHaveBeenCalled();
-            expect(addEntry).toHaveBeenCalled();
-            expect(addEntry.mock.calls[0][0].action).toBe('event_reroll');
-            expect(addEntry.mock.calls[0][0].eventType).toBe('wild-magic');
+            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'event_reroll', eventType: 'wild-magic',
+            }));
         });
     });
 
     describe('Forced march handler', () => {
-        it('calls forcedMarch and logs forced_march', () => {
+        it('forces a march and logs the forced_march action with the current weather', () => {
             const addEntry = vi.fn();
             const tm = makeTravelMgmt({
                 isTravelActive: true,
@@ -496,81 +542,45 @@ describe('HexMap additional coverage', () => {
             useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 }, weather: { label: 'Storm' } }));
             render(<HexMap campaignName="test" mapName="test-map" />);
             fireEvent.click(screen.getByTestId('btn-forced-march'));
-            expect(tm.forcedMarch).toHaveBeenCalled();
-            expect(addEntry).toHaveBeenCalled();
-            expect(addEntry.mock.calls[0][0].action).toBe('forced_march');
+            expect(tm.forcedMarch).toHaveBeenCalledTimes(1);
+            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
+                action: 'forced_march', weather: 'Storm',
+            }));
         });
     });
 
-    describe('SVG style cursor', () => {
-        it('sets grabbing cursor when panning', () => {
-            const zp = makeZoomPan({ panning: true });
-            useZoomPan.mockReturnValue(zp);
+    describe('SVG cursor style', () => {
+        it('shows a grabbing cursor while panning', () => {
+            useZoomPan.mockReturnValue(makeZoomPan({ panning: true }));
             render(<HexMap campaignName="test" mapName="test-map" />);
-            const svg = document.querySelector('.hex-svg');
-            expect(svg).toHaveStyle({ cursor: 'grabbing' });
+            expect(document.querySelector('.hex-svg')).toHaveStyle({ cursor: 'grabbing' });
         });
 
-        it('sets grab cursor when not panning', () => {
-            const zp = makeZoomPan({ panning: false });
-            useZoomPan.mockReturnValue(zp);
+        it('shows a grab cursor by default', () => {
             render(<HexMap campaignName="test" mapName="test-map" />);
-            const svg = document.querySelector('.hex-svg');
-            expect(svg).toHaveStyle({ cursor: 'grab' });
-        });
-    });
-
-    describe('Travel mode states in TravelPanel', () => {
-        it('renders travel panel for planning mode', () => {
-            const tm = makeTravelMgmt({ isTravelActive: true, travelMode: 'planning' });
-            useTravelManagement.mockReturnValue(tm);
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            expect(screen.getByTestId('travel-panel')).toBeInTheDocument();
+            expect(document.querySelector('.hex-svg')).toHaveStyle({ cursor: 'grab' });
         });
 
-        it('renders travel panel for traveling mode', () => {
-            const tm = makeTravelMgmt({ isTravelActive: true, travelMode: 'traveling' });
-            useTravelManagement.mockReturnValue(tm);
+        it('shows a crosshair cursor when a drawing tool is active', () => {
             render(<HexMap campaignName="test" mapName="test-map" />);
-            expect(screen.getByTestId('travel-panel')).toBeInTheDocument();
+            fireEvent.click(screen.getByTestId('tool-paint'));
+            expect(document.querySelector('.hex-svg')).toHaveStyle({ cursor: 'crosshair' });
         });
     });
 
-    describe('Weather change event acceptance', () => {
-        it('does not change pace when travel is not active after weather event', () => {
-            const addEntry = vi.fn();
-            const tm = makeTravelMgmt({
-                isTravelActive: false,
-                pendingEvent: { type: 'weatherChange' },
-                acceptEvent: vi.fn(() => ({ type: 'weatherChange' })),
-                currentPosition: { q: 10, r: 5 },
-            });
-            useTravelManagement.mockReturnValue(tm);
-            useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 }, terrain: { '10,5': 'plains' } }));
+    describe('TravelPanel wiring', () => {
+        it.each([true, false])('renders travel controls only while a session is active (isTravelActive=%s)', (isTravelActive) => {
+            useTravelManagement.mockReturnValue(makeTravelMgmt({ isTravelActive }));
             render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.click(screen.getByTestId('event-accept'));
-            expect(generateWeather).toHaveBeenCalled();
-            expect(tm.changePace).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('Event accept with no position', () => {
-        it('handles event accept when party position is null', () => {
-            const addEntry = vi.fn();
-            const tm = makeTravelMgmt({
-                isTravelActive: true,
-                pendingEvent: { type: 'skirmish' },
-                acceptEvent: vi.fn(() => ({ type: 'skirmish' })),
-                currentPosition: null,
-            });
-            useTravelManagement.mockReturnValue(tm);
-            useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: null, terrain: {} }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.click(screen.getByTestId('event-accept'));
-            expect(tm.acceptEvent).toHaveBeenCalled();
-            expect(addEntry).toHaveBeenCalled();
+            const advanceBtn = screen.queryByTestId('btn-advance');
+            const campBtn = screen.queryByTestId('btn-camp');
+            if (isTravelActive) {
+                expect(advanceBtn).toBeInTheDocument();
+                expect(campBtn).toBeInTheDocument();
+            } else {
+                expect(advanceBtn).not.toBeInTheDocument();
+                expect(campBtn).not.toBeInTheDocument();
+            }
         });
     });
 });

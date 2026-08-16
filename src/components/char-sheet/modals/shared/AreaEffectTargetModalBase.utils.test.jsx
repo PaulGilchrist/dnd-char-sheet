@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { renderTargetList, renderResultsSection, logSaveEntry, persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
 import * as logService from '../../../../services/ui/logService.js';
 import * as storage from '../../../../services/ui/storage.js';
+import * as combatData from '../../../../services/encounters/combatData.js';
 
 // Properly mock CustomEvent as a class/constructor
 const originalCustomEvent = globalThis.CustomEvent;
@@ -30,6 +32,10 @@ vi.mock('../../../../services/ui/storage.js', () => ({
   },
 }));
 
+vi.mock('../../../../services/encounters/combatData.js', () => ({
+  setCombatSummaryCache: vi.fn(),
+}));
+
 // ── Helpers ────────────────────────────────────────────────────
 
 const eligibleTargets = [
@@ -49,8 +55,8 @@ const pendingPrompts = [
   { promptId: 'p2', targetName: 'Player2' },
 ];
 
-function toggleTargetMock() {
-  return vi.fn((name) => console.log('toggle', name));
+function createToggleTarget() {
+  return vi.fn();
 }
 
 // ── renderTargetList Tests ─────────────────────────────────────
@@ -61,7 +67,7 @@ describe('renderTargetList', () => {
   });
 
   it('renders all eligible targets with checkboxes', () => {
-    const toggleTarget = toggleTargetMock();
+    const toggleTarget = createToggleTarget();
     render(renderTargetList({ eligibleTargets, selected: new Set(), toggleTarget }));
 
     expect(screen.getByText('Goblin')).toBeInTheDocument();
@@ -70,7 +76,7 @@ describe('renderTargetList', () => {
   });
 
   it('renders target types in parentheses', () => {
-    const toggleTarget = toggleTargetMock();
+    const toggleTarget = createToggleTarget();
     const { container } = render(renderTargetList({ eligibleTargets, selected: new Set(), toggleTarget }));
 
     const typeSpans = container.querySelectorAll('.abjure-target-type');
@@ -80,7 +86,7 @@ describe('renderTargetList', () => {
   });
 
   it('marks selected targets with selected class', () => {
-    const toggleTarget = toggleTargetMock();
+    const toggleTarget = createToggleTarget();
     const selected = new Set(['Goblin']);
     const { container } = render(
       renderTargetList({ eligibleTargets, selected, toggleTarget }),
@@ -93,7 +99,7 @@ describe('renderTargetList', () => {
   });
 
   it('calls toggleTarget when checkbox is changed', () => {
-    const toggleTarget = toggleTargetMock();
+    const toggleTarget = createToggleTarget();
     render(renderTargetList({ eligibleTargets, selected: new Set(), toggleTarget }));
 
     const checkboxes = screen.getAllByRole('checkbox');
@@ -104,12 +110,48 @@ describe('renderTargetList', () => {
   });
 
   it('shows "No valid targets in range" when eligibleTargets is empty', () => {
-    const toggleTarget = toggleTargetMock();
+    const toggleTarget = createToggleTarget();
     render(
       renderTargetList({ eligibleTargets: [], selected: new Set(), toggleTarget }),
     );
 
     expect(screen.getByText('No valid targets in range.')).toBeInTheDocument();
+  });
+
+  it('renders carefulSpellProtected indicator when target has it', () => {
+    const toggleTarget = createToggleTarget();
+    const targetsWithCareful = [
+      { name: 'Goblin', type: 'monster', carefulSpellProtected: true },
+    ];
+    const { container } = render(
+      renderTargetList({ eligibleTargets: targetsWithCareful, selected: new Set(), toggleTarget }),
+    );
+
+    const note = container.querySelector('.sp-note');
+    expect(note).toBeInTheDocument();
+    expect(note.textContent).toContain('Careful Spell protected');
+  });
+
+  it('renders heighten radio buttons when metamagicHeighten is provided', () => {
+    const toggleTarget = createToggleTarget();
+    const { container } = render(
+      renderTargetList({ eligibleTargets, selected: new Set(), toggleTarget, metamagicHeighten: true }),
+    );
+
+    const radios = container.querySelectorAll('input[type="radio"]');
+    expect(radios).toHaveLength(3);
+  });
+
+  it('calls setHeightenTarget when heighten radio is selected', () => {
+    const toggleTarget = createToggleTarget();
+    const setHeightenTarget = vi.fn();
+    const { container } = render(
+      renderTargetList({ eligibleTargets, selected: new Set(), toggleTarget, metamagicHeighten: true, setHeightenTarget }),
+    );
+
+    const radios = container.querySelectorAll('input[type="radio"]');
+    radios[0].click();
+    expect(setHeightenTarget).toHaveBeenCalledWith('Goblin');
   });
 });
 
@@ -162,8 +204,8 @@ describe('renderResultsSection', () => {
     );
 
     const resultDivs = container.querySelectorAll('.abjure-result');
-    const goblinResult = [...resultDivs].find(d => d.textContent.includes('Goblin'));
-    const orcResult = [...resultDivs].find(d => d.textContent.includes('Orc'));
+    const goblinResult = [...resultDivs].find(d => d.querySelector('strong')?.textContent === 'Goblin');
+    const orcResult = [...resultDivs].find(d => d.querySelector('strong')?.textContent === 'Orc');
 
     expect(goblinResult).toHaveClass('abjure-result-fail');
     expect(orcResult).toHaveClass('abjure-result-success');
@@ -184,6 +226,8 @@ describe('renderResultsSection', () => {
     expect(pendingDivs).toHaveLength(2);
     expect(screen.getByText('Player1')).toBeInTheDocument();
     expect(screen.getByText('Player2')).toBeInTheDocument();
+    const waitingMessages = container.querySelectorAll('.abjure-result-pending em');
+    expect(waitingMessages).toHaveLength(2);
   });
 
   it('shows "All targets resolved" when allResolved is true', () => {
@@ -211,10 +255,10 @@ describe('renderResultsSection', () => {
       }),
     );
 
-    const goblinResult = container.querySelector('.abjure-result')?.textContent;
-    expect(goblinResult).toContain('Roll: 7');
-    expect(goblinResult).toContain('+2');
-    expect(goblinResult).toContain('= 9');
+    const goblinResult = [...container.querySelectorAll('.abjure-result')].find(d => d.querySelector('strong')?.textContent === 'Goblin');
+    expect(goblinResult.textContent).toContain('Roll: 7');
+    expect(goblinResult.textContent).toContain('+2');
+    expect(goblinResult.textContent).toContain('= 9');
   });
 
   it('omits bonus when saveBonus is 0', () => {
@@ -228,7 +272,7 @@ describe('renderResultsSection', () => {
       }),
     );
 
-    const orcResult = [...container.querySelectorAll('.abjure-result')].find(d => d.textContent.includes('Orc'));
+    const orcResult = [...container.querySelectorAll('.abjure-result')].find(d => d.querySelector('strong')?.textContent === 'Orc');
     expect(orcResult.textContent).toContain('Roll: 15');
     expect(orcResult.textContent).not.toContain('+');
   });
@@ -311,17 +355,38 @@ describe('renderResultsSection', () => {
     expect(screen.getByText('Resolving WIS saving throws (DC 10)...')).toBeInTheDocument();
     expect(screen.getByText('All targets resolved.')).toBeInTheDocument();
   });
+
+  it('shows no resolved message when allResolved is false with empty data', () => {
+    const { container } = render(
+      renderResultsSection({
+        results: [],
+        pendingPrompts: [],
+        allResolved: false,
+        saveType: 'DEX',
+        saveDc: 13,
+      }),
+    );
+
+    expect(container.querySelector('.abjure-results-list')).toBeInTheDocument();
+    expect(screen.queryByText('All targets resolved.')).not.toBeInTheDocument();
+  });
 });
 
 // ── logSaveEntry Tests ─────────────────────────────────────────
 
 describe('logSaveEntry', () => {
+  let consoleErrorSpy;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('calls addEntry with all correct fields', () => {
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('calls addEntry with all correct fields for failure', () => {
     logSaveEntry(
       'TestCampaign',
       'Fireball',
@@ -351,6 +416,25 @@ describe('logSaveEntry', () => {
       formula: '1d20+1',
       timestamp: expect.any(Number),
     });
+  });
+
+  it('calls addEntry with success result when success is true', () => {
+    logSaveEntry(
+      'TestCampaign',
+      'Fireball',
+      'Wizard',
+      'Goblin',
+      15,
+      'DEX',
+      true,
+      18,
+      [17],
+      1,
+      '1d20+1',
+    );
+
+    const call = logService.addEntry.mock.calls[0][1];
+    expect(call.saveResult).toBe('success');
   });
 
   it('includes timestamp as current time', () => {
@@ -395,9 +479,9 @@ describe('logSaveEntry', () => {
   });
 
   it('catches and logs addEntry errors without throwing', async () => {
-    logService.addEntry.mockRejectedValue(new Error('network error'));
+    logService.addEntry.mockRejectedValueOnce(new Error('network error'));
 
-    await logSaveEntry(
+    logSaveEntry(
       'TestCampaign',
       'Test Spell',
       'Caster',
@@ -411,10 +495,12 @@ describe('logSaveEntry', () => {
       '1d20',
     );
 
-    expect(console.error).toHaveBeenCalledWith(
-      '[AreaEffectModal] Error:',
-      expect.any(Error),
-    );
+    await vi.waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[AreaEffectModal] Error:',
+        expect.any(Error),
+      );
+    });
   });
 });
 
@@ -423,6 +509,17 @@ describe('logSaveEntry', () => {
 describe('persistAndNotify', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('calls setCombatSummaryCache with correct arguments', () => {
+    const combatSummary = {
+      creatures: [{ name: 'Goblin', type: 'monster' }],
+      players: [{ name: 'Wizard' }],
+    };
+
+    persistAndNotify(combatSummary, 'TestCampaign');
+
+    expect(combatData.setCombatSummaryCache).toHaveBeenCalledWith(combatSummary, 'TestCampaign');
   });
 
   it('calls storage.set with correct arguments', () => {
@@ -465,5 +562,6 @@ describe('persistAndNotify', () => {
       combatSummary,
       'EmptyCampaign',
     );
+    expect(combatData.setCombatSummaryCache).toHaveBeenCalledWith(combatSummary, 'EmptyCampaign');
   });
 });

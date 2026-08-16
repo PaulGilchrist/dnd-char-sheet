@@ -7,7 +7,7 @@ function HexAbilityModal({
   abilities,
   title,
   prompt,
-  icon = 'fa-eye',
+  icon,
 }) {
   const defaultAbilities = [
     { key: 'STR', label: 'Strength' },
@@ -20,12 +20,13 @@ function HexAbilityModal({
   const abilityOptions = abilities || defaultAbilities;
   const modalTitle = title || 'Hex — Choose Ability';
   const modalPrompt = prompt || 'Choose an ability check for the target to have disadvantage on:';
+  const iconClass = icon ?? 'fa-eye';
 
   return (
     <div className="sp-overlay" onClick={onCancel}>
       <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
         <div className="sp-header">
-          <i className={`fa-solid ${icon}`}></i> {modalTitle}
+          <i className={`fa-solid ${iconClass}`}></i> {modalTitle}
         </div>
         <div className="sp-body">
           <p>{modalPrompt}</p>

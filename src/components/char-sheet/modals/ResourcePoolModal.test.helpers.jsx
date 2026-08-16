@@ -1,5 +1,6 @@
 // @cleaned-by-ai
 import { render } from '@testing-library/react';
+import { vi } from 'vitest';
 import ResourcePoolModal from './ResourcePoolModal.jsx';
 
 // ── Test fixtures ──

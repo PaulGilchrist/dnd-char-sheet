@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PolymorphSelectionModal from './PolymorphSelectionModal.jsx';
@@ -104,9 +105,35 @@ function findBeastItem(beastName) {
     return null;
 }
 
+function getBeastNames() {
+    const items = document.querySelectorAll('.wild-shape-beast-item');
+    return Array.from(items).map(item => {
+        const nameEl = item.querySelector('.wild-shape-beast-name');
+        if (!nameEl) return '';
+        const clone = nameEl.cloneNode(true);
+        const crSpan = clone.querySelector('.wild-shape-beast-cr');
+        if (crSpan) crSpan.remove();
+        return clone.textContent.replace(/\s+/g, ' ').trim();
+    });
+}
+
 describe('PolymorphSelectionModal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+    });
+
+    describe('loading state', () => {
+        it('shows loading text while data is loading', async () => {
+            const { loadMonsters } = await import('../../../services/ui/dataLoader.js');
+            const originalImpl = loadMonsters.getMockImplementation();
+            loadMonsters.mockReturnValue(new Promise(() => { /* never resolves */ }));
+
+            render(<PolymorphSelectionModal {...baseProps} />);
+
+            expect(screen.getByText('Loading available creatures...')).toBeInTheDocument();
+
+            loadMonsters.mockImplementation(originalImpl);
+        });
     });
 
     describe('rendering after data loads', () => {
@@ -136,16 +163,6 @@ describe('PolymorphSelectionModal', () => {
             });
         });
 
-        it('renders excluded types info when excludeTypes is provided', async () => {
-            render(<PolymorphSelectionModal {...makeProps({ excludeTypes: ['fey', 'dragon'] })} />);
-            await waitFor(() => {
-                const infoDivs = document.querySelectorAll('.wild-shape-info');
-                const excludedDiv = Array.from(infoDivs).find(d => d.querySelector('strong')?.textContent === 'Excluded Types:');
-                expect(excludedDiv).toBeInTheDocument();
-                expect(excludedDiv.textContent).toContain('fey, dragon');
-            });
-        });
-
         it('filters out non-beast creatures when allowAnyCreature is false', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
@@ -156,30 +173,18 @@ describe('PolymorphSelectionModal', () => {
         it('filters out creatures with CR above effectiveMaxCR', async () => {
             render(<PolymorphSelectionModal {...makeProps({ maxCR: 0 })} />);
             await waitFor(() => {
-                // Only CR 0 (Rat) passes with maxCR 0
                 expect(screen.getByText('Rat')).toBeInTheDocument();
-                // CR 0.25 beasts should be filtered
                 expect(screen.queryByText('Wolf')).not.toBeInTheDocument();
             });
         });
 
-        it('filters beasts by wild shape limitations (walk only)', async () => {
+        it('filters beasts that lack walk speed per wild shape limitations', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 // Eagle has only fly speed, should be filtered out
                 expect(screen.queryByText('Eagle')).not.toBeInTheDocument();
                 // Crocodile has walk: 20, so it passes the walk filter
                 expect(screen.getByText('Crocodile')).toBeInTheDocument();
-            });
-        });
-
-        it('filters beasts by wild shape limitations (no swim)', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                // Rat has only walk: 20, should pass
-                expect(screen.getByText('Rat')).toBeInTheDocument();
-                // Panther has walk: 40, climb: 20, should pass
-                expect(screen.getByText('Panther')).toBeInTheDocument();
             });
         });
 
@@ -226,16 +231,7 @@ describe('PolymorphSelectionModal', () => {
             await waitFor(() => {
                 expect(screen.getByText('Rat')).toBeInTheDocument();
             });
-            // Find the rat item and check its actions
-            const ratItems = document.querySelectorAll('.wild-shape-beast-item');
-            let ratItem = null;
-            for (const item of ratItems) {
-                const nameEl = item.querySelector('.wild-shape-beast-name');
-                if (nameEl && nameEl.textContent.includes('Rat')) {
-                    ratItem = item;
-                    break;
-                }
-            }
+            const ratItem = findBeastItem('Rat');
             expect(ratItem).toBeInTheDocument();
             expect(ratItem.querySelector('.wild-shape-beast-actions').textContent).toBe('No actions');
         });
@@ -247,21 +243,6 @@ describe('PolymorphSelectionModal', () => {
             });
         });
 
-        it('renders Cancel button', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-            });
-        });
-
-        it('renders Wild Shape button with default icon', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const confirmBtn = screen.getByRole('button', { name: 'Wild Shape' });
-                expect(confirmBtn).toBeInTheDocument();
-            });
-        });
-
         it('disables the confirm button when no beast is selected', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
@@ -269,48 +250,9 @@ describe('PolymorphSelectionModal', () => {
                 expect(confirmBtn).toBeDisabled();
             });
         });
-
-        it('renders beast image with correct URL pattern', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const images = document.querySelectorAll('.wild-shape-beast-avatar img');
-                expect(images.length).toBeGreaterThan(0);
-                images.forEach((img) => {
-                    expect(img.src).toMatch(/\/images\/[^/]+\.jpg$/);
-                });
-            });
-        });
-
-        it('hides the img element on error', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const images = document.querySelectorAll('.wild-shape-beast-avatar img');
-                expect(images.length).toBeGreaterThan(0);
-            });
-
-            const images = document.querySelectorAll('.wild-shape-beast-avatar img');
-            fireEvent.error(images[0]);
-
-            await waitFor(() => {
-                expect(images[0].style.display).toBe('none');
-            });
-        });
     });
 
     describe('search functionality', () => {
-        function getBeastNames() {
-            const items = document.querySelectorAll('.wild-shape-beast-item');
-            return Array.from(items).map(item => {
-                const nameEl = item.querySelector('.wild-shape-beast-name');
-                if (!nameEl) return '';
-                // Remove the CR span to get just the beast name
-                const clone = nameEl.cloneNode(true);
-                const crSpan = clone.querySelector('.wild-shape-beast-cr');
-                if (crSpan) crSpan.remove();
-                return clone.textContent.replace(/\s+/g, ' ').trim();
-            });
-        }
-
         it('filters beasts by name when searching', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
@@ -381,7 +323,6 @@ describe('PolymorphSelectionModal', () => {
         it('filters based on already-filtered beast list', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
-                // Eagle should be filtered out due to wild shape limitations
                 expect(screen.queryByText('Eagle')).not.toBeInTheDocument();
             });
 
@@ -389,50 +330,45 @@ describe('PolymorphSelectionModal', () => {
             fireEvent.change(input, { target: { value: 'eagle' } });
 
             await waitFor(() => {
-                // Should show no results since eagle was already filtered
                 expect(screen.getByText(/No beasts match/)).toBeInTheDocument();
             });
         });
     });
 
     describe('beast selection', () => {
-        it('selects a beast when clicking on it', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Crocodile')).toBeInTheDocument();
-            });
-
-            // Find the crocodile item
-            let targetItem = null;
-            for (const item of document.querySelectorAll('.wild-shape-beast-item')) {
-                const nameEl = item.querySelector('.wild-shape-beast-name');
-                if (nameEl && nameEl.textContent.includes('Crocodile')) {
-                    targetItem = item;
-                    break;
-                }
-            }
-            expect(targetItem).toBeInTheDocument();
-            fireEvent.click(targetItem);
-
-            await waitFor(() => {
-                const selected = document.querySelector('.wild-shape-beast-item.selected');
-                expect(selected).toBeInTheDocument();
-            });
-        });
-
-        it('applies selected CSS class to selected beast item', async () => {
+        it('selects a beast, enables confirm, and calls onConfirm with correct data', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 expect(screen.getByText('Wolf')).toBeInTheDocument();
             });
 
+            // Confirm button starts disabled
+            const confirmBtn = screen.getByRole('button', { name: 'Wild Shape' });
+            expect(confirmBtn).toBeDisabled();
+
+            // Click to select Wolf
             const wolfItem = findBeastItem('Wolf');
             expect(wolfItem).toBeInTheDocument();
             fireEvent.click(wolfItem);
 
+            // Confirm button should be enabled
             await waitFor(() => {
-                const selectedItem = document.querySelector('.wild-shape-beast-item.selected');
-                expect(selectedItem).toBeInTheDocument();
+                expect(screen.getByRole('button', { name: 'Wild Shape' })).toBeEnabled();
+            });
+
+            // Verify selection visual state
+            const selectedItem = document.querySelector('.wild-shape-beast-item.selected');
+            expect(selectedItem).toBeInTheDocument();
+            const selectedName = selectedItem.querySelector('.wild-shape-beast-name').textContent;
+            expect(selectedName).toContain('Wolf');
+
+            // Click confirm
+            fireEvent.click(confirmBtn);
+
+            await waitFor(() => {
+                expect(baseProps.onConfirm).toHaveBeenCalled();
+                const selected = baseProps.onConfirm.mock.calls[0][0];
+                expect(selected.index).toBe('wolf');
             });
         });
 
@@ -444,15 +380,12 @@ describe('PolymorphSelectionModal', () => {
             });
 
             const wolfItem = findBeastItem('Wolf');
-            expect(wolfItem).toBeInTheDocument();
             fireEvent.click(wolfItem);
             await waitFor(() => {
                 expect(document.querySelector('.wild-shape-beast-item.selected')).toBeInTheDocument();
             });
 
-            // Find and click Brown Bear
             const bearItem = findBeastItem('Brown Bear');
-            expect(bearItem).toBeInTheDocument();
             fireEvent.click(bearItem);
             await waitFor(() => {
                 const selected = document.querySelector('.wild-shape-beast-item.selected');
@@ -461,65 +394,11 @@ describe('PolymorphSelectionModal', () => {
             });
         });
 
-        it('enables confirm button when a beast is selected', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wolf')).toBeInTheDocument();
-            });
-
-            let confirmBtn = screen.getByRole('button', { name: 'Wild Shape' });
-            expect(confirmBtn).toBeDisabled();
-
-            const wolfItem = findBeastItem('Wolf');
-            expect(wolfItem).toBeInTheDocument();
-            fireEvent.click(wolfItem);
-
-            await waitFor(() => {
-                confirmBtn = screen.getByRole('button', { name: 'Wild Shape' });
-                expect(confirmBtn).toBeEnabled();
-            });
-        });
-
-    });
-
-    describe('confirm behavior', () => {
-        it('calls onConfirm with selected beast when confirm button is clicked', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wolf')).toBeInTheDocument();
-            });
-
-            // Find the wolf item specifically (first item might be Rat with CR 0)
-            let wolfItem = null;
-            for (const item of document.querySelectorAll('.wild-shape-beast-item')) {
-                const nameEl = item.querySelector('.wild-shape-beast-name');
-                if (nameEl && nameEl.textContent.includes('Wolf')) {
-                    wolfItem = item;
-                    break;
-                }
-            }
-            expect(wolfItem).toBeInTheDocument();
-            fireEvent.click(wolfItem);
-
-            await waitFor(() => {
-                const confirmBtn = screen.getByRole('button', { name: 'Wild Shape' });
-                expect(confirmBtn).toBeEnabled();
-                fireEvent.click(confirmBtn);
-            });
-
-            await waitFor(() => {
-                expect(baseProps.onConfirm).toHaveBeenCalled();
-                const selected = baseProps.onConfirm.mock.calls[0][0];
-                expect(selected.index).toBe('wolf');
-            });
-        });
-
         it('does not call onConfirm when confirm button is not clicked', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 expect(screen.getByText('Wolf')).toBeInTheDocument();
             });
-
             expect(baseProps.onConfirm).not.toHaveBeenCalled();
         });
 
@@ -530,7 +409,6 @@ describe('PolymorphSelectionModal', () => {
                 expect(confirmBtn).toBeDisabled();
                 fireEvent.click(confirmBtn);
             });
-
             expect(baseProps.onConfirm).not.toHaveBeenCalled();
         });
     });

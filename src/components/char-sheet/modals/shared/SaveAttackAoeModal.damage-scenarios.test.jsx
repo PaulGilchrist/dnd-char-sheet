@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
@@ -198,6 +199,9 @@ import * as combatData from '../../../../services/encounters/combatData.js';
 import * as diceRoller from '../../../../services/dice/diceRoller.js';
 import * as allySelection from '../../../../hooks/useAllySelection.js';
 import * as automationExpressions from '../../../../services/combat/automation/automationExpressions.js';
+import * as applyDamage from '../../../../services/rules/combat/applyDamage.js';
+import * as logService from '../../../../services/ui/logService.js';
+import * as damageRollback from '../../../../services/automation/common/damageRollback.js';
 
 // ── Test fixtures ──
 
@@ -237,7 +241,7 @@ function getCheckboxByName(name) {
       return cb;
     }
   }
-  throw new Error(`Checkbox for "${name}" not found`);
+  return null;
 }
 
 // ── Tests ──
@@ -284,18 +288,19 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
     });
   });
 
-  // ── Processing state ──
+  // ── Ability logging ──
 
-  describe('processing state', () => {
-    it('sets processing to true when apply is called', async () => {
+  describe('ability logging on confirm', () => {
+    it('logs ability_use entry when apply is called', async () => {
       render(<SaveAttackAoeModal {...makeProps()} />);
       fireEvent.click(getCheckboxByName('Goblin A'));
       const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
       await act(async () => {
         fireEvent.click(confirmBtn);
       });
-      const { addEntry } = await import('../../../../services/ui/logService.js');
-      const abilityCalls = addEntry.mock.calls.filter(c => c[1] && c[1].type === 'ability_use');
+      const abilityCalls = logService.addEntry.mock.calls.filter(
+        c => c[0] === 'test-campaign' && c[1] && c[1].type === 'ability_use'
+      );
       expect(abilityCalls.length).toBeGreaterThan(0);
     });
   });
@@ -314,23 +319,24 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
       await act(async () => {
         await new Promise(r => setTimeout(r, 50));
       });
-      const { addTargetResult } = await import('../../../../services/automation/common/damageRollback.js');
-      const goblinCalls = addTargetResult.mock.calls.filter(c => c[1] && c[1].targetName === 'Goblin A');
+      const goblinCalls = damageRollback.addTargetResult.mock.calls.filter(
+        c => c[1] && c[1].targetName === 'Goblin A'
+      );
       expect(goblinCalls.length).toBeGreaterThan(0);
       expect(goblinCalls[0][1].appliedDamage).toBe(0);
     });
 
     it('excludes careful spell protected NPCs from damage log when damage is 0', async () => {
       allySelection.getAllyList.mockReturnValue(['Goblin A']);
-      const { addEntry } = await import('../../../../services/ui/logService.js');
-      addEntry.mockClear();
       render(<SaveAttackAoeModal {...makeProps({ metamagicCareful: true })} />);
       fireEvent.click(getCheckboxByName('Goblin A'));
       const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
       await act(async () => {
         fireEvent.click(confirmBtn);
       });
-      const rollCalls = addEntry.mock.calls.filter(c => c[1] && c[1].type === 'roll' && c[1].rollType === 'save-damage');
+      const rollCalls = logService.addEntry.mock.calls.filter(
+        c => c[1] && c[1].type === 'roll' && c[1].rollType === 'save-damage'
+      );
       expect(rollCalls.length).toBe(0);
     });
   });
@@ -338,11 +344,10 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
   // ── Heighten disadvantage for NPC ──
 
   describe('heighten disadvantage for NPC', () => {
-    it('uses double-disadvantage roll when target is heighten target', async () => {
+    it('rolls for heighten target when metamagicHeighten is enabled', async () => {
       diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
       render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: true })} />);
       fireEvent.click(getCheckboxByName('Goblin A'));
-
       fireEvent.click(getCheckboxByName('Goblin B'));
       const confirmBtn = screen.getByRole('button', { name: /Fireball \(2\)/ });
       await act(async () => {
@@ -355,36 +360,22 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
   // ── Evasion effects ──
 
   describe('evasion effects', () => {
-    it('uses hasEvasionForSave for NPC targets', async () => {
-      const { hasEvasionForSave } = await import('../../../../services/rules/combat/applyDamage.js');
-      hasEvasionForSave.mockReturnValue(false);
+    it('checks evasion for NPC targets before computing damage', async () => {
       render(<SaveAttackAoeModal {...makeProps()} />);
       fireEvent.click(getCheckboxByName('Goblin A'));
       const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
       await act(async () => {
         fireEvent.click(confirmBtn);
       });
-      expect(hasEvasionForSave).toHaveBeenCalled();
+      expect(applyDamage.hasEvasionForSave).toHaveBeenCalledWith(undefined, 'DEX');
     });
   });
 
   // ── Resistances and immunities ──
 
   describe('resistances and immunities', () => {
-    it('passes resistances to computeDamageAfterResistancesWithDetails for NPCs', async () => {
-      const { computeDamageAfterResistancesWithDetails } = await import('../../../../services/rules/combat/applyDamage.js');
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      expect(computeDamageAfterResistancesWithDetails).toHaveBeenCalled();
-    });
-
     it('handles NPC with fire resistance reducing damage', async () => {
-      const { computeDamageAfterResistancesWithDetails } = await import('../../../../services/rules/combat/applyDamage.js');
-      computeDamageAfterResistancesWithDetails.mockReturnValue({ finalDamage: 3 });
+      applyDamage.computeDamageAfterResistancesWithDetails.mockReturnValue({ finalDamage: 3 });
       combatData.getCombatSummary.mockReturnValue({
         creatures: [
           { name: 'Goblin A', type: 'npc', currentHp: 5, maxHp: 10, saveBonuses: { dex: 2 }, resistances: ['Fire'], immunities: [] },
@@ -396,7 +387,7 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
       await act(async () => {
         fireEvent.click(confirmBtn);
       });
-      expect(computeDamageAfterResistancesWithDetails).toHaveBeenCalledWith(
+      expect(applyDamage.computeDamageAfterResistancesWithDetails).toHaveBeenCalledWith(
         expect.any(Number),
         ['Fire'],
         ['Fire'],

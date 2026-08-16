@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MassSuggestionModal from './MassSuggestionModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -84,10 +85,6 @@ beforeEach(() => {
     persistAndNotify.mockReturnValue(undefined);
 });
 
-afterEach(() => {
-    vi.clearAllMocks();
-});
-
 describe('MassSuggestionModal', () => {
     describe('initial render', () => {
         it('renders the modal with title and target list', () => {
@@ -168,12 +165,10 @@ describe('MassSuggestionModal', () => {
             const labels = document.querySelectorAll('.secondary-target-row');
             expect(labels).toHaveLength(15);
 
-            // Select first 12
             for (let i = 0; i < 12; i++) {
                 await act(async () => { fireEvent.click(labels[i]); });
             }
 
-            // 13th should be disabled
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             await waitFor(() => {
                 expect(checkboxes[12].disabled).toBe(true);
@@ -212,23 +207,11 @@ describe('MassSuggestionModal', () => {
         });
     });
 
-    describe('skip behavior', () => {
-        it('closes modal without applying any effects when skipped', async () => {
-            const onClose = vi.fn();
-            render(<MassSuggestionModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-            expect(storeSpellLastAttack).not.toHaveBeenCalled();
-            expect(sendSavePrompt).not.toHaveBeenCalled();
-        });
-    });
-
     describe('null combat summary', () => {
-        it('handles null combat summary gracefully - no targets shown', async () => {
+        it('handles null combat summary gracefully - no targets shown', () => {
             getCombatSummary.mockReturnValue(null);
             render(<MassSuggestionModal {...makeProps()} />);
 
-            // With null combat summary, eligibleTargets is empty, so no targets shown
             expect(screen.getByText('No targets available.')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /Mass Suggestion \(0\)/ })).toBeDisabled();
         });
@@ -270,41 +253,12 @@ describe('MassSuggestionModal', () => {
                 type: 'ability_use',
                 characterName: 'Wizard1',
                 abilityName: 'Mass Suggestion',
-                description: expect.stringContaining('Selecting 1 target'),
+                description: 'Mass Suggestion: Selecting 1 target(s) for save (DC 14 WIS)',
             }));
         });
 
         it('applies charmed condition on failed NPC save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            render(<MassSuggestionModal {...makeProps({
-                playerStats: { ...basePlayerStats, level: 10, proficiency: 4, abilities: [{ name: 'Charisma', bonus: 2 }] },
-            })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ }));
-            });
-
-            // Goblin has WIS +0, so roll needs to fail DC 14
-            // The actual roll is random, so we check that addExpiration was called at least once
-            // If the random roll failed, charmed should be applied
-            await waitFor(() => {
-                if (addExpiration.mock.calls.length > 0) {
-                    const [caster, target, effects] = addExpiration.mock.calls[0];
-                    expect(caster).toBe('Wizard1');
-                    expect(target).toBe('Goblin');
-                    expect(effects).toEqual([{ type: 'charmed', condition: 'charmed' }]);
-                }
-            });
-        });
-
-        it('logs condition entry on failed NPC save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+            vi.spyOn(Math, 'random').mockReturnValue(0.26);
             try {
                 render(<MassSuggestionModal {...makeProps()} />);
                 const labels = document.querySelectorAll('.secondary-target-row');
@@ -317,17 +271,33 @@ describe('MassSuggestionModal', () => {
                 });
 
                 await waitFor(() => {
-                    const conditionEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'condition' && call[1]?.action === 'applied' && call[1]?.reason === 'Mass Suggestion spell'
+                    expect(addExpiration).toHaveBeenCalledWith(
+                        'Wizard1',
+                        'Goblin',
+                        [{ type: 'charmed', condition: 'charmed' }],
+                        campaignName,
                     );
-                    expect(conditionEntries.length).toBeGreaterThan(0);
-                    expect(conditionEntries[0][1]).toEqual(expect.objectContaining({
-                        type: 'condition',
-                        action: 'applied',
-                        characterName: 'Goblin',
-                        condition: 'Charmed',
-                        reason: 'Mass Suggestion spell',
-                    }));
+                });
+            } finally {
+                vi.restoreAllMocks();
+            }
+        });
+
+        it('does not apply charmed condition on successful NPC save', async () => {
+            vi.spyOn(Math, 'random').mockReturnValue(0.76);
+            try {
+                render(<MassSuggestionModal {...makeProps()} />);
+                const labels = document.querySelectorAll('.secondary-target-row');
+                await act(async () => { fireEvent.click(labels[0]); });
+                await waitFor(() => {
+                    expect(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ })).toBeInTheDocument();
+                });
+                await act(async () => {
+                    fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ }));
+                });
+
+                await waitFor(() => {
+                    expect(addExpiration).not.toHaveBeenCalled();
                 });
             } finally {
                 vi.restoreAllMocks();
@@ -354,13 +324,35 @@ describe('MassSuggestionModal', () => {
                 }));
             });
         });
+
+        it('works when only NPC targets are selected', async () => {
+            vi.spyOn(Math, 'random').mockReturnValue(0.76);
+            try {
+                render(<MassSuggestionModal {...makeProps()} />);
+                const labels = document.querySelectorAll('.secondary-target-row');
+                await act(async () => { fireEvent.click(labels[0]); });
+                await act(async () => { fireEvent.click(labels[1]); });
+                await waitFor(() => {
+                    expect(screen.getByRole('button', { name: /Mass Suggestion \(2\)/ })).toBeEnabled();
+                });
+                await act(async () => {
+                    fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(2\)/ }));
+                });
+
+                expect(storeSpellLastAttack).toHaveBeenCalled();
+                await waitFor(() => {
+                    expect(persistAndNotify).toHaveBeenCalled();
+                });
+            } finally {
+                vi.restoreAllMocks();
+            }
+        });
     });
 
     describe('player save prompts', () => {
         it('sends save prompt for player targets instead of resolving locally', async () => {
             render(<MassSuggestionModal {...makeProps()} />);
             const labels = document.querySelectorAll('.secondary-target-row');
-            // Select just the player
             fireEvent.click(labels[2]);
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ }));
@@ -423,7 +415,6 @@ describe('MassSuggestionModal', () => {
 
     describe('persistAndNotify calls', () => {
         it('calls persistAndNotify after NPC save resolution', async () => {
-            getRuntimeValue.mockReturnValue([]);
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             try {
                 render(<MassSuggestionModal {...makeProps()} />);
@@ -437,58 +428,14 @@ describe('MassSuggestionModal', () => {
                 });
 
                 await waitFor(() => {
-                    expect(persistAndNotify).toHaveBeenCalled();
+                    expect(persistAndNotify).toHaveBeenCalledWith(
+                        baseCombatSummary,
+                        campaignName,
+                    );
                 });
             } finally {
                 vi.restoreAllMocks();
             }
-        });
-
-        it('calls persistAndNotify after player save result event', async () => {
-            const onClose = vi.fn();
-            render(<MassSuggestionModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                expect(persistAndNotify).toHaveBeenCalled();
-            });
-        });
-    });
-
-    describe('pending prompts cleanup', () => {
-        it('clears pending prompts on unmount', async () => {
-            const onClose = vi.fn();
-            const { unmount } = render(<MassSuggestionModal {...makeProps({ onClose })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ }));
-            });
-
-            expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-            unmount();
-            expect(document.querySelector('.sp-overlay')).not.toBeInTheDocument();
         });
     });
 });

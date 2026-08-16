@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import usePlayerDragging from './usePlayerDragging.js';
@@ -5,8 +6,12 @@ import { CELL_SIZE } from '../../../config/mapConfig.js';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
 
 describe('usePlayerDragging', () => {
+  // Shared mutable containers so useCallback closures always see current values.
+  // The hook's useCallback captures mapData/svgRef by reference at render time.
+  // By using objects whose .current properties are reassigned, the closures
+  // see updates because they reference the object, not the primitive value.
   let svgRef;
-  let mapData;
+  let mapDataHolder;
   let setMapData;
   let gridCenterX;
   let gridCenterY;
@@ -19,7 +24,8 @@ describe('usePlayerDragging', () => {
     setPointerCapture: vi.fn(),
     releasePointerCapture: vi.fn(),
     createSVGPoint: () => ({
-      x: 0, y: 0,
+      x: 0,
+      y: 0,
       matrixTransform: () => ({ x: 60, y: 80 }),
     }),
     getScreenCTM: () => ({ inverse: () => ({ x: 1, y: 1 }) }),
@@ -30,62 +36,43 @@ describe('usePlayerDragging', () => {
     setPointerCapture: vi.fn(),
     releasePointerCapture: vi.fn(),
     createSVGPoint: () => ({
-      x: 0, y: 0,
+      x: 0,
+      y: 0,
       matrixTransform: transformFn,
     }),
     getScreenCTM: () => ({ inverse: () => ({ x: 1, y: 1 }) }),
     ...overrides,
   });
 
-  const defaultParams = () => ({
-    svgRef,
-    mapData,
-    gridSize,
-    setMapData,
-    gridCenterX,
-    gridCenterY,
-    rulerMode: false,
-    spellMode: false,
-    campaignName,
-  });
-
-  beforeEach(() => {
-    svgRef = { current: null };
-    mapData = {
-      players: [
-        { id: 'p1', name: 'Player1', gridX: 1, gridY: 2 },
-        { id: 'p2', name: 'Player2', gridX: 5, gridY: 5 },
-        { id: 'p3', name: 'Player3', gridX: 10, gridY: 10 },
-      ],
-    };
-    setMapData = vi.fn((fn) => {
-      if (typeof fn === 'function') {
-        const prev = mapData;
-        const result = fn(prev);
-        return result;
-      }
-      return fn;
-    });
-    gridCenterX = (x) => x * CELL_SIZE + CELL_SIZE / 2;
-    gridCenterY = (y) => y * CELL_SIZE + CELL_SIZE / 2;
-    setRuntimeValueSpy = vi.spyOn(runtimeState, 'setRuntimeValue').mockReturnValue(undefined);
+  const createMockEvent = (overrides = {}) => ({
+    pointerId: 1,
+    clientX: 100,
+    clientY: 100,
+    stopPropagation: vi.fn(),
+    preventDefault: vi.fn(),
+    ...overrides,
   });
 
   const getHook = (overrides = {}) => {
     const { result } = renderHook(() =>
-      usePlayerDragging({ ...defaultParams(), ...overrides })
+      usePlayerDragging({
+        svgRef,
+        mapData: mapDataHolder.current,
+        gridSize,
+        setMapData,
+        gridCenterX,
+        gridCenterY,
+        rulerMode: false,
+        spellMode: false,
+        campaignName,
+        ...overrides,
+      })
     );
     return result;
   };
 
   const setupDrag = (playerId, svgOverrides = {}) => {
-    const mockEvent = {
-      pointerId: 1,
-      clientX: 100,
-      clientY: 100,
-      stopPropagation: vi.fn(),
-      preventDefault: vi.fn(),
-    };
+    const mockEvent = createMockEvent();
     svgRef.current = defaultSvgMock(svgOverrides);
     const result = getHook();
     act(() => {
@@ -93,6 +80,38 @@ describe('usePlayerDragging', () => {
     });
     return { result };
   };
+
+  beforeEach(() => {
+    svgRef = { current: null };
+    mapDataHolder = {
+      current: {
+        players: [
+          { id: 'p1', name: 'Player1', gridX: 1, gridY: 2 },
+          { id: 'p2', name: 'Player2', gridX: 5, gridY: 5 },
+          { id: 'p3', name: 'Player3', gridX: 10, gridY: 10 },
+        ],
+      },
+    };
+
+    // setMapData updates mapDataHolder.current so the hook sees new data on next render.
+    // The mock returns a NEW object each time (like React setState), which triggers
+    // the useCallback dependency to update on the next render.
+    setMapData = vi.fn((fn) => {
+      if (typeof fn === 'function') {
+        const result = fn(mapDataHolder.current);
+        mapDataHolder.current = result;
+        return result;
+      }
+      mapDataHolder.current = fn;
+      return fn;
+    });
+
+    gridCenterX = (x) => x * CELL_SIZE + CELL_SIZE / 2;
+    gridCenterY = (y) => y * CELL_SIZE + CELL_SIZE / 2;
+    setRuntimeValueSpy = vi
+      .spyOn(runtimeState, 'setRuntimeValue')
+      .mockReturnValue(undefined);
+  });
 
   describe('initial state', () => {
     it('should return dragging as null initially', () => {
@@ -114,7 +133,7 @@ describe('usePlayerDragging', () => {
       ['rulerMode', { rulerMode: true }],
       ['spellMode', { spellMode: true }],
     ])('should not start drag when %s is enabled', (_, overrides) => {
-      const mockEvent = { stopPropagation: vi.fn(), preventDefault: vi.fn() };
+      const mockEvent = createMockEvent();
       const result = getHook(overrides);
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
@@ -126,191 +145,200 @@ describe('usePlayerDragging', () => {
   });
 
   describe('handlePointerDown', () => {
-    it('should stop propagation and prevent default', () => {
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
+    it('should call stopPropagation and preventDefault on the event', () => {
+      const mockEvent = createMockEvent();
       svgRef.current = defaultSvgMock();
-
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
       });
-
       expect(mockEvent.stopPropagation).toHaveBeenCalled();
       expect(mockEvent.preventDefault).toHaveBeenCalled();
     });
 
-    it('should return early if svgRef is null', () => {
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
-      svgRef.current = null;
-
+    it('should capture pointer on svg', () => {
+      const setPointerCapture = vi.fn();
+      svgRef.current = defaultSvgMock({ setPointerCapture });
+      const mockEvent = createMockEvent({ pointerId: 42 });
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
       });
+      expect(setPointerCapture).toHaveBeenCalledWith(42);
+    });
 
+    it('should set dragging state with correct properties', () => {
+      svgRef.current = defaultSvgMock();
+      const mockEvent = createMockEvent({ pointerId: 42 });
+      const result = getHook();
+      act(() => {
+        result.current.handlePointerDown(mockEvent, 'p1');
+      });
+      const dragging = result.current.dragging;
+      expect(dragging).not.toBeNull();
+      expect(dragging.playerId).toBe('p1');
+      expect(dragging.pointerId).toBe(42);
+      expect(typeof dragging.offsetX).toBe('number');
+      expect(typeof dragging.offsetY).toBe('number');
+    });
+
+    it('should return early when svgRef is null', () => {
+      const mockEvent = createMockEvent();
+      svgRef.current = null;
+      const result = getHook();
+      act(() => {
+        result.current.handlePointerDown(mockEvent, 'p1');
+      });
       expect(result.current.dragging).toBeNull();
     });
 
-    it('should return early if ctm is null', () => {
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
+    it('should return early when ctm is null', () => {
+      const mockEvent = createMockEvent();
       svgRef.current = {
         setPointerCapture: vi.fn(),
         createSVGPoint: () => ({ x: 0, y: 0 }),
         getScreenCTM: () => null,
       };
-
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
       });
-
       expect(result.current.dragging).toBeNull();
     });
 
-    it('should return early if player not found', () => {
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
+    it('should return early when player is not found', () => {
+      const mockEvent = createMockEvent();
       svgRef.current = defaultSvgMock();
-
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'nonexistent');
       });
-
       expect(result.current.dragging).toBeNull();
-    });
-
-    it('should set dragging state with correct properties', () => {
-      const mockEvent = {
-        pointerId: 42,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
-      svgRef.current = defaultSvgMock();
-
-      const result = getHook();
-      act(() => {
-        result.current.handlePointerDown(mockEvent, 'p1');
-      });
-
-      expect(result.current.dragging).toBeDefined();
-      expect(result.current.dragging.playerId).toBe('p1');
-      expect(result.current.dragging.pointerId).toBe(42);
-      expect(typeof result.current.dragging.offsetX).toBe('number');
-      expect(typeof result.current.dragging.offsetY).toBe('number');
-    });
-
-    it('should capture pointer on svg', () => {
-      const mockEvent = {
-        pointerId: 42,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
-      const setPointerCapture = vi.fn();
-      svgRef.current = {
-        ...defaultSvgMock(),
-        setPointerCapture,
-      };
-
-      const result = getHook();
-      act(() => {
-        result.current.handlePointerDown(mockEvent, 'p1');
-      });
-
-      expect(setPointerCapture).toHaveBeenCalledWith(42);
     });
   });
 
   describe('handlePointerMove', () => {
-    it('should return early if not dragging', () => {
-      const mockEvent = { preventDefault: vi.fn() };
+    it('should do nothing when not dragging', () => {
       const result = getHook();
       act(() => {
-        result.current.handlePointerMove(mockEvent);
+        result.current.handlePointerMove({ preventDefault: vi.fn() });
       });
-      expect(mockEvent.preventDefault).not.toHaveBeenCalled();
       expect(setMapData).not.toHaveBeenCalled();
     });
 
     it('should update player grid position during drag', () => {
       const { result } = setupDrag('p1');
-
-      const moveEvent = { preventDefault: vi.fn(), clientX: 250, clientY: 250 };
+      // Move to SVG coordinates (150, 150) → grid cell (3, 3)
+      svgRef.current = createSvgMockWithTransform(() => ({ x: 150, y: 150 }));
       act(() => {
-        result.current.handlePointerMove(moveEvent);
+        result.current.handlePointerMove({
+          preventDefault: vi.fn(),
+          clientX: 150,
+          clientY: 150,
+        });
       });
-
       expect(setMapData).toHaveBeenCalled();
+      const updated = setMapData.mock.calls[0][0](mapDataHolder.current);
+      const player = updated.players.find((p) => p.id === 'p1');
+      expect(player.gridX).toBe(3);
+      expect(player.gridY).toBe(4);
     });
 
-    it('should clamp grid position to map bounds', () => {
+    it('should clamp grid position to minimum bounds (0, 0)', () => {
       const { result } = setupDrag('p1');
-
-      const moveEvent = { preventDefault: vi.fn(), clientX: -100, clientY: -100 };
       svgRef.current = createSvgMockWithTransform(() => ({ x: -100, y: -100 }));
       act(() => {
-        result.current.handlePointerMove(moveEvent);
+        result.current.handlePointerMove({
+          preventDefault: vi.fn(),
+          clientX: -100,
+          clientY: -100,
+        });
       });
-
       expect(setMapData).toHaveBeenCalled();
-      const callArg = setMapData.mock.calls[0][0];
-      const updated = callArg(mapData);
+      const updated = setMapData.mock.calls[0][0](mapDataHolder.current);
       const player = updated.players.find((p) => p.id === 'p1');
       expect(player.gridX).toBe(0);
       expect(player.gridY).toBe(0);
     });
 
-    it('should clamp grid position to max bounds during drag', () => {
+    it('should clamp grid position to maximum bounds (gridSize - 1)', () => {
       const { result } = setupDrag('p1');
-
-      svgRef.current = createSvgMockWithTransform(() => ({ x: 99999, y: 99999 }));
-      const moveEvent = { preventDefault: vi.fn(), clientX: 99999, clientY: 99999 };
+      svgRef.current = createSvgMockWithTransform(() => ({
+        x: 99999,
+        y: 99999,
+      }));
       act(() => {
-        result.current.handlePointerMove(moveEvent);
+        result.current.handlePointerMove({
+          preventDefault: vi.fn(),
+          clientX: 99999,
+          clientY: 99999,
+        });
       });
-
       expect(setMapData).toHaveBeenCalled();
-      const callArg = setMapData.mock.calls[0][0];
-      const updated = callArg(mapData);
+      const updated = setMapData.mock.calls[0][0](mapDataHolder.current);
       const player = updated.players.find((p) => p.id === 'p1');
       expect(player.gridX).toBe(gridSize - 1);
       expect(player.gridY).toBe(gridSize - 1);
     });
+
+    it('should do nothing when svgRef is null', () => {
+      const { result } = setupDrag('p1');
+      svgRef.current = null;
+      act(() => {
+        result.current.handlePointerMove({
+          preventDefault: vi.fn(),
+          clientX: 150,
+          clientY: 150,
+        });
+      });
+      expect(setMapData).not.toHaveBeenCalled();
+    });
+
+    it('should do nothing when ctm is null', () => {
+      const { result } = setupDrag('p1');
+      svgRef.current = {
+        createSVGPoint: () => ({ x: 0, y: 0 }),
+        getScreenCTM: () => null,
+      };
+      act(() => {
+        result.current.handlePointerMove({
+          preventDefault: vi.fn(),
+          clientX: 150,
+          clientY: 150,
+        });
+      });
+      expect(setMapData).not.toHaveBeenCalled();
+    });
+
+    it('should do nothing when dragged player is not found', () => {
+      mapDataHolder.current = { players: [] };
+      const mockEvent = createMockEvent();
+      svgRef.current = defaultSvgMock();
+      const result = getHook();
+      act(() => {
+        result.current.handlePointerDown(mockEvent, 'p1');
+      });
+      act(() => {
+        result.current.handlePointerMove({
+          preventDefault: vi.fn(),
+          clientX: 150,
+          clientY: 150,
+        });
+      });
+      expect(setMapData).not.toHaveBeenCalled();
+    });
   });
 
   describe('handlePointerUp', () => {
-    it('should return early if not dragging', () => {
-      const mockEvent = { preventDefault: vi.fn(), pointerId: 1, clientX: 0, clientY: 0 };
+    it('should do nothing when not dragging', () => {
       const result = getHook();
       act(() => {
-        result.current.handlePointerUp(mockEvent);
+        result.current.handlePointerUp({
+          preventDefault: vi.fn(),
+          pointerId: 1,
+          clientX: 0,
+          clientY: 0,
+        });
       });
       expect(setMapData).not.toHaveBeenCalled();
     });
@@ -318,193 +346,173 @@ describe('usePlayerDragging', () => {
     it('should release pointer capture on svg', () => {
       const releasePointerCapture = vi.fn();
       const { result } = setupDrag('p1', { releasePointerCapture });
-
-      const upEvent = { preventDefault: vi.fn(), pointerId: 1, clientX: 60, clientY: 80 };
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 60,
+        clientY: 80,
+      };
       act(() => {
         result.current.handlePointerUp(upEvent);
       });
-
       expect(releasePointerCapture).toHaveBeenCalledWith(1);
     });
 
     it('should set dragging to null after pointer up', () => {
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
+      const mockEvent = createMockEvent();
       svgRef.current = defaultSvgMock();
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
       });
-
-      const upEvent = { preventDefault: vi.fn(), pointerId: 1, clientX: 60, clientY: 80 };
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 60,
+        clientY: 80,
+      };
       act(() => {
         result.current.handlePointerUp(upEvent);
       });
-
       expect(result.current.dragging).toBeNull();
     });
 
     it('should update player position on pointer up', () => {
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
+      const mockEvent = createMockEvent();
       svgRef.current = defaultSvgMock();
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
       });
-
-      svgRef.current = createSvgMockWithTransform(() => ({ x: 120, y: 160 }));
-      const upEvent = { preventDefault: vi.fn(), pointerId: 1, clientX: 120, clientY: 160 };
+      svgRef.current = createSvgMockWithTransform(() => ({
+        x: 120,
+        y: 160,
+      }));
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 120,
+        clientY: 160,
+      };
       act(() => {
         result.current.handlePointerUp(upEvent);
       });
-
       expect(setMapData).toHaveBeenCalled();
+      const updated = setMapData.mock.calls[0][0](mapDataHolder.current);
+      const player = updated.players.find((p) => p.id === 'p1');
+      expect(player.gridX).toBe(3);
+      expect(player.gridY).toBe(4);
     });
 
-    it('should clamp final position to grid bounds', () => {
+    it('should clamp final position to minimum grid bounds', () => {
       const { result } = setupDrag('p1');
-
-      svgRef.current = createSvgMockWithTransform(() => ({ x: -100, y: -100 }));
-      const upEvent = { preventDefault: vi.fn(), pointerId: 1, clientX: -100, clientY: -100 };
+      svgRef.current = createSvgMockWithTransform(() => ({
+        x: -100,
+        y: -100,
+      }));
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: -100,
+        clientY: -100,
+      };
       act(() => {
         result.current.handlePointerUp(upEvent);
       });
-
       expect(setMapData).toHaveBeenCalled();
-      const callArg = setMapData.mock.calls[0][0];
-      const updated = callArg(mapData);
+      const updated = setMapData.mock.calls[0][0](mapDataHolder.current);
       const player = updated.players.find((p) => p.id === 'p1');
       expect(player.gridX).toBe(0);
       expect(player.gridY).toBe(0);
     });
 
-    it('should find nearest unoccupied square when target is occupied', () => {
-      mapData = {
-        players: [
-          { id: 'p1', name: 'Player1', gridX: 5, gridY: 5 },
-          { id: 'p2', name: 'Player2', gridX: 5, gridY: 6 },
-          { id: 'p3', name: 'Player3', gridX: 6, gridY: 5 },
-          { id: 'p4', name: 'Player4', gridX: 4, gridY: 5 },
-          { id: 'p5', name: 'Player5', gridX: 5, gridY: 4 },
-        ],
-      };
-
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
+    it('should clamp final position to maximum grid bounds', () => {
+      const { result } = setupDrag('p1');
+      svgRef.current = createSvgMockWithTransform(() => ({
+        x: 99999,
+        y: 99999,
+      }));
+      const upEvent = {
         preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 99999,
+        clientY: 99999,
       };
-      svgRef.current = defaultSvgMock();
-      const result = getHook();
-      act(() => {
-        result.current.handlePointerDown(mockEvent, 'p1');
-      });
-
-      // p1 starts at (5,5), gridCenter = (220, 220)
-      // defaultSvgMock returns svgPt (60, 80)
-      // offsetX = 60 - 220 = -160, offsetY = 80 - 220 = -140
-      // Target grid: cx = 60 - (-160) = 220, cy = 80 - (-140) = 220
-      // gridX = floor(220/40) = 5, gridY = floor(220/40) = 5 → target is (5,5) which is p1's own position
-      // p1 is excluded from occupiedSquares, so (5,5) is free and p1 stays there
-      svgRef.current = createSvgMockWithTransform(() => ({ x: 60, y: 80 }));
-      const upEvent = { preventDefault: vi.fn(), pointerId: 1, clientX: 60, clientY: 80 };
       act(() => {
         result.current.handlePointerUp(upEvent);
       });
-
       expect(setMapData).toHaveBeenCalled();
-      const callArg = setMapData.mock.calls[0][0];
-      const updated = callArg(mapData);
+      const updated = setMapData.mock.calls[0][0](mapDataHolder.current);
       const player = updated.players.find((p) => p.id === 'p1');
-      // (5,5) is p1's own position, excluded from occupiedSquares, so p1 stays
-      expect(player.gridX).toBe(5);
-      expect(player.gridY).toBe(5);
+      expect(player.gridX).toBe(gridSize - 1);
+      expect(player.gridY).toBe(gridSize - 1);
     });
 
-    it('should move to free square when target is occupied', () => {
-      mapData = {
-        players: [
-          { id: 'p1', name: 'Player1', gridX: 0, gridY: 0 },
-          { id: 'p2', name: 'Player2', gridX: 1, gridY: 0 },
-          { id: 'p3', name: 'Player3', gridX: 0, gridY: 1 },
-          { id: 'p4', name: 'Player4', gridX: 1, gridY: 1 },
-        ],
-      };
-
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
+    it('should do nothing when ctm is null (clears dragging)', () => {
+      const mockEvent = createMockEvent();
       svgRef.current = defaultSvgMock();
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
       });
-
-      // p1 at (0,0), gridCenter = (20, 20)
-      // offsetX = 60 - 20 = 40, offsetY = 80 - 20 = 60
-      // We want target (1,0) which is occupied by p2
-      // gridCenter(1,0) = (60, 20), svgPt = (60-40, 20-60) = (20, -40)
-      // gridX = floor(20/40) = 0, gridY = floor(-40/40) = -1, clamped to (0,0)
-      // (0,0) is p1's own position, excluded from occupied → p1 stays at (0,0)
-      // To target (1,0): gridCenter(1,0) = (60, 20), svgPt = (20, -40)
-      // Need: cx = svgPt.x - offsetX = 20 - 40 = -20, gridX = floor(-20/40) = -1, clamped to 0
-      // Actually let's target (1,1): gridCenter(1,1) = (60, 60), svgPt = (20, 0)
-      // cx = 20 - 40 = -20, gridX = -1 clamped to 0; cy = 0 - 60 = -60, gridY = -2 clamped to 0
-      // Hmm, let's try: svgPt = (100, 160) → cx=60, cy=100 → gridX=1, gridY=2
-      // (1,2) is free, so p1 moves there directly
-      svgRef.current = createSvgMockWithTransform(() => ({ x: 100, y: 160 }));
-      const upEvent = { preventDefault: vi.fn(), pointerId: 1, clientX: 100, clientY: 160 };
+      svgRef.current = {
+        createSVGPoint: () => ({ x: 0, y: 0 }),
+        getScreenCTM: () => null,
+      };
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 0,
+        clientY: 0,
+      };
       act(() => {
         result.current.handlePointerUp(upEvent);
       });
-
-      expect(setMapData).toHaveBeenCalled();
-      const callArg = setMapData.mock.calls[0][0];
-      const updated = callArg(mapData);
-      const player = updated.players.find((p) => p.id === 'p1');
-      // (1,2) is not occupied, so p1 moves there directly
-      expect(player.gridX).toBe(1);
-      expect(player.gridY).toBe(2);
+      expect(result.current.dragging).toBeNull();
+      expect(setMapData).not.toHaveBeenCalled();
     });
 
-    it('should call setRuntimeValue when player moves', () => {
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
+    it('should not call setRuntimeValue when player stays in same position', () => {
+      setRuntimeValueSpy.mockClear();
+      const mockEvent = createMockEvent();
       svgRef.current = defaultSvgMock();
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
       });
-
-      // Move to different position
-      svgRef.current = createSvgMockWithTransform(() => ({ x: 120, y: 160 }));
-      const upEvent = { preventDefault: vi.fn(), pointerId: 1, clientX: 120, clientY: 160 };
+      // Move to same position as default transform (60, 80) which is p1's start
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 60,
+        clientY: 80,
+      };
       act(() => {
         result.current.handlePointerUp(upEvent);
       });
+      expect(setRuntimeValueSpy).not.toHaveBeenCalled();
+    });
 
+    it('should call setRuntimeValue when player moves to a different position', () => {
+      const mockEvent = createMockEvent();
+      svgRef.current = defaultSvgMock();
+      const result = getHook();
+      act(() => {
+        result.current.handlePointerDown(mockEvent, 'p1');
+      });
+      svgRef.current = createSvgMockWithTransform(() => ({
+        x: 120,
+        y: 160,
+      }));
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 120,
+        clientY: 160,
+      };
+      act(() => {
+        result.current.handlePointerUp(upEvent);
+      });
       expect(setRuntimeValueSpy).toHaveBeenCalledWith(
         'Player1',
         'steadyAimMovedThisTurn',
@@ -514,38 +522,107 @@ describe('usePlayerDragging', () => {
     });
 
     it('should use player.id when player.name is missing', () => {
-      mapData = {
+      mapDataHolder.current = {
+        players: [{ id: 'orphan-token', gridX: 0, gridY: 0 }],
+      };
+      const mockEvent = createMockEvent();
+      svgRef.current = defaultSvgMock();
+      const result = getHook();
+      act(() => {
+        result.current.handlePointerDown(mockEvent, 'orphan-token');
+      });
+      svgRef.current = createSvgMockWithTransform(() => ({
+        x: 120,
+        y: 160,
+      }));
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 120,
+        clientY: 160,
+      };
+      act(() => {
+        result.current.handlePointerUp(upEvent);
+      });
+      expect(setRuntimeValueSpy).toHaveBeenCalledWith(
+        'orphan-token',
+        'steadyAimMovedThisTurn',
+        true,
+        campaignName
+      );
+    });
+
+    it('should find nearest unoccupied square when target is occupied', () => {
+      mapDataHolder.current = {
         players: [
-          { id: 'p1', gridX: 0, gridY: 0 },
+          { id: 'p1', name: 'Player1', gridX: 5, gridY: 5 },
+          { id: 'p2', name: 'Player2', gridX: 5, gridY: 6 },
+          { id: 'p3', name: 'Player3', gridX: 6, gridY: 5 },
+          { id: 'p4', name: 'Player4', gridX: 4, gridY: 5 },
+          { id: 'p5', name: 'Player5', gridX: 5, gridY: 4 },
         ],
       };
-
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
+      const mockEvent = createMockEvent();
       svgRef.current = defaultSvgMock();
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
       });
-
-      // Move to different position
-      svgRef.current = createSvgMockWithTransform(() => ({ x: 120, y: 160 }));
-      const upEvent = { preventDefault: vi.fn(), pointerId: 1, clientX: 120, clientY: 160 };
+      // Target (5,5) is p1's own position, excluded from occupiedSquares, so p1 stays
+      svgRef.current = createSvgMockWithTransform(() => ({
+        x: 60,
+        y: 80,
+      }));
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 60,
+        clientY: 80,
+      };
       act(() => {
         result.current.handlePointerUp(upEvent);
       });
+      expect(setMapData).toHaveBeenCalled();
+      const updated = setMapData.mock.calls[0][0](mapDataHolder.current);
+      const player = updated.players.find((p) => p.id === 'p1');
+      expect(player.gridX).toBe(5);
+      expect(player.gridY).toBe(5);
+    });
 
-      expect(setRuntimeValueSpy).toHaveBeenCalledWith(
-        'p1',
-        'steadyAimMovedThisTurn',
-        true,
-        campaignName
-      );
+    it('should move to free square via BFS when target is occupied', () => {
+      mapDataHolder.current = {
+        players: [
+          { id: 'p1', name: 'Player1', gridX: 0, gridY: 0 },
+          { id: 'p2', name: 'Player2', gridX: 1, gridY: 0 },
+          { id: 'p3', name: 'Player3', gridX: 0, gridY: 1 },
+          { id: 'p4', name: 'Player4', gridX: 1, gridY: 1 },
+        ],
+      };
+      const mockEvent = createMockEvent();
+      svgRef.current = defaultSvgMock();
+      const result = getHook();
+      act(() => {
+        result.current.handlePointerDown(mockEvent, 'p1');
+      });
+      // Target (1,2) is free, so p1 moves there directly
+      svgRef.current = createSvgMockWithTransform(() => ({
+        x: 100,
+        y: 160,
+      }));
+      const upEvent = {
+        preventDefault: vi.fn(),
+        pointerId: 1,
+        clientX: 100,
+        clientY: 160,
+      };
+      act(() => {
+        result.current.handlePointerUp(upEvent);
+      });
+      expect(setMapData).toHaveBeenCalled();
+      const updated = setMapData.mock.calls[0][0](mapDataHolder.current);
+      const player = updated.players.find((p) => p.id === 'p1');
+      expect(player.gridX).toBe(1);
+      expect(player.gridY).toBe(2);
     });
   });
 
@@ -553,34 +630,41 @@ describe('usePlayerDragging', () => {
     it('should release pointer capture when dragging', () => {
       const releasePointerCapture = vi.fn();
       const { result } = setupDrag('p1', { releasePointerCapture });
-
       const leaveEvent = { pointerId: 1 };
       act(() => {
         result.current.handlePointerLeave(leaveEvent);
       });
-
       expect(releasePointerCapture).toHaveBeenCalledWith(1);
     });
 
     it('should set dragging to null on pointer leave', () => {
-      const mockEvent = {
-        pointerId: 1,
-        clientX: 100,
-        clientY: 100,
-        stopPropagation: vi.fn(),
-        preventDefault: vi.fn(),
-      };
+      const mockEvent = createMockEvent();
       svgRef.current = defaultSvgMock();
       const result = getHook();
       act(() => {
         result.current.handlePointerDown(mockEvent, 'p1');
       });
-
       const leaveEvent = { pointerId: 1 };
       act(() => {
         result.current.handlePointerLeave(leaveEvent);
       });
+      expect(result.current.dragging).toBeNull();
+    });
 
+    it('should do nothing when not dragging', () => {
+      const result = getHook();
+      act(() => {
+        result.current.handlePointerLeave({ pointerId: 1 });
+      });
+      expect(result.current.dragging).toBeNull();
+    });
+
+    it('should not release pointer capture when svgRef is null', () => {
+      const { result } = setupDrag('p1');
+      svgRef.current = null;
+      act(() => {
+        result.current.handlePointerLeave({ pointerId: 1 });
+      });
       expect(result.current.dragging).toBeNull();
     });
   });

@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
 
@@ -198,6 +199,10 @@ import * as combatData from '../../../../services/encounters/combatData.js';
 import * as diceRoller from '../../../../services/dice/diceRoller.js';
 import * as allySelection from '../../../../hooks/useAllySelection.js';
 import * as automationExpressions from '../../../../services/combat/automation/automationExpressions.js';
+import * as damageRollback from '../../../../services/automation/common/damageRollback.js';
+import * as savePromptService from '../../../../services/combat/conditions/savePromptService.js';
+import * as logService from '../../../../services/ui/logService.js';
+import * as applyDamage from '../../../../services/rules/combat/applyDamage.js';
 
 // ── Test fixtures ──
 
@@ -240,6 +245,14 @@ function getCheckboxByName(name) {
   throw new Error(`Checkbox for "${name}" not found`);
 }
 
+function confirmSelection(targetName) {
+  fireEvent.click(getCheckboxByName(targetName));
+  const confirmBtn = screen.getByRole('button', { name: /Fireball \(\d+\)/ });
+  return act(async () => {
+    fireEvent.click(confirmBtn);
+  });
+}
+
 // ── Tests ──
 
 describe('SaveAttackAoeModal - Damage resolution', () => {
@@ -261,87 +274,47 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
   // ── CreatureSelectionModal confirm path ──
 
   describe('creature selection confirm', () => {
-    it('calls storeSpellLastAttack when confirm is fired', async () => {
-      const { default: MockCSM } = await import('./CreatureSelectionModal.jsx');
-      expect(MockCSM).toBeDefined();
+    it('stores spell attack scope and calls addTargetResult for NPC with failed save', async () => {
+      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
       render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      const { storeSpellLastAttack } = await import('../../../../services/automation/common/damageRollback.js');
-      expect(storeSpellLastAttack).toHaveBeenCalledWith('test-campaign', {
+      await confirmSelection('Goblin A');
+
+      expect(damageRollback.storeSpellLastAttack).toHaveBeenCalledWith('test-campaign', {
         casterName: 'Cleric1',
         spellName: 'Fireball',
         saveType: 'DEX',
         saveDc: 15,
         attackScope: 'aoe',
       });
+
+      expect(damageRollback.addTargetResult).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+        targetName: 'Goblin A',
+      }));
     });
 
-    it('shows results for NPC with failed save', async () => {
+    it('calls applyDamageToTarget for NPC with failed save', async () => {
       diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
       render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      const resultDiv = screen.getByText(/Goblin A/);
-      expect(resultDiv).toBeInTheDocument();
+      await confirmSelection('Goblin A');
+
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
     });
 
-    it('calls applyDamageToTarget when NPC takes damage after failed save', async () => {
-      const { applyDamageToTarget } = await import('../../../../services/rules/combat/applyDamage.js');
+    it('sends save prompt for player target and logs ability_use entry', async () => {
       render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      expect(applyDamageToTarget).toHaveBeenCalled();
-    });
+      await confirmSelection('Player One');
 
-    it('calls sendSavePrompt for player targets', async () => {
-      const { sendSavePrompt } = await import('../../../../services/combat/conditions/savePromptService.js');
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Player One'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      expect(sendSavePrompt).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+      expect(savePromptService.sendSavePrompt).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
         targetName: 'Player One',
         saveType: 'DEX',
         saveDc: 15,
         sourceName: 'Cleric1',
         disadvantage: false,
       }));
-    });
 
-    it('calls addTargetResult for each NPC processed', async () => {
-      const { addTargetResult } = await import('../../../../services/automation/common/damageRollback.js');
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      expect(addTargetResult).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-        targetName: 'Goblin A',
-      }));
-    });
-
-    it('logs ability_use entry on confirm', async () => {
-      const { addEntry } = await import('../../../../services/ui/logService.js');
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      const abilityCalls = addEntry.mock.calls.filter(c => c[0]?.type === 'ability_use' || (c[1] && c[1].type === 'ability_use'));
+      const abilityCalls = logService.addEntry.mock.calls.filter(
+        c => c[0]?.type === 'ability_use' || (c[1] && c[1].type === 'ability_use')
+      );
       expect(abilityCalls.length).toBeGreaterThan(0);
     });
   });
@@ -349,176 +322,97 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
   // ── Results display (summary path) ──
 
   describe('results display (summary path)', () => {
-    it('renders results summary when summary state is set', async () => {
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-      expect(screen.getByText(/Fireball — Results/)).toBeInTheDocument();
-    });
-
     it('renders results summary with target names after NPC resolution', async () => {
       diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
       render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-      expect(screen.getByText(/Fireball — Results/)).toBeInTheDocument();
+      await confirmSelection('Goblin A');
+
+      await waitFor(() => {
+        expect(screen.getByText(/Fireball — Results/)).toBeInTheDocument();
+      }, { timeout: 200 });
+
       expect(screen.getByText(/Goblin A/)).toBeInTheDocument();
     });
 
-    it('shows result text for NPC with successful save (high roll)', async () => {
-      diceRoller.rollExpression.mockReturnValue({ total: 20, rolls: [20], modifier: 0, formula: '1d20' });
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-      // Save roll is random; with dex bonus 2, need roll >= 13 for success (DC 15)
-      // Just verify a result is shown
-      expect(screen.getByText(/Goblin A/)).toBeInTheDocument();
-    });
-
-    it('shows result text when save succeeds with low damage', async () => {
-      diceRoller.rollExpression.mockReturnValue({ total: 1, rolls: [1], modifier: 0, formula: '1d20' });
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-      expect(screen.getByText(/Goblin A/)).toBeInTheDocument();
-    });
-
-    it('renders close button in results summary', async () => {
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-      expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
-    });
-
-    it('calls onClose when close button is clicked in results', async () => {
+    it('renders close button in results summary and calls onClose when clicked', async () => {
       const onClose = vi.fn();
       diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
       render(<SaveAttackAoeModal {...makeProps({ onClose })} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
+      await confirmSelection('Goblin A');
+
+      await waitFor(() => {
+        expect(screen.getByText(/Goblin A/)).toBeInTheDocument();
+      }, { timeout: 200 });
+
       fireEvent.click(screen.getByRole('button', { name: 'Close' }));
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows result text when save roll succeeds (high roll)', async () => {
+      diceRoller.rollExpression.mockReturnValue({ total: 20, rolls: [20], modifier: 0, formula: '1d20' });
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      await confirmSelection('Goblin A');
+
+      await waitFor(() => {
+        expect(screen.getByText(/Goblin A/)).toBeInTheDocument();
+      }, { timeout: 200 });
     });
   });
 
   // ── handleSaveResult (player save path) ──
 
   describe('handleSaveResult', () => {
-    it('sends save-result event for player target and processes it', async () => {
-      const { sendSavePrompt } = await import('../../../../services/combat/conditions/savePromptService.js');
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Player One'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      expect(sendSavePrompt).toHaveBeenCalled();
-      const promptCall = sendSavePrompt.mock.calls[0][1];
+    async function triggerSaveResult(success, extra = {}) {
+      const promptCall = savePromptService.sendSavePrompt.mock.calls[0][1];
       const promptId = promptCall.promptId;
 
       await act(async () => {
         window.dispatchEvent(new CustomEvent('save-result', {
           detail: {
             promptId,
-            success: false,
+            success,
             saveBonus: 4,
             rawDamage: 12,
             total: 16,
             roll: 12,
+            ...extra,
           },
         }));
       });
 
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
+      await waitFor(() => {
+        const playerCalls = damageRollback.addTargetResult.mock.calls.filter(
+          c => c[1] && c[1].targetName === 'Player One'
+        );
+        expect(playerCalls.length).toBeGreaterThan(0);
+      }, { timeout: 200 });
+    }
 
-      const { addTargetResult } = await import('../../../../services/automation/common/damageRollback.js');
-      expect(addTargetResult).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-        targetName: 'Player One',
-        saveResult: 'failure',
-      }));
+    it('records failure when player fails save', async () => {
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      await confirmSelection('Player One');
+      await triggerSaveResult(false);
+
+      const playerCalls = damageRollback.addTargetResult.mock.calls.filter(
+        c => c[1] && c[1].targetName === 'Player One'
+      );
+      expect(playerCalls[0][1].saveResult).toBe('failure');
     });
 
-    it('handles successful player save', async () => {
-      const { sendSavePrompt } = await import('../../../../services/combat/conditions/savePromptService.js');
+    it('records success when player succeeds save with half damage', async () => {
       render(<SaveAttackAoeModal {...makeProps({ dcSuccess: 'half' })} />);
-      fireEvent.click(getCheckboxByName('Player One'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      const promptCall = sendSavePrompt.mock.calls[0][1];
+      await confirmSelection('Player One');
+      await triggerSaveResult(true);
 
-      await act(async () => {
-        window.dispatchEvent(new CustomEvent('save-result', {
-          detail: {
-            promptId: promptCall.promptId,
-            success: true,
-            saveBonus: 4,
-            rawDamage: 12,
-            total: 16,
-            roll: 12,
-          },
-        }));
-      });
-
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-
-      const { addTargetResult } = await import('../../../../services/automation/common/damageRollback.js');
-      expect(addTargetResult).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-        targetName: 'Player One',
-        saveResult: 'success',
-      }));
+      const playerCalls = damageRollback.addTargetResult.mock.calls.filter(
+        c => c[1] && c[1].targetName === 'Player One'
+      );
+      expect(playerCalls[0][1].saveResult).toBe('success');
     });
 
     it('ignores save-result with unknown promptId', async () => {
       render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Player One'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
+      await confirmSelection('Player One');
 
       await act(async () => {
         window.dispatchEvent(new CustomEvent('save-result', {
@@ -533,29 +427,38 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
         }));
       });
 
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-
-      const { addTargetResult } = await import('../../../../services/automation/common/damageRollback.js');
-      const calls = addTargetResult.mock.calls.filter(c => c[1] && c[1].targetName === 'Player One');
-      expect(calls.length).toBe(0);
+      await waitFor(() => {
+        const playerCalls = damageRollback.addTargetResult.mock.calls.filter(
+          c => c[1] && c[1].targetName === 'Player One'
+        );
+        expect(playerCalls.length).toBe(0);
+      }, { timeout: 200 });
     });
 
     it('ignores save-result with no detail', async () => {
       render(<SaveAttackAoeModal {...makeProps()} />);
+
       await act(async () => {
         window.dispatchEvent(new CustomEvent('save-result', { detail: null }));
       });
-      expect(true).toBe(true);
+
+      await waitFor(() => {
+        const calls = damageRollback.addTargetResult.mock.calls;
+        expect(calls.length).toBe(0);
+      }, { timeout: 200 });
     });
 
-    it('ignores save-result with no promptId in detail', async () => {
+    it('ignores save-result with empty detail (no promptId)', async () => {
       render(<SaveAttackAoeModal {...makeProps()} />);
+
       await act(async () => {
         window.dispatchEvent(new CustomEvent('save-result', { detail: {} }));
       });
-      expect(true).toBe(true);
+
+      await waitFor(() => {
+        const calls = damageRollback.addTargetResult.mock.calls;
+        expect(calls.length).toBe(0);
+      }, { timeout: 200 });
     });
   });
 });

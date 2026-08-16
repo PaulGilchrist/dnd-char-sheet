@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
@@ -13,7 +14,7 @@ vi.mock('../../../../services/combat/automation/automationExpressions.js', () =>
 }));
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn(() => null),
+  getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
 }));
 
@@ -229,6 +230,17 @@ function makeProps(overrides) {
   return { ...baseProps, ...overrides };
 }
 
+function getCheckboxByName(name) {
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+  for (const cb of checkboxes) {
+    const label = cb.closest('label');
+    if (label && label.textContent.includes(name)) {
+      return cb;
+    }
+  }
+  return null;
+}
+
 // ── Tests ──
 
 describe('SaveAttackAoeModal - Blocking effects', () => {
@@ -247,119 +259,122 @@ describe('SaveAttackAoeModal - Blocking effects', () => {
     automationExpressions.resolveScaling.mockReturnValue({});
   });
 
-  describe('target blocking effects', () => {
-    it('renders modal when forcecage effect is present', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'forcecage', target: 'Cleric1' },
-      ]);
+  describe('no blocking effects', () => {
+    it('renders all targets when no targetEffects are present', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue(null);
       render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
-    });
-
-    it('renders modal when maze effect is present', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'maze', target: 'Cleric1' },
-      ]);
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
-    });
-
-    it('renders modal when banishment effect is present', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'banishment', target: 'Cleric1' },
-      ]);
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
-    });
-
-    it('renders modal when imprisonment effect is present', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'imprisonment', target: 'Cleric1' },
-      ]);
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+      expect(getCheckboxByName('Goblin A')).toBeInTheDocument();
+      expect(getCheckboxByName('Goblin B')).toBeInTheDocument();
+      expect(getCheckboxByName('Player One')).toBeInTheDocument();
     });
   });
 
-  describe('forcecage both trapped', () => {
-    it('filters out targets when both attacker and target are forcecaged by different sources', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'forcecage', target: 'Cleric1', source: 'Wizard1' },
-        { effect: 'forcecage', target: 'Goblin A', source: 'Wizard2' },
-      ]);
+  describe('target-only blocking', () => {
+    it('filters out target when only the target has a blocking effect', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((scope, key) => {
+        if (scope === 'campaign' && key === 'targetEffects') {
+          return [{ effect: 'forcecage', target: 'Goblin A', source: 'Wizard1' }];
+        }
+        return null;
+      });
       render(<SaveAttackAoeModal {...makeProps()} />);
-      // Goblin A should be filtered out because attacker is forcecaged by Wizard1
-      // but Goblin A is forcecaged by a different source (Wizard2)
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(getCheckboxByName('Goblin A')).toBeNull();
+      expect(getCheckboxByName('Goblin B')).toBeInTheDocument();
+      expect(getCheckboxByName('Player One')).toBeInTheDocument();
     });
 
-    it('allows target when both attacker and target are forcecaged by same source', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'forcecage', target: 'Cleric1', source: 'Wizard1' },
-        { effect: 'forcecage', target: 'Goblin A', source: 'Wizard1' },
-      ]);
+    it('filters out all targets when only the attacker has a blocking effect', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((scope, key) => {
+        if (scope === 'campaign' && key === 'targetEffects') {
+          return [{ effect: 'forcecage', target: 'Cleric1', source: 'Wizard1' }];
+        }
+        return null;
+      });
       render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-    });
-  });
-
-  describe('maze both trapped', () => {
-    it('filters out targets when both attacker and target are mazed by different sources', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'maze', target: 'Cleric1', source: 'Wizard1' },
-        { effect: 'maze', target: 'Goblin A', source: 'Wizard2' },
-      ]);
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-    });
-
-    it('allows target when both attacker and target are mazed by same source', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'maze', target: 'Cleric1', source: 'Wizard1' },
-        { effect: 'maze', target: 'Goblin A', source: 'Wizard1' },
-      ]);
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(getCheckboxByName('Goblin A')).toBeNull();
+      expect(getCheckboxByName('Goblin B')).toBeNull();
+      expect(getCheckboxByName('Player One')).toBeNull();
     });
   });
 
-  describe('banishment both trapped', () => {
-    it('filters out targets when both attacker and target are banished by different sources', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'banishment', target: 'Cleric1', source: 'Wizard1' },
-        { effect: 'banishment', target: 'Goblin A', source: 'Wizard2' },
-      ]);
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-    });
+  describe('blocking effect types', () => {
+    const blockingEffects = ['forcecage', 'maze', 'banishment', 'imprisonment'];
 
-    it('allows target when both attacker and target are banished by same source', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'banishment', target: 'Cleric1', source: 'Wizard1' },
-        { effect: 'banishment', target: 'Goblin A', source: 'Wizard1' },
-      ]);
+    for (const effect of blockingEffects) {
+      it(`renders modal when ${effect} effect is present on attacker`, () => {
+        useRuntimeState.getRuntimeValue.mockImplementation((scope, key) => {
+          if (scope === 'campaign' && key === 'targetEffects') {
+            return [{ effect, target: 'Cleric1', source: 'Wizard1' }];
+          }
+          return null;
+        });
+        render(<SaveAttackAoeModal {...makeProps()} />);
+        expect(screen.getByText('Fireball')).toBeInTheDocument();
+      });
+    }
+  });
+
+  describe('both attacker and target blocking - same source', () => {
+    it('allows target when both attacker and target share the same blocking effect source', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((scope, key) => {
+        if (scope === 'campaign' && key === 'targetEffects') {
+          return [
+            { effect: 'forcecage', target: 'Cleric1', source: 'Wizard1' },
+            { effect: 'forcecage', target: 'Goblin A', source: 'Wizard1' },
+          ];
+        }
+        return null;
+      });
       render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(getCheckboxByName('Goblin A')).toBeInTheDocument();
     });
   });
 
-  describe('imprisonment both trapped', () => {
-    it('filters out targets when both attacker and target are imprisoned by different sources', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'imprisonment', target: 'Cleric1', source: 'Wizard1' },
-        { effect: 'imprisonment', target: 'Goblin A', source: 'Wizard2' },
-      ]);
+  describe('both attacker and target blocking - different sources', () => {
+    it('filters out all targets when attacker has blocking effect and targets have different sources', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((scope, key) => {
+        if (scope === 'campaign' && key === 'targetEffects') {
+          return [
+            { effect: 'forcecage', target: 'Cleric1', source: 'Wizard1' },
+            { effect: 'forcecage', target: 'Goblin A', source: 'Wizard2' },
+          ];
+        }
+        return null;
+      });
       render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(getCheckboxByName('Goblin A')).toBeNull();
+      expect(getCheckboxByName('Goblin B')).toBeNull();
+      expect(getCheckboxByName('Player One')).toBeNull();
+    });
+  });
+
+  describe('multiple blocking effects', () => {
+    it('filters target when attacker has forcecage and target has maze from different sources', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((scope, key) => {
+        if (scope === 'campaign' && key === 'targetEffects') {
+          return [
+            { effect: 'forcecage', target: 'Cleric1', source: 'Wizard1' },
+            { effect: 'maze', target: 'Goblin A', source: 'Wizard2' },
+          ];
+        }
+        return null;
+      });
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(getCheckboxByName('Goblin A')).toBeNull();
     });
 
-    it('allows target when both attacker and target are imprisoned by same source', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { effect: 'imprisonment', target: 'Cleric1', source: 'Wizard1' },
-        { effect: 'imprisonment', target: 'Goblin A', source: 'Wizard1' },
-      ]);
+    it('filters target when attacker has maze and target has forcecage from different sources', () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((scope, key) => {
+        if (scope === 'campaign' && key === 'targetEffects') {
+          return [
+            { effect: 'maze', target: 'Cleric1', source: 'Wizard1' },
+            { effect: 'forcecage', target: 'Goblin A', source: 'Wizard2' },
+          ];
+        }
+        return null;
+      });
       render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(getCheckboxByName('Goblin A')).toBeNull();
     });
   });
 });

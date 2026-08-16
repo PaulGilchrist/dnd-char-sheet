@@ -1,28 +1,9 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import POIContextMenu from './POIContextMenu.jsx';
 
-vi.mock('../../config/outdoorConfig.js', () => ({
-    HEX_SIZE: 30,
-}));
-
-vi.mock('../../services/maps/hexMapUtils.js', () => ({
-    hexToPixel: vi.fn((q, r, size) => ({
-        x: size * Math.sqrt(3) * (q + r / 2),
-        y: size * 3 / 2 * r,
-    })),
-}));
-
-vi.mock('../../services/maps/mapsService.js', () => ({
-    formatMapName: vi.fn((name) => {
-        if (!name) return '';
-        return name
-            .replace(/\.json$/i, '')
-            .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-    }),
-}));
+const BASE_POI = { id: 'poi-1', type: 'city', q: 0, r: 0, label: 'City A', visible: true, linkedMap: null };
 
 describe('POIContextMenu', () => {
     let props;
@@ -30,9 +11,7 @@ describe('POIContextMenu', () => {
     beforeEach(() => {
         props = {
             selectedPoi: { id: 'poi-1', q: 0, r: 0 },
-            pois: [
-                { id: 'poi-1', type: 'city', q: 0, r: 0, label: 'City A', visible: true, linkedMap: null },
-            ],
+            pois: [BASE_POI],
             onToggleVisibility: vi.fn(),
             onDelete: vi.fn(),
             onRename: vi.fn(),
@@ -52,155 +31,231 @@ describe('POIContextMenu', () => {
     }
 
     describe('rendering', () => {
-        it('should return null when no selectedPoi', () => {
+        it('renders nothing when no POI is selected', () => {
             const { container } = renderMenu({ selectedPoi: null });
             expect(container.querySelector('.poi-context-menu')).not.toBeInTheDocument();
         });
 
-        it('should return null when selectedPoi is not found in pois array', () => {
+        it('renders nothing when the selected POI is not in the pois list', () => {
             const { container } = renderMenu({ pois: [] });
             expect(container.querySelector('.poi-context-menu')).not.toBeInTheDocument();
         });
 
-        it('should render the menu container when selectedPoi exists', () => {
+        it('renders the menu when the selected POI exists', () => {
             const { container } = renderMenu();
             expect(container.querySelector('.poi-context-menu')).toBeInTheDocument();
         });
-
-        it('should not render Remove Roads when no roads connected', () => {
-            renderMenu({ roads: [] });
-            expect(screen.queryByText(/Remove Roads/)).not.toBeInTheDocument();
-        });
     });
 
-    describe('menu options', () => {
-        it('should render correct options when POI has no linked map and no roads', () => {
-            renderMenu({ pois: [{ ...props.pois[0], linkedMap: null }], roads: [] });
-            expect(screen.getByText('Hide')).toBeInTheDocument();
-            expect(screen.getByText('Rename')).toBeInTheDocument();
-            expect(screen.getByText('Link to Map...')).toBeInTheDocument();
-            expect(screen.getByText('Delete')).toBeInTheDocument();
-            expect(screen.queryByText(/Remove Roads/)).not.toBeInTheDocument();
-        });
+    describe('contextual options', () => {
+        const optionCases = [
+            {
+                name: 'a POI with no linked map and no roads',
+                pois: [BASE_POI],
+                roads: [],
+                present: ['Hide', 'Rename', 'Link to Map...', 'Delete'],
+                absent: [/Unlink Map/, /Remove Roads/],
+            },
+            {
+                name: 'a POI with a linked map but no roads',
+                pois: [{ ...BASE_POI, linkedMap: 'dungeon-map.json' }],
+                roads: [],
+                present: ['Hide', 'Rename', 'Unlink Map (Dungeon Map)', 'Delete'],
+                absent: ['Link to Map...', /Remove Roads/],
+            },
+            {
+                name: 'a POI with roads but no linked map',
+                pois: [BASE_POI],
+                roads: [{ fromPoiId: 'poi-1', toPoiId: 'poi-2' }],
+                present: ['Hide', 'Rename', 'Link to Map...', 'Remove Roads (1)', 'Delete'],
+                absent: [/Unlink Map/],
+            },
+            {
+                name: 'a POI with both a linked map and roads',
+                pois: [{ ...BASE_POI, linkedMap: 'map.json' }],
+                roads: [{ fromPoiId: 'poi-1', toPoiId: 'poi-2' }],
+                present: ['Hide', 'Rename', 'Unlink Map (Map)', 'Remove Roads (1)', 'Delete'],
+                absent: ['Link to Map...'],
+            },
+        ];
 
-        it('should render correct options when POI has a linked map but no roads', () => {
-            renderMenu({ pois: [{ ...props.pois[0], linkedMap: 'dungeon-map.json' }], roads: [] });
-            expect(screen.getByText('Hide')).toBeInTheDocument();
-            expect(screen.getByText('Rename')).toBeInTheDocument();
-            expect(screen.getByText(/Unlink Map/)).toBeInTheDocument();
-            expect(screen.getByText('Delete')).toBeInTheDocument();
-            expect(screen.queryByText(/Remove Roads/)).not.toBeInTheDocument();
-        });
+        it.each(optionCases)(
+            'renders the correct options for $name',
+            ({ pois, roads, present, absent }) => {
+                renderMenu({ pois, roads });
+                present.forEach((option) => expect(screen.getByText(option)).toBeInTheDocument());
+                absent.forEach((option) => expect(screen.queryByText(option)).not.toBeInTheDocument());
+            }
+        );
 
-        it('should render correct options when POI has roads but no linked map', () => {
-            const roads = [{ fromPoiId: 'poi-1', toPoiId: 'poi-2' }];
-            renderMenu({ pois: [{ ...props.pois[0], linkedMap: null }], roads });
-            expect(screen.getByText('Hide')).toBeInTheDocument();
-            expect(screen.getByText('Rename')).toBeInTheDocument();
-            expect(screen.getByText('Link to Map...')).toBeInTheDocument();
+        it('counts roads that terminate at the POI as connected', () => {
+            renderMenu({ roads: [{ fromPoiId: 'poi-2', toPoiId: 'poi-1' }] });
             expect(screen.getByText('Remove Roads (1)')).toBeInTheDocument();
-            expect(screen.getByText('Delete')).toBeInTheDocument();
         });
 
-        it('should render correct options when POI has both linked map and roads', () => {
-            const roads = [{ fromPoiId: 'poi-1', toPoiId: 'poi-2' }];
-            renderMenu({ pois: [{ ...props.pois[0], linkedMap: 'map.json' }], roads });
-            expect(screen.getByText('Hide')).toBeInTheDocument();
-            expect(screen.getByText('Rename')).toBeInTheDocument();
-            expect(screen.getByText(/Unlink Map/)).toBeInTheDocument();
-            expect(screen.getByText('Remove Roads (1)')).toBeInTheDocument();
-            expect(screen.getByText('Delete')).toBeInTheDocument();
-        });
-
-        it('should render Remove Roads with correct count', () => {
-            const roads = [
-                { fromPoiId: 'poi-1', toPoiId: 'poi-2' },
-                { fromPoiId: 'poi-3', toPoiId: 'poi-1' },
-            ];
-            renderMenu({ roads });
+        it('shows the total count when multiple roads touch the POI', () => {
+            renderMenu({
+                roads: [
+                    { fromPoiId: 'poi-1', toPoiId: 'poi-2' },
+                    { fromPoiId: 'poi-3', toPoiId: 'poi-1' },
+                ],
+            });
             expect(screen.getByText('Remove Roads (2)')).toBeInTheDocument();
         });
 
-        it('should render Show when POI is hidden', () => {
-            renderMenu({ pois: [{ ...props.pois[0], visible: false }] });
+        it('labels the visibility option Show for a hidden POI', () => {
+            renderMenu({ pois: [{ ...BASE_POI, visible: false }] });
             expect(screen.getByText('Show')).toBeInTheDocument();
+            expect(screen.queryByText('Hide')).not.toBeInTheDocument();
         });
     });
 
     describe('action callbacks', () => {
-        it('should toggle visibility and close when Hide/Show is clicked', () => {
-            renderMenu({ pois: [{ ...props.pois[0], visible: true }] });
+        it('toggles a visible POI to hidden and closes on Hide', () => {
+            renderMenu();
             fireEvent.click(screen.getByText('Hide'));
             expect(props.onToggleVisibility).toHaveBeenCalledWith('poi-1');
             expect(props.onClose).toHaveBeenCalled();
         });
 
-        it('should call setShowRename when Rename is clicked', () => {
+        it('toggles a hidden POI back to visible and closes on Show', () => {
+            renderMenu({ pois: [{ ...BASE_POI, visible: false }] });
+            fireEvent.click(screen.getByText('Show'));
+            expect(props.onToggleVisibility).toHaveBeenCalledWith('poi-1');
+            expect(props.onClose).toHaveBeenCalled();
+        });
+
+        it('opens the rename input via setShowRename when Rename is clicked', () => {
             renderMenu();
             fireEvent.click(screen.getByText('Rename'));
             expect(props.setShowRename).toHaveBeenCalledWith('poi-1');
         });
 
-        it('should delete and close when Delete is clicked', () => {
+        it('deletes the POI and closes on Delete', () => {
             renderMenu();
             fireEvent.click(screen.getByText('Delete'));
             expect(props.onDelete).toHaveBeenCalledWith('poi-1');
             expect(props.onClose).toHaveBeenCalled();
         });
 
-        it('should unlink map and close when Unlink Map is clicked', () => {
-            renderMenu({ pois: [{ ...props.pois[0], linkedMap: 'dungeon-map.json' }] });
+        it('unlinks the map and closes on Unlink Map', () => {
+            renderMenu({ pois: [{ ...BASE_POI, linkedMap: 'dungeon-map.json' }] });
             fireEvent.click(screen.getByText(/Unlink Map/));
             expect(props.onUnlinkMap).toHaveBeenCalledWith('poi-1');
             expect(props.onClose).toHaveBeenCalled();
         });
 
-        it('should remove roads and close when Remove Roads is clicked', () => {
-            const roads = [{ fromPoiId: 'poi-1', toPoiId: 'poi-2' }];
-            renderMenu({ roads });
+        it('removes connected roads and closes on Remove Roads', () => {
+            renderMenu({ roads: [{ fromPoiId: 'poi-1', toPoiId: 'poi-2' }] });
             fireEvent.click(screen.getByText('Remove Roads (1)'));
             expect(props.onRemoveRoads).toHaveBeenCalledWith('poi-1');
             expect(props.onClose).toHaveBeenCalled();
         });
 
-        it('should close when close button is clicked', () => {
+        it('closes the menu when the close button is clicked', () => {
             renderMenu();
-            fireEvent.click(document.querySelector('text.menu-close'));
+            fireEvent.click(screen.getByText('✕'));
             expect(props.onClose).toHaveBeenCalled();
+        });
+
+        it('does not let clicks or pointer events inside the menu bubble to the map beneath it', () => {
+            const mapClick = vi.fn();
+            const mapPointerDown = vi.fn();
+            render(
+                <svg onClick={mapClick} onPointerDown={mapPointerDown}>
+                    <POIContextMenu {...props} />
+                </svg>
+            );
+            fireEvent.pointerDown(screen.getByText('Hide'));
+            fireEvent.click(screen.getByText('Hide'));
+            expect(props.onToggleVisibility).toHaveBeenCalledWith('poi-1');
+            expect(mapPointerDown).not.toHaveBeenCalled();
+            expect(mapClick).not.toHaveBeenCalled();
         });
     });
 
     describe('link picker', () => {
-        it('should call onLinkMap and onClose when a map is selected', () => {
-            const indoorMaps = ['dungeon-map.json'];
-            renderMenu({ indoorMaps, pois: [{ ...props.pois[0], linkedMap: null }] });
+        it('links the selected map and closes when a map is chosen', () => {
+            renderMenu({ indoorMaps: ['dungeon-map.json'], pois: [BASE_POI] });
             fireEvent.click(screen.getByText('Link to Map...'));
             fireEvent.click(screen.getByText('Dungeon Map'));
             expect(props.onLinkMap).toHaveBeenCalledWith('poi-1', 'dungeon-map.json');
             expect(props.onClose).toHaveBeenCalled();
         });
+
+        it('shows a hint when there are no indoor maps to link', () => {
+            renderMenu({ indoorMaps: [], pois: [BASE_POI] });
+            fireEvent.click(screen.getByText('Link to Map...'));
+            expect(screen.getByText('No indoor maps available')).toBeInTheDocument();
+        });
+
+        it('shows at most six maps in the picker', () => {
+            const indoorMaps = Array.from({ length: 8 }, (_, i) => `map-0${i + 1}.json`);
+            renderMenu({ indoorMaps, pois: [BASE_POI] });
+            fireEvent.click(screen.getByText('Link to Map...'));
+            for (let i = 1; i <= 6; i += 1) {
+                expect(screen.getByText(`Map 0${i}`)).toBeInTheDocument();
+            }
+            expect(screen.queryByText('Map 07')).not.toBeInTheDocument();
+            expect(screen.queryByText('Map 08')).not.toBeInTheDocument();
+        });
     });
 
     describe('rename input', () => {
-        it('should show rename input when showRename matches selectedPoi.id', () => {
+        it('shows an input pre-filled with the POI label when showRename matches', () => {
             renderMenu({ showRename: 'poi-1' });
-            const input = document.querySelector('.context-menu-input');
-            expect(input).toBeInTheDocument();
-            expect(input.value).toBe('City A');
+            expect(screen.getByRole('textbox')).toHaveValue('City A');
         });
 
-        it('should call onRename and onClose on Enter key or blur', () => {
+        it('does not show the input when showRename targets another POI', () => {
+            renderMenu({ showRename: 'other-poi' });
+            expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+        });
+
+        it('defaults to an empty value when the POI has no label', () => {
+            renderMenu({ showRename: 'poi-1', pois: [{ ...BASE_POI, label: '' }] });
+            expect(screen.getByRole('textbox')).toHaveValue('');
+        });
+
+        it('commits the entered name and closes on Enter', () => {
             renderMenu({ showRename: 'poi-1' });
-            const input = document.querySelector('.context-menu-input');
+            const input = screen.getByRole('textbox');
+            fireEvent.change(input, { target: { value: 'Northern Bastion' } });
             fireEvent.keyDown(input, { key: 'Enter' });
-            expect(props.onRename).toHaveBeenCalledWith('poi-1', 'City A');
+            expect(props.onRename).toHaveBeenCalledWith('poi-1', 'Northern Bastion');
             expect(props.onClose).toHaveBeenCalled();
         });
 
-        it('should use POI label as input default value', () => {
-            renderMenu({ showRename: 'poi-1', pois: [{ ...props.pois[0], label: 'Custom Label' }] });
-            const input = document.querySelector('.context-menu-input');
-            expect(input.value).toBe('Custom Label');
+        it('commits the entered name and closes on blur', () => {
+            renderMenu({ showRename: 'poi-1' });
+            const input = screen.getByRole('textbox');
+            fireEvent.change(input, { target: { value: 'Northern Bastion' } });
+            fireEvent.blur(input);
+            expect(props.onRename).toHaveBeenCalledWith('poi-1', 'Northern Bastion');
+            expect(props.onClose).toHaveBeenCalled();
+        });
+    });
+
+    describe('positioning', () => {
+        it('places the menu next to the selected POI hex', () => {
+            const { container } = renderMenu();
+            const rect = container.querySelector('.poi-context-menu rect');
+            expect(rect).toHaveAttribute('x', '10');
+            expect(rect).toHaveAttribute('y', '10');
+        });
+
+        it('keeps the natural offset when the menu already fits inside the viewport', () => {
+            const { container } = renderMenu({ viewPortBounds: { left: 0, top: 0, right: 1000, bottom: 1000 } });
+            const rect = container.querySelector('.poi-context-menu rect');
+            expect(rect).toHaveAttribute('x', '10');
+            expect(rect).toHaveAttribute('y', '10');
+        });
+
+        it('clamps the menu into the viewport when it would overflow', () => {
+            const { container } = renderMenu({ viewPortBounds: { left: 0, top: 0, right: 50, bottom: 50 } });
+            const rect = container.querySelector('.poi-context-menu rect');
+            expect(rect).toHaveAttribute('x', '4');
+            expect(rect).toHaveAttribute('y', '4');
         });
     });
 });

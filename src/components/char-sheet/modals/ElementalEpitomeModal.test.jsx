@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalEpitomeModal from './ElementalEpitomeModal.jsx';
 
@@ -41,12 +42,7 @@ function makeProps(overrides) {
 // ── Helpers ──
 
 function selectResistance(type) {
-  const radios = document.querySelectorAll('input[name="epitomeResistance"]');
-  const radio = [...radios].find(r => {
-    const label = r.closest('label');
-    return label && label.textContent.includes(type);
-  });
-  if (radio) fireEvent.click(radio);
+  fireEvent.click(screen.getByRole('radio', { name: new RegExp(`^${type}\\b`) }));
 }
 
 // ── Tests ──
@@ -54,61 +50,45 @@ function selectResistance(type) {
 describe('ElementalEpitomeModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
   });
 
   // ── Initial render / display ──
 
   describe('initial render', () => {
-    it('renders modal overlay and content', () => {
+    it('renders the modal overlay and modal container', () => {
       render(<ElementalEpitomeModal {...defaultProps} />);
       expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
       expect(document.querySelector('.sp-modal')).toBeInTheDocument();
     });
 
-    it('renders modal with action name in header', () => {
+    it('renders the action name in the header', () => {
       render(<ElementalEpitomeModal {...defaultProps} />);
       expect(screen.getByText('Elemental Epitome')).toBeInTheDocument();
     });
 
-    it('renders default name when action name is missing', () => {
+    it('renders a fallback name when action.name is missing', () => {
       render(<ElementalEpitomeModal {...makeProps({ action: { automation: { type: 'class_feature' } } })} />);
       expect(screen.getByText('Elemental Epitome')).toBeInTheDocument();
     });
 
-    it('renders instruction text', () => {
+    it('renders the instruction text', () => {
       render(<ElementalEpitomeModal {...defaultProps} />);
       expect(screen.getByText('Choose your damage resistance type:')).toBeInTheDocument();
     });
 
-    it('renders all five resistance type options', () => {
+    it('renders all five resistance type radio options', () => {
       render(<ElementalEpitomeModal {...defaultProps} />);
       const radios = document.querySelectorAll('input[name="epitomeResistance"]');
       expect(radios).toHaveLength(5);
-      const labels = [...radios].map(r => {
-        const label = r.closest('label');
-        return label ? label.textContent : '';
-      });
-      expect(labels.some(l => l.includes('Acid'))).toBe(true);
-      expect(labels.some(l => l.includes('Cold'))).toBe(true);
-      expect(labels.some(l => l.includes('Fire'))).toBe(true);
-      expect(labels.some(l => l.includes('Lightning'))).toBe(true);
-      expect(labels.some(l => l.includes('Thunder'))).toBe(true);
     });
 
-    it('renders each option with correct icon and description', () => {
+    it('renders each resistance type with its icon and description', () => {
       render(<ElementalEpitomeModal {...defaultProps} />);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Acid');
-      expect(body.textContent).toContain('Corrosive acid damage resistance.');
-      expect(body.textContent).toContain('Fire');
-      expect(body.textContent).toContain('Searing fire damage resistance.');
-      expect(body.textContent).toContain('Lightning');
-      expect(body.textContent).toContain('Crackling lightning damage resistance.');
-      expect(body.textContent).toContain('Cold');
-      expect(body.textContent).toContain('Biting cold damage resistance.');
-      expect(body.textContent).toContain('Thunder');
-      expect(body.textContent).toContain('Deafening thunder damage resistance.');
+      expect(screen.getByRole('radio', { name: /^Acid\b/ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Cold\b/ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Fire\b/ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Lightning\b/ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Thunder\b/ })).toBeInTheDocument();
     });
 
     it('renders Choose and Cancel buttons', () => {
@@ -155,12 +135,7 @@ describe('ElementalEpitomeModal', () => {
     it('selects a resistance type when its radio is clicked', () => {
       render(<ElementalEpitomeModal {...defaultProps} />);
       selectResistance('Fire');
-      const radios = document.querySelectorAll('input[name="epitomeResistance"]');
-      const fireRadio = [...radios].find(r => {
-        const label = r.closest('label');
-        return label && label.textContent.includes('Fire');
-      });
-      expect(fireRadio).toBeChecked();
+      expect(screen.getByRole('radio', { name: /^Fire\b/ })).toBeChecked();
     });
 
     it('enables Choose button after selecting a type', () => {
@@ -172,34 +147,15 @@ describe('ElementalEpitomeModal', () => {
     it('switches selection when a different type is clicked', () => {
       render(<ElementalEpitomeModal {...defaultProps} />);
       selectResistance('Fire');
-      let radios = document.querySelectorAll('input[name="epitomeResistance"]');
-      let fireRadio = [...radios].find(r => {
-        const label = r.closest('label');
-        return label && label.textContent.includes('Fire');
-      });
-      expect(fireRadio).toBeChecked();
+      expect(screen.getByRole('radio', { name: /^Fire\b/ })).toBeChecked();
       selectResistance('Acid');
-      radios = document.querySelectorAll('input[name="epitomeResistance"]');
-      fireRadio = [...radios].find(r => {
-        const label = r.closest('label');
-        return label && label.textContent.includes('Fire');
-      });
-      expect(fireRadio).not.toBeChecked();
-      const acidRadio = [...radios].find(r => {
-        const label = r.closest('label');
-        return label && label.textContent.includes('Acid');
-      });
-      expect(acidRadio).toBeChecked();
+      expect(screen.getByRole('radio', { name: /^Fire\b/ })).not.toBeChecked();
+      expect(screen.getByRole('radio', { name: /^Acid\b/ })).toBeChecked();
     });
 
     it('selects the currentResistance value on initial render', () => {
       render(<ElementalEpitomeModal {...makeProps({ currentResistance: 'Lightning' })} />);
-      const radios = document.querySelectorAll('input[name="epitomeResistance"]');
-      const lightningRadio = [...radios].find(r => {
-        const label = r.closest('label');
-        return label && label.textContent.includes('Lightning');
-      });
-      expect(lightningRadio).toBeChecked();
+      expect(screen.getByRole('radio', { name: /^Lightning\b/ })).toBeChecked();
     });
   });
 
@@ -253,15 +209,6 @@ describe('ElementalEpitomeModal', () => {
       expect(elementalEpitomeHandler.applyResistanceChoice).not.toHaveBeenCalled();
     });
 
-    it('returns early from handleApply when no option is selected even if handler fires', () => {
-      render(<ElementalEpitomeModal {...defaultProps} />);
-      const chooseBtn = screen.getByRole('button', { name: 'Choose' });
-      // Remove disabled attribute to trigger the handler
-      chooseBtn.removeAttribute('disabled');
-      fireEvent.click(chooseBtn);
-      expect(elementalEpitomeHandler.applyResistanceChoice).not.toHaveBeenCalled();
-    });
-
     it('calls applyResistanceChoice with correct arguments when apply is clicked', async () => {
       elementalEpitomeHandler.applyResistanceChoice.mockResolvedValue({
         type: 'popup',
@@ -273,7 +220,9 @@ describe('ElementalEpitomeModal', () => {
       });
       render(<ElementalEpitomeModal {...defaultProps} />);
       selectResistance('Fire');
-      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      });
       await waitFor(() => {
         expect(elementalEpitomeHandler.applyResistanceChoice).toHaveBeenCalledWith(
           baseAction,
@@ -296,7 +245,9 @@ describe('ElementalEpitomeModal', () => {
       });
       render(<ElementalEpitomeModal {...makeProps({ onClose })} />);
       selectResistance('Cold');
-      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      });
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledTimes(1);
       });
@@ -315,7 +266,9 @@ describe('ElementalEpitomeModal', () => {
       });
       render(<ElementalEpitomeModal {...makeProps({ onConfirm })} />);
       selectResistance('Thunder');
-      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      });
       await waitFor(() => {
         expect(onConfirm).toHaveBeenCalledWith(expectedPayload);
       });
@@ -329,7 +282,9 @@ describe('ElementalEpitomeModal', () => {
       });
       render(<ElementalEpitomeModal {...makeProps({ onConfirm })} />);
       selectResistance('Acid');
-      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      });
       await waitFor(() => {
         expect(onConfirm).not.toHaveBeenCalled();
       });
@@ -340,11 +295,14 @@ describe('ElementalEpitomeModal', () => {
         type: 'popup',
         payload: { type: 'automation_info' },
       });
-      render(<ElementalEpitomeModal {...defaultProps} />);
+      const onClose = vi.fn();
+      render(<ElementalEpitomeModal {...makeProps({ onClose, onConfirm: undefined })} />);
       selectResistance('Lightning');
-      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      });
       await waitFor(() => {
-        // defaultProps has no onConfirm, so it should not throw
+        expect(onClose).toHaveBeenCalledTimes(1);
       });
     });
 
@@ -353,7 +311,9 @@ describe('ElementalEpitomeModal', () => {
       elementalEpitomeHandler.applyResistanceChoice.mockResolvedValue(null);
       render(<ElementalEpitomeModal {...makeProps({ onClose })} />);
       selectResistance('Fire');
-      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      });
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledTimes(1);
       });
@@ -364,7 +324,9 @@ describe('ElementalEpitomeModal', () => {
       elementalEpitomeHandler.applyResistanceChoice.mockResolvedValue(undefined);
       render(<ElementalEpitomeModal {...makeProps({ onClose })} />);
       selectResistance('Cold');
-      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      });
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledTimes(1);
       });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
@@ -51,29 +52,30 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
   describe('initial filtering', () => {
     it('excludes the caster when includeCaster is false', () => {
       getRuntimeValue.mockReturnValue([]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        const list = ctx.eligibleTargets;
-        return <div>{list.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      const targetNames = ctx.eligibleTargets.map(t => t.name);
+      const targetNames = capturedCtx.eligibleTargets.map(t => t.name);
       expect(targetNames).not.toContain('Wizard1');
+      expect(targetNames).toContain('Goblin');
     });
 
     it('includes the caster in eligible targets when includeCaster is true', () => {
       getRuntimeValue.mockReturnValue([]);
       const wizardCreature = { name: 'Wizard1', type: 'player', currentHp: 30, maxHp: 30, saveBonuses: { int: 4 } };
       const combatSummary = { creatures: [...baseCombatSummary.creatures, wizardCreature] };
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} combatSummary={combatSummary} includeCaster={true} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      const targetNames = ctx.eligibleTargets.map(t => t.name);
+      const targetNames = capturedCtx.eligibleTargets.map(t => t.name);
       expect(targetNames).toContain('Wizard1');
+      expect(targetNames).toContain('Goblin');
     });
 
     it('filters to undead only when turnUndead is true', () => {
@@ -90,16 +92,14 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
           { name: 'PlayerAlly', type: 'Undead', currentHp: 30, maxHp: 30, saveBonuses: { cha: 1 } },
         ],
       };
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} combatSummary={combatSummary} turnUndead={true} monsters={monsters} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      const targetNames = ctx.eligibleTargets.map(t => t.name);
-      expect(targetNames).toContain('Goblin');
-      expect(targetNames).toContain('PlayerAlly');
-      expect(targetNames).not.toContain('Orc');
+      const targetNames = capturedCtx.eligibleTargets.map(t => t.name);
+      expect(targetNames).toEqual(['Goblin', 'PlayerAlly']);
     });
 
     it('returns all non-caster targets when turnUndead is false', () => {
@@ -107,37 +107,48 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
       const monsters = [
         { name: 'Zombie', type: 'Undead' },
       ];
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} turnUndead={false} monsters={monsters} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      const targetNames = ctx.eligibleTargets.map(t => t.name);
+      const targetNames = capturedCtx.eligibleTargets.map(t => t.name);
       expect(targetNames).not.toContain('Wizard1');
       expect(targetNames).toContain('Goblin');
     });
 
-    it('returns empty array when combatSummary has no creatures', () => {
+    it('returns empty array when combatSummary has no creatures property', () => {
       getRuntimeValue.mockReturnValue([]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} combatSummary={{}} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets).toEqual([]);
+      expect(capturedCtx.eligibleTargets).toEqual([]);
     });
 
     it('returns empty array when combatSummary is null', () => {
       getRuntimeValue.mockReturnValue([]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} combatSummary={null} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets).toEqual([]);
+      expect(capturedCtx.eligibleTargets).toEqual([]);
+    });
+
+    it('returns empty array when combatSummary.creatures is an empty array', () => {
+      getRuntimeValue.mockReturnValue([]);
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} combatSummary={{ creatures: [] }} renderBody={renderBody} />);
+      expect(capturedCtx.eligibleTargets).toEqual([]);
     });
   });
 
@@ -147,13 +158,13 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         { effect: 'forcecage', target: 'Wizard1', source: 'CageA' },
         { effect: 'forcecage', target: 'Goblin', source: 'CageB' },
       ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
     });
 
     it('includes target when both attacker and target are forcecaged with same source', () => {
@@ -161,46 +172,61 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         { effect: 'forcecage', target: 'Wizard1', source: 'CageA' },
         { effect: 'forcecage', target: 'Goblin', source: 'CageA' },
       ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
 
-    it('includes target when neither is forcecaged', () => {
-      getRuntimeValue.mockReturnValue([]);
+    it('excludes all targets when only the attacker is forcecaged', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'forcecage', target: 'Wizard1', source: 'CageA' },
+      ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets).toEqual([]);
     });
 
-    it('includes target when no forcecage effects exist', () => {
-      getRuntimeValue.mockReturnValue(undefined);
+    it('excludes target when only the target is forcecaged', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'forcecage', target: 'Goblin', source: 'CageA' },
+      ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
+    });
+
+    it('includes target when targetEffects is null', () => {
+      getRuntimeValue.mockReturnValue(null);
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
 
     it('includes target when targetEffects is not an array', () => {
       getRuntimeValue.mockReturnValue('not-an-array');
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
   });
 
@@ -210,13 +236,13 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         { effect: 'maze', target: 'Wizard1', source: 'MazeA' },
         { effect: 'maze', target: 'Goblin', source: 'MazeB' },
       ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
     });
 
     it('includes target when both attacker and target are maze blocked with same source', () => {
@@ -224,13 +250,50 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         { effect: 'maze', target: 'Wizard1', source: 'MazeA' },
         { effect: 'maze', target: 'Goblin', source: 'MazeA' },
       ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+    });
+
+    it('excludes all targets when only the attacker is maze blocked', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'maze', target: 'Wizard1', source: 'MazeA' },
+      ]);
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
+      expect(capturedCtx.eligibleTargets).toEqual([]);
+    });
+
+    it('excludes target when only the target is maze blocked', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'maze', target: 'Goblin', source: 'MazeA' },
+      ]);
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
+    });
+
+    it('includes target when targetEffects is null', () => {
+      getRuntimeValue.mockReturnValue(null);
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
   });
 
@@ -240,13 +303,13 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         { effect: 'banishment', target: 'Wizard1', source: 'BanishA' },
         { effect: 'banishment', target: 'Goblin', source: 'BanishB' },
       ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
     });
 
     it('includes target when both attacker and target are banished with same source', () => {
@@ -254,13 +317,50 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         { effect: 'banishment', target: 'Wizard1', source: 'BanishA' },
         { effect: 'banishment', target: 'Goblin', source: 'BanishA' },
       ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+    });
+
+    it('excludes all targets when only the attacker is banished', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'banishment', target: 'Wizard1', source: 'BanishA' },
+      ]);
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
+      expect(capturedCtx.eligibleTargets).toEqual([]);
+    });
+
+    it('excludes target when only the target is banished', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'banishment', target: 'Goblin', source: 'BanishA' },
+      ]);
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
+    });
+
+    it('includes target when targetEffects is null', () => {
+      getRuntimeValue.mockReturnValue(null);
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
   });
 
@@ -270,13 +370,13 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         { effect: 'imprisonment', target: 'Wizard1', source: 'ImpA' },
         { effect: 'imprisonment', target: 'Goblin', source: 'ImpB' },
       ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
     });
 
     it('includes target when both attacker and target are imprisoned with same source', () => {
@@ -284,35 +384,50 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         { effect: 'imprisonment', target: 'Wizard1', source: 'ImpA' },
         { effect: 'imprisonment', target: 'Goblin', source: 'ImpA' },
       ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
 
-    it('includes target when no imprisonment effects exist', () => {
-      getRuntimeValue.mockReturnValue([]);
+    it('excludes all targets when only the attacker is imprisoned', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'imprisonment', target: 'Wizard1', source: 'ImpA' },
+      ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets).toEqual([]);
     });
 
-    it('includes target when targetEffects is undefined', () => {
-      getRuntimeValue.mockReturnValue(undefined);
+    it('excludes target when only the target is imprisoned', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'imprisonment', target: 'Goblin', source: 'ImpA' },
+      ]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
+    });
+
+    it('includes target when targetEffects is null', () => {
+      getRuntimeValue.mockReturnValue(null);
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
   });
 
@@ -324,9 +439,10 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
           { name: 'Goblin', gridX: 10, gridY: 10 },
         ],
       };
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(
         <AreaEffectTargetModalBase
@@ -339,8 +455,7 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
           renderBody={renderBody}
         />
       );
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
 
     it('uses distance-based check when shape is not provided', () => {
@@ -350,9 +465,10 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
           { name: 'Goblin', gridX: 10, gridY: 10 },
         ],
       };
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(
         <AreaEffectTargetModalBase
@@ -363,8 +479,7 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
           renderBody={renderBody}
         />
       );
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
 
     it('includes target when target has no position on map', () => {
@@ -372,35 +487,35 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
       const mapData = {
         players: [],
       };
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} mapData={mapData} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
 
     it('includes target when mapData is null', () => {
       getRuntimeValue.mockReturnValue([]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} mapData={null} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
 
     it('includes target when attackerPos is null', () => {
       getRuntimeValue.mockReturnValue([]);
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} attackerPos={null} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
 
     it('looks up target position from placedItems', () => {
@@ -411,13 +526,92 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
           { name: 'Goblin', gridX: 12, gridY: 12 },
         ],
       };
+      let capturedCtx = null;
       const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.eligibleTargets.map(t => <span key={t.name}>{t.name}</span>).join(', ')}</div>;
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} mapData={mapData} renderBody={renderBody} />);
-      const ctx = renderBody.mock.calls[0][0];
-      expect(ctx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+    });
+
+    it('falls back to distance-based check when shape is provided but grid coords are missing', () => {
+      getRuntimeValue.mockReturnValue([]);
+      const mapData = {
+        players: [
+          { name: 'Goblin', gridX: 10, gridY: 10 },
+        ],
+      };
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(
+        <AreaEffectTargetModalBase
+          {...baseProps}
+          mapData={mapData}
+          shape="sphere"
+          rangeFeet={30}
+          renderBody={renderBody}
+        />
+      );
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+    });
+
+    it('prioritizes shape-based overlay when both shape and attackerPos are provided', () => {
+      getRuntimeValue.mockReturnValue([]);
+      const mapData = {
+        players: [
+          { name: 'Goblin', gridX: 10, gridY: 10 },
+        ],
+      };
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(
+        <AreaEffectTargetModalBase
+          {...baseProps}
+          mapData={mapData}
+          shape="cone"
+          attackerGridX={10}
+          attackerGridY={10}
+          coneAngle={90}
+          rangeFeet={30}
+          attackerPos={{ gridX: 10, gridY: 10 }}
+          renderBody={renderBody}
+        />
+      );
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
+    });
+
+    it('uses widthFt parameter with shape-based overlay', () => {
+      getRuntimeValue.mockReturnValue([]);
+      const mapData = {
+        players: [
+          { name: 'Goblin', gridX: 10, gridY: 10 },
+        ],
+      };
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls.at(-1)[0];
+        return <div>Captured</div>;
+      });
+      render(
+        <AreaEffectTargetModalBase
+          {...baseProps}
+          mapData={mapData}
+          shape="line"
+          attackerGridX={10}
+          attackerGridY={10}
+          widthFt={10}
+          rangeFeet={30}
+          renderBody={renderBody}
+        />
+      );
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
   });
 });

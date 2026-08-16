@@ -174,9 +174,9 @@ export function createRageCharacter(name, rageDamage) {
 export function setupDefaults(rollD20, computeAuraBonus, getRuntimeValue) {
   vi.clearAllMocks();
   setupGlobalEventSource();
-  rollD20.mockReturnValue(15);
-  computeAuraBonus.mockResolvedValue({ bonus: 0, sourceName: null });
-  getRuntimeValue.mockImplementation(() => null);
+  rollD20.mockReset().mockReturnValue(15);
+  computeAuraBonus.mockReset().mockResolvedValue({ bonus: 0, sourceName: null });
+  getRuntimeValue.mockReset().mockImplementation(() => null);
 }
 
 export function cleanupDefaults() {

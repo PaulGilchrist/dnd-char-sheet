@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingIllusionModal from './HealingIllusionModal.jsx';
@@ -32,7 +33,7 @@ describe('HealingIllusionModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useRuntimeState.getRuntimeValue.mockReturnValue(null);
-    useRuntimeState.setRuntimeValue.mockResolvedValue();
+    useRuntimeState.setRuntimeValue.mockResolvedValue(undefined);
   });
 
   describe('initial render', () => {
@@ -107,6 +108,42 @@ describe('HealingIllusionModal', () => {
       render(<HealingIllusionModal {...makeProps()} />);
       fireEvent.click(document.querySelector('.sp-modal'));
       expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it('calls onClose when the Skip button is clicked', () => {
+      render(<HealingIllusionModal {...makeProps()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the modal when Done is clicked in the applied state', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'currentHitPoints') return 20;
+        return null;
+      });
+
+      render(<HealingIllusionModal {...makeProps()} />);
+      fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+      });
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the modal when the overlay is clicked in the applied state', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'currentHitPoints') return 20;
+        return null;
+      });
+
+      render(<HealingIllusionModal {...makeProps()} />);
+      fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
+
+      await waitFor(() => {
+        fireEvent.click(document.querySelector('.sp-overlay'));
+      });
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -195,7 +232,7 @@ describe('HealingIllusionModal', () => {
       });
     });
 
-    it('disables the Heal button when already at max HP', async () => {
+    it('allows healing with zero actual heal when already at max HP', async () => {
       useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'currentHitPoints') return 40;
         return null;
@@ -221,7 +258,9 @@ describe('HealingIllusionModal', () => {
       });
     });
 
-    it('closes the modal when Done is clicked or overlay is clicked in the applied state', async () => {
+    it('dispatches combat-summary-updated event after healing', async () => {
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
       useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'currentHitPoints') return 20;
         return null;
@@ -231,9 +270,10 @@ describe('HealingIllusionModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
 
       await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+        expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
       });
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
+
+      dispatchSpy.mockRestore();
     });
   });
 
@@ -308,14 +348,16 @@ describe('HealingIllusionModal', () => {
       const customRadio = document.querySelector('input[type="radio"][value="custom"]');
       fireEvent.click(customRadio);
 
+      // Empty string
       fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
       expect(healingRoll.logHealingToSSE).not.toHaveBeenCalled();
 
       vi.clearAllMocks();
       useRuntimeState.getRuntimeValue.mockReturnValue(null);
-      useRuntimeState.setRuntimeValue.mockResolvedValue();
+      useRuntimeState.setRuntimeValue.mockResolvedValue(undefined);
 
+      // Whitespace-only
       const customRadio2 = document.querySelector('input[type="radio"][value="custom"]');
       fireEvent.click(customRadio2);
       const customInput = document.querySelector('input[type="text"]');
@@ -324,6 +366,37 @@ describe('HealingIllusionModal', () => {
 
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
       expect(healingRoll.logHealingToSSE).not.toHaveBeenCalled();
+    });
+
+    it('uses fallback max HP of 0 when hitPoints is falsy for custom target', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'hitPoints') return null;
+        return null;
+      });
+
+      render(<HealingIllusionModal {...makeProps()} />);
+      const customRadio = document.querySelector('input[type="radio"][value="custom"]');
+      fireEvent.click(customRadio);
+      const customInput = document.querySelector('input[type="text"]');
+      fireEvent.change(customInput, { target: { value: 'Ghost' } });
+      fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
+
+      await waitFor(() => {
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'Ghost',
+          'currentHitPoints',
+          0,
+          campaignName
+        );
+        expect(healingRoll.logHealingToSSE).toHaveBeenCalledWith(campaignName, {
+          targetName: 'Ghost',
+          sourceName: 'Healing Illusion',
+          actualHeal: 0,
+          newHp: 0,
+          maxHp: 0,
+        });
+      });
     });
   });
 });

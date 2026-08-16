@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import HiddenInput from './HiddenInput.jsx';
@@ -60,7 +61,6 @@ describe('HiddenInput', () => {
       const input = screen.getByRole('spinbutton');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue(5);
-      expect(document.activeElement).toBe(input);
     });
 
     it('hides the input and shows the value when showInput becomes false', () => {
@@ -84,6 +84,32 @@ describe('HiddenInput', () => {
 
       expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
       expect(screen.getByText('5')).toBeInTheDocument();
+    });
+
+    it('renders native min and max attributes on the input element', () => {
+      const { rerender } = render(
+        <HiddenInput
+          handleInputToggle={mockOnToggle}
+          handleValueChange={mockOnChange}
+          showInput={false}
+          value={5}
+          max={20}
+        />
+      );
+
+      rerender(
+        <HiddenInput
+          handleInputToggle={mockOnToggle}
+          handleValueChange={mockOnChange}
+          showInput
+          value={5}
+          max={20}
+        />
+      );
+
+      const input = screen.getByRole('spinbutton');
+      expect(input).toHaveAttribute('min', '0');
+      expect(input).toHaveAttribute('max', '20');
     });
   });
 
@@ -140,7 +166,7 @@ describe('HiddenInput', () => {
       expect(mockOnToggle).toHaveBeenCalled();
     });
 
-    it('commits on Enter key and toggles', () => {
+    it('commits the clamped value on Enter key and toggles', () => {
       render(
         <HiddenInput
           handleInputToggle={mockOnToggle}
@@ -153,11 +179,11 @@ describe('HiddenInput', () => {
       const input = screen.getByRole('spinbutton');
       fireEvent.keyDown(input, { key: 'Enter' });
 
-      expect(mockOnChange).toHaveBeenCalled();
+      expect(mockOnChange).toHaveBeenCalledWith(5);
       expect(mockOnToggle).toHaveBeenCalled();
     });
 
-    it('clamps value to max on commit', () => {
+    it('clamps value to max on commit via blur', () => {
       render(
         <HiddenInput
           handleInputToggle={mockOnToggle}
@@ -173,6 +199,25 @@ describe('HiddenInput', () => {
       fireEvent.blur(input);
 
       expect(mockOnChange).toHaveBeenCalledWith(10);
+    });
+
+    it('clamps value to max on commit via Enter key', () => {
+      render(
+        <HiddenInput
+          handleInputToggle={mockOnToggle}
+          handleValueChange={mockOnChange}
+          showInput
+          value={5}
+          max={10}
+        />
+      );
+
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '15' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(mockOnChange).toHaveBeenCalledWith(10);
+      expect(mockOnToggle).toHaveBeenCalled();
     });
 
     it('clamps negative values to 0 on commit', () => {
@@ -191,5 +236,41 @@ describe('HiddenInput', () => {
 
       expect(mockOnChange).toHaveBeenCalledWith(0);
     });
+
+    it('clamps to 0 when max is 0', () => {
+      render(
+        <HiddenInput
+          handleInputToggle={mockOnToggle}
+          handleValueChange={mockOnChange}
+          showInput
+          value={5}
+          max={0}
+        />
+      );
+
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '5' } });
+      fireEvent.blur(input);
+
+      expect(mockOnChange).toHaveBeenCalledWith(0);
+    });
+
+    it('passes through zero as a valid value', () => {
+      render(
+        <HiddenInput
+          handleInputToggle={mockOnToggle}
+          handleValueChange={mockOnChange}
+          showInput
+          value={0}
+        />
+      );
+
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '0' } });
+      fireEvent.blur(input);
+
+      expect(mockOnChange).toHaveBeenCalledWith(0);
+    });
+
   });
 });

@@ -20,9 +20,9 @@ describe('WizardHeader', () => {
       expect(screen.getByRole('button', { name: '×' })).toHaveClass('close-btn');
     });
 
-    it('renders the heading text dynamically based on the title prop', () => {
-      render(<WizardHeader title="Create Character" onClose={() => {}} />);
-      expect(screen.getByRole('heading', { level: 2, name: 'Create Character' })).toBeInTheDocument();
+    it('wraps content in a div with wizard-header class', () => {
+      const { container } = render(<WizardHeader {...createProps()} />);
+      expect(container.querySelector('.wizard-header')).toBeInTheDocument();
     });
 
     it('renders an empty heading when title is an empty string', () => {

@@ -1,25 +1,9 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useModalHandlers from './useModalHandlers.js';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
     rollExpression: vi.fn(),
-}));
-
-vi.mock('../../services/rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../services/rules/combat/rangeValidation.js', () => ({
-    getDistanceFeet: vi.fn(),
-}));
-
-vi.mock('../../services/encounters/combatData.js', () => ({
-    getCurrentCombatRound: vi.fn(),
-}));
-
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-    getRuntimeValue: vi.fn(),
-    setRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../services/automation/handlers/class-sorcerer/starryFormHandler.js', () => ({
@@ -80,6 +64,14 @@ function createDeps(overrides = {}) {
     };
 }
 
+const FLURRY_MODAL = {
+    action: { name: 'Flurry of Blows' },
+    playerStats: { name: 'TestMonk' },
+    campaignName: 'test-campaign',
+    mapName: 'test-map',
+    numAttacks: 2,
+};
+
 describe('useModalHandlers - flurry of blows', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -87,24 +79,18 @@ describe('useModalHandlers - flurry of blows', () => {
     });
 
     describe('handleFlurryOfBlowsConfirm', () => {
-        it('calls applyFlurryOfBlows with correct arguments', async () => {
+        it('clears the flurry modal, calls applyFlurryOfBlows, and sets popup on success', async () => {
             applyFlurryOfBlows.mockResolvedValue({
-                payload: 'Flurry hit!',
+                payload: 'Flurry hit 1d6!',
                 type: 'popup',
             });
-            const deps = createDeps({
-                modalState: {
-                    flurryOfBlowsModal: {
-                        action: { name: 'Flurry of Blows' },
-                        playerStats: { name: 'TestMonk' },
-                        campaignName: 'test-campaign',
-                        mapName: 'test-map',
-                        numAttacks: 2,
-                    },
-                },
-            });
+            const deps = createDeps({ modalState: { flurryOfBlowsModal: FLURRY_MODAL } });
             const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
             await handleFlurryOfBlowsConfirm({ distribution: 'target1' });
+
+            // Modal is cleared first
+            expect(deps.setModalState).toHaveBeenNthCalledWith(1, { flurryOfBlowsModal: null });
+            // Then handler is called with correct args
             expect(applyFlurryOfBlows).toHaveBeenCalledWith(
                 { name: 'Flurry of Blows' },
                 { name: 'TestMonk' },
@@ -113,155 +99,104 @@ describe('useModalHandlers - flurry of blows', () => {
                 'target1',
                 2
             );
-        });
-
-        it('clears flurry modal after calling handler', async () => {
-            applyFlurryOfBlows.mockResolvedValue({
-                payload: 'Flurry hit!',
-                type: 'popup',
-            });
-            const deps = createDeps({
-                modalState: {
-                    flurryOfBlowsModal: {
-                        action: { name: 'Flurry of Blows' },
-                        playerStats: { name: 'TestMonk' },
-                        campaignName: 'test-campaign',
-                        mapName: 'test-map',
-                        numAttacks: 2,
-                    },
-                },
-            });
-            const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
-            await handleFlurryOfBlowsConfirm({ distribution: 'target1' });
-            expect(deps.setModalState).toHaveBeenCalledWith({ flurryOfBlowsModal: null });
-        });
-
-        it('sets popup when apply result type is popup', async () => {
-            applyFlurryOfBlows.mockResolvedValue({
-                payload: 'Flurry hit 1d6!',
-                type: 'popup',
-            });
-            const deps = createDeps({
-                modalState: {
-                    flurryOfBlowsModal: {
-                        action: { name: 'Flurry of Blows' },
-                        playerStats: { name: 'TestMonk' },
-                        campaignName: 'test-campaign',
-                        mapName: 'test-map',
-                        numAttacks: 1,
-                    },
-                },
-            });
-            const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
-            await handleFlurryOfBlowsConfirm({ distribution: 'target1' });
+            // Popup is set from handler result
             expect(deps.setPopupHtml).toHaveBeenCalledWith('Flurry hit 1d6!');
         });
 
-        it('opens open hand modal when flurry returns open hand targets', async () => {
+        it('opens open hand modal when flurry returns openHandTargets', async () => {
             applyFlurryOfBlows.mockResolvedValue({
                 payload: 'Flurry with knockdown!',
                 openHandTargets: [
-                    {
-                        action: { name: 'Open Hand Technique' },
-                        targetName: 'Goblin',
-                    },
+                    { action: { name: 'Open Hand Technique' }, targetName: 'Goblin' },
                 ],
             });
-            const deps = createDeps({
-                modalState: {
-                    flurryOfBlowsModal: {
-                        action: { name: 'Flurry of Blows' },
-                        playerStats: { name: 'TestMonk' },
-                        campaignName: 'test-campaign',
-                        mapName: 'test-map',
-                        numAttacks: 1,
-                    },
-                },
-            });
+            const deps = createDeps({ modalState: { flurryOfBlowsModal: FLURRY_MODAL } });
             const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
             await handleFlurryOfBlowsConfirm({ distribution: 'target1' });
 
-            expect(deps.setModalState).toHaveBeenCalledWith({
+            expect(deps.setModalState).toHaveBeenNthCalledWith(1, { flurryOfBlowsModal: null });
+            expect(deps.setModalState).toHaveBeenNthCalledWith(2, {
                 openHandFromFlurry: {
-                    targets: [
-                        {
-                            action: { name: 'Open Hand Technique' },
-                            targetName: 'Goblin',
-                        },
-                    ],
+                    targets: [{ action: { name: 'Open Hand Technique' }, targetName: 'Goblin' }],
                     saveDc: 15,
                     currentIndex: 0,
                     popupHtml: 'Flurry with knockdown!',
                 },
             });
+            // buildSaveDc is called with the first target's action and playerStats
+            expect(buildSaveDc).toHaveBeenCalledWith(
+                { name: 'Open Hand Technique' },
+                { name: 'TestMonk' }
+            );
+            // No popup set when open hand targets exist
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
+        });
+
+        it('does not open open hand modal when openHandTargets is empty array', async () => {
+            applyFlurryOfBlows.mockResolvedValue({
+                payload: 'Flurry result',
+                openHandTargets: [],
+            });
+            const deps = createDeps({ modalState: { flurryOfBlowsModal: FLURRY_MODAL } });
+            const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
+            await handleFlurryOfBlowsConfirm({ distribution: 'target1' });
+
+            expect(deps.setModalState).toHaveBeenCalledWith({ flurryOfBlowsModal: null });
             expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
 
         it('does nothing when applyFlurryOfBlows returns null', async () => {
             applyFlurryOfBlows.mockResolvedValue(null);
-            const deps = createDeps({
-                modalState: {
-                    flurryOfBlowsModal: {
-                        action: { name: 'Flurry of Blows' },
-                        playerStats: { name: 'TestMonk' },
-                        campaignName: 'test-campaign',
-                        mapName: 'test-map',
-                        numAttacks: 1,
-                    },
-                },
-            });
+            const deps = createDeps({ modalState: { flurryOfBlowsModal: FLURRY_MODAL } });
             const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
             await handleFlurryOfBlowsConfirm({ distribution: 'target1' });
+
+            expect(deps.setModalState).toHaveBeenCalledWith({ flurryOfBlowsModal: null });
             expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
 
-        it('does nothing when applyFlurryOfBlows returns result without popup type and no openHandTargets', async () => {
+        it('does nothing when result lacks popup type and has no openHandTargets', async () => {
             applyFlurryOfBlows.mockResolvedValue({ someOtherField: 'value' });
-            const deps = createDeps({
-                modalState: {
-                    flurryOfBlowsModal: {
-                        action: { name: 'Flurry of Blows' },
-                        playerStats: { name: 'TestMonk' },
-                        campaignName: 'test-campaign',
-                        mapName: 'test-map',
-                        numAttacks: 1,
-                    },
-                },
-            });
+            const deps = createDeps({ modalState: { flurryOfBlowsModal: FLURRY_MODAL } });
             const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
             await handleFlurryOfBlowsConfirm({ distribution: 'target1' });
+
+            expect(deps.setModalState).toHaveBeenCalledWith({ flurryOfBlowsModal: null });
             expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
 
         it('does nothing when no flurry modal state exists', async () => {
-            const deps = createDeps({
-                modalState: {},
-            });
+            const deps = createDeps({ modalState: {} });
             const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
             await handleFlurryOfBlowsConfirm({ distribution: 'target1' });
+
             expect(applyFlurryOfBlows).not.toHaveBeenCalled();
             expect(deps.setModalState).not.toHaveBeenCalled();
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when applyFlurryOfBlows throws', async () => {
+            applyFlurryOfBlows.mockRejectedValue(new Error('network failure'));
+            const deps = createDeps({ modalState: { flurryOfBlowsModal: FLURRY_MODAL } });
+            const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
+
+            await expect(handleFlurryOfBlowsConfirm({ distribution: 'target1' })).rejects.toThrow('network failure');
+            // Modal was cleared before the handler call, so it was already cleared
+            expect(deps.setModalState).toHaveBeenCalledWith({ flurryOfBlowsModal: null });
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
     });
 
     describe('handleFlurryOfBlowsSkip', () => {
         it('clears the flurry modal when skipping', () => {
-            const deps = createDeps({
-                modalState: {
-                    flurryOfBlowsModal: {
-                        action: { name: 'Flurry of Blows' },
-                    },
-                },
-            });
+            const deps = createDeps({ modalState: { flurryOfBlowsModal: FLURRY_MODAL } });
             const { handleFlurryOfBlowsSkip } = useModalHandlers(deps);
             handleFlurryOfBlowsSkip();
             expect(deps.setModalState).toHaveBeenCalledWith({ flurryOfBlowsModal: null });
         });
 
         it('clears flurry modal even when no flurry modal state exists', () => {
-            const deps = createDeps({
-                modalState: {},
-            });
+            const deps = createDeps({ modalState: {} });
             const { handleFlurryOfBlowsSkip } = useModalHandlers(deps);
             handleFlurryOfBlowsSkip();
             expect(deps.setModalState).toHaveBeenCalledWith({ flurryOfBlowsModal: null });
@@ -280,15 +215,13 @@ describe('useModalHandlers - open hand from flurry', () => {
     });
 
     describe('handleOpenHandFromFlurryConfirm', () => {
-        it('calls applyOpenHandTechnique with correct arguments', async () => {
+        it('calls applyOpenHandTechnique with correct arguments and advances to next target', async () => {
             const deps = createDeps({
                 modalState: {
                     openHandFromFlurry: {
                         targets: [
-                            {
-                                action: { name: 'Open Hand Technique' },
-                                targetName: 'Goblin',
-                            },
+                            { action: { name: 'Open Hand Technique' }, targetName: 'Goblin' },
+                            { action: { name: 'Open Hand Technique' }, targetName: 'Orc' },
                         ],
                         saveDc: 15,
                         currentIndex: 0,
@@ -307,30 +240,11 @@ describe('useModalHandlers - open hand from flurry', () => {
                 'Push',
                 15
             );
-        });
-
-        it('advances to next target when more targets remain', async () => {
-            const deps = createDeps({
-                modalState: {
-                    openHandFromFlurry: {
-                        targets: [
-                            { action: { name: 'Open Hand' }, targetName: 'Goblin' },
-                            { action: { name: 'Open Hand' }, targetName: 'Orc' },
-                        ],
-                        saveDc: 15,
-                        currentIndex: 0,
-                        popupHtml: 'Flurry result',
-                    },
-                },
-            });
-            const { handleOpenHandFromFlurryConfirm } = useModalHandlers(deps);
-            await handleOpenHandFromFlurryConfirm({ optionName: 'Push' });
-
             expect(deps.setModalState).toHaveBeenCalledWith({
                 openHandFromFlurry: {
                     targets: [
-                        { action: { name: 'Open Hand' }, targetName: 'Goblin' },
-                        { action: { name: 'Open Hand' }, targetName: 'Orc' },
+                        { action: { name: 'Open Hand Technique' }, targetName: 'Goblin' },
+                        { action: { name: 'Open Hand Technique' }, targetName: 'Orc' },
                     ],
                     saveDc: 15,
                     currentIndex: 1,
@@ -340,13 +254,11 @@ describe('useModalHandlers - open hand from flurry', () => {
             expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
 
-        it('clears open hand state and shows popup when all targets processed', async () => {
+        it('clears open hand state and shows popup when all targets processed with popup result', async () => {
             const deps = createDeps({
                 modalState: {
                     openHandFromFlurry: {
-                        targets: [
-                            { action: { name: 'Open Hand' }, targetName: 'Goblin' },
-                        ],
+                        targets: [{ action: { name: 'Open Hand' }, targetName: 'Goblin' }],
                         saveDc: 15,
                         currentIndex: 0,
                         popupHtml: 'Flurry result',
@@ -358,6 +270,25 @@ describe('useModalHandlers - open hand from flurry', () => {
 
             expect(deps.setModalState).toHaveBeenCalledWith({ openHandFromFlurry: null });
             expect(deps.setPopupHtml).toHaveBeenCalledWith('Open Hand pushed!');
+        });
+
+        it('clears open hand state without popup when result is not popup type', async () => {
+            applyOpenHandTechnique.mockResolvedValue({ type: 'other' });
+            const deps = createDeps({
+                modalState: {
+                    openHandFromFlurry: {
+                        targets: [{ action: { name: 'Open Hand' }, targetName: 'Goblin' }],
+                        saveDc: 15,
+                        currentIndex: 0,
+                        popupHtml: 'Flurry result',
+                    },
+                },
+            });
+            const { handleOpenHandFromFlurryConfirm } = useModalHandlers(deps);
+            await handleOpenHandFromFlurryConfirm({ optionName: 'Push' });
+
+            expect(deps.setModalState).toHaveBeenCalledWith({ openHandFromFlurry: null });
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
 
         it('does nothing when current target is missing', async () => {
@@ -373,26 +304,9 @@ describe('useModalHandlers - open hand from flurry', () => {
             });
             const { handleOpenHandFromFlurryConfirm } = useModalHandlers(deps);
             await handleOpenHandFromFlurryConfirm({ optionName: 'Push' });
-            expect(applyOpenHandTechnique).not.toHaveBeenCalled();
-        });
 
-        it('clears open hand state when result is not popup type', async () => {
-            applyOpenHandTechnique.mockResolvedValue({ type: 'other' });
-            const deps = createDeps({
-                modalState: {
-                    openHandFromFlurry: {
-                        targets: [
-                            { action: { name: 'Open Hand' }, targetName: 'Goblin' },
-                        ],
-                        saveDc: 15,
-                        currentIndex: 0,
-                        popupHtml: 'Flurry result',
-                    },
-                },
-            });
-            const { handleOpenHandFromFlurryConfirm } = useModalHandlers(deps);
-            await handleOpenHandFromFlurryConfirm({ optionName: 'Push' });
-            expect(deps.setModalState).toHaveBeenCalledWith({ openHandFromFlurry: null });
+            expect(applyOpenHandTechnique).not.toHaveBeenCalled();
+            expect(deps.setModalState).not.toHaveBeenCalled();
             expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
 
@@ -400,7 +314,29 @@ describe('useModalHandlers - open hand from flurry', () => {
             const deps = createDeps();
             const { handleOpenHandFromFlurryConfirm } = useModalHandlers(deps);
             await handleOpenHandFromFlurryConfirm({ optionName: 'Push' });
+
             expect(applyOpenHandTechnique).not.toHaveBeenCalled();
+            expect(deps.setModalState).not.toHaveBeenCalled();
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when applyOpenHandTechnique throws', async () => {
+            applyOpenHandTechnique.mockRejectedValue(new Error('handler error'));
+            const deps = createDeps({
+                modalState: {
+                    openHandFromFlurry: {
+                        targets: [{ action: { name: 'Open Hand' }, targetName: 'Goblin' }],
+                        saveDc: 15,
+                        currentIndex: 0,
+                        popupHtml: 'Flurry result',
+                    },
+                },
+            });
+            const { handleOpenHandFromFlurryConfirm } = useModalHandlers(deps);
+
+            await expect(handleOpenHandFromFlurryConfirm({ optionName: 'Push' })).rejects.toThrow('handler error');
+            expect(deps.setModalState).not.toHaveBeenCalled();
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
     });
 
@@ -433,15 +369,14 @@ describe('useModalHandlers - open hand from flurry', () => {
                     popupHtml: 'Flurry result',
                 },
             });
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
 
         it('clears open hand state and shows popup when all targets processed', async () => {
             const deps = createDeps({
                 modalState: {
                     openHandFromFlurry: {
-                        targets: [
-                            { action: { name: 'Open Hand' }, targetName: 'Goblin' },
-                        ],
+                        targets: [{ action: { name: 'Open Hand' }, targetName: 'Goblin' }],
                         saveDc: 15,
                         currentIndex: 0,
                         popupHtml: 'Final popup',
@@ -455,16 +390,32 @@ describe('useModalHandlers - open hand from flurry', () => {
             expect(deps.setPopupHtml).toHaveBeenCalledWith('Final popup');
         });
 
-        it('does not set popup when popupHtml is falsy and all targets processed', async () => {
+        it('does not set popup when popupHtml is null and all targets processed', async () => {
             const deps = createDeps({
                 modalState: {
                     openHandFromFlurry: {
-                        targets: [
-                            { action: { name: 'Open Hand' }, targetName: 'Goblin' },
-                        ],
+                        targets: [{ action: { name: 'Open Hand' }, targetName: 'Goblin' }],
                         saveDc: 15,
                         currentIndex: 0,
                         popupHtml: null,
+                    },
+                },
+            });
+            const { handleOpenHandFromFlurrySkip } = useModalHandlers(deps);
+            await handleOpenHandFromFlurrySkip();
+
+            expect(deps.setModalState).toHaveBeenCalledWith({ openHandFromFlurry: null });
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
+        });
+
+        it('does not set popup when popupHtml is an empty string', async () => {
+            const deps = createDeps({
+                modalState: {
+                    openHandFromFlurry: {
+                        targets: [{ action: { name: 'Open Hand' }, targetName: 'Goblin' }],
+                        saveDc: 15,
+                        currentIndex: 0,
+                        popupHtml: '',
                     },
                 },
             });
@@ -479,7 +430,9 @@ describe('useModalHandlers - open hand from flurry', () => {
             const deps = createDeps();
             const { handleOpenHandFromFlurrySkip } = useModalHandlers(deps);
             await handleOpenHandFromFlurrySkip();
+
             expect(deps.setModalState).not.toHaveBeenCalled();
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
     });
 });

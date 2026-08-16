@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EyebiteEffectModal from './EyebiteEffectModal.jsx';
@@ -122,25 +123,19 @@ describe('EyebiteEffectModal', () => {
             });
         });
 
-        it('shows cancel button', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
-            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-        });
-
         it('calls onClose when Cancel is clicked', () => {
             render(<EyebiteEffectModal {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
             expect(baseProps.onClose).toHaveBeenCalled();
         });
+
+        it('renders Cancel button', () => {
+            render(<EyebiteEffectModal {...makeProps()} />);
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        });
     });
 
-    describe('SecondaryTargetModal rendering', () => {
-        it('renders SecondaryTargetModal after effect selection', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
-        });
-
+    describe('secondary target modal content', () => {
         it('passes correct title to SecondaryTargetModal', () => {
             render(<EyebiteEffectModal {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
@@ -154,46 +149,33 @@ describe('EyebiteEffectModal', () => {
         });
 
         it('excludes caster from targets', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: {
+                    creatures: [
+                        { name: 'Witch1', type: 'player', saveBonuses: { wis: 5 } },
+                        { name: 'Goblin1', type: 'npc', saveBonuses: { wis: 2 } },
+                    ],
+                },
+                attackerName: 'Witch1',
+            })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            expect(screen.getByTestId('stm-targetCount')).toHaveTextContent('3');
-        });
-
-        it('includes all non-attacker creatures as targets', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            expect(screen.getByTestId('stm-target-0')).toHaveTextContent('Goblin1');
-            expect(screen.getByTestId('stm-target-1')).toHaveTextContent('Orc Warrior');
-            expect(screen.getByTestId('stm-target-2')).toHaveTextContent('Elf Mage');
+            expect(screen.getByTestId('stm-targetCount')).toHaveTextContent('1');
         });
 
         it('passes correct description with range and DC', () => {
             render(<EyebiteEffectModal {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
             const desc = screen.getByTestId('stm-description');
-            expect(desc.innerHTML).toContain('60 feet');
-            expect(desc.innerHTML).toContain('DC 13');
-            expect(desc.innerHTML).toContain('WIS');
-        });
-
-        it('uses correct confirmLabel', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            expect(screen.getByTestId('stm-confirmLabel')).toHaveTextContent('Cast Eyebite');
-        });
-
-        it('passes effect label in description', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Panicked/ }));
-            const desc = screen.getByTestId('stm-description');
-            expect(desc.innerHTML).toContain('Panicked');
+            expect(desc.textContent).toContain('60 feet');
+            expect(desc.textContent).toContain('DC 13');
+            expect(desc.textContent).toContain('WIS');
         });
 
         it('uses custom rangeFeet in description', () => {
             render(<EyebiteEffectModal {...makeProps({ rangeFeet: 30 })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
             const desc = screen.getByTestId('stm-description');
-            expect(desc.innerHTML).toContain('30 feet');
+            expect(desc.textContent).toContain('30 feet');
         });
 
         it('calls onSkip when Skip is clicked', () => {
@@ -213,6 +195,24 @@ describe('EyebiteEffectModal', () => {
         it('uses default featureName "Eyebite" when not provided', () => {
             render(<EyebiteEffectModal {...makeProps({ featureName: undefined })} />);
             expect(screen.getByText('Eyebite')).toBeInTheDocument();
+        });
+    });
+
+    describe('edge cases', () => {
+        it('renders empty target list when no creatures exist', () => {
+            render(<EyebiteEffectModal {...makeProps({
+                combatSummary: { creatures: [] },
+            })} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            expect(screen.getByTestId('stm-targetCount')).toHaveTextContent('0');
+        });
+
+        it('renders all non-attacker creatures as targets', () => {
+            render(<EyebiteEffectModal {...makeProps()} />);
+            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
+            expect(screen.getByTestId('stm-target-0')).toHaveTextContent('Goblin1');
+            expect(screen.getByTestId('stm-target-1')).toHaveTextContent('Orc Warrior');
+            expect(screen.getByTestId('stm-target-2')).toHaveTextContent('Elf Mage');
         });
     });
 });

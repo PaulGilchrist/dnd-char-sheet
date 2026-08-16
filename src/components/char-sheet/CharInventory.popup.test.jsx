@@ -1,87 +1,14 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import CharInventory from './CharInventory.jsx';
-
-// Mock the dataLoader service
-vi.mock('../../services/ui/dataLoader.js', () => ({
-  loadEquipment: vi.fn(),
-  clearDataCache: vi.fn(),
-}));
-
-// Mock the usePopup hook
-vi.mock('../../hooks/combat/usePopup.js', () => ({
-  default: vi.fn(),
-}));
-
-// Mock the sanitize service
-vi.mock('../../services/ui/sanitize.js', () => ({
-  sanitizeHtml: vi.fn((html) => html),
-}));
-
-import usePopup from '../../hooks/combat/usePopup.js';
-import { loadEquipment } from '../../services/ui/dataLoader.js';
-
-function renderComponent(playerStats) {
-  return render(<CharInventory playerStats={playerStats} />);
-}
+// @improved-by-ai
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createRenderComponent } from './charInventoryTestHelpers.jsx';
 
 describe('CharInventory item popup', () => {
-  let setPopupHtmlSpy;
+  let helpers;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-
-    setPopupHtmlSpy = vi.fn();
-
-    usePopup.mockImplementation(() => ({
-      showPopup: vi.fn(),
-      popupHtml: null,
-      setPopupHtml: setPopupHtmlSpy,
-    }));
-
-    loadEquipment.mockResolvedValue([
-      {
-        name: 'Longsword',
-        index: 'longsword',
-        desc: ['A common sword.'],
-        cost: { quantity: 15, unit: 'gp' },
-        weight: 3,
-        equipment_category: 'Martial Melee Weapons',
-      },
-      {
-        name: 'Shield',
-        index: 'shield',
-        desc: ['A defensive item.'],
-        cost: { quantity: 10, unit: 'gp' },
-        weight: 6,
-        equipment_category: 'Armor',
-      },
-      {
-        name: 'Dagger',
-        index: 'dagger',
-        desc: ['A simple melee weapon.'],
-        cost: { quantity: 2, unit: 'gp' },
-        weight: 1,
-        equipment_category: 'Simple Melee Weapons',
-      },
-      {
-        name: 'Potion of Healing',
-        index: 'potion-of-healing',
-        desc: ['Restores hit points.', 'Doubles as an alchemy component.'],
-        ability: 'Constitution',
-        utilize: 'Drink',
-        craft: 'Alchemy',
-      },
-    ]);
+    helpers = createRenderComponent();
+    helpers.setup();
   });
-
-  async function clickItemByText(text) {
-    const clickable = screen.getByText(text);
-    fireEvent.click(clickable);
-    await waitFor(() => {
-      expect(setPopupHtmlSpy).toHaveBeenCalled();
-    });
-  }
 
   describe('name normalization', () => {
     it('should strip quantity from parentheses when clicking backpack items', async () => {
@@ -92,9 +19,9 @@ describe('CharInventory item popup', () => {
           backpack: ['Potion of Healing'],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Potion of Healing');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Potion of Healing');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('Potion of Healing');
     });
 
@@ -106,15 +33,23 @@ describe('CharInventory item popup', () => {
           backpack: ['Rations (10)'],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Rations (10)');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Rations (10)');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('Item details not found');
     });
   });
 
   describe('equipment lookup', () => {
     it('should find item by exact name match', async () => {
+      helpers.setup([
+        {
+          name: 'Shield',
+          index: 'shield',
+          desc: ['A defensive item.'],
+          cost: { quantity: 10, unit: 'gp' },
+        },
+      ]);
       const stats = {
         inventory: {
           magicItems: [],
@@ -122,14 +57,17 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Shield');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Shield');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('<b>Shield</b>');
       expect(callArg).toContain('A defensive item.');
     });
 
     it('should find item by exact index match', async () => {
+      helpers.setup([
+        { name: 'Dagger', index: 'dagger' },
+      ]);
       const stats = {
         inventory: {
           magicItems: [],
@@ -137,13 +75,16 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Dagger');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Dagger');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('<b>Dagger</b>');
     });
 
     it('should find item by plural-to-singular fallback', async () => {
+      helpers.setup([
+        { name: 'Dagger', index: 'dagger' },
+      ]);
       const stats = {
         inventory: {
           magicItems: [],
@@ -151,23 +92,23 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Daggers');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Daggers');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('<b>Dagger</b>');
     });
 
-    it('should not attempt plural fallback for words ending in "s" that are already plural', async () => {
+    it('should display resolved singular name in popup when plural-to-singular fallback matches', async () => {
       const stats = {
         inventory: {
           magicItems: [],
-          equipped: ['Longsword'],
+          equipped: ['Longswords'],
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Longsword');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Longswords');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('<b>Longsword</b>');
     });
   });
@@ -181,9 +122,9 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Longsword');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Longsword');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('<b>Cost:</b>');
       expect(callArg).toContain('15 gp');
       expect(callArg).toContain('<b>Weight:</b>');
@@ -193,6 +134,16 @@ describe('CharInventory item popup', () => {
     });
 
     it('should include ability, utilize, and craft fields when present', async () => {
+      helpers.setup([
+        {
+          name: 'Potion of Healing',
+          index: 'potion-of-healing',
+          desc: ['Restores hit points.', 'Doubles as an alchemy component.'],
+          ability: 'Constitution',
+          utilize: 'Drink',
+          craft: 'Alchemy',
+        },
+      ]);
       const stats = {
         inventory: {
           magicItems: [],
@@ -200,9 +151,9 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Potion of Healing');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Potion of Healing');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('<b>Ability:</b>');
       expect(callArg).toContain('Constitution');
       expect(callArg).toContain('<b>Utilize:</b>');
@@ -212,6 +163,13 @@ describe('CharInventory item popup', () => {
     });
 
     it('should join array descriptions with <br/><br/>', async () => {
+      helpers.setup([
+        {
+          name: 'Potion of Healing',
+          index: 'potion-of-healing',
+          desc: ['Restores hit points.', 'Doubles as an alchemy component.'],
+        },
+      ]);
       const stats = {
         inventory: {
           magicItems: [],
@@ -219,13 +177,12 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Potion of Healing');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Potion of Healing');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('Restores hit points.');
       expect(callArg).toContain('Doubles as an alchemy component.');
     });
-
   });
 
   describe('item not found', () => {
@@ -237,14 +194,15 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Unobtainium Rod');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Unobtainium Rod');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('Unobtainium Rod');
       expect(callArg).toContain('not found in database');
     });
 
     it('should show "not found" when equipment data is empty array', async () => {
+      const { loadEquipment } = await import('../../services/ui/dataLoader.js');
       loadEquipment.mockResolvedValue([]);
       const stats = {
         inventory: {
@@ -253,15 +211,17 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Longsword');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Longsword');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('not found in database');
     });
   });
 
   describe('error handling', () => {
-    it('should show error message when equipment loading throws', async () => {
+    it('should log console.error and show error message when equipment loading throws', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { loadEquipment } = await import('../../services/ui/dataLoader.js');
       loadEquipment.mockRejectedValue(new Error('Network error'));
       const stats = {
         inventory: {
@@ -270,14 +230,20 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Longsword');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Longsword');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[CharInventory] Error loading equipment:',
+        expect.any(Error)
+      );
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('Error loading item details');
       expect(callArg).toContain('Network error');
+      consoleErrorSpy.mockRestore();
     });
 
-    it('should show error message when equipment data is null', async () => {
+    it('should show "not found" when equipment data is null', async () => {
+      const { loadEquipment } = await import('../../services/ui/dataLoader.js');
       loadEquipment.mockResolvedValue(null);
       const stats = {
         inventory: {
@@ -286,9 +252,9 @@ describe('CharInventory item popup', () => {
           backpack: [],
         },
       };
-      renderComponent(stats);
-      await clickItemByText('Longsword');
-      const callArg = setPopupHtmlSpy.mock.calls[0][0];
+      helpers.renderComponent(stats);
+      await helpers.clickItemByText('Longsword');
+      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('not found in database');
     });
   });

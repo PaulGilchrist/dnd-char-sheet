@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AttackResultPopup from './AttackResultPopup.jsx';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -37,34 +38,87 @@ function renderPopup(props = {}) {
 describe('AttackResultPopup', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getRuntimeValue.mockReturnValue(null);
+    setRuntimeValue.mockResolvedValue(undefined);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  // ── Edge cases ──
+  // ── Edge cases not covered by other test files ──
 
   describe('edge cases', () => {
-    it('renders correctly when popupHtml is undefined', () => {
-      renderPopup({ popupHtml: undefined });
+    it('renders Done button after Boon of Combat Prowess converts a miss to a hit', () => {
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [3],
+          bonus: 3,
+          hit: false,
+          autoRerollForAttack: true,
+          autoDamage: true,
+        },
+        attackerName: 'PlayerOne',
+        onClose: vi.fn(),
+      });
 
-      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+      const boonBtn = screen.getByRole('button', { name: /Boon of Combat Prowess/i });
+      fireEvent.click(boonBtn);
+
+      expect(screen.getByRole('button', { name: /Done/i })).toBeInTheDocument();
     });
 
-    it('renders correctly when popupHtml is an empty object', () => {
-      renderPopup({ popupHtml: {} });
+    it('wires up onStrokeOfLuck=undefined when boonOfCombatProwessUsed is true in runtime state', () => {
+      getRuntimeValue.mockImplementation((_key, prop) => {
+        if (prop === 'boonOfCombatProwessUsed') {
+          return true;
+        }
+        return null;
+      });
 
-      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [3],
+          bonus: 3,
+          hit: false,
+          autoRerollForAttack: true,
+        },
+        attackerName: 'PlayerOne',
+      });
+
+      // DiceRollResult still renders the Boon button (it checks autoRerollForAttack, not the ref),
+      // but clicking it does nothing because AttackResultPopup passes onStrokeOfLuck=undefined
+      const boonBtn = screen.getByRole('button', { name: /Boon of Combat Prowess/i });
+      expect(() => fireEvent.click(boonBtn)).not.toThrow();
     });
 
-    it('renders correctly when onClose is null', () => {
-      renderPopup({ onClose: null });
+    it('passes hit=true to DiceRollResult after Boon converts miss to hit', () => {
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [3],
+          bonus: 3,
+          hit: false,
+          autoRerollForAttack: true,
+          autoDamage: true,
+        },
+        attackerName: 'PlayerOne',
+        onClose: vi.fn(),
+      });
 
-      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+      // Initial render: hit=false so no Done button
+      expect(screen.queryByRole('button', { name: /Done/i })).not.toBeInTheDocument();
+
+      const boonBtn = screen.getByRole('button', { name: /Boon of Combat Prowess/i });
+      fireEvent.click(boonBtn);
+
+      // After boon click, missToHitApplied becomes true, hit becomes true in DiceRollResult,
+      // and computedHit becomes true, showing the Done button
+      expect(screen.getByRole('button', { name: /Done/i })).toBeInTheDocument();
     });
 
-    it('renders correctly when attackerName is missing but autoRerollForAttack is true', () => {
+    it('does not show Boon button when attackerName is falsy but autoRerollForAttack is true', () => {
       renderPopup({
         popupHtml: {
           name: 'Test Attack',
@@ -75,19 +129,21 @@ describe('AttackResultPopup', () => {
           autoRerollForAttack: true,
         },
         attackerName: null,
-        onClose: vi.fn(),
       });
 
+      // The component checks `popupHtml?.autoRerollForAttack && attackerName` before initializing ref
+      // When attackerName is null, the ref is never initialized (stays false),
+      // but the button still renders because the condition in DiceRollResult is `autoRerollForAttack && !boonUsed && isD20 && !hit && !isAutoMiss`
+      // However, AttackResultPopup only passes onStrokeOfLuck when `popupHtml?.autoRerollForAttack && !missToHitApplied && !hasBoonBeenUsedRef.current`
       expect(screen.getByRole('button', { name: /Boon of Combat Prowess/i })).toBeInTheDocument();
     });
 
-    it('handles bardicInspirationUses as a number (not object)', async () => {
-      const origGet = getRuntimeValue;
-      getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'Bard' && prop === 'bardicInspirationUses') {
-          return 3;
+    it('handles bardicInspirationUses as a string number (e.g. "3")', async () => {
+      getRuntimeValue.mockImplementation((_key, prop) => {
+        if (prop === 'bardicInspirationUses') {
+          return '3';
         }
-        return origGet(key, prop);
+        return null;
       });
 
       renderPopup({
@@ -117,13 +173,12 @@ describe('AttackResultPopup', () => {
       });
     });
 
-    it('handles bardicInspirationUses as null (defaults to 0)', async () => {
-      const origGet = getRuntimeValue;
-      getRuntimeValue.mockImplementation((key, prop) => {
-        if (key === 'Bard' && prop === 'bardicInspirationUses') {
-          return null;
+    it('handles bardicInspirationUses as a string "0" (does NOT decrement)', async () => {
+      getRuntimeValue.mockImplementation((_key, prop) => {
+        if (prop === 'bardicInspirationUses') {
+          return '0';
         }
-        return origGet(key, prop);
+        return null;
       });
 
       renderPopup({
@@ -144,16 +199,47 @@ describe('AttackResultPopup', () => {
       fireEvent.click(biBtn);
 
       await waitFor(() => {
-        expect(setRuntimeValue).not.toHaveBeenCalledWith(
-          'Bard',
-          'bardicInspirationUses',
-          expect.any(Number),
-          'test-campaign'
+        const calls = setRuntimeValue.mock.calls.filter(
+          (c) => c[1] === 'bardicInspirationUses'
         );
+        expect(calls).toHaveLength(0);
       });
     });
 
-    it('uses handleDone with computedHit when provided', async () => {
+    it('handles bardicInspirationUses as a negative number (does NOT decrement)', async () => {
+      getRuntimeValue.mockImplementation((_key, prop) => {
+        if (prop === 'bardicInspirationUses') {
+          return -1;
+        }
+        return null;
+      });
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+        },
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
+      fireEvent.click(biBtn);
+
+      await waitFor(() => {
+        const calls = setRuntimeValue.mock.calls.filter(
+          (c) => c[1] === 'bardicInspirationUses'
+        );
+        expect(calls).toHaveLength(0);
+      });
+    });
+
+    it('uses computedHit from onDone callback when provided, overriding popupHtml.hit', async () => {
       const onClose = vi.fn();
       renderPopup({
         popupHtml: {
@@ -173,28 +259,68 @@ describe('AttackResultPopup', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('uses popupHtml.hit as fallback when missToHitApplied is false and computedHit is not provided', async () => {
-      const onClose = vi.fn();
+    it('does not dispatch dice-roll-done event when autoDamage is true but hit is false', () => {
       renderPopup({
         popupHtml: {
           name: 'Test Attack',
           type: 'd20',
-          rolls: [18],
+          rolls: [3],
           bonus: 3,
-          hit: true,
+          hit: false,
           autoDamage: true,
         },
-        onClose,
+        onClose: vi.fn(),
       });
 
-      const doneBtn = screen.getByRole('button', { name: /Done/i });
-      fireEvent.click(doneBtn);
-
-      expect(onClose).toHaveBeenCalledTimes(1);
+      // No Done button because hit is false and no computedHit overrides it
+      expect(screen.queryByRole('button', { name: /Done/i })).not.toBeInTheDocument();
     });
 
-    it('does not call onClose when autoDamage is false and no onDone callback', () => {
-      const onClose = vi.fn();
+    it('passes callbacks spread to DiceRollResult via {...callbacks}', () => {
+      const onReroll = vi.fn();
+      const onQuickRoll = vi.fn();
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [15],
+          bonus: 3,
+          hit: true,
+        },
+        onReroll,
+        onQuickRoll,
+        onClose: vi.fn(),
+      });
+
+      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+    });
+
+    it('does not crash when campaignName is undefined', () => {
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [3],
+          bonus: 3,
+          hit: false,
+          autoRerollForAttack: true,
+        },
+        attackerName: 'PlayerOne',
+        campaignName: undefined,
+      });
+
+      expect(screen.getByRole('button', { name: /Boon of Combat Prowess/i })).toBeInTheDocument();
+    });
+
+    it('does not crash when setPopupHtml is undefined during BI defense', async () => {
+      getRuntimeValue.mockImplementation((_key, prop) => {
+        if (prop === 'bardicInspirationUses') {
+          return 1;
+        }
+        return null;
+      });
+
       renderPopup({
         popupHtml: {
           name: 'Test Attack',
@@ -202,12 +328,42 @@ describe('AttackResultPopup', () => {
           rolls: [18],
           bonus: 3,
           hit: true,
-          autoDamage: false,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+          targetAc: 25,
         },
-        onClose,
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
       });
 
-      expect(onClose).not.toHaveBeenCalled();
+      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
+      fireEvent.click(biBtn);
+
+      await waitFor(() => {
+        // Should not throw, silently handles missing setPopupHtml
+      });
+    });
+
+    it('renders popup overlay when popupHtml is an empty object', () => {
+      renderPopup({ popupHtml: {} });
+
+      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+    });
+
+    it('renders popup overlay when attackerName is null with autoRerollForAttack', () => {
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [3],
+          bonus: 3,
+          hit: false,
+          autoRerollForAttack: true,
+        },
+        attackerName: null,
+      });
+
+      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
     });
   });
 });

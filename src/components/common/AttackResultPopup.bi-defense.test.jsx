@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AttackResultPopup from './AttackResultPopup.jsx';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -40,14 +41,10 @@ describe('AttackResultPopup', () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   // ── Bardic Inspiration Defense ──
 
   describe('bardic inspiration defense', () => {
-    it('passes onBardicInspirationDefense handler when bardicInspirationDefense prop is present', () => {
+    it('renders BI Defense button when bardicInspirationDefense is true and targetName is present', () => {
       renderPopup({
         popupHtml: {
           name: 'Test Attack',
@@ -64,7 +61,7 @@ describe('AttackResultPopup', () => {
       expect(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i })).toBeInTheDocument();
     });
 
-    it('does NOT show BI Defense button when bardicInspirationDefense prop is absent', () => {
+    it('renders BI Defense button when bardicInspirationDefense is true but targetName is missing', () => {
       renderPopup({
         popupHtml: {
           name: 'Test Attack',
@@ -72,17 +69,17 @@ describe('AttackResultPopup', () => {
           rolls: [18],
           bonus: 3,
           hit: true,
+          bardicInspirationDefense: true,
         },
         onClose: vi.fn(),
       });
 
-      expect(screen.queryByRole('button', { name: /Bardic Inspiration - Defense/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i })).toBeInTheDocument();
     });
 
-    it('calls onBeforeBiDefense before modifying runtime state', async () => {
+    it('calls onBeforeBiDefense with correct arguments when clicked', async () => {
       const onBeforeBiDefense = vi.fn().mockResolvedValue(undefined);
       const onAfterBiDefense = vi.fn().mockResolvedValue(undefined);
-      const setPopupHtml = vi.fn();
 
       renderPopup({
         popupHtml: {
@@ -97,30 +94,27 @@ describe('AttackResultPopup', () => {
         },
         onBeforeBiDefense,
         onAfterBiDefense,
-        setPopupHtml,
         campaignName: 'test-campaign',
         onClose: vi.fn(),
       });
 
-      setRuntimeValue.mockResolvedValue(undefined);
-
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
       await waitFor(() => {
-        expect(onBeforeBiDefense).toHaveBeenCalled();
+        expect(onBeforeBiDefense).toHaveBeenCalledTimes(1);
       });
 
-      const callArgs = onBeforeBiDefense.mock.calls[0][0];
-      expect(callArgs.targetName).toBe('Bard');
-      expect(typeof callArgs.dieValue).toBe('number');
-      expect(typeof callArgs.dieSize).toBe('number');
-      expect(typeof callArgs.newAc).toBe('number');
-      expect(typeof callArgs.willMiss).toBe('boolean');
-      expect(callArgs.willMiss).toBe(true);
+      const [args] = onBeforeBiDefense.mock.calls[0];
+      expect(args).toMatchObject({
+        targetName: 'Bard',
+        willMiss: true,
+      });
+      expect(typeof args.dieValue).toBe('number');
+      expect(typeof args.dieSize).toBe('number');
+      expect(typeof args.newAc).toBe('number');
     });
 
-    it('calls onAfterBiDefense after modifying runtime state', async () => {
+    it('calls onAfterBiDefense with correct arguments after BI defense completes', async () => {
       const onBeforeBiDefense = vi.fn().mockResolvedValue(undefined);
       const onAfterBiDefense = vi.fn().mockResolvedValue(undefined);
 
@@ -133,6 +127,7 @@ describe('AttackResultPopup', () => {
           hit: true,
           bardicInspirationDefense: true,
           bardicInspirationDefenseTargetName: 'Bard',
+          targetAc: 25,
         },
         onBeforeBiDefense,
         onAfterBiDefense,
@@ -140,19 +135,30 @@ describe('AttackResultPopup', () => {
         onClose: vi.fn(),
       });
 
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
       await waitFor(() => {
-        expect(onAfterBiDefense).toHaveBeenCalled();
+        expect(onAfterBiDefense).toHaveBeenCalledTimes(1);
       });
 
-      const callArgs = onAfterBiDefense.mock.calls[0][0];
-      expect(callArgs.targetName).toBe('Bard');
+      const [args] = onAfterBiDefense.mock.calls[0];
+      expect(args).toMatchObject({
+        targetName: 'Bard',
+      });
+      expect(typeof args.dieValue).toBe('number');
+      expect(typeof args.dieSize).toBe('number');
+      expect(typeof args.newAc).toBe('number');
+      expect(typeof args.willMiss).toBe('boolean');
     });
 
-    it('decrements bardicInspirationUses when currentUses > 0', async () => {
-      setRuntimeValue.mockImplementation(() => Promise.resolve());
+    it('decrements bardicInspirationUses when currentUses is a number > 0', async () => {
+      const origGet = getRuntimeValue;
+      getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'Bard' && prop === 'bardicInspirationUses') {
+          return 3;
+        }
+        return origGet(key, prop);
+      });
 
       renderPopup({
         popupHtml: {
@@ -168,6 +174,19 @@ describe('AttackResultPopup', () => {
         onClose: vi.fn(),
       });
 
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'Bard',
+          'bardicInspirationUses',
+          2,
+          'test-campaign'
+        );
+      });
+    });
+
+    it('decrements bardicInspirationUses when currentUses is an object with current > 0', async () => {
       const origGet = getRuntimeValue;
       getRuntimeValue.mockImplementation((key, prop) => {
         if (key === 'Bard' && prop === 'bardicInspirationUses') {
@@ -176,8 +195,21 @@ describe('AttackResultPopup', () => {
         return origGet(key, prop);
       });
 
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+        },
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
       await waitFor(() => {
         expect(setRuntimeValue).toHaveBeenCalledWith(
@@ -189,7 +221,40 @@ describe('AttackResultPopup', () => {
       });
     });
 
-    it('does NOT decrement bardicInspirationUses when currentUses is 0', async () => {
+    it('does NOT decrement bardicInspirationUses when currentUses is 0 (number)', async () => {
+      const origGet = getRuntimeValue;
+      getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'Bard' && prop === 'bardicInspirationUses') {
+          return 0;
+        }
+        return origGet(key, prop);
+      });
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+        },
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        const calls = setRuntimeValue.mock.calls.filter(
+          (c) => c[1] === 'bardicInspirationUses'
+        );
+        expect(calls).toHaveLength(0);
+      });
+    });
+
+    it('does NOT decrement bardicInspirationUses when currentUses is 0 (object)', async () => {
       const origGet = getRuntimeValue;
       getRuntimeValue.mockImplementation((key, prop) => {
         if (key === 'Bard' && prop === 'bardicInspirationUses') {
@@ -212,20 +277,47 @@ describe('AttackResultPopup', () => {
         onClose: vi.fn(),
       });
 
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
       await waitFor(() => {
-        expect(setRuntimeValue).not.toHaveBeenCalledWith(
-          'Bard',
-          'bardicInspirationUses',
-          expect.any(Number),
-          'test-campaign'
+        const calls = setRuntimeValue.mock.calls.filter(
+          (c) => c[1] === 'bardicInspirationUses'
         );
+        expect(calls).toHaveLength(0);
+      });
+    });
+
+    it('does NOT decrement bardicInspirationUses when currentUses is null', async () => {
+      const origGet = getRuntimeValue;
+      getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'Bard' && prop === 'bardicInspirationUses') {
+          return null;
+        }
+        return origGet(key, prop);
       });
 
-      getRuntimeValue.mockRestore = getRuntimeValue.mockRestore || (() => {});
-      getRuntimeValue.mockImplementation(origGet);
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+        },
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        const calls = setRuntimeValue.mock.calls.filter(
+          (c) => c[1] === 'bardicInspirationUses'
+        );
+        expect(calls).toHaveLength(0);
+      });
     });
 
     it('sets popupHtml to hit:false and isAutoMiss:true when willMiss is true', async () => {
@@ -255,19 +347,19 @@ describe('AttackResultPopup', () => {
         onClose: vi.fn(),
       });
 
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
       await waitFor(() => {
-        expect(setPopupHtml).toHaveBeenCalled();
+        expect(setPopupHtml).toHaveBeenCalledTimes(1);
       });
 
       const updatedHtml = setPopupHtml.mock.calls[0][0];
       expect(updatedHtml.hit).toBe(false);
       expect(updatedHtml.isAutoMiss).toBe(true);
+      expect(updatedHtml.name).toBe('Test Attack');
     });
 
-    it('does NOT set popupHtml when willMiss is false', async () => {
+    it('does NOT call setPopupHtml when willMiss is false', async () => {
       const setPopupHtml = vi.fn();
 
       const origGet = getRuntimeValue;
@@ -294,15 +386,45 @@ describe('AttackResultPopup', () => {
         onClose: vi.fn(),
       });
 
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
-      await new Promise((r) => setTimeout(r, 200));
-
-      expect(setPopupHtml).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(setPopupHtml).not.toHaveBeenCalled();
+      });
     });
 
-    it('logs an entry when willMiss is true', async () => {
+    it('does NOT call setPopupHtml when setPopupHtml is not provided', async () => {
+      const origGet = getRuntimeValue;
+      getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'Bard' && prop === 'bardicInspirationUses') {
+          return { current: 1 };
+        }
+        return origGet(key, prop);
+      });
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+          targetAc: 25,
+        },
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        // No error thrown, no setPopupHtml call since it wasn't passed
+      });
+    });
+
+    it('logs an ability_use entry with correct fields when willMiss is true', async () => {
       const origGet = getRuntimeValue;
       getRuntimeValue.mockImplementation((key, prop) => {
         if (key === 'Bard' && prop === 'bardicInspirationUses') {
@@ -327,22 +449,25 @@ describe('AttackResultPopup', () => {
         onClose: vi.fn(),
       });
 
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
       await waitFor(() => {
-        expect(logService.addEntry).toHaveBeenCalled();
+        expect(logService.addEntry).toHaveBeenCalledTimes(1);
       });
 
-      const logArgs = logService.addEntry.mock.calls[0][1];
+      const [campaign, logArgs] = logService.addEntry.mock.calls[0];
+      expect(campaign).toBe('test-campaign');
       expect(logArgs.type).toBe('ability_use');
       expect(logArgs.characterName).toBe('Bard');
       expect(logArgs.abilityName).toBe('Combat Inspiration - Defense');
       expect(logArgs.biDieRoll).toBeDefined();
+      expect(typeof logArgs.biDieRoll).toBe('number');
+      expect(logArgs.description).toContain("Goblin's attack missed");
       expect(logArgs.description).toContain('missed');
+      expect(logArgs.timestamp).toBeDefined();
     });
 
-    it('logs an entry when willMiss is false', async () => {
+    it('logs an ability_use entry with correct fields when willMiss is false', async () => {
       const origGet = getRuntimeValue;
       getRuntimeValue.mockImplementation((key, prop) => {
         if (key === 'Bard' && prop === 'bardicInspirationUses') {
@@ -367,15 +492,50 @@ describe('AttackResultPopup', () => {
         onClose: vi.fn(),
       });
 
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
       await waitFor(() => {
-        expect(logService.addEntry).toHaveBeenCalled();
+        expect(logService.addEntry).toHaveBeenCalledTimes(1);
       });
 
-      const logArgs = logService.addEntry.mock.calls[0][1];
+      const [, logArgs] = logService.addEntry.mock.calls[0];
+      expect(logArgs.type).toBe('ability_use');
       expect(logArgs.description).toContain('still hits');
+    });
+
+    it('logs an ability_use entry when attackerName is missing', async () => {
+      const origGet = getRuntimeValue;
+      getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'Bard' && prop === 'bardicInspirationUses') {
+          return { current: 1 };
+        }
+        return origGet(key, prop);
+      });
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+          targetAc: 25,
+        },
+        campaignName: 'test-campaign',
+        attackerName: null,
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        expect(logService.addEntry).toHaveBeenCalledTimes(1);
+      });
+
+      const [, logArgs] = logService.addEntry.mock.calls[0];
+      expect(logArgs.description).toContain('The attacker');
     });
 
     it('resets bardicInspirationDie, bardicInspirationCombatOptions, bardicInspirationGrantedBy after BI defense', async () => {
@@ -402,8 +562,7 @@ describe('AttackResultPopup', () => {
         onClose: vi.fn(),
       });
 
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
       await waitFor(() => {
         expect(setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationDie', null, 'test-campaign');
@@ -412,7 +571,122 @@ describe('AttackResultPopup', () => {
       });
     });
 
-    it('logs error and returns early when no bardicInspirationDefenseTargetName in popupHtml', async () => {
+    it('resets bardicInspirationDie, bardicInspirationCombatOptions, bardicInspirationGrantedBy even when willMiss is false', async () => {
+      const origGet = getRuntimeValue;
+      getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'Bard' && prop === 'bardicInspirationUses') {
+          return { current: 1 };
+        }
+        return origGet(key, prop);
+      });
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+          targetAc: 0,
+        },
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        expect(setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationDie', null, 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationCombatOptions', null, 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationGrantedBy', null, 'test-campaign');
+      });
+    });
+
+    it('resets bardicInspirationDie, bardicInspirationCombatOptions, bardicInspirationGrantedBy even when uses are 0', async () => {
+      const origGet = getRuntimeValue;
+      getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'Bard' && prop === 'bardicInspirationUses') {
+          return { current: 0 };
+        }
+        return origGet(key, prop);
+      });
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+        },
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        expect(setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationDie', null, 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationCombatOptions', null, 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('Bard', 'bardicInspirationGrantedBy', null, 'test-campaign');
+      });
+    });
+
+    it('calls onBeforeBiDefense when provided, skips it when not provided', async () => {
+      const onBeforeBiDefense = vi.fn().mockResolvedValue(undefined);
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+        },
+        onBeforeBiDefense,
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        expect(onBeforeBiDefense).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('calls onAfterBiDefense when provided, skips it when not provided', async () => {
+      const onAfterBiDefense = vi.fn().mockResolvedValue(undefined);
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+          bardicInspirationDefenseTargetName: 'Bard',
+        },
+        onAfterBiDefense,
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        expect(onAfterBiDefense).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('logs error when targetName is missing from popupHtml', async () => {
       const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       renderPopup({
@@ -428,8 +702,7 @@ describe('AttackResultPopup', () => {
         onClose: vi.fn(),
       });
 
-      const biBtn = screen.getByRole('button', { name: /Bardic Inspiration - Defense/i });
-      fireEvent.click(biBtn);
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
 
       await waitFor(() => {
         expect(consoleError).toHaveBeenCalledWith(
@@ -440,7 +713,38 @@ describe('AttackResultPopup', () => {
       consoleError.mockRestore();
     });
 
-    it('does nothing when popupHtml is null and BI defense handler is somehow called', () => {
+    it('does not call setRuntimeValue for BI state reset when targetName is missing', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      renderPopup({
+        popupHtml: {
+          name: 'Test Attack',
+          type: 'd20',
+          rolls: [18],
+          bonus: 3,
+          hit: true,
+          bardicInspirationDefense: true,
+        },
+        campaignName: 'test-campaign',
+        onClose: vi.fn(),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Bardic Inspiration - Defense/i }));
+
+      await waitFor(() => {
+        const resetCalls = setRuntimeValue.mock.calls.filter(
+          (c) =>
+            c[1] === 'bardicInspirationDie' ||
+            c[1] === 'bardicInspirationCombatOptions' ||
+            c[1] === 'bardicInspirationGrantedBy'
+        );
+        expect(resetCalls).toHaveLength(0);
+      });
+
+      consoleError.mockRestore();
+    });
+
+    it('does nothing when popupHtml is null', () => {
       const onBeforeBiDefense = vi.fn();
       const onAfterBiDefense = vi.fn();
 

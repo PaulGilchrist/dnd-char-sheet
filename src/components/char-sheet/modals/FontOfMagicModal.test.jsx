@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import FontOfMagicModal from './FontOfMagicModal.jsx';
@@ -90,8 +91,9 @@ describe('FontOfMagicModal', () => {
 
   it('renders the modal overlay, header, and subtitle', () => {
     render(<FontOfMagicModal {...makeProps()} />);
-    expect(document.querySelector('.font-of-magic-overlay')).toBeInTheDocument();
-    expect(document.querySelector('.font-of-magic-overlay').classList.contains('no-print')).toBe(true);
+    const overlay = document.querySelector('.font-of-magic-overlay');
+    expect(overlay).toBeInTheDocument();
+    expect(overlay).toHaveClass('no-print');
     expect(document.querySelector('.font-of-magic-modal')).toBeInTheDocument();
     expect(screen.getByText('Font of Magic')).toBeInTheDocument();
     expect(document.querySelector('.fas.fa-fire')).toBeInTheDocument();
@@ -109,6 +111,11 @@ describe('FontOfMagicModal', () => {
     expect(summary.textContent).toContain('10');
   });
 
+  it('shows stat--buffed class when finalSP equals currentSP (no conversion)', () => {
+    render(<FontOfMagicModal {...makeProps()} />);
+    expect(document.querySelector('.font-of-magic-summary .stat--buffed')).toBeInTheDocument();
+  });
+
   it('uses stored sorcery points from runtime state when available', () => {
     vi.mocked(getRuntimeValue).mockImplementation((name, prop) =>
       prop === 'sorceryPoints' ? '7' : null
@@ -118,8 +125,10 @@ describe('FontOfMagicModal', () => {
   });
 
   it('defaults maxSP to 0 when getClassFeatures returns null', () => {
-    vi.mocked(getClassFeatures).mockReset().mockReturnValue(null);
-    vi.mocked(getRuntimeValue).mockReset().mockReturnValue(null);
+    vi.mocked(getClassFeatures).mockReturnValue(null);
+    vi.mocked(getRuntimeValue).mockImplementation((name, prop) =>
+      prop === 'sorceryPoints' ? null : null
+    );
     render(<FontOfMagicModal {...makeProps()} />);
     expect(document.querySelector('.font-of-magic-summary').textContent).toContain('0');
   });
@@ -358,6 +367,19 @@ describe('FontOfMagicModal', () => {
     expect(screen.getByText('Apply Conversion')).toBeDisabled();
   });
 
+  it('enables Apply when both conversion directions are active simultaneously', () => {
+    vi.mocked(getRuntimeValue).mockImplementation((name, prop) =>
+      prop === 'sorceryPoints' ? '10' : null
+    );
+    render(<FontOfMagicModal {...makeProps()} />);
+    const tables = document.querySelectorAll('.font-of-magic-table');
+    const firstRows = tables[0].querySelectorAll('tbody tr');
+    const secondRows = tables[1].querySelectorAll('tbody tr');
+    fireEvent.change(firstRows[0].querySelector('input'), { target: { value: '1' } });
+    fireEvent.change(secondRows[0].querySelector('input'), { target: { value: '1' } });
+    expect(screen.getByText('Apply Conversion')).not.toBeDisabled();
+  });
+
   // ── handleApply ──
 
   it('calls setRuntimeBatch with correct data when Apply is clicked (slot-to-SP)', () => {
@@ -456,9 +478,23 @@ describe('FontOfMagicModal', () => {
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
+  it('calls onClose when overlay background is clicked', () => {
+    render(<FontOfMagicModal {...makeProps()} />);
+    const overlay = document.querySelector('.font-of-magic-overlay');
+    fireEvent.click(overlay);
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not close when modal content is clicked', () => {
+    render(<FontOfMagicModal {...makeProps()} />);
+    const modal = document.querySelector('.font-of-magic-modal');
+    fireEvent.click(modal);
+    expect(mockOnClose).not.toHaveBeenCalled();
+  });
+
   // ── Edge cases: missing data ──
 
-  it('handles missing spellAbilities, class_levels, class, or no slots gracefully', () => {
+  it('handles missing spellAbilities, class_levels, or class gracefully', () => {
     const scenarios = [
       {
         name: 'missing spellAbilities',
@@ -481,54 +517,55 @@ describe('FontOfMagicModal', () => {
     }
 
     // no spell slots
-    const { container } = render(<FontOfMagicModal playerStats={{ name: 'Throg', level: 1, rules: '5e', class: { name: 'Sorcerer', class_levels: [] }, spellAbilities: { spell_slots_level_1: 0, spell_slots_level_2: 0, spell_slots_level_3: 0, spell_slots_level_4: 0, spell_slots_level_5: 0 } }} campaignName="test-campaign" onClose={mockOnClose} />);
+    render(<FontOfMagicModal playerStats={{ name: 'Throg', level: 1, rules: '5e', class: { name: 'Sorcerer', class_levels: [] }, spellAbilities: { spell_slots_level_1: 0, spell_slots_level_2: 0, spell_slots_level_3: 0, spell_slots_level_4: 0, spell_slots_level_5: 0 } }} campaignName="test-campaign" onClose={mockOnClose} />);
     const tables = document.querySelectorAll('.font-of-magic-table');
     const rows = tables[0].querySelectorAll('tbody tr');
     rows.forEach(row => expect(row.textContent).toContain('0 / 0'));
-    container.remove();
   });
 
   // ── netSPChange computation ──
 
-  it('correctly computes netSPChange for conversion-only, creation-only, and mixed scenarios', () => {
-    // conversion only: convert 1 level-3 slot → +3 SP
+  it('computes finalSP correctly when converting slots to SP only', () => {
     vi.mocked(getRuntimeValue).mockImplementation((name, prop) =>
       prop === 'sorceryPoints' ? '5' : null
     );
-    const { container: c1 } = render(<FontOfMagicModal {...makeProps()} />);
-    let tables = document.querySelectorAll('.font-of-magic-table');
-    let firstRows = tables[0].querySelectorAll('tbody tr');
+    render(<FontOfMagicModal {...makeProps()} />);
+    const tables = document.querySelectorAll('.font-of-magic-table');
+    const firstRows = tables[0].querySelectorAll('tbody tr');
     fireEvent.change(firstRows[2].querySelector('input'), { target: { value: '1' } });
+    // 1 level-3 slot → +3 SP, currentSP=5, finalSP=8
     expect(document.querySelector('.font-of-magic-summary').textContent).toContain('8');
-    c1.remove();
+  });
 
-    // creation only: create 2 level-3 slots at cost 4 each → -8 SP
+  it('computes finalSP correctly when creating slots from SP only', () => {
     vi.mocked(getRuntimeValue).mockImplementation((name, prop) =>
       prop === 'sorceryPoints' ? '20' : null
     );
     const props = makePropsWithCosts([
       { spell_slot_level: 3, sorcery_point_cost: 4 },
     ]);
-    const { container: c2 } = render(<FontOfMagicModal {...props} />);
-    tables = document.querySelectorAll('.font-of-magic-table');
-    let secondRows = tables[1].querySelectorAll('tbody tr');
+    render(<FontOfMagicModal {...props} />);
+    const tables = document.querySelectorAll('.font-of-magic-table');
+    const secondRows = tables[1].querySelectorAll('tbody tr');
     fireEvent.change(secondRows[2].querySelector('input'), { target: { value: '2' } });
+    // 2 level-3 slots → -8 SP, currentSP=20, finalSP=12
     expect(document.querySelector('.font-of-magic-summary').textContent).toContain('12');
-    c2.remove();
+  });
 
-    // mixed: convert 2 level-1 slots (+2 SP), create 1 level-1 slot (-2 SP) → netSP = 0, finalSP = 10
+  it('computes finalSP correctly when both conversion directions are active', () => {
     vi.mocked(getRuntimeValue).mockImplementation((name, prop) =>
       prop === 'sorceryPoints' ? '10' : null
     );
-    const props2 = makePropsWithCosts([
+    const props = makePropsWithCosts([
       { spell_slot_level: 1, sorcery_point_cost: 2 },
     ]);
-    render(<FontOfMagicModal {...props2} />);
-    tables = document.querySelectorAll('.font-of-magic-table');
-    firstRows = tables[0].querySelectorAll('tbody tr');
-    secondRows = tables[1].querySelectorAll('tbody tr');
+    render(<FontOfMagicModal {...props} />);
+    const tables = document.querySelectorAll('.font-of-magic-table');
+    const firstRows = tables[0].querySelectorAll('tbody tr');
+    const secondRows = tables[1].querySelectorAll('tbody tr');
     fireEvent.change(firstRows[0].querySelector('input'), { target: { value: '2' } });
     fireEvent.change(secondRows[0].querySelector('input'), { target: { value: '1' } });
+    // 2 level-1 slots → +2 SP, 1 level-1 slot → -2 SP, net=0, finalSP=10
     expect(document.querySelector('.font-of-magic-summary').textContent).toContain('10');
   });
 

@@ -1,13 +1,12 @@
-import { render, screen } from '@testing-library/react';
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import EncounterSummaryPanel from './EncounterSummaryPanel.jsx';
-
 
 describe('EncounterSummaryPanel', () => {
   let defaultProps;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     defaultProps = {
       totalMonsterXP: 500,
       monsterCount: 3,
@@ -23,21 +22,26 @@ describe('EncounterSummaryPanel', () => {
     };
   });
 
-  describe('rendering summary values', () => {
-    it('renders formatted total XP and effective XP with commas', () => {
+  describe('summary values', () => {
+    it('renders total XP and effective XP formatted with thousand separators', () => {
       render(<EncounterSummaryPanel {...defaultProps} totalMonsterXP={10000} effectiveXP={15000} />);
       expect(screen.getByText('10,000')).toBeInTheDocument();
       expect(screen.getByText('15,000')).toBeInTheDocument();
     });
 
-    it('renders monster count', () => {
-      render(<EncounterSummaryPanel {...defaultProps} />);
-      expect(screen.getByText('3')).toBeInTheDocument();
+    it('renders zero XP values without separators', () => {
+      render(<EncounterSummaryPanel {...defaultProps} totalMonsterXP={0} effectiveXP={0} />);
+      expect(screen.getAllByText('0')).toHaveLength(2);
     });
 
-    it('renders difficulty multiplier', () => {
-      render(<EncounterSummaryPanel {...defaultProps} />);
-      expect(screen.getByText('\u00D72')).toBeInTheDocument();
+    it('renders the monster count', () => {
+      render(<EncounterSummaryPanel {...defaultProps} monsterCount={7} />);
+      expect(screen.getByText('7')).toBeInTheDocument();
+    });
+
+    it('renders the difficulty multiplier prefixed with the multiplication sign', () => {
+      render(<EncounterSummaryPanel {...defaultProps} difficultyMultiplier={3} />);
+      expect(screen.getByText('\u00D73')).toBeInTheDocument();
     });
   });
 
@@ -52,13 +56,19 @@ describe('EncounterSummaryPanel', () => {
       expect(screen.getByText(expected)).toBeInTheDocument();
     });
 
-    it('renders Unknown when difficultyIndex is out of bounds or labels are empty', () => {
-      render(<EncounterSummaryPanel {...defaultProps} difficultyIndex={5} />);
-      expect(screen.getByText('Unknown')).toBeInTheDocument();
+    it('renders the label supplied via the difficultyLabels array', () => {
+      render(<EncounterSummaryPanel {...defaultProps} difficultyLabels={['Trivial']} difficultyIndex={0} />);
+      expect(screen.getByText('Trivial')).toBeInTheDocument();
     });
 
-    it('renders Unknown when difficultyLabels is empty', () => {
-      render(<EncounterSummaryPanel {...defaultProps} difficultyLabels={[]} difficultyIndex={0} />);
+    it.each([
+      ['an out-of-bounds index', { difficultyIndex: 5 }],
+      ['a negative index', { difficultyIndex: -1 }],
+      ['empty labels', { difficultyLabels: [], difficultyIndex: 0 }],
+      ['undefined labels', { difficultyLabels: undefined, difficultyIndex: 0 }],
+      ['an undefined index', { difficultyIndex: undefined }],
+    ])('renders Unknown when given %s', (_description, overrides) => {
+      render(<EncounterSummaryPanel {...defaultProps} {...overrides} />);
       expect(screen.getByText('Unknown')).toBeInTheDocument();
     });
   });
@@ -66,17 +76,20 @@ describe('EncounterSummaryPanel', () => {
   describe('Clear All button', () => {
     it('renders when monsters are selected', () => {
       render(<EncounterSummaryPanel {...defaultProps} />);
-      expect(screen.getByText('Clear All')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Clear All' })).toBeInTheDocument();
     });
 
-    it('does not render when selectedMonsters is null or empty', () => {
-      render(<EncounterSummaryPanel {...defaultProps} selectedMonsters={null} />);
-      expect(screen.queryByText('Clear All')).not.toBeInTheDocument();
+    it.each([
+      ['null', null],
+      ['an empty array', []],
+    ])('does not render when selectedMonsters is %s', (_description, selectedMonsters) => {
+      render(<EncounterSummaryPanel {...defaultProps} selectedMonsters={selectedMonsters} />);
+      expect(screen.queryByRole('button', { name: 'Clear All' })).not.toBeInTheDocument();
     });
 
     it('calls onClearMonsters when clicked', () => {
       render(<EncounterSummaryPanel {...defaultProps} />);
-      screen.getByText('Clear All').click();
+      fireEvent.click(screen.getByRole('button', { name: 'Clear All' }));
       expect(defaultProps.onClearMonsters).toHaveBeenCalledTimes(1);
     });
   });

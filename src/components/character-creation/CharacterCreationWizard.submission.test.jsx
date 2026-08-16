@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharacterCreationWizard from './CharacterCreationWizard.jsx';
@@ -289,7 +290,7 @@ describe('CharacterCreationWizard - Submission', () => {
     validateFinalFormData.mockImplementation(() => ({}));
   });
 
-  it('calls onComplete with formData when all validations pass', async () => {
+  function renderWizard(props = {}) {
     useWizardNavigation.mockImplementation(() => ({
       currentStep: 12,
       isNextDisabled: false,
@@ -299,9 +300,12 @@ describe('CharacterCreationWizard - Submission', () => {
       getStepEnabled: mockGetStepEnabled,
       isSaveEnabled: true,
     }));
+    return render(<CharacterCreationWizard {...defaultProps} {...props} />);
+  }
 
+  it('calls onComplete with formData when all validations pass', async () => {
     const localOnComplete = vi.fn();
-    render(<CharacterCreationWizard {...defaultProps} onComplete={localOnComplete} characterData={{ rules: '5e' }} />);
+    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
 
     await act(async () => {
       fireEvent.click(screen.getByText('Create Character'));
@@ -312,44 +316,63 @@ describe('CharacterCreationWizard - Submission', () => {
     });
   });
 
-  it('calls onComplete with formData when all validations pass (2024 ruleset)', async () => {
-    useWizardNavigation.mockImplementation(() => ({
-      currentStep: 12,
-      isNextDisabled: false,
-      navigateNext: mockNavigateNext,
-      navigatePrevious: mockNavigatePrevious,
-      goToStep: mockGoToStep,
-      getStepEnabled: mockGetStepEnabled,
-      isSaveEnabled: true,
-    }));
-
+  it('passes the character ruleset to validateStep', async () => {
     const localOnComplete = vi.fn();
-    render(<CharacterCreationWizard {...defaultProps} onComplete={localOnComplete} characterData={{ rules: '2024' }} />);
+    renderWizard({ onComplete: localOnComplete, characterData: { rules: '2024' } });
 
     await act(async () => {
       fireEvent.click(screen.getByText('Create Character'));
     });
 
     await waitFor(() => {
-      expect(localOnComplete).toHaveBeenCalledWith(mockFormData);
       expect(validateStep).toHaveBeenCalledWith(12, mockFormData, {}, [], [], '2024');
+    });
+  });
+
+  it('passes the character ruleset to validateStep for 5e', async () => {
+    const localOnComplete = vi.fn();
+    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create Character'));
+    });
+
+    await waitFor(() => {
+      expect(validateStep).toHaveBeenCalledWith(12, mockFormData, {}, [], [], '5e');
+    });
+  });
+
+  it('calls validateFinalFormData after validateStep passes', async () => {
+    const localOnComplete = vi.fn();
+    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create Character'));
+    });
+
+    await waitFor(() => {
+      expect(validateFinalFormData).toHaveBeenCalledWith(mockFormData);
+    });
+  });
+
+  it('does not call validateFinalFormData when step validation fails', async () => {
+    validateStep.mockImplementation(() => Promise.resolve({ name: 'Name is required' }));
+    const localOnComplete = vi.fn();
+    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create Character'));
+    });
+
+    await waitFor(() => {
+      expect(validateFinalFormData).not.toHaveBeenCalled();
     });
   });
 
   it('sets step errors and does not call onComplete when step validation fails', async () => {
     validateStep.mockImplementation(() => Promise.resolve({ name: 'Name is required' }));
-    useWizardNavigation.mockImplementation(() => ({
-      currentStep: 12,
-      isNextDisabled: false,
-      navigateNext: mockNavigateNext,
-      navigatePrevious: mockNavigatePrevious,
-      goToStep: mockGoToStep,
-      getStepEnabled: mockGetStepEnabled,
-      isSaveEnabled: true,
-    }));
-
     const localOnComplete = vi.fn();
-    render(<CharacterCreationWizard {...defaultProps} onComplete={localOnComplete} characterData={{ rules: '5e' }} />);
+    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
 
     await act(async () => {
       fireEvent.click(screen.getByText('Create Character'));
@@ -362,20 +385,9 @@ describe('CharacterCreationWizard - Submission', () => {
   });
 
   it('sets final validation errors and does not call onComplete when final validation fails', async () => {
-    validateStep.mockImplementation(() => Promise.resolve({}));
     validateFinalFormData.mockImplementation(() => ({ name: 'Name is required' }));
-    useWizardNavigation.mockImplementation(() => ({
-      currentStep: 12,
-      isNextDisabled: false,
-      navigateNext: mockNavigateNext,
-      navigatePrevious: mockNavigatePrevious,
-      goToStep: mockGoToStep,
-      getStepEnabled: mockGetStepEnabled,
-      isSaveEnabled: true,
-    }));
-
     const localOnComplete = vi.fn();
-    render(<CharacterCreationWizard {...defaultProps} onComplete={localOnComplete} characterData={{ rules: '5e' }} />);
+    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
 
     await act(async () => {
       fireEvent.click(screen.getByText('Create Character'));
@@ -384,6 +396,59 @@ describe('CharacterCreationWizard - Submission', () => {
     await waitFor(() => {
       expect(mockSetErrors).toHaveBeenCalledWith({ name: 'Name is required' });
       expect(localOnComplete).not.toHaveBeenCalled();
+    });
+  });
+
+  it('uses "Save Changes" button text when isEditing is true', async () => {
+    const localOnComplete = vi.fn();
+    renderWizard({ onComplete: localOnComplete, isEditing: true, characterData: { rules: '5e' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Save Changes'));
+    });
+
+    await waitFor(() => {
+      expect(localOnComplete).toHaveBeenCalledWith(mockFormData);
+    });
+  });
+
+  it('uses "Create Character" button text when isEditing is false', async () => {
+    const localOnComplete = vi.fn();
+    renderWizard({ onComplete: localOnComplete, isEditing: false, characterData: { rules: '5e' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create Character'));
+    });
+
+    await waitFor(() => {
+      expect(localOnComplete).toHaveBeenCalledWith(mockFormData);
+    });
+  });
+
+  it('calls onComplete with the formData from the wizard form hook', async () => {
+    const localOnComplete = vi.fn();
+    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create Character'));
+    });
+
+    await waitFor(() => {
+      expect(localOnComplete).toHaveBeenCalledWith(mockFormData);
+      expect(mockSetFormData).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not call setErrors when validation succeeds', async () => {
+    const localOnComplete = vi.fn();
+    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create Character'));
+    });
+
+    await waitFor(() => {
+      expect(mockSetErrors).not.toHaveBeenCalled();
     });
   });
 });

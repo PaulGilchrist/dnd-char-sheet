@@ -1,3 +1,7 @@
+// @improved-by-ai
+// SavePromptModal — Rolling Mechanics
+// Tests behavioral outcomes of the d20 rolling system: disadvantage, advantage,
+// normal rolls, and save resolution with different bonus sources.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -86,10 +90,15 @@ vi.mock('./Subscriber.jsx', () => {
 });
 
 describe('SavePromptModal — rolling', () => {
-  beforeEach(() => setupDefaults(rollD20, computeAuraBonus, getRuntimeValue));
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupDefaults(rollD20, computeAuraBonus, getRuntimeValue);
+  });
   afterEach(cleanupDefaults);
 
-  it('rolls two d20s and takes the minimum for disadvantage', async () => {
+  // ── Disadvantage: explicit prompt flag ──
+
+  it('rolls two d20s and takes the minimum when disadvantage flag is set', async () => {
     rollD20.mockReturnValueOnce(18).mockReturnValueOnce(5);
 
     render(
@@ -111,14 +120,19 @@ describe('SavePromptModal — rolling', () => {
     fireEvent.click(rollBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/d20/i)).toBeInTheDocument();
+      expect(screen.getByText(/Disadvantage/i)).toBeInTheDocument();
     });
 
     expect(rollD20).toHaveBeenCalledTimes(2);
+    // Minimum of 18 and 5 is 5; no character found so bonus is 0; 5 < 14 DC = failure
+    expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
+    expectSaveTotal(5, 14);
   });
 
-  it('rolls two d20s for DEX saves when the target is Charmed', async () => {
-    vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
+  // ── Disadvantage: charmed condition on DEX save ──
+
+  it('rolls two d20s and takes the minimum for DEX saves when target is charmed', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
       if (name === 'testTarget' && key === 'activeConditions') return ['charmed', 'speed_zero'];
       return null;
     });
@@ -132,7 +146,8 @@ describe('SavePromptModal — rolling', () => {
       />
     );
 
-    fireEvent.click(screen.getByTestId('subscriber-trigger-dex'));
+    const trigger = screen.getByTestId('subscriber-trigger-dex');
+    fireEvent.click(trigger);
 
     await waitFor(() => {
       expect(screen.getByText(/must make a/i)).toBeInTheDocument();
@@ -142,15 +157,17 @@ describe('SavePromptModal — rolling', () => {
     fireEvent.click(rollBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/d20/i)).toBeInTheDocument();
+      expect(screen.getByText(/Disadvantage/i)).toBeInTheDocument();
     });
 
     expect(rollD20).toHaveBeenCalledTimes(2);
-    expect(screen.getAllByText(/\(Disadvantage\)/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
   });
 
-  it('rolls two d20s for DEX saves when the target has Otto\'s Irresistible Dance', async () => {
-    vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
+  // ── Disadvantage: Otto's Irresistible Dance on DEX save ──
+
+  it('rolls two d20s and takes the minimum for DEX saves when target has Otto\'s Irresistible Dance', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
       if (name === 'campaign' && key === 'targetEffects') return [{ target: 'testTarget', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }];
       return null;
     });
@@ -164,7 +181,8 @@ describe('SavePromptModal — rolling', () => {
       />
     );
 
-    fireEvent.click(screen.getByTestId('subscriber-trigger-dex'));
+    const trigger = screen.getByTestId('subscriber-trigger-dex');
+    fireEvent.click(trigger);
 
     await waitFor(() => {
       expect(screen.getByText(/must make a/i)).toBeInTheDocument();
@@ -174,19 +192,21 @@ describe('SavePromptModal — rolling', () => {
     fireEvent.click(rollBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/d20/i)).toBeInTheDocument();
+      expect(screen.getByText(/Disadvantage/i)).toBeInTheDocument();
     });
 
     expect(rollD20).toHaveBeenCalledTimes(2);
-    expect(screen.getAllByText(/\(Disadvantage\)/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
   });
 
-  it('does not roll with disadvantage for non-DEX saves when the target is Charmed', async () => {
-    vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
+  // ── No disadvantage: non-DEX save with charmed condition ──
+
+  it('rolls a single d20 for non-DEX saves when target is charmed', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
       if (name === 'testTarget' && key === 'activeConditions') return ['charmed'];
       return null;
     });
-    rollD20.mockReturnValueOnce(15);
+    rollD20.mockReturnValue(15);
 
     render(
       <SavePromptModal
@@ -196,7 +216,8 @@ describe('SavePromptModal — rolling', () => {
       />
     );
 
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
 
     await waitFor(() => {
       expect(screen.getByText(/must make a/i)).toBeInTheDocument();
@@ -206,14 +227,18 @@ describe('SavePromptModal — rolling', () => {
     fireEvent.click(rollBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/d20/i)).toBeInTheDocument();
+      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
     });
 
     expect(rollD20).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Disadvantage/i)).not.toBeInTheDocument();
   });
+
+  // ── Character save bonus ──
 
   it('uses character save bonus from getAbilitySaveBonus when character is found', async () => {
     rollD20.mockReturnValue(15);
+
     const targetChar = {
       name: 'testTarget',
       level: 1,
@@ -247,8 +272,12 @@ describe('SavePromptModal — rolling', () => {
       expect(screen.getByText(/Total:/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/SAVE SUCCESS|SAVE FAILURE/i)).toBeInTheDocument();
+    // 15 + 3 = 18 >= 12 DC, so success
+    expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+    expectSaveTotal(18, 12);
   });
+
+  // ── Creature save bonus from combatSummary ──
 
   it('uses creature saveBonuses from combatSummary when character is not found', async () => {
     rollD20.mockReturnValue(15);
@@ -277,9 +306,15 @@ describe('SavePromptModal — rolling', () => {
     await waitFor(() => {
       expect(screen.getByText(/Total:/i)).toBeInTheDocument();
     });
+
+    // 15 + 5 = 20 >= 12 DC, so success
+    expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+    expectSaveTotal(20, 12);
   });
 
-  it('does not grant own evasion when incapacitated', async () => {
+  // ── Incapacitated: no own evasion ──
+
+  it('does not grant own evasion when target is incapacitated', async () => {
     rollD20.mockReturnValue(15);
     getRuntimeValue.mockImplementation((name, key, campaign) => {
       if (name === 'testTarget' && key === 'activeConditions' && campaign === 'test-campaign') return ['incapacitated'];
@@ -318,5 +353,19 @@ describe('SavePromptModal — rolling', () => {
     await waitFor(() => {
       expect(screen.getByText(/Total:/i)).toBeInTheDocument();
     });
+
+    // 15 + 3 = 18 >= 12, but no evasion message since incapacitated
+    expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+    expect(screen.queryByText(/Evasion: No damage on success/i)).not.toBeInTheDocument();
   });
+
+  // ── Helper: verify total text across split elements ──
+
+  function expectSaveTotal(total, _dc) {
+    // The total is rendered as: Total: <strong>{total}</strong> vs DC {dc}
+    // Text may be split across elements, so match the strong element directly.
+    const resultTotal = document.querySelector('.sp-result-total strong');
+    expect(resultTotal).toBeInTheDocument();
+    expect(resultTotal.textContent).toBe(String(total));
+  }
 });

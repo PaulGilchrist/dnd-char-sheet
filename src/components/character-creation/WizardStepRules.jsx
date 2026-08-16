@@ -10,6 +10,7 @@ function WizardStepRules({ ruleset, errors, onRulesetChange }) {
         <div 
           className={`rules-option ${ruleset === '5e' ? 'selected' : ''}`}
           onClick={() => onRulesetChange('5e')}
+          data-testid="rules-option-5e"
         >
           <div className="rules-option-icon">📜</div>
           <h3>5th Edition (5e)</h3>
@@ -25,6 +26,7 @@ function WizardStepRules({ ruleset, errors, onRulesetChange }) {
         <div 
           className={`rules-option ${ruleset === '2024' ? 'selected' : ''}`}
           onClick={() => onRulesetChange('2024')}
+          data-testid="rules-option-2024"
         >
           <div className="rules-option-icon">✨</div>
           <h3>2024 Rules (Essentials)</h3>
@@ -38,7 +40,7 @@ function WizardStepRules({ ruleset, errors, onRulesetChange }) {
         </div>
       </div>
       
-      {errors.ruleset && <span className="error-message">{errors.ruleset}</span>}
+      {errors?.ruleset && <span className="error-message">{errors.ruleset}</span>}
     </div>
   );
 }

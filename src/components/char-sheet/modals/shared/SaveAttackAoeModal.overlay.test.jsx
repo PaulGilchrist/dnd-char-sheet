@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
@@ -131,7 +132,7 @@ vi.mock('./CreatureSelectionModal.jsx', () => {
 vi.mock('./AreaEffectTargetModalBase.jsx', () => {
   const { useState, useCallback, useMemo } = require('react');
   function MockAreaEffectTargetModalBase({
-    combatSummary, _saveDc, campaignName: _campaignName, featureName, _saveType, _rangeFeet,
+    combatSummary, _saveDc, _campaignName, featureName, _saveType, _rangeFeet,
     onClose, icon, _handleApplyOverride, _handleSaveResultOverride, extraState,
     renderBody, renderActions,
   }) {
@@ -193,7 +194,6 @@ vi.mock('./AreaEffectTargetModalBase.jsx', () => {
 
 // ── Re-import mocked modules ──
 
-import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as combatData from '../../../../services/encounters/combatData.js';
 import * as diceRoller from '../../../../services/dice/diceRoller.js';
 import * as allySelection from '../../../../hooks/useAllySelection.js';
@@ -229,13 +229,23 @@ function makeProps(overrides) {
   return { ...baseProps, ...overrides };
 }
 
+function getCheckboxByName(name) {
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+  for (const cb of checkboxes) {
+    const label = cb.closest('label');
+    if (label && label.textContent.includes(name)) {
+      return cb;
+    }
+  }
+  return null;
+}
+
 // ── Tests ──
 
 describe('SaveAttackAoeModal - Overlay targeting path', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     diceRoller.rollExpression.mockReturnValue({ total: 12, rolls: [12], modifier: 0, formula: '1d20' });
-    useRuntimeState.getRuntimeValue.mockReturnValue(null);
     combatData.getCombatSummary.mockReturnValue({
       creatures: [
         { name: 'Goblin A', type: 'npc', currentHp: 5, maxHp: 10, saveBonuses: { con: 2, dex: 2 }, resistances: [], immunities: [] },
@@ -247,43 +257,71 @@ describe('SaveAttackAoeModal - Overlay targeting path', () => {
     automationExpressions.resolveScaling.mockReturnValue({});
   });
 
-  describe('overlay targeting', () => {
-    it('renders AreaEffectTargetModalBase when playerStats.targetName starts with overlay-', () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
+  describe('overlay mode rendering', () => {
+    it('renders AreaEffectTargetModalBase when targetName starts with overlay- and activeOverlay is truthy', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' }, activeOverlay: true })} />);
       expect(screen.getByText('Fireball')).toBeInTheDocument();
     });
 
-    it('passes correct props to AreaEffectTargetModalBase in overlay mode', () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-map1' }, range: 30 })} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    it('renders CreatureSelectionModal when targetName starts with overlay- but activeOverlay is falsy', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' }, activeOverlay: false })} />);
+      expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
     });
 
-    it('renders target list in overlay mode via renderBody', () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-test' } })} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    it('does not enter overlay mode when targetName does not start with overlay-', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'normal-target' }, activeOverlay: true })} />);
+      expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
     });
 
-    it('shows processing message in overlay mode when pending prompts exist', async () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-test' } })} />);
-      // In overlay mode, the AreaEffectTargetModalBase mock renders renderBody
-      // The renderBody function shows processing message when pendingPrompts.length > 0
-      // We verify the modal renders without crashing in overlay mode
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    it('renders the save type and DC in the modal body', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' }, activeOverlay: true })} />);
+      expect(screen.getByText(/DEX/)).toBeInTheDocument();
+      expect(screen.getByText(/DC 15/)).toBeInTheDocument();
     });
+
+    it('displays the damage expression and type in the warning text', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' }, activeOverlay: true })} />);
+      expect(screen.getByText(/On a failed save.*8d6.*Fire.*damage/)).toBeInTheDocument();
+    });
+
+    it('displays the half damage info on successful save', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' }, activeOverlay: true })} />);
+      expect(screen.getByText(/On a successful save.*half damage/)).toBeInTheDocument();
+    });
+
+    it('renders target list in overlay mode via renderBody callback', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-test' }, activeOverlay: true })} />);
+      expect(getCheckboxByName('Goblin A')).toBeInTheDocument();
+      expect(getCheckboxByName('Goblin B')).toBeInTheDocument();
+    });
+
+
   });
 
   describe('careful spell with overlay', () => {
     it('marks allies as carefully protected in overlay mode', () => {
       allySelection.getAllyList.mockReturnValue(['Goblin A']);
-      render(<SaveAttackAoeModal {...makeProps({ metamagicCareful: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
+      render(<SaveAttackAoeModal {...makeProps({ metamagicCareful: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' }, activeOverlay: true })} />);
       expect(screen.getByText('Fireball')).toBeInTheDocument();
     });
   });
 
   describe('heighten with overlay', () => {
     it('passes heighten state through extraState in overlay mode', () => {
-      render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
+      render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' }, activeOverlay: true })} />);
       expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+  });
+
+  describe('overlay props passed to AreaEffectTargetModalBase', () => {
+    it('passes correct props to AreaEffectTargetModalBase in overlay mode', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-map1' }, range: 30 })} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+
+    it('passes handleApplyOverride callback to AreaEffectTargetModalBase', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' }, activeOverlay: true })} />);
+      expect(screen.getByText(/Select creatures in the area of effect/)).toBeInTheDocument();
     });
   });
 });

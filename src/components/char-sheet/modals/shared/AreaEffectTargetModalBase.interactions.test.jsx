@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
@@ -98,6 +99,27 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
       });
       expect(renderBody.mock.calls.at(-1)[0].selected.has('Goblin')).toBe(false);
     });
+
+    it('adds target to selection even when not in eligible targets list', () => {
+      getRuntimeValue.mockReturnValue([]);
+      const renderBody = vi.fn(() => {
+        const ctx = renderBody.mock.calls.at(-1)[0];
+        return (
+          <div>
+            <button onClick={() => ctx.toggleTarget('NonExistent')}>Toggle NonExistent</button>
+            <span id="count">{ctx.selected.size}</span>
+          </div>
+        );
+      });
+      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
+
+      act(() => {
+        renderBody.mock.calls.at(-1)[0].toggleTarget('NonExistent');
+      });
+
+      expect(renderBody.mock.calls.at(-1)[0].selected.has('NonExistent')).toBe(true);
+      expect(renderBody.mock.calls.at(-1)[0].selected.size).toBe(1);
+    });
   });
 
   describe('handleApply', () => {
@@ -119,9 +141,10 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
       });
 
       expect(handleApplyOverride).not.toHaveBeenCalled();
+      expect(setApplyBusyInstance).not.toHaveBeenCalledWith(true);
     });
 
-    it('applies when isApplyBusy returns false', async () => {
+    it('applies when isApplyBusy returns false and passes context to override', async () => {
       getRuntimeValue.mockReturnValue([]);
       isApplyBusy.mockReturnValue(false);
 
@@ -139,7 +162,13 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
       });
 
       expect(setApplyBusyInstance).toHaveBeenCalledWith(true);
-      expect(handleApplyOverride).toHaveBeenCalled();
+      expect(handleApplyOverride).toHaveBeenCalledTimes(1);
+      expect(handleApplyOverride).toHaveBeenCalledWith(expect.objectContaining({
+        saveType: 'CHA',
+        saveDc: 14,
+        rangeFeet: 30,
+        featureName: 'Test Effect',
+      }));
     });
 
     it('uses default no-op when handleApplyOverride is not provided', async () => {
@@ -190,7 +219,7 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
       );
     });
 
-    it('uses default no-op when handleSaveResultOverride is not provided', () => {
+    it('provides a callable handleSaveResult even when no override is given', () => {
       getRuntimeValue.mockReturnValue([]);
 
       let capturedCtx = null;
@@ -202,15 +231,15 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
       render(<AreaEffectTargetModalBase {...baseProps} renderActions={renderActions} />);
 
       act(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Result' }));
+        capturedCtx.handleSaveResult({ detail: { success: true } });
       });
 
-      expect(true).toBe(true);
+      expect(typeof capturedCtx.handleSaveResult).toBe('function');
     });
   });
 
-  describe('save-result event listener', () => {
-    it('adds event listener when processing is true', () => {
+  describe('save-result event listener lifecycle', () => {
+    it('calls handleSaveResultOverride when save-result event fires during processing', () => {
       getRuntimeValue.mockReturnValue([]);
 
       const handleSaveResultOverride = vi.fn();
@@ -226,19 +255,20 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
 
       render(<AreaEffectTargetModalBase {...baseProps} handleSaveResultOverride={handleSaveResultOverride} renderBody={renderBody} />);
 
-      // Set processing to true
       act(() => {
         capturedCtx.setProcessing(true);
       });
 
-      // The event listener is added to window, we can verify by dispatching
-      const event = new CustomEvent('save-result', { detail: { test: true } });
+      const event = new CustomEvent('save-result', { detail: { targetName: 'Goblin', success: true } });
       window.dispatchEvent(event);
 
-      expect(handleSaveResultOverride).toHaveBeenCalled();
+      expect(handleSaveResultOverride).toHaveBeenCalledWith(
+        expect.objectContaining({ detail: { targetName: 'Goblin', success: true } }),
+        expect.objectContaining({ processing: true })
+      );
     });
 
-    it('removes event listener when processing becomes false', () => {
+    it('does not call handleSaveResultOverride when processing is false', () => {
       getRuntimeValue.mockReturnValue([]);
 
       const handleSaveResultOverride = vi.fn();
@@ -254,20 +284,16 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
 
       render(<AreaEffectTargetModalBase {...baseProps} handleSaveResultOverride={handleSaveResultOverride} renderBody={renderBody} />);
 
-      // Stop processing
-      act(() => {
-        capturedCtx.setProcessing(false);
-      });
+      const event = new CustomEvent('save-result', { detail: { targetName: 'Goblin', success: true } });
+      window.dispatchEvent(event);
 
-      // Should not throw on cleanup
-      expect(true).toBe(true);
+      expect(handleSaveResultOverride).not.toHaveBeenCalled();
     });
   });
 
   describe('processing reset', () => {
     it('resets applyBusy when processing becomes false', async () => {
       getRuntimeValue.mockReturnValue([]);
-      setApplyBusyInstance.mockReturnValue(undefined);
 
       let capturedCtx = null;
       const renderBody = vi.fn(() => {
@@ -281,7 +307,6 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
 
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
 
-      // Set processing to false
       await act(async () => {
         capturedCtx.setProcessing(false);
       });
@@ -291,7 +316,7 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
   });
 
   describe('onAllResolved callback', () => {
-    it('calls onAllResolved when allResolved becomes true', async () => {
+    it('calls onAllResolved when processing is true, no pending prompts, and results cover all selected', async () => {
       getRuntimeValue.mockReturnValue([]);
 
       const onAllResolved = vi.fn();
@@ -315,7 +340,6 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
         />
       );
 
-      // Set processing and clear prompts and set results to trigger allResolved
       await act(async () => {
         capturedCtx.setProcessing(true);
         capturedCtx.setPendingPrompts([]);
@@ -349,11 +373,10 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
         />
       );
 
-      // Processing is already false, so allResolved should be false
       expect(onAllResolved).not.toHaveBeenCalled();
     });
 
-    it('does not call onAllResolved when pendingPrompts is not empty', () => {
+    it('does not call onAllResolved when pending prompts exist', () => {
       getRuntimeValue.mockReturnValue([]);
 
       const onAllResolved = vi.fn();
@@ -375,9 +398,43 @@ describe('AreaEffectTargetModalBase - Interactions', () => {
         />
       );
 
-      // Add pending prompts but keep processing false
       act(() => {
         capturedCtx.setPendingPrompts([{ promptId: '1', targetName: 'Goblin' }]);
+      });
+
+      expect(onAllResolved).not.toHaveBeenCalled();
+    });
+
+    it('does not call onAllResolved when results do not cover all selected targets', () => {
+      getRuntimeValue.mockReturnValue([]);
+
+      const onAllResolved = vi.fn();
+      let capturedCtx = null;
+      const renderBody = vi.fn(() => {
+        capturedCtx = renderBody.mock.calls[0][0];
+        return (
+          <div>
+            <button onClick={() => capturedCtx.setSelected(new Set(['Goblin', 'Orc']))}>Select Two</button>
+            <button onClick={() => capturedCtx.setProcessing(true)}>Set Processing</button>
+            <button onClick={() => capturedCtx.setPendingPrompts([])}>Clear Prompts</button>
+            <button onClick={() => capturedCtx.setResults([{ targetName: 'Goblin', success: false }])}>Set One Result</button>
+          </div>
+        );
+      });
+
+      render(
+        <AreaEffectTargetModalBase
+          {...baseProps}
+          onAllResolved={onAllResolved}
+          renderBody={renderBody}
+        />
+      );
+
+      act(() => {
+        capturedCtx.setSelected(new Set(['Goblin', 'Orc']));
+        capturedCtx.setProcessing(true);
+        capturedCtx.setPendingPrompts([]);
+        capturedCtx.setResults([{ targetName: 'Goblin', success: false }]);
       });
 
       expect(onAllResolved).not.toHaveBeenCalled();

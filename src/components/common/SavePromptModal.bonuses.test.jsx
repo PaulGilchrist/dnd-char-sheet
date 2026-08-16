@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -9,6 +10,7 @@ import { rollExpression } from '../../services/dice/diceRoller.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import { getAllyList } from '../../hooks/useAllySelection.js';
 import * as circleOfPowerHandler from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
+import * as savePromptService from '../../services/combat/conditions/savePromptService.js';
 import { setupDefaults, cleanupDefaults } from './SavePromptModal.test-utils.jsx';
 
 // ── Mocks ──
@@ -83,13 +85,21 @@ vi.mock('./Subscriber.jsx', () => {
       React.createElement('button', { 'data-testid': 'subscriber-trigger-disadvantage', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget3`, data: { promptId: 'test-prompt-disadv', targetName: 'testTarget3', saveType: 'str', saveDc: 14, disadvantage: true, dcSuccess: 'half', sourceName: 'Fireball' } }) }),
       React.createElement('button', { 'data-testid': 'subscriber-trigger-dex', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-dex', targetName: 'testTarget', saveType: 'dex', saveDc: 17, disadvantage: false, dcSuccess: 'half', sourceName: 'Sacred Flame' } }) }),
       React.createElement('button', { 'data-testid': 'subscriber-trigger-none-dc', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget4`, data: { promptId: 'test-prompt-none', targetName: 'testTarget4', saveType: 'wis', saveDc: 16, disadvantage: false, dcSuccess: 'none' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-wis', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-wis', targetName: 'testTarget', saveType: 'WIS', saveDc: 13, disadvantage: false } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-attacker', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-attacker', targetName: 'testTarget', saveType: 'con', saveDc: 12, disadvantage: false, attackerName: 'Fiend' } }) }),
     );
   }
   return { default: MockSubscriber };
 });
 
 describe('SavePromptModal — save bonus sources', () => {
-  beforeEach(() => setupDefaults(rollD20, computeAuraBonus, getRuntimeValue));
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupDefaults(rollD20, computeAuraBonus, getRuntimeValue);
+    vi.mocked(circleOfPowerHandler.isCircleOfPowerActive).mockReturnValue(false);
+    vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
+    vi.mocked(getAllyList).mockReturnValue([]);
+  });
   afterEach(cleanupDefaults);
 
   // ── saveModifiers advantage ──
@@ -130,6 +140,59 @@ describe('SavePromptModal — save bonus sources', () => {
     });
 
     expect(rollD20).toHaveBeenCalledTimes(1);
+    expect(savePromptService.sendSaveResult).not.toHaveBeenCalled();
+  });
+
+  it('applies advantage save bonus to the total and sends save result on done', async () => {
+    rollD20.mockReturnValueOnce(15).mockReturnValueOnce(18);
+    const targetChar = {
+      name: 'testTarget',
+      level: 1,
+      class: { class_levels: [] },
+      computedStats: {
+        abilities: [{ name: 'Constitution', bonus: 3 }],
+        evasionEffects: [],
+      },
+      saveModifiers: [{ target: 'saving_throw', effect: 'advantage', condition: 'against_spell' }],
+    };
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[targetChar]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+    });
+
+    const doneBtn = screen.getByRole('button', { name: 'Done' });
+    fireEvent.click(doneBtn);
+
+    await waitFor(() => {
+      expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
+        'test-campaign',
+        'testTarget',
+        expect.objectContaining({
+          promptId: 'test-prompt-1',
+          success: true,
+          mode: 'advantage',
+        })
+      );
+      expect(savePromptService.clearSavePrompt).toHaveBeenCalledWith('test-campaign', 'testTarget');
+    });
   });
 
   // ── Dodge buff ──
@@ -162,6 +225,8 @@ describe('SavePromptModal — save bonus sources', () => {
     await waitFor(() => {
       expect(screen.getByText(/Advantage/)).toBeInTheDocument();
     });
+
+    expect(rollD20).toHaveBeenCalledTimes(1);
   });
 
   it('does not grant Dodge advantage on non-DEX saves', async () => {
@@ -194,6 +259,7 @@ describe('SavePromptModal — save bonus sources', () => {
     });
 
     expect(rollD20).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Advantage/)).not.toBeInTheDocument();
   });
 
   // ── Circle of Power ──
@@ -223,6 +289,38 @@ describe('SavePromptModal — save bonus sources', () => {
     await waitFor(() => {
       expect(screen.getByText(/Advantage/)).toBeInTheDocument();
     });
+
+    expect(rollD20).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not grant Circle of Power advantage when disadvantage is already present', async () => {
+    rollD20.mockReturnValueOnce(18).mockReturnValueOnce(5);
+    vi.mocked(circleOfPowerHandler.isCircleOfPowerActive).mockReturnValue(true);
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger-disadvantage');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Disadvantage/)).toBeInTheDocument();
+      expect(screen.queryByText(/Advantage/)).not.toBeInTheDocument();
+    });
+
+    expect(rollD20).toHaveBeenCalledTimes(2);
   });
 
   // ── Holy Nimbus ──
@@ -246,7 +344,7 @@ describe('SavePromptModal — save bonus sources', () => {
       />
     );
 
-    const trigger = screen.getByTestId('subscriber-trigger');
+    const trigger = screen.getByTestId('subscriber-trigger-attacker');
     fireEvent.click(trigger);
 
     await waitFor(() => {
@@ -259,6 +357,46 @@ describe('SavePromptModal — save bonus sources', () => {
     await waitFor(() => {
       expect(screen.getByText(/Advantage/)).toBeInTheDocument();
     });
+
+    expect(rollD20).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not grant Holy Nimbus advantage against non-fiend attacker', async () => {
+    getRuntimeValue.mockImplementation((name, key, campaign) => {
+      if (key === 'holyNimbusActive' && campaign === 'test-campaign') return true;
+      return null;
+    });
+    vi.mocked(getCombatSummary).mockReturnValue({
+      creatures: [{ name: 'Goblin', type: 'Humanoid' }, { name: 'testTarget', type: 'player' }],
+    });
+    vi.mocked(getAllyList).mockReturnValue(['testTarget']);
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={['testAlly']}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger-attacker');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
+    });
+
+    expect(rollD20).toHaveBeenCalledTimes(1);
+    // Check that the result breakdown does not show "Advantage" mode
+    const breakdown = document.querySelector('.sp-result-breakdown');
+    expect(breakdown.textContent).not.toContain('Advantage');
   });
 
   // ── Bane ──
@@ -292,6 +430,41 @@ describe('SavePromptModal — save bonus sources', () => {
     await waitFor(() => {
       expect(screen.getByText(/Bane/i)).toBeInTheDocument();
     });
+
+    // Verify the penalty is reflected in the total (15 - 2 = 13 >= 12 DC = success)
+    expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+  });
+
+  it('does not apply bane penalty when target has no bane_effect', async () => {
+    rollD20.mockReturnValue(15);
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (name === 'campaign' && key === 'targetEffects') return [];
+      return null;
+    });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Bane/i)).not.toBeInTheDocument();
   });
 
   // ── Bless ──
@@ -325,6 +498,41 @@ describe('SavePromptModal — save bonus sources', () => {
     await waitFor(() => {
       expect(screen.getByText(/Bless/i)).toBeInTheDocument();
     });
+
+    // Verify the bonus is reflected in the total (15 + 4 = 19 >= 12 DC = success)
+    expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+  });
+
+  it('does not apply bless bonus when target has no bless_effect', async () => {
+    rollD20.mockReturnValue(15);
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (name === 'campaign' && key === 'targetEffects') return [];
+      return null;
+    });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Bless/i)).not.toBeInTheDocument();
   });
 
   // ── Warding Bond ──
@@ -356,6 +564,157 @@ describe('SavePromptModal — save bonus sources', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Warding Bond/i)).toBeInTheDocument();
+    });
+
+    // Verify the bonus is reflected in the total (15 + 1 = 16 >= 12 DC = success)
+    expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+  });
+
+  it('does not apply warding bond when buff is missing saveBonus', async () => {
+    rollD20.mockReturnValue(15);
+    getRuntimeValue.mockImplementation((name, key, campaign) => {
+      if (name === 'testTarget' && key === 'activeBuffs' && campaign === 'test-campaign') return [{ effect: 'warding_bond' }];
+      return null;
+    });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Warding Bond/i)).not.toBeInTheDocument();
+  });
+
+  // ── Aura bonus with source name ──
+
+  it('displays aura source name when computeAuraBonus returns a sourceName', async () => {
+    rollD20.mockReturnValue(15);
+    vi.mocked(computeAuraBonus).mockResolvedValue({ bonus: 2, sourceName: 'Aura of Protection' });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/from Aura of Protection/i)).toBeInTheDocument();
+  });
+
+  // ── Multiple bonus sources stacking ──
+
+  it('stacks bane penalty and bless bonus in the same save', async () => {
+    rollD20.mockReturnValue(15);
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (name === 'campaign' && key === 'targetEffects') return [
+        { target: 'testTarget', effect: 'bane_penalty' },
+        { target: 'testTarget', effect: 'bless_bonus' },
+      ];
+      return null;
+    });
+    vi.mocked(rollExpression).mockReturnValue({ total: 2 });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Bane/i)).toBeInTheDocument();
+      expect(screen.getByText(/Bless/i)).toBeInTheDocument();
+    });
+  });
+
+  // ── Save result service calls ──
+
+  it('sends save result with bonus details via sendSaveResult on done', async () => {
+    rollD20.mockReturnValue(15);
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (name === 'campaign' && key === 'targetEffects') return [{ target: 'testTarget', effect: 'bless_bonus' }];
+      return null;
+    });
+    vi.mocked(rollExpression).mockReturnValue({ total: 4 });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+    });
+
+    const doneBtn = screen.getByRole('button', { name: 'Done' });
+    fireEvent.click(doneBtn);
+
+    await waitFor(() => {
+      expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
+        'test-campaign',
+        'testTarget',
+        expect.objectContaining({
+          promptId: 'test-prompt-1',
+          bonusDetail: expect.stringContaining('Bless'),
+        })
+      );
+      expect(savePromptService.clearSavePrompt).toHaveBeenCalledWith('test-campaign', 'testTarget');
     });
   });
 });

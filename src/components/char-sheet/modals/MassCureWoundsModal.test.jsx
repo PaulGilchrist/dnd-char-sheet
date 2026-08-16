@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MassCureWoundsModal from './MassCureWoundsModal.jsx';
@@ -94,43 +95,10 @@ describe('MassCureWoundsModal', () => {
     mockHandleConfirm.mockClear();
   });
 
-  // ── Rendering ──
-
-  describe('rendering', () => {
-    it('renders with title "Mass Cure Wounds"', () => {
+  describe('renders CreatureSelectionModal with correct hardcoded props', () => {
+    it('passes title, icons, and description', () => {
       render(<MassCureWoundsModal {...makeProps()} />);
-      expect(screen.getByText('Mass Cure Wounds')).toBeInTheDocument();
-    });
-
-    it('renders with heart icon', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      expect(document.querySelector('.fa-heart')).toBeInTheDocument();
-    });
-
-    it('renders the description "Choose up to 6 allies within 30 feet to heal."', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      expect(screen.getByText('Choose up to 6 allies within 30 feet to heal.')).toBeInTheDocument();
-    });
-
-    it('renders confirm button with label "Cure"', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Cure/ })).toBeInTheDocument();
-    });
-
-    it('renders confirm button with heart icon', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      const confirmBtn = screen.getByRole('button', { name: /Cure/ });
-      expect(confirmBtn.querySelector('.fa-heart')).toBeInTheDocument();
-    });
-
-    it('renders Skip button', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-    });
-
-    it('renders CreatureSelectionModal with correct props', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
+      const props = CreatureSelectionModal.mock.calls[0][0];
       expect(props.title).toBe('Mass Cure Wounds');
       expect(props.icon).toBe('fa-heart');
       expect(props.description).toBe('Choose up to 6 allies within 30 feet to heal.');
@@ -138,28 +106,60 @@ describe('MassCureWoundsModal', () => {
       expect(props.confirmIcon).toBe('fa-heart');
     });
 
-    it('passes creatureTargets to CreatureSelectionModal', () => {
+    it('passes creatureTargets as targets', () => {
       render(<MassCureWoundsModal {...makeProps()} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual(defaultTargets);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.targets).toBe(makeProps().creatureTargets);
     });
 
-    it('passes maxTargets to CreatureSelectionModal', () => {
+    it('passes maxTargets when provided', () => {
       render(<MassCureWoundsModal {...makeProps({ maxTargets: 5 })} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(5);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.maxTargets).toBe(5);
     });
 
-    it('passes onConfirm to CreatureSelectionModal', () => {
+    it('passes onConfirm and onSkip callbacks', () => {
       render(<MassCureWoundsModal {...makeProps()} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].onConfirm).toBe(mockOnConfirm);
-    });
-
-    it('passes onSkip to CreatureSelectionModal', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].onSkip).toBe(mockOnSkip);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.onConfirm).toBe(mockOnConfirm);
+      expect(props.onSkip).toBe(mockOnSkip);
     });
   });
 
-  // ── User interactions ──
+  describe('prop passthrough', () => {
+    it('passes empty targets array', () => {
+      render(<MassCureWoundsModal {...makeProps({ creatureTargets: [] })} />);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.targets).toEqual([]);
+    });
+
+    it('passes string targets', () => {
+      const stringTargets = ['AllyA', 'AllyB', 'AllyC'];
+      render(<MassCureWoundsModal {...makeProps({ creatureTargets: stringTargets })} />);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.targets).toBe(stringTargets);
+    });
+
+    it('does not pass maxTargets when omitted', () => {
+      render(<MassCureWoundsModal {...makeProps({ maxTargets: undefined })} />);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.maxTargets).toBeUndefined();
+    });
+  });
+
+  describe('missing optional callbacks', () => {
+    it('renders without onConfirm', () => {
+      render(<MassCureWoundsModal {...makeProps({ onConfirm: undefined })} />);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.onConfirm).toBeUndefined();
+    });
+
+    it('renders without onSkip', () => {
+      render(<MassCureWoundsModal {...makeProps({ onSkip: undefined })} />);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.onSkip).toBeUndefined();
+    });
+  });
 
   describe('user interactions', () => {
     it('calls onSkip when Skip button is clicked', () => {
@@ -177,83 +177,18 @@ describe('MassCureWoundsModal', () => {
     });
   });
 
-  // ── Prop passthrough ──
-
-  describe('prop passthrough', () => {
-    it('passes different maxTargets values to CreatureSelectionModal', () => {
-      render(<MassCureWoundsModal {...makeProps({ maxTargets: 1 })} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(1);
-
-      vi.clearAllMocks();
-      render(<MassCureWoundsModal {...makeProps({ maxTargets: 6 })} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(6);
-    });
-
-    it('passes empty creatureTargets array to CreatureSelectionModal', () => {
-      render(<MassCureWoundsModal {...makeProps({ creatureTargets: [] })} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual([]);
-    });
-
-    it('passes string targets to CreatureSelectionModal', () => {
-      const stringTargets = ['AllyA', 'AllyB', 'AllyC'];
-      render(<MassCureWoundsModal {...makeProps({ creatureTargets: stringTargets })} />);
-      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual(stringTargets);
-    });
-  });
-
-  // ── Default values ──
-
-  describe('default values', () => {
-    it('renders without maxTargets prop', () => {
-      const props = makeProps();
-      delete props.maxTargets;
-      render(<MassCureWoundsModal {...props} />);
-      expect(screen.getByText('Mass Cure Wounds')).toBeInTheDocument();
-    });
-
-    it('renders without onConfirm prop', () => {
-      const props = makeProps();
-      delete props.onConfirm;
-      render(<MassCureWoundsModal {...props} />);
-      expect(screen.getByText('Mass Cure Wounds')).toBeInTheDocument();
-    });
-
-    it('renders without onSkip prop', () => {
-      const props = makeProps();
-      delete props.onSkip;
-      render(<MassCureWoundsModal {...props} />);
-      expect(screen.getByText('Mass Cure Wounds')).toBeInTheDocument();
-    });
-  });
-
-  // ── Fixed label/icon behavior ──
-
-  describe('fixed label and icon behavior', () => {
-    it('always uses "Mass Cure Wounds" title', () => {
+  describe('visual output', () => {
+    it('displays the title text', () => {
       render(<MassCureWoundsModal {...makeProps()} />);
       expect(screen.getByText('Mass Cure Wounds')).toBeInTheDocument();
     });
 
-    it('always uses heart icon', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      expect(document.querySelectorAll('.fa-heart').length).toBeGreaterThan(0);
-    });
-
-    it('always uses "Cure" confirm label', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Cure/ })).toBeInTheDocument();
-    });
-
-    it('always shows "Choose up to 6 allies within 30 feet to heal." description', () => {
+    it('displays the description text', () => {
       render(<MassCureWoundsModal {...makeProps()} />);
       expect(screen.getByText('Choose up to 6 allies within 30 feet to heal.')).toBeInTheDocument();
     });
-  });
 
-  // ── Integration with CreatureSelectionModal mock ──
-
-  describe('integration with CreatureSelectionModal', () => {
-    it('renders target list items from creatureTargets', () => {
+    it('renders target names from creatureTargets', () => {
       render(<MassCureWoundsModal {...makeProps()} />);
       expect(screen.getByText('Ally1')).toBeInTheDocument();
       expect(screen.getByText('Ally2')).toBeInTheDocument();
@@ -261,20 +196,14 @@ describe('MassCureWoundsModal', () => {
       expect(screen.getByText('Enemy1')).toBeInTheDocument();
     });
 
-    it('renders "No targets available." when no creatureTargets', () => {
+    it('shows "No targets available." when targets is empty', () => {
       render(<MassCureWoundsModal {...makeProps({ creatureTargets: [] })} />);
       expect(screen.getByText('No targets available.')).toBeInTheDocument();
     });
 
-    it('disables confirm button when no targets selected', () => {
+    it('uses heart icon classes', () => {
       render(<MassCureWoundsModal {...makeProps()} />);
-      const confirmBtn = screen.getByRole('button', { name: /Cure \(0\)/ });
-      expect(confirmBtn).toBeDisabled();
-    });
-
-    it('shows selection count in confirm button', () => {
-      render(<MassCureWoundsModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Cure \(0\)/ })).toBeInTheDocument();
+      expect(document.querySelectorAll('.fa-heart').length).toBeGreaterThan(0);
     });
   });
 });

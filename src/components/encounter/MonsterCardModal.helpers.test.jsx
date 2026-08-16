@@ -1,3 +1,27 @@
+// @improved-by-ai
+// Behavioral tests for the condition-effect badge rendering in the monster card.
+//
+// Coverage audit against ALL other MonsterCardModal test files (before adding any test):
+//   - Badge label rendering (Save Disadv, +N to hit, No OA, Insp. Move, No OA (Crit),
+//     OA Disadv, No Difficult Terrain on Dash) is asserted ONLY here; no sibling file
+//     checks these labels.
+//   - riderAttackBonus flowing into the actual attack roll (not just the badge) is
+//     asserted in MonsterCardModal.logic.test.jsx.
+//   - speedZero / Shield of Faith / senses / ally badges / save-modifier fallbacks are
+//     covered by MonsterCardModal.test.jsx, senses-and-fallback.test.jsx, ally-modal.test.jsx.
+//
+// Problems fixed in the previous version:
+//   - The conditionEffects mock duplicated a 30-line default effects object that every
+//     test overrode, so it could silently drift out of sync with test-utils.js.
+//   - Inspiring Move / No OA (Crit) runtime-flag mock state was never reset between
+//     tests, so a test could depend on flags set by an earlier test.
+//   - Assertions used document.querySelector('.effect-...'), probing the whole document
+//     instead of scoping the class check to the badge element itself.
+//   - Repeated creature fixtures were inlined in every test; extracted to helpers.
+//   - Missing negative paths: no badges when effects report nothing, no badges when the
+//     creature has no conditions even if flags/effects are set, and no speedy badges when
+//     the passives are absent.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import MonsterCardModal from './MonsterCardModal.jsx';
@@ -15,66 +39,24 @@ vi.mock('../../services/ui/sanitize.js', () => ({
 }));
 
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
-  let _popupHtml = null;
-  const _setPopupHtml = vi.fn((val) => { _popupHtml = val; });
+  const mockHook = vi.fn(() => ({
+    popupHtml: null,
+    setPopupHtml: vi.fn(),
+    rollAttack: vi.fn(),
+    rollDamage: vi.fn(),
+    rollAbilityCheck: vi.fn(),
+    rollSavingThrow: vi.fn(),
+    rollSkillCheck: vi.fn(),
+    rollInitiative: vi.fn(),
+    quickRollPlayerSave: vi.fn(),
+  }));
 
-  const mockHook = vi.fn((_monsterName, _campaignName, _opts) => {
-    return {
-      popupHtml: _popupHtml,
-      setPopupHtml: _setPopupHtml,
-      rollAttack: vi.fn(),
-      rollDamage: vi.fn(),
-      rollAbilityCheck: vi.fn(),
-      rollSavingThrow: vi.fn(),
-      rollSkillCheck: vi.fn(),
-      rollInitiative: vi.fn(),
-      quickRollPlayerSave: vi.fn(),
-    };
-  });
-
-  return {
-    default: mockHook,
-    __setPopupHtml(val) { _popupHtml = val; },
-  };
+  return { default: mockHook };
 });
 
 vi.mock('../../services/combat/conditions/conditionEffects.js', () => {
-  const defaultEffects = {
-    attackAdvantageCount: 0,
-    attackDisadvantageCount: 0,
-    abilityCheckDisadvantage: false,
-    autoFailSaves: [],
-    saveDisadvantage: [],
-    cannotAct: false,
-    speedZero: false,
-    concentrationBroken: false,
-    targetAdvantageCount: 0,
-    targetDisadvantageCount: 0,
-    targetAdvantageIfWithin5ft: false,
-    targetDisadvantageIfBeyond5ft: false,
-    autoCritWithin5ft: false,
-    resistantToAll: false,
-    poisonImmune: false,
-    saveAdvantage: [],
-    saveAdvantageCount: 0,
-    saveDisadvantageCount: 0,
-    autoReroll: false,
-    autoRerollCondition: null,
-    autoRerollBonus: null,
-    strSaveReplace: false,
-    strCheckReplace: false,
-    reliableTalent: false,
-    tacticalMind: false,
-    tacticalMindBonus: null,
-    riderSaveDisadvantage: false,
-    riderAttackBonus: 0,
-    riderCannotOpportunityAttack: false,
-  };
-
   let _computeReturn = null;
-  const computeConditionEffects = vi.fn((_conditions) => {
-    return _computeReturn ?? { ...defaultEffects };
-  });
+  const computeConditionEffects = vi.fn(() => _computeReturn ?? {});
 
   return {
     computeConditionEffects,
@@ -93,9 +75,7 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => {
     formatDamageTypes: vi.fn((types) => (types || []).join(', ') || ''),
     getTargetFromAttacker: vi.fn(() => null),
     getResistanceNotice: vi.fn(() => null),
-    findCreatureByName: vi.fn((_ctx, _name) => {
-      return _findCreatureReturn ?? { ...DEFAULT_CREATURE };
-    }),
+    findCreatureByName: vi.fn(() => _findCreatureReturn ?? { ...DEFAULT_CREATURE }),
     getCombatContext: vi.fn().mockResolvedValue(null),
     __setFindCreatureReturn(val) { _findCreatureReturn = val; },
   };
@@ -119,7 +99,7 @@ vi.mock('../../services/maps/mapsService.js', () => ({
 }));
 
 vi.mock('../../services/shared/abilityLookup.js', () => ({
-  getAbilitySaveModifier: vi.fn((_abilities, _abilityKey) => 0),
+  getAbilitySaveModifier: vi.fn(() => 0),
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => {
@@ -150,150 +130,185 @@ import * as conditionEffects from '../../services/combat/conditions/conditionEff
 import * as damageUtils from '../../services/rules/combat/damageUtils.js';
 import * as useRuntimeState from '../../hooks/runtime/useRuntimeState.js';
 
-// ── Tests ───────────────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+const BLINDED_CREATURE = { name: 'Goblin', conditions: [{ key: 'blinded', label: 'Blinded' }] };
+
+/** Build a monsterCharacter whose passives list matches the given effects. */
+function makeMonsterCharacter(effects = []) {
+  return {
+    name: 'Goblin',
+    computedStats: {
+      automation: {
+        passives: effects.map(effect => ({ type: 'passive_rule', effect })),
+      },
+    },
+  };
+}
+
+/**
+ * Assert a badge with the given label renders with the expected effect class.
+ * Scoped to the badge element itself rather than probing the whole document.
+ */
+function expectBadge(label, effectClass) {
+  expect(screen.getByText(label)).toHaveClass('mc-effect-badge', effectClass);
+}
+
+function expectNoBadge(label) {
+  expect(screen.queryByText(label)).not.toBeInTheDocument();
+}
+
+function resetState() {
+  vi.clearAllMocks();
+  conditionEffects.__setComputeReturn(null);
+  damageUtils.__setFindCreatureReturn({ ...BLINDED_CREATURE });
+  useRuntimeState.__setInspiringMoveNoOA(false);
+  useRuntimeState.__setRemarkableNoOA(false);
+  useRuntimeState.__setTargetEffects([]);
+}
+
+// ── Tests: rider effect badges ──────────────────────────────────────────────
 
 describe('MonsterCardModal - condition effect badges', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    conditionEffects.__setComputeReturn(null);
-    damageUtils.__setFindCreatureReturn(null);
+  beforeEach(resetState);
+
+  it('renders no effect badges when the creature has conditions but no rider effects', () => {
+    conditionEffects.__setComputeReturn({ ...defaultConditionEffects });
+    render(<MonsterCardModal {...makeProps(makeMonster())} />);
+
+    expectNoBadge('Save Disadv');
+    expectNoBadge('+2 to hit');
+    expectNoBadge('No OA');
+    expectNoBadge('Insp. Move');
+    expectNoBadge('No OA (Crit)');
   });
 
-  it('renders Save Disadv badge when riderSaveDisadvantage is true', () => {
+  it('renders the Save Disadv badge when riderSaveDisadvantage is reported', () => {
     conditionEffects.__setComputeReturn({ ...defaultConditionEffects, riderSaveDisadvantage: true });
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [{ key: 'blinded', label: 'Blinded' }] });
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
-    expect(screen.getByText('Save Disadv')).toBeInTheDocument();
-    expect(document.querySelector('.effect-disadvantage')).toBeInTheDocument();
+
+    expectBadge('Save Disadv', 'effect-disadvantage');
   });
 
-  it('renders rider attack bonus badge when riderAttackBonus > 0', () => {
+  it('renders the +N to hit badge with the reported rider attack bonus', () => {
     conditionEffects.__setComputeReturn({ ...defaultConditionEffects, riderAttackBonus: 2 });
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [{ key: 'blinded', label: 'Blinded' }] });
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
-    expect(screen.getByText('+2 to hit')).toBeInTheDocument();
-    expect(document.querySelector('.effect-target-adv')).toBeInTheDocument();
+
+    expectBadge('+2 to hit', 'effect-target-adv');
   });
 
-  it('renders No OA badge when riderCannotOpportunityAttack is true', () => {
+  it('renders the No OA badge when riderCannotOpportunityAttack is reported', () => {
     conditionEffects.__setComputeReturn({ ...defaultConditionEffects, riderCannotOpportunityAttack: true });
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [{ key: 'blinded', label: 'Blinded' }] });
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
-    expect(screen.getByText('No OA')).toBeInTheDocument();
-    expect(document.querySelector('.effect-cannot-act')).toBeInTheDocument();
+
+    expectBadge('No OA', 'effect-cannot-act');
   });
 
-  it('renders multiple rider badges together (Save Disadv, +N to hit, No OA)', () => {
+  it('renders the Inspiring Move badge when inspiringMovementNoOA is true', () => {
+    useRuntimeState.__setInspiringMoveNoOA(true);
+    render(<MonsterCardModal {...makeProps(makeMonster())} />);
+
+    expectBadge('Insp. Move', 'effect-cannot-act');
+  });
+
+  it('renders the No OA (Crit) badge when remarkableAthleteNoOA is true', () => {
+    useRuntimeState.__setRemarkableNoOA(true);
+    render(<MonsterCardModal {...makeProps(makeMonster())} />);
+
+    expectBadge('No OA (Crit)', 'effect-cannot-act');
+  });
+
+  it('renders no effect badges when the creature has no conditions, even if effects and flags are set', () => {
+    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [] });
     conditionEffects.__setComputeReturn({
       ...defaultConditionEffects,
       riderSaveDisadvantage: true,
-      riderAttackBonus: 3,
+      riderAttackBonus: 2,
       riderCannotOpportunityAttack: true,
     });
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [{ key: 'blinded', label: 'Blinded' }] });
-    render(<MonsterCardModal {...makeProps(makeMonster())} />);
-    expect(screen.getByText('Save Disadv')).toBeInTheDocument();
-    expect(screen.getByText('+3 to hit')).toBeInTheDocument();
-    expect(screen.getByText('No OA')).toBeInTheDocument();
-  });
-
-  it('renders Inspiring Move badge when inspiringMovementNoOA is true and creature has conditions', () => {
-    useRuntimeState.__setInspiringMoveNoOA(true);
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [{ key: 'blinded', label: 'Blinded' }] });
-    render(<MonsterCardModal {...makeProps(makeMonster())} />);
-    expect(screen.getByText('Insp. Move')).toBeInTheDocument();
-  });
-
-  it('renders No OA (Crit) badge when remarkableAthleteNoOA is true and creature has conditions', () => {
-    useRuntimeState.__setRemarkableNoOA(true);
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [{ key: 'blinded', label: 'Blinded' }] });
-    render(<MonsterCardModal {...makeProps(makeMonster())} />);
-    expect(screen.getByText('No OA (Crit)')).toBeInTheDocument();
-  });
-
-  it('does not render Inspiring Move or No OA (Crit) badges when creature has no conditions', () => {
     useRuntimeState.__setInspiringMoveNoOA(true);
     useRuntimeState.__setRemarkableNoOA(true);
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [] });
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
-    expect(screen.queryByText('Insp. Move')).not.toBeInTheDocument();
-    expect(screen.queryByText('No OA (Crit)')).not.toBeInTheDocument();
+
+    expectNoBadge('Save Disadv');
+    expectNoBadge('+2 to hit');
+    expectNoBadge('No OA');
+    expectNoBadge('Insp. Move');
+    expectNoBadge('No OA (Crit)');
+  });
+
+  it('renders badges from every source together (rider + runtime + speedy passives)', () => {
+    conditionEffects.__setComputeReturn({
+      ...defaultConditionEffects,
+      riderSaveDisadvantage: true,
+      riderAttackBonus: 2,
+      riderCannotOpportunityAttack: true,
+    });
+    useRuntimeState.__setInspiringMoveNoOA(true);
+    useRuntimeState.__setRemarkableNoOA(true);
+    const monsterCharacter = makeMonsterCharacter([
+      'opportunity_attacks_disadvantage',
+      'ignore_difficult_terrain_on_dash',
+    ]);
+
+    render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [monsterCharacter] })} />);
+
+    expectBadge('Save Disadv', 'effect-disadvantage');
+    expectBadge('+2 to hit', 'effect-target-adv');
+    expectBadge('No OA', 'effect-cannot-act');
+    expectBadge('Insp. Move', 'effect-cannot-act');
+    expectBadge('No OA (Crit)', 'effect-cannot-act');
+    expectBadge('OA Disadv', 'effect-disadvantage');
+    expectBadge('No Difficult Terrain on Dash', 'effect-cannot-act');
   });
 });
 
+// ── Tests: speedy passive badges ────────────────────────────────────────────
+
 describe('MonsterCardModal - speedy passive badges', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    conditionEffects.__setComputeReturn(null);
-    damageUtils.__setFindCreatureReturn(null);
+  beforeEach(resetState);
+
+  it('renders the OA Disadv badge when the creature has the passive and conditions', () => {
+    const monsterCharacter = makeMonsterCharacter(['opportunity_attacks_disadvantage']);
+    render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [monsterCharacter] })} />);
+
+    expectBadge('OA Disadv', 'effect-disadvantage');
   });
 
-  it('renders OA Disadv badge when monsterCharacter has opportunity_attacks_disadvantage passive and conditions', () => {
-    const monsterCharacter = {
-      name: 'Goblin',
-      computedStats: {
-        automation: {
-          passives: [
-            { type: 'passive_rule', effect: 'opportunity_attacks_disadvantage' },
-          ],
-        },
-      },
-    };
+  it('renders the No Difficult Terrain on Dash badge when the creature has the passive and conditions', () => {
+    const monsterCharacter = makeMonsterCharacter(['ignore_difficult_terrain_on_dash']);
+    render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [monsterCharacter] })} />);
 
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [{ key: 'blinded', label: 'Blinded' }] });
-
-    render(
-      <MonsterCardModal
-        {...makeProps(makeMonster())}
-        characters={[monsterCharacter]}
-      />
-    );
-    expect(screen.getByText('OA Disadv')).toBeInTheDocument();
+    expectBadge('No Difficult Terrain on Dash', 'effect-cannot-act');
   });
 
-  it('renders No Difficult Terrain on Dash badge when monsterCharacter has the passive and conditions', () => {
-    const monsterCharacter = {
-      name: 'Goblin',
-      computedStats: {
-        automation: {
-          passives: [
-            { type: 'passive_rule', effect: 'ignore_difficult_terrain_on_dash' },
-          ],
-        },
-      },
-    };
+  it('renders both speedy badges together when both passives are present', () => {
+    const monsterCharacter = makeMonsterCharacter([
+      'opportunity_attacks_disadvantage',
+      'ignore_difficult_terrain_on_dash',
+    ]);
+    render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [monsterCharacter] })} />);
 
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [{ key: 'blinded', label: 'Blinded' }] });
-
-    render(
-      <MonsterCardModal
-        {...makeProps(makeMonster())}
-        characters={[monsterCharacter]}
-      />
-    );
-    expect(screen.getByText('No Difficult Terrain on Dash')).toBeInTheDocument();
+    expectBadge('OA Disadv', 'effect-disadvantage');
+    expectBadge('No Difficult Terrain on Dash', 'effect-cannot-act');
   });
 
-  it('does not render speedy passive badges when monsterCharacter has no conditions', () => {
-    const monsterCharacter = {
-      name: 'Goblin',
-      computedStats: {
-        automation: {
-          passives: [
-            { type: 'passive_rule', effect: 'opportunity_attacks_disadvantage' },
-          ],
-        },
-      },
-    };
+  it('does not render speedy badges when the creature has conditions but lacks the passives', () => {
+    render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [makeMonsterCharacter([])] })} />);
 
+    expectNoBadge('OA Disadv');
+    expectNoBadge('No Difficult Terrain on Dash');
+  });
+
+  it('does not render speedy badges when the creature has the passives but no conditions', () => {
     damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [] });
+    const monsterCharacter = makeMonsterCharacter([
+      'opportunity_attacks_disadvantage',
+      'ignore_difficult_terrain_on_dash',
+    ]);
+    render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [monsterCharacter] })} />);
 
-    render(
-      <MonsterCardModal
-        {...makeProps(makeMonster())}
-        characters={[monsterCharacter]}
-      />
-    );
-    expect(screen.queryByText('OA Disadv')).not.toBeInTheDocument();
+    expectNoBadge('OA Disadv');
+    expectNoBadge('No Difficult Terrain on Dash');
   });
 });

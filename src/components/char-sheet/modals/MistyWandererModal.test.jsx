@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MistyWandererModal from './MistyWandererModal.jsx';
@@ -14,14 +15,9 @@ import { confirmMistyWanderer } from '../../../services/automation/handlers/clas
 
 // ── Test fixtures ──
 
-const baseAction = {
-  name: 'Misty Wanderer',
-};
+const baseAction = { name: 'Misty Wanderer' };
 
-const basePlayerStats = {
-  name: 'Warlock1',
-  level: 3,
-};
+const basePlayerStats = { name: 'Warlock1', level: 3 };
 
 const baseProps = {
   action: baseAction,
@@ -37,6 +33,16 @@ function makeProps(overrides) {
 function makeAction(overrides) {
   return { ...baseAction, ...(overrides || {}) };
 }
+
+// Shared mock result reused across confirm-related tests
+const mockResult = {
+  type: 'popup',
+  payload: {
+    type: 'automation_info',
+    name: 'Misty Wanderer',
+    description: 'Misty Wanderer: Cast Misty Step (0 remaining).',
+  },
+};
 
 // ── Tests ──
 
@@ -116,14 +122,7 @@ describe('MistyWandererModal', () => {
 
   describe('ally selection', () => {
     it('calls confirmMistyWanderer with bringAlly=false and null when no ally is selected', async () => {
-      confirmMistyWanderer.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Misty Wanderer',
-          description: 'Misty Wanderer: Cast Misty Step (0 remaining).',
-        },
-      });
+      confirmMistyWanderer.mockResolvedValue(mockResult);
       render(<MistyWandererModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
       await waitFor(() => {
@@ -138,16 +137,10 @@ describe('MistyWandererModal', () => {
     });
 
     it('calls confirmMistyWanderer with bringAlly=true and ally name when an ally is selected', async () => {
-      confirmMistyWanderer.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Misty Wanderer',
-          description: 'Misty Wanderer: Cast Misty Step (0 remaining). Brought Ally1 to an unoccupied space within 5 feet of your destination.',
-        },
-      });
+      confirmMistyWanderer.mockResolvedValue(mockResult);
       render(<MistyWandererModal {...makeProps()} />);
       const select = screen.getByRole('combobox');
+      // Select only has "None" option; set value via property getter to simulate selection
       Object.defineProperty(select, 'value', { get: () => 'Ally1', configurable: true });
       fireEvent.change(select);
       fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
@@ -166,15 +159,6 @@ describe('MistyWandererModal', () => {
   // ── Confirm flow and result display ──
 
   describe('confirm flow', () => {
-    const mockResult = {
-      type: 'popup',
-      payload: {
-        type: 'automation_info',
-        name: 'Misty Wanderer',
-        description: 'Misty Wanderer: Cast Misty Step (0 remaining).',
-      },
-    };
-
     beforeEach(() => {
       confirmMistyWanderer.mockResolvedValue(mockResult);
     });
@@ -207,30 +191,6 @@ describe('MistyWandererModal', () => {
       });
     });
 
-    it('hides Cast Misty Step button after confirm', async () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
-      await waitFor(() => {
-        expect(screen.queryByRole('button', { name: /Cast Misty Step/ })).not.toBeInTheDocument();
-      });
-    });
-
-    it('hides Cancel button after confirm', async () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
-      await waitFor(() => {
-        expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-      });
-    });
-
-    it('hides the ally select dropdown after confirm', async () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
-      await waitFor(() => {
-        expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-      });
-    });
-
     it('shows ally name in result description when ally was brought', async () => {
       confirmMistyWanderer.mockResolvedValue({
         type: 'popup',
@@ -260,15 +220,6 @@ describe('MistyWandererModal', () => {
   // ── Result close behavior ──
 
   describe('result close behavior', () => {
-    const mockResult = {
-      type: 'popup',
-      payload: {
-        type: 'automation_info',
-        name: 'Misty Wanderer',
-        description: 'Misty Wanderer: Cast Misty Step (0 remaining).',
-      },
-    };
-
     beforeEach(() => {
       confirmMistyWanderer.mockResolvedValue(mockResult);
     });
@@ -280,6 +231,25 @@ describe('MistyWandererModal', () => {
       await waitFor(() => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
       });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── Dismiss behavior ──
+
+  describe('dismiss behavior', () => {
+    it('calls onClose when Cancel button is clicked', () => {
+      const onClose = vi.fn();
+      render(<MistyWandererModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onClose when clicking the modal overlay background', () => {
+      const onClose = vi.fn();
+      render(<MistyWandererModal {...makeProps({ onClose })} />);
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });

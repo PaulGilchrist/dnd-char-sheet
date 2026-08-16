@@ -9,7 +9,7 @@ export default function SearingVengeanceModal({
         <CreatureSelectionModal
             title="Searing Vengeance"
             icon="fa-fire"
-            targets={creatureTargets}
+            targets={creatureTargets || []}
             description="Select creatures within 30 feet to unleash radiant energy upon."
             note="Each selected creature takes 2d8 + Charisma modifier Radiant damage and is Blinded until end of your turn."
             confirmLabel="Unleash Vengeance"

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackHealModal from './SaveAttackHealModal.jsx';
@@ -13,10 +14,6 @@ vi.mock('../../../../services/combat/conditions/savePromptService.js', () => ({
   sendSaveResult: vi.fn(),
 }));
 
-vi.mock('../../../../services/ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
-}));
-
 vi.mock('../../../../services/dice/diceRoller.js', () => ({
   rollExpression: vi.fn(() => ({ total: 10, rolls: [10], modifier: 0, formula: '1d20' })),
 }));
@@ -30,6 +27,7 @@ vi.mock('../../../../services/ui/utils.js', () => ({
 vi.mock('../../../../services/ui/storage.js', () => ({
   default: {
     set: vi.fn(),
+    get: vi.fn(() => null),
   },
 }));
 
@@ -138,7 +136,7 @@ describe('SaveAttackHealModal', () => {
       expect(checkbox.checked).toBe(false);
     });
 
-    it('updates target count when a checkbox is toggled', () => {
+    it('updates target count and button label when targets are selected', () => {
       render(<SaveAttackHealModal {...makeProps()} />);
       fireEvent.click(getCheckboxByName('Goblin A'));
       expect(screen.getByText(/Targets selected: 1\/3/)).toBeInTheDocument();
@@ -150,15 +148,10 @@ describe('SaveAttackHealModal', () => {
       expect(getApplyButton()).toBeEnabled();
     });
 
-    it('shows singular "target" when exactly one is selected', () => {
+    it('shows singular "target" when exactly one is selected and plural for multiple', () => {
       render(<SaveAttackHealModal {...makeProps()} />);
       fireEvent.click(getCheckboxByName('Goblin A'));
       expect(getApplyButton()).toHaveTextContent('Divine Smite (1 target)');
-    });
-
-    it('shows plural "targets" when multiple are selected', () => {
-      render(<SaveAttackHealModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
       fireEvent.click(getCheckboxByName('Goblin B'));
       expect(getApplyButton()).toHaveTextContent('Divine Smite (2 targets)');
     });
@@ -168,6 +161,10 @@ describe('SaveAttackHealModal', () => {
 
   describe('range filtering', () => {
     const baseProps = makeProps({ rangeFeet: 10, mapData: { players: [], placedItems: [] } });
+
+    afterEach(() => {
+      vi.mocked(rangeValidation.getDistanceFeet).mockReturnValue(10);
+    });
 
     it('includes targets within range', () => {
       rangeValidation.getDistanceFeet.mockReturnValue(5);
@@ -199,16 +196,30 @@ describe('SaveAttackHealModal', () => {
       render(<SaveAttackHealModal {...makeProps({ combatSummary: null })} />);
       expect(screen.getByText('No valid targets in range.')).toBeInTheDocument();
     });
+
+    it('handles undefined creatures array gracefully', () => {
+      render(<SaveAttackHealModal {...makeProps({ combatSummary: {} })} />);
+      expect(screen.getByText('No valid targets in range.')).toBeInTheDocument();
+    });
+  });
+
+  // ── Cancel button behavior ──
+
+  describe('cancel button', () => {
+    it('calls onClose when Cancel is clicked before applying', () => {
+      const onClose = vi.fn();
+      render(<SaveAttackHealModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ── Edge cases ──
 
   describe('edge cases', () => {
-    it('does not process when apply is clicked with no targets selected', async () => {
+    it('does not process when apply is clicked with no targets selected', () => {
       render(<SaveAttackHealModal {...makeProps()} />);
-      await vi.waitFor(() => {
-        fireEvent.click(getApplyButton());
-      });
+      fireEvent.click(getApplyButton());
       expect(screen.queryByText(/Resolving/)).not.toBeInTheDocument();
     });
   });

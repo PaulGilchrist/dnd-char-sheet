@@ -2,7 +2,31 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepSpells from './WizardStepSpells.jsx';
-import * as spellLimits from '../../services/rules/spells/spellLimits.js';
+
+// Mock modals to prevent full rendering and enable reliable assertions
+vi.mock('./MagicInitiateModal.jsx', () => ({
+  default: vi.fn(({ onClose }) => (
+    <div data-testid="magic-initiate-modal">
+      <span>Magic Initiate</span>
+      <button onClick={onClose}>Close</button>
+    </div>
+  )),
+}));
+
+vi.mock('./FeyTouchedModal.jsx', () => ({
+  default: vi.fn(({ onClose }) => (
+    <div data-testid="fey-touched-modal">
+      <span>Fey Magic</span>
+      <button onClick={onClose}>Close</button>
+    </div>
+  )),
+  ShadowTouchedModal: vi.fn(({ onClose }) => (
+    <div data-testid="shadow-touched-modal">
+      <span>Shadow Magic</span>
+      <button onClick={onClose}>Close</button>
+    </div>
+  )),
+}));
 
 vi.mock('./SelectableList.jsx', () => ({
   default: vi.fn((props) => {
@@ -41,13 +65,16 @@ const defaultSpellLimits = {
   preparedSpells: null,
 };
 
+// Shared mutable state for reliable mock overrides — avoids mockResolvedValueOnce race conditions
+let currentSpellLimits = { ...defaultSpellLimits };
+
 vi.mock('../../services/rules/spells/spellLimits.js', () => ({
-  getSpellLimits: vi.fn(() => Promise.resolve(defaultSpellLimits)),
-  validateSpellSelection: vi.fn(() => Promise.resolve({ valid: true, violations: [] })),
+  getSpellLimits: vi.fn().mockImplementation(async () => currentSpellLimits),
+  validateSpellSelection: vi.fn().mockResolvedValue({ valid: true, violations: [] }),
 }));
 
 vi.mock('../../services/rules/spells/spellValidation.js', () => ({
-  getSpellValidationInfo: vi.fn(() => Promise.resolve({ warnings: [] })),
+  getSpellValidationInfo: vi.fn().mockResolvedValue({ warnings: [] }),
 }));
 
 const mockProps = {
@@ -79,14 +106,15 @@ const warlockProps = {
   allSpells: warlockSpells,
 };
 
-// Shared helper: set a default mock and override only when needed
+// Update shared spell limits before each render
 const setSpellLimits = (overrides = {}) => {
-  spellLimits.getSpellLimits.mockResolvedValueOnce({ ...defaultSpellLimits, ...overrides });
+  currentSpellLimits = { ...defaultSpellLimits, ...overrides };
 };
 
 describe('WizardStepSpells feat integrations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentSpellLimits = { ...defaultSpellLimits };
   });
 
   describe('Warlock Mystic Arcanum', () => {
@@ -253,7 +281,7 @@ describe('WizardStepSpells feat integrations', () => {
       { name: 'Healing Word', index: 'healing_word', level: 1, school: 'Evocation', description: ['Healing word.'], classes: ['Cleric'] },
     ];
 
-    it('shows Magic Initiate edit button when feat is a string', async () => {
+    it('renders edit button when Magic Initiate feat is present as a string with instances configured', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate'], magicInitiateInstances: [{ class: 'Wizard', cantrips: ['Burning Hands', 'Thunderwave'], level1Spell: 'Healing Word' }] }} allSpells={baseSpells} />);
       await waitFor(() => {
@@ -261,7 +289,7 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('shows Magic Initiate edit button when feat is an object', async () => {
+    it('renders edit button when Magic Initiate feat is present as an object with instances configured', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [{ name: 'Magic Initiate', index: 'magic-initiate' }], magicInitiateInstances: [{ class: 'Wizard', cantrips: ['Burning Hands', 'Thunderwave'], level1Spell: 'Healing Word' }] }} allSpells={baseSpells} />);
       await waitFor(() => {
@@ -269,20 +297,55 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('does not show Magic Initiate edit button when modal is open', async () => {
+    it('renders the modal when Magic Initiate feat is added but instances do not match', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate'] }} allSpells={baseSpells} />);
       await waitFor(() => {
-        expect(screen.getByText('Magic Initiate')).toBeInTheDocument();
-        expect(screen.queryByText('Edit Magic Initiate')).not.toBeInTheDocument();
+        expect(screen.getByTestId('magic-initiate-modal')).toBeInTheDocument();
       });
     });
 
-    it('excludes Magic Initiate spells from user spell counts', async () => {
+    it('does not render the modal when instances match the number of Magic Initiate feats', async () => {
+      setSpellLimits();
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate'], magicInitiateInstances: [{ class: 'Wizard', cantrips: ['Cantrip1'], level1Spell: 'Spell1' }] }} />);
+      await waitFor(() => {
+        expect(screen.queryByTestId('magic-initiate-modal')).not.toBeInTheDocument();
+      });
+    });
+
+    it('renders the modal when there are two Magic Initiate feats but only one instance', async () => {
+      setSpellLimits();
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate', 'Magic Initiate'] }} />);
+      await waitFor(() => {
+        expect(screen.getByTestId('magic-initiate-modal')).toBeInTheDocument();
+      });
+    });
+
+    it('excludes Magic Initiate cantrips and level 1 spells from user spell counts', async () => {
       setSpellLimits({ cantrip: 0, level1: 0 });
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, spells: ['Burning Hands', 'Thunderwave', 'Healing Word'], magicInitiateInstances: [{ class: 'Wizard', cantrips: ['Burning Hands', 'Thunderwave'], level1Spell: 'Healing Word' }] }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.getByText('Spell Selection Summary')).toBeInTheDocument();
+        const cantripCount = screen.getByText(/Cantrips:/);
+        expect(cantripCount.parentElement.textContent).toBe('Cantrips:0/0');
+      });
+    });
+
+    it('handles null cantrip slots in Magic Initiate instances', async () => {
+      setSpellLimits({ cantrip: 2 });
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, spells: ['Magic Missile'], magicInitiateInstances: [{ class: 'Wizard', cantrips: [null, 'Burning Hands'], level1Spell: null }] }} allSpells={baseSpells} />);
+      await waitFor(() => {
+        expect(screen.getByText('Spell Selection Summary')).toBeInTheDocument();
+        const cantripCount = screen.getByText(/Cantrips:/);
+        expect(cantripCount.parentElement.textContent).toBe('Cantrips:1/2');
+      });
+    });
+
+    it('handles empty Magic Initiate instances array gracefully', async () => {
+      setSpellLimits();
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate'], magicInitiateInstances: [] }} allSpells={baseSpells} />);
+      await waitFor(() => {
+        expect(screen.getByTestId('magic-initiate-modal')).toBeInTheDocument();
       });
     });
   });
@@ -293,7 +356,7 @@ describe('WizardStepSpells feat integrations', () => {
       { name: 'Misty Step', index: 'misty_step', level: 1, school: 'Conjuration', description: ['Misty step.'], classes: ['Sorcerer', 'Warlock', 'Wizard'] },
     ];
 
-    it('shows Fey Magic edit button when feat is a string and spell is set', async () => {
+    it('renders edit button when Fey Touched feat is present as a string with spell set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Fey Touched'], feyTouchedSpell: 'Misty Step' }} allSpells={baseSpells} />);
       await waitFor(() => {
@@ -301,7 +364,7 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('shows Fey Magic edit button when feat is an object', async () => {
+    it('renders edit button when Fey Touched feat is present as an object with spell set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [{ name: 'Fey Touched', index: 'fey-touched' }], feyTouchedSpell: 'Misty Step' }} allSpells={baseSpells} />);
       await waitFor(() => {
@@ -309,36 +372,38 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('does not show Fey Magic edit button when modal is open', async () => {
+    it('renders the modal when Fey Touched feat is present but spell is not set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Fey Touched'] }} allSpells={baseSpells} />);
       await waitFor(() => {
-        expect(screen.getByText('Fey Magic')).toBeInTheDocument();
-        expect(screen.queryByText('Edit Fey Magic')).not.toBeInTheDocument();
+        expect(screen.getByTestId('fey-touched-modal')).toBeInTheDocument();
       });
     });
 
-    it('does not show Fey Magic edit button when spell is not set', async () => {
+    it('does not render the modal when Fey Touched spell is already set', async () => {
       setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Fey Touched'] }} allSpells={baseSpells} />);
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Fey Touched'], feyTouchedSpell: 'Misty Step' }} allSpells={baseSpells} />);
       await waitFor(() => {
+        expect(screen.queryByTestId('fey-touched-modal')).not.toBeInTheDocument();
+      });
+    });
+
+    it('does not render the modal or edit button when Fey Touched feat is not present', async () => {
+      setSpellLimits();
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [] }} allSpells={baseSpells} />);
+      await waitFor(() => {
+        expect(screen.queryByTestId('fey-touched-modal')).not.toBeInTheDocument();
         expect(screen.queryByText('Edit Fey Magic')).not.toBeInTheDocument();
       });
     });
 
     it('excludes Fey Touched spell from user spell counts', async () => {
-      setSpellLimits({ cantrip: 1 });
+      setSpellLimits({ cantrip: 1, level1: 0 });
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, spells: ['Misty Step'], feyTouchedSpell: 'Misty Step' }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.getByText('Spell Selection Summary')).toBeInTheDocument();
-      });
-    });
-
-    it('does not show Fey Magic edit button when feat is not present', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [] }} allSpells={baseSpells} />);
-      await waitFor(() => {
-        expect(screen.queryByText('Edit Fey Magic')).not.toBeInTheDocument();
+        const level1Count = screen.getByText(/1th level:/);
+        expect(level1Count.parentElement.textContent).toBe('1th level:0/0');
       });
     });
   });
@@ -349,7 +414,7 @@ describe('WizardStepSpells feat integrations', () => {
       { name: 'Invisibility', index: 'invisibility', level: 2, school: 'Illusion', description: ['Invisibility.'], classes: ['Sorcerer', 'Wizard'] },
     ];
 
-    it('shows Shadow Magic edit button when feat is a string and spell is set', async () => {
+    it('renders edit button when Shadow Touched feat is present as a string with spell set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Shadow Touched'], shadowTouchedSpell: 'Invisibility' }} allSpells={baseSpells} />);
       await waitFor(() => {
@@ -357,7 +422,7 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('shows Shadow Magic edit button when feat is an object', async () => {
+    it('renders edit button when Shadow Touched feat is present as an object with spell set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [{ name: 'Shadow Touched', index: 'shadow-touched' }], shadowTouchedSpell: 'Invisibility' }} allSpells={baseSpells} />);
       await waitFor(() => {
@@ -365,41 +430,43 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('does not show Shadow Magic edit button when modal is open', async () => {
+    it('renders the modal when Shadow Touched feat is present but spell is not set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Shadow Touched'] }} allSpells={baseSpells} />);
       await waitFor(() => {
-        expect(screen.getByText('Shadow Magic')).toBeInTheDocument();
-        expect(screen.queryByText('Edit Shadow Magic')).not.toBeInTheDocument();
+        expect(screen.getByTestId('shadow-touched-modal')).toBeInTheDocument();
       });
     });
 
-    it('does not show Shadow Magic edit button when spell is not set', async () => {
+    it('does not render the modal when Shadow Touched spell is already set', async () => {
       setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Shadow Touched'] }} allSpells={baseSpells} />);
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Shadow Touched'], shadowTouchedSpell: 'Invisibility' }} allSpells={baseSpells} />);
       await waitFor(() => {
+        expect(screen.queryByTestId('shadow-touched-modal')).not.toBeInTheDocument();
+      });
+    });
+
+    it('does not render the modal or edit button when Shadow Touched feat is not present', async () => {
+      setSpellLimits();
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [] }} allSpells={baseSpells} />);
+      await waitFor(() => {
+        expect(screen.queryByTestId('shadow-touched-modal')).not.toBeInTheDocument();
         expect(screen.queryByText('Edit Shadow Magic')).not.toBeInTheDocument();
       });
     });
 
     it('excludes Shadow Touched spell from user spell counts', async () => {
-      setSpellLimits({ cantrip: 1 });
+      setSpellLimits({ cantrip: 1, level2: 0 });
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, spells: ['Invisibility'], shadowTouchedSpell: 'Invisibility' }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.getByText('Spell Selection Summary')).toBeInTheDocument();
-      });
-    });
-
-    it('does not show Shadow Magic edit button when feat is not present', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [] }} allSpells={baseSpells} />);
-      await waitFor(() => {
-        expect(screen.queryByText('Edit Shadow Magic')).not.toBeInTheDocument();
+        const level2Count = screen.getByText(/2th level:/);
+        expect(level2Count.parentElement.textContent).toBe('2th level:0/0');
       });
     });
   });
 
-  describe('Spell counts with feat spells', () => {
+  describe('Combined feat spell counts', () => {
     it('excludes all feat spell types from counts together', async () => {
       setSpellLimits({ cantrip: 2 });
       const allSpells = [
@@ -423,76 +490,8 @@ describe('WizardStepSpells feat integrations', () => {
       );
       await waitFor(() => {
         expect(screen.getByText('Spell Selection Summary')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Magic Initiate modal trigger', () => {
-    it('shows Magic Initiate modal when feat is added and instances do not match', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate', 'Magic Initiate'] }} />);
-      await waitFor(() => {
-        expect(screen.getByText('Magic Initiate')).toBeInTheDocument();
-      });
-    });
-
-    it('does not show Magic Initiate modal when instances match feat count', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate'], magicInitiateInstances: [{ class: 'Wizard', cantrips: ['Cantrip1'], level1Spell: 'Spell1' }] }} />);
-      await waitFor(() => {
-        expect(screen.queryByText('Magic Initiate')).not.toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Fey Touched modal trigger', () => {
-    it('shows Fey Touched modal when feat is present and spell is not set', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Fey Touched'] }} />);
-      await waitFor(() => {
-        expect(screen.getByText('Fey Magic')).toBeInTheDocument();
-      });
-    });
-
-    it('does not show Fey Touched modal when spell is already set', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Fey Touched'], feyTouchedSpell: 'Misty Step' }} />);
-      await waitFor(() => {
-        expect(screen.queryByText('Fey Magic')).not.toBeInTheDocument();
-      });
-    });
-
-    it('does not show Fey Touched modal when feat is not present', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [] }} />);
-      await waitFor(() => {
-        expect(screen.queryByText('Fey Magic')).not.toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Shadow Touched modal trigger', () => {
-    it('shows Shadow Touched modal when feat is present and spell is not set', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Shadow Touched'] }} />);
-      await waitFor(() => {
-        expect(screen.getByText('Shadow Magic')).toBeInTheDocument();
-      });
-    });
-
-    it('does not show Shadow Touched modal when spell is already set', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Shadow Touched'], shadowTouchedSpell: 'Invisibility' }} />);
-      await waitFor(() => {
-        expect(screen.queryByText('Shadow Magic')).not.toBeInTheDocument();
-      });
-    });
-
-    it('does not show Shadow Touched modal when feat is not present', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [] }} />);
-      await waitFor(() => {
-        expect(screen.queryByText('Shadow Magic')).not.toBeInTheDocument();
+        const cantripCount = screen.getByText(/Cantrips:/);
+        expect(cantripCount.parentElement.textContent).toBe('Cantrips:1/2');
       });
     });
   });

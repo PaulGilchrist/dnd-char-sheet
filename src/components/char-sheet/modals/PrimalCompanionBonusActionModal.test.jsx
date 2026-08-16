@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PrimalCompanionBonusActionModal from './PrimalCompanionBonusActionModal.jsx';
@@ -37,6 +38,8 @@ describe('PrimalCompanionBonusActionModal', () => {
     vi.clearAllMocks();
     localStorage.clear();
   });
+
+  // ── Initial render ──
 
   describe('initial render', () => {
     it('renders the header with action name and Font Awesome hands icon', () => {
@@ -83,7 +86,35 @@ describe('PrimalCompanionBonusActionModal', () => {
       expect(submitBtn).toBeDisabled();
       expect(submitBtn.querySelector('.fa-hands')).toBeInTheDocument();
     });
+
+    it('closes on Cancel button click', () => {
+      const onClose = vi.fn();
+      render(<PrimalCompanionBonusActionModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes when clicking the overlay on initial render', () => {
+      const onClose = vi.fn();
+      render(<PrimalCompanionBonusActionModal {...makeProps({ onClose })} />);
+      fireEvent.click(document.querySelector('.sp-overlay'));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close when clicking inside the modal content', () => {
+      render(<PrimalCompanionBonusActionModal {...makeProps()} />);
+      fireEvent.click(document.querySelector('.sp-modal'));
+      expect(baseProps.onClose).not.toHaveBeenCalled();
+    });
+
+    it('does not close when clicking a command option', () => {
+      render(<PrimalCompanionBonusActionModal {...makeProps()} />);
+      fireEvent.click(screen.getByText('Dash'));
+      expect(baseProps.onClose).not.toHaveBeenCalled();
+    });
   });
+
+  // ── Command selection ──
 
   describe('command selection', () => {
     const commands = ['Dash', 'Disengage', 'Dodge', 'Help'];
@@ -99,7 +130,11 @@ describe('PrimalCompanionBonusActionModal', () => {
       const label = screen.getByText(command).closest('label');
       expect(label.querySelector('input')).toBeChecked();
     });
+
+
   });
+
+  // ── Force damage option ──
 
   describe('force damage option', () => {
     const withForceDamage = (overrides = {}) => makeProps({
@@ -119,6 +154,20 @@ describe('PrimalCompanionBonusActionModal', () => {
       expect(screen.queryByLabelText(/Deal Force damage/)).not.toBeInTheDocument();
     });
 
+    it('does not render the force damage checkbox when forceDamageOption is false', () => {
+      render(<PrimalCompanionBonusActionModal {...makeProps({
+        action: { name: 'Primal Companion', automation: { type: 'bonus_action', forceDamageOption: false } }
+      })} />);
+      expect(screen.queryByLabelText(/Deal Force damage/)).not.toBeInTheDocument();
+    });
+
+    it('does not render the force damage checkbox when automation is missing', () => {
+      render(<PrimalCompanionBonusActionModal {...makeProps({
+        action: { name: 'Primal Companion' }
+      })} />);
+      expect(screen.queryByLabelText(/Deal Force damage/)).not.toBeInTheDocument();
+    });
+
     it('defaults the force damage checkbox to unchecked', () => {
       render(<PrimalCompanionBonusActionModal {...withForceDamage()} />);
       expect(screen.getByLabelText(/Deal Force damage/)).not.toBeChecked();
@@ -134,6 +183,8 @@ describe('PrimalCompanionBonusActionModal', () => {
       expect(checkbox).not.toBeChecked();
     });
   });
+
+  // ── Apply flow ──
 
   describe('apply flow', () => {
     it('does not call applyBonusActionCommand when no command is selected', async () => {
@@ -200,6 +251,28 @@ describe('PrimalCompanionBonusActionModal', () => {
       });
     });
 
+    it('renders the action name in the result screen header', async () => {
+      render(<PrimalCompanionBonusActionModal {...makeProps()} />);
+      await act(async () => { fireEvent.click(screen.getByText('Dash')); });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Command Companion/ }));
+      });
+      await waitFor(() => {
+        expect(screen.getByText('Primal Companion')).toBeInTheDocument();
+      });
+    });
+
+    it('renders the hands icon in the result screen header', async () => {
+      render(<PrimalCompanionBonusActionModal {...makeProps()} />);
+      await act(async () => { fireEvent.click(screen.getByText('Dash')); });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Command Companion/ }));
+      });
+      await waitFor(() => {
+        expect(document.querySelector('.sp-header .fa-hands')).toBeInTheDocument();
+      });
+    });
+
     it('calls onClose when Done button is clicked on the result screen', async () => {
       const onClose = vi.fn();
       render(<PrimalCompanionBonusActionModal {...makeProps({ onClose })} />);
@@ -224,6 +297,57 @@ describe('PrimalCompanionBonusActionModal', () => {
         fireEvent.click(document.querySelector('.sp-overlay'));
       });
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close when clicking the modal in result screen', async () => {
+      render(<PrimalCompanionBonusActionModal {...makeProps()} />);
+      await act(async () => { fireEvent.click(screen.getByText('Dash')); });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Command Companion/ }));
+      });
+      await waitFor(() => {
+        fireEvent.click(document.querySelector('.sp-modal'));
+      });
+      expect(baseProps.onClose).not.toHaveBeenCalled();
+    });
+
+    it('renders result description as HTML when it contains HTML tags', async () => {
+      vi.mocked(primalCompanionHandler.applyBonusActionCommand).mockResolvedValue({
+        type: 'popup',
+        payload: {
+          type: 'automation_info',
+          name: 'Primal Companion',
+          description: '<b>Commanded Wolf</b> to take a Dash action.',
+        },
+      });
+      render(<PrimalCompanionBonusActionModal {...makeProps()} />);
+      await act(async () => { fireEvent.click(screen.getByText('Dash')); });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Command Companion/ }));
+      });
+      await waitFor(() => {
+        const body = document.querySelector('.sp-body');
+        expect(body.querySelector('b')).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ── Null safety ──
+
+  describe('null safety', () => {
+    it('renders with undefined action.automation', () => {
+      render(<PrimalCompanionBonusActionModal {...makeProps({
+        action: { name: 'Primal Companion', automation: undefined }
+      })} />);
+      expect(screen.getByText('Primal Companion')).toBeInTheDocument();
+      expect(screen.queryByLabelText(/Deal Force damage/)).not.toBeInTheDocument();
+    });
+
+    it('renders with empty companionType', () => {
+      render(<PrimalCompanionBonusActionModal {...makeProps({ companionType: '' })} />);
+      expect(screen.getByText('Primal Companion')).toBeInTheDocument();
+      const body = document.querySelector('.sp-body');
+      expect(body.textContent).toContain('Command your');
     });
   });
 });

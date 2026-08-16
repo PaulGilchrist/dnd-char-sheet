@@ -1,25 +1,9 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useModalHandlers from './useModalHandlers.js';
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
     rollExpression: vi.fn(),
-}));
-
-vi.mock('../../services/rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../services/rules/combat/rangeValidation.js', () => ({
-    getDistanceFeet: vi.fn(),
-}));
-
-vi.mock('../../services/encounters/combatData.js', () => ({
-    getCurrentCombatRound: vi.fn(),
-}));
-
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-    getRuntimeValue: vi.fn(),
-    setRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../services/automation/handlers/class-sorcerer/starryFormHandler.js', () => ({
@@ -37,11 +21,12 @@ vi.mock('../../services/automation/handlers/combat/bonusAttacksHandler.js', () =
     applyFlurryOfBlows: vi.fn(),
 }));
 
-import { rollExpression } from '../../services/dice/diceRoller.js';
-import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
-import { getDistanceFeet } from '../../services/rules/combat/rangeValidation.js';
-import { getCurrentCombatRound } from '../../services/encounters/combatData.js';
-import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+}));
+
+import { setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { applyConstellationOption } from '../../services/automation/handlers/class-sorcerer/starryFormHandler.js';
 import { applyConstellationOption as twinklingApply } from '../../services/automation/handlers/class-sorcerer/twinklingConstellationHandler.js';
 
@@ -78,185 +63,11 @@ function createDeps(overrides = {}) {
 describe('useModalHandlers - features & constellation', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReturnValue(null);
         setRuntimeValue.mockReturnValue(undefined);
-        getCurrentCombatRound.mockReturnValue(1);
-        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-        getCombatContext.mockResolvedValue(null);
-        getDistanceFeet.mockReturnValue(5);
-        globalThis.Math.random = () => 20;
-    });
-
-    describe('handleEnhancedUnarmedChoice', () => {
-        it('applies damage bonus rider when chosen option has damage_bonus', () => {
-            const deps = createDeps({
-                pendingDamage: {
-                    attack: { name: 'Unarmed Strike' },
-                    formula: '1d4',
-                    total: 5,
-                    rolls: [5],
-                    modifier: 0,
-                    rider: null,
-                    _attackRider: {
-                        name: 'Unarmed Fighting',
-                        options: [{ name: 'Damage Bonus', effect: 'damage_bonus', damageExpression: '1d4', damageType: 'force' }],
-                    },
-                },
-            });
-            rollExpression.mockReturnValue({ total: 3, rolls: [3], modifier: 0 });
-            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
-            handleEnhancedUnarmedChoice('Damage Bonus');
-            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
-            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
-            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
-                expect.any(Object),
-                expect.stringContaining('1d4'),
-                expect.any(Number),
-                expect.any(Array),
-                null
-            );
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestFighter',
-                '_Unarmed_Fighting_usedRound',
-                1,
-                'test-campaign'
-            );
-        });
-
-        it('proceeds with original damage when option is found but has no damage_bonus effect', () => {
-            const deps = createDeps({
-                pendingDamage: {
-                    attack: { name: 'Unarmed Strike' },
-                    formula: '1d4',
-                    total: 5,
-                    rolls: [5],
-                    modifier: 0,
-                    rider: null,
-                    _attackRider: {
-                        name: 'Unarmed Fighting',
-                        options: [{ name: 'Other Option', effect: 'other' }],
-                    },
-                },
-            });
-            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
-            handleEnhancedUnarmedChoice('Other Option');
-            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
-            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
-            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
-                expect.any(Object),
-                '1d4',
-                5,
-                [5],
-                null
-            );
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('proceeds with original damage when option is not found in rider options', () => {
-            const deps = createDeps({
-                pendingDamage: {
-                    attack: { name: 'Unarmed Strike' },
-                    formula: '1d4',
-                    total: 5,
-                    rolls: [5],
-                    modifier: 0,
-                    rider: null,
-                    _attackRider: {
-                        name: 'Unarmed Fighting',
-                        options: [{ name: 'Damage Bonus', effect: 'damage_bonus', damageExpression: '1d4', damageType: 'force' }],
-                    },
-                },
-            });
-            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
-            handleEnhancedUnarmedChoice('Nonexistent Option');
-            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
-            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
-                expect.any(Object),
-                '1d4',
-                5,
-                [5],
-                null
-            );
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('proceeds with original damage when rollExpression returns null for damage_bonus', () => {
-            const deps = createDeps({
-                pendingDamage: {
-                    attack: { name: 'Unarmed Strike' },
-                    formula: '1d4',
-                    total: 5,
-                    rolls: [5],
-                    modifier: 0,
-                    rider: null,
-                    _attackRider: {
-                        name: 'Unarmed Fighting',
-                        options: [{ name: 'Damage Bonus', effect: 'damage_bonus', damageExpression: '1d4', damageType: 'force' }],
-                    },
-                },
-            });
-            rollExpression.mockReturnValue(null);
-            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
-            handleEnhancedUnarmedChoice('Damage Bonus');
-            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
-            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
-                expect.any(Object),
-                '1d4',
-                5,
-                [5],
-                null
-            );
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('returns early when no pending damage', () => {
-            const deps = createDeps();
-            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
-            handleEnhancedUnarmedChoice('Any Option');
-            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
-            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('handleEnhancedUnarmedSkip', () => {
-        it('proceeds with original damage and records used round when skipping', () => {
-            const deps = createDeps({
-                pendingDamage: {
-                    attack: { name: 'Unarmed Strike' },
-                    formula: '1d4',
-                    total: 5,
-                    rolls: [5],
-                    modifier: 0,
-                    rider: null,
-                    _attackRider: { name: 'Unarmed Fighting' },
-                },
-            });
-            const { handleEnhancedUnarmedSkip } = useModalHandlers(deps);
-            handleEnhancedUnarmedSkip();
-            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
-            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
-            expect(deps.proceedWithDamage).toHaveBeenCalled();
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestFighter',
-                '_Unarmed_Fighting_usedRound',
-                1,
-                'test-campaign'
-            );
-        });
-
-        it('returns early when no pending damage', () => {
-            const deps = createDeps();
-            const { handleEnhancedUnarmedSkip } = useModalHandlers(deps);
-            handleEnhancedUnarmedSkip();
-            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
-            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
     });
 
     describe('handleFeatureChoiceConfirm', () => {
-        it('stores chosen option and shows popup with rest message for defensive_tactics', () => {
+        it('stores chosen option, clears modal, and shows popup with rest message for defensive_tactics', () => {
             const deps = createDeps({
                 modalState: {
                     featureChoice: {
@@ -269,28 +80,30 @@ describe('useModalHandlers - features & constellation', () => {
             handleFeatureChoiceConfirm('Shield Block');
             expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_DefensiveTactics_choice', 'Shield Block', 'test-campaign');
             expect(deps.setModalState).toHaveBeenCalledWith({ featureChoice: null });
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Defensive Tactics'));
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.stringContaining('Short or Long Rest'));
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.stringMatching(/Defensive Tactics.*Shield Block.*Short or Long Rest/)
+            );
         });
 
-        it('shows different message for non-hunter_prey/non-defensive_tactics actions', () => {
+        it('stores chosen option and shows popup with re-click message for non-special actions', () => {
             const deps = createDeps({
                 modalState: {
                     featureChoice: {
-                        action: { name: 'Other Feature', automation: {} },
-                        optionKey: 'other_choice',
+                        action: { name: 'Second Wind', automation: { type: 'healing' } },
+                        optionKey: '_SecondWind_choice',
                     },
                 },
             });
             const { handleFeatureChoiceConfirm } = useModalHandlers(deps);
-            handleFeatureChoiceConfirm('Option A');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'other_choice', 'Option A', 'test-campaign');
+            handleFeatureChoiceConfirm('Heal 5 HP');
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_SecondWind_choice', 'Heal 5 HP', 'test-campaign');
             expect(deps.setModalState).toHaveBeenCalledWith({ featureChoice: null });
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.stringContaining('clicking the feature again'));
-            expect(deps.setPopupHtml).not.toHaveBeenCalledWith(expect.stringContaining('Short or Long Rest'));
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.stringMatching(/Second Wind.*Heal 5 HP.*clicking the feature again/)
+            );
         });
 
-        it('does nothing when no feature choice', () => {
+        it('does nothing when no feature choice exists', () => {
             const deps = createDeps();
             const { handleFeatureChoiceConfirm } = useModalHandlers(deps);
             handleFeatureChoiceConfirm('Option A');
@@ -298,14 +111,46 @@ describe('useModalHandlers - features & constellation', () => {
             expect(deps.setModalState).not.toHaveBeenCalled();
             expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
+
+        it('handles hunter_prey automation type with rest message', () => {
+            const deps = createDeps({
+                modalState: {
+                    featureChoice: {
+                        action: { name: 'Hunter\'s Premise', automation: { type: 'hunter_prey' } },
+                        optionKey: '_HunterPrey_choice',
+                    },
+                },
+            });
+            const { handleFeatureChoiceConfirm } = useModalHandlers(deps);
+            handleFeatureChoiceConfirm('Lurer');
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_HunterPrey_choice', 'Lurer', 'test-campaign');
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(
+                expect.stringMatching(/Hunter's Premise.*Lurer.*Short or Long Rest/)
+            );
+        });
     });
 
     describe('handleFeatureChoiceSkip', () => {
-        it('clears feature choice', () => {
+        it('clears feature choice modal', () => {
             const deps = createDeps();
             const { handleFeatureChoiceSkip } = useModalHandlers(deps);
             handleFeatureChoiceSkip();
             expect(deps.setModalState).toHaveBeenCalledWith({ featureChoice: null });
+        });
+
+        it('clears feature choice even when one exists in modalState', () => {
+            const deps = createDeps({
+                modalState: {
+                    featureChoice: {
+                        action: { name: 'Test Feature' },
+                        optionKey: 'test_key',
+                    },
+                },
+            });
+            const { handleFeatureChoiceSkip } = useModalHandlers(deps);
+            handleFeatureChoiceSkip();
+            expect(deps.setModalState).toHaveBeenCalledWith({ featureChoice: null });
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
     });
 
@@ -320,7 +165,12 @@ describe('useModalHandlers - features & constellation', () => {
             twinklingApply.mockResolvedValue({ payload: 'Twinkled!' });
             const { handleConstellationSelect } = useModalHandlers(deps);
             await handleConstellationSelect(payload, 'Twinkling Constellation');
-            expect(twinklingApply).toHaveBeenCalled();
+            expect(twinklingApply).toHaveBeenCalledWith(
+                { name: 'Starry Form' },
+                expect.objectContaining({ level: 12 }),
+                'test-campaign',
+                'Twinkling Constellation'
+            );
             expect(applyConstellationOption).not.toHaveBeenCalled();
             expect(deps.setModalState).toHaveBeenCalledWith({ starryFormConstellationModal: null, twinklingConstellationModal: null });
             expect(deps.setPopupHtml).toHaveBeenCalledWith('Twinkled!');
@@ -336,7 +186,12 @@ describe('useModalHandlers - features & constellation', () => {
             applyConstellationOption.mockResolvedValue({ payload: 'Starry!' });
             const { handleConstellationSelect } = useModalHandlers(deps);
             await handleConstellationSelect(payload, 'Starry Form');
-            expect(applyConstellationOption).toHaveBeenCalled();
+            expect(applyConstellationOption).toHaveBeenCalledWith(
+                { name: 'Starry Form' },
+                expect.objectContaining({ level: 6 }),
+                'test-campaign',
+                'Starry Form'
+            );
             expect(twinklingApply).not.toHaveBeenCalled();
             expect(deps.setModalState).toHaveBeenCalledWith({ starryFormConstellationModal: null, twinklingConstellationModal: null });
             expect(deps.setPopupHtml).toHaveBeenCalledWith('Starry!');
@@ -353,37 +208,53 @@ describe('useModalHandlers - features & constellation', () => {
             const { handleConstellationSelect } = useModalHandlers(deps);
             await handleConstellationSelect(payload, 'Starry Form');
             expect(deps.setPopupHtml).not.toHaveBeenCalled();
+            expect(deps.setModalState).toHaveBeenCalledWith({ starryFormConstellationModal: null, twinklingConstellationModal: null });
         });
-    });
 
-    describe('return value', () => {
-        it('returns all expected handler functions', () => {
+        it('does not set popup when result is undefined', async () => {
             const deps = createDeps();
-            const handlers = useModalHandlers(deps);
-            expect(Object.keys(handlers)).toHaveLength(18);
-            expect(Object.keys(handlers)).toEqual([
-                'handleMasteryClose',
-                'handleWeaponMasteryChoice',
-                'handleDivineFuryDamageType',
-                'handleDivineFurySkip',
-                'handleGenericDamageTypeChoice',
-                'handleGenericDamageTypeSkip',
-                'handleDamageTypeModifierChoice',
-                'handleDamageTypeModifierSkip',
-                'handleEnhancedUnarmedChoice',
-                'handleEnhancedUnarmedSkip',
-                'handleFeatureChoiceConfirm',
-                'handleFeatureChoiceSkip',
-                'handleConstellationSelect',
-                'handleWeaponKindMasteryClose',
-                'handleFlurryOfBlowsConfirm',
-                'handleFlurryOfBlowsSkip',
-                'handleOpenHandFromFlurryConfirm',
-                'handleOpenHandFromFlurrySkip',
-            ]);
-            for (const handler of Object.values(handlers)) {
-                expect(typeof handler).toBe('function');
-            }
+            const payload = {
+                action: { name: 'Starry Form' },
+                playerStats: { level: 6 },
+                campaignName: 'test-campaign',
+            };
+            applyConstellationOption.mockResolvedValue(undefined);
+            const { handleConstellationSelect } = useModalHandlers(deps);
+            await handleConstellationSelect(payload, 'Starry Form');
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
+            expect(deps.setModalState).toHaveBeenCalledWith({ starryFormConstellationModal: null, twinklingConstellationModal: null });
+        });
+
+        it('sets popup with undefined when result is truthy but lacks payload property', async () => {
+            const deps = createDeps();
+            const payload = {
+                action: { name: 'Starry Form' },
+                playerStats: { level: 6 },
+                campaignName: 'test-campaign',
+            };
+            applyConstellationOption.mockResolvedValue({ type: 'other' });
+            const { handleConstellationSelect } = useModalHandlers(deps);
+            await handleConstellationSelect(payload, 'Starry Form');
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(undefined);
+            expect(deps.setModalState).toHaveBeenCalledWith({ starryFormConstellationModal: null, twinklingConstellationModal: null });
+        });
+
+        it('passes the optionName to the handler', async () => {
+            const deps = createDeps();
+            const payload = {
+                action: { name: 'Starry Form' },
+                playerStats: { level: 6 },
+                campaignName: 'test-campaign',
+            };
+            applyConstellationOption.mockResolvedValue({ payload: 'Selected!' });
+            const { handleConstellationSelect } = useModalHandlers(deps);
+            await handleConstellationSelect(payload, 'Arrow Storm');
+            expect(applyConstellationOption).toHaveBeenLastCalledWith(
+                expect.any(Object),
+                expect.any(Object),
+                expect.any(String),
+                'Arrow Storm'
+            );
         });
     });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import useMapLoader from './useMapLoader.js';
@@ -26,39 +27,66 @@ vi.mock('../../../config/outdoorConfig.js', () => ({
 }));
 
 import * as mapsService from '../../../services/maps/mapsService.js';
-import { hexKey } from '../../../services/maps/hexMapUtils.js';
 
-describe('useMapLoader - initial state', () => {
+const characters = [
+    { name: 'Thorin' },
+    { name: 'Gandalf' },
+];
+
+// Renders the hook with a loadMapData promise that never resolves, so the
+// pre-load state is observable deterministically instead of racing timers.
+const renderWithPendingLoad = (campaign = 'test-campaign', map = 'test-map', chars = characters) => {
+    mapsService.loadMapData.mockReturnValue(new Promise(() => {}));
+    return renderHook(() => useMapLoader(campaign, map, chars));
+};
+
+describe('useMapLoader - initial state before load completes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mapsService.loadMapData.mockResolvedValue(null);
-        hexKey.mockImplementation((q, r) => `${q},${r}`);
     });
 
-    const characters = [
-        { name: 'Thorin' },
-        { name: 'Gandalf' },
-    ];
+    it('stays in loading state with no map data while the load is pending', () => {
+        const { result } = renderWithPendingLoad();
 
-    it('returns loading true and mapData null before async load completes', () => {
-        const { result } = renderHook(() => useMapLoader('test-campaign', 'test-map', characters));
         expect(result.current.loading).toBe(true);
         expect(result.current.mapData).toBeNull();
-        expect(result.current.travelInit).toBeNull();
-        expect(result.current.marchingOrder).toEqual([]);
-        expect(result.current.partyPosition).toBeNull();
     });
 
-    it('returns default values before async load completes', () => {
-        const { result } = renderHook(() => useMapLoader('test-campaign', 'test-map', characters));
+    it('does not persist anything while the load is pending', () => {
+        renderWithPendingLoad();
+
+        expect(mapsService.saveMapData).not.toHaveBeenCalled();
+    });
+
+    it('exposes default map configuration before the load completes', () => {
+        const { result } = renderWithPendingLoad();
+
         expect(result.current.gridSize).toBe(10);
+        expect(result.current.zoom).toBe(2);
+        expect(result.current.panX).toBe(0);
+        expect(result.current.panY).toBe(0);
         expect(result.current.terrain).toEqual({});
         expect(result.current.rivers).toEqual([]);
         expect(result.current.roads).toEqual([]);
         expect(result.current.pois).toEqual([]);
-        expect(result.current.zoom).toBe(2);
-        expect(result.current.panX).toBe(0);
-        expect(result.current.panY).toBe(0);
+    });
+
+    it('exposes default party, travel, and weather state before the load completes', () => {
+        const { result } = renderWithPendingLoad();
+
+        expect(result.current.marchingOrder).toEqual([]);
+        expect(result.current.partyPosition).toBeNull();
+        expect(result.current.weather).toBeNull();
+        expect(result.current.travelInit).toBeNull();
         expect(result.current.travelSaveVersion).toBe(0);
+    });
+
+    it('seeds refs from the given props before the load completes', () => {
+        const { result } = renderWithPendingLoad('my-campaign', 'my-map');
+
+        expect(result.current.hexMapNameRef.current).toBe('my-map');
+        expect(result.current.hexMapDisplayNameRef.current).toBe('my-map');
+        expect(result.current.needsResetViewRef.current).toBe(false);
+        expect(result.current.travelStateRef.current).toBeNull();
     });
 });

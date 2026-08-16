@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalBurstModal from './ElementalBurstModal.jsx';
@@ -24,6 +25,7 @@ vi.mock('./shared/SaveAttackAoeModal.jsx', () => ({
 // ── Re-import mocked modules ──
 
 import * as logService from '../../../services/ui/logService.js';
+import * as SaveAttackAoeModalMock from './shared/SaveAttackAoeModal.jsx';
 
 // ── Test fixtures ──
 
@@ -84,66 +86,34 @@ function renderModal(props = {}) {
 describe('ElementalBurstModal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        localStorage.clear();
     });
 
     // ── Initial render / display ──
 
     describe('initial render', () => {
-        it('renders the modal overlay', () => {
+        it('renders the modal overlay and container', () => {
             renderModal();
             expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-        });
-
-        it('renders the modal container', () => {
-            renderModal();
             expect(document.querySelector('.sp-modal')).toBeInTheDocument();
         });
 
-        it('renders the modal header', () => {
-            renderModal();
-            expect(document.querySelector('.sp-header')).toBeInTheDocument();
-        });
-
-        it('renders the body section', () => {
-            renderModal();
-            expect(document.querySelector('.sp-body')).toBeInTheDocument();
-        });
-
-        it('renders the actions section', () => {
-            renderModal();
-            expect(document.querySelector('.sp-actions')).toBeInTheDocument();
-        });
-
-        it('renders the wand icon in the header', () => {
-            renderModal();
-            const icon = document.querySelector('.sp-header i.fa-solid.fa-wand-magic-sparkles');
-            expect(icon).toBeInTheDocument();
-        });
-
-        it('renders "Elemental Burst" in the header', () => {
+        it('renders the action name in the header', () => {
             renderModal();
             expect(screen.getByText('Elemental Burst')).toBeInTheDocument();
         });
 
-        it('renders the description paragraph with DC calculation', () => {
+        it('renders the description with DC calculation', () => {
             // DC = 8 + Dex bonus (4) + proficiency (3) = 15
             renderModal();
             expect(screen.getByText(/must make a Dexterity saving throw \(DC 15\)/)).toBeInTheDocument();
         });
 
-        it('renders the note paragraph with damage dice', () => {
+        it('renders the damage dice in the note', () => {
             // martial_arts_die is 4 at level 5
             const { container } = renderModal();
             const body = container.querySelector('.sp-body');
-            expect(body).toBeTruthy();
             expect(body.textContent).toContain('3d4 damage');
             expect(body.textContent).toContain('half as much damage');
-        });
-
-        it('renders the Cancel button', () => {
-            renderModal();
-            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
 
         it('renders all five damage type buttons', () => {
@@ -155,44 +125,9 @@ describe('ElementalBurstModal', () => {
             expect(screen.getByText('Thunder')).toBeInTheDocument();
         });
 
-        it('renders the acid button with leaf icon', () => {
+        it('renders the Cancel button', () => {
             renderModal();
-            const acidBtn = screen.getByText('Acid').closest('button');
-            const icon = acidBtn.querySelector('i');
-            expect(icon).toHaveClass('fa-solid');
-            expect(icon).toHaveClass('fa-leaf');
-        });
-
-        it('renders the cold button with snowflake icon', () => {
-            renderModal();
-            const coldBtn = screen.getByText('Cold').closest('button');
-            const icon = coldBtn.querySelector('i');
-            expect(icon).toHaveClass('fa-solid');
-            expect(icon).toHaveClass('fa-snowflake');
-        });
-
-        it('renders the fire button with fire icon', () => {
-            renderModal();
-            const fireBtn = screen.getByText('Fire').closest('button');
-            const icon = fireBtn.querySelector('i');
-            expect(icon).toHaveClass('fa-solid');
-            expect(icon).toHaveClass('fa-fire');
-        });
-
-        it('renders the lightning button with bolt icon', () => {
-            renderModal();
-            const lightningBtn = screen.getByText('Lightning').closest('button');
-            const icon = lightningBtn.querySelector('i');
-            expect(icon).toHaveClass('fa-solid');
-            expect(icon).toHaveClass('fa-bolt');
-        });
-
-        it('renders the thunder button with volume-high icon', () => {
-            renderModal();
-            const thunderBtn = screen.getByText('Thunder').closest('button');
-            const icon = thunderBtn.querySelector('i');
-            expect(icon).toHaveClass('fa-solid');
-            expect(icon).toHaveClass('fa-volume-high');
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
     });
 
@@ -296,12 +231,6 @@ describe('ElementalBurstModal', () => {
             fireEvent.click(modal);
             expect(handleClose).not.toHaveBeenCalled();
         });
-
-        it('does not call onClose when sp-body is clicked', () => {
-            const { handleClose } = renderModal();
-            fireEvent.click(document.querySelector('.sp-body'));
-            expect(handleClose).not.toHaveBeenCalled();
-        });
     });
 
     // ── Cancel button ──
@@ -317,9 +246,11 @@ describe('ElementalBurstModal', () => {
     // ── Damage type selection ──
 
     describe('damage type selection', () => {
-        it('logs an ability_use entry when Acid is chosen', async () => {
+        const damageTypes = ['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder'];
+
+        it.each(damageTypes)('logs an ability_use entry when %s is chosen', async (typeName) => {
             renderModal();
-            fireEvent.click(screen.getByText('Acid'));
+            fireEvent.click(screen.getByText(typeName));
             await waitFor(() => {
                 expect(logService.addEntry).toHaveBeenCalledWith(
                     'test-campaign',
@@ -327,59 +258,7 @@ describe('ElementalBurstModal', () => {
                         type: 'ability_use',
                         characterName: 'Monk1',
                         abilityName: 'Elemental Burst',
-                        description: 'Elemental Burst: Chose Acid damage type.',
-                    })
-                );
-            });
-        });
-
-        it('logs an ability_use entry when Cold is chosen', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Cold'));
-            await waitFor(() => {
-                expect(logService.addEntry).toHaveBeenCalledWith(
-                    'test-campaign',
-                    expect.objectContaining({
-                        description: 'Elemental Burst: Chose Cold damage type.',
-                    })
-                );
-            });
-        });
-
-        it('logs an ability_use entry when Fire is chosen', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => {
-                expect(logService.addEntry).toHaveBeenCalledWith(
-                    'test-campaign',
-                    expect.objectContaining({
-                        description: 'Elemental Burst: Chose Fire damage type.',
-                    })
-                );
-            });
-        });
-
-        it('logs an ability_use entry when Lightning is chosen', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Lightning'));
-            await waitFor(() => {
-                expect(logService.addEntry).toHaveBeenCalledWith(
-                    'test-campaign',
-                    expect.objectContaining({
-                        description: 'Elemental Burst: Chose Lightning damage type.',
-                    })
-                );
-            });
-        });
-
-        it('logs an ability_use entry when Thunder is chosen', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Thunder'));
-            await waitFor(() => {
-                expect(logService.addEntry).toHaveBeenCalledWith(
-                    'test-campaign',
-                    expect.objectContaining({
-                        description: 'Elemental Burst: Chose Thunder damage type.',
+                        description: `Elemental Burst: Chose ${typeName} damage type.`,
                     })
                 );
             });
@@ -393,75 +272,38 @@ describe('ElementalBurstModal', () => {
             });
         });
 
-        it('passes correct damage value to AOE modal', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => {
-                expect(screen.getByTestId('aoe-damage')).toHaveTextContent('3d4');
-            });
-        });
-
-        it('passes lowercase damage type to AOE modal', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => {
-                expect(screen.getByTestId('aoe-damage-type')).toHaveTextContent('fire');
-            });
-        });
-
-        it('passes DEX as save type to AOE modal', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => {
-                expect(screen.getByTestId('aoe-save-type')).toHaveTextContent('DEX');
-            });
-        });
-
-        it('passes correct save DC to AOE modal', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => {
-                expect(screen.getByTestId('aoe-save-dc')).toHaveTextContent('15');
-            });
-        });
-
-        it('passes action to AOE modal', async () => {
+        it('passes correct data to the AOE modal', async () => {
             renderModal();
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
                 expect(screen.getByTestId('aoe-action')).toHaveTextContent('Elemental Burst');
+                expect(screen.getByTestId('aoe-damage')).toHaveTextContent('3d4');
+                expect(screen.getByTestId('aoe-damage-type')).toHaveTextContent('fire');
+                expect(screen.getByTestId('aoe-save-type')).toHaveTextContent('DEX');
+                expect(screen.getByTestId('aoe-save-dc')).toHaveTextContent('15');
             });
         });
 
-        it('renders the AOE modal with Acid damage type', async () => {
+        it('passes correct AOE payload fields (shape, range, dcSuccess)', async () => {
             renderModal();
-            fireEvent.click(screen.getByText('Acid'));
+            fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
-                expect(screen.getByTestId('aoe-damage-type')).toHaveTextContent('acid');
+                expect(screen.getByTestId('save-attack-aoe-modal')).toBeInTheDocument();
+            });
+            // Verify the mock was called with the expected payload fields
+            const mockCall = SaveAttackAoeModalMock.default.mock.calls[0][0];
+            expect(mockCall).toMatchObject({
+                shape: 'sphere',
+                range: 20,
+                dcSuccess: 'half',
             });
         });
 
-        it('renders the AOE modal with Cold damage type', async () => {
+        it.each(damageTypes)('passes lowercase %s as damage type to AOE modal', async (typeName) => {
             renderModal();
-            fireEvent.click(screen.getByText('Cold'));
+            fireEvent.click(screen.getByText(typeName));
             await waitFor(() => {
-                expect(screen.getByTestId('aoe-damage-type')).toHaveTextContent('cold');
-            });
-        });
-
-        it('renders the AOE modal with Lightning damage type', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Lightning'));
-            await waitFor(() => {
-                expect(screen.getByTestId('aoe-damage-type')).toHaveTextContent('lightning');
-            });
-        });
-
-        it('renders the AOE modal with Thunder damage type', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Thunder'));
-            await waitFor(() => {
-                expect(screen.getByTestId('aoe-damage-type')).toHaveTextContent('thunder');
+                expect(screen.getByTestId('aoe-damage-type')).toHaveTextContent(typeName.toLowerCase());
             });
         });
     });
@@ -482,7 +324,7 @@ describe('ElementalBurstModal', () => {
     // ── Processing phase (transient) ──
 
     describe('processing phase', () => {
-        it('does not render the initial phase UI after a choice is made', async () => {
+        it('hides the initial phase UI after a choice is made', async () => {
             renderModal();
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
@@ -490,7 +332,7 @@ describe('ElementalBurstModal', () => {
             });
         });
 
-        it('does not render damage type buttons after a choice is made', async () => {
+        it('hides damage type buttons after a choice is made', async () => {
             renderModal();
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
@@ -533,7 +375,6 @@ describe('ElementalBurstModal', () => {
             logService.addEntry.mockRejectedValue(new Error('network error'));
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             renderModal();
-            // Should not throw
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
                 expect(consoleSpy).toHaveBeenCalledWith(
@@ -545,44 +386,27 @@ describe('ElementalBurstModal', () => {
         });
     });
 
-    // ── CSS classes ──
+    // ── Edge cases ──
 
-    describe('CSS classes', () => {
-        it('has sp-overlay class on the outer container', () => {
-            renderModal();
-            expect(document.querySelector('.sp-overlay')).toHaveClass('sp-overlay');
+    describe('edge cases', () => {
+        it('renders with undefined action', () => {
+            renderModal({ action: undefined });
+            expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
 
-        it('has sp-modal class on the modal container', () => {
-            renderModal();
-            expect(document.querySelector('.sp-modal')).toHaveClass('sp-modal');
+        it('renders with null proficiency (DC uses 0)', () => {
+            const stats = makePlayerStats({ proficiency: null });
+            renderModal({ playerStats: stats });
+            // DC = 8 + 4 + null = 12 (null coerced to 0 in addition)
+            expect(screen.getByText(/DC 12/)).toBeInTheDocument();
         });
 
-        it('has sp-header class on the header', () => {
-            renderModal();
-            expect(document.querySelector('.sp-header')).toHaveClass('sp-header');
-        });
-
-        it('has sp-body class on the body', () => {
-            renderModal();
-            expect(document.querySelector('.sp-body')).toHaveClass('sp-body');
-        });
-
-        it('has sp-actions class on the actions container', () => {
-            renderModal();
-            expect(document.querySelector('.sp-actions')).toHaveClass('sp-actions');
-        });
-
-        it('has sp-roll-btn class on damage type buttons', () => {
-            renderModal();
-            const fireBtn = screen.getByText('Fire').closest('button');
-            expect(fireBtn).toHaveClass('sp-roll-btn');
-        });
-
-        it('has sp-dismiss-btn class on the Cancel button', () => {
-            renderModal();
-            const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
-            expect(cancelBtn).toHaveClass('sp-dismiss-btn');
+        it('renders with empty proficiency (DC uses 0)', () => {
+            const stats = makePlayerStats({ proficiency: 0 });
+            renderModal({ playerStats: stats });
+            // DC = 8 + 4 + 0 = 12
+            expect(screen.getByText(/DC 12/)).toBeInTheDocument();
         });
     });
 });

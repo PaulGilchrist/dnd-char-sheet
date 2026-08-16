@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import BreathWeaponShapeModal from './BreathWeaponShapeModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -54,20 +55,23 @@ describe('BreathWeaponShapeModal', () => {
         expect(screen.getByText('30-foot Line (5 feet wide)')).toBeInTheDocument();
     });
 
-    it('renders Cancel button', () => {
+    it('renders Cancel and Choose Shape buttons', () => {
         render(<BreathWeaponShapeModal {...makeProps()} />);
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Choose Shape' })).toBeInTheDocument();
     });
 
     it('shows default title when action is null, undefined, or missing name', () => {
         render(<BreathWeaponShapeModal {...makeProps({ action: null })} />);
         expect(screen.getByText('Breath Weapon')).toBeInTheDocument();
-        cleanup();
-        vi.clearAllMocks();
+    });
+
+    it('shows default title when action is undefined', () => {
         render(<BreathWeaponShapeModal {...makeProps({ action: undefined })} />);
         expect(screen.getByText('Breath Weapon')).toBeInTheDocument();
-        cleanup();
-        vi.clearAllMocks();
+    });
+
+    it('shows default title when action has no name property', () => {
         render(<BreathWeaponShapeModal {...makeProps({ action: {} })} />);
         expect(screen.getByText('Breath Weapon')).toBeInTheDocument();
     });
@@ -88,6 +92,13 @@ describe('BreathWeaponShapeModal', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
+    it('does not call onClose when modal content is clicked', () => {
+        const onClose = vi.fn();
+        render(<BreathWeaponShapeModal {...makeProps({ onClose })} />);
+        fireEvent.click(document.querySelector('.sp-modal'));
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
     // ── Selection behavior ──
 
     it('disables Choose Shape button when nothing selected', () => {
@@ -95,10 +106,17 @@ describe('BreathWeaponShapeModal', () => {
         expect(screen.getByRole('button', { name: 'Choose Shape' })).toBeDisabled();
     });
 
-    it('enables Choose Shape button after selecting a shape', () => {
+    it('enables Choose Shape button after selecting cone', () => {
         render(<BreathWeaponShapeModal {...makeProps()} />);
         const radios = document.querySelectorAll('input[type="radio"]');
         fireEvent.click(radios[0]);
+        expect(screen.getByRole('button', { name: 'Choose Shape' })).toBeEnabled();
+    });
+
+    it('enables Choose Shape button after selecting line', () => {
+        render(<BreathWeaponShapeModal {...makeProps()} />);
+        const radios = document.querySelectorAll('input[type="radio"]');
+        fireEvent.click(radios[1]);
         expect(screen.getByRole('button', { name: 'Choose Shape' })).toBeEnabled();
     });
 
@@ -124,7 +142,7 @@ describe('BreathWeaponShapeModal', () => {
         expect(executeHandler).not.toHaveBeenCalled();
     });
 
-    it('stores selection and calls onClose and executeHandler', async () => {
+    it('stores cone selection and calls onClose and executeHandler', async () => {
         render(<BreathWeaponShapeModal {...makeProps()} />);
         const radios = document.querySelectorAll('input[type="radio"]');
         fireEvent.click(radios[0]);
@@ -136,7 +154,19 @@ describe('BreathWeaponShapeModal', () => {
         expect(executeHandler).toHaveBeenCalledWith(baseProps.action, baseProps.playerStats, baseProps.campaignName, null);
     });
 
-    it('replaces multiple spaces with underscore in option key', async () => {
+    it('stores line selection and calls onClose and executeHandler', async () => {
+        render(<BreathWeaponShapeModal {...makeProps()} />);
+        const radios = document.querySelectorAll('input[type="radio"]');
+        fireEvent.click(radios[1]);
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Choose Shape' }));
+        });
+        expect(setRuntimeValue).toHaveBeenCalledWith('DragonbornFighter', '_Breath_Weapon_option', 'line', 'test-campaign');
+        expect(baseProps.onClose).toHaveBeenCalledTimes(1);
+        expect(executeHandler).toHaveBeenCalledWith(baseProps.action, baseProps.playerStats, baseProps.campaignName, null);
+    });
+
+    it('collapses whitespace sequences to single underscore in option key', async () => {
         const actionWithSpaces = { name: 'Breath  Weapon' };
         render(<BreathWeaponShapeModal {...makeProps({ action: actionWithSpaces })} />);
         const radios = document.querySelectorAll('input[type="radio"]');
@@ -158,7 +188,7 @@ describe('BreathWeaponShapeModal', () => {
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Choose Shape' }));
         });
-        expect(dispatchSpy).toHaveBeenCalledWith(expect.any(CustomEvent));
+        expect(dispatchSpy).toHaveBeenCalledTimes(1);
         const event = dispatchSpy.mock.calls[0][0];
         expect(event.type).toBe('automation-result');
         expect(event.detail).toEqual({ type: 'popup', payload: { message: 'done' } });

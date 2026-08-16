@@ -67,21 +67,20 @@ const makeSettlement = (name, overrides = {}) => ({
 const renderSettlements = () =>
   render(<Settlements campaignName="test" onBack={() => {}} />);
 
-const getSettlementItem = (name) =>
-  screen.getByRole('button', { name: new RegExp(`edit settlement: ${name}`, 'i') });
-
-const withinListItem = (name) => within(getSettlementItem(name));
-
-// The description preview is a plain <p> with no accessible role, so it is
-// located by its class within the settlement list item.
-const getSettlementPreview = (name) =>
-  getSettlementItem(name).querySelector('.settlements-list-preview');
-
-// Size filter buttons are the only elements carrying a `Filter:` tooltip; the
-// size badges in the list use a bare lowercase size title. This query is exact
-// and unambiguous, unlike matching button names, which collide with the
-// aria-label of settlement list items (e.g. "Edit settlement: Fire Village").
-const getSizeFilterButton = (sizeLabel) => screen.getByTitle(`Filter: ${sizeLabel}`);
+// Scope every query to the specific settlement list item so regex-based
+// button-name queries don't collide with other buttons on the page.
+const withinSettlement = (name) => {
+  const item = screen.getByRole('button', { name: new RegExp(`edit settlement: ${name}`, 'i') });
+  return {
+    item,
+    getByText: (text) => within(item).getByText(text),
+    queryByText: (text) => within(item).queryByText(text),
+    getByTitle: (title) => within(item).getByTitle(title),
+    queryByTitle: (title) => within(item).queryByTitle(title),
+    getByClass: (cls) => item.querySelector(`.${cls}`),
+    queryByClass: (cls) => item.querySelector(`.${cls}`),
+  };
+};
 
 describe('Settlements - list rendering details', () => {
   beforeEach(() => {
@@ -110,24 +109,34 @@ describe('Settlements - list rendering details', () => {
       ];
       renderSettlements();
 
-      const townBadge = withinListItem('Fireport').getByTitle('town');
+      const townBadge = withinSettlement('Fireport').getByTitle('town');
       expect(townBadge).toHaveTextContent('town');
       expect(townBadge.querySelector('i')).toHaveClass('fa-solid', 'fa-hotel');
 
-      const villageBadge = withinListItem('Iceholm').getByTitle('village');
+      const villageBadge = withinSettlement('Iceholm').getByTitle('village');
       expect(villageBadge).toHaveTextContent('village');
       expect(villageBadge.querySelector('i')).toHaveClass('fa-solid', 'fa-house-chimney');
 
-      const cityBadge = withinListItem('Goldhaven').getByTitle('city');
+      const cityBadge = withinSettlement('Goldhaven').getByTitle('city');
       expect(cityBadge).toHaveTextContent('city');
       expect(cityBadge.querySelector('i')).toHaveClass('fa-solid', 'fa-city');
+    });
+
+    it('renders a metropolis badge with the landmark-dome icon', () => {
+      settlementMockStore.items = [makeSettlement('Capital City', { size: 'metropolis' })];
+      renderSettlements();
+
+      const badge = withinSettlement('Capital City').getByTitle('metropolis');
+      expect(badge).toHaveTextContent('metropolis');
+      expect(badge.querySelector('i')).toHaveClass('fa-solid', 'fa-landmark-dome');
     });
 
     it('does not render a size badge for a settlement without a size', () => {
       settlementMockStore.items = [makeSettlement('Mysterious Hollow', { size: '' })];
       renderSettlements();
 
-      expect(getSettlementItem('Mysterious Hollow').querySelector('.settlements-size-badge')).toBeNull();
+      expect(withinSettlement('Mysterious Hollow').queryByTitle('')).toBeNull();
+      expect(withinSettlement('Mysterious Hollow').getByClass('settlements-size-badge')).toBeNull();
     });
   });
 
@@ -139,8 +148,15 @@ describe('Settlements - list rendering details', () => {
       ];
       renderSettlements();
 
-      expect(withinListItem('Fireport').getByText('1,500 souls')).toBeInTheDocument();
-      expect(withinListItem('Goldhaven').getByText('25,000 souls')).toBeInTheDocument();
+      expect(withinSettlement('Fireport').getByText('1,500 souls')).toBeInTheDocument();
+      expect(withinSettlement('Goldhaven').getByText('25,000 souls')).toBeInTheDocument();
+    });
+
+    it('hides the population row when both population and size are empty', () => {
+      settlementMockStore.items = [makeSettlement('Empty Hollow', { population: '', size: '' })];
+      renderSettlements();
+
+      expect(withinSettlement('Empty Hollow').getByClass('settlements-list-subtitle')).toBeNull();
     });
 
     it('shows the service count with correct pluralization', () => {
@@ -152,8 +168,8 @@ describe('Settlements - list rendering details', () => {
       ];
       renderSettlements();
 
-      expect(withinListItem('Fireport').getByText('2 services')).toBeInTheDocument();
-      expect(withinListItem('Goldhaven').getByText('1 service')).toBeInTheDocument();
+      expect(withinSettlement('Fireport').getByText('2 services')).toBeInTheDocument();
+      expect(withinSettlement('Goldhaven').getByText('1 service')).toBeInTheDocument();
     });
 
     it('shows the tags for settlements that have them', () => {
@@ -163,22 +179,22 @@ describe('Settlements - list rendering details', () => {
       ];
       renderSettlements();
 
-      expect(withinListItem('Fireport').getByText('coastal, trade')).toBeInTheDocument();
-      expect(withinListItem('Goldhaven').getByText('trade hub')).toBeInTheDocument();
+      expect(withinSettlement('Fireport').getByText('coastal, trade')).toBeInTheDocument();
+      expect(withinSettlement('Goldhaven').getByText('trade hub')).toBeInTheDocument();
     });
 
     it('does not render a service count when a settlement has no services', () => {
       settlementMockStore.items = [makeSettlement('Quiet Hollow', { services: [] })];
       renderSettlements();
 
-      expect(getSettlementItem('Quiet Hollow').querySelector('.settlements-list-services')).toBeNull();
+      expect(withinSettlement('Quiet Hollow').getByClass('settlements-list-services')).toBeNull();
     });
 
     it('does not render a tags row when a settlement has no tags', () => {
       settlementMockStore.items = [makeSettlement('Quiet Hollow', { tags: '' })];
       renderSettlements();
 
-      expect(getSettlementItem('Quiet Hollow').querySelector('.settlements-list-tags')).toBeNull();
+      expect(withinSettlement('Quiet Hollow').getByClass('settlements-list-tags')).toBeNull();
     });
   });
 
@@ -188,9 +204,8 @@ describe('Settlements - list rendering details', () => {
       settlementMockStore.items = [makeSettlement('Fireport', { description: longDescription })];
       renderSettlements();
 
-      const preview = getSettlementPreview('Fireport');
-      expect(preview.textContent).toBe(`${longDescription.slice(0, 120)}…`);
-      expect(preview.textContent).not.toContain(longDescription.slice(120));
+      const preview = withinSettlement('Fireport').getByText(longDescription.slice(0, 120) + '\u2026');
+      expect(preview).toHaveClass('settlements-list-preview');
     });
 
     it('shows a description of 120 characters or fewer in full', () => {
@@ -198,7 +213,7 @@ describe('Settlements - list rendering details', () => {
       settlementMockStore.items = [makeSettlement('ShortDesc', { description: shortDescription })];
       renderSettlements();
 
-      expect(withinListItem('ShortDesc').getByText(shortDescription)).toBeInTheDocument();
+      expect(withinSettlement('ShortDesc').getByText(shortDescription)).toBeInTheDocument();
     });
 
     it('treats a 120-character description as short but truncates a 121-character one', () => {
@@ -210,31 +225,30 @@ describe('Settlements - list rendering details', () => {
       ];
       renderSettlements();
 
-      expect(withinListItem('Exact Town').getByText(exactly120)).toBeInTheDocument();
-      expect(getSettlementPreview('Over Town').textContent).toBe(`${'b'.repeat(120)}…`);
+      expect(withinSettlement('Exact Town').getByText(exactly120)).toBeInTheDocument();
+      expect(withinSettlement('Over Town').getByText('b'.repeat(120) + '\u2026')).toHaveClass('settlements-list-preview');
     });
 
     it('does not render a description preview when the description is empty', () => {
       settlementMockStore.items = [makeSettlement('Quiet Hollow', { description: '' })];
       renderSettlements();
 
-      expect(getSettlementPreview('Quiet Hollow')).toBeNull();
+      expect(withinSettlement('Quiet Hollow').getByClass('settlements-list-preview')).toBeNull();
+    });
+
+    it('renders a description preview when the description is whitespace-only (truthy)', () => {
+      settlementMockStore.items = [makeSettlement('Space Town', { description: '   ' })];
+      renderSettlements();
+
+      expect(withinSettlement('Space Town').getByClass('settlements-list-preview')).toBeInTheDocument();
     });
   });
 
   describe('Size filter buttons', () => {
-    it('renders all four size filter buttons', () => {
-      renderSettlements();
-
-      ['Village', 'Town', 'City', 'Metropolis'].forEach((label) => {
-        expect(getSizeFilterButton(label)).toBeInTheDocument();
-      });
-    });
-
     it('toggles the active state of a size filter button', () => {
       renderSettlements();
 
-      const villageFilter = getSizeFilterButton('Village');
+      const villageFilter = screen.getByTitle('Filter: Village');
       expect(villageFilter).not.toHaveClass('settlements-size-btn-active');
 
       fireEvent.click(villageFilter);

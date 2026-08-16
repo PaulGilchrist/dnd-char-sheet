@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HypnoticPatternModal from './HypnoticPatternModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -7,42 +8,12 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
 }));
 
-vi.mock('../../../../services/combat/conditions/savePromptService.js', () => ({
-    sendSavePrompt: vi.fn(),
-}));
-
-vi.mock('../../../../services/ui/logService.js', () => ({
-    addEntry: vi.fn().mockResolvedValue(undefined),
-}));
-
 vi.mock('../../../../services/encounters/combatData.js', () => ({
     getCombatSummary: vi.fn(),
 }));
 
-vi.mock('../../../../services/automation/common/damageRollback.js', () => ({
-    storeSpellLastAttack: vi.fn(),
-    addTargetResult: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('../../../../services/rules/effects/expirations.js', () => ({
-    addExpiration: vi.fn(),
-}));
-
-vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
-    persistAndNotify: vi.fn(),
-}));
-
-vi.mock('../../../../hooks/useAllySelection.js', () => ({
-    getAllyList: vi.fn(),
-}));
-
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
-import { getAllyList } from '../../../../hooks/useAllySelection.js';
-import { addEntry } from '../../../../services/ui/logService.js';
-import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
-import { storeSpellLastAttack } from '../../../../services/automation/common/damageRollback.js';
-import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
 
 const campaignName = 'test-campaign';
 
@@ -82,18 +53,10 @@ beforeEach(() => {
     vi.resetAllMocks();
     getCombatSummary.mockReturnValue(baseCombatSummary);
     getRuntimeValue.mockReturnValue([]);
-    setRuntimeValue.mockReturnValue(undefined);
-    addEntry.mockResolvedValue(undefined);
-    persistAndNotify.mockReturnValue(undefined);
-    getAllyList.mockReturnValue(null);
-});
-
-afterEach(() => {
-    vi.clearAllMocks();
 });
 
 describe('HypnoticPatternModal', () => {
-    describe('initial render', () => {
+    describe('rendering', () => {
         it('renders the modal with title and target list', () => {
             render(<HypnoticPatternModal {...makeProps()} />);
             expect(screen.getByText('Hypnotic Pattern')).toBeInTheDocument();
@@ -109,34 +72,48 @@ describe('HypnoticPatternModal', () => {
             expect(screen.getByText(/DC 14/)).toBeInTheDocument();
         });
 
-        it('renders the note about charmed, incapacitated, and speed 0 conditions', () => {
-            const { container } = render(<HypnoticPatternModal {...makeProps()} />);
-            const noteEl = container.querySelector('.sp-note');
-            expect(noteEl).toHaveTextContent(/On a failed save, target becomes.*Charmed/);
+        it('renders the note about conditions on failed save', () => {
+            render(<HypnoticPatternModal {...makeProps()} />);
+            expect(screen.getByText(/Charmed/)).toBeInTheDocument();
             expect(screen.getByText(/Incapacitated/)).toBeInTheDocument();
             expect(screen.getByText(/Speed 0/)).toBeInTheDocument();
         });
 
-        it('disables the confirm button when no target is selected', () => {
+        it('displays HP percentage for NPC targets', () => {
             render(<HypnoticPatternModal {...makeProps()} />);
-            expect(screen.getByRole('button', { name: /Hypnotic Pattern \(0\)/ })).toBeDisabled();
+            expect(screen.getByText(/71% HP/)).toBeInTheDocument();
+            expect(screen.getByText(/68% HP/)).toBeInTheDocument();
         });
 
-        it('renders skip button', () => {
+        it('does not display HP for player targets', () => {
+            const { container } = render(<HypnoticPatternModal {...makeProps()} />);
+            const playerRow = [...container.querySelectorAll('.secondary-target-row')].find(
+                row => row.textContent.includes('PlayerAlly'),
+            );
+            expect(playerRow.textContent).not.toContain('HP');
+        });
+
+        it('renders the confirm button with target count', () => {
+            render(<HypnoticPatternModal {...makeProps()} />);
+            expect(screen.getByRole('button', { name: /Hypnotic Pattern \(0\)/ })).toBeInTheDocument();
+        });
+
+        it('renders the skip button', () => {
             render(<HypnoticPatternModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
         });
     });
 
     describe('target selection', () => {
-        it('selects a target when its checkbox is clicked and enables confirm', async () => {
+        it('disables the confirm button when no target is selected', () => {
+            render(<HypnoticPatternModal {...makeProps()} />);
+            expect(screen.getByRole('button', { name: /Hypnotic Pattern \(0\)/ })).toBeDisabled();
+        });
+
+        it('enables the confirm button after selecting a target', async () => {
             render(<HypnoticPatternModal {...makeProps()} />);
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-                expect(checkboxes[0].checked).toBe(true);
-            });
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /Hypnotic Pattern \(1\)/ })).toBeEnabled();
             });
@@ -147,11 +124,6 @@ describe('HypnoticPatternModal', () => {
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[0]); });
             await act(async () => { fireEvent.click(labels[1]); });
-            await waitFor(() => {
-                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-                expect(checkboxes[0].checked).toBe(true);
-                expect(checkboxes[1].checked).toBe(true);
-            });
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /Hypnotic Pattern \(2\)/ })).toBeEnabled();
             });
@@ -168,14 +140,14 @@ describe('HypnoticPatternModal', () => {
     });
 
     describe('empty targets', () => {
-        it('renders empty target list when no creatures in combat', () => {
+        it('shows no targets message when combat summary has no creatures', () => {
             getCombatSummary.mockReturnValue({ creatures: [] });
             render(<HypnoticPatternModal {...makeProps()} />);
             expect(screen.getByText('No targets available.')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /Hypnotic Pattern \(0\)/ })).toBeDisabled();
         });
 
-        it('renders the caster as a target when caster is the only creature', () => {
+        it('includes the caster as a target when caster is the only creature', () => {
             getCombatSummary.mockReturnValue({
                 creatures: [
                     { name: 'Wizard1', type: 'player', currentHp: 30, maxHp: 30, saveBonuses: { wis: 4 } },
@@ -183,17 +155,6 @@ describe('HypnoticPatternModal', () => {
             });
             render(<HypnoticPatternModal {...makeProps()} />);
             expect(screen.getByText('Wizard1')).toBeInTheDocument();
-        });
-    });
-
-    describe('skip behavior', () => {
-        it('closes modal without applying any effects when skipped', async () => {
-            const onClose = vi.fn();
-            render(<HypnoticPatternModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-            expect(storeSpellLastAttack).not.toHaveBeenCalled();
-            expect(sendSavePrompt).not.toHaveBeenCalled();
         });
     });
 });

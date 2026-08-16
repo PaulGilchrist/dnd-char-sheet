@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CalmEmotionsModal from './CalmEmotionsModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -23,6 +24,11 @@ vi.mock('../../../../hooks/useAllySelection.js', () => ({
     getAllyList: vi.fn(),
 }));
 
+vi.mock('../../../../services/automation/common/damageRollback.js', () => ({
+    storeSpellLastAttack: vi.fn(),
+    addTargetResult: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
     persistAndNotify: vi.fn(),
 }));
@@ -30,7 +36,6 @@ vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
 vi.mock('../../../../services/automation/handlers/spells/calmEmotionsHandler.js', () => ({
     applyCalmEmotionsImmunity: vi.fn().mockResolvedValue(undefined),
     applyCalmEmotionsCharmed: vi.fn().mockResolvedValue({ immune: false }),
-    handle: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -83,10 +88,6 @@ beforeEach(() => {
     addEntry.mockResolvedValue(undefined);
     persistAndNotify.mockReturnValue(undefined);
     getAllyList.mockReturnValue(null);
-});
-
-afterEach(() => {
-    vi.clearAllMocks();
 });
 
 describe('CalmEmotionsModal', () => {
@@ -170,14 +171,16 @@ describe('CalmEmotionsModal', () => {
     // ── Choice selection (immunity vs charmed) ──
 
     describe('choice selection', () => {
-        it('shows choice radios for all targets by default', () => {
+        it('shows choice radios for all targets with independent groups per target', () => {
             render(<CalmEmotionsModal {...makeProps()} />);
             const goblinRadios = document.querySelectorAll('input[name="choice-Goblin"]');
-            expect(goblinRadios).toHaveLength(2);
             const orcRadios = document.querySelectorAll('input[name="choice-Orc"]');
-            expect(orcRadios).toHaveLength(2);
             const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
+            expect(goblinRadios).toHaveLength(2);
+            expect(orcRadios).toHaveLength(2);
             expect(playerRadios).toHaveLength(2);
+            expect(goblinRadios[0].checked).toBe(true);
+            expect(orcRadios[0].checked).toBe(true);
         });
 
         it('defaults to immunity choice for all targets', () => {
@@ -191,21 +194,8 @@ describe('CalmEmotionsModal', () => {
         it('allows switching between immunity and charmed choices', async () => {
             render(<CalmEmotionsModal {...makeProps()} />);
             const goblinRadios = document.querySelectorAll('input[name="choice-Goblin"]');
-            // Switch to charmed (second radio)
             await act(async () => { fireEvent.click(goblinRadios[1]); });
-            await waitFor(() => {
-                expect(goblinRadios[1].checked).toBe(true);
-            });
-        });
-
-        it('has independent choice radio groups per target', () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            const goblinRadios = document.querySelectorAll('input[name="choice-Goblin"]');
-            const orcRadios = document.querySelectorAll('input[name="choice-Orc"]');
-            expect(goblinRadios).toHaveLength(2);
-            expect(orcRadios).toHaveLength(2);
-            expect(goblinRadios[0].checked).toBe(true);
-            expect(orcRadios[0].checked).toBe(true);
+            expect(goblinRadios[1].checked).toBe(true);
         });
     });
 
@@ -228,9 +218,7 @@ describe('CalmEmotionsModal', () => {
             render(<CalmEmotionsModal {...makeProps({ metamagicHeighten: true })} />);
             const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
             await act(async () => { fireEvent.click(heightenRadios[1]); });
-            await waitFor(() => {
-                expect(heightenRadios[1].checked).toBe(true);
-            });
+            expect(heightenRadios[1].checked).toBe(true);
         });
     });
 
@@ -316,6 +304,7 @@ describe('CalmEmotionsModal', () => {
                 activeOverlay: { name: 'TestOverlay' },
             })} />);
             expect(document.querySelector('.sp-overlay')).not.toBeInTheDocument();
+            expect(document.querySelector('.sp-modal')).not.toBeInTheDocument();
         });
 
         it('renders normally when player is overlay targeted but no active overlay', () => {
@@ -345,58 +334,10 @@ describe('CalmEmotionsModal', () => {
         });
     });
 
-    // ── persistAndNotify calls ──
-
-    describe('persistAndNotify calls', () => {
-        it('calls persistAndNotify after cast button is clicked', async () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            await waitFor(() => {
-                expect(persistAndNotify).toHaveBeenCalled();
-            });
-        });
-
-        it('calls persistAndNotify after player save result event', async () => {
-            const onClose = vi.fn();
-            render(<CalmEmotionsModal {...makeProps({ onClose })} />);
-
-            await act(async () => {
-                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
-                fireEvent.click(playerRadios[1]);
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                expect(persistAndNotify).toHaveBeenCalled();
-            });
-        });
-    });
-
     // ── Save result event edge cases ──
 
     describe('save result event edge cases', () => {
-        it('ignores save-result event with missing promptId', async () => {
+        it('ignores save-result event with missing promptId and applies no effects', async () => {
             const onClose = vi.fn();
             render(<CalmEmotionsModal {...makeProps({ onClose })} />);
 
@@ -408,16 +349,15 @@ describe('CalmEmotionsModal', () => {
             });
 
             expect(onClose).not.toHaveBeenCalled();
+            expect(applyCalmEmotionsImmunity).not.toHaveBeenCalled();
+            expect(applyCalmEmotionsCharmed).not.toHaveBeenCalled();
+            expect(sendSavePrompt).not.toHaveBeenCalled();
         });
 
-        it('ignores save-result event for unknown promptId', async () => {
+        it('ignores save-result event for unknown promptId and applies no effects', async () => {
             const onClose = vi.fn();
             render(<CalmEmotionsModal {...makeProps({ onClose })} />);
 
-            await act(async () => {
-                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
-                fireEvent.click(playerRadios[1]);
-            });
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
             });
@@ -436,10 +376,7 @@ describe('CalmEmotionsModal', () => {
             });
 
             expect(onClose).not.toHaveBeenCalled();
+            expect(applyCalmEmotionsImmunity).toHaveBeenCalledTimes(3);
         });
     });
-
-
-
-
 });

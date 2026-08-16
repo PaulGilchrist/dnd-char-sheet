@@ -1,47 +1,6 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useModalHandlers from './useModalHandlers.js';
-
-vi.mock('../../services/dice/diceRoller.js', () => ({
-    rollExpression: vi.fn(),
-}));
-
-vi.mock('../../services/rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../services/rules/combat/rangeValidation.js', () => ({
-    getDistanceFeet: vi.fn(),
-}));
-
-vi.mock('../../services/encounters/combatData.js', () => ({
-    getCurrentCombatRound: vi.fn(),
-}));
-
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-    getRuntimeValue: vi.fn(),
-    setRuntimeValue: vi.fn(),
-}));
-
-vi.mock('../../services/automation/handlers/class-sorcerer/starryFormHandler.js', () => ({
-    handle: vi.fn(),
-    applyConstellationOption: vi.fn(),
-}));
-
-vi.mock('../../services/automation/handlers/class-sorcerer/twinklingConstellationHandler.js', () => ({
-    handle: vi.fn(),
-    applyConstellationOption: vi.fn(),
-}));
-
-vi.mock('../../services/automation/handlers/combat/bonusAttacksHandler.js', () => ({
-    handle: vi.fn(),
-    applyFlurryOfBlows: vi.fn(),
-}));
-
-import { rollExpression } from '../../services/dice/diceRoller.js';
-import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
-import { getDistanceFeet } from '../../services/rules/combat/rangeValidation.js';
-import { getCurrentCombatRound } from '../../services/encounters/combatData.js';
-import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 
 function createDeps(overrides = {}) {
     const playerStats = {
@@ -49,7 +8,7 @@ function createDeps(overrides = {}) {
         level: 5,
         proficiency: 3,
         abilities: [{ name: 'Strength', bonus: 3 }],
-        ...overrides.playerStats,
+        ...(overrides.playerStats || {}),
     };
     const modalState = {};
     return {
@@ -60,11 +19,11 @@ function createDeps(overrides = {}) {
         pendingDamage: null,
         setPendingDamage: vi.fn(),
         modalState,
-        setModalState: vi.fn((fn) => {
-            if (typeof fn === 'function') {
-                return fn(modalState);
+        setModalState: vi.fn((updates) => {
+            if (typeof updates === 'function') {
+                return updates(modalState);
             }
-            Object.assign(modalState, fn);
+            Object.assign(modalState, updates);
         }),
         setPopupHtml: vi.fn(),
         ...overrides,
@@ -74,17 +33,10 @@ function createDeps(overrides = {}) {
 describe('useModalHandlers', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReturnValue(null);
-        setRuntimeValue.mockReturnValue(undefined);
-        getCurrentCombatRound.mockReturnValue(1);
-        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-        getCombatContext.mockResolvedValue(null);
-        getDistanceFeet.mockReturnValue(5);
-        globalThis.Math.random = () => 20;
     });
 
     describe('handleMasteryClose', () => {
-        it('closes weapon mastery modal and proceeds with pending damage when no cleave effect', async () => {
+        it('clears the weapon mastery modal, proceeds with pending damage, and resets pending damage', async () => {
             const deps = createDeps({
                 pendingDamage: {
                     attack: { name: 'Longsword' },
@@ -93,7 +45,6 @@ describe('useModalHandlers', () => {
                     rolls: [5, 5],
                     modifier: 3,
                 },
-                setRuntimeValue: vi.fn(),
             });
             const { handleMasteryClose } = useModalHandlers(deps);
             await handleMasteryClose();
@@ -108,16 +59,35 @@ describe('useModalHandlers', () => {
             expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
         });
 
-
-
-        it('does nothing when there is no pending damage', async () => {
+        it('clears the weapon mastery modal even when there is no pending damage', async () => {
             const deps = createDeps();
             const { handleMasteryClose } = useModalHandlers(deps);
             await handleMasteryClose();
             expect(deps.setModalState).toHaveBeenCalledWith({ weaponMasteryModal: null });
             expect(deps.proceedWithDamage).not.toHaveBeenCalled();
+            expect(deps.setPendingDamage).not.toHaveBeenCalled();
+        });
+
+        it('passes the correct attack object reference to proceedWithDamage', async () => {
+            const attack = { name: 'Greatsword', damageType: 'slashing' };
+            const deps = createDeps({
+                pendingDamage: {
+                    attack,
+                    formula: '2d6+3',
+                    total: 12,
+                    rolls: [6, 6],
+                    modifier: 3,
+                },
+            });
+            const { handleMasteryClose } = useModalHandlers(deps);
+            await handleMasteryClose();
+            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
+                attack,
+                '2d6+3',
+                12,
+                [6, 6],
+                3
+            );
         });
     });
-
-
 });

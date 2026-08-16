@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import RevelationInFleshModal from './RevelationInFleshModal.jsx';
@@ -9,7 +10,12 @@ vi.mock(
   })
 );
 
+vi.mock('../../../services/ui/logService.js', () => ({
+  addEntry: vi.fn().mockImplementation(() => Promise.resolve()),
+}));
+
 import * as revelationHandler from '../../../services/automation/handlers/class-warlock/revelationInFleshHandler.js';
+import * as logService from '../../../services/ui/logService.js';
 
 const mockOnClose = vi.fn();
 
@@ -26,7 +32,6 @@ const baseProps = {
   action: {
     name: 'Revelation in Flesh',
     automation: {
-      type: 'revelation',
       options: [
         { name: 'Charm Person', description: 'Gain the ability to charm others' },
         { name: 'Detect Thoughts', description: 'Read the thoughts of others' },
@@ -67,7 +72,7 @@ describe('RevelationInFleshModal', () => {
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
-    it('renders options when description is missing or options are mixed', () => {
+    it('renders options with and without descriptions', () => {
       const action = {
         name: 'Revelation in Flesh',
         automation: {
@@ -82,14 +87,16 @@ describe('RevelationInFleshModal', () => {
       expect(screen.getByText('Without Desc')).toBeInTheDocument();
     });
 
-    it('renders no options when automation is missing or options array is empty', () => {
+    it('renders no checkboxes when automation is missing', () => {
       const actionNoAutomation = { name: 'Revelation in Flesh' };
       render(<RevelationInFleshModal {...makeProps({ action: actionNoAutomation })} />);
       expect(
         screen.getByText(/Choose bodily alterations/)
       ).toBeInTheDocument();
       expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    });
 
+    it('renders no checkboxes when options array is empty', () => {
       const actionEmptyOptions = {
         name: 'Revelation in Flesh',
         automation: { options: [] },
@@ -100,20 +107,26 @@ describe('RevelationInFleshModal', () => {
   });
 
   describe('selection behavior', () => {
-    it('enables the Activate button after selecting an option and allows multiple selections', () => {
+    it('enables the Activate button after selecting at least one option', () => {
       render(<RevelationInFleshModal {...makeProps()} />);
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
 
       fireEvent.click(checkboxes[0]);
       expect(checkboxes[0]).toBeChecked();
       expect(screen.getByRole('button', { name: /Activate/ })).toBeEnabled();
+    });
 
+    it('allows selecting multiple options simultaneously', () => {
+      render(<RevelationInFleshModal {...makeProps()} />);
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+      fireEvent.click(checkboxes[0]);
       fireEvent.click(checkboxes[2]);
       expect(checkboxes[0]).toBeChecked();
       expect(checkboxes[2]).toBeChecked();
     });
 
-    it('allows toggling options on and off', () => {
+    it('toggles an option on and off when clicking the same checkbox', () => {
       render(<RevelationInFleshModal {...makeProps()} />);
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
 
@@ -123,10 +136,21 @@ describe('RevelationInFleshModal', () => {
       fireEvent.click(checkboxes[0]);
       expect(checkboxes[0]).not.toBeChecked();
     });
+
+    it('disables the Activate button after deselecting all options', () => {
+      render(<RevelationInFleshModal {...makeProps()} />);
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+      fireEvent.click(checkboxes[0]);
+      expect(screen.getByRole('button', { name: /Activate/ })).toBeEnabled();
+
+      fireEvent.click(checkboxes[0]);
+      expect(screen.getByRole('button', { name: /Activate/ })).toBeDisabled();
+    });
   });
 
   describe('activation flow', () => {
-    it('calls applyRevelationOptions with correct arguments when options are selected', async () => {
+    it('calls applyRevelationOptions with selected option names', async () => {
       render(<RevelationInFleshModal {...makeProps()} />);
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
       fireEvent.click(checkboxes[0]);
@@ -172,6 +196,52 @@ describe('RevelationInFleshModal', () => {
         expect(screen.getByText(desc)).toBeInTheDocument();
       });
     });
+
+    it('calls addEntry for each logEntry returned by the handler', async () => {
+      const logEntry = { text: 'Charm Person activated' };
+      revelationHandler.applyRevelationOptions.mockResolvedValue({
+        type: 'popup',
+        payload: {
+          type: 'automation_info',
+          name: 'Revelation in Flesh',
+          description: 'Charm Person chosen.',
+        },
+        logEntries: [logEntry],
+      });
+      render(<RevelationInFleshModal {...makeProps()} />);
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      fireEvent.click(checkboxes[0]);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Activate/ }));
+      });
+      await waitFor(() => {
+        expect(logService.addEntry).toHaveBeenCalledWith(
+          baseProps.campaignName,
+          logEntry
+        );
+      });
+    });
+
+    it('works when the handler returns no logEntries', async () => {
+      revelationHandler.applyRevelationOptions.mockResolvedValue({
+        type: 'popup',
+        payload: {
+          type: 'automation_info',
+          name: 'Revelation in Flesh',
+          description: 'Charm Person chosen.',
+        },
+      });
+      render(<RevelationInFleshModal {...makeProps()} />);
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      fireEvent.click(checkboxes[0]);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Activate/ }));
+      });
+      await waitFor(() => {
+        expect(screen.getByText('Charm Person chosen.')).toBeInTheDocument();
+      });
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
   });
 
   describe('result state', () => {
@@ -198,25 +268,15 @@ describe('RevelationInFleshModal', () => {
       });
       await waitFor(() => {
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-      });
-      await waitFor(() => {
         expect(screen.queryByText(/Choose bodily alterations/)).not.toBeInTheDocument();
-      });
-      await waitFor(() => {
         expect(screen.getByText('My Custom Revelation')).toBeInTheDocument();
-      });
-      await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-      });
-      await waitFor(() => {
         expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-      });
-      await waitFor(() => {
         expect(screen.queryByRole('button', { name: /Activate/ })).not.toBeInTheDocument();
       });
     });
 
-    it('renders HTML in the result body via dangerouslySetInnerHTML', async () => {
+    it('renders HTML content from the handler description', async () => {
       revelationHandler.applyRevelationOptions.mockResolvedValue({
         type: 'popup',
         payload: {
@@ -232,14 +292,13 @@ describe('RevelationInFleshModal', () => {
         fireEvent.click(screen.getByRole('button', { name: /Activate/ }));
       });
       await waitFor(() => {
-        const body = document.querySelector('.sp-body');
-        expect(body.querySelector('p strong')).toBeInTheDocument();
+        expect(document.querySelector('.sp-body strong')).toBeInTheDocument();
       });
     });
   });
 
   describe('after apply', () => {
-    it('calls onClose when Done button is clicked after apply', async () => {
+    it('calls onClose when Done button is clicked', async () => {
       render(<RevelationInFleshModal {...makeProps()} />);
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
       fireEvent.click(checkboxes[0]);
@@ -249,6 +308,21 @@ describe('RevelationInFleshModal', () => {
       await waitFor(() => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
       });
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('dismissal', () => {
+    it('calls onClose when Cancel button is clicked', () => {
+      render(<RevelationInFleshModal {...makeProps()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onClose when clicking outside the modal overlay', () => {
+      render(<RevelationInFleshModal {...makeProps()} />);
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
   });

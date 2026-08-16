@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HurlThroughHellModal from './HurlThroughHellModal.jsx';
 
 // ── Mocked modules ──
@@ -73,13 +74,25 @@ function makeProps(overrides) {
 
 // ── Helpers ──
 
-function waitForSaveResult(detail) {
+/**
+ * Dispatches a save-result event after the modal's event listener is registered.
+ * The 15ms delay accounts for the async handleConfirm flow that registers the listener.
+ */
+function dispatchSaveResult(detail) {
   return act(async () => {
-    await new Promise(r => setTimeout(r, 10));
+    await new Promise(r => setTimeout(r, 15));
     window.dispatchEvent(new CustomEvent('save-result', { detail }));
     await new Promise(r => setTimeout(r, 0));
     await new Promise(r => setTimeout(r, 0));
   });
+}
+
+function renderModal(propsOverride) {
+  return render(<HurlThroughHellModal {...makeProps(propsOverride)} />);
+}
+
+function triggerConfirm() {
+  fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
 }
 
 // ── Tests ──
@@ -111,20 +124,19 @@ describe('HurlThroughHellModal', () => {
     savePrompt.createSaveListener.mockImplementation(() => ({ promptId: 'test-prompt-id-123' }));
   });
 
-  // ── Save failure - non-fiend target ──
+  afterEach(() => {
+    // Clean up any damage-popup listeners added during tests
+    document.body.innerHTML = '';
+  });
 
-  describe('save failure - non-fiend target', () => {
-    it('adds incapacitated condition to target on failed save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+  // ── Failed save - non-fiend target ──
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
+  describe('failed save - non-fiend target', () => {
+    it('adds incapacitated condition to target', async () => {
+      renderModal();
+      triggerConfirm();
 
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -141,18 +153,11 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('adds target effect with teleport and returnToTrue on failed save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        if (key === 'targetEffects') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+    it('adds target effect with teleport and returnToSpace flags', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -181,17 +186,11 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('applies damage to non-fiend target', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+    it('applies damage to target', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -212,17 +211,11 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('logs save_result entry on failed save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+    it('logs save_result entry with correct details', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -246,17 +239,11 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('logs roll entry for damage on failed save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+    it('logs damage roll entry', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -280,19 +267,14 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('dispatches damage-popup event on failed save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('dispatches damage-popup event with correct details', async () => {
       const handler = vi.fn();
       window.addEventListener('damage-popup', handler);
 
-      render(<HurlThroughHellModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
+      renderModal();
+      triggerConfirm();
 
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -300,32 +282,23 @@ describe('HurlThroughHellModal', () => {
       });
 
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0].detail).toEqual(
-        expect.objectContaining({
-          targetName: 'Goblin1',
-          sourceName: 'Throg',
-          spellName: 'Hurl Through Hell',
-          popupText: expect.stringContaining('failed WIS save'),
-          damageType: 'Psychic',
-          rolls: [15, 7],
-          formula: '4d10',
-        })
-      );
+      const detail = handler.mock.calls[0][0].detail;
+      expect(detail.targetName).toBe('Goblin1');
+      expect(detail.sourceName).toBe('Throg');
+      expect(detail.spellName).toBe('Hurl Through Hell');
+      expect(detail.damageType).toBe('Psychic');
+      expect(detail.rolls).toEqual([15, 7]);
+      expect(detail.formula).toBe('4d10');
+      expect(detail.popupText).toContain('failed WIS save');
 
       window.removeEventListener('damage-popup', handler);
     });
 
-    it('sets result with saveSuccess=false after save resolves', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+    it('shows failure text on result screen', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -333,16 +306,15 @@ describe('HurlThroughHellModal', () => {
       });
 
       await waitFor(() => {
-        // Result screen should show failure text
         expect(screen.getByText(/failed.*WIS save/)).toBeInTheDocument();
       });
     });
   });
 
-  // ── Save failure - fiend target ──
+  // ── Failed save - fiend target ──
 
-  describe('save failure - fiend target', () => {
-    it('does not apply damage to fiend target', async () => {
+  describe('failed save - fiend target', () => {
+    function setupFiendTarget() {
       runtimeState.getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'currentTurn') return 'Turn5';
         if (key === 'activeConditions') return [];
@@ -354,12 +326,14 @@ describe('HurlThroughHellModal', () => {
           { name: 'Elf Mage', type: 'player' },
         ],
       });
+    }
 
-      render(<HurlThroughHellModal {...makeProps({ targetName: 'Orc Warrior' })} />);
+    it('does not apply damage to fiend', async () => {
+      setupFiendTarget();
+      renderModal({ targetName: 'Orc Warrior' });
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -371,24 +345,63 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('logs save_result entry noting fiend immunity on failed save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
+    it('still adds incapacitated condition to fiend', async () => {
+      setupFiendTarget();
+      renderModal({ targetName: 'Orc Warrior' });
+      triggerConfirm();
+
+      await dispatchSaveResult({
+        promptId: 'test-prompt-id-123',
+        roll: 8,
+        total: 10,
+        success: false,
       });
-      combatData.getCombatSummary.mockReturnValue({
-        creatures: [
-          { name: 'Orc Warrior', type: 'fiend' },
-          { name: 'Elf Mage', type: 'player' },
-        ],
+
+      await waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'Orc Warrior',
+          'activeConditions',
+          expect.arrayContaining(['incapacitated']),
+          'test-campaign'
+        );
+      });
+    });
+
+    it('still adds target effect to fiend', async () => {
+      setupFiendTarget();
+      renderModal({ targetName: 'Orc Warrior' });
+      triggerConfirm();
+
+      await dispatchSaveResult({
+        promptId: 'test-prompt-id-123',
+        roll: 8,
+        total: 10,
+        success: false,
       });
 
-      render(<HurlThroughHellModal {...makeProps({ targetName: 'Orc Warrior' })} />);
+      await waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'campaign',
+          'targetEffects',
+          expect.arrayContaining([
+            expect.objectContaining({
+              target: 'Orc Warrior',
+              effect: 'incapacitated',
+              teleport: true,
+              returnToSpace: true,
+            }),
+          ]),
+          'test-campaign'
+        );
+      });
+    });
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
+    it('logs save_result noting fiend immunity', async () => {
+      setupFiendTarget();
+      renderModal({ targetName: 'Orc Warrior' });
+      triggerConfirm();
 
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -409,24 +422,14 @@ describe('HurlThroughHellModal', () => {
     });
 
     it('dispatches damage-popup noting fiend immunity', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      combatData.getCombatSummary.mockReturnValue({
-        creatures: [
-          { name: 'Orc Warrior', type: 'fiend' },
-          { name: 'Elf Mage', type: 'player' },
-        ],
-      });
+      setupFiendTarget();
       const handler = vi.fn();
       window.addEventListener('damage-popup', handler);
 
-      render(<HurlThroughHellModal {...makeProps({ targetName: 'Orc Warrior' })} />);
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
+      renderModal({ targetName: 'Orc Warrior' });
+      triggerConfirm();
 
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -434,30 +437,19 @@ describe('HurlThroughHellModal', () => {
       });
 
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0].detail.popupText).toContain('Fiend');
-      expect(handler.mock.calls[0][0].detail.popupText).toContain('no Psychic damage');
+      const detail = handler.mock.calls[0][0].detail;
+      expect(detail.popupText).toContain('Fiend');
+      expect(detail.popupText).toContain('no Psychic damage');
 
       window.removeEventListener('damage-popup', handler);
     });
 
-    it('sets result with saveSuccess=false for fiend', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      combatData.getCombatSummary.mockReturnValue({
-        creatures: [
-          { name: 'Orc Warrior', type: 'fiend' },
-          { name: 'Elf Mage', type: 'player' },
-        ],
-      });
+    it('shows failure text on result screen for fiend', async () => {
+      setupFiendTarget();
+      renderModal({ targetName: 'Orc Warrior' });
+      triggerConfirm();
 
-      render(<HurlThroughHellModal {...makeProps({ targetName: 'Orc Warrior' })} />);
-
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 8,
         total: 10,
@@ -470,20 +462,14 @@ describe('HurlThroughHellModal', () => {
     });
   });
 
-  // ── Save success ──
+  // ── Successful save ──
 
-  describe('save success', () => {
-    it('does not add incapacitated condition on successful save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+  describe('successful save', () => {
+    it('does not add incapacitated condition', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 15,
         total: 17,
@@ -500,18 +486,11 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('does not add target effect on successful save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        if (key === 'targetEffects') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+    it('does not add target effect', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 15,
         total: 17,
@@ -528,17 +507,11 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('does not apply damage on successful save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+    it('does not apply damage', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 15,
         total: 17,
@@ -550,17 +523,11 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('logs save_result entry with success=true on successful save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+    it('logs save_result with success=true', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 15,
         total: 17,
@@ -581,19 +548,14 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('dispatches damage-popup noting success on successful save', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it('dispatches damage-popup noting success', async () => {
       const handler = vi.fn();
       window.addEventListener('damage-popup', handler);
 
-      render(<HurlThroughHellModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
+      renderModal();
+      triggerConfirm();
 
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 15,
         total: 17,
@@ -606,17 +568,11 @@ describe('HurlThroughHellModal', () => {
       window.removeEventListener('damage-popup', handler);
     });
 
-    it('sets result with saveSuccess=true after save resolves', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return 'Turn5';
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      render(<HurlThroughHellModal {...makeProps()} />);
+    it('shows success text on result screen', async () => {
+      renderModal();
+      triggerConfirm();
 
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitForSaveResult({
+      await dispatchSaveResult({
         promptId: 'test-prompt-id-123',
         roll: 15,
         total: 17,
@@ -625,6 +581,62 @@ describe('HurlThroughHellModal', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/succeeded.*WIS save/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ── Edge cases: null/undefined runtime values ──
+
+  describe('edge cases - null runtime values', () => {
+    it('handles null activeConditions by starting fresh array on failed save', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'currentTurn') return 'Turn5';
+        if (key === 'activeConditions') return null;
+        return null;
+      });
+      renderModal();
+      triggerConfirm();
+
+      await dispatchSaveResult({
+        promptId: 'test-prompt-id-123',
+        roll: 8,
+        total: 10,
+        success: false,
+      });
+
+      await waitFor(() => {
+        const calls = runtimeState.setRuntimeValue.mock.calls.filter(
+          c => c[1] === 'activeConditions'
+        );
+        expect(calls.length).toBeGreaterThan(0);
+        expect(calls[0][2]).toEqual(['incapacitated']);
+      });
+    });
+
+    it('handles null targetEffects by starting fresh array', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'currentTurn') return 'Turn5';
+        if (key === 'activeConditions') return [];
+        if (key === 'targetEffects') return null;
+        return null;
+      });
+      renderModal();
+      triggerConfirm();
+
+      await dispatchSaveResult({
+        promptId: 'test-prompt-id-123',
+        roll: 8,
+        total: 10,
+        success: false,
+      });
+
+      await waitFor(() => {
+        const calls = runtimeState.setRuntimeValue.mock.calls.filter(
+          c => c[1] === 'targetEffects'
+        );
+        expect(calls.length).toBeGreaterThan(0);
+        expect(calls[0][2]).toHaveLength(1);
+        expect(calls[0][2][0].target).toBe('Goblin1');
       });
     });
   });

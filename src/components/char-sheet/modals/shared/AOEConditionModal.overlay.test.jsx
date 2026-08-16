@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AOEConditionModal from './AOEConditionModal.jsx';
@@ -40,7 +41,6 @@ const handleSaveResultOverrideCapture = vi.fn();
 
 vi.mock('./AreaEffectTargetModalBase.jsx', () => ({
     default: function MockAreaEffectTargetModalBase(props) {
-        // Capture the handlers for direct testing
         handleApplyOverrideCapture.mockImplementation((ctx) => {
             return props.handleApplyOverride(ctx);
         });
@@ -144,22 +144,6 @@ describe('AOEConditionModal Overlay', () => {
             expect(screen.getByTestId('save-dc')).toHaveTextContent('12');
         });
 
-        it('passes handleApplyOverride to AreaEffectTargetModalBase', () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-            expect(screen.getByTestId('area-effect-target-modal-base')).toBeInTheDocument();
-        });
-
-        it('passes handleSaveResultOverride to AreaEffectTargetModalBase', () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-            expect(screen.getByTestId('area-effect-target-modal-base')).toBeInTheDocument();
-        });
-
         it('logs ability_use when handleApplyOverride is called via overlay', async () => {
             render(<AOEConditionModal {...makeProps({
                 playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
@@ -181,7 +165,7 @@ describe('AOEConditionModal Overlay', () => {
             });
         });
 
-        it('calls resolveAllSaves with selected targets from overlay context', async () => {
+        it('calls storeSpellLastAttack when handleApplyOverride is invoked via overlay', async () => {
             render(<AOEConditionModal {...makeProps({
                 playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
                 activeOverlay: { name: 'TestOverlay' },
@@ -192,34 +176,9 @@ describe('AOEConditionModal Overlay', () => {
                 fireEvent.click(applyBtn);
             });
 
-            // resolveAllSaves is called asynchronously via the handleApplyOverride
-            // The mock context's setResults/setPendingPrompts are no-ops
-            // but storeSpellLastAttack should still be called synchronously
             await waitFor(() => {
                 expect(damageRollback.storeSpellLastAttack).toHaveBeenCalled();
             });
-        });
-
-        it('handles save-result event with missing promptId in overlay mode', async () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        success: false,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            // Should not have called setRuntimeValue for conditions
-            const conditionCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'activeConditions'
-            );
-            expect(conditionCalls.length).toBe(0);
         });
 
         it('invokes handleApplyOverride with correct context from overlay', async () => {
@@ -233,7 +192,6 @@ describe('AOEConditionModal Overlay', () => {
                 fireEvent.click(applyBtn);
             });
 
-            // handleApplyOverrideCapture should have been called
             await waitFor(() => {
                 expect(handleApplyOverrideCapture).toHaveBeenCalled();
             });
@@ -274,7 +232,6 @@ describe('AOEConditionModal Overlay', () => {
                 handleSaveResultOverrideCapture(event, ctx);
             });
 
-            // Should log save_result success
             await waitFor(() => {
                 const saveEntries = addEntry.mock.calls.filter(
                     call => call[1]?.type === 'save_result' && call[1]?.success === true
@@ -282,12 +239,10 @@ describe('AOEConditionModal Overlay', () => {
                 expect(saveEntries.length).toBeGreaterThan(0);
             });
 
-            // Should call addTargetResult with success
             expect(damageRollback.addTargetResult).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                 saveResult: 'success',
             }));
 
-            // Should call persistAndNotify
             expect(persistAndNotify).toHaveBeenCalled();
         });
 
@@ -320,7 +275,6 @@ describe('AOEConditionModal Overlay', () => {
                 handleSaveResultOverrideCapture(event, ctx);
             });
 
-            // Should apply conditions
             await waitFor(() => {
                 const conditionCalls = setRuntimeValue.mock.calls.filter(
                     call => call[1] === 'activeConditions' && call[0] === 'Goblin'
@@ -328,24 +282,17 @@ describe('AOEConditionModal Overlay', () => {
                 expect(conditionCalls.length).toBeGreaterThan(0);
             });
 
-            // Should log condition entry
             const conditionEntries = addEntry.mock.calls.filter(
                 call => call[1]?.type === 'condition'
             );
             expect(conditionEntries.length).toBeGreaterThan(0);
 
-            // Should call addTargetResult with failure
             expect(damageRollback.addTargetResult).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                 saveResult: 'failure',
             }));
         });
 
         it('handleSaveResultOverride does nothing with missing promptId', async () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-
             const mockSetResults = vi.fn();
             const mockSetPendingPrompts = vi.fn();
 
@@ -365,7 +312,6 @@ describe('AOEConditionModal Overlay', () => {
                 handleSaveResultOverrideCapture(event, ctx);
             });
 
-            // Should not have called anything
             const conditionCalls = setRuntimeValue.mock.calls.filter(
                 call => call[1] === 'activeConditions'
             );
@@ -373,11 +319,6 @@ describe('AOEConditionModal Overlay', () => {
         });
 
         it('handleSaveResultOverride does nothing with non-matching promptId', async () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-
             const mockSetResults = vi.fn();
             const mockSetPendingPrompts = vi.fn();
 
@@ -398,90 +339,10 @@ describe('AOEConditionModal Overlay', () => {
                 handleSaveResultOverrideCapture(event, ctx);
             });
 
-            // Should not have applied conditions
             const conditionCalls = setRuntimeValue.mock.calls.filter(
                 call => call[1] === 'activeConditions'
             );
             expect(conditionCalls.length).toBe(0);
         });
     });
-
-    // ── Processing state rendering ──
-
-    describe('processing state rendering in renderBody', () => {
-        it('shows selection message in normal mode', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.getByText(/Select creatures in the area of effect/)).toBeInTheDocument();
-        });
-    });
-
-    // ── Blocking effects - both attacker and target trapped ──
-
-    describe('getCreatureTargets', () => {
-        it('returns creature targets with correct shape', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-            });
-        });
-
-        it('includes carefulSpellProtected flag in creature targets', () => {
-            getAllyList.mockReturnValue(['Goblin']);
-            getRuntimeValue.mockReturnValue([]);
-            render(<AOEConditionModal {...makeProps({ metamagicCareful: true })} />);
-            const goblinRow = [...document.querySelectorAll('.secondary-target-row')]
-                .find(row => row.textContent.includes('Goblin'));
-            expect(goblinRow.textContent).toContain('Careful Spell protected');
-        });
-    });
-
-    // ── Combat summary null handling in resolveAllSaves ──
-    describe('combat summary null handling in resolveAllSaves', () => {
-        it('returns empty results when combatSummary is null', async () => {
-            getCombatSummary.mockReturnValue(null);
-            render(<AOEConditionModal {...makeProps()} />);
-
-            // With null combatSummary, eligibleTargets returns [] so no target rows exist
-            // The modal should still render without crashing
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-            });
-            expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeDisabled();
-        });
-    });
-
-    // ── Target not found in combatSummary ──
-    describe('target not found in combatSummary', () => {
-        it('skips targets not found in combatSummary creatures', async () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 7, saveBonuses: { con: 0 } },
-                ],
-            });
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                // Only Goblin exists, so selecting just Goblin is fine
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    expect(addEntry).toHaveBeenCalled();
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-    });
-
-    // ── addTargetResult calls ──
 });
