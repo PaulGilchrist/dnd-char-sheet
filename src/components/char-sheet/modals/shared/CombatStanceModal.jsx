@@ -6,17 +6,23 @@ function CombatStanceModal({ action, playerStats, campaignName, onClose }) {
     const [selected, setSelected] = useState(null);
     const [applied, setApplied] = useState(false);
     const [result, setResult] = useState(null);
+    const [error, setError] = useState(null);
 
     const options = action.automation?.options || [];
 
     const handleApply = async () => {
         if (!selected) return;
-        const res = await applyStanceOption(action, playerStats, campaignName, selected);
-        setResult(res);
-        setApplied(true);
+        try {
+            const res = await applyStanceOption(action, playerStats, campaignName, selected);
+            setResult(res);
+            setApplied(true);
+        } catch (e) {
+            console.error(`${action.name} failed`, e);
+            setError(`Failed to apply ${action.name}: ${e.message}`);
+        }
     };
 
-    if (applied && result) {
+    if (applied && result?.payload?.description) {
         return (
             <div className="sp-overlay" onClick={onClose}>
                 <div className="sp-modal" onClick={e => e.stopPropagation()}>
@@ -40,6 +46,7 @@ function CombatStanceModal({ action, playerStats, campaignName, onClose }) {
                     <i className="fa-solid fa-paw"></i> {action.name}
                 </div>
                 <div className="sp-body">
+                    {error && <p>{error}</p>}
                     <p>Choose {action.name === 'Rage' ? 'a primal aspect of your Rage' : 'an elemental movement type'}:</p>
                     <div style={{ textAlign: 'left', marginTop: '12px' }}>
                         {options.map((opt, i) => {

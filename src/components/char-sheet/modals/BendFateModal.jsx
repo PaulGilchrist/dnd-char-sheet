@@ -4,13 +4,19 @@ import '../../common/savePromptModal.css';
 
 function BendFateModal({ action, playerStats, campaignName, d4Roll, lastAttack, attackerName: _attackerName, eventLabel, hitStatus, saveStatus, isAttack, isSave, isCheck: _isCheck, onClose }) {
     const [result, setResult] = useState(null);
+    const [error, setError] = useState(null);
 
     const bonusValue = typeof lastAttack.bonus === 'object' ? (lastAttack.bonus?.modifier || lastAttack.bonus?.total || 0) : (lastAttack.bonus || 0);
     const originalTotal = (lastAttack.d20 || 0) + bonusValue;
 
     const handleChoice = async (mode) => {
-        const res = await applyBendFateChoice(action, playerStats, campaignName, d4Roll, lastAttack, mode);
-        setResult(res);
+        try {
+            const res = await applyBendFateChoice(action, playerStats, campaignName, d4Roll, lastAttack, mode);
+            setResult(res);
+        } catch (e) {
+            console.error('Bend Fate failed', e);
+            setError(`Failed to apply Bend Fate: ${e.message}`);
+        }
     };
 
     if (result) {
@@ -48,6 +54,7 @@ function BendFateModal({ action, playerStats, campaignName, d4Roll, lastAttack, 
                         <p>vs DC {lastAttack.saveDc || '—'} → <b>{saveStatus}</b></p>
                     )}
                     <p>Rolled 1d4: <span className="sp-dc">{d4Roll.total}</span></p>
+                    {error && <p>{error}</p>}
                     <p>Choose how to apply the modifier:</p>
                 </div>
                 <div className="sp-actions">

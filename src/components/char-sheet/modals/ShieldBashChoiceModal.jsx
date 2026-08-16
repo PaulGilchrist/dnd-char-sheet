@@ -6,13 +6,19 @@ function ShieldBashChoiceModal({ action, playerStats, campaignName, targetName, 
     const [selected, setSelected] = useState(null);
     const [applied, setApplied] = useState(false);
     const [result, setResult] = useState(null);
+    const [error, setError] = useState(null);
 
     const handleApply = async () => {
         if (!selected) return;
 
-        const res = await applyShieldBashEffect(action, playerStats, campaignName, targetName, selected, saveDc);
-        setResult(res);
-        setApplied(true);
+        try {
+            const res = await applyShieldBashEffect(action, playerStats, campaignName, targetName, selected, saveDc);
+            setResult(res);
+            setApplied(true);
+        } catch (e) {
+            console.error('Shield Bash failed', e);
+            setError(`Failed to apply Shield Bash: ${e.message}`);
+        }
     };
 
     if (applied && result) {
@@ -39,6 +45,7 @@ function ShieldBashChoiceModal({ action, playerStats, campaignName, targetName, 
                     <i className="fa-solid fa-shield-halved"></i> Shield Bash
                 </div>
                 <div className="sp-body">
+                    {error && <p>{error}</p>}
                     <p>Choose an effect for <b>{targetName}</b> on failed STR save (DC {saveDc}):</p>
                     <div style={{ textAlign: 'left', marginTop: '12px' }}>
                         {[
@@ -66,7 +73,7 @@ function ShieldBashChoiceModal({ action, playerStats, campaignName, targetName, 
                     <button className="sp-roll-btn" onClick={handleApply} disabled={!selected}>
                         <i className="fa-solid fa-shield-halved"></i> Apply Effect
                     </button>
-                    <button className="sp-dismiss-btn" onClick={() => { applyShieldBashEffect(action, playerStats, campaignName, targetName, 'skip', saveDc); onClose(); }}>Skip (do not consume use)</button>
+                    <button className="sp-dismiss-btn" onClick={() => { applyShieldBashEffect(action, playerStats, campaignName, targetName, 'skip', saveDc).catch((e) => console.error('Shield Bash skip failed', e)); onClose(); }}>Skip (do not consume use)</button>
                 </div>
             </div>
         </div>

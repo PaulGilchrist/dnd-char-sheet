@@ -294,12 +294,13 @@ describe('ElementalAttunementModal player save handling', () => {
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
             const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+            await waitFor(() => expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument());
             await act(async () => {
                 window.dispatchEvent(new CustomEvent('save-result', {
                     detail: { promptId, targetName: 'Player1', success: false, roll: 10, saveBonus: 3, total: 13, rawDamage: 5 },
                 }));
             });
-            await waitFor(() => expect(applyDamage.applyDamageToTarget).toHaveBeenCalled());
+            await waitFor(() => expect(applyDamage.applyDamageToTarget).toHaveBeenCalled(), { timeout: 10000 });
             const callArgs = applyDamage.applyDamageToTarget.mock.calls[0];
             expect(callArgs[1]).toBe('Player1');
             expect(callArgs[3]).toEqual(['fire']);

@@ -244,14 +244,13 @@ describe('runtime value propagation to playerStats', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Character',
+        'hitPoints',
+        expect.objectContaining({ current: 40, max: 40 }),
+        'test-campaign'
+      );
     });
-
-    expect(setRuntimeValue).toHaveBeenCalledWith(
-      'Test Character',
-      'hitPoints',
-      expect.objectContaining({ current: 40, max: 40 }),
-      'test-campaign'
-    );
   });
 
   it('loads prepared spells from runtime for Wizard in 2024', async () => {

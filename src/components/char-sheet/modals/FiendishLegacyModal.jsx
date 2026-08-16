@@ -12,12 +12,18 @@ function FiendishLegacyModal({ action: _action, playerStats, campaignName, onClo
     const [selected, setSelected] = useState(null);
     const [applied, setApplied] = useState(false);
     const [result, setResult] = useState(null);
+    const [error, setError] = useState(null);
 
     const handleApply = async () => {
         if (!selected) return;
-        const res = await confirmFiendishLegacy(playerStats, selected, campaignName);
-        setResult(res);
-        setApplied(true);
+        try {
+            const res = await confirmFiendishLegacy(playerStats, selected, campaignName);
+            setResult(res);
+            setApplied(true);
+        } catch (e) {
+            console.error('Fiendish Legacy failed', e);
+            setError(`Failed to select legacy: ${e.message}`);
+        }
     };
 
     if (applied && result) {
@@ -44,6 +50,7 @@ function FiendishLegacyModal({ action: _action, playerStats, campaignName, onClo
                     <i className="fa-solid fa-dragon"></i> Fiendish Legacy
                 </div>
                 <div className="sp-body">
+                    {error && <p>{error}</p>}
                     <p>Choose a fiendish legacy (this choice determines your racial spellcasting ability and granted spells):</p>
                     <div style={{ textAlign: 'left', marginTop: '12px' }}>
                         {FIENDISH_LEGACIES.map((opt, i) => {

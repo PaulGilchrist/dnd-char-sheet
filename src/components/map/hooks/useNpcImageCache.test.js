@@ -60,11 +60,10 @@ describe('useNpcImageCache', () => {
 
       await waitFor(() => {
         expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
-      });
-
-      expect(result.current.npcImages).toEqual({
-        [undefined]: null,
-        Goblin: 'https://example.com/goblin.jpg',
+        expect(result.current.npcImages).toEqual({
+          [undefined]: null,
+          Goblin: 'https://example.com/goblin.jpg',
+        });
       });
     });
   });
@@ -83,11 +82,10 @@ describe('useNpcImageCache', () => {
 
       await waitFor(() => {
         expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
-      });
-
-      expect(result.current.npcImages).toEqual({
-        Goblin: 'https://example.com/goblin.jpg',
-        Orc: 'https://example.com/orc.jpg',
+        expect(result.current.npcImages).toEqual({
+          Goblin: 'https://example.com/goblin.jpg',
+          Orc: 'https://example.com/orc.jpg',
+        });
       });
     });
 
@@ -104,10 +102,9 @@ describe('useNpcImageCache', () => {
 
       await waitFor(() => {
         expect(getMonsterImageUrl).toHaveBeenCalledTimes(2);
-      });
-
-      expect(result.current.npcImages).toEqual({
-        Goblin: 'https://example.com/goblin2.jpg',
+        expect(result.current.npcImages).toEqual({
+          Goblin: 'https://example.com/goblin2.jpg',
+        });
       });
     });
 
@@ -119,10 +116,9 @@ describe('useNpcImageCache', () => {
 
       await waitFor(() => {
         expect(getMonsterImageUrl).toHaveBeenCalledTimes(1);
-      });
-
-      expect(result.current.npcImages).toEqual({
-        UnknownMonster: null,
+        expect(result.current.npcImages).toEqual({
+          UnknownMonster: null,
+        });
       });
     });
   });

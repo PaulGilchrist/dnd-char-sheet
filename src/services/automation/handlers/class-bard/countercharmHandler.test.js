@@ -244,6 +244,7 @@ describe('countercharmHandler.handle', () => {
         attackEvent: makeSaveEvent({ d20: 3, saveDc: 15, saveResult: 'failure' }),
         targetName: 'TestHero',
       }));
+      vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
       const result = await handle(action, ps, campaignName, null);
 
