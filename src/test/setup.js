@@ -14,7 +14,7 @@ const inertResponse = () => ({
     json: () => Promise.resolve({}),
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
     clone: () => inertResponse(),
-    headers: new globalThis.Headers ? new globalThis.Headers() : {},
+    headers: globalThis.Headers ? new globalThis.Headers() : {},
 });
 
 function inertFetch() {

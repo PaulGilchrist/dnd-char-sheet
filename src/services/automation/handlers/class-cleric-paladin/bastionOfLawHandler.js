@@ -197,10 +197,10 @@ export async function handleSpendDice(action, playerStats, campaignName, _mapNam
 
     // Heal the target (damage reduction = healing)
     const storedHp = getRuntimeValue(playerName, 'currentHitPoints', campaignName);
+    const currentHp = storedHp ?? 0;
     const baseHp = getRuntimeValue(playerName, 'hitPoints', campaignName);
     const maxHp = baseHp || playerStats.hitPoints || 0;
-    const currentHp = storedHp ?? 0;
-    const newHp = Math.min(maxHp, Math.max(0, currentHp + actualHeal));
+    const newHp = maxHp > 0 ? Math.min(maxHp, Math.max(0, currentHp + actualHeal)) : currentHp + actualHeal;
     const healedAmount = newHp - currentHp;
     if (healedAmount !== 0) {
         await setRuntimeValue(playerName, 'currentHitPoints', newHp, campaignName);
