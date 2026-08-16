@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -27,6 +28,10 @@ vi.mock('../../../shared/abilityLookup.js', () => ({
   getAbilityModifier: vi.fn(),
 }));
 
+vi.mock('../../../ui/dataLoader.js', () => ({
+  loadMonsters: vi.fn().mockResolvedValue([]),
+}));
+
 // ── Imports ────────────────────────────────────────────────────
 
 import { handle } from './conditionHandler.js';
@@ -36,6 +41,7 @@ import * as mapsService from '../../../maps/mapsService.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { getAbilityModifier } from '../../../shared/abilityLookup.js';
+import * as dataLoader from '../../../ui/dataLoader.js';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -75,25 +81,22 @@ function makeAction(automation = {}) {
   };
 }
 
-function resetMocks() {
-  vi.clearAllMocks();
-  getRuntimeValue.mockReset();
-  setRuntimeValue.mockReset().mockResolvedValue(undefined);
-  getAbilityModifier.mockReset();
-  getCombatContext.mockReset().mockResolvedValue({});
-  rangeToFeet.mockReset();
-  mapsService.loadMapData.mockReset();
-  addEntry.mockReset().mockResolvedValue({});
-}
-
 // ── Tests ──────────────────────────────────────────────────────
 
 describe('conditionHandler.handle', () => {
   beforeEach(() => {
-    resetMocks();
+    vi.clearAllMocks();
+    getRuntimeValue.mockReset();
+    setRuntimeValue.mockReset().mockResolvedValue(undefined);
+    getAbilityModifier.mockReset();
+    getCombatContext.mockReset().mockResolvedValue({});
+    rangeToFeet.mockReset();
+    mapsService.loadMapData.mockReset();
+    addEntry.mockReset().mockResolvedValue({});
+    dataLoader.loadMonsters.mockReset().mockResolvedValue([]);
   });
 
-  describe('buildSaveDc', () => {
+  describe('buildSaveDc integration', () => {
     it('returns ability-based DC when saveDc === "ability"', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ saveDc: 'ability', saveAbility: 'STR' });
@@ -107,7 +110,7 @@ describe('conditionHandler.handle', () => {
       expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'STR');
     });
 
-    it('defaults to WIS when saveAbility is absent', async () => {
+    it('uses handler default WIS when saveAbility is absent', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ saveDc: 'ability' });
 
@@ -119,7 +122,19 @@ describe('conditionHandler.handle', () => {
       expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'WIS');
     });
 
-    it('returns numeric saveDc directly when saveDc is a number', async () => {
+    it('uses first element when saveAbility is an array', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ saveDc: 'ability', saveAbility: ['DEX', 'CON'] });
+
+      getAbilityModifier.mockReturnValue(1);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.saveDc).toBe(12);
+      expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'DEX');
+    });
+
+    it('returns numeric saveDc directly without calling getAbilityModifier', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ saveDc: 16 });
 
@@ -129,7 +144,7 @@ describe('conditionHandler.handle', () => {
       expect(getAbilityModifier).not.toHaveBeenCalled();
     });
 
-    it('returns fallback DC (8 + WIS bonus + prof) when saveDc is falsy', async () => {
+    it('returns fallback DC when saveDc is falsy', async () => {
       const ps = makePlayerStats();
       const action = makeAction({});
 
@@ -139,6 +154,28 @@ describe('conditionHandler.handle', () => {
 
       expect(result.payload.saveDc).toBe(13);
       expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'WIS');
+    });
+
+    it('uses spell_save_dc from playerStats when saveDc === "spell_save_dc"', async () => {
+      const ps = makePlayerStats({ spellAbilities: { saveDc: 15 } });
+      const action = makeAction({ saveDc: 'spell_save_dc' });
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.saveDc).toBe(15);
+      expect(getAbilityModifier).not.toHaveBeenCalled();
+    });
+
+    it('derives spell_save_dc from CHA when spellAbilities.saveDc is missing', async () => {
+      const ps = makePlayerStats({ spellAbilities: {} });
+      const action = makeAction({ saveDc: 'spell_save_dc' });
+
+      getAbilityModifier.mockReturnValue(3);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.saveDc).toBe(14);
+      expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'CHA');
     });
   });
 
@@ -156,6 +193,29 @@ describe('conditionHandler.handle', () => {
       expect(result.payload.description).toBe('No Channel Divinity charges remaining.');
       expect(result.payload.name).toBe('Divine Smite');
       expect(result.payload.automationType).toBe('channel_divinity');
+    });
+
+    it('returns popup with negative charges', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({});
+
+      getRuntimeValue.mockReturnValue(-1);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+    });
+
+    it('returns popup when stored charges are string "0"', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({});
+
+      getRuntimeValue.mockReturnValue('0');
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.type).toBe('popup');
     });
 
     it('returns modal with charges > 0', async () => {
@@ -180,9 +240,23 @@ describe('conditionHandler.handle', () => {
       const result = await handle(action, ps, CAMPAIGN_NAME, null);
 
       expect(result.type).toBe('modal');
+      expect(result.payload.channelDivinityCharges).toBe(3);
     });
 
-    it('uses default charge count from defaults when class data is missing', async () => {
+    it('uses channel_divinity_charges from class data when present', async () => {
+      const ps = makePlayerStats({ level: 4 });
+      const action = makeAction({});
+
+      ps.class.class_levels[3] = { class_specific: { channel_divinity_charges: 5 } };
+
+      getRuntimeValue.mockReturnValue(undefined);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.channelDivinityCharges).toBe(5);
+    });
+
+    it('uses default charge count when class data is missing', async () => {
       const ps = makePlayerStats({ class: null });
       const action = makeAction({});
 
@@ -227,6 +301,18 @@ describe('conditionHandler.handle', () => {
 
       getRuntimeValue.mockReturnValue(2);
       rangeToFeet.mockReturnValue(null);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.rangeFeet).toBe(60);
+    });
+
+    it('uses zero as default range when rangeToFeet returns 0', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ range: '0ft' });
+
+      getRuntimeValue.mockReturnValue(2);
+      rangeToFeet.mockReturnValue(0);
 
       const result = await handle(action, ps, CAMPAIGN_NAME, null);
 
@@ -285,6 +371,18 @@ describe('conditionHandler.handle', () => {
 
       expect(result.payload.attackerPos).toBeNull();
       expect(result.payload.mapData).toBeNull();
+    });
+
+    it('skips map lookup when mapName is null', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({});
+
+      getRuntimeValue.mockReturnValue(2);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(mapsService.loadMapData).not.toHaveBeenCalled();
+      expect(result.payload.attackerPos).toBeNull();
     });
   });
 
@@ -399,6 +497,31 @@ describe('conditionHandler.handle', () => {
       expect(result.payload.rangeFeet).toBe(60);
       expect(result.payload.conditionName).toBe('frightened');
       expect(result.payload.saveType).toBe('WIS');
+    });
+
+    it('includes monsters array from loadMonsters', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({});
+
+      getRuntimeValue.mockReturnValue(2);
+      const mockMonsters = [{ name: 'Goblin' }, { name: 'Skeleton' }];
+      dataLoader.loadMonsters.mockResolvedValue(mockMonsters);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.monsters).toEqual(mockMonsters);
+    });
+
+    it('includes empty monsters array when loadMonsters fails', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({});
+
+      getRuntimeValue.mockReturnValue(2);
+      dataLoader.loadMonsters.mockRejectedValue(new Error('Data unavailable'));
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.monsters).toEqual([]);
     });
   });
 });

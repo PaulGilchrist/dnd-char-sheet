@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { handle, isPassWithoutTraceActive } from './passWithoutTraceHandler.js'
 import { toggleBuff } from '../../common/buffToggle.js'
 import { addExpiration } from '../../../rules/effects/expirations.js'
@@ -98,6 +99,17 @@ describe('passWithoutTraceHandler', () => {
                 expect.objectContaining({ auraRange: 60 }),
                 CAMPAIGN
             )
+            expect(addExpiration).toHaveBeenCalledWith(
+                'Rogue',
+                'Rogue',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        type: 'remove_active_buff',
+                        buffName: 'Pass Without Trace',
+                    }),
+                ]),
+                CAMPAIGN
+            )
             expect(result.payload.auraRange).toBe(60)
         })
 
@@ -107,6 +119,26 @@ describe('passWithoutTraceHandler', () => {
 
             const result = await handle(makeAction(), { name: 'Rogue' }, CAMPAIGN, null)
 
+            expect(toggleBuff).toHaveBeenCalledWith(
+                'Rogue',
+                'Pass Without Trace',
+                expect.objectContaining({
+                    effect: 'pass_without_trace',
+                    auraRange: 30,
+                }),
+                CAMPAIGN
+            )
+            expect(addExpiration).toHaveBeenCalledWith(
+                'Rogue',
+                'Rogue',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        type: 'remove_active_buff',
+                        buffName: 'Pass Without Trace',
+                    }),
+                ]),
+                CAMPAIGN
+            )
             expect(result).toEqual({
                 type: 'popup',
                 payload: {
@@ -117,7 +149,7 @@ describe('passWithoutTraceHandler', () => {
             })
         })
 
-        it('toggles buff but still returns target selection when already active', async () => {
+        it('does not call addExpiration when buff is already active', async () => {
             toggleBuff.mockReturnValue({ wasActive: true })
             getCombatContext.mockResolvedValue({
                 creatures: [{ name: 'Rogue' }],
@@ -125,7 +157,60 @@ describe('passWithoutTraceHandler', () => {
 
             const result = await handle(makeAction(), { name: 'Rogue' }, CAMPAIGN, null)
 
+            expect(toggleBuff).toHaveBeenCalledWith(
+                'Rogue',
+                'Pass Without Trace',
+                expect.objectContaining({
+                    effect: 'pass_without_trace',
+                    auraRange: 30,
+                }),
+                CAMPAIGN
+            )
+            expect(addExpiration).not.toHaveBeenCalled()
             expect(result.payload.type).toBe('pass_without_trace_target_selection')
+        })
+
+        it('returns target selection popup with empty creature list', async () => {
+            toggleBuff.mockReturnValue({ wasActive: false })
+            getCombatContext.mockResolvedValue({ creatures: [] })
+
+            const result = await handle(makeAction(), { name: 'Rogue' }, CAMPAIGN, null)
+
+            expect(result).toEqual({
+                type: 'popup',
+                payload: expect.objectContaining({
+                    type: 'pass_without_trace_target_selection',
+                    creatureTargets: [],
+                    auraRange: 30,
+                }),
+            })
+        })
+
+        it('throws when playerStats is null', async () => {
+            await expect(
+                handle(makeAction(), null, CAMPAIGN, null)
+            ).rejects.toThrow()
+        })
+
+        it('uses default auraRange of 30 when automation has no auraRange', async () => {
+            toggleBuff.mockReturnValue({ wasActive: false })
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Rogue' }],
+            })
+
+            await handle(
+                { name: 'Pass Without Trace', automation: { type: 'pass_without_trace' } },
+                { name: 'Rogue' },
+                CAMPAIGN,
+                null
+            )
+
+            expect(toggleBuff).toHaveBeenCalledWith(
+                'Rogue',
+                'Pass Without Trace',
+                expect.objectContaining({ auraRange: 30 }),
+                CAMPAIGN
+            )
         })
     })
 
@@ -140,6 +225,26 @@ describe('passWithoutTraceHandler', () => {
 
         it('returns false when buff is not active', () => {
             getRuntimeValue.mockReturnValue([])
+
+            expect(isPassWithoutTraceActive('Rogue', CAMPAIGN)).toBe(false)
+        })
+
+        it('returns false when activeBuffs is null', () => {
+            getRuntimeValue.mockReturnValue(null)
+
+            expect(isPassWithoutTraceActive('Rogue', CAMPAIGN)).toBe(false)
+        })
+
+        it('returns false when activeBuffs is undefined', () => {
+            getRuntimeValue.mockReturnValue(undefined)
+
+            expect(isPassWithoutTraceActive('Rogue', CAMPAIGN)).toBe(false)
+        })
+
+        it('returns false when buff has matching name but wrong effect', () => {
+            getRuntimeValue.mockReturnValue([
+                { name: 'Pass Without Trace', effect: 'something_else' },
+            ])
 
             expect(isPassWithoutTraceActive('Rogue', CAMPAIGN)).toBe(false)
         })

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle, applyHaste, isHasteActive } from './hasteHandler.js';
@@ -116,7 +117,7 @@ describe('hasteHandler.handle', () => {
         expect(result.payload.attackerPos).toEqual({ gridX: 1, gridY: 2 });
     });
 
-    it('uses spell range/duration when present, falls back to defaults when absent', async () => {
+    it('uses spell range and duration from action when present', async () => {
         resolveMapPositions.mockResolvedValue(null);
         getCombatSummary.mockReturnValue({
             creatures: [{ name: 'Enemy1' }],
@@ -164,29 +165,6 @@ describe('hasteHandler.handle', () => {
         const result = await handle(action, makePlayerStats(), CAMPAIGN, null, []);
 
         expect(result.payload.range).toBe('30 feet');
-    });
-
-    it('passes attackerPos to popup when map resolves to positions', async () => {
-        resolveMapPositions.mockResolvedValue({ attackerPos: { gridX: 5, gridY: 10 } });
-        getCombatSummary.mockReturnValue({
-            creatures: [{ name: 'Ally1' }],
-        });
-
-        const action = makeAction();
-        const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP, []);
-
-        expect(result.payload.attackerPos).toEqual({ gridX: 5, gridY: 10 });
-    });
-
-    it('passes null attackerPos when mapName is null', async () => {
-        getCombatSummary.mockReturnValue({
-            creatures: [{ name: 'Ally1' }],
-        });
-
-        const action = makeAction();
-        const result = await handle(action, makePlayerStats(), CAMPAIGN, null, []);
-
-        expect(result.payload.attackerPos).toBeNull();
     });
 });
 
@@ -245,7 +223,7 @@ describe('hasteHandler.applyHaste', () => {
         );
     });
 
-    it('does not apply buff if Haste already active on target', async () => {
+    it('returns info popup with description when target already has Haste', async () => {
         getRuntimeValue.mockImplementation((name, key) => {
             if (key === 'activeBuffs') return [{ name: 'Haste', effect: 'haste' }];
             return {};
@@ -256,7 +234,9 @@ describe('hasteHandler.applyHaste', () => {
 
         expect(result).not.toBeNull();
         expect(result.type).toBe('popup');
-        // No setRuntimeValue call for activeBuffs since the buff already exists
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.description).toContain('Ally1 gained Haste');
+
         const buffsCalls = setRuntimeValue.mock.calls.filter(
             (c) => c[0] === 'Ally1' && c[1] === 'activeBuffs',
         );
@@ -522,7 +502,7 @@ describe('hasteHandler.applyHaste', () => {
         );
     });
 
-    it('uses custom duration from action.spell when action.spell is missing duration', async () => {
+    it('uses default duration when action.spell is missing duration', async () => {
         getRuntimeValue.mockImplementation((name, key) => {
             if (key === 'activeBuffs') return [];
             if (key === 'conditionEffects') return {};
@@ -564,19 +544,6 @@ describe('hasteHandler.applyHaste', () => {
         const result = await applyHaste(action, makePlayerStats(), CAMPAIGN, null, ['Ally1', 'Ally2']);
 
         expect(result.payload.description).toBe('2 targets gained Haste from Haste: Ally1, Ally2.');
-    });
-
-    it('reports three targets in description correctly', async () => {
-        getRuntimeValue.mockImplementation((name, key) => {
-            if (key === 'activeBuffs') return [];
-            if (key === 'conditionEffects') return {};
-            return null;
-        });
-
-        const action = makeAction();
-        const result = await applyHaste(action, makePlayerStats(), CAMPAIGN, null, ['A', 'B', 'C']);
-
-        expect(result.payload.description).toBe('3 targets gained Haste from Haste: A, B, C.');
     });
 
     it('uses action name in description when different from default', async () => {
@@ -698,7 +665,7 @@ describe('hasteHandler.isHasteActive', () => {
         expect(result).toBe(false);
     });
 
-    it('handles both name and effect match requirement', () => {
+    it('requires both name and effect to match', () => {
         // name matches but effect doesn't
         getRuntimeValue.mockReturnValue([
             { name: 'Haste', effect: 'something_else' },

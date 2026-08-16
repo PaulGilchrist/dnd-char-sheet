@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/buffToggle.js', () => ({
@@ -31,7 +32,7 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
@@ -46,6 +47,10 @@ vi.mock('../class-druid/wildShapeCreatureBuilder.js', () => ({
   cleanupWildShape: vi.fn(),
 }));
 
+vi.mock('./tempHpService.js', () => ({
+  setTempHp: vi.fn(),
+}));
+
 import { handle, restoreAdrenalineRushUses } from './buffHandler.js';
 import * as buffToggle from '../../common/buffToggle.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -55,6 +60,7 @@ import * as automationService from '../../../combat/automation/automationService
 import * as logService from '../../../ui/logService.js';
 import * as expirations from '../../../rules/effects/expirations.js';
 import * as wildShapeCreatureBuilder from '../class-druid/wildShapeCreatureBuilder.js';
+import * as tempHpService from './tempHpService.js';
 
 const campaignName = 'test-campaign';
 
@@ -87,7 +93,6 @@ describe('buffHandler.handle - advanced effects', () => {
     it('uses playerStats.name as targetName when target is not willing_creature', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ target: 'self' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
 
       await handle(action, ps, campaignName, null);
 
@@ -100,12 +105,11 @@ describe('buffHandler.handle - advanced effects', () => {
       );
     });
 
-    it('uses target name from getTargetFromAttacker when target === willing_creature and combatSummary exists', async () => {
+    it('uses target name from getTargetFromAttacker when target is willing_creature and combatSummary exists', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ target: 'willing_creature' });
       combatData.getCombatSummary.mockReturnValue({ enemies: [] });
       damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'AllyTarget' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
 
       await handle(action, ps, campaignName, null);
 
@@ -118,11 +122,27 @@ describe('buffHandler.handle - advanced effects', () => {
       );
     });
 
-    it('falls back to playerStats.name when target resolution fails', async () => {
+    it('falls back to playerStats.name when combatSummary is null for willing_creature target', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ target: 'willing_creature' });
       combatData.getCombatSummary.mockReturnValue(null);
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+
+      await handle(action, ps, campaignName, null);
+
+      expect(buffToggle.toggleBuff).toHaveBeenCalledWith(
+        ps.name,
+        action.name,
+        action.automation,
+        campaignName,
+        ps.name
+      );
+    });
+
+    it('falls back to playerStats.name when getTargetFromAttacker returns null', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ target: 'willing_creature' });
+      combatData.getCombatSummary.mockReturnValue({ enemies: [] });
+      damageUtils.getTargetFromAttacker.mockReturnValue(null);
 
       await handle(action, ps, campaignName, null);
 
@@ -137,10 +157,9 @@ describe('buffHandler.handle - advanced effects', () => {
   });
 
   describe('Buff toggling', () => {
-    it('calls toggleBuff with correct arguments and returns correct description', async () => {
+    it('calls toggleBuff with correct arguments and returns activated description', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ type: 'buff' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
 
       const result = await handle(action, ps, campaignName, null);
 
@@ -151,7 +170,7 @@ describe('buffHandler.handle - advanced effects', () => {
         campaignName,
         ps.name
       );
-      expect(result.payload.description).toBe(`${action.name} activated on yourself (10 min)`);
+      expect(result.payload.description).toBe('Test Buff activated on yourself (10 min)');
     });
 
     it('returns toggled OFF description when wasActive is true', async () => {
@@ -161,60 +180,84 @@ describe('buffHandler.handle - advanced effects', () => {
 
       const result = await handle(action, ps, campaignName, null);
 
-      expect(result.payload.description).toBe(`${action.name} toggled OFF`);
+      expect(result.payload.description).toBe('Test Buff toggled OFF');
     });
 
     it('uses auto.duration in description when provided', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ type: 'buff', duration: '1 hour' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
 
       const result = await handle(action, ps, campaignName, null);
 
-      expect(result.payload.description).toBe(`${action.name} activated on yourself (1 hour)`);
+      expect(result.payload.description).toBe('Test Buff activated on yourself (1 hour)');
     });
   });
 
   describe('Temp HP on buff activation', () => {
-    it('sets tempHp when buff was not active and tempHpExpression exists', async () => {
+    it('calls setTempHp when buff was not active and tempHpExpression evaluates to a positive number', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ tempHpExpression: '2d4+3' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
       automationService.evaluateAutoExpression.mockReturnValue(7);
 
       await handle(action, ps, campaignName, null);
 
       expect(automationService.evaluateAutoExpression).toHaveBeenCalledWith('2d4+3', ps);
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(ps.name, 'tempHp', 7, campaignName);
+      expect(tempHpService.setTempHp).toHaveBeenCalledWith(ps.name, 7, campaignName);
     });
 
-    it('does not set tempHp when buff was already active, no expression, or result is non-positive', async () => {
+    it('does not call setTempHp when buff was already active', async () => {
       const ps = makePlayerStats();
-
-      // Already active
-      const action1 = makeAction({ tempHpExpression: '2d4+3' });
+      const action = makeAction({ tempHpExpression: '2d4+3' });
       buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
       automationService.evaluateAutoExpression.mockReturnValue(7);
-      await handle(action1, ps, campaignName, null);
-      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(ps.name, 'tempHp', expect.any(Number), campaignName);
 
-      // No expression
-      buffToggle.toggleBuff.mockClear();
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-      const action2 = makeAction({});
-      await handle(action2, ps, campaignName, null);
-      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(ps.name, 'tempHp', expect.any(Number), campaignName);
+      await handle(action, ps, campaignName, null);
 
-      // Zero result
-      buffToggle.toggleBuff.mockClear();
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-      const action3 = makeAction({ tempHpExpression: '1d2' });
-      automationService.evaluateAutoExpression.mockReturnValue(0);
-      await handle(action3, ps, campaignName, null);
-      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(ps.name, 'tempHp', expect.any(Number), campaignName);
+      expect(tempHpService.setTempHp).not.toHaveBeenCalled();
     });
 
-    it('returns wild_shape_select popup for shape_shift when activating', async () => {
+    it('does not call setTempHp when tempHpExpression is missing', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({});
+
+      await handle(action, ps, campaignName, null);
+
+      expect(tempHpService.setTempHp).not.toHaveBeenCalled();
+    });
+
+    it('does not call setTempHp when expression evaluates to zero', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ tempHpExpression: '1d2' });
+      automationService.evaluateAutoExpression.mockReturnValue(0);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(tempHpService.setTempHp).not.toHaveBeenCalled();
+    });
+
+    it('does not call setTempHp when expression evaluates to a negative number', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ tempHpExpression: '-5' });
+      automationService.evaluateAutoExpression.mockReturnValue(-3);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(tempHpService.setTempHp).not.toHaveBeenCalled();
+    });
+
+    it('does not call setTempHp when expression evaluates to a non-number', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ tempHpExpression: '2d4' });
+      automationService.evaluateAutoExpression.mockReturnValue(null);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(tempHpService.setTempHp).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Wild Shape (shape_shift)', () => {
+    it('returns wild_shape_select popup when activating with uses available', async () => {
       const ps = makePlayerStats({
         level: 7,
         class: { major: { name: 'Druid' }, subclass: { name: 'Circle of the Moon' }, class_levels: [{ level: 7, wild_shape: 2 }] },
@@ -270,13 +313,13 @@ describe('buffHandler.handle - advanced effects', () => {
       expect(result.payload.description).toContain('No Wild Shape uses remaining');
       expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
     });
+
   });
 
   describe('Invisible effect', () => {
-    it('adds invisible to activeConditions and sets tracking when wasActive is false', async () => {
+    it('adds invisible to activeConditions and sets tracking when activating', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ effect: 'invisible' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
       runtimeState.getRuntimeValue.mockReturnValue([]);
 
       await handle(action, ps, campaignName, null);
@@ -284,7 +327,7 @@ describe('buffHandler.handle - advanced effects', () => {
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         ps.name,
         'activeConditions',
-        expect.arrayContaining(['invisible']),
+        ['invisible'],
         campaignName
       );
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
@@ -295,7 +338,7 @@ describe('buffHandler.handle - advanced effects', () => {
       );
     });
 
-    it('removes invisible from activeConditions when wasActive is true', async () => {
+    it('removes invisible from activeConditions when deactivating', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ effect: 'invisible' });
       buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
@@ -310,16 +353,47 @@ describe('buffHandler.handle - advanced effects', () => {
         campaignName
       );
     });
+
+    it('clears invisibility tracking key when deactivating', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ effect: 'invisible' });
+      buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
+      runtimeState.getRuntimeValue.mockReturnValue(['invisible']);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        `_activeInvisibility_${ps.name}`,
+        null,
+        campaignName
+      );
+    });
+
+    it('does not modify activeConditions when deactivating but invisible is not in the list', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ effect: 'invisible' });
+      buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
+      runtimeState.getRuntimeValue.mockReturnValue(['bleeding', 'poisoned']);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+        ps.name,
+        'activeConditions',
+        expect.anything(),
+        campaignName
+      );
+    });
   });
 
-  describe('See invisibility and Haste effects', () => {
-    it('logs activation for see_invisibility, adds expiration for haste on activation, removes speed_zero on haste deactivation', async () => {
+  describe('See Invisibility effect', () => {
+    it('logs activation when wasActive is false', async () => {
       const ps = makePlayerStats();
+      const action = makeAction({ effect: 'see_invisibility' });
 
-      // See invisibility activation (no expiration, just logging)
-      let action = makeAction({ effect: 'see_invisibility' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
       await handle(action, ps, campaignName, null);
+
       expect(logService.addEntry).toHaveBeenCalledWith(
         campaignName,
         expect.objectContaining({
@@ -329,18 +403,50 @@ describe('buffHandler.handle - advanced effects', () => {
           description: expect.stringContaining('See Invisibility activated'),
         })
       );
+    });
 
-      // Haste activation
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-      action = makeAction({ effect: 'haste' });
+    it('logs deactivation when wasActive is true', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ effect: 'see_invisibility' });
+      buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
+
       await handle(action, ps, campaignName, null);
-      expect(expirations.addExpiration).toHaveBeenCalled();
 
-      // Haste deactivation removes speed_zero
+      expect(logService.addEntry).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          type: 'ability_use',
+          characterName: ps.name,
+          abilityName: 'Test Buff',
+          description: expect.stringContaining('deactivated See Invisibility'),
+        })
+      );
+    });
+  });
+
+  describe('Haste effect', () => {
+    it('adds expiration when activating', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ effect: 'haste' });
+
+      await handle(action, ps, campaignName, null);
+
+      expect(expirations.addExpiration).toHaveBeenCalledWith(
+        ps.name,
+        ps.name,
+        expect.arrayContaining([expect.objectContaining({ type: 'remove_active_buff' })]),
+        campaignName
+      );
+    });
+
+    it('removes speed_zero from activeConditions when deactivating', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ effect: 'haste' });
       buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
       runtimeState.getRuntimeValue.mockReturnValue(['speed_zero', 'blinded']);
-      action = makeAction({ effect: 'haste' });
+
       await handle(action, ps, campaignName, null);
+
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         ps.name,
         'activeConditions',
@@ -348,31 +454,54 @@ describe('buffHandler.handle - advanced effects', () => {
         campaignName
       );
     });
+
+    it('does not modify activeConditions when speed_zero is not present on deactivation', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ effect: 'haste' });
+      buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
+      runtimeState.getRuntimeValue.mockReturnValue(['blinded']);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+        ps.name,
+        'activeConditions',
+        expect.anything(),
+        campaignName
+      );
+    });
   });
 
   describe('Fly speed equals walk speed effect', () => {
-    it('is a no-op when toggling off, passes through to normal buff when toggling on', async () => {
+    it('is a no-op when toggling off', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ effect: 'fly_speed_equals_walk_speed' });
+      buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
+
+      const result = await handle(action, ps, campaignName, null);
+      expect(result.payload.description).toBe('Test Buff toggled OFF');
+      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+    });
+
+    it('passes through to normal buff flow when toggling on', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ effect: 'fly_speed_equals_walk_speed' });
 
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
-      const offResult = await handle(action, ps, campaignName, null);
-      expect(offResult.payload.description).toBe('Test Buff toggled OFF');
-      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-      const onResult = await handle(action, ps, campaignName, null);
-      expect(onResult.payload.description).toContain('activated on yourself');
+      const result = await handle(action, ps, campaignName, null);
+      expect(result.payload.description).toContain('activated on yourself');
       expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
   });
 
   describe('Null/undefined safety', () => {
-    it('throws when action, action.automation, or playerStats is missing', async () => {
+    it('throws when action is undefined', async () => {
       const ps = makePlayerStats();
-      await expect(handle({ name: 'No Automation' }, ps, campaignName, null)).rejects.toThrow();
       await expect(handle(undefined, ps, campaignName, null)).rejects.toThrow();
-      await expect(handle(makeAction(), undefined, campaignName, null)).rejects.toThrow();
+    });
+
+    it('throws when playerStats is undefined', async () => {
+      const action = makeAction();
+      await expect(handle(action, undefined, campaignName, null)).rejects.toThrow();
     });
   });
 

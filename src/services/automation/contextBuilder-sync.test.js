@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildAttackContextSync } from './contextBuilder.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -70,12 +71,41 @@ vi.mock('./handlers/class-cleric-paladin/avengingAngelHandler.js', () => ({
   handle: vi.fn(),
 }));
 
+vi.mock('./handlers/spells/sanctuaryHandler.js', () => ({
+  endSanctuary: vi.fn(),
+}));
+
+vi.mock('../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js', () => ({
+  isProtectionFromEvilAndGoodActive: vi.fn().mockReturnValue(false),
+  isCreatureWarded: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../combat/automation/automationService.js', () => ({
+  collectWeaponMastery: vi.fn().mockReturnValue({ baseMastery: null, extraMasteries: [] }),
+}));
+
+vi.mock('../combat/automation/automationExpressions.js', () => ({
+  resolveDiceExpression: vi.fn(),
+}));
+
+vi.mock('../combat/automation/automationPassives.js', () => ({
+  isResilientSphereActive: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../encounters/combatData.js', () => ({
+  getCurrentCombatRound: vi.fn().mockReturnValue(1),
+}));
+
 const { buildBaseAttackContext } = await import('./common/damageRoll.js');
 const { getInnateSorceryBonus } = await import('../combat/buffs/buffService.js');
 const { getWolfAdvantageAgainst } = await import('../combat/auras/wolfAuraUtils.js');
 const { getDuplicityAdvantageAgainst } = await import('../combat/auras/duplicityAuraUtils.js');
 const { getLionDisadvantageAgainst } = await import('../combat/auras/lionAuraUtils.js');
 const { getCoronaSaveDisadvantage } = await import('../combat/auras/coronaAuraUtils.js');
+const { isActive: isAvengingAngelActive, isAuraTarget: checkIsAuraTarget } =
+  await import('./handlers/class-cleric-paladin/avengingAngelHandler.js');
+const { collectWeaponMastery } = await import('../combat/automation/automationService.js');
+const { isResilientSphereActive } = await import('../combat/automation/automationPassives.js');
 
 const mockStats = {
   name: 'Fighter1',
@@ -111,30 +141,59 @@ function defaultBaseAttackContext(targetName = 'Orc', target = null) {
   });
 }
 
+function defaultAuraMocks() {
+  getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
+  getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
+  getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
+  getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+  getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+  isAvengingAngelActive.mockReturnValue(false);
+  checkIsAuraTarget.mockReturnValue(false);
+  collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
+  isResilientSphereActive.mockReturnValue(false);
+}
+
 describe('contextBuilder-sync: basic context fields', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+    defaultAuraMocks();
   });
 
-  describe('basic context fields', () => {
-    it('returns context with target and attacker names', async () => {
+  describe('target and attacker names', () => {
+    it('returns context with target and attacker names from base context', async () => {
       const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(result.targetName).toBe('Orc');
       expect(result.attackerName).toBe('Fighter1');
     });
 
+    it('uses the target name from base context even when target object differs', async () => {
+      buildBaseAttackContext.mockResolvedValue({
+        target: { name: 'Dragon', type: 'monster' },
+        targetName: 'Dragon',
+        resistanceNotice: null,
+      });
+
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.targetName).toBe('Dragon');
+    });
+  });
+
+  describe('damage and weapon properties', () => {
     it('passes through damage type from attack', async () => {
       const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(result.damageType).toBe('Slashing');
+    });
+
+    it('falls back to damage_type_primary when damageType is missing', async () => {
+      const altAttack = { ...mockAttack, damageType: undefined, damage_type_primary: 'Bludgeoning' };
+      const result = await buildAttackContextSync(altAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.damageType).toBe('Bludgeoning');
     });
 
     it('sets isMelee true for melee and unarmed, false for ranged', async () => {
@@ -187,6 +246,15 @@ describe('contextBuilder-sync: basic context fields', () => {
       expect(result.hitBonusFormula).toBe('To Hit = 4 + 2 + 1');
     });
 
+    it('returns weaponType and weaponName from attack', async () => {
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.weaponType).toBe('melee');
+      expect(result.weaponName).toBe('Longsword');
+    });
+  });
+
+  describe('resistance notice passthrough', () => {
     it('returns resistanceNotice from base context', async () => {
       buildBaseAttackContext.mockResolvedValue({
         target: { name: 'Orc' },
@@ -198,9 +266,21 @@ describe('contextBuilder-sync: basic context fields', () => {
 
       expect(result.resistanceNotice).toBe('Orc resists Slashing');
     });
+
+    it('returns null resistanceNotice when base context has null', async () => {
+      buildBaseAttackContext.mockResolvedValue({
+        target: { name: 'Orc' },
+        targetName: 'Orc',
+        resistanceNotice: null,
+      });
+
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.resistanceNotice).toBeNull();
+    });
   });
 
-  describe('conditionAttackMode passthrough', () => {
+  describe('conditionAttackMode passthrough (forcedMode)', () => {
     it('passes non-normal conditionAttackMode through as forcedMode', async () => {
       let result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'death_attack', {});
       expect(result.forcedMode).toBe('death_attack');
@@ -213,6 +293,185 @@ describe('contextBuilder-sync: basic context fields', () => {
       const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(result.forcedMode).toBeUndefined();
+    });
+
+    it('preserves forcedMode from conditionAttackMode through all advantage/disadvantage logic', async () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'activeBuffs') return [{ effect: 'advantage_attacks_advantage_against' }];
+        return undefined;
+      });
+      getWolfAdvantageAgainst.mockReturnValue({ advantage: true });
+      getInnateSorceryBonus.mockReturnValue({ spellAdvantage: true, saveDcBonus: 0 });
+
+      // Even with multiple advantage sources, conditionAttackMode='disadvantage' wins
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'disadvantage', {});
+
+      expect(result.forcedMode).toBe('disadvantage');
+    });
+  });
+
+  describe('save DC and type passthrough', () => {
+    it('includes saveType and dcSuccess from attack when present', async () => {
+      const attack = { ...mockAttack, saveDc: 13, saveType: 'DEX', saveSuccess: 0.5 };
+      const result = await buildAttackContextSync(attack, mockStats, 'camp', 'normal', {});
+
+      expect(result.saveType).toBe('DEX');
+      expect(result.dcSuccess).toBe(0.5);
+    });
+
+    it('includes saveType and dcSuccess as undefined when not on attack', async () => {
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.saveType).toBeUndefined();
+      expect(result.dcSuccess).toBeUndefined();
+    });
+
+    it('includes saveDc from attack when present', async () => {
+      const attack = { ...mockAttack, saveDc: 15 };
+      const result = await buildAttackContextSync(attack, mockStats, 'camp', 'normal', {});
+
+      expect(result.saveDc).toBe(15);
+    });
+
+    it('produces NaN for saveDc when not present on attack and no sorcery bonus', async () => {
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.saveDc).toBeNaN();
+    });
+  });
+
+  describe('antimagic field early return', () => {
+    it('returns auto miss when attacker is affected by antimagic field and attack is not a weapon attack', async () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (name === 'campaign' && key === 'targetEffects') return [
+          { effect: 'antimagic_field', target: 'Fighter1' },
+        ];
+        return undefined;
+      });
+
+      const spellAttack = { ...mockAttack, isWeaponAttack: false, weaponType: undefined };
+      const result = await buildAttackContextSync(spellAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.isAutoMiss).toBe(true);
+      expect(result.rangeReason).toBe('Antimagic Field blocks non-weapon attacks');
+      expect(result.notice).toBe('Attack blocked by Antimagic Field — only weapon attacks are allowed.');
+      expect(result.forcedMode).toBeUndefined();
+      expect(result.hitBonus).toBe(0);
+      expect(result.isMelee).toBe(false);
+      expect(result.isWeaponAttack).toBe(false);
+    });
+
+    it('returns auto miss when target is affected by antimagic field and attack is not a weapon attack', async () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (name === 'campaign' && key === 'targetEffects') return [
+          { effect: 'antimagic_field', target: 'Orc' },
+        ];
+        return undefined;
+      });
+
+      const spellAttack = { ...mockAttack, isWeaponAttack: false, weaponType: undefined };
+      const result = await buildAttackContextSync(spellAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.isAutoMiss).toBe(true);
+      expect(result.rangeReason).toBe('Antimagic Field blocks non-weapon attacks');
+    });
+
+    it('does not trigger antimagic field block for weapon attacks', async () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (name === 'campaign' && key === 'targetEffects') return [
+          { effect: 'antimagic_field', target: 'Fighter1' },
+        ];
+        return undefined;
+      });
+
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.isAutoMiss).toBeUndefined();
+    });
+
+    it('does not trigger antimagic field when no one is affected', async () => {
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.isAutoMiss).toBeUndefined();
+    });
+
+    it('does not trigger antimagic field when targetName is null', async () => {
+      buildBaseAttackContext.mockResolvedValue({
+        target: null,
+        targetName: null,
+        resistanceNotice: null,
+      });
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (name === 'campaign' && key === 'targetEffects') return [
+          { effect: 'antimagic_field', target: 'Fighter1' },
+        ];
+        return undefined;
+      });
+
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.isAutoMiss).toBeUndefined();
+    });
+  });
+
+  describe('resilient sphere early return', () => {
+    it('returns auto miss when attacker is enclosed in resilient sphere', async () => {
+      isResilientSphereActive.mockReturnValue(true);
+
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.isAutoMiss).toBe(true);
+      expect(result.rangeReason).toBe('Resilient Sphere blocks attacks — nothing passes through the barrier');
+      expect(result.notice).toBe('Attack blocked by Resilient Sphere — nothing can pass through the barrier.');
+      expect(result.forcedMode).toBeUndefined();
+      expect(result.hitBonus).toBe(0);
+    });
+
+    it('returns auto miss when target is enclosed in resilient sphere', async () => {
+      isResilientSphereActive.mockImplementation((name) => name === 'Orc');
+
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.isAutoMiss).toBe(true);
+      expect(result.rangeReason).toBe('Resilient Sphere blocks attacks — nothing passes through the barrier');
+    });
+
+    it('does not trigger early return when no one is in a sphere', async () => {
+      isResilientSphereActive.mockReturnValue(false);
+
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.isAutoMiss).toBeUndefined();
+      expect(result.forcedMode).toBeUndefined();
+    });
+
+    it('returns auto miss when both attacker and target are in spheres', async () => {
+      isResilientSphereActive.mockReturnValue(true);
+
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      expect(result.isAutoMiss).toBe(true);
+    });
+  });
+
+  describe('result structure completeness', () => {
+    it('returns all expected top-level fields in the result', async () => {
+      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+      const expectedFields = [
+        'damageType', 'resistanceNotice', 'hunterLoreNotice', 'targetName',
+        'saveDc', 'saveType', 'dcSuccess', 'attackerName', 'forcedMode',
+        'advantageReason', 'autoDamageFormula', 'autoDamageName', 'ramActive',
+        'isMelee', 'isWeaponAttack', 'criticalRange', 'hitBonus', 'hitBonusFormula',
+        'sacredWeaponBonus', 'defensiveDuelistBonus', 'baitAndSwitchBonus',
+        'strokeOfLuck', 'boonOfCombatProwess', 'boonOfFate', 'isPsychicBlade',
+        'playerStats', 'grazeDamage', 'grazeAbilityName', 'grazeAbilityMod',
+        'weaponType', 'weaponName', 'sneakAttackDice',
+      ];
+
+      for (const field of expectedFields) {
+        expect(result).toHaveProperty(field);
+      }
     });
   });
 });

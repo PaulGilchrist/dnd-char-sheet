@@ -1,7 +1,7 @@
-
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ── Mocks ────────────────────────────────────────────────────────
+// ── Mocks BEFORE imports ─────────────────────────────────────────
 
 vi.mock('../../common/buffToggle.js', () => ({
   toggleBuff: vi.fn(),
@@ -47,14 +47,12 @@ function makeAction(overrides = {}) {
   };
 }
 
-function resetMocks() {
-  vi.clearAllMocks();
-}
-
 // ── Tests ────────────────────────────────────────────────────────
 
 describe('buffAllyHandler.handle', () => {
-  beforeEach(resetMocks);
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   // ── Activation / deactivation ──────────────────────────────────
 
@@ -70,7 +68,9 @@ describe('buffAllyHandler.handle', () => {
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.name).toBe('Tactical Warning');
       expect(result.payload.automationType).toBe('buff_ally');
-      expect(result.payload.description).toContain('activated');
+      expect(result.payload.description).toBe(
+        'Tactical Warning activated — allies have Advantage on attack rolls and saving throws until the start of your next turn',
+      );
       expect(result.payload.automation).toEqual(action.automation);
     });
 
@@ -82,7 +82,11 @@ describe('buffAllyHandler.handle', () => {
       const result = await handle(action, ps, campaignName, null);
 
       expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Tactical Warning');
       expect(result.payload.description).toBe('Tactical Warning expired');
+      expect(result.payload.automation).toEqual(action.automation);
+      expect(expirations.addExpiration).not.toHaveBeenCalled();
     });
 
     it('registers expiration only on activation, not deactivation', async () => {
@@ -101,7 +105,7 @@ describe('buffAllyHandler.handle', () => {
       expect(expirations.addExpiration).not.toHaveBeenCalled();
     });
 
-    it('passes buffExpression as effect when both are provided, falling back to effect when buffExpression is absent', async () => {
+    it('passes buffExpression as effect when provided', async () => {
       const ps = makePlayerStats();
       const action = makeAction({
         effect: 'my_effect',
@@ -117,10 +121,17 @@ describe('buffAllyHandler.handle', () => {
         expect.objectContaining({ effect: 'custom_expression' }),
         campaignName,
       );
+    });
 
-      resetMocks();
+    it('falls back to effect when buffExpression is absent', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({
+        effect: 'my_effect',
+        buffExpression: undefined,
+      });
       buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-      await handle({ ...action, automation: { ...action.automation, buffExpression: undefined } }, ps, campaignName, null);
+
+      await handle(action, ps, campaignName, null);
 
       expect(buffToggle.toggleBuff).toHaveBeenCalledWith(
         'Fighter',
@@ -143,6 +154,7 @@ describe('buffAllyHandler.handle', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Tactical Warning');
       expect(result.payload.description).toContain('cannot be used again until a long rest');
       expect(result.payload.automation).toEqual(action.automation);
       expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
@@ -160,7 +172,7 @@ describe('buffAllyHandler.handle', () => {
       expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
     });
 
-    it('includes Rage recharge hint for long_rest_or_expend_rage, omits it for other recharge values', async () => {
+    it('includes Rage recharge hint for long_rest_or_expend_rage', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ usesMax: 1, recharge: 'long_rest_or_expend_rage' });
       useRuntimeState.getRuntimeValue.mockReturnValue(0);
@@ -168,12 +180,16 @@ describe('buffAllyHandler.handle', () => {
       const result = await handle(action, ps, campaignName, null);
 
       expect(result.payload.description).toContain('expend one use of Rage');
+    });
 
-      resetMocks();
+    it('omits Rage hint for other recharge values', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ usesMax: 1, recharge: 'short_rest' });
       useRuntimeState.getRuntimeValue.mockReturnValue(0);
-      const result2 = await handle(makeAction({ usesMax: 1, recharge: 'short_rest' }), ps, campaignName, null);
 
-      expect(result2.payload.description).not.toContain('Rage');
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.description).not.toContain('Rage');
     });
   });
 
@@ -194,7 +210,12 @@ describe('buffAllyHandler.handle', () => {
         0,
         campaignName,
       );
-      expect(buffToggle.toggleBuff).toHaveBeenCalled();
+      expect(buffToggle.toggleBuff).toHaveBeenCalledWith(
+        'Fighter',
+        'Tactical Warning',
+        expect.any(Object),
+        campaignName,
+      );
     });
 
     it('uses custom resourceKey when provided', async () => {
@@ -232,7 +253,7 @@ describe('buffAllyHandler.handle', () => {
       );
     });
 
-    it('treats null or undefined runtime value as maxUses before decrementing', async () => {
+    it('treats null runtime value as maxUses before decrementing', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ usesMax: 3 });
       buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
@@ -246,11 +267,17 @@ describe('buffAllyHandler.handle', () => {
         2,
         campaignName,
       );
+    });
+
+    it('treats undefined runtime value as maxUses before decrementing', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ usesMax: 3 });
+      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
 
       useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
       await handle(action, ps, campaignName, null);
 
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenLastCalledWith(
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
         'Fighter',
         'tacticalwarningUses',
         2,
@@ -289,6 +316,32 @@ describe('buffAllyHandler.handle', () => {
         ]),
         campaignName,
       );
+    });
+  });
+
+  // ── Popup content ──────────────────────────────────────────────
+
+  describe('popup content', () => {
+    it('includes full activation description with Advantage details', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.description).toBe(
+        'Tactical Warning activated — allies have Advantage on attack rolls and saving throws until the start of your next turn',
+      );
+    });
+
+    it('includes automationType matching action automation type', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ type: 'buff_ally' });
+      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.automationType).toBe('buff_ally');
     });
   });
 });

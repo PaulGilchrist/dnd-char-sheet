@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -60,6 +61,7 @@ function resetMocks() {
   runtimeState.setRuntimeValue.mockClear();
   expirations.addExpiration.mockClear();
   concentrationService.addConcentration.mockClear();
+  combatData.getCombatSummary.mockClear();
   logService.addEntry.mockClear();
 }
 
@@ -90,6 +92,34 @@ describe('holyAuraHandler.handle', () => {
       expect(result.payload.name).toBe('Holy Aura');
       expect(result.payload.creatureTargets).toEqual(['TestHero', 'Ally1', 'Ally2']);
       expect(result.payload.automation).toEqual({ type: 'holy_aura' });
+    });
+
+    it('returns holy_aura_target_selection popup with empty creature list when combat has no creatures', async () => {
+      combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+
+      const ps = makePlayerStats();
+      const action = makeAction();
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('holy_aura_target_selection');
+      expect(result.payload.creatureTargets).toEqual([]);
+    });
+
+    it('returns automation payload with empty object when action.automation is undefined', async () => {
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'TestHero', type: 'Humanoid' }],
+      });
+
+      const ps = makePlayerStats();
+      const action = { name: 'Holy Aura' };
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('holy_aura_target_selection');
+      expect(result.payload.automation).toEqual({});
     });
 
     it('returns error popup when no combat context', async () => {
@@ -140,6 +170,18 @@ describe('holyAuraHandler.applyHolyAura', () => {
     expect(result.payload.targetNames).toEqual(targets);
   });
 
+  it('applies buff to single target and returns success popup', async () => {
+    const ps = makePlayerStats({ name: 'Paladin' });
+    const action = makeAction();
+    const targets = ['Ally1'];
+
+    const result = await applyHolyAura(action, ps, campaignName, null, targets);
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.targetCount).toBe(1);
+    expect(result.payload.targetNames).toEqual(['Ally1']);
+  });
+
   it('adds Holy Aura buff to each target\'s activeBuffs', async () => {
     const ps = makePlayerStats({ name: 'Cleric' });
     const action = makeAction();
@@ -181,6 +223,28 @@ describe('holyAuraHandler.applyHolyAura', () => {
     );
   });
 
+  it('uses default auraRange of 30 when action.automation has no auraRange', async () => {
+    const ps = makePlayerStats({ name: 'Cleric' });
+    const action = makeAction();
+    const targets = ['Ally1'];
+
+    runtimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+
+    await applyHolyAura(action, ps, campaignName, null, targets);
+
+    const buffCalls = runtimeState.setRuntimeValue.mock.calls.filter(
+      call => call[1] === 'activeBuffs',
+    );
+    expect(buffCalls[0][2]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ auraRange: 30 }),
+      ]),
+    );
+  });
+
   it('does not duplicate buff if already present', async () => {
     const ps = makePlayerStats({ name: 'Cleric' });
     const action = makeAction();
@@ -193,11 +257,33 @@ describe('holyAuraHandler.applyHolyAura', () => {
 
     await applyHolyAura(action, ps, campaignName, null, targets);
 
-    // Should not call setRuntimeValue for activeBuffs since the buff already exists
     const buffCalls = runtimeState.setRuntimeValue.mock.calls.filter(
       call => call[1] === 'activeBuffs'
     );
     expect(buffCalls).toHaveLength(0);
+  });
+
+  it('handles undefined activeBuffs the same as null', async () => {
+    const ps = makePlayerStats({ name: 'Cleric' });
+    const action = makeAction();
+    const targets = ['Ally1'];
+
+    runtimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return undefined;
+      return null;
+    });
+
+    await applyHolyAura(action, ps, campaignName, null, targets);
+
+    const buffCalls = runtimeState.setRuntimeValue.mock.calls.filter(
+      call => call[1] === 'activeBuffs',
+    );
+    expect(buffCalls).toHaveLength(1);
+    expect(buffCalls[0][2]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Holy Aura', effect: 'holy_aura' }),
+      ]),
+    );
   });
 
   it('registers expiration for each target', async () => {
@@ -345,7 +431,7 @@ describe('holyAuraHandler.applyHolyAura', () => {
     );
   });
 
-  it('logs to campaign for each target', async () => {
+  it('logs to campaign for each target with full entry structure', async () => {
     const ps = makePlayerStats({ name: 'Cleric' });
     const action = makeAction();
     const targets = ['Ally1', 'Ally2'];
@@ -362,6 +448,8 @@ describe('holyAuraHandler.applyHolyAura', () => {
         characterName: 'Cleric',
         spellName: 'Holy Aura',
         targetName: 'Ally1',
+        effects: ['Advantage on all saving throws', 'Other creatures have Disadvantage on attack rolls against them'],
+        timestamp: expect.any(Number),
       }),
     );
     expect(logService.addEntry).toHaveBeenCalledWith(
@@ -371,6 +459,8 @@ describe('holyAuraHandler.applyHolyAura', () => {
         characterName: 'Cleric',
         spellName: 'Holy Aura',
         targetName: 'Ally2',
+        effects: ['Advantage on all saving throws', 'Other creatures have Disadvantage on attack rolls against them'],
+        timestamp: expect.any(Number),
       }),
     );
   });
@@ -437,6 +527,22 @@ describe('holyAuraHandler.getHolyAuraTargets', () => {
     expect(result).toEqual([]);
   });
 
+  it('returns an empty array when stored value is a string', () => {
+    runtimeState.getRuntimeValue.mockReturnValue('not-an-array');
+
+    const result = getHolyAuraTargets('TestHero', campaignName);
+
+    expect(result).toEqual([]);
+  });
+
+  it('returns an empty array when stored value is a number', () => {
+    runtimeState.getRuntimeValue.mockReturnValue(42);
+
+    const result = getHolyAuraTargets('TestHero', campaignName);
+
+    expect(result).toEqual([]);
+  });
+
   it('uses the playerName and campaignName parameters correctly', () => {
     runtimeState.getRuntimeValue.mockReturnValue([]);
 
@@ -477,5 +583,11 @@ describe('holyAuraHandler.isHolyAuraActive', () => {
     runtimeState.getRuntimeValue.mockReturnValue(null);
 
     expect(isHolyAuraActive('Target', 'Cleric', campaignName)).toBe(false);
+  });
+
+  it('returns false when targetName is an empty string', () => {
+    runtimeState.getRuntimeValue.mockReturnValue(['Ally1', 'Ally2']);
+
+    expect(isHolyAuraActive('', 'Cleric', campaignName)).toBe(false);
   });
 });

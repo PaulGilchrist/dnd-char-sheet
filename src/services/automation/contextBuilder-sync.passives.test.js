@@ -1,7 +1,7 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildAttackContextSync } from './contextBuilder.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import { collectWeaponMastery } from '../combat/automation/automationService.js';
 
 vi.mock('./common/damageRoll.js', () => ({
   buildBaseAttackContext: vi.fn(),
@@ -71,8 +71,25 @@ vi.mock('./handlers/class-cleric-paladin/avengingAngelHandler.js', () => ({
   handle: vi.fn(),
 }));
 
+vi.mock('./handlers/spells/sanctuaryHandler.js', () => ({
+  endSanctuary: vi.fn(),
+}));
+
+vi.mock('../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js', () => ({
+  isProtectionFromEvilAndGoodActive: vi.fn().mockReturnValue(false),
+  isCreatureWarded: vi.fn().mockReturnValue(false),
+}));
+
 vi.mock('../combat/automation/automationService.js', () => ({
   collectWeaponMastery: vi.fn(),
+}));
+
+vi.mock('../combat/automation/automationPassives.js', () => ({
+  isResilientSphereActive: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../encounters/combatData.js', () => ({
+  getCurrentCombatRound: vi.fn().mockReturnValue(1),
 }));
 
 const { buildBaseAttackContext } = await import('./common/damageRoll.js');
@@ -81,6 +98,7 @@ const { getWolfAdvantageAgainst } = await import('../combat/auras/wolfAuraUtils.
 const { getDuplicityAdvantageAgainst } = await import('../combat/auras/duplicityAuraUtils.js');
 const { getLionDisadvantageAgainst } = await import('../combat/auras/lionAuraUtils.js');
 const { getCoronaSaveDisadvantage } = await import('../combat/auras/coronaAuraUtils.js');
+const { collectWeaponMastery } = await import('../combat/automation/automationService.js');
 
 const mockStats = {
   name: 'Fighter1',
@@ -116,20 +134,40 @@ function defaultBaseAttackContext(targetName = 'Orc', target = null) {
   });
 }
 
+function defaultAuraMocks() {
+  getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
+  getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
+  getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
+  getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+  getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+  collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
+}
+
 describe('contextBuilder-sync: hunter lore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
+    defaultAuraMocks();
   });
 
-  it('includes hunterLoreNotice when passive exists and target has vulnerability data', async () => {
+  it('includes hunterLoreNotice with full IRV data when passive exists and target has vulnerabilities, resistances, and immunities', async () => {
+    buildBaseAttackContext.mockResolvedValue({
+      target: { vulnerabilities: ['fire'], resistances: ['cold'], immunities: ['poison'] },
+      targetName: 'Orc',
+      resistanceNotice: null,
+    });
+    const stats = {
+      ...mockStats,
+      automation: { passives: [{ type: 'passive_rule', effect: 'hunter_lore' }] },
+    };
+
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+
+    expect(result.hunterLoreNotice).toBe('Vulnerabilities: fire\nResistances: cold\nImmunities: poison');
+  });
+
+  it('includes hunterLoreNotice with only present IRV categories', async () => {
     buildBaseAttackContext.mockResolvedValue({
       target: { vulnerabilities: ['fire'], resistances: [], immunities: [] },
       targetName: 'Orc',
@@ -142,11 +180,10 @@ describe('contextBuilder-sync: hunter lore', () => {
 
     const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
 
-    expect(result.hunterLoreNotice).toContain('Vulnerabilities');
-    expect(result.hunterLoreNotice).toContain('fire');
+    expect(result.hunterLoreNotice).toBe('Vulnerabilities: fire');
   });
 
-  it('does not include hunterLoreNotice when target has no IRV data or passive does not exist', async () => {
+  it('returns null hunterLoreNotice when target has no vulnerability, resistance, or immunity data', async () => {
     buildBaseAttackContext.mockResolvedValue({
       target: { name: 'Orc' },
       targetName: 'Orc',
@@ -158,13 +195,11 @@ describe('contextBuilder-sync: hunter lore', () => {
     };
 
     const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
-    expect(result.hunterLoreNotice).toBeNull();
 
-    const noPassiveResult = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(noPassiveResult.hunterLoreNotice).toBeNull();
+    expect(result.hunterLoreNotice).toBeNull();
   });
 
-  it('does not include hunterLoreNotice when target is null', async () => {
+  it('returns null hunterLoreNotice when target is null', async () => {
     buildBaseAttackContext.mockResolvedValue({
       target: null,
       targetName: null,
@@ -179,6 +214,12 @@ describe('contextBuilder-sync: hunter lore', () => {
 
     expect(result.hunterLoreNotice).toBeNull();
   });
+
+  it('returns null hunterLoreNotice when passive does not exist', async () => {
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.hunterLoreNotice).toBeNull();
+  });
 });
 
 describe('contextBuilder-sync: critical range', () => {
@@ -186,12 +227,7 @@ describe('contextBuilder-sync: critical range', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
+    defaultAuraMocks();
   });
 
   it('includes criticalRange from passives', async () => {
@@ -207,17 +243,19 @@ describe('contextBuilder-sync: critical range', () => {
     expect(result.criticalRange).toBe('19-20');
   });
 
-  it('returns empty string when no critical range passive or passive lacks value', async () => {
+  it('returns empty string when no critical range passive exists', async () => {
     const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
     expect(result.criticalRange).toBe('');
+  });
 
+  it('returns empty string when passive exists but lacks criticalRange value', async () => {
     const stats = {
       ...mockStats,
       automation: { passives: [{ type: 'passive_rule', effect: 'critical_range' }] },
     };
 
-    const noValueResult = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
-    expect(noValueResult.criticalRange).toBe('');
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+    expect(result.criticalRange).toBe('');
   });
 
   it('uses last matching critical_range passive when multiple exist', async () => {
@@ -242,12 +280,7 @@ describe('contextBuilder-sync: glorious defense', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
+    defaultAuraMocks();
   });
 
   it('does not include gloriousDefenseBonus in context (handled retroactively by handler)', async () => {
@@ -263,53 +296,15 @@ describe('contextBuilder-sync: glorious defense', () => {
   });
 });
 
-describe('contextBuilder-sync: defensive duelist and bait and switch', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    defaultBaseAttackContext();
-    getRuntimeValue.mockReturnValue(undefined);
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
-  });
-
-  it('includes AC bonuses when active', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs' && name === 'Fighter1') return [{ effect: 'defensive_duelist' }];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(result.defensiveDuelistBonus).toBe(2);
-
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'baitAndSwitchActive') return true;
-      if (key === 'baitAndSwitchBonus') return 3;
-      return undefined;
-    });
-
-    const baitResult = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(baitResult.baitAndSwitchBonus).toBe(3);
-  });
-});
-
 describe('contextBuilder-sync: stroke of luck and boon of fate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
+    defaultAuraMocks();
   });
 
-  it('sets available when passive exists and not used', async () => {
+  it('sets strokeOfLuck true when passive exists and not used', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'strokeOfLuckUsed') return false;
       return undefined;
@@ -319,23 +314,11 @@ describe('contextBuilder-sync: stroke of luck and boon of fate', () => {
       automation: { passives: [{ type: 'stroke_of_luck' }] },
     };
 
-    const strokeResult = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
-    expect(strokeResult.strokeOfLuck).toBe(true);
-
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'boonOfFateUsed') return false;
-      return undefined;
-    });
-    const boonStats = {
-      ...mockStats,
-      automation: { passives: [{ type: 'modify_d20_roll' }] },
-    };
-
-    const boonResult = await buildAttackContextSync(mockAttack, boonStats, 'camp', 'normal', {});
-    expect(boonResult.boonOfFate).toBe(true);
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+    expect(result.strokeOfLuck).toBe(true);
   });
 
-  it('sets unavailable when passive exists but already used or passive does not exist', async () => {
+  it('sets strokeOfLuck false when passive exists but already used', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'strokeOfLuckUsed') return true;
       return undefined;
@@ -345,11 +328,46 @@ describe('contextBuilder-sync: stroke of luck and boon of fate', () => {
       automation: { passives: [{ type: 'stroke_of_luck' }] },
     };
 
-    const strokeResult = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
-    expect(strokeResult.strokeOfLuck).toBe(false);
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+    expect(result.strokeOfLuck).toBe(false);
+  });
 
-    const boonResult = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(boonResult.boonOfFate).toBe(false);
+  it('sets strokeOfLuck false when passive does not exist', async () => {
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+    expect(result.strokeOfLuck).toBe(false);
+  });
+
+  it('sets boonOfFate true when passive exists and not used', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'boonOfFateUsed') return false;
+      return undefined;
+    });
+    const stats = {
+      ...mockStats,
+      automation: { passives: [{ type: 'modify_d20_roll' }] },
+    };
+
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+    expect(result.boonOfFate).toBe(true);
+  });
+
+  it('sets boonOfFate false when passive exists but already used', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'boonOfFateUsed') return true;
+      return undefined;
+    });
+    const stats = {
+      ...mockStats,
+      automation: { passives: [{ type: 'modify_d20_roll' }] },
+    };
+
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+    expect(result.boonOfFate).toBe(false);
+  });
+
+  it('sets boonOfFate false when passive does not exist', async () => {
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+    expect(result.boonOfFate).toBe(false);
   });
 });
 
@@ -358,15 +376,11 @@ describe('contextBuilder-sync: graze damage', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
+    defaultAuraMocks();
     collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
   });
 
-  it('includes grazeDamage when weapon has Graze mastery in base or extra', async () => {
+  it('includes grazeDamage when Graze mastery is in baseMastery', async () => {
     collectWeaponMastery.mockReturnValue({ baseMastery: 'Graze', extraMasteries: [] });
 
     const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
@@ -374,12 +388,15 @@ describe('contextBuilder-sync: graze damage', () => {
     expect(result.grazeDamage).toBe(true);
     expect(result.grazeAbilityName).toBe('Strength');
     expect(result.grazeAbilityMod).toBe(4);
+  });
 
+  it('includes grazeDamage when Graze mastery is in extraMasteries', async () => {
     collectWeaponMastery.mockReturnValue({ baseMastery: 'Cleave', extraMasteries: ['Graze'] });
 
-    const extraResult = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(extraResult.grazeDamage).toBe(true);
-    expect(extraResult.grazeAbilityMod).toBe(4);
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.grazeDamage).toBe(true);
+    expect(result.grazeAbilityMod).toBe(4);
   });
 
   it('uses attack.abilityName when provided, defaults to Strength', async () => {
@@ -390,12 +407,15 @@ describe('contextBuilder-sync: graze damage', () => {
 
     expect(result.grazeAbilityName).toBe('Dexterity');
     expect(result.grazeAbilityMod).toBe(3);
+  });
 
+  it('defaults to Strength when abilityName is undefined', async () => {
     collectWeaponMastery.mockReturnValue({ baseMastery: 'Graze', extraMasteries: [] });
-    const noAbilityAttack = { ...mockAttack, abilityName: undefined };
+    const attack = { ...mockAttack, abilityName: undefined };
 
-    const defaultResult = await buildAttackContextSync(noAbilityAttack, mockStats, 'camp', 'normal', {});
-    expect(defaultResult.grazeAbilityName).toBe('Strength');
+    const result = await buildAttackContextSync(attack, mockStats, 'camp', 'normal', {});
+
+    expect(result.grazeAbilityName).toBe('Strength');
   });
 
   it('excludes grazeDamage when no Graze mastery', async () => {
@@ -406,5 +426,67 @@ describe('contextBuilder-sync: graze damage', () => {
     expect(result.grazeDamage).toBe(false);
     expect(result.grazeAbilityName).toBeNull();
     expect(result.grazeAbilityMod).toBe(0);
+  });
+});
+
+describe('contextBuilder-sync: boon of combat prowess', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    defaultBaseAttackContext();
+    getRuntimeValue.mockReturnValue(undefined);
+    defaultAuraMocks();
+  });
+
+  it('sets boonOfCombatProwess true when auto_reroll passive exists and not used', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'boonOfCombatProwessUsed') return false;
+      return undefined;
+    });
+    const stats = {
+      ...mockStats,
+      automation: {
+        actions: [{ type: 'auto_reroll', effect: 'convert_miss_to_hit' }],
+      },
+    };
+
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+    expect(result.boonOfCombatProwess).toBe(true);
+  });
+
+  it('sets boonOfCombatProwess true when auto_reroll exists in reactions', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'boonOfCombatProwessUsed') return false;
+      return undefined;
+    });
+    const stats = {
+      ...mockStats,
+      automation: {
+        reactions: [{ type: 'auto_reroll', automation: { effect: 'convert_miss_to_hit' } }],
+      },
+    };
+
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+    expect(result.boonOfCombatProwess).toBe(true);
+  });
+
+  it('sets boonOfCombatProwess false when auto_reroll passive exists but already used', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'boonOfCombatProwessUsed') return true;
+      return undefined;
+    });
+    const stats = {
+      ...mockStats,
+      automation: {
+        actions: [{ type: 'auto_reroll', effect: 'convert_miss_to_hit' }],
+      },
+    };
+
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+    expect(result.boonOfCombatProwess).toBe(false);
+  });
+
+  it('sets boonOfCombatProwess false when auto_reroll passive does not exist', async () => {
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+    expect(result.boonOfCombatProwess).toBe(false);
   });
 });

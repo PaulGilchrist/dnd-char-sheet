@@ -1,16 +1,9 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../dice/diceRoller.js', () => ({
-  rollExpression: vi.fn(),
-}));
-
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('./tempHpService.js', () => ({
-  setTempHp: vi.fn(),
-}));
+vi.mock('../../../dice/diceRoller.js', () => ({ rollExpression: vi.fn() }));
+vi.mock('../../../ui/logService.js', () => ({ addEntry: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./tempHpService.js', () => ({ setTempHp: vi.fn() }));
 
 import { handle } from './falseLifeHandler.js';
 import * as diceRoller from '../../../dice/diceRoller.js';
@@ -35,6 +28,10 @@ function successRoll(total, formula) {
   return { total, rolls: [], modifier: 0, formula };
 }
 
+function failureRoll() {
+  return null;
+}
+
 describe('falseLifeHandler.handle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -42,7 +39,25 @@ describe('falseLifeHandler.handle', () => {
   });
 
   describe('temp HP expression selection', () => {
-    it('uses default 2d4+4 when no expression is provided', async () => {
+    it('uses default 2d4+4 when automation is undefined', async () => {
+      const ps = makePlayerStats();
+      const action = { name: 'False Life' };
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
+    });
+
+    it('uses default 2d4+4 when automation is null', async () => {
+      const ps = makePlayerStats();
+      const action = { name: 'False Life', automation: null };
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
+    });
+
+    it('uses default 2d4+4 when tempHpExpression is missing from automation', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ automation: {} });
 
@@ -58,31 +73,6 @@ describe('falseLifeHandler.handle', () => {
       await handle(action, ps, CAMPAIGN_NAME, null);
 
       expect(diceRoller.rollExpression).toHaveBeenCalledWith('3d6+2');
-    });
-
-    it('overrides with spell.heal_at_slot_level when slot level matches', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({
-        spell: { heal_at_slot_level: { 2: '4d6+4' } },
-        spellSlotLevel: 2,
-      });
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('4d6+4');
-    });
-
-    it('falls back to automation.tempHpExpression when no slot-level match', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({
-        automation: { tempHpExpression: '2d8+3' },
-        spell: { heal_at_slot_level: { 2: '4d6+4' } },
-        spellSlotLevel: 1,
-      });
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d8+3');
     });
 
     it('uses spell.level when spellSlotLevel is absent', async () => {
@@ -108,12 +98,34 @@ describe('falseLifeHandler.handle', () => {
       expect(diceRoller.rollExpression).toHaveBeenCalledWith('5d6+5');
     });
 
-    it('falls back to default when spellSlotLevel does not match any key', async () => {
+    it('falls back to default when spellSlotLevel does not match any heal_at_slot_level key', async () => {
       const ps = makePlayerStats();
       const action = makeAction({
         spell: { heal_at_slot_level: { 5: '10d6+10' } },
         spellSlotLevel: 1,
       });
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
+    });
+
+    it('falls back to automation.tempHpExpression when spellSlotLevel does not match', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({
+        spell: { heal_at_slot_level: { 2: '4d6+4' } },
+        spellSlotLevel: 1,
+        automation: { tempHpExpression: '2d8+3' },
+      });
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d8+3');
+    });
+
+    it('uses default when spell is null', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ spell: null });
 
       await handle(action, ps, CAMPAIGN_NAME, null);
 
@@ -136,7 +148,7 @@ describe('falseLifeHandler.handle', () => {
     });
 
     it('does not call setTempHp when roll fails', async () => {
-      diceRoller.rollExpression.mockReturnValue(null);
+      diceRoller.rollExpression.mockReturnValue(failureRoll());
 
       await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
 
@@ -145,11 +157,6 @@ describe('falseLifeHandler.handle', () => {
   });
 
   describe('campaign logging', () => {
-    beforeEach(() => {
-      vi.clearAllMocks();
-      diceRoller.rollExpression.mockReturnValue(successRoll(10, '2d4+4'));
-    });
-
     it('logs hp_change entry with isTempHp true on success', async () => {
       const ps = makePlayerStats({ name: 'Gandalf' });
 
@@ -160,7 +167,7 @@ describe('falseLifeHandler.handle', () => {
         expect.objectContaining({
           type: 'hp_change',
           targetName: 'Gandalf',
-          delta: 10,
+          delta: 8,
           isTempHp: true,
           sourceName: 'Gandalf',
           note: 'False Life (2d4+4)',
@@ -193,7 +200,7 @@ describe('falseLifeHandler.handle', () => {
     });
 
     it('does not log when roll fails', async () => {
-      diceRoller.rollExpression.mockReturnValue(null);
+      diceRoller.rollExpression.mockReturnValue(failureRoll());
 
       await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
 
@@ -208,7 +215,7 @@ describe('falseLifeHandler.handle', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('Gained 10 temporary hit points');
+      expect(result.payload.description).toContain('Gained 8 temporary hit points');
       expect(tempHpService.setTempHp).toHaveBeenCalled();
     });
   });
@@ -233,11 +240,31 @@ describe('falseLifeHandler.handle', () => {
 
       expect(result.payload.automationType).toBe('false_life');
     });
+
+    it('has undefined automationType when auto.type is absent', async () => {
+      const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
+
+      expect(result.payload.automationType).toBeUndefined();
+    });
+
+    it('includes automation field in failure popup', async () => {
+      diceRoller.rollExpression.mockReturnValue(failureRoll());
+      const result = await handle(
+        makeAction({ automation: { tempHpExpression: 'invalid' } }),
+        makePlayerStats(),
+        CAMPAIGN_NAME,
+        null,
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.automation).toEqual({ tempHpExpression: 'invalid' });
+    });
   });
 
   describe('roll failure', () => {
     it('returns info popup with error description when roll fails', async () => {
-      diceRoller.rollExpression.mockReturnValue(null);
+      diceRoller.rollExpression.mockReturnValue(failureRoll());
       const result = await handle(
         makeAction({ automation: { tempHpExpression: 'invalid' } }),
         makePlayerStats(),
@@ -252,62 +279,6 @@ describe('falseLifeHandler.handle', () => {
         'False Life: Could not roll temp HP (invalid).',
       );
       expect(tempHpService.setTempHp).not.toHaveBeenCalled();
-    });
-
-    it('does not call setTempHp or addEntry on roll failure', async () => {
-      diceRoller.rollExpression.mockReturnValue(null);
-
-      await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
-
-      expect(tempHpService.setTempHp).not.toHaveBeenCalled();
-      expect(logService.addEntry).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('missing optional fields', () => {
-    it('uses default expression when action.automation is undefined', async () => {
-      const ps = makePlayerStats();
-      const action = { name: 'False Life' };
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
-    });
-
-    it('uses default expression when action.spell is undefined', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
-    });
-
-    it('works with action.automation being null', async () => {
-      const ps = makePlayerStats();
-      const action = { name: 'False Life', automation: null };
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
-    });
-
-    it('works with action.spell being null', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({ spell: null });
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
-    });
-
-    it('uses spell.level when spellSlotLevel is undefined and spell.level exists', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({ spell: { level: 2, heal_at_slot_level: { 2: '3d6+6' } } });
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('3d6+6');
     });
   });
 });

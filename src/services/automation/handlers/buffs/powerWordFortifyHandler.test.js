@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ─────────────────────────────────────────
@@ -87,36 +88,24 @@ describe('powerWordFortifyHandler', () => {
   // ── handle: temp HP expression resolution ────────────────────
 
   describe('temp HP expression resolution', () => {
-    it('defaults to 120 when no tempHpExpression provided (plain numeric, no dice roll)', async () => {
-      // '120' does not match dice regex, so parseInt is used directly
+    it('defaults to 120 when no tempHpExpression provided', async () => {
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(diceRoller.rollExpression).not.toHaveBeenCalled();
       expect(result.payload.totalTempHp).toBe(120);
+      expect(result.payload.tempHpExpression).toBe('120');
     });
 
-    it('uses a dice expression from automation', async () => {
+    it('rolls dice for dice expressions and returns the total in payload', async () => {
       diceRoller.rollExpression.mockReturnValue({ total: 45, rolls: [20, 20, 5], modifier: 0 });
 
-      await handle(makeAction({ tempHpExpression: '3d6+9' }), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction({ tempHpExpression: '3d6+9' }), makePlayerStats(), campaignName, null);
 
       expect(diceRoller.rollExpression).toHaveBeenCalledWith('3d6+9');
+      expect(result.payload.totalTempHp).toBe(45);
     });
 
-    it('replaces spellSlotLevel in expression then parses numerically', async () => {
-      // 'spellSlotLevel * 10' → '7 * 10' → parseInt returns 7 (stops at space)
-      const result = await handle(
-        makeAction({ tempHpExpression: 'spellSlotLevel * 10' }),
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.payload.totalTempHp).toBe(7);
-    });
-
-    it('uses auto.slotLevel when provided instead of player level', async () => {
-      // 'spellSlotLevel * 10' with slotLevel=8 → '8 * 10' → parseInt returns 8
+    it('substitutes spellSlotLevel with auto.slotLevel when provided', async () => {
       const result = await handle(
         makeAction({ tempHpExpression: 'spellSlotLevel * 10', slotLevel: 8 }),
         makePlayerStats(),
@@ -127,7 +116,7 @@ describe('powerWordFortifyHandler', () => {
       expect(result.payload.totalTempHp).toBe(8);
     });
 
-    it('falls back to playerStats.level when no auto.slotLevel', async () => {
+    it('substitutes spellSlotLevel with playerStats.level when no auto.slotLevel', async () => {
       const result = await handle(
         makeAction({ tempHpExpression: 'spellSlotLevel * 10' }),
         makePlayerStats({ level: 7 }),
@@ -138,7 +127,7 @@ describe('powerWordFortifyHandler', () => {
       expect(result.payload.totalTempHp).toBe(7);
     });
 
-    it('falls back to level 7 when no slotLevel and no player level', async () => {
+    it('substitutes spellSlotLevel with default level 7 when no slotLevel or player level', async () => {
       const result = await handle(
         makeAction({ tempHpExpression: 'spellSlotLevel * 10' }),
         makePlayerStats({ level: undefined }),
@@ -149,32 +138,34 @@ describe('powerWordFortifyHandler', () => {
       expect(result.payload.totalTempHp).toBe(7);
     });
 
-    it('handles a plain numeric expression (no dice)', async () => {
-      await handle(
+    it('handles plain numeric expressions without rolling dice', async () => {
+      const result = await handle(
         makeAction({ tempHpExpression: '50' }),
         makePlayerStats(),
         campaignName,
         null,
       );
 
-      // Plain numeric should NOT call rollExpression (handled via parseInt path)
       expect(diceRoller.rollExpression).not.toHaveBeenCalled();
+      expect(result.payload.totalTempHp).toBe(50);
     });
 
-    it('handles dice expression with modifier', async () => {
+    it('handles dice expressions with positive modifiers', async () => {
       diceRoller.rollExpression.mockReturnValue({ total: 25, rolls: [12, 8, 5], modifier: 0 });
 
-      await handle(makeAction({ tempHpExpression: '3d8+1' }), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction({ tempHpExpression: '3d8+1' }), makePlayerStats(), campaignName, null);
 
       expect(diceRoller.rollExpression).toHaveBeenCalledWith('3d8+1');
+      expect(result.payload.totalTempHp).toBe(25);
     });
 
-    it('handles dice expression with negative modifier', async () => {
+    it('handles dice expressions with negative modifiers', async () => {
       diceRoller.rollExpression.mockReturnValue({ total: 18, rolls: [6, 6, 6], modifier: 0 });
 
-      await handle(makeAction({ tempHpExpression: '3d6-3' }), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction({ tempHpExpression: '3d6-3' }), makePlayerStats(), campaignName, null);
 
       expect(diceRoller.rollExpression).toHaveBeenCalledWith('3d6-3');
+      expect(result.payload.totalTempHp).toBe(18);
     });
   });
 
@@ -216,37 +207,47 @@ describe('powerWordFortifyHandler', () => {
 
       expect(result).toBeNull();
     });
+
+    it('returns popup when combat context exists but creatures array is null', async () => {
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: null, players: [], placedItems: [] });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toBe('Power Word Fortify: No allies within range.');
+    });
   });
 
   // ── handle: ally resolution ──────────────────────────────────
 
   describe('ally resolution', () => {
-    it('uses stored ally list when available', async () => {
+    it('uses stored ally list when available and non-empty', async () => {
       allySelection.getAllyList.mockReturnValue(['Ally1', 'Ally2']);
 
       damageUtils.getCombatContext.mockResolvedValue(
         makeCombatContext([playerName, 'Ally1', 'Ally2']),
       );
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(allySelection.getAllyList).toHaveBeenCalledWith(playerName);
+      expect(result.type).toBe('modal');
     });
 
-    it('falls back to all combat creatures when no ally list', async () => {
+    it('falls back to all combat creatures when ally list is empty', async () => {
       allySelection.getAllyList.mockReturnValue([]);
 
       damageUtils.getCombatContext.mockResolvedValue(
         makeCombatContext([playerName, 'Ally1', 'Ally2', 'Enemy1']),
       );
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      // Should use combatSummary.creatures as fallback
+      expect(result.type).toBe('modal');
       expect(damageUtils.getCombatContext).toHaveBeenCalledWith(campaignName);
     });
 
-    it('falls back to [playerName] when ally list is empty and no combat creatures', async () => {
+    it('returns popup when no allies exist at all', async () => {
       allySelection.getAllyList.mockReturnValue([]);
 
       damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
@@ -257,18 +258,31 @@ describe('powerWordFortifyHandler', () => {
       expect(result.payload.description).toContain('No allies within range');
     });
 
-    it('excludes the player themselves from eligible allies', async () => {
+    it('excludes the player from creatureTargets', async () => {
       allySelection.getAllyList.mockReturnValue(['Ally1', 'Ally2']);
 
       damageUtils.getCombatContext.mockResolvedValue(
         makeCombatContext([playerName, 'Ally1', 'Ally2']),
       );
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      // The handler skips playerName in the eligible list
-      // So only Ally1 and Ally2 should be checked
-      expect(rangeCheck.isWithinRange).not.toHaveBeenCalledWith(playerName, playerName, 60);
+      const targetNames = result.payload.creatureTargets.map((t) => t.name);
+      expect(targetNames).not.toContain(playerName);
+    });
+
+    it('skips allies not found in combat context', async () => {
+      allySelection.getAllyList.mockReturnValue(['Ally1', 'Ghost']);
+
+      damageUtils.getCombatContext.mockResolvedValue(
+        makeCombatContext([playerName, 'Ally1']),
+      );
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.creatureTargets).toHaveLength(1);
+      expect(result.payload.creatureTargets[0].name).toBe('Ally1');
     });
   });
 
@@ -285,10 +299,12 @@ describe('powerWordFortifyHandler', () => {
       rangeCheck.isWithinRange.mockResolvedValueOnce(true);   // Ally1 in range
       rangeCheck.isWithinRange.mockResolvedValueOnce(false);  // Ally2 out of range
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(rangeCheck.isWithinRange).toHaveBeenCalledWith(playerName, 'Ally1', 60);
       expect(rangeCheck.isWithinRange).toHaveBeenCalledWith(playerName, 'Ally2', 60);
+      expect(result.payload.creatureTargets).toHaveLength(1);
+      expect(result.payload.creatureTargets[0].name).toBe('Ally1');
     });
 
     it('returns popup when no allies are within range', async () => {
@@ -312,27 +328,19 @@ describe('powerWordFortifyHandler', () => {
 
   describe('range configuration', () => {
     it('uses default 60ft range when no range in automation', async () => {
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(rangeValidation.rangeToFeet).not.toHaveBeenCalled();
+      expect(result.type).toBe('modal');
     });
 
     it('converts range string to feet when provided', async () => {
       rangeValidation.rangeToFeet.mockReturnValue(30);
 
-      await handle(makeAction({ range: '30 ft' }), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction({ range: '30 ft' }), makePlayerStats(), campaignName, null);
 
       expect(rangeValidation.rangeToFeet).toHaveBeenCalledWith('30 ft');
-    });
-
-    it('uses maxTargets from automation, defaulting to 6', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(
-        makeCombatContext([playerName, 'Ally1', 'Ally2']),
-      );
-
-      await handle(makeAction({ maxTargets: 3 }), makePlayerStats(), campaignName, null);
-
-      expect(damageUtils.getCombatContext).toHaveBeenCalledWith(campaignName);
+      expect(result.type).toBe('modal');
     });
   });
 
@@ -354,7 +362,6 @@ describe('powerWordFortifyHandler', () => {
       expect(result.payload.playerStats).toBeDefined();
       expect(result.payload.campaignName).toBe(campaignName);
       expect(result.payload.maxTargets).toBe(6);
-      // Default tempHpExpression is '120' (plain numeric, no dice roll)
       expect(result.payload.totalTempHp).toBe(120);
       expect(result.payload.tempHpExpression).toBe('120');
     });
@@ -406,21 +413,6 @@ describe('powerWordFortifyHandler', () => {
 
       expect(result.payload.tempHpExpression).toBe('2d10+5');
       expect(result.payload.totalTempHp).toBe(25);
-    });
-
-    it('uses dice expression from automation in modal payload', async () => {
-      allySelection.getAllyList.mockReturnValue(['Ally1']);
-
-      damageUtils.getCombatContext.mockResolvedValue(
-        makeCombatContext([playerName, 'Ally1']),
-      );
-
-      diceRoller.rollExpression.mockReturnValue({ total: 40, rolls: [20, 20], modifier: 0 });
-
-      const result = await handle(makeAction({ tempHpExpression: '2d20' }), makePlayerStats(), campaignName, null);
-
-      expect(result.payload.totalTempHp).toBe(40);
-      expect(result.payload.tempHpExpression).toBe('2d20');
     });
   });
 });
@@ -568,7 +560,6 @@ describe('confirmPowerWordFortify', () => {
 
     logService.addEntry.mockRejectedValue(new Error('log failed'));
 
-    // Should not throw; the handler catches errors
     const result = await confirmPowerWordFortify(
       action, ps, campaignName, distribution, 20, '2d8+4',
     );

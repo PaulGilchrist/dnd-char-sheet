@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ─────────────────────────────────────────
@@ -60,7 +61,7 @@ describe('circleOfPowerHandler', () => {
 
     describe('handle', () => {
         it('returns popup with all creature targets including caster', async () => {
-            combatData.getCombatSummary.mockReturnValue(
+            combatData.getCombatSummary.mockResolvedValue(
                 makeCombatSummary(['Cleric', 'Ally1', 'Ally2', 'Enemy1'])
             );
 
@@ -82,7 +83,7 @@ describe('circleOfPowerHandler', () => {
         });
 
         it('returns error popup when no combat context', async () => {
-            combatData.getCombatSummary.mockReturnValue(null);
+            combatData.getCombatSummary.mockResolvedValue(null);
 
             const action = {
                 name: 'Circle of Power',
@@ -95,6 +96,24 @@ describe('circleOfPowerHandler', () => {
                 payload: expect.objectContaining({
                     type: 'automation_info',
                     description: expect.stringContaining('No combat context found'),
+                }),
+            });
+        });
+
+        it('returns popup with empty creatureTargets when combat has no creatures', async () => {
+            combatData.getCombatSummary.mockResolvedValue(makeCombatSummary([]));
+
+            const action = {
+                name: 'Circle of Power',
+                automation: { type: 'circle_of_power' },
+            };
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result).toEqual({
+                type: 'popup',
+                payload: expect.objectContaining({
+                    creatureTargets: [],
+                    maxTargets: 5,
                 }),
             });
         });
@@ -153,17 +172,19 @@ describe('circleOfPowerHandler', () => {
             // Verify concentration was set
             expect(vi.mocked(concentrationService.addConcentration)).toHaveBeenCalled();
 
-            // Verify logging
+            // Verify logging for both targets
             expect(vi.mocked(logService.addEntry)).toHaveBeenCalledTimes(2);
 
-            // Verify log entries contain the correct effects
+            // Verify both log entries contain the correct effects
             const logCalls = vi.mocked(logService.addEntry).mock.calls;
             expect(logCalls[0][1].type).toBe('spell_effect');
             expect(logCalls[0][1].effects).toContain('Advantage on saving throws against spells and other magical effects');
             expect(logCalls[0][1].effects).toContain('No damage on a successful save vs half-damage effects');
+            expect(logCalls[1][1].type).toBe('spell_effect');
+            expect(logCalls[1][1].targetName).toBe('Ally2');
         });
 
-        it('does not duplicate buff if already active', async () => {
+        it('does not call setRuntimeValue for activeBuffs when buff already exists', async () => {
             vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((entity, key) => {
                 if (entity === 'Ally1' && key === 'activeBuffs') {
                     return [{ name: 'Circle of Power', effect: 'circle_of_power', sourceCharacter: 'Cleric' }];
@@ -177,11 +198,11 @@ describe('circleOfPowerHandler', () => {
             };
             await applyCircleOfPower(action, makePlayerStats(), campaignName, null, ['Ally1']);
 
-            // Should not push a second buff entry
-            const storedBuffs = vi.mocked(useRuntimeState.getRuntimeValue).mock.calls
-                .filter(call => call[0] === 'Ally1' && call[1] === 'activeBuffs')
-                .map(call => call[2]);
-            expect(storedBuffs.length).toBeGreaterThan(0);
+            // setRuntimeValue should NOT have been called for Ally1's activeBuffs since the buff already exists
+            const buffSetCalls = vi.mocked(useRuntimeState.setRuntimeValue).mock.calls.filter(
+                (call) => call[0] === 'Ally1' && call[1] === 'activeBuffs',
+            );
+            expect(buffSetCalls).toHaveLength(0);
         });
 
         it('returns null for empty target list', async () => {
@@ -193,13 +214,84 @@ describe('circleOfPowerHandler', () => {
             expect(result).toBeNull();
         });
 
-        it('returns null for undefined target list', async () => {
+        it('returns null for null target list', async () => {
             const action = {
                 name: 'Circle of Power',
                 automation: { type: 'circle_of_power' },
             };
             const result = await applyCircleOfPower(action, makePlayerStats(), campaignName, null, null);
             expect(result).toBeNull();
+        });
+
+        it('returns null for non-array target list', async () => {
+            const action = {
+                name: 'Circle of Power',
+                automation: { type: 'circle_of_power' },
+            };
+            const result = await applyCircleOfPower(action, makePlayerStats(), campaignName, null, 'Ally1');
+            expect(result).toBeNull();
+        });
+
+        it('handles single target correctly', async () => {
+            const action = {
+                name: 'Circle of Power',
+                automation: { type: 'circle_of_power' },
+            };
+            const result = await applyCircleOfPower(action, makePlayerStats(), campaignName, null, ['Ally1']);
+
+            expect(result).toEqual({
+                type: 'popup',
+                payload: expect.objectContaining({
+                    description: expect.stringContaining('1 target(s)'),
+                }),
+            });
+
+            expect(vi.mocked(expirations.addExpiration)).toHaveBeenCalledTimes(1);
+            expect(vi.mocked(logService.addEntry)).toHaveBeenCalledTimes(1);
+        });
+
+        it('updates existing targetEffect instead of duplicating', async () => {
+            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((entity, key) => {
+                if (entity === 'campaign' && key === 'targetEffects') {
+                    return [
+                        { target: 'Ally1', effect: 'circle_of_power', source: 'Cleric', duration: 'concentration' },
+                    ];
+                }
+                if (entity === 'Ally1' && key === 'activeBuffs') {
+                    return [];
+                }
+                return null;
+            });
+
+            const action = {
+                name: 'Circle of Power',
+                automation: { type: 'circle_of_power' },
+            };
+            await applyCircleOfPower(action, makePlayerStats(), campaignName, null, ['Ally1']);
+
+            // Only one targetEffects set call should exist
+            const teSetCalls = vi.mocked(useRuntimeState.setRuntimeValue).mock.calls.filter(
+                (call) => call[0] === 'campaign' && call[1] === 'targetEffects',
+            );
+            expect(teSetCalls).toHaveLength(1);
+            expect(teSetCalls[0][2]).toHaveLength(1);
+        });
+
+        it('handles missing concentrationBonus gracefully', async () => {
+            const action = {
+                name: 'Circle of Power',
+                automation: { type: 'circle_of_power' },
+            };
+            const result = await applyCircleOfPower(action, { name: 'Cleric' }, campaignName, null, ['Ally1']);
+
+            expect(result).toEqual({
+                type: 'popup',
+                payload: expect.objectContaining({
+                    description: expect.stringContaining('1 target(s)'),
+                }),
+            });
+
+            expect(vi.mocked(concentrationService.addConcentration)).toHaveBeenCalled();
         });
     });
 
@@ -234,6 +326,28 @@ describe('circleOfPowerHandler', () => {
             vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((entity, key) => {
                 if (entity === 'campaign' && key === 'targetEffects') {
                     return [];
+                }
+                return null;
+            });
+            expect(isCircleOfPowerActive('Ally1', campaignName)).toBe(false);
+        });
+
+        it('returns false when targetEffects is null', () => {
+            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((entity, key) => {
+                if (entity === 'campaign' && key === 'targetEffects') {
+                    return null;
+                }
+                return null;
+            });
+            expect(isCircleOfPowerActive('Ally1', campaignName)).toBe(false);
+        });
+
+        it('checks both effect and target fields', () => {
+            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((entity, key) => {
+                if (entity === 'campaign' && key === 'targetEffects') {
+                    return [
+                        { effect: 'circle_of_power', target: 'OtherPlayer', source: 'Cleric' },
+                    ];
                 }
                 return null;
             });

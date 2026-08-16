@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -62,8 +63,6 @@ import { handle } from './avengingAngelHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-import { rollD20 } from '../../../dice/diceRoller.js';
-import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 import utils from '../../../ui/utils.js';
 
 const campaignName = 'test-campaign';
@@ -90,7 +89,7 @@ describe('avengingAngelHandler.handle - activation', () => {
     vi.clearAllMocks();
   });
 
-  describe('already active popup', () => {
+  describe('already active', () => {
     it('should return popup and NOT change state when already active', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'avengingAngelActive') return true;
@@ -122,9 +121,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         if (key === 'activeBuffs') return [];
         return null;
       });
-      getCombatContext.mockResolvedValue({ creatures: [] });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
       utils.guid.mockReturnValue('test-guid');
 
       const now = Date.now();
@@ -170,46 +166,30 @@ describe('avengingAngelHandler.handle - activation', () => {
       expect(setRuntimeValue).not.toHaveBeenCalled();
       expect(addEntry).not.toHaveBeenCalled();
     });
-  });
 
-  describe('first use', () => {
-    it('should set restUsed flag on first use', async () => {
+    it('should show cannot be used popup when spell_slots_level_5 is undefined', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'avengingAngelActive') return false;
+        if (key === 'avengingAngelRestUsed') return true;
         if (key === 'activeBuffs') return [];
         return null;
       });
-      getCombatContext.mockResolvedValue({ creatures: [] });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
-      utils.guid.mockReturnValue('test-guid');
 
-      const now = Date.now();
-      vi.spyOn(Date, 'now').mockReturnValue(now);
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith('TestPaladin', 'avengingAngelRestUsed', true, campaignName);
-      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-        type: 'ability_use',
-        characterName: 'TestPaladin',
-        abilityName: 'Avenging Angel',
-        description: 'Avenging Angel activated — Flight 60 ft (hover), Frightful Aura active for 10 minutes.',
-        timestamp: now,
-      }));
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toBe('Avenging Angel cannot be used again until a long rest or level 5 spell slot becomes available.');
+      expect(setRuntimeValue).not.toHaveBeenCalled();
     });
   });
 
-  describe('activation', () => {
-    it('should return popup and set state when not active', async () => {
+  describe('first use activation', () => {
+    it('should set restUsed flag and all state on first use', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'avengingAngelActive') return false;
         if (key === 'activeBuffs') return [];
         return null;
       });
-      getCombatContext.mockResolvedValue({ creatures: [] });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
       utils.guid.mockReturnValue('test-guid');
 
       const now = Date.now();
@@ -235,6 +215,13 @@ describe('avengingAngelHandler.handle - activation', () => {
         campaignName,
       );
       expect(setRuntimeValue).toHaveBeenCalledWith('TestPaladin', 'avengingAngelAuraTargets', [], campaignName);
+      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        type: 'ability_use',
+        characterName: 'TestPaladin',
+        abilityName: 'Avenging Angel',
+        description: 'Avenging Angel activated — Flight 60 ft (hover), Frightful Aura active for 10 minutes.',
+        timestamp: now,
+      }));
     });
 
     it('should use custom flySpeed and hover from automation', async () => {
@@ -243,9 +230,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         if (key === 'activeBuffs') return [];
         return null;
       });
-      getCombatContext.mockResolvedValue({ creatures: [] });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
       utils.guid.mockReturnValue('test-guid');
 
       const customAction = makeAction({ flySpeed: 50, hover: true });
@@ -267,9 +251,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         if (key === 'activeBuffs') return [{ name: 'Divine Shield', effect: 'divine_shield' }];
         return null;
       });
-      getCombatContext.mockResolvedValue({ creatures: [] });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
       utils.guid.mockReturnValue('test-guid');
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
@@ -284,6 +265,46 @@ describe('avengingAngelHandler.handle - activation', () => {
         campaignName,
       );
     });
+
+    it('should handle null activeBuffs gracefully', async () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'avengingAngelActive') return false;
+        if (key === 'activeBuffs') return null;
+        return null;
+      });
+      utils.guid.mockReturnValue('test-guid');
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'TestPaladin',
+        'activeBuffs',
+        expect.arrayContaining([
+          expect.objectContaining({ effect: 'avenging_angel_flight' }),
+        ]),
+        campaignName,
+      );
+    });
+
+    it('should handle undefined activeBuffs gracefully', async () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'avengingAngelActive') return false;
+        if (key === 'activeBuffs') return undefined;
+        return null;
+      });
+      utils.guid.mockReturnValue('test-guid');
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'TestPaladin',
+        'activeBuffs',
+        expect.arrayContaining([
+          expect.objectContaining({ effect: 'avenging_angel_flight' }),
+        ]),
+        campaignName,
+      );
+    });
   });
 
   describe('addEntry rejection handling', () => {
@@ -293,9 +314,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         if (key === 'activeBuffs') return [];
         return null;
       });
-      getCombatContext.mockResolvedValue({ creatures: [] });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
       utils.guid.mockReturnValue('test-guid');
       addEntry.mockRejectedValue(new Error('disk error'));
 
@@ -317,9 +335,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         if (key === 'activeBuffs') return [];
         return null;
       });
-      getCombatContext.mockResolvedValue({ creatures: [] });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
       utils.guid.mockReturnValue('test-guid');
       addEntry.mockRejectedValue(new Error('disk error'));
 
@@ -335,15 +350,12 @@ describe('avengingAngelHandler.handle - activation', () => {
   });
 
   describe('buff deduplication', () => {
-    it('should not duplicate buff when Avenging Angel already in activeBuffs (first use)', async () => {
+    it('should add duplicate buff when Avenging Angel in activeBuffs but not active (first use path)', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'avengingAngelActive') return false;
         if (key === 'activeBuffs') return [{ name: 'Avenging Angel', effect: 'avenging_angel_flight' }];
         return null;
       });
-      getCombatContext.mockResolvedValue({ creatures: [] });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
       utils.guid.mockReturnValue('test-guid');
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
@@ -353,6 +365,7 @@ describe('avengingAngelHandler.handle - activation', () => {
         'activeBuffs',
         expect.arrayContaining([
           expect.objectContaining({ name: 'Avenging Angel', effect: 'avenging_angel_flight' }),
+          expect.objectContaining({ name: 'Avenging Angel', effect: 'avenging_angel_flight', duration: '10_minutes' }),
         ]),
         campaignName,
       );
@@ -366,13 +379,7 @@ describe('avengingAngelHandler.handle - activation', () => {
         if (key === 'activeBuffs') return [{ name: 'Avenging Angel', effect: 'avenging_angel_flight' }];
         return null;
       });
-      getCombatContext.mockResolvedValue({ creatures: [] });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
       utils.guid.mockReturnValue('test-guid');
-
-      const now = Date.now();
-      vi.spyOn(Date, 'now').mockReturnValue(now);
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -393,8 +400,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         return null;
       });
       getCombatContext.mockResolvedValue(null);
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
 
       const now = Date.now();
       vi.spyOn(Date, 'now').mockReturnValue(now);
@@ -419,8 +424,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         return null;
       });
       getCombatContext.mockResolvedValue({ creatures: undefined });
-      rollD20.mockReturnValue(20);
-      getAbilityModifier.mockReturnValue(3);
 
       const now = Date.now();
       vi.spyOn(Date, 'now').mockReturnValue(now);

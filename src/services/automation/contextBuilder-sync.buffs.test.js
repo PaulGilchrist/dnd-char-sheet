@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildAttackContextSync } from './contextBuilder.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -70,6 +71,31 @@ vi.mock('./handlers/class-cleric-paladin/avengingAngelHandler.js', () => ({
   handle: vi.fn(),
 }));
 
+vi.mock('./handlers/spells/sanctuaryHandler.js', () => ({
+  endSanctuary: vi.fn(),
+}));
+
+vi.mock('../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js', () => ({
+  isProtectionFromEvilAndGoodActive: vi.fn().mockReturnValue(false),
+  isCreatureWarded: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../combat/automation/automationService.js', () => ({
+  collectWeaponMastery: vi.fn().mockReturnValue({ baseMastery: null, extraMasteries: [] }),
+}));
+
+vi.mock('../combat/automation/automationExpressions.js', () => ({
+  resolveDiceExpression: vi.fn(),
+}));
+
+vi.mock('../combat/automation/automationPassives.js', () => ({
+  isResilientSphereActive: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../encounters/combatData.js', () => ({
+  getCurrentCombatRound: vi.fn().mockReturnValue(1),
+}));
+
 const { buildBaseAttackContext } = await import('./common/damageRoll.js');
 const { getInnateSorceryBonus } = await import('../combat/buffs/buffService.js');
 const { getWolfAdvantageAgainst } = await import('../combat/auras/wolfAuraUtils.js');
@@ -112,16 +138,22 @@ function defaultBaseAttackContext(targetName = 'Orc', target = null) {
   });
 }
 
+function defaultAuraMocks() {
+  getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
+  getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
+  getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
+  getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+  getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+  isAvengingAngelActive.mockReturnValue(false);
+  isAuraTarget.mockReturnValue(false);
+}
+
 describe('contextBuilder-sync: innate sorcery bonus', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+    defaultAuraMocks();
   });
 
   it('sets forcedMode to advantage when spellAdvantage is true', async () => {
@@ -155,11 +187,7 @@ describe('contextBuilder-sync: activeBuffs — stance damage (rage)', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+    defaultAuraMocks();
   });
 
   it('includes stance damage in autoDamageFormula when rage buff active', async () => {
@@ -240,16 +268,32 @@ describe('contextBuilder-sync: activeBuffs — reckless attack', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+    defaultAuraMocks();
   });
 
-  it('sets forcedMode to advantage when reckless attack buff is active', async () => {
+  it('sets forcedMode to advantage when advantage_attacks_advantage_against buff is active', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ effect: 'advantage_attacks_advantage_against' }];
+      return undefined;
+    });
+
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.forcedMode).toBe('advantage');
+  });
+});
+
+describe('contextBuilder-sync: activeBuffs — advantage_attacks_and_saves', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    defaultBaseAttackContext();
+    getRuntimeValue.mockReturnValue(undefined);
+    defaultAuraMocks();
+  });
+
+  it('sets forcedMode to advantage when advantage_attacks_and_saves buff is active', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ effect: 'advantage_attacks_and_saves' }];
       return undefined;
     });
 
@@ -264,11 +308,7 @@ describe('contextBuilder-sync: activeBuffs — Ram', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+    defaultAuraMocks();
   });
 
   it('sets ramActive true when Ram buff is present', async () => {
@@ -299,11 +339,7 @@ describe('contextBuilder-sync: Dodge action', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+    defaultAuraMocks();
   });
 
   it('sets forcedMode to disadvantage when target has Dodge active', async () => {
@@ -347,11 +383,7 @@ describe('contextBuilder-sync: activeBuffs — sacred weapon', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+    defaultAuraMocks();
   });
 
   it('adds Charisma bonus to sacredWeaponBonus and hitBonus for melee attacks', async () => {
@@ -421,55 +453,86 @@ describe('contextBuilder-sync: activeBuffs — sacred weapon', () => {
 
     expect(result.sacredWeaponBonus).toBe(1);
   });
+
+  it('uses minimum 1 when Charisma stat is missing', async () => {
+    const stats = {
+      ...mockStats,
+      abilities: [
+        { name: 'Strength', bonus: 4 },
+      ],
+    };
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
+      return undefined;
+    });
+
+    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
+
+    expect(result.sacredWeaponBonus).toBe(1);
+  });
 });
 
-describe('contextBuilder-sync: activeBuffs — vow of enmity and clairvoyant combatant', () => {
+describe('contextBuilder-sync: activeBuffs — vow of enmity', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+    defaultAuraMocks();
   });
 
-  it('sets advantage when vow of enmity is on target activeBuffs', async () => {
+  it('sets advantage when vow_of_enmity is on target activeBuffs', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ effect: 'vow_of_enmity' }];
       return undefined;
     });
 
-    const vowResult = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(vowResult.forcedMode).toBe('advantage');
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [{ effect: 'clairvoyant_combatant' }];
-      if (key === 'clairvoyantCombatantTarget') return 'Orc';
-      return undefined;
-    });
-
-    const clairResult = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(clairResult.forcedMode).toBe('advantage');
+    expect(result.forcedMode).toBe('advantage');
   });
 
-  it('does not set advantage when vow_of_enmity is not on target activeBuffs', async () => {
+  it('does not set advantage when vow_of_enmity is not on target', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ effect: 'divine_shield' }];
       return undefined;
     });
 
     const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(result.forcedMode).toBeUndefined();
 
+    expect(result.forcedMode).toBeUndefined();
+  });
+});
+
+describe('contextBuilder-sync: activeBuffs — clairvoyant combatant', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    defaultBaseAttackContext();
+    getRuntimeValue.mockReturnValue(undefined);
+    defaultAuraMocks();
+  });
+
+  it('sets advantage when clairvoyant_combatant is active and target matches', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ effect: 'clairvoyant_combatant' }];
+      if (key === 'clairvoyantCombatantTarget') return 'Orc';
       return undefined;
     });
 
-    const clairResult = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(clairResult.forcedMode).toBeUndefined();
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.forcedMode).toBe('advantage');
+  });
+
+  it('does not set advantage when clairvoyant_combatant target does not match', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ effect: 'clairvoyant_combatant' }];
+      if (key === 'clairvoyantCombatantTarget') return 'Goblin';
+      return undefined;
+    });
+
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.forcedMode).toBeUndefined();
   });
 });
 
@@ -478,11 +541,7 @@ describe('contextBuilder-sync: activeBuffs — create_illusion', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+    defaultAuraMocks();
   });
 
   it('sets advantage when create_illusion buff is active', async () => {
@@ -502,15 +561,10 @@ describe('contextBuilder-sync: activeBuffs — avenging angel', () => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+    defaultAuraMocks();
   });
 
   it('sets advantage when avenging angel active and target is in aura', async () => {
-    const { isActive: isAvengingAngelActive, isAuraTarget } = await import('./handlers/class-cleric-paladin/avengingAngelHandler.js');
     isAvengingAngelActive.mockReturnValue(true);
     isAuraTarget.mockReturnValue(true);
 
@@ -525,6 +579,94 @@ describe('contextBuilder-sync: activeBuffs — avenging angel', () => {
 
     const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
+    expect(result.forcedMode).toBeUndefined();
+  });
+});
+
+describe('contextBuilder-sync: activeBuffs — blessed warrior', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    defaultBaseAttackContext();
+    getRuntimeValue.mockReturnValue(undefined);
+    defaultAuraMocks();
+  });
+
+  it('adds +2 to hitBonus and hitBonusFormula for melee attacks', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ effect: 'blessed_warrior' }];
+      return undefined;
+    });
+
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.hitBonus).toBe(9);
+    expect(result.hitBonusFormula).toBe('To Hit = 4 + 2 + 1 + Blessed Warrior (2)');
+  });
+
+  it('does not add bonus for ranged attacks', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ effect: 'blessed_warrior' }];
+      return undefined;
+    });
+
+    const rangedAttack = { ...mockAttack, weaponType: 'ranged', hitBonus: 7, hitBonusFormula: 'To Hit = 5 + 2 + 1' };
+
+    const result = await buildAttackContextSync(rangedAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.hitBonus).toBe(7);
+  });
+
+  it('adds +2 to hitBonus for unarmed attacks', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ effect: 'blessed_warrior' }];
+      return undefined;
+    });
+
+    const unarmedAttack = { ...mockAttack, weaponType: 'unarmed' };
+
+    const result = await buildAttackContextSync(unarmedAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.hitBonus).toBe(9);
+  });
+});
+
+describe('contextBuilder-sync: resilient sphere early return', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    defaultBaseAttackContext();
+    getRuntimeValue.mockReturnValue(undefined);
+    defaultAuraMocks();
+  });
+
+  it('returns auto miss when attacker is enclosed in resilient sphere', async () => {
+    const { isResilientSphereActive } = await import('../combat/automation/automationPassives.js');
+    isResilientSphereActive.mockReturnValue(true);
+
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.isAutoMiss).toBe(true);
+    expect(result.rangeReason).toBe('Resilient Sphere blocks attacks — nothing passes through the barrier');
+    expect(result.forcedMode).toBeUndefined();
+    expect(result.hitBonus).toBe(0);
+  });
+
+  it('returns auto miss when target is enclosed in resilient sphere', async () => {
+    const { isResilientSphereActive } = await import('../combat/automation/automationPassives.js');
+    isResilientSphereActive.mockImplementation((name) => name === 'Orc');
+
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.isAutoMiss).toBe(true);
+    expect(result.rangeReason).toBe('Resilient Sphere blocks attacks — nothing passes through the barrier');
+  });
+
+  it('does not trigger early return when no one is in a sphere', async () => {
+    const { isResilientSphereActive } = await import('../combat/automation/automationPassives.js');
+    isResilientSphereActive.mockReturnValue(false);
+
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.isAutoMiss).toBeUndefined();
     expect(result.forcedMode).toBeUndefined();
   });
 });

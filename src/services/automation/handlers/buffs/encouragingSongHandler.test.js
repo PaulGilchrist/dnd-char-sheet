@@ -61,12 +61,11 @@ function makeAction(automation = {}) {
 describe('encouragingSongHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    runtimeState.getRuntimeValue.mockReturnValue(null);
   });
 
   // ── Modal return ────────────────────────────────────────────
 
-  describe('modal return', () => {
+  describe('handle returns target selection modal', () => {
     it('should return a modal with creature targets from combat context', async () => {
       combatData.getCombatContext.mockResolvedValue({
         creatures: [
@@ -114,16 +113,58 @@ describe('encouragingSongHandler', () => {
 
       expect(result.payload.creatureTargets).toEqual([]);
     });
+
+    it('should return empty creature targets when getCombatContext returns null', async () => {
+      combatData.getCombatContext.mockResolvedValue(null);
+
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      const result = await handle(action, ps, campaignName);
+
+      expect(result.payload.creatureTargets).toEqual([]);
+    });
+
+    it('should default missing creature properties', async () => {
+      combatData.getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Bard' },
+          { name: 'Ally1', type: 'player' },
+          { name: 'Ally2', currentHp: 10, maxHp: 20 },
+        ],
+      });
+
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      const result = await handle(action, ps, campaignName);
+
+      expect(result.payload.creatureTargets[0]).toEqual({
+        name: 'Bard',
+        type: 'player',
+        currentHp: 0,
+        maxHp: 0,
+      });
+      expect(result.payload.creatureTargets[1]).toEqual({
+        name: 'Ally1',
+        type: 'player',
+        currentHp: 0,
+        maxHp: 0,
+      });
+      expect(result.payload.creatureTargets[2]).toEqual({
+        name: 'Ally2',
+        type: 'player',
+        currentHp: 10,
+        maxHp: 20,
+      });
+    });
   });
 
   // ── Uses tracking (handle) ──────────────────────────────────
 
-  describe('uses tracking on handle', () => {
+  describe('handle uses check', () => {
     it('should return popup when no uses remaining', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_player, key) => {
-        if (key === 'encouragingsongUses') return 0;
-        return null;
-      });
+      runtimeState.getRuntimeValue.mockReturnValue(0);
 
       const action = makeAction();
       const ps = makePlayerStats();
@@ -136,10 +177,7 @@ describe('encouragingSongHandler', () => {
     });
 
     it('should return modal when uses are available', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_player, key) => {
-        if (key === 'encouragingsongUses') return 1;
-        return null;
-      });
+      runtimeState.getRuntimeValue.mockReturnValue(1);
       combatData.getCombatContext.mockResolvedValue({ creatures: [] });
 
       const action = makeAction();
@@ -149,8 +187,46 @@ describe('encouragingSongHandler', () => {
 
       expect(result.type).toBe('modal');
       expect(result.modalName).toBe('encouragingSongTarget');
-      // Should NOT decrement uses on handle
       expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+    });
+
+    it('should return modal when maxUses is 0 (unlimited uses)', async () => {
+      combatData.getCombatContext.mockResolvedValue({ creatures: [] });
+
+      const action = makeAction({ usesMax: 0 });
+      const ps = makePlayerStats();
+
+      const result = await handle(action, ps, campaignName);
+
+      expect(result.type).toBe('modal');
+      expect(result.modalName).toBe('encouragingSongTarget');
+      expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith('Bard', 'encouragingsongUses');
+      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+    });
+
+    it('should default to maxUses when runtime value is null', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+      combatData.getCombatContext.mockResolvedValue({ creatures: [] });
+
+      const action = makeAction({ usesMax: 3 });
+      const ps = makePlayerStats();
+
+      const result = await handle(action, ps, campaignName);
+
+      expect(result.type).toBe('modal');
+      expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith('Bard', 'encouragingsongUses');
+    });
+
+    it('should use custom resourceKey when provided in automation', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(1);
+      combatData.getCombatContext.mockResolvedValue({ creatures: [] });
+
+      const action = makeAction({ resourceKey: 'customSongUses' });
+      const ps = makePlayerStats();
+
+      await handle(action, ps, campaignName);
+
+      expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith('Bard', 'customSongUses');
     });
   });
 
@@ -158,10 +234,7 @@ describe('encouragingSongHandler', () => {
 
   describe('confirmEncouragingSong', () => {
     it('should decrement uses and set hasInspiration on targets', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_player, key) => {
-        if (key === 'encouragingsongUses') return 1;
-        return null;
-      });
+      runtimeState.getRuntimeValue.mockReturnValue(1);
 
       const action = makeAction();
       const ps = makePlayerStats();
@@ -177,10 +250,7 @@ describe('encouragingSongHandler', () => {
     });
 
     it('should limit targets to proficiency bonus', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_player, key) => {
-        if (key === 'encouragingsongUses') return 1;
-        return null;
-      });
+      runtimeState.getRuntimeValue.mockReturnValue(1);
 
       const action = makeAction();
       const ps = makePlayerStats();
@@ -196,10 +266,7 @@ describe('encouragingSongHandler', () => {
     });
 
     it('should return error popup when no uses remaining', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_player, key) => {
-        if (key === 'encouragingsongUses') return 0;
-        return null;
-      });
+      runtimeState.getRuntimeValue.mockReturnValue(0);
 
       const action = makeAction();
       const ps = makePlayerStats();
@@ -208,13 +275,61 @@ describe('encouragingSongHandler', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('cannot be used again');
+      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+    });
+
+    it('should skip uses check when maxUses is 0 (unlimited)', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(0);
+
+      const action = makeAction({ usesMax: 0 });
+      const ps = makePlayerStats();
+
+      const result = await confirmEncouragingSong(action, ps, campaignName, ['Ally1']);
+
+      expect(runtimeState.getRuntimeValue).not.toHaveBeenCalled();
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Ally1', 'hasInspiration', true, campaignName);
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('1 ally');
+    });
+
+    it('should handle empty selected targets array', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(1);
+
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      const result = await confirmEncouragingSong(action, ps, campaignName, []);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('0 allies');
+    });
+
+    it('should handle undefined selected targets', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(1);
+
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      const result = await confirmEncouragingSong(action, ps, campaignName, undefined);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('0 allies');
+    });
+
+    it('should use custom resourceKey when provided in automation', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(1);
+
+      const action = makeAction({ resourceKey: 'customSongUses' });
+      const ps = makePlayerStats();
+
+      await confirmEncouragingSong(action, ps, campaignName, ['Ally1']);
+
+      expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith('Bard', 'customSongUses');
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Bard', 'customSongUses', 0, campaignName);
     });
 
     it('should log to campaign log', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_player, key) => {
-        if (key === 'encouragingsongUses') return 1;
-        return null;
-      });
+      runtimeState.getRuntimeValue.mockReturnValue(1);
 
       const action = makeAction();
       const ps = makePlayerStats();
@@ -226,6 +341,46 @@ describe('encouragingSongHandler', () => {
         characterName: 'Bard',
         abilityName: 'Encouraging Song',
       }));
+    });
+
+    it('should return popup with correct payload structure', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(1);
+
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      const result = await confirmEncouragingSong(action, ps, campaignName, ['Ally1']);
+
+      expect(result.payload).toEqual(expect.objectContaining({
+        type: 'automation_info',
+        name: 'Encouraging Song',
+        automationType: 'heroic_inspiration_buff',
+      }));
+      expect(result.payload.description).toContain('1 ally');
+      expect(result.payload.automation).toEqual(action.automation);
+    });
+
+    it('should use singular "ally" when exactly one target', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(1);
+
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      const result = await confirmEncouragingSong(action, ps, campaignName, ['Ally1']);
+
+      expect(result.payload.description).toContain('1 ally');
+      expect(result.payload.description).not.toContain('1 allies');
+    });
+
+    it('should use plural "allies" when more than one target', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(1);
+
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      const result = await confirmEncouragingSong(action, ps, campaignName, ['Ally1', 'Ally2']);
+
+      expect(result.payload.description).toContain('2 allies');
     });
   });
 
@@ -246,6 +401,21 @@ describe('encouragingSongHandler', () => {
       }));
       expect(result.type).toBe('popup');
       expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+    });
+
+    it('should return popup with correct payload structure', async () => {
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      const result = await skipEncouragingSong(action, ps, campaignName);
+
+      expect(result.payload).toEqual(expect.objectContaining({
+        type: 'automation_info',
+        name: 'Encouraging Song',
+        automationType: 'heroic_inspiration_buff',
+      }));
+      expect(result.payload.description).toBe('Encouraging Song: No allies selected.');
+      expect(result.payload.automation).toEqual(action.automation);
     });
   });
 });
