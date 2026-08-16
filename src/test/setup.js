@@ -3,6 +3,27 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 import { clearActiveInstances } from '../components/char-sheet/modals/shared/areaEffectModalInstances.js';
 
+// Inert default fetch so tests can never reach a live dev/api server.
+// A live server + a real fetch would let the changedata route persist
+// public/campaigns/<name>/data/character-change-data.json (creating folders).
+// Tests that assert on fetch override this per-test (vi.spyOn / vi.stubGlobal).
+const inertResponse = () => ({
+    ok: true,
+    status: 200,
+    text: () => Promise.resolve(''),
+    json: () => Promise.resolve({}),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    clone: () => inertResponse(),
+    headers: new globalThis.Headers ? new globalThis.Headers() : {},
+});
+
+function inertFetch() {
+    return Promise.resolve(inertResponse());
+}
+
+globalThis.fetch = inertFetch;
+vi.stubGlobal('fetch', inertFetch);
+
 // Mock localStorage for all tests
 const localStorageMock = (() => {
   let store = {};
