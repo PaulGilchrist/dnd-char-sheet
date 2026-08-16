@@ -52,12 +52,12 @@ function WarMagicSpellModal({ action, playerStats, campaignName, options, option
                                 }}
                                 onClick={() => setSelected(name)}
                             >
-                                <strong>{name}</strong>
-                                {optionDetails[name]?.level && (
-                                    <span style={{ marginLeft: '8px', color: '#666' }}>Level {optionDetails[name].level}</span>
+                            <strong>{name}</strong>
+                            {optionDetails?.[name]?.level && (
+                                    <span style={{ marginLeft: '8px', color: '#666' }}>Level {optionDetails?.[name]?.level}</span>
                                 )}
-                                {optionDetails[name]?.casting_time && (
-                                    <span style={{ marginLeft: '8px', color: '#666' }}>({optionDetails[name].casting_time})</span>
+                                {optionDetails?.[name]?.casting_time && (
+                                    <span style={{ marginLeft: '8px', color: '#666' }}>({optionDetails?.[name]?.casting_time})</span>
                                 )}
                             </div>
                         ))}

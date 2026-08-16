@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import WarMagicSpellModal from './WarMagicSpellModal.jsx'
@@ -62,13 +63,14 @@ describe('WarMagicSpellModal', () => {
             expect(screen.getByRole('button', { name: /replace attack/i })).toBeDisabled()
         })
 
-        it('renders options without casting time gracefully when detail is missing', () => {
+        it('renders options without casting time span when detail is missing', () => {
             const detailsWithoutCastingTime = {
                 'Burning Hands': { name: 'Burning Hands', level: 1 },
             }
             renderModal({ options: ['Burning Hands'], optionDetails: detailsWithoutCastingTime })
             expect(screen.getByText('Burning Hands')).toBeInTheDocument()
             expect(screen.getByText('Level 1')).toBeInTheDocument()
+            expect(screen.queryAllByText(/\(1 action\)/)).toHaveLength(0)
         })
     })
 
@@ -101,6 +103,13 @@ describe('WarMagicSpellModal', () => {
             const overlay = document.querySelector('.sp-overlay')
             fireEvent.click(overlay)
             expect(mockOnClose).toHaveBeenCalledOnce()
+        })
+
+        it('does NOT close when clicking inside the modal content', () => {
+            renderModal()
+            const modal = document.querySelector('.sp-modal')
+            fireEvent.click(modal)
+            expect(mockOnClose).not.toHaveBeenCalled()
         })
     })
 
@@ -142,6 +151,28 @@ describe('WarMagicSpellModal', () => {
             })
         })
 
+        it('renders the result description as HTML via dangerouslySetInnerHTML', async () => {
+            const { confirmWarMagicSpell } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicSpellHandler.js')
+            confirmWarMagicSpell.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Improved War Magic',
+                    description: '<b>Web</b> replaced one attack with <i>fire damage</i>.',
+                },
+            })
+
+            renderModal()
+            fireEvent.click(screen.getByText('Web'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+
+            await waitFor(() => {
+                const bodyDiv = document.querySelector('.sp-body')
+                expect(bodyDiv.innerHTML).toContain('<b>Web</b>')
+                expect(bodyDiv.innerHTML).toContain('<i>fire damage</i>')
+            })
+        })
+
         it('calls onClose when Done button is clicked after confirmation', async () => {
             const { confirmWarMagicSpell } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicSpellHandler.js')
             confirmWarMagicSpell.mockResolvedValue({
@@ -163,12 +194,83 @@ describe('WarMagicSpellModal', () => {
             fireEvent.click(screen.getByText('Done'))
             expect(mockOnClose).toHaveBeenCalledOnce()
         })
+
+        it('does not show result state when handler returns null', async () => {
+            const { confirmWarMagicSpell } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicSpellHandler.js')
+            confirmWarMagicSpell.mockResolvedValue(null)
+
+            renderModal()
+            fireEvent.click(screen.getByText('Web'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+
+            await waitFor(() => {
+                expect(screen.queryByText('Done')).not.toBeInTheDocument()
+            })
+        })
+
+    })
+
+    describe('result state interactions', () => {
+        it('calls onClose when overlay is clicked in result state', async () => {
+            const { confirmWarMagicSpell } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicSpellHandler.js')
+            confirmWarMagicSpell.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Improved War Magic',
+                    description: 'Replaced one attack with the level 2 spell Web.',
+                },
+            })
+
+            renderModal()
+            fireEvent.click(screen.getByText('Web'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+
+            await waitFor(() => {
+                expect(screen.getByText('Done')).toBeInTheDocument()
+            })
+
+            const overlay = document.querySelector('.sp-overlay')
+            fireEvent.click(overlay)
+            expect(mockOnClose).toHaveBeenCalled()
+        })
+
+        it('does NOT close when clicking inside the modal in result state', async () => {
+            const { confirmWarMagicSpell } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicSpellHandler.js')
+            confirmWarMagicSpell.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Improved War Magic',
+                    description: 'Replaced one attack with the level 2 spell Web.',
+                },
+            })
+
+            renderModal()
+            fireEvent.click(screen.getByText('Web'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+
+            await waitFor(() => {
+                expect(screen.getByText('Done')).toBeInTheDocument()
+            })
+
+            const modal = document.querySelector('.sp-modal')
+            fireEvent.click(modal)
+            expect(mockOnClose).not.toHaveBeenCalled()
+        })
     })
 
     describe('edge cases', () => {
         it('shows a different max spell level in the prompt', () => {
             renderModal({ maxSpellLevel: 3 })
             expect(screen.getByText(/Replace one attack with a Wizard spell of level 1–3/)).toBeInTheDocument()
+        })
+
+        it('renders spell name when optionDetails is null', () => {
+            renderModal({ optionDetails: null })
+            expect(screen.getByText('Burning Hands')).toBeInTheDocument()
+            expect(screen.queryAllByText(/Level/)).toHaveLength(0)
+            expect(screen.queryAllByText(/\(1 action\)/)).toHaveLength(0)
         })
     })
 })
