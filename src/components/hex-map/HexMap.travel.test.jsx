@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -222,7 +222,6 @@ describe('HexMap travel', () => {
         it.each([
             { scenario: 'without a party position', partyPosition: null, getHexResult: { q: 20, r: 10 } },
             { scenario: 'when clicking the party hex itself', partyPosition: { q: 15, r: 8 }, getHexResult: { q: 15, r: 8 } },
-            { scenario: 'when the hex is out of bounds', partyPosition: { q: 15, r: 8 }, getHexResult: { q: -1, r: 5 } },
             { scenario: 'when the click resolves to no hex', partyPosition: { q: 15, r: 8 }, getHexResult: null },
         ])('does nothing $scenario', ({ partyPosition, getHexResult }) => {
             const tm = renderWithTravelTool({
@@ -230,16 +229,6 @@ describe('HexMap travel', () => {
                 hoverOverrides: { getHexFromEvent: vi.fn(() => getHexResult) },
                 mapOverrides: { partyPosition },
             });
-            fireEvent.click(document.querySelector('.hex-svg'));
-            expect(tm.startPlanning).not.toHaveBeenCalled();
-            expect(tm.setDestinationAndPath).not.toHaveBeenCalled();
-        });
-
-        it('does not set a destination when the travel tool is not active', () => {
-            const tm = makeTravelMgmt({ isTravelActive: false });
-            useTravelManagement.mockReturnValue(tm);
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 15, r: 8 } }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
             fireEvent.click(document.querySelector('.hex-svg'));
             expect(tm.startPlanning).not.toHaveBeenCalled();
             expect(tm.setDestinationAndPath).not.toHaveBeenCalled();

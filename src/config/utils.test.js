@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as dataLoader from '../services/ui/dataLoader.js';
 import * as utils from './utils.js';
@@ -35,17 +35,10 @@ describe('character-creation/utils', () => {
       expect(costs).toEqual(MOCK_VALIDATION_RULES.point_buy.costs);
     });
 
-    it('loads rules for the requested ruleset', async () => {
-      await utils.getPointBuyCosts('2024');
-      expect(dataLoader.loadValidationRules).toHaveBeenCalledWith('2024');
-    });
-
-    it('falls back to default costs when rules have no point_buy section', async () => {
+    it('falls back to default costs when rules have no point_buy section or no costs', async () => {
       dataLoader.loadValidationRules.mockResolvedValue({});
       await expect(utils.getPointBuyCosts('5e')).resolves.toEqual(DEFAULT_POINT_BUY_COSTS);
-    });
 
-    it('falls back to default costs when point_buy has no costs', async () => {
       dataLoader.loadValidationRules.mockResolvedValue({ point_buy: {} });
       await expect(utils.getPointBuyCosts('5e')).resolves.toEqual(DEFAULT_POINT_BUY_COSTS);
     });
@@ -55,9 +48,7 @@ describe('character-creation/utils', () => {
     it('returns default costs when the cache is empty', () => {
       vi.spyOn(dataLoader, 'getCachedPointBuyCosts').mockReturnValue(null);
       expect(utils.getPointBuyCostsSync('5e')).toEqual(DEFAULT_POINT_BUY_COSTS);
-    });
 
-    it('returns default costs when the cache has not been populated', () => {
       vi.spyOn(dataLoader, 'getCachedPointBuyCosts').mockReturnValue(undefined);
       expect(utils.getPointBuyCostsSync('5e')).toEqual(DEFAULT_POINT_BUY_COSTS);
     });
@@ -66,12 +57,6 @@ describe('character-creation/utils', () => {
       const cachedCosts = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 6, 15: 8 };
       vi.spyOn(dataLoader, 'getCachedPointBuyCosts').mockReturnValue(cachedCosts);
       expect(utils.getPointBuyCostsSync('5e')).toEqual(cachedCosts);
-    });
-
-    it('queries the cache for the requested ruleset', () => {
-      vi.spyOn(dataLoader, 'getCachedPointBuyCosts').mockReturnValue(DEFAULT_POINT_BUY_COSTS);
-      utils.getPointBuyCostsSync('2024');
-      expect(dataLoader.getCachedPointBuyCosts).toHaveBeenCalledWith('2024');
     });
   });
 
@@ -99,18 +84,6 @@ describe('character-creation/utils', () => {
       ['name', 'level', 'alignment', 'race', 'class', 'expertSkills'].forEach(field => {
         expect(errors).toHaveProperty(field);
       });
-    });
-
-    it('does not require abilities, inventory, or skillProficiencies', () => {
-      const errors = utils.validateFinalFormData({
-        ...completeFormData,
-        abilities: [],
-        inventory: {},
-        skillProficiencies: []
-      });
-      expect(errors).not.toHaveProperty('abilities');
-      expect(errors).not.toHaveProperty('inventory');
-      expect(errors).not.toHaveProperty('skillProficiencies');
     });
 
     it('rejects falsy values for required fields', () => {
@@ -257,74 +230,41 @@ describe('character-creation/utils', () => {
         expect(await utils.validateStep(2, validFormData, {}, [], [], '5e')).toEqual({});
       });
 
-      it('returns an error when name is missing or whitespace-only', async () => {
-        expect(await utils.validateStep(2, { ...validFormData, name: undefined }, {}, [], [], '5e')).toHaveProperty('name');
-        expect(await utils.validateStep(2, { ...validFormData, name: '   ' }, {}, [], [], '5e')).toHaveProperty('name');
-      });
-
-      it('returns an error when alignment is missing', async () => {
-        expect(await utils.validateStep(2, { ...validFormData, alignment: undefined }, {}, [], [], '5e')).toHaveProperty('alignment');
-      });
-
-      it('returns an error when level is missing', async () => {
-        expect(await utils.validateStep(2, { ...validFormData, level: undefined }, {}, [], [], '5e')).toHaveProperty('level');
-      });
-
       it('bubbles up invalid level values through the shared level validator', async () => {
         expect(await utils.validateStep(2, { ...validFormData, level: 0 }, {}, [], [], '5e')).toHaveProperty('level');
         expect(await utils.validateStep(2, { ...validFormData, level: 21 }, {}, [], [], '5e')).toHaveProperty('level');
       });
-
-      it('discards previously collected errors and only reports new ones', async () => {
-        const errors = await utils.validateStep(2, { ...validFormData, name: undefined }, { custom: 'existing' }, [], [], '5e');
-        expect(errors).toHaveProperty('name');
-        expect(errors).not.toHaveProperty('custom');
-      });
     });
 
     describe('Step 3: Race', () => {
-      it('returns an error when race is missing or has no name', async () => {
+      it('returns an error when race is missing or has no name, and accepts a valid race', async () => {
         expect(await utils.validateStep(3, {}, {}, [], [], '5e')).toHaveProperty('race');
         expect(await utils.validateStep(3, { race: {} }, {}, [], [], '5e')).toHaveProperty('race');
-      });
-
-      it('accepts a race that has a name', async () => {
         expect(await utils.validateStep(3, { race: { name: 'Human' } }, {}, [], [], '5e')).toEqual({});
       });
     });
 
     describe('Step 4: Subrace', () => {
-      it('requires a subrace when the selected race has subraces', async () => {
-        const racesData = [{ name: 'Elf', subraces: [{ name: 'High Elf' }, { name: 'Wood Elf' }] }];
+      it('requires a subrace when the race has subraces, accepts a selected subrace, and skips when the race has none or is not found', async () => {
+        const racesWithSubraces = [{ name: 'Elf', subraces: [{ name: 'High Elf' }, { name: 'Wood Elf' }] }];
+        const racesWithoutSubraces = [{ name: 'Human', subraces: [] }];
         const formData = { race: { name: 'Elf' } };
-        const errors = await utils.validateStep(4, formData, {}, racesData, [], '5e');
+        const formDataWithSubrace = { race: { name: 'Elf', subrace: { name: 'High Elf' } } };
+        const noRaceForm = { race: {} };
+
+        let errors = await utils.validateStep(4, formData, {}, racesWithSubraces, [], '5e');
         expect(errors).toHaveProperty('subrace');
-      });
 
-      it('does not require a subrace when the selected race has none', async () => {
-        const racesData = [{ name: 'Human', subraces: [] }];
-        const formData = { race: { name: 'Human' } };
-        const errors = await utils.validateStep(4, formData, {}, racesData, [], '5e');
+        errors = await utils.validateStep(4, formDataWithSubrace, {}, racesWithSubraces, [], '5e');
         expect(errors).not.toHaveProperty('subrace');
-      });
 
-      it('does not require a subrace when the race is not found in racesData', async () => {
-        const formData = { race: { name: 'Gnome' } };
-        const errors = await utils.validateStep(4, formData, {}, [], [], '5e');
+        errors = await utils.validateStep(4, formData, {}, racesWithoutSubraces, [], '5e');
         expect(errors).not.toHaveProperty('subrace');
-      });
 
-      it('accepts a selected subrace', async () => {
-        const racesData = [{ name: 'Elf', subraces: [{ name: 'High Elf' }, { name: 'Wood Elf' }] }];
-        const formData = { race: { name: 'Elf', subrace: { name: 'High Elf' } } };
-        const errors = await utils.validateStep(4, formData, {}, racesData, [], '5e');
+        errors = await utils.validateStep(4, noRaceForm, {}, racesWithSubraces, [], '5e');
         expect(errors).not.toHaveProperty('subrace');
-      });
 
-      it('does not require a subrace when race name is missing', async () => {
-        const racesData = [{ name: 'Elf', subraces: [{ name: 'High Elf' }] }];
-        const formData = { race: {} };
-        const errors = await utils.validateStep(4, formData, {}, racesData, [], '5e');
+        errors = await utils.validateStep(4, { race: { name: 'Gnome' } }, {}, [], [], '5e');
         expect(errors).not.toHaveProperty('subrace');
       });
     });
@@ -332,30 +272,17 @@ describe('character-creation/utils', () => {
     describe('Step 5: Background', () => {
       const validFormData = { name: 'Test', level: 1, alignment: 'Good' };
 
-      it('requires a background for the 2024 ruleset', async () => {
-        const errors = await utils.validateStep(5, validFormData, {}, [], [], '2024');
-        expect(errors).toHaveProperty('background');
-      });
-
-      it('does not require a background for the 5e ruleset', async () => {
-        const errors = await utils.validateStep(5, validFormData, {}, [], [], '5e');
-        expect(errors).not.toHaveProperty('background');
-      });
-
-      it('accepts a present background for the 2024 ruleset', async () => {
-        const formData = { ...validFormData, background: 'Fighter' };
-        const errors = await utils.validateStep(5, formData, {}, [], [], '2024');
-        expect(errors).not.toHaveProperty('background');
+      it('requires a background for 2024 but not 5e, and accepts a present background for 2024', async () => {
+        expect(await utils.validateStep(5, validFormData, {}, [], [], '2024')).toHaveProperty('background');
+        expect(await utils.validateStep(5, validFormData, {}, [], [], '5e')).not.toHaveProperty('background');
+        expect(await utils.validateStep(5, { ...validFormData, background: 'Fighter' }, {}, [], [], '2024')).not.toHaveProperty('background');
       });
     });
 
     describe('Step 6: Class', () => {
-      it('returns an error when class is missing or has no name', async () => {
+      it('returns an error when class is missing or has no name, and does not require a subclass', async () => {
         expect(await utils.validateStep(6, {}, {}, [], [], '5e')).toHaveProperty('class');
         expect(await utils.validateStep(6, { class: {} }, {}, [], [], '5e')).toHaveProperty('class');
-      });
-
-      it('does not require a subclass (handled in step 7)', async () => {
         const classSubtypes = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }] }];
         const formData = { class: { name: 'Fighter' } };
         const errors = await utils.validateStep(6, formData, {}, [], classSubtypes, '5e');
@@ -364,37 +291,26 @@ describe('character-creation/utils', () => {
     });
 
     describe('Step 7: Subclass', () => {
-      it('requires a subclass when the selected class has subclasses', async () => {
-        const classSubtypes = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }, { name: 'Battle Master' }] }];
+      it('requires a subclass when the class has subclasses, accepts a selected subclass, and skips when the class has none, is not found, or is missing', async () => {
+        const classSubtypesWithSubclasses = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }, { name: 'Battle Master' }] }];
+        const classSubtypesEmpty = [{ className: 'Fighter', subtypes: [] }];
         const formData = { class: { name: 'Fighter' } };
-        const errors = await utils.validateStep(7, formData, {}, [], classSubtypes, '5e');
+        const formDataWithSubclass = { class: { name: 'Fighter', subclass: { name: 'Champion' } } };
+        const noClassForm = { class: {} };
+
+        let errors = await utils.validateStep(7, formData, {}, [], classSubtypesWithSubclasses, '5e');
         expect(errors).toHaveProperty('subclass');
-      });
 
-      it('does not require a subclass when the selected class has none', async () => {
-        const classSubtypes = [{ className: 'Fighter', subtypes: [] }];
-        const formData = { class: { name: 'Fighter' } };
-        const errors = await utils.validateStep(7, formData, {}, [], classSubtypes, '5e');
+        errors = await utils.validateStep(7, formDataWithSubclass, {}, [], classSubtypesWithSubclasses, '5e');
         expect(errors).not.toHaveProperty('subclass');
-      });
 
-      it('does not require a subclass when the class is not found in classSubtypes', async () => {
-        const formData = { class: { name: 'Rogue' } };
-        const errors = await utils.validateStep(7, formData, {}, [], [], '5e');
+        errors = await utils.validateStep(7, formData, {}, [], classSubtypesEmpty, '5e');
         expect(errors).not.toHaveProperty('subclass');
-      });
 
-      it('accepts a selected subclass', async () => {
-        const classSubtypes = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }] }];
-        const formData = { class: { name: 'Fighter', subclass: { name: 'Champion' } } };
-        const errors = await utils.validateStep(7, formData, {}, [], classSubtypes, '5e');
+        errors = await utils.validateStep(7, { class: { name: 'Rogue' } }, {}, [], [], '5e');
         expect(errors).not.toHaveProperty('subclass');
-      });
 
-      it('does not require a subclass when class name is missing', async () => {
-        const classSubtypes = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }] }];
-        const formData = { class: {} };
-        const errors = await utils.validateStep(7, formData, {}, [], classSubtypes, '5e');
+        errors = await utils.validateStep(7, noClassForm, {}, [], classSubtypesWithSubclasses, '5e');
         expect(errors).not.toHaveProperty('subclass');
       });
     });

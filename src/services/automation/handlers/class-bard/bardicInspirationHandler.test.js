@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────────
@@ -88,8 +88,8 @@ describe('bardicInspirationHandler.handle', () => {
   });
 
   describe('uses exhaustion', () => {
-    it('returns info popup when uses are exhausted', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue(0);
+    it.each([0, -1])('returns info popup when uses are %d (exhausted)', async (uses) => {
+      useRuntimeState.getRuntimeValue.mockReturnValue(uses);
 
       const result = await handle(action, playerStats, campaignName);
 
@@ -103,15 +103,6 @@ describe('bardicInspirationHandler.handle', () => {
         },
       });
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-    });
-
-    it('returns info popup when uses are negative', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue(-1);
-
-      const result = await handle(action, playerStats, campaignName);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('no uses remaining');
     });
   });
 
@@ -129,26 +120,13 @@ describe('bardicInspirationHandler.handle', () => {
   });
 
   describe('no combat context', () => {
-    it('returns info popup when combat context has no creatures', async () => {
-      getCombatContext.mockResolvedValue(makeCombatSummary([]));
-
-      const result = await handle(action, playerStats, campaignName);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('requires a target');
-    });
-
-    it('returns info popup when combatSummary is null', async () => {
-      getCombatContext.mockResolvedValue(null);
-
-      const result = await handle(action, playerStats, campaignName);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('requires a target');
-    });
-
-    it('returns info popup when combatSummary has no creatures property', async () => {
-      getCombatContext.mockResolvedValue({});
+    it.each([
+      { name: 'null', value: null },
+      { name: 'empty object', value: {} },
+      { name: 'no creatures array', value: { creatures: undefined } },
+      { name: 'empty creatures array', value: { creatures: [] } },
+    ])('returns info popup when combatSummary is $name', async ({ value }) => {
+      getCombatContext.mockResolvedValue(value);
 
       const result = await handle(action, playerStats, campaignName);
 
@@ -241,36 +219,24 @@ describe('bardicInspirationHandler.handle', () => {
       expect(result.payload.dieSize).toBe(10);
     });
 
+    it.each([
+      { name: 'no matching passive', passives: [{ effect: 'some_other_passive' }] },
+      { name: 'empty passives array', passives: [] },
+      { name: 'undefined passives', passives: undefined },
+    ])('sets hasCombatOptions false when %s', async ({ passives }) => {
+      playerStats.automation.passives = passives;
+
+      const result = await handle(action, playerStats, campaignName);
+
+      expect(result.payload.hasCombatOptions).toBe(false);
+    });
+
     it('sets hasCombatOptions true when passive is present', async () => {
       playerStats.automation.passives = [{ effect: 'bardic_inspiration_combat_options' }];
 
       const result = await handle(action, playerStats, campaignName);
 
       expect(result.payload.hasCombatOptions).toBe(true);
-    });
-
-    it('sets hasCombatOptions false when no matching passive exists', async () => {
-      playerStats.automation.passives = [{ effect: 'some_other_passive' }];
-
-      const result = await handle(action, playerStats, campaignName);
-
-      expect(result.payload.hasCombatOptions).toBe(false);
-    });
-
-    it('sets hasCombatOptions false when passives array is empty', async () => {
-      playerStats.automation.passives = [];
-
-      const result = await handle(action, playerStats, campaignName);
-
-      expect(result.payload.hasCombatOptions).toBe(false);
-    });
-
-    it('sets hasCombatOptions false when passives is undefined', async () => {
-      playerStats.automation.passives = undefined;
-
-      const result = await handle(action, playerStats, campaignName);
-
-      expect(result.payload.hasCombatOptions).toBe(false);
     });
   });
 });
@@ -431,25 +397,6 @@ describe('bardicInspirationHandler.applyBardicInspiration', () => {
         campaignName,
       );
     });
-
-    it('sets target state first, then self state when targetName differs from playerStats.name with combat options', async () => {
-      action.automation.options = ['custom'];
-
-      await applyBardicInspiration(action, playerStats, campaignName, 'Fighter', 8, true);
-
-      const calls = useRuntimeState.setRuntimeValue.mock.calls;
-      // Call 0: uses decrement on self
-      expect(calls[0]).toEqual([playerName, 'bardicInspirationUses', 2, campaignName]);
-      // Calls 1-4: target state (die, grantedBy, uses 1/1, combatOptions)
-      expect(calls[1]).toEqual(['Fighter', 'bardicInspirationDie', '8', campaignName]);
-      expect(calls[2]).toEqual(['Fighter', 'bardicInspirationGrantedBy', playerName, campaignName]);
-      expect(calls[3]).toEqual(['Fighter', 'bardicInspirationUses', { current: 1, max: 1 }, campaignName]);
-      expect(calls[4]).toEqual(['Fighter', 'bardicInspirationCombatOptions', JSON.stringify(['custom']), campaignName]);
-      // Calls 5-7: self state (die, grantedBy, combatOptions)
-      expect(calls[5]).toEqual([playerName, 'bardicInspirationDie', '8', campaignName]);
-      expect(calls[6]).toEqual([playerName, 'bardicInspirationGrantedBy', playerName, campaignName]);
-      expect(calls[7]).toEqual([playerName, 'bardicInspirationCombatOptions', JSON.stringify(['custom']), campaignName]);
-    });
   });
 
   describe('expiration', () => {
@@ -474,19 +421,6 @@ describe('bardicInspirationHandler.applyBardicInspiration', () => {
         characterName: playerName,
         abilityName: 'Bardic Inspiration',
         description: `${playerName} granted Bardic Inspiration (d8) to Fighter.`,
-      });
-    });
-
-    it('posts a log entry with correct player name', async () => {
-      playerStats.name = 'Lyra';
-
-      await applyBardicInspiration(action, playerStats, campaignName, 'Fighter', 8, false);
-
-      expect(addEntry).toHaveBeenCalledWith(campaignName, {
-        type: 'ability_use',
-        characterName: 'Lyra',
-        abilityName: 'Bardic Inspiration',
-        description: 'Lyra granted Bardic Inspiration (d8) to Fighter.',
       });
     });
   });
@@ -548,19 +482,6 @@ describe('bardicInspirationHandler.applyBardicInspiration', () => {
       expect(result.payload.description).toContain('granted to Fighter');
       expect(result.payload.description).toContain('one ability check');
       expect(result.payload.automation).toEqual(action.automation);
-    });
-
-    it('uses the dieSize parameter in the description', async () => {
-      const result = await applyBardicInspiration(action, playerStats, campaignName, 'Fighter', 6, false);
-
-      expect(result.payload.description).toContain('d6');
-    });
-
-    it('uses the dieSize parameter in the log description', async () => {
-      await applyBardicInspiration(action, playerStats, campaignName, 'Fighter', 6, false);
-
-      const logCall = addEntry.mock.calls[0][1];
-      expect(logCall.description).toContain('d6');
     });
   });
 

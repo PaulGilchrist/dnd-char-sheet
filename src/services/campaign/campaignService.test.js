@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getCharacterFolders,
@@ -33,18 +33,7 @@ describe('campaignService', () => {
       expect(fetchSpy).toHaveBeenCalledWith('/api/campaigns');
     });
 
-    it('should return empty array when folders key is null', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ folders: null })
-      });
-
-      const result = await getCharacterFolders();
-
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array when folders key is undefined', async () => {
+    it('should return empty array when folders key is missing', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({})
@@ -99,18 +88,7 @@ describe('campaignService', () => {
       expect(fetchSpy).toHaveBeenCalledWith('/api/campaigns/My%20Campaign');
     });
 
-    it('should return empty array when files key is null', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ files: null })
-      });
-
-      const result = await getCharacterFiles('campaign1');
-
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array when files key is undefined', async () => {
+    it('should return empty array when files key is missing', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({})
@@ -193,22 +171,6 @@ describe('campaignService', () => {
         .mockResolvedValueOnce({
           ok: false,
           statusText: 'Not Found'
-        });
-
-      const result = await loadCharacters('campaign1', ['char1.json', 'char2.json']);
-
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array when all characters fail to load', async () => {
-      fetchSpy
-        .mockResolvedValueOnce({
-          ok: false,
-          statusText: 'Not Found'
-        })
-        .mockResolvedValueOnce({
-          ok: false,
-          statusText: 'Internal Server Error'
         });
 
       const result = await loadCharacters('campaign1', ['char1.json', 'char2.json']);

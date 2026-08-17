@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import raceRules from './5e.js';
 
@@ -11,13 +11,15 @@ describe('raceRules 5e - getSenses', () => {
       expect(result.length).toBe(0);
     });
 
-    it('preserves existing senses and returns sorted', () => {
+    it('does not add Darkvision when race does not have the trait', () => {
       const playerStats = {
-        senses: [{ name: 'Normal Vision', value: '60 ft.' }],
-        race: { traits: [] }
+        senses: [],
+        race: {
+          traits: [{ name: 'Other Trait' }]
+        }
       };
       const result = raceRules.getSenses(playerStats);
-      expect(result).toContainEqual({ name: 'Normal Vision', value: '60 ft.' });
+      expect(result).not.toContainEqual({ name: 'Darkvision', value: '60 ft.' });
     });
 
     it('adds Darkvision when race has Darkvision trait and it is not already present', () => {
@@ -41,26 +43,6 @@ describe('raceRules 5e - getSenses', () => {
       const result = raceRules.getSenses(playerStats);
       expect(result.filter((s) => s.name === 'Darkvision').length).toBe(1);
       expect(result.find((s) => s.name === 'Darkvision').value).toBe('120 ft.');
-    });
-
-    it('does not add Darkvision when race does not have the trait', () => {
-      const playerStats = {
-        senses: [],
-        race: {
-          traits: [{ name: 'Other Trait' }]
-        }
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Darkvision', value: '60 ft.' });
-    });
-
-    it('does not add Darkvision when race has empty traits', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] }
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Darkvision', value: '60 ft.' });
     });
 
     it('adds Passive Perception when Wisdom ability with Perception skill exists', () => {
@@ -127,15 +109,18 @@ describe('raceRules 5e - getSenses', () => {
       expect(result).toContainEqual({ name: 'Passive Insight', value: '12' });
     });
 
-    it('does not add passive skills when abilities array is missing', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] }
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Passive Perception', value: '10' });
-      expect(result).not.toContainEqual({ name: 'Passive Investigation', value: '10' });
-      expect(result).not.toContainEqual({ name: 'Passive Insight', value: '10' });
+    it('does not add passive skills when abilities is missing, null, or empty', () => {
+      expect(
+        raceRules.getSenses({ senses: [], race: { traits: [] } })
+      ).not.toContainEqual({ name: 'Passive Perception', value: '10' });
+
+      expect(
+        raceRules.getSenses({ senses: [], race: { traits: [] }, abilities: null })
+      ).not.toContainEqual({ name: 'Passive Perception', value: '10' });
+
+      expect(
+        raceRules.getSenses({ senses: [], race: { traits: [] }, abilities: [] })
+      ).not.toContainEqual({ name: 'Passive Perception', value: '10' });
     });
 
     it('does not add passive skills when the relevant ability is missing', () => {
@@ -227,23 +212,14 @@ describe('raceRules 5e - getSenses', () => {
       expect(result.find((s) => s.name === 'Feral Senses').value).toBe('120 ft.');
     });
 
-    it('handles missing class_levels gracefully', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] },
-        class: {}
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Feral Senses', value: '' });
-    });
+    it('handles missing or undefined class gracefully', () => {
+      expect(
+        raceRules.getSenses({ senses: [], race: { traits: [] }, class: {} })
+      ).not.toContainEqual({ name: 'Feral Senses', value: '' });
 
-    it('handles undefined class gracefully', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] }
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Feral Senses', value: '' });
+      expect(
+        raceRules.getSenses({ senses: [], race: { traits: [] } })
+      ).not.toContainEqual({ name: 'Feral Senses', value: '' });
     });
 
     it('adds Blindvision 10 ft. when Blind Fighting fighting style is selected', () => {
@@ -258,28 +234,30 @@ describe('raceRules 5e - getSenses', () => {
       expect(result).toContainEqual({ name: 'Blindvision', value: '10 ft.' });
     });
 
-    it('does not add Blindvision when Blind Fighting is not selected', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] },
-        class: {
-          fightingStyles: ['Dueling']
-        }
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
-    });
+    it('does not add Blindvision when Blind Fighting is not selected or fightingStyles is missing', () => {
+      expect(
+        raceRules.getSenses({
+          senses: [],
+          race: { traits: [] },
+          class: { fightingStyles: ['Dueling'] }
+        })
+      ).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
 
-    it('does not add Blindvision when fightingStyles is empty', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] },
-        class: {
-          fightingStyles: []
-        }
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
+      expect(
+        raceRules.getSenses({
+          senses: [],
+          race: { traits: [] },
+          class: { fightingStyles: [] }
+        })
+      ).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
+
+      expect(
+        raceRules.getSenses({
+          senses: [],
+          race: { traits: [] },
+          class: {}
+        })
+      ).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
     });
 
     it('does not duplicate Blindvision when already in senses', () => {
@@ -295,64 +273,22 @@ describe('raceRules 5e - getSenses', () => {
       expect(result.find((s) => s.name === 'Blindvision').value).toBe('30 ft.');
     });
 
-    it('handles missing fightingStyles gracefully', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] },
-        class: {}
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Blindvision', value: '10 ft.' });
-    });
+    it('handles abilities with missing skills array or undefined bonus', () => {
+      expect(
+        raceRules.getSenses({
+          senses: [],
+          race: { traits: [] },
+          abilities: [{ name: 'Wisdom', bonus: 2 }]
+        })
+      ).toContainEqual({ name: 'Passive Perception', value: '12' });
 
-    it('handles null abilities gracefully', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] },
-        abilities: null
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Passive Perception', value: '10' });
-    });
-
-    it('handles empty abilities array', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] },
-        abilities: []
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).not.toContainEqual({ name: 'Passive Perception', value: '10' });
-    });
-
-    it('handles abilities with missing skills array', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] },
-        abilities: [
-          {
-            name: 'Wisdom',
-            bonus: 2
-          }
-        ]
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).toContainEqual({ name: 'Passive Perception', value: '12' });
-    });
-
-    it('handles abilities with undefined bonus', () => {
-      const playerStats = {
-        senses: [],
-        race: { traits: [] },
-        abilities: [
-          {
-            name: 'Wisdom',
-            skills: [{ name: 'Perception', bonus: 3 }]
-          }
-        ]
-      };
-      const result = raceRules.getSenses(playerStats);
-      expect(result).toContainEqual({ name: 'Passive Perception', value: '13' });
+      expect(
+        raceRules.getSenses({
+          senses: [],
+          race: { traits: [] },
+          abilities: [{ name: 'Wisdom', skills: [{ name: 'Perception', bonus: 3 }] }]
+        })
+      ).toContainEqual({ name: 'Passive Perception', value: '13' });
     });
 
     it('combines Darkvision, passive skills, and Feral Senses together', () => {

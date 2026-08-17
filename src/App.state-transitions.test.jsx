@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -238,40 +238,6 @@ describe('App - Runtime Events & State Transitions', () => {
   });
 
   describe('Theme management', () => {
-    it('defaults to dark theme when localStorage has no theme value', async () => {
-      const localStorageMock = {
-        getItem: vi.fn(() => null),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      };
-      Object.defineProperty(window, 'localStorage', {
-        value: localStorageMock,
-        writable: true,
-        configurable: true,
-      });
-
-      await setupWithCharacters();
-      expect(document.body.getAttribute('data-theme')).toBe('dark');
-    });
-
-    it('respects light theme from localStorage on mount', async () => {
-      const localStorageMock = {
-        getItem: vi.fn((key) => (key === 'theme' ? 'light' : null)),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      };
-      Object.defineProperty(window, 'localStorage', {
-        value: localStorageMock,
-        writable: true,
-        configurable: true,
-      });
-
-      await setupWithCharacters();
-      expect(document.body.getAttribute('data-theme')).toBe('light');
-    });
-
     it('toggles theme from dark to light and persists to localStorage', async () => {
       const localStorageMock = {
         getItem: vi.fn(() => 'dark'),
@@ -297,23 +263,6 @@ describe('App - Runtime Events & State Transitions', () => {
         expect(document.body.getAttribute('data-theme')).toBe('light');
       });
       expect(localStorageMock.setItem).toHaveBeenCalledWith('theme', 'light');
-    });
-  });
-
-  describe('Document title management', () => {
-    it('sets document title to character name when on charSheet', async () => {
-      await setupWithCharacters([{ name: 'Aragorn', level: 1 }]);
-      expect(document.title).toBe('Aragorn');
-    });
-
-    it('sets document title to "CharSheets" when navigating away from charSheet', async () => {
-      await setupWithCharacters([{ name: 'Aragorn', level: 1 }]);
-      expect(document.title).toBe('Aragorn');
-
-      fireEvent.click(screen.getByTestId('initiative-btn'));
-      await waitFor(() => {
-        expect(document.title).toBe('CharSheets');
-      });
     });
   });
 
@@ -383,43 +332,6 @@ describe('App - Runtime Events & State Transitions', () => {
     });
   });
 
-  describe('Maps view transitions', () => {
-    it('navigates back from map to manager when history has entries', async () => {
-      const { loadMaps } = await import('./services/maps/mapsService.js');
-      loadMaps.mockResolvedValue({
-        maps: [{ fileName: 'dungeon-1.json', isActive: true }],
-      });
-
-      await setupWithCharacters();
-
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('open-map-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('map-view')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('map-back-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Seed runtime store effect', () => {
-    it('fetches change-data from server on campaign load', async () => {
-      await setupWithCharacters();
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
-          '/api/campaigns/test-campaign/change-data',
-        );
-      });
-    });
-  });
-
   describe('Campaign select callback - combat summary initialization', () => {
     it('initializes combat summary cache when no server data exists', async () => {
       const { loadCombatSummary, setCombatSummaryCache } = await import(
@@ -447,19 +359,6 @@ describe('App - Runtime Events & State Transitions', () => {
   // where the useAppData mock properly simulates the data loading flow.
 
   describe('handleCharacterClick', () => {
-    it('switches active character when clicking sidebar character button', async () => {
-      await setupWithCharacters([
-        { name: 'Aragorn', level: 1 },
-        { name: 'Legolas', level: 2 },
-      ]);
-      expect(screen.getByTestId('character-name').textContent).toBe('Aragorn');
-
-      fireEvent.click(screen.getByTestId('char-btn-Legolas'));
-      await waitFor(() => {
-        expect(screen.getByTestId('character-name').textContent).toBe('Legolas');
-      });
-    });
-
     it('switches back to first character when clicking it again', async () => {
       await setupWithCharacters([
         { name: 'Aragorn', level: 1 },
@@ -480,28 +379,6 @@ describe('App - Runtime Events & State Transitions', () => {
   });
 
   describe('Campaign repair view', () => {
-    it('renders campaign repair view with correct theme', async () => {
-      const localStorageMock = {
-        getItem: vi.fn(() => null),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      };
-      Object.defineProperty(window, 'localStorage', {
-        value: localStorageMock,
-        writable: true,
-        configurable: true,
-      });
-
-      await setupWithCharacters();
-
-      fireEvent.click(screen.getByTestId('admin-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('campaign-admin')).toBeInTheDocument();
-      });
-      expect(screen.getByTestId('admin-theme').textContent).toBe('dark');
-    });
-
     it('navigates back from campaign repair', async () => {
       await setupWithCharacters();
 

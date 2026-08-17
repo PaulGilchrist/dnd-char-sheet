@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import raceRules from './5e.js';
 
@@ -114,22 +114,10 @@ describe('raceRules 5e - getResistances', () => {
       expect(result).toEqual([]);
     });
 
-    it('handles empty resistances array', () => {
-      const playerSummary = {
-        race: { name: 'Elf' },
-        resistances: []
-      };
-      const result = raceRules.getResistances(playerSummary);
-      expect(result).toEqual(['Charm']);
-    });
-
-    it('handles undefined resistances', () => {
-      const playerSummary = {
-        race: { name: 'Elf' },
-        resistances: undefined
-      };
-      const result = raceRules.getResistances(playerSummary);
-      expect(result).toEqual(['Charm']);
+    it('handles empty or undefined resistances gracefully', () => {
+      const base = { race: { name: 'Elf' } };
+      expect(raceRules.getResistances({ ...base, resistances: [] })).toEqual(['Charm']);
+      expect(raceRules.getResistances({ ...base, resistances: undefined })).toEqual(['Charm']);
     });
 
     it('handles subrace without damage_resistance', () => {

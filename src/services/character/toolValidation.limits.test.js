@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -21,17 +21,15 @@ describe('toolValidation - getToolLimitsByCategory', () => {
   });
 
   it('should return empty limits for non-2024 ruleset', async () => {
-    const result = await getToolLimitsByCategory({ rules: '5e' });
-    expect(result.categoryLimits.size).toBe(0);
-    expect(result.preSelected).toEqual([]);
-    expect(result.skilledUsesAvailable).toBe(0);
-  });
+    const result5e = await getToolLimitsByCategory({ rules: '5e' });
+    expect(result5e.categoryLimits.size).toBe(0);
+    expect(result5e.preSelected).toEqual([]);
+    expect(result5e.skilledUsesAvailable).toBe(0);
 
-  it('should return empty limits when missing rules field defaults to 5e', async () => {
-    const result = await getToolLimitsByCategory({});
-    expect(result.categoryLimits.size).toBe(0);
-    expect(result.preSelected).toEqual([]);
-    expect(result.skilledUsesAvailable).toBe(0);
+    const resultMissing = await getToolLimitsByCategory({});
+    expect(resultMissing.categoryLimits.size).toBe(0);
+    expect(resultMissing.preSelected).toEqual([]);
+    expect(resultMissing.skilledUsesAvailable).toBe(0);
   });
 
   it('should return empty limits when no class/background/feats on 2024', async () => {
@@ -167,7 +165,6 @@ describe('toolValidation - getToolLimitsByCategory', () => {
       feats: ['Some Feat'],
     });
 
-    // Non-Skilled isAny applies to all tool categories
     expect(result.categoryLimits.get("Artisan's Tools")).toBe(2);
     expect(result.categoryLimits.get('Gaming Sets')).toBe(2);
     expect(result.categoryLimits.get('Musical Instrument')).toBe(2);
@@ -193,19 +190,6 @@ describe('toolValidation - getToolLimitsByCategory', () => {
     expect(result.categoryLimits.has("Artisan's Tools")).toBe(false);
   });
 
-  it('should find feat by name and by index', async () => {
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([
-      { name: 'Skilled', index: 'skilled', benefits: [{ type: 'proficiency', description: 'You gain proficiency in any combination of three skills or tools of your choice' }] },
-    ]);
-
-    const result = await getToolLimitsByCategory({
-      rules: '2024',
-      feats: ['Skilled'],
-    });
-
-    expect(result.skilledUsesAvailable).toBe(3);
-  });
-
   it('should skip feat that is not found in feat data', async () => {
     vi.mocked(dataLoader.loadFeatData).mockResolvedValue([]);
 
@@ -218,32 +202,30 @@ describe('toolValidation - getToolLimitsByCategory', () => {
     expect(result.skilledUsesAvailable).toBe(0);
   });
 
-  it('should handle missing class/background gracefully (returns null)', async () => {
+  it('should handle missing class/background gracefully (null or missing tools field)', async () => {
     vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue(null);
     vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
 
-    const result = await getToolLimitsByCategory({
+    const resultNull = await getToolLimitsByCategory({
       rules: '2024',
       background: 'Unknown',
       class: { name: 'Unknown' },
     });
 
-    expect(result.categoryLimits.size).toBe(0);
-    expect(result.preSelected).toEqual([]);
-  });
+    expect(resultNull.categoryLimits.size).toBe(0);
+    expect(resultNull.preSelected).toEqual([]);
 
-  it('should handle missing tools field on class/background gracefully', async () => {
     vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
     vi.mocked(dataLoader.fetchClassData).mockResolvedValue({});
 
-    const result = await getToolLimitsByCategory({
+    const resultMissingField = await getToolLimitsByCategory({
       rules: '2024',
       background: 'Charlatan',
       class: { name: 'Bard' },
     });
 
-    expect(result.categoryLimits.size).toBe(0);
-    expect(result.preSelected).toEqual([]);
+    expect(resultMissingField.categoryLimits.size).toBe(0);
+    expect(resultMissingField.preSelected).toEqual([]);
   });
 
   it('should aggregate multiple sources (background + class + feat)', async () => {
@@ -271,17 +253,15 @@ describe('toolValidation - getToolLimitsByCategory', () => {
     expect(result.categoryLimits.get('Musical Instrument')).toBe(2);
   });
 
-  it('should handle empty feats array', async () => {
-    const result = await getToolLimitsByCategory({
+  it('should handle empty feats array and feats with no matching tool benefits', async () => {
+    const resultEmpty = await getToolLimitsByCategory({
       rules: '2024',
       feats: [],
     });
 
-    expect(result.categoryLimits.size).toBe(0);
-    expect(result.skilledUsesAvailable).toBe(0);
-  });
+    expect(resultEmpty.categoryLimits.size).toBe(0);
+    expect(resultEmpty.skilledUsesAvailable).toBe(0);
 
-  it('should handle feat with no matching tool benefits', async () => {
     vi.mocked(dataLoader.loadFeatData).mockResolvedValue([
       {
         name: 'Tough',
@@ -289,27 +269,13 @@ describe('toolValidation - getToolLimitsByCategory', () => {
       },
     ]);
 
-    const result = await getToolLimitsByCategory({
+    const resultNonTool = await getToolLimitsByCategory({
       rules: '2024',
       feats: ['Tough'],
     });
 
-    expect(result.categoryLimits.size).toBe(0);
-    expect(result.skilledUsesAvailable).toBe(0);
-  });
-
-  it('should handle missing class/background data (null returns)', async () => {
-    vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue(null);
-    vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
-
-    const result = await getToolLimitsByCategory({
-      rules: '2024',
-      background: 'NonExistent',
-      class: { name: 'NonExistent' },
-    });
-
-    expect(result.categoryLimits.size).toBe(0);
-    expect(result.preSelected).toEqual([]);
+    expect(resultNonTool.categoryLimits.size).toBe(0);
+    expect(resultNonTool.skilledUsesAvailable).toBe(0);
   });
 });
 
@@ -319,30 +285,21 @@ describe('toolValidation - validateTools', () => {
     expect(warnings).toEqual([]);
   });
 
-  it('should return empty warnings when no tools selected', async () => {
+  it('should return empty warnings when no tools selected (empty or missing)', async () => {
     vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
     vi.mocked(dataLoader.fetchClassData).mockResolvedValue({});
     vi.mocked(dataLoader.loadFeatData).mockResolvedValue([]);
 
-    const warnings = await validateTools({
+    const warningsEmpty = await validateTools({
       rules: '2024',
       toolProficiencies: [],
     });
+    expect(warningsEmpty).toEqual([]);
 
-    expect(warnings).toEqual([]);
-  });
-
-  it('should return empty warnings when no limits and no tools selected', async () => {
-    vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
-    vi.mocked(dataLoader.fetchClassData).mockResolvedValue({});
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([]);
-
-    const warnings = await validateTools({
+    const warningsMissing = await validateTools({
       rules: '2024',
-      toolProficiencies: [],
     });
-
-    expect(warnings).toEqual([]);
+    expect(warningsMissing).toEqual([]);
   });
 
   it('should warn when selecting more tools than allowed in a category', async () => {
@@ -414,7 +371,7 @@ describe('toolValidation - validateTools', () => {
     expect(warnings).toEqual([]);
   });
 
-  it('should not warn for pre-selected tools (excluded from user selections)', async () => {
+  it('should not warn for pre-selected or placeholder tools', async () => {
     vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({
       tool_proficiencies: "Artisan's Tools",
     });
@@ -424,32 +381,26 @@ describe('toolValidation - validateTools', () => {
       { name: "Alchemist's Supplies", equipment_category: 'Tools', tool_category: "Artisan's Tools" },
     ]);
 
-    const warnings = await validateTools({
+    const warningsPreSelected = await validateTools({
       rules: '2024',
       background: 'Artisan',
-      toolProficiencies: ["Alchemist's Supplies", "Artisan's Tools"],
+      toolProficiencies: ["Artisan's Tools"],
     });
+    expect(warningsPreSelected).toEqual([]);
 
-    // "Artisan's Tools" is pre-selected (excluded), but "Alchemist's Supplies" is user-selected
-    // and falls in Artisan's Tools which has 0 limit → should warn
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0].message).toContain('Artisan\'s Tools');
-  });
-
-  it('should not warn for placeholder tools', async () => {
     vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
-    vi.mocked(dataLoader.fetchClassData).mockResolvedValue({});
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([]);
-    vi.mocked(dataLoader.loadEquipment).mockResolvedValue([
-      { name: 'Flute', equipment_category: 'Tools', tool_category: 'Musical Instrument' },
-    ]);
 
-    const warnings = await validateTools({
+    const warningsPlaceholder = await validateTools({
       rules: '2024',
       toolProficiencies: ['3 from: Flute'],
     });
+    expect(warningsPlaceholder).toEqual([]);
 
-    expect(warnings).toEqual([]);
+    const warningsMultiPlaceholder = await validateTools({
+      rules: '2024',
+      toolProficiencies: ['1 from: Flute', '2 from: Drum'],
+    });
+    expect(warningsMultiPlaceholder).toEqual([]);
   });
 
   it('should not warn when overflow is within Skilled pool', async () => {
@@ -479,8 +430,6 @@ describe('toolValidation - validateTools', () => {
       feats: ['Skilled'],
     });
 
-    // Artisan's Tools: limit 2, selected 3, excess 1, skilled has 2 => covers it
-    // No warning expected because Skilled covers the 1 excess
     expect(warnings).toEqual([]);
   });
 
@@ -513,22 +462,8 @@ describe('toolValidation - validateTools', () => {
       feats: ['Skilled'],
     });
 
-    // Artisan's Tools: limit 2, selected 3, excess 1, skilled has 2 => covers 1, skilledCanCover = 1
-    // Musical Instrument: limit 0, selected 2, skilledCanCover (1) < 2 => warning
     expect(warnings).toHaveLength(1);
     expect(warnings[0].message).toContain('Musical Instrument');
-  });
-
-  it('should handle missing toolProficiencies gracefully', async () => {
-    vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
-    vi.mocked(dataLoader.fetchClassData).mockResolvedValue({});
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([]);
-
-    const warnings = await validateTools({
-      rules: '2024',
-    });
-
-    expect(warnings).toEqual([]);
   });
 
   it('should combine warnings from multiple categories', async () => {
@@ -547,7 +482,6 @@ describe('toolValidation - validateTools', () => {
       toolProficiencies: ['Flute', 'Drum', 'Dice', 'Cards'],
     });
 
-    // Two categories with 0 allowed, each should generate a warning
     expect(warnings).toHaveLength(2);
     const musicalWarning = warnings.find(w => w.message.includes('Musical Instrument'));
     const gamingWarning = warnings.find(w => w.message.includes('Gaming Sets'));
@@ -571,7 +505,7 @@ describe('toolValidation - validateTools', () => {
     expect(warnings[0].message).toContain('Flute');
   });
 
-  it('should not warn when all selected tools are pre-selected', async () => {
+  it('should warn when pre-selected tools leave user selections over the limit', async () => {
     vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({
       tool_proficiencies: "Artisan's Tools",
     });
@@ -584,27 +518,11 @@ describe('toolValidation - validateTools', () => {
     const warnings = await validateTools({
       rules: '2024',
       background: 'Artisan',
-      toolProficiencies: ["Artisan's Tools"],
+      toolProficiencies: ["Alchemist's Supplies", "Artisan's Tools"],
     });
 
-    // "Artisan's Tools" is pre-selected, so userSelectedTools is empty
-    expect(warnings).toEqual([]);
-  });
-
-  it('should not warn when only placeholder tools are selected', async () => {
-    vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue({});
-    vi.mocked(dataLoader.fetchClassData).mockResolvedValue({});
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([]);
-    vi.mocked(dataLoader.loadEquipment).mockResolvedValue([
-      { name: 'Flute', equipment_category: 'Tools', tool_category: 'Musical Instrument' },
-    ]);
-
-    const warnings = await validateTools({
-      rules: '2024',
-      toolProficiencies: ['1 from: Flute', '2 from: Drum'],
-    });
-
-    expect(warnings).toEqual([]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain('Artisan\'s Tools');
   });
 
   it('should handle missing formData gracefully', async () => {

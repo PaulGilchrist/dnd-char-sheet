@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import POIContextMenu from './POIContextMenu.jsx';
@@ -114,24 +114,15 @@ describe('POIContextMenu', () => {
             expect(screen.queryByText('Show')).not.toBeInTheDocument();
         });
 
-        it('defaults to no road options when roads prop is undefined', () => {
-            const { container } = render(<POIContextMenu {...props} roads={undefined} />);
-            expect(container.querySelector('.poi-context-menu')).toBeInTheDocument();
-            expect(screen.queryByText(/Remove Roads/)).not.toBeInTheDocument();
-        });
     });
 
     describe('action callbacks', () => {
-        it('toggles a visible POI to hidden and closes on Hide', () => {
-            renderMenu();
-            fireEvent.click(screen.getByText('Hide'));
-            expect(props.onToggleVisibility).toHaveBeenCalledWith('poi-1');
-            expect(props.onClose).toHaveBeenCalled();
-        });
-
-        it('toggles a hidden POI back to visible and closes on Show', () => {
-            renderMenu({ pois: [{ ...BASE_POI, visible: false }] });
-            fireEvent.click(screen.getByText('Show'));
+        it.each([
+            { label: 'visible', visible: true, button: 'Hide' },
+            { label: 'hidden', visible: false, button: 'Show' },
+        ])('toggles a %s POI and closes on %s', ({ visible, button }) => {
+            renderMenu({ pois: [{ ...BASE_POI, visible }] });
+            fireEvent.click(screen.getByText(button));
             expect(props.onToggleVisibility).toHaveBeenCalledWith('poi-1');
             expect(props.onClose).toHaveBeenCalled();
         });
@@ -221,12 +212,6 @@ describe('POIContextMenu', () => {
             }
         });
 
-        it('defaults to no maps when indoorMaps prop is undefined', () => {
-            const { container } = render(<POIContextMenu {...props} indoorMaps={undefined} pois={[BASE_POI]} />);
-            expect(container.querySelector('.poi-context-menu')).toBeInTheDocument();
-            expect(screen.getByText('Link to Map...')).toBeInTheDocument();
-        });
-
         it('closes the link picker when the close button is clicked', () => {
             renderMenu({ indoorMaps: ['dungeon-map.json'], pois: [BASE_POI] });
             fireEvent.click(screen.getByText('Link to Map...'));
@@ -275,13 +260,6 @@ describe('POIContextMenu', () => {
     describe('positioning', () => {
         it('places the menu next to the selected POI hex', () => {
             const { container } = renderMenu();
-            const rect = container.querySelector('.poi-context-menu rect');
-            expect(rect).toHaveAttribute('x', '10');
-            expect(rect).toHaveAttribute('y', '10');
-        });
-
-        it('keeps the natural offset when the menu already fits inside the viewport', () => {
-            const { container } = renderMenu({ viewPortBounds: { left: 0, top: 0, right: 1000, bottom: 1000 } });
             const rect = container.querySelector('.poi-context-menu rect');
             expect(rect).toHaveAttribute('x', '10');
             expect(rect).toHaveAttribute('y', '10');

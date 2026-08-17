@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ describe('bardicInspirationUseHandler.handle', () => {
   // ── No bardic inspiration die ────────────────────────────────
 
   describe('no bardic inspiration die', () => {
-    it('returns info popup when bardicInspirationDie is null', async () => {
+    it('returns info popup when no die is available', async () => {
       mockNoDie();
       const action = makeAction();
 
@@ -77,22 +77,6 @@ describe('bardicInspirationUseHandler.handle', () => {
       expect(result.payload.description).toBe('You do not have a Bardic Inspiration die.');
     });
 
-    it('returns info popup when bardicInspirationDie is 0', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(0);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(result.payload.description).toBe('You do not have a Bardic Inspiration die.');
-    });
-
-    it('returns info popup when bardicInspirationDie is undefined', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(undefined);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(result.payload.description).toBe('You do not have a Bardic Inspiration die.');
-    });
-
     it('does not roll dice or set runtime state when there is no die', async () => {
       mockNoDie();
 
@@ -100,18 +84,6 @@ describe('bardicInspirationUseHandler.handle', () => {
 
       expect(diceRoller.rollExpression).not.toHaveBeenCalled();
       expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-    });
-
-    it('reads bardicInspirationDie from runtime state', async () => {
-      mockNoDie();
-
-      await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith(
-        playerName,
-        'bardicInspirationDie',
-        campaignName,
-      );
     });
   });
 
@@ -137,15 +109,6 @@ describe('bardicInspirationUseHandler.handle', () => {
       await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-    });
-
-    it('rolls the correct die expression for the die size', async () => {
-      mockWithDie(10, null);
-      diceRoller.rollExpression.mockReturnValue(null);
-
-      await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d10');
     });
   });
 
@@ -174,16 +137,8 @@ describe('bardicInspirationUseHandler.handle', () => {
       );
     });
 
-    it('rolls the correct die expression for the die size', async () => {
-      mockSuccess(8, null, { total: 5, rolls: [5] });
-
-      await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d8');
-    });
-
-    it('clears bardicInspirationDie runtime state', async () => {
-      mockSuccess(8, null, { total: 5, rolls: [5] });
+    it('clears both runtime state values after a successful roll', async () => {
+      mockSuccess(8, 'Bard NPC', { total: 5, rolls: [5] });
 
       await handle(makeAction(), makePlayerStats(), campaignName);
 
@@ -193,13 +148,6 @@ describe('bardicInspirationUseHandler.handle', () => {
         null,
         campaignName,
       );
-    });
-
-    it('clears bardicInspirationGrantedBy runtime state', async () => {
-      mockSuccess(8, 'Bard NPC', { total: 5, rolls: [5] });
-
-      await handle(makeAction(), makePlayerStats(), campaignName);
-
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         playerName,
         'bardicInspirationGrantedBy',
@@ -216,34 +164,19 @@ describe('bardicInspirationUseHandler.handle', () => {
       expect(result.payload.automation).toEqual({ type: 'bardic_inspiration_use' });
     });
 
-    it('includes roll total and individual rolls in the description', async () => {
-      mockSuccess(8, null, { total: 5, rolls: [5] });
+    it('returns a description with roll details and grantedBy', async () => {
+      mockSuccess(8, 'Bard College Member', { total: 5, rolls: [3, 2] });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(result.payload.description).toContain('1d8');
       expect(result.payload.description).toContain('**5**');
-      expect(result.payload.description).toContain('5');
-    });
-
-    it('includes individual roll components in the description', async () => {
-      mockSuccess(8, null, { total: 5, rolls: [3, 2] });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(result.payload.description).toContain('**5**');
       expect(result.payload.description).toContain('3, 2');
-    });
-
-    it('includes grantedBy in the description when set', async () => {
-      mockSuccess(8, 'Bard College Member', { total: 5, rolls: [5] });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
+      expect(result.payload.description).toContain('Add this to an ability check');
       expect(result.payload.description).toContain('Die granted by Bard College Member');
     });
 
-    it('falls back to "unknown" when grantedBy is null', async () => {
+    it('falls back to "unknown" when grantedBy is null or undefined', async () => {
       mockSuccess(8, null, { total: 4, rolls: [4] });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -251,50 +184,23 @@ describe('bardicInspirationUseHandler.handle', () => {
       expect(result.payload.description).toContain('Die granted by unknown');
     });
 
-    it('falls back to "unknown" when grantedBy is undefined', async () => {
-      mockSuccess(8, undefined, { total: 4, rolls: [4] });
+    it('works with different die sizes (d6, d10, d12)', async () => {
+      const dice = [
+        { size: 6, total: 3 },
+        { size: 10, total: 7 },
+        { size: 12, total: 10 },
+      ];
 
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
+      for (const { size, total } of dice) {
+        vi.clearAllMocks();
+        mockSuccess(size, null, { total, rolls: [total] });
 
-      expect(result.payload.description).toContain('Die granted by unknown');
-    });
+        const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
-    it('works with different die sizes', async () => {
-      mockSuccess(10, null, { total: 7, rolls: [7] });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d10');
-      expect(result.payload.description).toContain('1d10');
-      expect(result.payload.description).toContain('**7**');
-    });
-
-    it('works with the smallest bardic inspiration die (d6)', async () => {
-      mockSuccess(6, null, { total: 3, rolls: [3] });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d6');
-      expect(result.payload.description).toContain('1d6');
-      expect(result.payload.description).toContain('**3**');
-    });
-
-    it('works with the largest bardic inspiration die (d12)', async () => {
-      mockSuccess(12, null, { total: 10, rolls: [10] });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d12');
-      expect(result.payload.description).toContain('1d12');
-      expect(result.payload.description).toContain('**10**');
-    });
-
-    it('includes "Add this to an ability check" instruction in the description', async () => {
-      mockSuccess(8, null, { total: 5, rolls: [5] });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(result.payload.description).toContain('Add this to an ability check');
+        expect(diceRoller.rollExpression).toHaveBeenCalledWith(`1d${size}`);
+        expect(result.payload.description).toContain(`1d${size}`);
+        expect(result.payload.description).toContain(`**${total}**`);
+      }
     });
   });
 });

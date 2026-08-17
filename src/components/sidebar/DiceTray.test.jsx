@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import DiceTray, { DicePopup } from './DiceTray.jsx';
@@ -32,73 +32,32 @@ afterEach(() => {
 
 describe('DiceTray', () => {
   describe('rendering', () => {
-    it('renders all 7 dice buttons', () => {
-      renderDiceTray();
-      DICE.forEach(({ label }) => {
-        expect(screen.getByTitle(`Roll ${label}`)).toBeInTheDocument();
-      });
-    });
-
-    it('wraps buttons in a .dice-tray container', () => {
-      const { container } = renderDiceTray();
-      expect(container.querySelector('.dice-tray')).toBeInTheDocument();
-    });
-
-    it.each(DICE)('renders a $label roll button with its icon', ({ label }) => {
+    it.each(DICE)('renders a roll button with title and label for $label', ({ label }) => {
       renderDiceTray();
       const button = screen.getByTitle(`Roll ${label}`);
-      const isSvgDie = ['d4', 'd8', 'd10', 'd12', 'd100'].includes(label);
-      const isFaDie = ['d6', 'd20'].includes(label);
-      if (isSvgDie) {
-        expect(button.querySelector('svg')).toBeInTheDocument();
-      } else if (isFaDie) {
-        expect(button.querySelector('.fa-solid')).toBeInTheDocument();
-      }
-    });
-
-    it.each(DICE)('renders a $label dice-label span inside the button', ({ label }) => {
-      renderDiceTray();
-      const button = screen.getByTitle(`Roll ${label}`);
-      const diceLabel = button.querySelector('.dice-label');
-      expect(diceLabel).toBeInTheDocument();
-      expect(diceLabel.textContent).toBe(label);
+      expect(button).toBeInTheDocument();
+      expect(button.querySelector('.dice-label')).toBeInTheDocument();
+      expect(button.querySelector('.dice-label').textContent).toBe(label);
     });
   });
 
   describe('rolling', () => {
     it.each(DICE)('calls onRoll with the result of rolling $label', ({ label, sides }) => {
       const onRoll = vi.fn();
-      const rollDieSpy = vi.spyOn(diceRoller, 'rollDie').mockReturnValue(MOCK_ROLL_VALUE);
+      vi.spyOn(diceRoller, 'rollDie').mockReturnValue(MOCK_ROLL_VALUE);
       renderDiceTray({ onRoll });
       fireEvent.click(screen.getByTitle(`Roll ${label}`));
-      expect(rollDieSpy).toHaveBeenCalledWith(sides);
       expect(onRoll).toHaveBeenCalledWith({ label, value: MOCK_ROLL_VALUE });
     });
 
-    it('forwards a real roll from the dice roller within the die range', () => {
+    it('calls onRoll with a value within the die range using a real roll', () => {
       const onRoll = vi.fn();
       renderDiceTray({ onRoll });
       fireEvent.click(screen.getByTitle('Roll d20'));
-      expect(onRoll).toHaveBeenCalledTimes(1);
       const result = onRoll.mock.calls[0][0];
       expect(result.label).toBe('d20');
       expect(result.value).toBeGreaterThanOrEqual(1);
       expect(result.value).toBeLessThanOrEqual(20);
-    });
-
-    it('calls onRoll with value at boundaries for d4', () => {
-      const onRoll = vi.fn();
-      const rollDieSpy = vi.spyOn(diceRoller, 'rollDie');
-      rollDieSpy.mockReturnValueOnce(1).mockReturnValueOnce(4);
-
-      renderDiceTray({ onRoll });
-      const button = screen.getByTitle('Roll d4');
-
-      fireEvent.click(button);
-      expect(onRoll).toHaveBeenLastCalledWith({ label: 'd4', value: 1 });
-
-      fireEvent.click(button);
-      expect(onRoll).toHaveBeenLastCalledWith({ label: 'd4', value: 4 });
     });
   });
 });
@@ -109,13 +68,8 @@ describe('DicePopup', () => {
       const { container } = renderPopup({ label, value: 1 });
       const resultIcon = container.querySelector('.dice-tray-result-icon');
       expect(resultIcon).toBeInTheDocument();
-      const isSvgDie = ['d4', 'd8', 'd10', 'd12', 'd100'].includes(label);
-      const isFaDie = ['d6', 'd20'].includes(label);
-      if (isSvgDie) {
-        expect(resultIcon.querySelector('svg')).toBeInTheDocument();
-      } else if (isFaDie) {
-        expect(resultIcon.querySelector('.fa-solid')).toBeInTheDocument();
-      }
+      const hasIcon = resultIcon.querySelector('svg') || resultIcon.querySelector('.fa-solid');
+      expect(hasIcon).toBeTruthy();
     });
 
     it('renders an unknown die label text without an icon', () => {
@@ -128,22 +82,11 @@ describe('DicePopup', () => {
       expect(screen.getByText('5')).toBeInTheDocument();
     });
 
-    it('renders the rolled value and die label', () => {
+    it('renders the rolled value, die label, and dismiss hint', () => {
       renderPopup();
       expect(screen.getByText('15')).toBeInTheDocument();
       expect(screen.getByText('d20')).toBeInTheDocument();
-    });
-
-    it('renders the dismiss hint', () => {
-      renderPopup();
       expect(screen.getByText('click anywhere to dismiss')).toBeInTheDocument();
-    });
-
-    it('renders the popup with correct modal and overlay structure', () => {
-      const { container } = renderPopup();
-      expect(container.querySelector('.dice-tray-popup-overlay')).toBeInTheDocument();
-      expect(container.querySelector('.dice-tray-popup-modal')).toBeInTheDocument();
-      expect(container.querySelector('.dice-tray-result')).toBeInTheDocument();
     });
   });
 

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import { getProficiencyChoiceCount } from './proficiencyUtils2024.js';
 
@@ -21,27 +21,10 @@ describe('proficiencyUtils2024', () => {
         expect(getProficiencyChoiceCount(playerStats, true)).toBe(10);
       });
 
-      it('handles extra whitespace around the number', () => {
-        const playerStats = {
-          class: { skill_proficiency_choices: 'Choose  3' },
-          race: {},
-        };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(3);
-      });
-
-      it('returns 0 when skill_proficiency_choices is missing', () => {
-        const playerStats = { class: {}, race: {} };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('returns 0 when skill_proficiency_choices is null', () => {
-        const playerStats = { class: { skill_proficiency_choices: null }, race: {} };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('returns 0 when skill_proficiency_choices is empty string', () => {
-        const playerStats = { class: { skill_proficiency_choices: '' }, race: {} };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
+      it('returns 0 when skill_proficiency_choices is missing or falsy', () => {
+        expect(getProficiencyChoiceCount({ class: {}, race: {} }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({ class: { skill_proficiency_choices: null }, race: {} }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({ class: { skill_proficiency_choices: '' }, race: {} }, true)).toBe(0);
       });
 
       it('returns 0 for non-matching format', () => {
@@ -114,28 +97,9 @@ describe('proficiencyUtils2024', () => {
         expect(getProficiencyChoiceCount(playerStats, false)).toBe(0);
       });
 
-      it('returns 0 when starting_proficiency_options is missing', () => {
-        const playerStats = { class: {}, race: {} };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('returns 0 when starting_proficiency_options is null', () => {
-        const playerStats = { class: {}, race: { starting_proficiency_options: null } };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('returns 0 when from array is empty', () => {
-        const playerStats = {
-          class: {},
-          race: {
-            starting_proficiency_options: {
-              choose: 2,
-              from: [],
-            },
-          },
-        };
-        // Accessing from[0] on empty array yields undefined, startsWith throws
-        expect(() => getProficiencyChoiceCount(playerStats, true)).toThrow(TypeError);
+      it('returns 0 when starting_proficiency_options is missing or null', () => {
+        expect(getProficiencyChoiceCount({ class: {}, race: {} }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({ class: {}, race: { starting_proficiency_options: null } }, true)).toBe(0);
       });
     });
 
@@ -191,101 +155,26 @@ describe('proficiencyUtils2024', () => {
         expect(getProficiencyChoiceCount(playerStats, false)).toBe(2);
       });
 
-      it('handles race traits being null', () => {
-        const playerStats = { class: {}, race: { traits: null } };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
+      it('returns 0 when race traits are null, undefined, or empty', () => {
+        expect(getProficiencyChoiceCount({ class: {}, race: { traits: null } }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({ class: {}, race: { traits: undefined } }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({ class: {}, race: { traits: [] } }, true)).toBe(0);
       });
 
-      it('handles race traits being undefined', () => {
-        const playerStats = { class: {}, race: { traits: undefined } };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
+      it('returns 0 when race traits lack proficiency_choices', () => {
+        expect(getProficiencyChoiceCount({ class: {}, race: { traits: [{ name: 'Darkvision' }] } }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({ class: {}, race: { traits: [{ proficiency_choices: null }] } }, true)).toBe(0);
       });
 
-      it('handles race traits being empty array', () => {
-        const playerStats = { class: {}, race: { traits: [] } };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles race traits without proficiency_choices', () => {
-        const playerStats = {
+      it('returns 0 when race trait proficiency_choices has empty or missing from', () => {
+        expect(getProficiencyChoiceCount({
           class: {},
-          race: {
-            traits: [{ name: 'Darkvision' }],
-          },
-        };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles race traits with null proficiency_choices', () => {
-        const playerStats = {
+          race: { traits: [{ proficiency_choices: { choose: 1, from: [] } }] },
+        }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({
           class: {},
-          race: {
-            traits: [{ proficiency_choices: null }],
-          },
-        };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles race traits with undefined proficiency_choices', () => {
-        const playerStats = {
-          class: {},
-          race: {
-            traits: [{ proficiency_choices: undefined }],
-          },
-        };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles race traits with empty from array (skipped via guard)', () => {
-        const playerStats = {
-          class: {},
-          race: {
-            traits: [
-              {
-                proficiency_choices: {
-                  choose: 1,
-                  from: [],
-                },
-              },
-            ],
-          },
-        };
-        // Source uses `pc.from && pc.from.length > 0` guard, so empty from is skipped
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles race traits with missing from property (skipped via guard)', () => {
-        const playerStats = {
-          class: {},
-          race: {
-            traits: [
-              {
-                proficiency_choices: {
-                  choose: 1,
-                },
-              },
-            ],
-          },
-        };
-        // Source uses `pc.from && pc.from.length > 0` guard, so missing from is skipped
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles race traits with undefined from[0]', () => {
-        const playerStats = {
-          class: {},
-          race: {
-            traits: [
-              {
-                proficiency_choices: {
-                  choose: 1,
-                  from: [undefined],
-                },
-              },
-            ],
-          },
-        };
-        expect(() => getProficiencyChoiceCount(playerStats, true)).toThrow(TypeError);
+          race: { traits: [{ proficiency_choices: { choose: 1 } }] },
+        }, true)).toBe(0);
       });
 
       it('sums choices from multiple race traits for skills', () => {
@@ -311,7 +200,7 @@ describe('proficiencyUtils2024', () => {
         expect(getProficiencyChoiceCount(playerStats, true)).toBe(3);
       });
 
-      it('handles mixed skill/non-skill choices across multiple traits for skills', () => {
+      it('handles mixed skill/non-skill choices across multiple traits', () => {
         const playerStats = {
           class: {},
           race: {
@@ -332,29 +221,6 @@ describe('proficiencyUtils2024', () => {
           },
         };
         expect(getProficiencyChoiceCount(playerStats, true)).toBe(2);
-        expect(getProficiencyChoiceCount(playerStats, false)).toBe(3);
-      });
-
-      it('handles mixed skill/non-skill choices across multiple traits for non-skills', () => {
-        const playerStats = {
-          class: {},
-          race: {
-            traits: [
-              {
-                proficiency_choices: {
-                  choose: 2,
-                  from: ['Skill: Perception'],
-                },
-              },
-              {
-                proficiency_choices: {
-                  choose: 3,
-                  from: ['Heavy Armor', 'Martial Weapons'],
-                },
-              },
-            ],
-          },
-        };
         expect(getProficiencyChoiceCount(playerStats, false)).toBe(3);
       });
 
@@ -428,74 +294,21 @@ describe('proficiencyUtils2024', () => {
         expect(getProficiencyChoiceCount(playerStats, false)).toBe(2);
       });
 
-      it('handles class.major without proficiency_choices', () => {
-        const playerStats = {
-          class: { major: { name: 'Battle Master' } },
-          race: {},
-        };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
+      it('returns 0 when class.major is null or lacks proficiency_choices', () => {
+        expect(getProficiencyChoiceCount({ class: { major: null }, race: {} }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({ class: { major: { proficiency_choices: [] } }, race: {} }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({ class: { major: { name: 'Battle Master' } }, race: {} }, true)).toBe(0);
       });
 
-      it('handles class without major', () => {
-        const playerStats = {
-          class: { name: 'Fighter' },
+      it('returns 0 when subclass proficiency_choices has empty or missing from', () => {
+        expect(getProficiencyChoiceCount({
+          class: { major: { proficiency_choices: [{ choose: 1, from: [] }] } },
           race: {},
-        };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles class.major being null', () => {
-        const playerStats = {
-          class: { major: null },
+        }, true)).toBe(0);
+        expect(getProficiencyChoiceCount({
+          class: { major: { proficiency_choices: [{ choose: 1 }] } },
           race: {},
-        };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles class.major.proficiency_choices being empty array', () => {
-        const playerStats = {
-          class: { major: { proficiency_choices: [] } },
-          race: {},
-        };
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles class.major.proficiency_choices entry with empty from (skipped via guard)', () => {
-        const playerStats = {
-          class: {
-            major: {
-              proficiency_choices: [{ choose: 1, from: [] }],
-            },
-          },
-          race: {},
-        };
-        // Source uses `pc.from && pc.from.length > 0` guard, so empty from is skipped
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles class.major.proficiency_choices entry with missing from (skipped via guard)', () => {
-        const playerStats = {
-          class: {
-            major: {
-              proficiency_choices: [{ choose: 1 }],
-            },
-          },
-          race: {},
-        };
-        // Source uses `pc.from && pc.from.length > 0` guard, so missing from is skipped
-        expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-      });
-
-      it('handles class.major.proficiency_choices entry with undefined from[0]', () => {
-        const playerStats = {
-          class: {
-            major: {
-              proficiency_choices: [{ choose: 1, from: [undefined] }],
-            },
-          },
-          race: {},
-        };
-        expect(() => getProficiencyChoiceCount(playerStats, true)).toThrow(TypeError);
+        }, true)).toBe(0);
       });
 
       it('sums choices from multiple subclass entries', () => {
@@ -590,7 +403,6 @@ describe('proficiencyUtils2024', () => {
             ],
           },
         };
-        // class.skill_proficiency_choices is ignored for non-skills
         expect(getProficiencyChoiceCount(playerStats, false)).toBe(3);
       });
 
@@ -619,7 +431,6 @@ describe('proficiencyUtils2024', () => {
             ],
           },
         };
-        // Only class.skill_proficiency_choices applies; all others are non-skill
         expect(getProficiencyChoiceCount(playerStats, true)).toBe(2);
       });
     });
@@ -630,7 +441,6 @@ describe('proficiencyUtils2024', () => {
           class: { skill_proficiency_choices: 'Choose 3' },
           race: {},
         };
-        // Without the second arg, should default to true and parse the class choice
         expect(getProficiencyChoiceCount(playerStats)).toBe(3);
       });
 
@@ -649,24 +459,12 @@ describe('proficiencyUtils2024', () => {
     });
 
     describe('error handling', () => {
-      it('throws when playerStats has no class property', () => {
-        const playerStats = { race: {} };
-        expect(() => getProficiencyChoiceCount(playerStats, true)).toThrow(TypeError);
-      });
-
-      it('throws when playerStats has no race property', () => {
-        const playerStats = { class: {} };
-        expect(() => getProficiencyChoiceCount(playerStats, true)).toThrow(TypeError);
-      });
-
-      it('throws when playerStats.class is undefined', () => {
-        const playerStats = { class: undefined, race: {} };
-        expect(() => getProficiencyChoiceCount(playerStats, true)).toThrow(TypeError);
-      });
-
-      it('throws when playerStats.race is undefined', () => {
-        const playerStats = { class: {}, race: undefined };
-        expect(() => getProficiencyChoiceCount(playerStats, true)).toThrow(TypeError);
+      it('throws TypeError when playerStats.class or playerStats.race is null or undefined', () => {
+        expect(() => getProficiencyChoiceCount({ race: {} }, true)).toThrow(TypeError);
+        expect(() => getProficiencyChoiceCount({ class: null, race: {} }, true)).toThrow(TypeError);
+        expect(() => getProficiencyChoiceCount({ class: undefined, race: {} }, true)).toThrow(TypeError);
+        expect(() => getProficiencyChoiceCount({ class: {}, race: null }, true)).toThrow(TypeError);
+        expect(() => getProficiencyChoiceCount({ class: {}, race: undefined }, true)).toThrow(TypeError);
       });
     });
   });

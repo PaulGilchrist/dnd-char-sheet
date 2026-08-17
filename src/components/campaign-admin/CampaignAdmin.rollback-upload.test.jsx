@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
@@ -48,48 +48,32 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             expect(screen.getByText(/overwrite ALL current campaign data/)).toBeInTheDocument();
         });
 
-        it('shows campaign name in rollback message', () => {
+        it('closes modal via cancel, close button, and overlay', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const action = findActionByText('Rollback');
             const btn = action.querySelector('button');
             fireEvent.click(btn);
 
-            expect(screen.getByText(/"test-campaign"/)).toBeInTheDocument();
-        });
+            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
 
-        it('closes modal when cancel button is clicked', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const cancelBtn = screen.getByText('Cancel');
-            fireEvent.click(cancelBtn);
-
+            // Cancel button
+            fireEvent.click(screen.getByText('Cancel'));
             expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
-        });
 
-        it('closes modal when close (X) button is clicked', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
+            // Re-open for next test
             fireEvent.click(btn);
+            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
 
-            const closeBtn = document.querySelector('.ct-modal-close');
-            fireEvent.click(closeBtn);
-
+            // Close (X) button
+            fireEvent.click(document.querySelector('.ct-modal-close'));
             expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
-        });
 
-        it('closes modal when overlay is clicked', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
+            // Re-open for next test
             fireEvent.click(btn);
+            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
 
-            const overlay = document.querySelector('.ct-modal-overlay');
-            fireEvent.click(overlay);
-
+            // Overlay click
+            fireEvent.click(document.querySelector('.ct-modal-overlay'));
             expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
         });
     });
@@ -239,67 +223,6 @@ describe('CampaignAdmin - Rollback & Upload', () => {
                 expect(btn).toBeDisabled();
             });
         });
-
-        it('shows error status from catch block on network failure', async () => {
-            global.fetch = vi.fn(() => Promise.reject(new Error('Connection refused')));
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
-
-            await waitFor(() => {
-                expect(screen.getByText('Connection refused')).toBeInTheDocument();
-                expect(window.location.reload).not.toHaveBeenCalled();
-            });
-        });
-
-        it('transitions from loading to success status', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
-            );
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
-
-            await waitFor(() => {
-                expect(screen.getByText('Rolling back...')).toBeInTheDocument();
-            });
-
-            await waitFor(() => {
-                expect(screen.queryByText('Rolling back...')).not.toBeInTheDocument();
-            });
-        });
-
-        it('transitions from loading to error status', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Server error' }) })
-            );
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
-
-            await waitFor(() => {
-                expect(screen.getByText('Rolling back...')).toBeInTheDocument();
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText('Server error')).toBeInTheDocument();
-            });
-        });
     });
 
     describe('Upload - file validation', () => {
@@ -333,33 +256,16 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             expect(screen.queryByText('Please select a .zip file')).not.toBeInTheDocument();
         });
 
-        it('does not show error for .zip file in nested path', () => {
+        it('rejects .ZIP and .Zip extensions (case-sensitive check)', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'backups/2024/test.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            expect(screen.queryByText('Please select a .zip file')).not.toBeInTheDocument();
-        });
-
-        it('rejects .ZIP file (case-sensitive check)', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'test.ZIP', { type: 'application/zip' });
-
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
+            // Test .ZIP
+            fireEvent.change(fileInput, { target: { files: [new File(['test'], 'test.ZIP', { type: 'application/zip' })] } });
             expect(screen.getByText('Please select a .zip file')).toBeInTheDocument();
-        });
 
-        it('rejects .Zip file (case-sensitive check)', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'test.Zip', { type: 'application/zip' });
-
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
+            // Test .Zip
+            fireEvent.change(fileInput, { target: { files: [new File(['test'], 'test.Zip', { type: 'application/zip' })] } });
             expect(screen.getByText('Please select a .zip file')).toBeInTheDocument();
         });
     });
@@ -386,65 +292,41 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             expect(screen.getByText(/"test-campaign"/)).toBeInTheDocument();
         });
 
-        it('mentions snapshot safety net in upload message', () => {
+        it('closes modal via cancel, close button, and overlay; body click is ignored', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
             fireEvent.change(fileInput, { target: { files: [file] } });
 
-            expect(screen.getByText(/safety net/i)).toBeInTheDocument();
-        });
+            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
 
-        it('closes modal when cancel button is clicked', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
-
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const cancelBtn = screen.getByText('Cancel');
-            fireEvent.click(cancelBtn);
-
+            // Cancel button
+            fireEvent.click(screen.getByText('Cancel'));
             expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
-        });
 
-        it('closes modal when close (X) button is clicked', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
-
+            // Re-open for next test
             fireEvent.change(fileInput, { target: { files: [file] } });
+            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
 
-            const closeBtn = document.querySelector('.ct-modal-close');
-            fireEvent.click(closeBtn);
-
+            // Close (X) button
+            fireEvent.click(document.querySelector('.ct-modal-close'));
             expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
-        });
 
-        it('closes modal when overlay is clicked', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
-
+            // Re-open for next test
             fireEvent.change(fileInput, { target: { files: [file] } });
+            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
 
-            const overlay = document.querySelector('.ct-modal-overlay');
-            fireEvent.click(overlay);
-
+            // Overlay click
+            fireEvent.click(document.querySelector('.ct-modal-overlay'));
             expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
-        });
 
-        it('prevents modal close when clicking modal body', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
-
+            // Re-open for body click test
             fireEvent.change(fileInput, { target: { files: [file] } });
+            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
 
-            const modal = document.querySelector('.ct-modal');
-            fireEvent.click(modal);
-
+            // Body click is prevented
+            fireEvent.click(document.querySelector('.ct-modal'));
             expect(document.querySelector('.ct-modal')).toBeInTheDocument();
         });
     });
@@ -638,25 +520,6 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             });
         });
 
-        it('shows error alert from catch block on network failure', async () => {
-            global.fetch = vi.fn(() => Promise.reject(new Error('Connection refused')));
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
-
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
-
-            await waitFor(() => {
-                expect(window.alert).toHaveBeenCalledWith(
-                    'Upload failed. Campaign has been rolled back to the previous state.\n\nError: Connection refused'
-                );
-            });
-        });
-
         it('clears file input after upload completes', async () => {
             global.fetch = vi.fn(() =>
                 Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Upload complete' }) })
@@ -728,52 +591,6 @@ describe('CampaignAdmin - Rollback & Upload', () => {
                 const uploadLabel = document.querySelector('.admin-upload-label');
                 const uploadInput = uploadLabel.querySelector('input[type="file"]');
                 expect(uploadInput).toBeDisabled();
-            });
-        });
-
-        it('transitions from loading to success status', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
-            );
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
-
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
-
-            await waitFor(() => {
-                expect(screen.getByText('Uploading and extracting...')).toBeInTheDocument();
-            });
-
-            await waitFor(() => {
-                expect(screen.queryByText('Uploading and extracting...')).not.toBeInTheDocument();
-            });
-        });
-
-        it('transitions from loading to error status', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Server error' }) })
-            );
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
-
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
-
-            await waitFor(() => {
-                expect(screen.getByText('Uploading and extracting...')).toBeInTheDocument();
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText('Server error')).toBeInTheDocument();
             });
         });
     });

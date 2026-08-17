@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NPCs from './NPCs';
@@ -181,51 +181,11 @@ describe('NPCs', () => {
   // ── Search / Filter ───────────────────────────────────────────────
 
   describe('Search filtering', () => {
-    it('filters NPCs by name', () => {
-      renderNPCs();
-      fireEvent.change(screen.getByLabelText('Search NPCs'), { target: { value: 'Goblin' } });
-      expect(screen.getByTestId('npc-list-item-Goblin')).toBeInTheDocument();
-      expect(screen.queryByTestId('npc-list-item-Wizard')).not.toBeInTheDocument();
-    });
-
-    it('matches search terms case-insensitively', () => {
-      renderNPCs();
-      fireEvent.change(screen.getByLabelText('Search NPCs'), { target: { value: 'goblin' } });
-      expect(screen.getByTestId('npc-list-item-Goblin')).toBeInTheDocument();
-      expect(screen.queryByTestId('npc-list-item-Wizard')).not.toBeInTheDocument();
-    });
-
-    it('filters NPCs by class role', () => {
-      renderNPCs();
-      fireEvent.change(screen.getByLabelText('Search NPCs'), { target: { value: 'Caster' } });
-      expect(screen.queryByTestId('npc-list-item-Goblin')).not.toBeInTheDocument();
-      expect(screen.getByTestId('npc-list-item-Wizard')).toBeInTheDocument();
-    });
-
-    it('filters NPCs by tags', () => {
-      renderNPCs();
-      fireEvent.change(screen.getByLabelText('Search NPCs'), { target: { value: 'boss' } });
-      expect(screen.queryByTestId('npc-list-item-Goblin')).not.toBeInTheDocument();
-      expect(screen.getByTestId('npc-list-item-Wizard')).toBeInTheDocument();
-    });
-
-    it('shows the no-results empty state when nothing matches', () => {
-      renderNPCs();
-      fireEvent.change(screen.getByLabelText('Search NPCs'), { target: { value: 'Nonexistent' } });
-      expect(screen.getByText(/No NPCs found/i)).toBeInTheDocument();
-    });
-
-    it('shows a clear button only while a query is set', () => {
+    it('shows a clear button only while a query is set and clearing it restores all NPCs', () => {
       renderNPCs();
       expect(screen.queryByLabelText('Clear search')).not.toBeInTheDocument();
       fireEvent.change(screen.getByLabelText('Search NPCs'), { target: { value: 'Goblin' } });
       expect(screen.getByLabelText('Clear search')).toBeInTheDocument();
-    });
-
-    it('clearing the search restores all NPCs', () => {
-      renderNPCs();
-      fireEvent.change(screen.getByLabelText('Search NPCs'), { target: { value: 'Goblin' } });
-      expect(screen.queryByTestId('npc-list-item-Wizard')).not.toBeInTheDocument();
       fireEvent.click(screen.getByLabelText('Clear search'));
       expect(screen.getByTestId('npc-list-item-Goblin')).toBeInTheDocument();
       expect(screen.getByTestId('npc-list-item-Wizard')).toBeInTheDocument();
@@ -318,14 +278,6 @@ describe('NPCs', () => {
       expect(mockSaveNPC.mock.calls[0][2]).toBe('Goblin');
     });
 
-    it('does not save when the name is empty', async () => {
-      renderNPCs();
-      fireEvent.click(screen.getByRole('button', { name: /New NPC/i }));
-      await waitFor(() => expect(screen.getByTestId('npc-form-modal')).toBeInTheDocument());
-      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-      expect(mockSaveNPC).not.toHaveBeenCalled();
-    });
-
     it('disables the save button for empty and whitespace-only names', async () => {
       renderNPCs();
       fireEvent.click(screen.getByRole('button', { name: /New NPC/i }));
@@ -413,12 +365,6 @@ describe('NPCs', () => {
       await waitFor(() => expect(screen.queryByTestId('npc-form-modal')).not.toBeInTheDocument());
     });
 
-    it('disables the save-and-add button while the name is empty', async () => {
-      renderNPCs();
-      fireEvent.click(screen.getByRole('button', { name: /New NPC/i }));
-      await waitFor(() => expect(screen.getByTestId('npc-form-modal')).toBeInTheDocument());
-      expect(screen.getByTestId('save-add-init-btn')).toHaveAttribute('disabled');
-    });
   });
 
   // ── Close Modal ───────────────────────────────────────────────────

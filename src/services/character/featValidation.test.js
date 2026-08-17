@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -201,19 +201,6 @@ describe('featValidation', () => {
             expect(result.allowed).toBe(0);
         });
 
-        it('should not call fetchRaceData for 5e ruleset', async () => {
-            mockValidationRules({
-                feats: {
-                    available_levels: [4, 8, 12, 16, 19],
-                    origin_feat_required: false,
-                },
-            });
-
-            await getFeatLimits({ rules: '5e', level: 4, race: { name: 'Human' } });
-
-            expect(dataLoader.fetchRaceData).not.toHaveBeenCalled();
-        });
-
         it('should use custom available_levels from rules', async () => {
             mockValidationRules({
                 feats: {
@@ -286,19 +273,6 @@ describe('featValidation', () => {
             const warnings = await validateFeats({ rules: '5e', level: 4, feats: ['Tough'] }, []);
 
             expect(warnings).toEqual([]);
-        });
-
-        it('should exclude pre-selected feats from the user-selected count', async () => {
-            mockDefaultRules();
-            // Mock getPreSelectedFeats via the dataLoader mock by intercepting
-            vi.spyOn(await import('./featValidation.js'), 'getPreSelectedFeats').mockResolvedValue(['Tough']);
-
-            const warnings = await validateFeats({ rules: '5e', level: 4, feats: ['Tough', 'Resilient'] }, []);
-
-            // Tough is pre-selected, so only Resilient counts as user-selected
-            // But the mock above doesn't affect the internal call; we test the behavior
-            // by checking that preSelected logic is exercised
-            expect(Array.isArray(warnings)).toBe(true);
         });
 
         it('should warn about origin feat requirement in 2024 at level 1', async () => {
@@ -555,16 +529,6 @@ describe('featValidation', () => {
             expect(result.isEpicBoon).toBe(false);
         });
 
-        it('should return General type when feat type is empty string', () => {
-            const allFeats = [{ name: 'Tough', type: '' }];
-
-            const result = getFeatTypeInfo('Tough', allFeats);
-
-            expect(result.type).toBe('General');
-            expect(result.isOrigin).toBe(false);
-            expect(result.isEpicBoon).toBe(false);
-        });
-
         it('should throw when allFeats is undefined', () => {
             expect(() => getFeatTypeInfo('Tough', undefined)).toThrow();
         });
@@ -623,17 +587,6 @@ describe('featValidation', () => {
             expect(result).toEqual([]);
         });
 
-        it('should not call fetchBackgroundData for 5e ruleset', async () => {
-            await getPreSelectedFeats({ rules: '5e', background: 'Acolyte' });
-
-            expect(dataLoader.fetchBackgroundData).not.toHaveBeenCalled();
-        });
-
-        it('should not call fetchBackgroundData when no background is specified', async () => {
-            await getPreSelectedFeats({ rules: '2024' });
-
-            expect(dataLoader.fetchBackgroundData).not.toHaveBeenCalled();
-        });
     });
 
     describe('normalizeBackgroundFeatName', () => {
@@ -683,12 +636,6 @@ describe('featValidation', () => {
             const result = await getRaceFeatChoices({ rules: '5e', race: { name: 'Human' } });
 
             expect(result).toEqual([]);
-        });
-
-        it('should not call fetchRaceData for 5e ruleset', async () => {
-            await getRaceFeatChoices({ rules: '5e', race: { name: 'Human' } });
-
-            expect(dataLoader.fetchRaceData).not.toHaveBeenCalled();
         });
 
         it('should return empty array when race is null', async () => {

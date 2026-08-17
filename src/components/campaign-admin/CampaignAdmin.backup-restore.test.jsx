@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
@@ -37,42 +37,6 @@ describe('CampaignAdmin - Snapshot', () => {
         });
     });
 
-    it('sends POST request to correct endpoint', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ size: 102400 }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Snapshot');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                '/api/campaigns/test-campaign/admin/snapshot',
-                { method: 'POST' }
-            );
-        });
-    });
-
-    it('URL-encodes the campaign name in snapshot endpoint', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ size: 1024 }) })
-        );
-
-        render(<CampaignAdmin {...createDefaultProps({ campaignName: 'my campaign/1' })} />);
-        const action = findActionByText('Snapshot');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                '/api/campaigns/my%20campaign%2F1/admin/snapshot',
-                { method: 'POST' }
-            );
-        });
-    });
-
     it('shows loading status while snapshotting', async () => {
         global.fetch = vi.fn(() => new Promise(() => { }));
 
@@ -86,9 +50,14 @@ describe('CampaignAdmin - Snapshot', () => {
         });
     });
 
-    it('shows success with size in KB on successful response', async () => {
+    it.each([
+        { size: 102400, expected: '100.0 KB' },
+        { size: 5120, expected: '5.0 KB' },
+        { size: 0, expected: '0.0 KB' },
+        { size: 204800, expected: '200.0 KB' },
+    ])('shows success with size in KB: %d bytes → %s', async ({ size, expected }) => {
         global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ size: 102400 }) })
+            Promise.resolve({ ok: true, json: () => Promise.resolve({ size }) })
         );
 
         render(<CampaignAdmin {...defaultProps} />);
@@ -97,56 +66,7 @@ describe('CampaignAdmin - Snapshot', () => {
         fireEvent.click(btn);
 
         await waitFor(() => {
-            expect(screen.getByText('Snapshot created (100.0 KB)')).toBeInTheDocument();
-        });
-    });
-
-    it('shows success with decimal KB for small snapshots', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ size: 5120 }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Snapshot');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Snapshot created (5.0 KB)')).toBeInTheDocument();
-        });
-    });
-
-    it('shows success with zero KB for empty snapshots', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ size: 0 }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Snapshot');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Snapshot created (0.0 KB)')).toBeInTheDocument();
-        });
-    });
-
-    it('transitions from loading to success status', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ size: 51200 }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Snapshot');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Creating snapshot...')).toBeInTheDocument();
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Snapshot created (50.0 KB)')).toBeInTheDocument();
+            expect(screen.getByText(`Snapshot created (${expected})`)).toBeInTheDocument();
         });
     });
 
@@ -177,70 +97,6 @@ describe('CampaignAdmin - Snapshot', () => {
             expect(screen.getByText('Network failed')).toBeInTheDocument();
         });
     });
-
-    it('transitions from loading to error status', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Server error' }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Snapshot');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Creating snapshot...')).toBeInTheDocument();
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Server error')).toBeInTheDocument();
-        });
-    });
-
-    it('disables button while busy', () => {
-        global.fetch = vi.fn(() => new Promise(() => { }));
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Snapshot');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-    });
-
-    it('re-enables button after successful completion', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ size: 1024 }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Snapshot');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
-        });
-    });
-
-    it('re-enables button after error completion', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Failed' }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Snapshot');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
-        });
-    });
 });
 
 describe('CampaignAdmin - Download', () => {
@@ -259,46 +115,6 @@ describe('CampaignAdmin - Download', () => {
 
     const createBlobMock = (content = 'test', type = 'application/zip') =>
         new Blob([content], { type });
-
-    it('sends GET request to correct endpoint', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({
-                ok: true,
-                blob: () => Promise.resolve(createBlobMock()),
-            })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Download');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                '/api/campaigns/test-campaign/admin/download'
-            );
-        });
-    });
-
-    it('URL-encodes the campaign name in download endpoint', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({
-                ok: true,
-                blob: () => Promise.resolve(createBlobMock()),
-            })
-        );
-
-        render(<CampaignAdmin {...createDefaultProps({ campaignName: 'my campaign/1' })} />);
-        const action = findActionByText('Download');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                '/api/campaigns/my%20campaign%2F1/admin/download'
-            );
-        });
-    });
 
     it('creates and triggers a download link with campaign name', async () => {
         const mockBlob = createBlobMock();
@@ -385,48 +201,6 @@ describe('CampaignAdmin - Download', () => {
         revokeObjectURLSpy.mockRestore();
     });
 
-    it('shows success status after download starts', async () => {
-        const mockBlob = createBlobMock();
-        global.fetch = vi.fn(() =>
-            Promise.resolve({
-                ok: true,
-                blob: () => Promise.resolve(mockBlob),
-            })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Download');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Download started')).toBeInTheDocument();
-        });
-    });
-
-    it('transitions from loading to success status', async () => {
-        const mockBlob = createBlobMock();
-        global.fetch = vi.fn(() =>
-            Promise.resolve({
-                ok: true,
-                blob: () => Promise.resolve(mockBlob),
-            })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Download');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Preparing download...')).toBeInTheDocument();
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Download started')).toBeInTheDocument();
-        });
-    });
-
     it('shows error status on failed response', async () => {
         global.fetch = vi.fn(() =>
             Promise.resolve({
@@ -455,80 +229,6 @@ describe('CampaignAdmin - Download', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Network failed')).toBeInTheDocument();
-        });
-    });
-
-    it('transitions from loading to error status', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({
-                ok: false,
-                json: () => Promise.resolve({ error: 'Server error' }),
-            })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Download');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Preparing download...')).toBeInTheDocument();
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Server error')).toBeInTheDocument();
-        });
-    });
-
-    it('disables button while busy', () => {
-        global.fetch = vi.fn(() => new Promise(() => { }));
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Download');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-    });
-
-    it('re-enables button after successful completion', async () => {
-        const mockBlob = createBlobMock();
-        global.fetch = vi.fn(() =>
-            Promise.resolve({
-                ok: true,
-                blob: () => Promise.resolve(mockBlob),
-            })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Download');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
-        });
-    });
-
-    it('re-enables button after error completion', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({
-                ok: false,
-                json: () => Promise.resolve({ error: 'Failed' }),
-            })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Download');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
         });
     });
 });

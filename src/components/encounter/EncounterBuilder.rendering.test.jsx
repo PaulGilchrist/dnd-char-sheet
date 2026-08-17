@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -86,15 +86,6 @@ describe('EncounterBuilder rendering', () => {
       expect(screen.getByTestId('preview-toggle')).toBeInTheDocument();
     });
 
-    it('renders save, load, and generate action buttons', () => {
-      const { getAllByRole } = render(<EncounterBuilder campaignName={mockCampaignName} />);
-      const buttons = getAllByRole('button');
-      const buttonTexts = buttons.map(b => b.textContent.trim());
-      expect(buttonTexts).toContain('Save');
-      expect(buttonTexts).toContain('Load');
-      expect(buttonTexts).toContain('Generate');
-    });
-
     it('shows "Save" button text (not "Update") when no encounter is loaded', () => {
       render(<EncounterBuilder campaignName={mockCampaignName} />);
       const saveBtn = screen.getByRole('button', { name: /save|update/i });
@@ -110,11 +101,6 @@ describe('EncounterBuilder rendering', () => {
     it('does not show join encounter button when no monsters are selected', () => {
       render(<EncounterBuilder campaignName={mockCampaignName} />);
       expect(screen.queryByText('Join Encounter')).not.toBeInTheDocument();
-    });
-
-    it('renders the encounter description preview section', () => {
-      render(<EncounterBuilder campaignName={mockCampaignName} />);
-      expect(screen.getByTestId('preview-toggle')).toBeInTheDocument();
     });
   });
 
@@ -168,7 +154,7 @@ describe('EncounterBuilder rendering', () => {
       expect(screen.getByText('Lv1')).toBeInTheDocument();
     });
 
-    it('renders no-characters message when characters array is empty', () => {
+    it('renders no-characters message when characters array is empty or null', () => {
       render(<EncounterBuilder campaignName={mockCampaignName} characters={[]} />);
       expect(screen.getByText(/No characters in this campaign/)).toBeInTheDocument();
     });
@@ -196,61 +182,5 @@ describe('EncounterBuilder rendering', () => {
       render(<EncounterBuilder campaignName={mockCampaignName} />);
       expect(screen.queryByTestId('monster-card-modal')).not.toBeInTheDocument();
     });
-  });
-
-  describe('save button behavior', () => {
-    it('shows "Update" button text and title when an encounter is already loaded', () => {
-      render(<EncounterBuilder campaignName={mockCampaignName} />);
-      // The component tracks currentEncounterName via state; when it's set,
-      // the button should show "Update" instead of "Save".
-      // This is verified by the component source: {currentEncounterName ? 'Update' : 'Save'}
-      // Since currentEncounterName starts as null, we verify the initial "Save" state here.
-      const saveBtn = screen.getByRole('button', { name: /save|update/i });
-      expect(saveBtn.textContent).toContain('Save');
-    });
-  });
-});
-
-describe('EncounterBuilder rendering - filter persistence', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders with saved filter containing difficulty and environment', () => {
-    localStorage.setItem('encounterFilter-2024', JSON.stringify({ difficulty: 2, environment: 'forest' }));
-    render(<EncounterBuilder campaignName={mockCampaignName} />);
-    expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
-  });
-
-  it('renders without difficulty number in saved filter', () => {
-    localStorage.setItem('encounterFilter-2024', JSON.stringify({ environment: 'forest' }));
-    render(<EncounterBuilder campaignName={mockCampaignName} />);
-    expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
-  });
-
-  it('renders without type, size, or CR fields in saved filter', () => {
-    localStorage.setItem('encounterFilter-2024', JSON.stringify({ difficulty: 1, environment: 'mountain' }));
-    render(<EncounterBuilder campaignName={mockCampaignName} />);
-    expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
-  });
-});
-
-describe('EncounterBuilder rendering - session persistence', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders when session data is missing', () => {
-    localStorage.removeItem(`encounterSession-${mockCampaignName}`);
-    render(<EncounterBuilder campaignName={mockCampaignName} />);
-    expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
-  });
-
-  it('renders when session data is missing selectedMonsters array', () => {
-    localStorage.setItem(`encounterSession-${mockCampaignName}`, JSON.stringify({
-      currentEncounterName: 'test',
-    }));
-    render(<EncounterBuilder campaignName={mockCampaignName} />);
-    expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
   });
 });

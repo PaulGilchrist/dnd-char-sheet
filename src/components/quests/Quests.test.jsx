@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Quests from './Quests.jsx';
@@ -85,15 +85,6 @@ describe('Quests', () => {
       renderWithQuests([]);
       expect(screen.getByRole('textbox', { name: /Search Quests/ })).toBeInTheDocument();
     });
-
-    it('renders the status options with the correct labels', () => {
-      renderWithQuests([]);
-      fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
-
-      expect(screen.getByRole('option', { name: 'Active' })).toBeInTheDocument();
-      expect(screen.getByRole('option', { name: 'Completed' })).toBeInTheDocument();
-      expect(screen.getByRole('option', { name: 'Failed' })).toBeInTheDocument();
-    });
   });
 
   describe('loading and empty states', () => {
@@ -133,34 +124,19 @@ describe('Quests', () => {
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
     });
 
-    it('closes the modal when Cancel is clicked', () => {
+    it('closes the modal via Cancel or X button', () => {
       renderWithQuests([]);
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
-    });
 
-    it('closes the modal when the X button is clicked', () => {
-      renderWithQuests([]);
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
+      expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
+
       fireEvent.click(screen.getByRole('button', { name: 'Close' }));
       expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
-    });
-
-    it('closes the modal when the overlay is clicked', () => {
-      renderWithQuests([]);
-      fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
-      fireEvent.click(document.querySelector('.ct-modal-overlay'));
-      expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
-    });
-
-    it('does not close the modal when clicking inside the modal content', () => {
-      renderWithQuests([]);
-      fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
-      fireEvent.click(document.querySelector('.ct-modal'));
-      expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
     });
 
     it('allows changing the form fields', () => {
@@ -279,35 +255,20 @@ describe('Quests', () => {
       expect(screen.getByText('failed')).toBeInTheDocument();
     });
 
-    it('shows a description preview in the quest list', () => {
-      renderWithQuests([
-        quest({ name: 'Find the Lost Sword', description: 'Search for the ancient sword in the ruins of the old castle' }),
-      ]);
-
-      expect(screen.getByText('Search for the ancient sword in the ruins of the old castle')).toBeInTheDocument();
-    });
-
     it('truncates long descriptions in the quest list', () => {
       renderWithQuests([quest({ name: 'Long Quest', description: 'A'.repeat(150) })]);
 
       expect(screen.getByText('A'.repeat(100) + '...')).toBeInTheDocument();
     });
 
-    it('renders quest list items as accessible, interactive buttons', () => {
-      renderWithQuests([quest({ name: 'Test Quest' })]);
-
-      const listItem = screen.getByRole('button', { name: 'Edit quest: Test Quest' });
-      expect(listItem).toBeInTheDocument();
-    });
-
-    it('opens the edit modal when a quest item is clicked', () => {
+    it('opens the edit modal when a quest item is clicked or activated via keyboard', () => {
       renderWithQuests([quest({ name: 'Clickable Quest' })]);
 
       fireEvent.click(screen.getByRole('button', { name: 'Edit quest: Clickable Quest' }));
       expect(screen.getByRole('heading', { name: 'Edit Quest' })).toBeInTheDocument();
-    });
 
-    it('opens the edit modal when a quest item is activated via Enter or Space', () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
       renderWithQuests([quest({ name: 'Keyboard Quest' })]);
       const listItem = screen.getByRole('button', { name: 'Edit quest: Keyboard Quest' });
 

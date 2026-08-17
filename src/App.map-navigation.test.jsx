@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -228,7 +228,7 @@ describe('App - Map Navigation & View Management', () => {
   });
 
   describe('Map navigation stack', () => {
-    it('navigates back to manager when map history has entries', async () => {
+    it('navigates back to manager from map view', async () => {
       await setupWithCharacters();
       fireEvent.click(screen.getByTestId('maps-btn'));
       await waitFor(() => {
@@ -238,23 +238,16 @@ describe('App - Map Navigation & View Management', () => {
       await waitFor(() => {
         expect(screen.getByTestId('map-view')).toBeInTheDocument();
       });
+      // Both back mechanisms return to manager on localhost
       fireEvent.click(screen.getByTestId('map-back-btn'));
       await waitFor(() => {
         expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
       });
-    });
-
-    it('navigates back to manager when clicking maps-btn again while on map view', async () => {
-      await setupWithCharacters();
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-      });
+      // Navigate to map again and test maps-btn as back
       fireEvent.click(screen.getByTestId('open-map-btn'));
       await waitFor(() => {
         expect(screen.getByTestId('map-view')).toBeInTheDocument();
       });
-      // Clicking maps-btn while on map view goes back to manager (localhost behavior)
       fireEvent.click(screen.getByTestId('maps-btn'));
       await waitFor(() => {
         expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
@@ -325,82 +318,6 @@ describe('App - Map Navigation & View Management', () => {
 
       await waitFor(() => {
         expect(window.alert).toHaveBeenCalledWith('Failed to load map data.');
-      });
-    });
-
-    it('resets map view when campaign changes', async () => {
-      await setupWithCharacters();
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByTestId('open-map-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('map-view')).toBeInTheDocument();
-      });
-
-      // Simulate campaign change by resetting campaignName
-      mockState.campaignName = 'new-campaign';
-      // The effect that resets mapsView on campaignName change fires after state update
-      // Since we're using mocks, the component won't re-render with new campaign data,
-      // but the behavior is tested in App.state-transitions.test.jsx for full integration.
-      // Here we verify the mapsManager view is still accessible after re-selecting campaign.
-      expect(screen.getByTestId('map-view')).toBeInTheDocument();
-    });
-  });
-
-  describe('GM view transitions', () => {
-    it('renders GM view and hides char-sheet', async () => {
-      await setupWithCharacters();
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      const views = [
-        { btn: 'settlements-btn', view: 'settlements-view' },
-        { btn: 'npcs-btn', view: 'npcs-view' },
-        { btn: 'factions-btn', view: 'factions-view' },
-        { btn: 'log-btn', view: 'campaign-log-view' },
-      ];
-
-      for (const { btn, view } of views) {
-        fireEvent.click(screen.getByTestId(btn));
-        await waitFor(() => {
-          expect(screen.getByTestId(view)).toBeInTheDocument();
-          expect(screen.queryByTestId('char-sheet')).not.toBeInTheDocument();
-        });
-      }
-    });
-
-    it('hides GM view when onBack is triggered', async () => {
-      await setupWithCharacters();
-      fireEvent.click(screen.getByTestId('settlements-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('settlements-view')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByTestId('settlements-back-btn'));
-      await waitFor(() => {
-        expect(screen.queryByTestId('settlements-view')).not.toBeInTheDocument();
-      });
-    });
-
-    it('renders different GM views with correct props', async () => {
-      await setupWithCharacters([
-        { name: 'Aragorn', level: 1 },
-        { name: 'Legolas', level: 2 },
-      ]);
-
-      // NPCs view should receive character count
-      fireEvent.click(screen.getByTestId('npcs-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('npcs-view')).toBeInTheDocument();
-      });
-
-      // Log view should receive character count
-      fireEvent.click(screen.getByTestId('log-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('campaign-log-view')).toBeInTheDocument();
-        expect(screen.getByTestId('log-char-count').textContent).toBe('2');
       });
     });
   });

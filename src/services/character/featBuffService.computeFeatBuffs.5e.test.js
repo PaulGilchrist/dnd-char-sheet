@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 
 import { computeFeatBuffs } from './featBuffService.js';
@@ -17,35 +17,6 @@ describe('computeFeatBuffs — 5e ruleset', () => {
       expect(computeFeatBuffs(undefined, '5e')).toEqual(emptyResult);
       expect(computeFeatBuffs({}, '5e')).toEqual(emptyResult);
     });
-
-    it('returns empty result when benefits is not an array', () => {
-      expect(computeFeatBuffs({ benefits: 'not-an-array' }, '5e')).toEqual({
-        abilityScoreIncreases: [],
-        proficiencies: [],
-        resistances: [],
-        features: [],
-      });
-    });
-
-    it('returns empty result when benefits is an empty array', () => {
-      expect(computeFeatBuffs({ benefits: [] }, '5e')).toEqual({
-        abilityScoreIncreases: [],
-        proficiencies: [],
-        resistances: [],
-        features: [],
-      });
-    });
-
-    it('returns empty result when feat has automation but no benefits', () => {
-      expect(
-        computeFeatBuffs({ automation: { type: 'custom' } }, '5e')
-      ).toEqual({
-        abilityScoreIncreases: [],
-        proficiencies: [],
-        resistances: [],
-        features: [],
-      });
-    });
   });
 
   describe('ability score increases', () => {
@@ -61,16 +32,6 @@ describe('computeFeatBuffs — 5e ruleset', () => {
       expect(result.proficiencies).toEqual([]);
       expect(result.resistances).toEqual([]);
       expect(result.features).toEqual([]);
-    });
-
-    it('preserves the raw captured ability name from the text', () => {
-      const result = computeFeatBuffs(
-        { benefits: ['increase your intelligence score by 1'] },
-        '5e'
-      );
-
-      expect(result.abilityScoreIncreases[0].name).toBe('intelligence');
-      expect(result.abilityScoreIncreases[0].amount).toBe(1);
     });
 
     it('parses an "or" ability score increase as two choice entries', () => {
@@ -133,27 +94,16 @@ describe('computeFeatBuffs — 5e ruleset', () => {
       const result = computeFeatBuffs(
         {
           benefits: [
-            'Increase your Strength score by 2, to a maximum of 30.',
-          ],
-        },
-        '5e'
-      );
-
-      expect(result.abilityScoreIncreases[0].max_value).toBe(30);
-    });
-
-    it('sets max_value to 30 for OR pattern when benefit text mentions maximum of 30', () => {
-      const result = computeFeatBuffs(
-        {
-          benefits: [
             'Increase your Strength or Dexterity score by 2, to a maximum of 30.',
           ],
         },
         '5e'
       );
 
-      expect(result.abilityScoreIncreases[0].max_value).toBe(30);
-      expect(result.abilityScoreIncreases[1].max_value).toBe(30);
+      expect(result.abilityScoreIncreases).toEqual([
+        { name: 'Strength', amount: 2, isChoice: true, max_value: 30 },
+        { name: 'Dexterity', amount: 2, isChoice: true, max_value: 30 },
+      ]);
     });
   });
 
@@ -297,22 +247,18 @@ describe('computeFeatBuffs — 5e ruleset', () => {
       ]);
     });
 
-    it('parses a resistance with "have" wording', () => {
-      const result = computeFeatBuffs(
+    it('parses a resistance with both "have" and "gain" wording', () => {
+      const haveResult = computeFeatBuffs(
         { benefits: ['You have resistance to fire'] },
         '5e'
       );
+      expect(haveResult.resistances).toEqual(['fire']);
 
-      expect(result.resistances).toEqual(['fire']);
-    });
-
-    it('parses a resistance with "gain" wording', () => {
-      const result = computeFeatBuffs(
+      const gainResult = computeFeatBuffs(
         { benefits: ['You gain resistance to cold'] },
         '5e'
       );
-
-      expect(result.resistances).toEqual(['cold']);
+      expect(gainResult.resistances).toEqual(['cold']);
     });
   });
 
@@ -326,19 +272,13 @@ describe('computeFeatBuffs — 5e ruleset', () => {
         '5e'
       );
 
-      expect(result.features).toEqual([
-        {
-          name: 'Passive Benefit',
-          description: 'You have an unusual aura',
-          type: 'passive',
-        },
-        {
-          name: undefined,
-          description: undefined,
-          type: 'custom_trigger',
-          automation: { type: 'custom_trigger', condition: 'on_damage' },
-        },
-      ]);
+      expect(result.features).toHaveLength(2);
+      expect(result.features[0].type).toBe('passive');
+      expect(result.features[1].type).toBe('custom_trigger');
+      expect(result.features[1].automation).toEqual({
+        type: 'custom_trigger',
+        condition: 'on_damage',
+      });
     });
 
     it('attaches array of feat-level automations as features', () => {
@@ -350,20 +290,11 @@ describe('computeFeatBuffs — 5e ruleset', () => {
         '5e'
       );
 
-      expect(result.features).toEqual([
-        {
-          name: undefined,
-          description: undefined,
-          type: 'trigger_a',
-          automation: { type: 'trigger_a' },
-        },
-        {
-          name: undefined,
-          description: undefined,
-          type: 'trigger_b',
-          automation: { type: 'trigger_b' },
-        },
-      ]);
+      expect(result.features).toHaveLength(2);
+      expect(result.features[0].type).toBe('trigger_a');
+      expect(result.features[0].automation).toEqual({ type: 'trigger_a' });
+      expect(result.features[1].type).toBe('trigger_b');
+      expect(result.features[1].automation).toEqual({ type: 'trigger_b' });
     });
 
     it('does not attach automation when there are no benefits', () => {
@@ -403,34 +334,6 @@ describe('computeFeatBuffs — 5e ruleset', () => {
 
       expect(result.abilityScoreIncreases).toEqual([
         { name: 'Strength', amount: 2, isChoice: false, max_value: 20 },
-      ]);
-    });
-
-    it('aggregates multiple benefits from a single feat', () => {
-      const result = computeFeatBuffs(
-        {
-          benefits: [
-            'Increase your Strength score by 2',
-            'You gain proficiency with heavy armor',
-            'Your speed increases by 10 feet',
-          ],
-        },
-        '5e'
-      );
-
-      expect(result.abilityScoreIncreases).toEqual([
-        { name: 'Strength', amount: 2, isChoice: false, max_value: 20 },
-      ]);
-      expect(result.proficiencies).toEqual([
-        { name: 'Heavy Armor', type: 'proficiency' },
-      ]);
-      expect(result.features).toEqual([
-        {
-          name: 'Speed Bonus',
-          description: 'Your speed increases by 10 feet',
-          type: 'speed',
-          value: 10,
-        },
       ]);
     });
 

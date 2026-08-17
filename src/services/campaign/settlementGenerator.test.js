@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { generateSettlement } from './settlementGenerator.js';
@@ -142,7 +142,6 @@ describe('settlementGenerator', () => {
 
       expect(result.name).not.toBe('Ashford');
       expect(result.name).not.toBe('Ashford 2');
-      expect(['Ashford', 'Ashford 2'].includes(result.name)).toBe(false);
     });
 
     it('resolves NPC name conflicts by appending incrementing numbers', async () => {
@@ -193,26 +192,17 @@ describe('settlementGenerator', () => {
       expect(metropolis.population).toContain('souls');
     });
 
-    it('includes tags with size and culture', async () => {
-      const result = await generateSettlement([], { size: 'village' });
+    it('includes tags with size, culture, first service type, and many-services', async () => {
+      const villageResult = await generateSettlement([], { size: 'village' });
+      const metropolisResult = await generateSettlement([], { size: 'metropolis' });
 
-      const tags = result.tags.split(', ');
-      expect(tags).toContain('village');
-      expect(tags.some((t) => /-culture$/.test(t))).toBe(true);
-    });
+      const villageTags = villageResult.tags.split(', ');
+      expect(villageTags).toContain('village');
+      expect(villageTags.some((t) => /-culture$/.test(t))).toBe(true);
+      expect(villageTags).toContain(villageResult.services[0].type);
 
-    it('includes first service type as a tag', async () => {
-      const result = await generateSettlement([], { size: 'village' });
-
-      const tags = result.tags.split(', ');
-      const firstServiceType = result.services[0].type;
-      expect(tags).toContain(firstServiceType);
-    });
-
-    it('includes many-services tag when services exceed 3', async () => {
-      const result = await generateSettlement([], { size: 'metropolis' });
-
-      expect(result.tags).toContain('many-services');
+      const metropolisTags = metropolisResult.tags.split(', ');
+      expect(metropolisTags).toContain('many-services');
     });
 
     it('generates notable NPCs with valid roles for each service', async () => {
@@ -272,31 +262,18 @@ describe('settlementGenerator', () => {
       }
     });
 
-    it('returns empty notes string by default', async () => {
+    it('returns empty notes and non-empty threat, government, atmosphere strings', async () => {
       const result = await generateSettlement();
-
       expect(result.notes).toBe('');
-    });
 
-    it('returns a non-empty threat string', async () => {
-      const result = await generateSettlement([], { size: 'village' });
+      const village = await generateSettlement([], { size: 'village' });
+      expect(village.threat.length).toBeGreaterThan(0);
 
-      expect(typeof result.threat).toBe('string');
-      expect(result.threat.length).toBeGreaterThan(0);
-    });
+      const town = await generateSettlement([], { size: 'town' });
+      expect(town.government.length).toBeGreaterThan(0);
 
-    it('returns a non-empty government string', async () => {
-      const result = await generateSettlement([], { size: 'town' });
-
-      expect(typeof result.government).toBe('string');
-      expect(result.government.length).toBeGreaterThan(0);
-    });
-
-    it('returns a non-empty atmosphere string', async () => {
-      const result = await generateSettlement([], { size: 'city' });
-
-      expect(typeof result.atmosphere).toBe('string');
-      expect(result.atmosphere.length).toBeGreaterThan(0);
+      const city = await generateSettlement([], { size: 'city' });
+      expect(city.atmosphere.length).toBeGreaterThan(0);
     });
 
     it('uses guild names for guild-type services when a guild is generated', async () => {

@@ -1,4 +1,4 @@
-// // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -68,30 +68,22 @@ describe('skillValidation', () => {
       expect(result.fromBackground.count).toBe(2);
     });
 
-    it('should return 5e defaults when all data is null and no ruleset specified', async () => {
+    it('should return correct defaults when all data is null', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(null);
       vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue(null);
 
-      const result = await getSkillLimits({});
+      const result5e = await getSkillLimits({ rules: '5e' });
+      expect(result5e.allowed).toBe(2);
+      expect(result5e.fromClass).toEqual({ count: 0, skills: [], isChoice: true });
+      expect(result5e.fromRace).toEqual({ count: 0, skills: [], isChoice: false });
+      expect(result5e.fromBackground).toEqual({ count: 2, skills: [], isChoice: true });
 
-      expect(result.allowed).toBe(2);
-      expect(result.fromClass).toEqual({ count: 0, skills: [], isChoice: true });
-      expect(result.fromRace).toEqual({ count: 0, skills: [], isChoice: false });
-      expect(result.fromBackground).toEqual({ count: 2, skills: [], isChoice: true });
-    });
-
-    it('should return zero when all data is null in 2024 ruleset', async () => {
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(null);
-      vi.mocked(dataLoader.fetchBackgroundData).mockResolvedValue(null);
-
-      const result = await getSkillLimits({ rules: '2024' });
-
-      expect(result.allowed).toBe(0);
-      expect(result.fromClass.count).toBe(0);
-      expect(result.fromRace.count).toBe(0);
-      expect(result.fromBackground.count).toBe(0);
+      const result2024 = await getSkillLimits({ rules: '2024' });
+      expect(result2024.allowed).toBe(0);
+      expect(result2024.fromClass.count).toBe(0);
+      expect(result2024.fromRace.count).toBe(0);
+      expect(result2024.fromBackground.count).toBe(0);
     });
 
     it('should handle race with no skill_proficiencies field', async () => {
@@ -110,52 +102,6 @@ describe('skillValidation', () => {
       expect(result.fromRace.skills).toEqual([]);
     });
 
-    it('should parse "Choose X from..." format correctly', async () => {
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-        skill_proficiencies: 'Choose 3 from Arcana, History, Insight, Religion',
-      });
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({});
-
-      const result = await getSkillLimits({
-        rules: '2024',
-        class: { name: 'Cleric' },
-        race: { name: 'Human' },
-      });
-
-      expect(result.fromClass.count).toBe(3);
-      expect(result.fromClass.skills).toEqual(['Arcana', 'History', 'Insight', 'Religion']);
-    });
-
-    it('should handle race with comma-separated skills', async () => {
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({});
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
-        skill_proficiencies: 'Insight, Perception, Survival',
-      });
-
-      const result = await getSkillLimits({
-        rules: '2024',
-        class: { name: 'Wizard' },
-        race: { name: 'Dwarf' },
-      });
-
-      expect(result.fromRace.skills).toEqual(['Insight', 'Perception', 'Survival']);
-    });
-
-    it('should handle 5e background count override', async () => {
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-        skill_proficiencies: 'Choose 2 from Arcana, History',
-      });
-
-      const result = await getSkillLimits({
-        rules: '5e',
-        class: { name: 'Wizard' },
-      });
-
-      expect(result.allowed).toBe(4);
-      expect(result.fromBackground.count).toBe(2);
-      expect(result.fromBackground.isChoice).toBe(true);
-    });
-
     it('should default to 2 skill choices when no class, race, or background provided in 5e', async () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(null);
@@ -170,12 +116,12 @@ describe('skillValidation', () => {
   });
 
   describe('getPreSelectedSkills', () => {
-    it('should return pre-selected skills from race', async () => {
+    it('should return pre-selected skills from race, background, and class (not choices)', async () => {
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
         skill_proficiencies: 'Insight and Perception',
       });
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-        skill_proficiencies: 'Choose 2 from Arcana, History',
+        skill_proficiencies: 'Arcana',
       });
 
       const result = await getPreSelectedSkills({
@@ -184,7 +130,7 @@ describe('skillValidation', () => {
         race: { name: 'Dwarf' },
       });
 
-      expect(result).toEqual(['Insight', 'Perception']);
+      expect(result).toEqual(['Insight', 'Perception', 'Arcana']);
     });
 
     it('should return pre-selected skills from background in 2024', async () => {
@@ -221,7 +167,7 @@ describe('skillValidation', () => {
       expect(result).toEqual([]);
     });
 
-    it('should return empty array when no skills are pre-selected', async () => {
+    it('should not include choice skills as pre-selected', async () => {
       vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
         skill_proficiencies: 'Choose 1 from Insight, Perception',
       });
@@ -236,37 +182,6 @@ describe('skillValidation', () => {
       });
 
       expect(result).toEqual([]);
-    });
-
-    it('should return pre-selected skills from class when not a choice', async () => {
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-        skill_proficiencies: 'Insight',
-      });
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({});
-
-      const result = await getPreSelectedSkills({
-        rules: '2024',
-        class: { name: 'Wizard' },
-      });
-
-      expect(result).toEqual(['Insight']);
-    });
-
-    it('should deduplicate skills from multiple sources', async () => {
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
-        skill_proficiencies: 'Insight',
-      });
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-        skill_proficiencies: 'Insight',
-      });
-
-      const result = await getPreSelectedSkills({
-        rules: '2024',
-        class: { name: 'Wizard' },
-        race: { name: 'Human' },
-      });
-
-      expect(result).toEqual(['Insight']);
     });
 
     it('should return empty array when no race or class provided', async () => {

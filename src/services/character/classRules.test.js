@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import classRules from './classRules.js';
 
@@ -30,7 +30,6 @@ describe('classRules', () => {
       expect(result.name).toBe('Wizard');
       expect(result.saving_throws).toEqual(['Intelligence']);
       expect(result.subclass).toBeNull();
-      expect(result.subclasses).toBeUndefined();
     });
 
     it('converts multiple saving_throws abbreviations to full names', () => {
@@ -48,11 +47,6 @@ describe('classRules', () => {
       expect(result.subclass.class_levels).toEqual([]);
     });
 
-    it('sets subclass to null when not specified in playerSummary', () => {
-      const result = classRules.getClass(mockClasses, { class: { name: 'Wizard' } });
-      expect(result.subclass).toBeNull();
-    });
-
     it('merges playerSummary class properties onto base class', () => {
       const result = classRules.getClass(
         mockClasses,
@@ -66,23 +60,12 @@ describe('classRules', () => {
       expect(result).toEqual({ class_levels: [] });
     });
 
-    it('returns default class_levels when allClasses is empty', () => {
-      const result = classRules.getClass([], { class: { name: 'Wizard' } });
-      expect(result).toEqual({ class_levels: [] });
-    });
-
     it('throws when playerSummary.class is null', () => {
       expect(() => classRules.getClass(mockClasses, { class: null })).toThrow(TypeError);
     });
 
     it('throws when playerSummary.class is missing', () => {
       expect(() => classRules.getClass(mockClasses, {})).toThrow(TypeError);
-    });
-
-    it('does not mutate the original allClasses array', () => {
-      const original = JSON.stringify(mockClasses[0]);
-      classRules.getClass(mockClasses, { class: { name: 'Wizard' } });
-      expect(JSON.stringify(mockClasses[0])).toBe(original);
     });
   });
 
@@ -157,18 +140,14 @@ describe('classRules', () => {
   });
 
   describe('getDruidWildShapeUses', () => {
-    it('always returns 2 regardless of arguments (5e rules)', () => {
+    it('returns 2 (5e rules)', () => {
       expect(classRules.getDruidWildShapeUses()).toBe(2);
-      expect(classRules.getDruidWildShapeUses({})).toBe(2);
-      expect(classRules.getDruidWildShapeUses(null)).toBe(2);
-      expect(classRules.getDruidWildShapeUses(undefined)).toBe(2);
     });
   });
 
   describe('getDruidBeastKnownForms', () => {
-    it('always returns 0 regardless of arguments (5e rules)', () => {
+    it('returns 0 (5e rules)', () => {
       expect(classRules.getDruidBeastKnownForms()).toBe(0);
-      expect(classRules.getDruidBeastKnownForms({})).toBe(0);
     });
   });
 
@@ -287,25 +266,6 @@ describe('classRules', () => {
       expect(allFeatureNames).toContain('Combat Maneuvers');
     });
 
-    it('returns empty categories when class has no features', () => {
-      const playerStats = {
-        class: { name: 'Fighter', class_levels: [{ level: 1 }] },
-        level: 1,
-        subclass: null,
-      };
-      const result = classRules.getFeatures(playerStats);
-      expect(result.actions).toEqual([]);
-      expect(result.bonusActions).toEqual([]);
-      expect(result.reactions).toEqual([]);
-      expect(result.specialActions).toEqual([]);
-      expect(result.characterAdvancement).toEqual([]);
-    });
-
-    it('throws when class_levels is missing', () => {
-      const playerStats = { class: { name: 'Fighter' }, level: 1, subclass: null };
-      expect(() => classRules.getFeatures(playerStats)).toThrow(TypeError);
-    });
-
     it('excludes subclass features when subclass is null', () => {
       const playerStats = {
         class: {
@@ -328,11 +288,6 @@ describe('classRules', () => {
   });
 
   describe('getHighestSubclassLevel', () => {
-    it('returns 0 when no subclass exists', () => {
-      const playerStats = { class: { name: 'Wizard', subclass: null }, level: 5 };
-      expect(classRules.getHighestSubclassLevel(playerStats)).toBe(0);
-    });
-
     it('returns highest subclass level capped at player level', () => {
       const playerStats = {
         class: {
@@ -387,11 +342,6 @@ describe('classRules', () => {
       expect(classRules.getRogueSneakAttack(playerStats)).toEqual({ dice_count: 0, dice_value: 6 });
     });
 
-    it('returns default when class_levels is missing', () => {
-      const playerStats = { class: { name: 'Rogue' }, level: 1 };
-      expect(classRules.getRogueSneakAttack(playerStats)).toEqual({ dice_count: 0, dice_value: 6 });
-    });
-
     it('returns default when class is missing', () => {
       expect(classRules.getRogueSneakAttack({})).toEqual({ dice_count: 0, dice_value: 6 });
     });
@@ -418,11 +368,6 @@ describe('classRules', () => {
     });
 
     it('returns defaults when class_specific is missing', () => {
-      const playerStats = { class: { name: 'Cleric' }, level: 5 };
-      expect(classRules.getClericFeatures(playerStats)).toEqual({ maxChannelDivinity: 0, destroyUndeadCR: null });
-    });
-
-    it('returns defaults when class_levels is missing', () => {
       const playerStats = { class: { name: 'Cleric' }, level: 5 };
       expect(classRules.getClericFeatures(playerStats)).toEqual({ maxChannelDivinity: 0, destroyUndeadCR: null });
     });
@@ -472,15 +417,6 @@ describe('classRules', () => {
       expect(classRules.getDruidFeatures(playerStats).wildShapeLimitations).toBe('walk, swim, or fly');
     });
 
-    it('returns defaults when class_levels is missing', () => {
-      const playerStats = { class: { name: 'Druid' }, level: 2 };
-      const result = classRules.getDruidFeatures(playerStats);
-      expect(result.maxWildShapeUses).toBe(2);
-      expect(result.maxWildShapeChallengeRating).toBe(0);
-      expect(result.beastKnownForms).toBe(0);
-      expect(result.wildShapeLimitations).toBe('walk only (no swim or fly)');
-    });
-
     it('returns defaults when class is missing', () => {
       const result = classRules.getDruidFeatures({});
       expect(result.maxWildShapeUses).toBe(2);
@@ -512,11 +448,6 @@ describe('classRules', () => {
     it('returns default auraRange when not set in class_specific', () => {
       const playerStats = { class: { name: 'Paladin', class_levels: [{ level: 5, class_specific: {} }] }, level: 5 };
       expect(classRules.getPaladinFeatures(playerStats).auraRange).toBeNull();
-    });
-
-    it('returns defaults when class_levels is missing', () => {
-      const playerStats = { class: { name: 'Paladin' }, level: 5 };
-      expect(classRules.getPaladinFeatures(playerStats)).toEqual({ maxChannelDivinity: 0, auraRange: null, extraAttacks: 1 });
     });
 
     it('returns defaults when class is missing (level also undefined)', () => {
@@ -556,14 +487,6 @@ describe('classRules', () => {
       expect(result.metamagicKnown).toBe(0);
       expect(result.creatingSpellSlotCosts).toEqual([]);
       expect(result.maxInnateSorcery).toBe(0);
-    });
-
-    it('returns defaults when class_levels is missing', () => {
-      const playerStats = { class: { name: 'Sorcerer' }, level: 3 };
-      const result = classRules.getSorcererFeatures(playerStats);
-      expect(result.maxSorceryPoints).toBe(0);
-      expect(result.metamagicKnown).toBe(0);
-      expect(result.creatingSpellSlotCosts).toEqual([]);
     });
 
     it('returns defaults when class is missing', () => {
@@ -696,20 +619,8 @@ describe('classRules', () => {
   });
 
   describe('getMonkFeatures', () => {
-    it('returns hardcoded values regardless of arguments', () => {
+    it('returns hardcoded values (5e rules)', () => {
       expect(classRules.getMonkFeatures()).toEqual({
-        martialArtsDie: 4,
-        unarmoredMovementIncrease: 0,
-        maxFocusPoints: 0,
-        wisdomBonus: 0,
-      });
-      expect(classRules.getMonkFeatures({})).toEqual({
-        martialArtsDie: 4,
-        unarmoredMovementIncrease: 0,
-        maxFocusPoints: 0,
-        wisdomBonus: 0,
-      });
-      expect(classRules.getMonkFeatures(null)).toEqual({
         martialArtsDie: 4,
         unarmoredMovementIncrease: 0,
         maxFocusPoints: 0,

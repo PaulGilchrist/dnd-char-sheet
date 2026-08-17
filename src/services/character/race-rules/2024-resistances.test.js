@@ -1,4 +1,4 @@
-// // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import raceRules from './2024.js';
 
@@ -18,8 +18,21 @@ describe('raceRules 2024 - getResistances', () => {
       expect(raceRules.getResistances({})).toEqual([]);
     });
 
-    it('returns empty array when race has no traits or subrace', () => {
-      expect(raceRules.getResistances({ race: { name: 'Human' } })).toEqual([]);
+    it('handles null/undefined race and traits gracefully', () => {
+      expect(raceRules.getResistances({ race: undefined })).toEqual([]);
+      expect(raceRules.getResistances({ race: null })).toEqual([]);
+      expect(raceRules.getResistances({ race: { traits: null } })).toEqual([]);
+      expect(raceRules.getResistances({ race: { traits: undefined } })).toEqual([]);
+    });
+
+    it('handles missing subrace gracefully', () => {
+      const input = { race: { name: 'Human', subrace: undefined } };
+      expect(raceRules.getResistances(input)).toEqual([]);
+    });
+
+    it('handles null resistances gracefully', () => {
+      const input = { race: { traits: [] }, resistances: null };
+      expect(raceRules.getResistances(input)).toEqual([]);
     });
 
     it('extracts resistance from subrace damage_resistance', () => {
@@ -32,18 +45,6 @@ describe('raceRules 2024 - getResistances', () => {
         race: { traits: [{ description: 'You have resistance to cold damage.' }] }
       };
       expect(raceRules.getResistances(input)).toContain('cold');
-    });
-
-    it('combines subrace and trait resistances', () => {
-      const input = {
-        race: {
-          subrace: { damage_resistance: 'Fire' },
-          traits: [{ description: 'You have resistance to poison.' }]
-        }
-      };
-      const result = raceRules.getResistances(input);
-      expect(result).toContain('Fire');
-      expect(result).toContain('poison');
     });
 
     it('combines subrace, trait, and playerSummary resistances', () => {
@@ -93,40 +94,7 @@ describe('raceRules 2024 - getResistances', () => {
       expect(raceRules.getResistances(input)).toEqual([]);
     });
 
-    it('handles missing campaignName gracefully', () => {
-      const input = {
-        race: { traits: [{ description: 'You have resistance to fire.' }] }
-      };
-      expect(raceRules.getResistances(input)).toContain('fire');
-    });
-
-    it('handles undefined race property', () => {
-      expect(raceRules.getResistances({ race: undefined })).toEqual([]);
-    });
-
-    it('handles null race property', () => {
-      expect(raceRules.getResistances({ race: null })).toEqual([]);
-    });
-
-    it('handles traits as null', () => {
-      expect(raceRules.getResistances({ race: { traits: null } })).toEqual([]);
-    });
-
-    it('handles traits as undefined', () => {
-      expect(raceRules.getResistances({ race: { traits: undefined } })).toEqual([]);
-    });
-
-    it('handles playerSummary resistances as null', () => {
-      const input = { race: { traits: [] }, resistances: null };
-      expect(raceRules.getResistances(input)).toEqual([]);
-    });
-
-    it('handles missing subrace gracefully', () => {
-      const input = { race: { name: 'Human', subrace: undefined } };
-      expect(raceRules.getResistances(input)).toEqual([]);
-    });
-
-    it('extracts only single-word resistance per match from trait description', () => {
+    it('extracts only single-word resistance per regex match from trait description', () => {
       const input = {
         race: {
           traits: [{ description: 'You have resistance to fire and cold damage.' }]
@@ -152,39 +120,24 @@ describe('raceRules 2024 - getResistances', () => {
     });
 
     it('adds Tiefling Fiendish Legacy resistances based on subrace name', () => {
-      const input = {
-        race: {
-          name: 'Tiefling',
-          subrace: { name: 'Abyssal Tiefling' }
-        }
-      };
-      const result = raceRules.getResistances(input);
-      expect(result).toContain('Poison');
+      const tieflingTests = [
+        { subrace: 'Abyssal Tiefling', expected: 'Poison' },
+        { subrace: 'Chthonic Tiefling', expected: 'Necrotic' },
+        { subrace: 'Infernal Tiefling', expected: 'Fire' }
+      ];
+      for (const { subrace, expected } of tieflingTests) {
+        const input = {
+          race: {
+            name: 'Tiefling',
+            subrace: { name: subrace }
+          }
+        };
+        const result = raceRules.getResistances(input);
+        expect(result).toContain(expected);
+      }
     });
 
-    it('adds Chthonic Tiefling Necrotic resistance', () => {
-      const input = {
-        race: {
-          name: 'Tiefling',
-          subrace: { name: 'Chthonic Tiefling' }
-        }
-      };
-      const result = raceRules.getResistances(input);
-      expect(result).toContain('Necrotic');
-    });
-
-    it('adds Infernal Tiefling Fire resistance', () => {
-      const input = {
-        race: {
-          name: 'Tiefling',
-          subrace: { name: 'Infernal Tiefling' }
-        }
-      };
-      const result = raceRules.getResistances(input);
-      expect(result).toContain('Fire');
-    });
-
-    it('does not add Fiendish Legacies trait text as resistance for Tiefling', () => {
+    it('skips Fiendish Legacies trait when Tiefling subrace provides resistance', () => {
       const input = {
         race: {
           name: 'Tiefling',
@@ -194,20 +147,7 @@ describe('raceRules 2024 - getResistances', () => {
       };
       const result = raceRules.getResistances(input);
       expect(result).toContain('Poison');
-      // Should not contain "legacies" or other trait text
       expect(result).not.toContain('legacies');
-    });
-
-    it('skips Fiendish Legacies trait for any Tiefling subrace', () => {
-      const input = {
-        race: {
-          name: 'Tiefling',
-          subrace: { name: 'Some Other Subrace' },
-          traits: [{ name: 'Fiendish Legacies', description: 'You have resistance to fire damage.' }]
-        }
-      };
-      const result = raceRules.getResistances(input);
-      expect(result).not.toContain('fire');
     });
   });
 });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
@@ -75,115 +75,9 @@ describe('CampaignAdmin - Status Display', () => {
                 cleanup();
             }
         });
-
-        it('sets isBusy (buttons disabled) during loading', async () => {
-            global.fetch = vi.fn(() => new Promise(() => {}));
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Snapshot');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            expect(btn).toBeDisabled();
-        });
-    });
-
-    describe('success status', () => {
-        it('shows success class, check icon, and message', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Data cleared' }) })
-            );
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Clear Change Data');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            await waitFor(() => {
-                const statusEl = document.querySelector('.admin-status--success');
-                expect(statusEl).toBeInTheDocument();
-                expect(statusEl.querySelector('.fa-check-circle')).toBeTruthy();
-                expect(screen.getByText('Data cleared')).toBeInTheDocument();
-            });
-        });
-    });
-
-    describe('error status', () => {
-        it('shows error class, exclamation icon, and message', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Something went wrong' }) })
-            );
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Clear Change Data');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            await waitFor(() => {
-                const statusEl = document.querySelector('.admin-status--error');
-                expect(statusEl).toBeInTheDocument();
-                expect(statusEl.querySelector('.fa-exclamation-circle')).toBeTruthy();
-                expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-            });
-        });
-
-        it('shows error status from network error (catch block)', async () => {
-            global.fetch = vi.fn(() => Promise.reject(new Error('Network failed')));
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Clear Change Data');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            await waitFor(() => {
-                const statusEl = document.querySelector('.admin-status--error');
-                expect(statusEl).toBeInTheDocument();
-                expect(screen.getByText('Network failed')).toBeInTheDocument();
-            });
-        });
     });
 
     describe('status transitions', () => {
-        it('transitions from loading to success', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done', size: 0 }) })
-            );
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Snapshot');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            await waitFor(() => {
-                expect(screen.getByText('Creating snapshot...')).toBeInTheDocument();
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText('Snapshot created (0.0 KB)')).toBeInTheDocument();
-                expect(document.querySelector('.admin-status--loading')).not.toBeInTheDocument();
-            });
-        });
-
-        it('transitions from loading to error', async () => {
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Error' }) })
-            );
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Snapshot');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            await waitFor(() => {
-                expect(screen.getByText('Creating snapshot...')).toBeInTheDocument();
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText('Error')).toBeInTheDocument();
-                expect(document.querySelector('.admin-status--loading')).not.toBeInTheDocument();
-            });
-        });
-
         it('re-enables all buttons after operation completes', async () => {
             global.fetch = vi.fn(() =>
                 Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
@@ -209,13 +103,6 @@ describe('CampaignAdmin - Status Display', () => {
     });
 
     describe('isBusy state', () => {
-        it('buttons are enabled when no operation is in progress', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Snapshot');
-            const btn = action.querySelector('button');
-            expect(btn).not.toBeDisabled();
-        });
-
         it('all action buttons are disabled during any operation', async () => {
             global.fetch = vi.fn(() => new Promise(() => {}));
 

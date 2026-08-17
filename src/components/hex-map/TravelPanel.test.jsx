@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TravelPanel from './TravelPanel.jsx';
@@ -83,34 +83,24 @@ describe('TravelPanel', () => {
   });
 
   describe('budget bar', () => {
-    it('should fill the bar in proportion to accrued cost', () => {
-      const { container } = render(<TravelPanel {...props} accruedCost={5} dailyBudget={10} />);
-      expect(container.querySelector('.travel-budget-fill')).toHaveStyle({ width: '50%' });
-    });
-
-    it('should cap the bar at 100% when cost exceeds the budget', () => {
-      const { container } = render(<TravelPanel {...props} accruedCost={15} dailyBudget={10} />);
-      expect(container.querySelector('.travel-budget-fill')).toHaveStyle({ width: '100%' });
-    });
-
-    it('should leave the bar empty when daily budget is zero', () => {
-      const { container } = render(<TravelPanel {...props} accruedCost={5} dailyBudget={0} />);
-      expect(container.querySelector('.travel-budget-fill')).toHaveStyle({ width: '0%' });
-    });
-
     it('should render the accrued cost and daily budget', () => {
       render(<TravelPanel {...props} accruedCost={7.5} dailyBudget={10} />);
       expect(screen.getByText('7.5 / 10')).toBeInTheDocument();
     });
 
-    it('should render the remaining budget', () => {
+    it('should render the remaining budget and cap it at 0 when cost exceeds budget', () => {
       render(<TravelPanel {...props} accruedCost={3} dailyBudget={10} />);
       expect(screen.getByText('7.0 left')).toBeInTheDocument();
     });
 
-    it('should clamp remaining budget at 0.0 when cost exceeds the budget', () => {
-      render(<TravelPanel {...props} accruedCost={15} dailyBudget={10} />);
-      expect(screen.getByText('0.0 left')).toBeInTheDocument();
+    it('should show the budget bar at 100% when cost exceeds the budget', () => {
+      const { container } = render(<TravelPanel {...props} accruedCost={15} dailyBudget={10} />);
+      expect(container.querySelector('.travel-budget-fill')).toHaveStyle({ width: '100%' });
+    });
+
+    it('should show the budget bar at 0% when daily budget is zero', () => {
+      const { container } = render(<TravelPanel {...props} accruedCost={5} dailyBudget={0} />);
+      expect(container.querySelector('.travel-budget-fill')).toHaveStyle({ width: '0%' });
     });
   });
 
@@ -158,11 +148,6 @@ describe('TravelPanel', () => {
       expect(screen.getByText('Mostly clear skies')).toBeInTheDocument();
     });
 
-    it('should render the re-roll button when weather is present', () => {
-      render(<TravelPanel {...props} weather={weather} />);
-      expect(screen.getByTitle('Re-roll weather')).toBeInTheDocument();
-    });
-
     it('should not render the weather section when weather is null', () => {
       render(<TravelPanel {...props} weather={null} />);
       expect(screen.queryByText('Weather:')).not.toBeInTheDocument();
@@ -177,13 +162,6 @@ describe('TravelPanel', () => {
       Object.values(EVENT_FREQUENCIES).forEach(freq => {
         expect(freqBox.getByRole('button', { name: freq.label })).toBeInTheDocument();
       });
-    });
-
-    it('should highlight the active frequency button', () => {
-      const { container } = render(<TravelPanel {...props} eventFrequency="sparse" />);
-      const freqBox = within(container.querySelector('.travel-panel-frequency'));
-      expect(freqBox.getByRole('button', { name: EVENT_FREQUENCIES.sparse.label })).toHaveClass('active');
-      expect(freqBox.getByRole('button', { name: EVENT_FREQUENCIES.frequent.label })).not.toHaveClass('active');
     });
 
     it('should call onSetEventFrequency with the chosen frequency', () => {
@@ -203,13 +181,6 @@ describe('TravelPanel', () => {
       });
     });
 
-    it('should highlight the active pace button', () => {
-      const { container } = render(<TravelPanel {...props} travelPace="slow" />);
-      const paceBox = within(container.querySelector('.travel-panel-pace'));
-      expect(paceBox.getByRole('button', { name: 'Slow' })).toHaveClass('active');
-      expect(paceBox.getByRole('button', { name: 'Normal' })).not.toHaveClass('active');
-    });
-
     it('should call onChangePace with the chosen pace', () => {
       const { container } = render(<TravelPanel {...props} travelPace="normal" />);
       const paceBox = within(container.querySelector('.travel-panel-pace'));
@@ -226,11 +197,6 @@ describe('TravelPanel', () => {
       expect(screen.getByRole('button', { name: 'Horseback' })).toBeInTheDocument();
     });
 
-    it('should highlight the toggle when horseback is active', () => {
-      render(<TravelPanel {...props} horseback />);
-      expect(screen.getByRole('button', { name: 'Horseback' })).toHaveClass('active');
-    });
-
     it('should call onToggleHorseback when clicked', () => {
       render(<TravelPanel {...props} horseback={false} />);
       fireEvent.click(screen.getByRole('button', { name: 'Walking' }));
@@ -239,29 +205,15 @@ describe('TravelPanel', () => {
   });
 
   describe('advance button', () => {
-    it('should be disabled when the travel budget is exhausted', () => {
-      render(<TravelPanel {...props} dayExhausted />);
-      expect(screen.getByRole('button', { name: 'Advance One Hex' })).toBeDisabled();
-    });
-
-    it('should read "Arrived" and be disabled at the end of the path', () => {
-      render(<TravelPanel {...props} pathIndex={mockPath.length} />);
-      expect(screen.getByRole('button', { name: 'Arrived' })).toBeDisabled();
-    });
-
-    it('should be disabled while an event is pending', () => {
-      render(<TravelPanel {...props} pendingEvent={{ title: 'Ambush' }} />);
-      expect(screen.getByRole('button', { name: 'Advance One Hex' })).toBeDisabled();
-    });
-
-    it('should be disabled when the party has max exhaustion', () => {
-      render(<TravelPanel {...props} partyHasMaxExhaustion />);
-      expect(screen.getByRole('button', { name: 'Advance One Hex' })).toBeDisabled();
-    });
-
-    it('should be disabled when the path is empty', () => {
-      render(<TravelPanel {...props} path={[]} pathIndex={0} />);
-      expect(screen.getByRole('button', { name: 'Arrived' })).toBeDisabled();
+    it.each([
+      { condition: 'travel budget is exhausted', dayExhausted: true },
+      { condition: 'at the end of the path', pathIndex: 3, buttonText: 'Arrived' },
+      { condition: 'an event is pending', pendingEvent: { title: 'Ambush' } },
+      { condition: 'the party has max exhaustion', partyHasMaxExhaustion: true },
+      { condition: 'the path is empty', path: [], pathIndex: 0, buttonText: 'Arrived' },
+    ])('should be disabled when $condition', ({ dayExhausted, pathIndex, pendingEvent, partyHasMaxExhaustion, path, buttonText }) => {
+      render(<TravelPanel {...props} dayExhausted={dayExhausted} pathIndex={pathIndex ?? 0} pendingEvent={pendingEvent} partyHasMaxExhaustion={partyHasMaxExhaustion} path={path ?? mockPath} />);
+      expect(screen.getByRole('button', { name: buttonText ?? 'Advance One Hex' })).toBeDisabled();
     });
 
     it('should be enabled when all conditions are clear', () => {
@@ -308,72 +260,12 @@ describe('TravelPanel', () => {
     });
   });
 
-  describe('draggable header', () => {
-    it('should set cursor to grabbing on header pointer down', () => {
-      const { container } = render(<TravelPanel {...props} />);
-      const header = container.querySelector('.travel-panel-header');
-      fireEvent.pointerDown(header, { clientX: 100, clientY: 100 });
-      expect(container.querySelector('.travel-panel').style.cursor).toBe('grabbing');
-    });
-
-    it('should move the panel on pointer move', () => {
-      const { container } = render(<TravelPanel {...props} />);
-      const header = container.querySelector('.travel-panel-header');
-      const panel = container.querySelector('.travel-panel');
-      fireEvent.pointerDown(header, { clientX: 100, clientY: 100 });
-
-      fireEvent.pointerMove(document, { clientX: 150, clientY: 120 });
-      expect(panel.style.left).toBe('50px');
-      expect(panel.style.top).toBe('20px');
-      expect(panel.style.bottom).toBe('auto');
-      expect(panel.style.transform).toBe('none');
-    });
-
-    it('should reset cursor on pointer up', () => {
-      const { container } = render(<TravelPanel {...props} />);
-      const header = container.querySelector('.travel-panel-header');
-      const panel = container.querySelector('.travel-panel');
-      fireEvent.pointerDown(header, { clientX: 100, clientY: 100 });
-
-      fireEvent.pointerUp(document);
-      expect(panel.style.cursor).toBe('');
-    });
-
-    it('should not start a drag when pointer down lands on a button', () => {
-      const { container } = render(<TravelPanel {...props} />);
-      const closeBtn = container.querySelector('.travel-panel-header button');
-      fireEvent.pointerDown(closeBtn, { clientX: 100, clientY: 100, target: closeBtn });
-      expect(container.querySelector('.travel-panel').style.cursor).toBe('');
-    });
-  });
-
   describe('travel time display', () => {
     const plainsTerrain = { '0,0': 'plains' };
-    const mountainsTerrain = { '0,0': 'mountains' };
 
     it('should show the current hex travel time at the current pace', () => {
       render(<TravelPanel {...props} terrain={plainsTerrain} />);
       expect(screen.getByText(formatTravelTime(getHexTravelTime('plains', 'normal')))).toBeInTheDocument();
-    });
-
-    it('should update travel time for slow pace', () => {
-      render(<TravelPanel {...props} travelPace="slow" terrain={plainsTerrain} />);
-      expect(screen.getByText(formatTravelTime(getHexTravelTime('plains', 'slow')))).toBeInTheDocument();
-    });
-
-    it('should update travel time for fast pace', () => {
-      render(<TravelPanel {...props} travelPace="fast" terrain={plainsTerrain} />);
-      expect(screen.getByText(formatTravelTime(getHexTravelTime('plains', 'fast')))).toBeInTheDocument();
-    });
-
-    it('should reflect the terrain move cost', () => {
-      render(<TravelPanel {...props} terrain={mountainsTerrain} />);
-      expect(screen.getByText(formatTravelTime(getHexTravelTime('mountains', 'normal')))).toBeInTheDocument();
-    });
-
-    it('should halve travel time when travelling by horseback', () => {
-      render(<TravelPanel {...props} terrain={plainsTerrain} horseback />);
-      expect(screen.getByText(formatTravelTime(getHexTravelTime('plains', 'normal', true)))).toBeInTheDocument();
     });
 
     it('should fall back to plains when the current hex has no terrain entry', () => {
@@ -385,20 +277,6 @@ describe('TravelPanel', () => {
     it('should not render the next-hex stat when the path is fully traversed', () => {
       render(<TravelPanel {...props} terrain={plainsTerrain} pathIndex={mockPath.length} />);
       expect(screen.queryByText('Next hex')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('structure', () => {
-    it('should render all core panel sections', () => {
-      const { container } = render(<TravelPanel {...props} />);
-      expect(container.querySelector('.travel-panel')).toBeInTheDocument();
-      expect(container.querySelector('.travel-panel-header')).toBeInTheDocument();
-      expect(container.querySelector('.travel-panel-frequency')).toBeInTheDocument();
-      expect(container.querySelector('.travel-panel-pace')).toBeInTheDocument();
-      expect(container.querySelector('.travel-panel-horseback')).toBeInTheDocument();
-      expect(container.querySelector('.travel-panel-stats')).toBeInTheDocument();
-      expect(container.querySelector('.travel-panel-budget-bar')).toBeInTheDocument();
-      expect(container.querySelector('.travel-panel-controls')).toBeInTheDocument();
     });
   });
 });

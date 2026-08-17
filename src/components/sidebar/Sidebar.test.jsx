@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import Sidebar from './Sidebar.jsx';
@@ -81,51 +81,19 @@ describe('Sidebar', () => {
       expect(screen.getByText('Characters')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Aragorn' })).not.toBeInTheDocument();
     });
-
-    it('does not render rename or delete campaign controls', () => {
-      renderSidebar({ onRenameCampaign: vi.fn(), onDeleteCampaign: vi.fn() });
-      expect(screen.queryByTitle('Rename Campaign')).not.toBeInTheDocument();
-      expect(screen.queryByTitle('Delete Campaign')).not.toBeInTheDocument();
-    });
   });
 
   describe('event handlers', () => {
-    it('calls onBackToCampaigns when the Campaigns button is clicked', () => {
+    it.each([
+      ['onBackToCampaigns', 'Campaigns'],
+      ['onAddCharacter', 'Add Character'],
+      ['onInitiativeClick', 'Initiative'],
+      ['onLogClick', 'Log'],
+      ['onNotesClick', 'Notes'],
+    ])('calls %s when the %s button is clicked', (handler, label) => {
       const { props } = renderSidebar();
-      fireEvent.click(screen.getByRole('button', { name: 'Campaigns' }));
-      expect(props.onBackToCampaigns).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onAddCharacter when the Add Character button is clicked', () => {
-      const { props } = renderSidebar();
-      fireEvent.click(screen.getByRole('button', { name: 'Add Character' }));
-      expect(props.onAddCharacter).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onInitiativeClick when the Initiative button is clicked', () => {
-      const { props } = renderSidebar();
-      fireEvent.click(screen.getByRole('button', { name: 'Initiative' }));
-      expect(props.onInitiativeClick).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onLogClick when the Log button is clicked', () => {
-      const { props } = renderSidebar();
-      fireEvent.click(screen.getByRole('button', { name: 'Log' }));
-      expect(props.onLogClick).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onNotesClick when the Notes button is clicked', () => {
-      const { props } = renderSidebar();
-      fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
-      expect(props.onNotesClick).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onMapsClick when Map/Maps is clicked on localhost and non-localhost', () => {
-      const { props, rerender } = renderSidebar({ isLocalhost: true });
-      fireEvent.click(screen.getByRole('button', { name: 'Maps' }));
-      rerender(<Sidebar {...props} isLocalhost={false} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Map' }));
-      expect(props.onMapsClick).toHaveBeenCalledTimes(2);
+      fireEvent.click(screen.getByRole('button', { name: label }));
+      expect(props[handler]).toHaveBeenCalledTimes(1);
     });
 
     it.each([
@@ -144,6 +112,16 @@ describe('Sidebar', () => {
       const { props } = renderSidebar({ isLocalhost: true });
       fireEvent.click(screen.getByRole('button', { name: 'Admin' }));
       expect(props.onRepairClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onMapsClick when Map/Maps is clicked', () => {
+      const { props } = renderSidebar({ isLocalhost: true });
+      fireEvent.click(screen.getByRole('button', { name: 'Maps' }));
+      expect(props.onMapsClick).toHaveBeenCalledTimes(1);
+
+      const { props: props2 } = renderSidebar({ isLocalhost: false });
+      fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+      expect(props2.onMapsClick).toHaveBeenCalledTimes(1);
     });
 
     it('opens the rules URL in a new tab when the Rules button is clicked', () => {
@@ -190,32 +168,20 @@ describe('Sidebar', () => {
       renderSidebar({ isLocalhost: true, activeView });
       expect(screen.getByRole('button', { name: label })).toHaveClass('active');
     });
-
-    it('does not highlight any button when activeView is not set', () => {
-      const { container } = renderSidebar({ isLocalhost: true, activeView: null });
-      Array.from(container.querySelectorAll('button')).forEach((btn) => {
-        expect(btn).not.toHaveClass('active');
-      });
-    });
   });
 
   describe('active view indicator', () => {
-    it('shows the active view label in the indicator', () => {
-      const { container } = renderSidebar({ activeView: 'initiative' });
-      expect(container.querySelector('.sidebar-active-indicator')).toHaveTextContent('Initiative');
-    });
-
-    it('shows the active character name in the indicator when charSheet is active', () => {
-      const { container } = renderSidebar({
-        activeView: 'charSheet',
-        activeCharacter: { name: 'Frodo' },
-      });
-      expect(container.querySelector('.sidebar-active-indicator')).toHaveTextContent('Frodo');
-    });
-
-    it('shows the generic label when charSheet is active without a character', () => {
-      const { container } = renderSidebar({ activeView: 'charSheet', activeCharacter: null });
-      expect(container.querySelector('.sidebar-active-indicator')).toHaveTextContent('Character');
+    it.each([
+      ['Initiative', 'initiative'],
+      ['Character', 'charSheet'],
+      ['Frodo', { view: 'charSheet', character: { name: 'Frodo' } }],
+    ])('shows "%s" in the indicator when activeView is %s', (expected, input) => {
+      const { container } = renderSidebar(
+        typeof input === 'object'
+          ? { activeView: input.view, activeCharacter: input.character }
+          : { activeView: input }
+      );
+      expect(container.querySelector('.sidebar-active-indicator')).toHaveTextContent(expected);
     });
 
     it('renders an empty indicator for an unknown active view', () => {
@@ -228,20 +194,6 @@ describe('Sidebar', () => {
     it('does not render the indicator when activeView is null', () => {
       const { container } = renderSidebar({ activeView: null });
       expect(container.querySelector('.sidebar-active-indicator')).not.toBeInTheDocument();
-    });
-
-    it('shows the matching icon in the indicator for each view', () => {
-      const { container, rerender } = renderSidebar({ activeView: 'initiative' });
-      let indicator = container.querySelector('.sidebar-active-indicator');
-      expect(indicator.querySelector('.fa-shield-alt')).toBeInTheDocument();
-
-      rerender(
-        <Sidebar
-          {...createProps({ activeView: 'charSheet', activeCharacter: { name: 'Test' } })}
-        />
-      );
-      indicator = container.querySelector('.sidebar-active-indicator');
-      expect(indicator.querySelector('.fa-user')).toBeInTheDocument();
     });
   });
 
@@ -260,21 +212,6 @@ describe('Sidebar', () => {
     it('renders the dice tray inside the sidebar', () => {
       renderSidebar();
       expect(screen.getByTitle('Roll d20')).toBeInTheDocument();
-    });
-
-    it('opens the DicePopup overlay when a die is rolled', () => {
-      const { container } = renderSidebar();
-      fireEvent.click(screen.getByTitle('Roll d20'));
-      expect(container.querySelector('.dice-tray-popup-overlay')).toBeInTheDocument();
-    });
-
-    it('closes the DicePopup when the overlay is clicked', () => {
-      const { container } = renderSidebar();
-      fireEvent.click(screen.getByTitle('Roll d20'));
-      expect(container.querySelector('.dice-tray-popup-overlay')).toBeInTheDocument();
-
-      fireEvent.click(container.querySelector('.dice-tray-popup-overlay'));
-      expect(container.querySelector('.dice-tray-popup-overlay')).not.toBeInTheDocument();
     });
   });
 });

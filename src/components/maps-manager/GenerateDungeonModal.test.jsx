@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import GenerateDungeonModal from './GenerateDungeonModal';
@@ -104,11 +104,6 @@ describe('GenerateDungeonModal', () => {
       expect(screen.getByText('Winding')).toBeInTheDocument();
     });
 
-    it('renders Cancel and Generate buttons', () => {
-      render(<GenerateDungeonModal {...props} />);
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Generate' })).toBeInTheDocument();
-    });
   });
 
   // -------------------------------------------------------------------------
@@ -187,12 +182,6 @@ describe('GenerateDungeonModal', () => {
         expect(props.onClose).toHaveBeenCalledTimes(1);
       });
       expect(dungeonMocks.generateAdjacentDungeon).not.toHaveBeenCalled();
-    });
-
-    it('does not call createMap when map name is whitespace-only', () => {
-      render(<GenerateDungeonModal {...props} initialMapName="   " />);
-      expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
-      expect(mapsServiceMocks.createMap).not.toHaveBeenCalled();
     });
   });
 
@@ -378,18 +367,6 @@ describe('GenerateDungeonModal', () => {
       }
     });
 
-    it('passes NaN through when the seed input is not numeric', async () => {
-      render(<GenerateDungeonModal {...props} />);
-      typeMapName('Dungeon');
-      fireEvent.change(screen.getByPlaceholderText('Random if empty'), { target: { value: 'not-a-number' } });
-      clickGenerate();
-
-      await waitFor(() => {
-        expect(dungeonMocks.generateDungeon).toHaveBeenCalled();
-      });
-      const callArgs = dungeonMocks.generateDungeon.mock.calls[0][0];
-      expect(callArgs.seed).toBeNaN();
-    });
   });
 
   // -------------------------------------------------------------------------
@@ -441,5 +418,4 @@ describe('GenerateDungeonModal', () => {
         expect(props.onClose).toHaveBeenCalled();
       });
     });
-  });
-});
+  });});

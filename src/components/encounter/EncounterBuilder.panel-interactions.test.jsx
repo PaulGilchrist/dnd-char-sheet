@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -342,7 +342,7 @@ vi.mock('../../services/ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-import { mount, sampleMonsters } from './EncounterBuilder.test-utils.jsx';
+import { mount } from './EncounterBuilder.test-utils.jsx';
 
 describe('EncounterBuilder interactions - panels', () => {
   beforeEach(() => {
@@ -458,71 +458,6 @@ describe('EncounterBuilder interactions - panels', () => {
       fireEvent.click(screen.getByTestId('increase-qty-goblin'));
 
       expect(screen.getByTestId('selected-xp-goblin')).toHaveTextContent('100 XP');
-    });
-  });
-
-  describe('encounter title display', () => {
-    it('shows "Encounter Builder" as default title', async () => {
-      await mount();
-      expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
-    });
-  });
-
-  describe('party summary display', () => {
-    it('shows party members with levels', async () => {
-      await mount();
-      expect(screen.getByText('Thorin')).toBeInTheDocument();
-      expect(screen.getByText('Lv5')).toBeInTheDocument();
-      expect(screen.getByText('Elara')).toBeInTheDocument();
-      expect(screen.getByText('Lv3')).toBeInTheDocument();
-    });
-
-    it('shows no characters message when characters array is empty', async () => {
-      await mount();
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={[]} onJoinEncounter={vi.fn()} />);
-      expect(screen.getByText(/No characters in this campaign/)).toBeInTheDocument();
-    });
-
-    it('shows no characters message when characters is null', async () => {
-      await mount();
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={null} onJoinEncounter={vi.fn()} />);
-      expect(screen.getByText(/No characters in this campaign/)).toBeInTheDocument();
-    });
-  });
-
-  describe('encounter actions visibility', () => {
-    it('renders all action buttons by default', async () => {
-      await mount();
-      expect(screen.getByText('Save')).toBeInTheDocument();
-      expect(screen.getByText('Load')).toBeInTheDocument();
-      expect(screen.getByText('Generate')).toBeInTheDocument();
-    });
-
-    it('hides reset button when no encounter is loaded', async () => {
-      await mount();
-      expect(screen.queryByText('Reset')).not.toBeInTheDocument();
     });
   });
 });

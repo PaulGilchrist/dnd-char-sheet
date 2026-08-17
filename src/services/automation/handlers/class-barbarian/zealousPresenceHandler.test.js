@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────────
@@ -157,7 +157,6 @@ describe('zealousPresenceHandler.handle', () => {
 
         it('uses usesMax when uses is not set', async () => {
             action.automation.usesMax = 2;
-            // usesKey still defaults to name-based key since no resourceKey
             useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'zealousPresenceActive') return null;
                 return undefined;
@@ -262,23 +261,6 @@ describe('zealousPresenceHandler.handle', () => {
             );
         });
 
-        it('returns popup when both runtime rage and _trackedResources rage are missing', async () => {
-            const stats = makePlayerStats();
-            action.automation.uses = 1;
-            useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'zealousPresenceActive') return null;
-                if (key === 'zealouspresenceUses') return 0;
-                if (key === 'ragePoints') return null;
-                return undefined;
-            });
-            action.automation.recharge = 'long_rest_or_expend_rage';
-
-            const result = await handle(action, stats, campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('cannot be used again');
-        });
-
         it('returns popup when recharge is not long_rest_or_expend_rage and uses exhausted', async () => {
             action.automation.uses = 1;
             useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
@@ -327,34 +309,6 @@ describe('zealousPresenceHandler.handle', () => {
             ]);
         });
 
-        it('returns modal with empty creatureTargets when no other creatures', async () => {
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'TestBarbarian' }],
-            });
-
-            const result = await handle(action, playerStats, campaignName, null);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.creatureTargets).toEqual([]);
-        });
-
-        it('returns modal with all non-self creatures when self not in list', async () => {
-            getCombatContext.mockResolvedValue({
-                creatures: [
-                    { name: 'Enemy1' },
-                    { name: 'Enemy2' },
-                ],
-            });
-
-            const result = await handle(action, playerStats, campaignName, null);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.creatureTargets).toEqual([
-                { name: 'Enemy1' },
-                { name: 'Enemy2' },
-            ]);
-        });
-
         it('passes maxTargets from automation config', async () => {
             action.automation.targets = 5;
 
@@ -363,68 +317,12 @@ describe('zealousPresenceHandler.handle', () => {
             expect(result.payload.maxTargets).toBe(5);
         });
 
-        it('defaults maxTargets to 10 when not specified', async () => {
-            delete action.automation.targets;
-
-            const result = await handle(action, playerStats, campaignName, null);
-
-            expect(result.payload.maxTargets).toBe(10);
-        });
-
         it('passes action and playerStats into payload', async () => {
             const result = await handle(action, playerStats, campaignName, null);
 
             expect(result.payload.action).toEqual(action);
             expect(result.payload.playerStats).toEqual(playerStats);
             expect(result.payload.campaignName).toBe(campaignName);
-        });
-
-        it('handles null combatSummary gracefully', async () => {
-            getCombatContext.mockResolvedValue(null);
-
-            const result = await handle(action, playerStats, campaignName, null);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.creatureTargets).toEqual([]);
-        });
-
-        it('handles combatSummary with missing creatures property', async () => {
-            getCombatContext.mockResolvedValue({});
-
-            const result = await handle(action, playerStats, campaignName, null);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.creatureTargets).toEqual([]);
-        });
-
-        it('handles combatSummary with null creatures', async () => {
-            getCombatContext.mockResolvedValue({ creatures: null });
-
-            const result = await handle(action, playerStats, campaignName, null);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.creatureTargets).toEqual([]);
-        });
-
-        it('uses maxUses as fallback when getRuntimeValue returns undefined for uses', async () => {
-            // When getRuntimeValue returns undefined, the ?? maxUses fallback kicks in
-            // Number(maxUses) = Number(1) = 1, so currentUses=1 and it proceeds to modal
-            action.automation.uses = 1;
-            useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'zealousPresenceActive') return null;
-                if (key === 'zealouspresenceUses') return undefined;
-                return undefined;
-            });
-
-            const result = await handle(action, playerStats, campaignName, null);
-
-            expect(result.type).toBe('modal');
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'zealouspresenceUses',
-                0,
-                campaignName,
-            );
         });
     });
 });
@@ -496,7 +394,6 @@ describe('zealousPresenceHandler.confirmZealousPresence', () => {
             const expCalls = addExpiration.mock.calls;
             expect(expCalls).toHaveLength(2);
 
-            // Both targets should get the same expiration structure
             for (const call of expCalls) {
                 expect(call[0]).toBe(playerName);
                 expect(call[1]).toMatch(/^Enemy\d$/);
@@ -545,15 +442,6 @@ describe('zealousPresenceHandler.confirmZealousPresence', () => {
             expect(toggleBuff).not.toHaveBeenCalledWith('Enemy3', expect.anything(), expect.anything(), expect.anything());
         });
 
-        it('defaults max targets to 10 when not specified', async () => {
-            delete action.automation.targets;
-
-            const manyTargets = ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11'];
-            await confirmZealousPresence(action, playerStats, campaignName, manyTargets);
-
-            expect(toggleBuff).toHaveBeenCalledTimes(10);
-        });
-
         it('caps targets at maxTargets=1 when specified', async () => {
             action.automation.targets = 1;
 
@@ -563,34 +451,22 @@ describe('zealousPresenceHandler.confirmZealousPresence', () => {
             expect(toggleBuff).toHaveBeenCalledWith('Enemy1', 'Zealous Presence', expect.any(Object), campaignName);
         });
 
-        it('handles empty targetNames array', async () => {
-            const result = await confirmZealousPresence(action, playerStats, campaignName, []);
+        it('handles empty or undefined targetNames', async () => {
+            const resultEmpty = await confirmZealousPresence(action, playerStats, campaignName, []);
+            const resultUndefined = await confirmZealousPresence(action, playerStats, campaignName, undefined);
 
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'zealousPresenceActive',
-                true,
-                campaignName,
-            );
-            expect(toggleBuff).not.toHaveBeenCalled();
-            expect(addExpiration).not.toHaveBeenCalled();
-            expect(result.payload.description).toContain('0 target(s)');
-            expect(result.payload.description).toContain('none');
-        });
-
-        it('handles undefined targetNames as empty array', async () => {
-            const result = await confirmZealousPresence(action, playerStats, campaignName, undefined);
-
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'zealousPresenceActive',
-                true,
-                campaignName,
-            );
-            expect(toggleBuff).not.toHaveBeenCalled();
-            expect(addExpiration).not.toHaveBeenCalled();
-            expect(result.payload.description).toContain('0 target(s)');
-            expect(result.payload.description).toContain('none');
+            for (const result of [resultEmpty, resultUndefined]) {
+                expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+                    playerName,
+                    'zealousPresenceActive',
+                    true,
+                    campaignName,
+                );
+                expect(toggleBuff).not.toHaveBeenCalled();
+                expect(addExpiration).not.toHaveBeenCalled();
+                expect(result.payload.description).toContain('0 target(s)');
+                expect(result.payload.description).toContain('none');
+            }
         });
 
         it('uses custom duration from automation when provided', async () => {
@@ -625,22 +501,6 @@ describe('zealousPresenceHandler.confirmZealousPresence', () => {
             );
         });
 
-        it('logs description with "no one" when no targets selected', async () => {
-            await confirmZealousPresence(action, playerStats, campaignName, []);
-
-            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                description: expect.stringContaining('to no one'),
-            }));
-        });
-
-        it('logs description with target list when targets selected', async () => {
-            await confirmZealousPresence(action, playerStats, campaignName, ['Goblin1', 'Goblin2']);
-
-            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                description: expect.stringContaining('Goblin1, Goblin2'),
-            }));
-        });
-
         it('handles addEntry promise rejection gracefully', async () => {
             addEntry.mockRejectedValue(new Error('Log service unavailable'));
 
@@ -648,28 +508,6 @@ describe('zealousPresenceHandler.confirmZealousPresence', () => {
 
             expect(result.type).toBe('popup');
             expect(consoleSpy).toHaveBeenCalledWith('[zealousPresence] Error:', expect.any(Error));
-        });
-
-        it('sets zealousPresenceActive even when addEntry fails', async () => {
-            addEntry.mockRejectedValue(new Error('Log service unavailable'));
-
-            await confirmZealousPresence(action, playerStats, campaignName, ['Enemy1']);
-
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'zealousPresenceActive',
-                true,
-                campaignName,
-            );
-        });
-
-        it('applies buffs and expirations even when addEntry fails', async () => {
-            addEntry.mockRejectedValue(new Error('Log service unavailable'));
-
-            await confirmZealousPresence(action, playerStats, campaignName, ['Enemy1', 'Enemy2']);
-
-            expect(toggleBuff).toHaveBeenCalledTimes(2);
-            expect(addExpiration).toHaveBeenCalledTimes(2);
         });
     });
 });

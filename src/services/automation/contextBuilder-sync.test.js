@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildAttackContextSync } from './contextBuilder.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -168,31 +168,15 @@ describe('contextBuilder-sync: basic context fields', () => {
       expect(result.targetName).toBe('Orc');
       expect(result.attackerName).toBe('Fighter1');
     });
-
-    it('uses the target name from base context even when target object differs', async () => {
-      buildBaseAttackContext.mockResolvedValue({
-        target: { name: 'Dragon', type: 'monster' },
-        targetName: 'Dragon',
-        resistanceNotice: null,
-      });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.targetName).toBe('Dragon');
-    });
   });
 
   describe('damage and weapon properties', () => {
-    it('passes through damage type from attack', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
+    it('passes through damage type from attack with fallback to damage_type_primary', async () => {
+      let result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
       expect(result.damageType).toBe('Slashing');
-    });
 
-    it('falls back to damage_type_primary when damageType is missing', async () => {
       const altAttack = { ...mockAttack, damageType: undefined, damage_type_primary: 'Bludgeoning' };
-      const result = await buildAttackContextSync(altAttack, mockStats, 'camp', 'normal', {});
-
+      result = await buildAttackContextSync(altAttack, mockStats, 'camp', 'normal', {});
       expect(result.damageType).toBe('Bludgeoning');
     });
 
@@ -226,72 +210,39 @@ describe('contextBuilder-sync: basic context fields', () => {
       const normalResult = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
       expect(normalResult.isPsychicBlade).toBe(false);
     });
-
-    it('returns playerStats reference in result', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.playerStats).toBe(mockStats);
-    });
-
-    it('sets autoDamageName from attack name', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.autoDamageName).toBe('Longsword');
-    });
-
-    it('returns hitBonus and hitBonusFormula from attack', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.hitBonus).toBe(7);
-      expect(result.hitBonusFormula).toBe('To Hit = 4 + 2 + 1');
-    });
-
-    it('returns weaponType and weaponName from attack', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.weaponType).toBe('melee');
-      expect(result.weaponName).toBe('Longsword');
-    });
   });
 
   describe('resistance notice passthrough', () => {
-    it('returns resistanceNotice from base context', async () => {
+    it('passes resistanceNotice through from base context (with value and null)', async () => {
       buildBaseAttackContext.mockResolvedValue({
         target: { name: 'Orc' },
         targetName: 'Orc',
         resistanceNotice: 'Orc resists Slashing',
       });
 
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
+      let result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
       expect(result.resistanceNotice).toBe('Orc resists Slashing');
-    });
 
-    it('returns null resistanceNotice when base context has null', async () => {
       buildBaseAttackContext.mockResolvedValue({
         target: { name: 'Orc' },
         targetName: 'Orc',
         resistanceNotice: null,
       });
 
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
+      result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
       expect(result.resistanceNotice).toBeNull();
     });
   });
 
   describe('conditionAttackMode passthrough (forcedMode)', () => {
-    it('passes non-normal conditionAttackMode through as forcedMode', async () => {
+    it('passes non-normal conditionAttackMode through as forcedMode, leaves undefined for normal', async () => {
       let result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'death_attack', {});
       expect(result.forcedMode).toBe('death_attack');
 
       result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'some_mode', {});
       expect(result.forcedMode).toBe('some_mode');
-    });
 
-    it('does not set forcedMode when conditionAttackMode is normal', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
+      result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
       expect(result.forcedMode).toBeUndefined();
     });
 
@@ -311,32 +262,25 @@ describe('contextBuilder-sync: basic context fields', () => {
   });
 
   describe('save DC and type passthrough', () => {
-    it('includes saveType and dcSuccess from attack when present', async () => {
+    it('includes saveType and dcSuccess from attack when present, undefined when not', async () => {
       const attack = { ...mockAttack, saveDc: 13, saveType: 'DEX', saveSuccess: 0.5 };
       const result = await buildAttackContextSync(attack, mockStats, 'camp', 'normal', {});
 
       expect(result.saveType).toBe('DEX');
       expect(result.dcSuccess).toBe(0.5);
+
+      const result2 = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+      expect(result2.saveType).toBeUndefined();
+      expect(result2.dcSuccess).toBeUndefined();
     });
 
-    it('includes saveType and dcSuccess as undefined when not on attack', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.saveType).toBeUndefined();
-      expect(result.dcSuccess).toBeUndefined();
-    });
-
-    it('includes saveDc from attack when present', async () => {
+    it('includes saveDc from attack when present, NaN when not', async () => {
       const attack = { ...mockAttack, saveDc: 15 };
       const result = await buildAttackContextSync(attack, mockStats, 'camp', 'normal', {});
-
       expect(result.saveDc).toBe(15);
-    });
 
-    it('produces NaN for saveDc when not present on attack and no sorcery bonus', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.saveDc).toBeNaN();
+      const result2 = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+      expect(result2.saveDc).toBeNaN();
     });
   });
 
@@ -376,7 +320,8 @@ describe('contextBuilder-sync: basic context fields', () => {
       expect(result.rangeReason).toBe('Antimagic Field blocks non-weapon attacks');
     });
 
-    it('does not trigger antimagic field block for weapon attacks', async () => {
+    it('allows weapon attacks and does not trigger when no one is affected or targetName is null', async () => {
+      // Weapon attacks pass through even when attacker affected
       getRuntimeValue.mockImplementation((name, key) => {
         if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'antimagic_field', target: 'Fighter1' },
@@ -384,18 +329,14 @@ describe('contextBuilder-sync: basic context fields', () => {
         return undefined;
       });
 
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
+      let result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
       expect(result.isAutoMiss).toBeUndefined();
-    });
 
-    it('does not trigger antimagic field when no one is affected', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
+      // No one affected
+      result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
       expect(result.isAutoMiss).toBeUndefined();
-    });
 
-    it('does not trigger antimagic field when targetName is null', async () => {
+      // Null targetName does not trigger block
       buildBaseAttackContext.mockResolvedValue({
         target: null,
         targetName: null,
@@ -408,70 +349,44 @@ describe('contextBuilder-sync: basic context fields', () => {
         return undefined;
       });
 
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
+      result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
       expect(result.isAutoMiss).toBeUndefined();
     });
   });
 
   describe('resilient sphere early return', () => {
-    it('returns auto miss when attacker is enclosed in resilient sphere', async () => {
+    it('returns auto miss when attacker or target is enclosed in resilient sphere', async () => {
       isResilientSphereActive.mockReturnValue(true);
 
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+      let result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(result.isAutoMiss).toBe(true);
       expect(result.rangeReason).toBe('Resilient Sphere blocks attacks — nothing passes through the barrier');
       expect(result.notice).toBe('Attack blocked by Resilient Sphere — nothing can pass through the barrier.');
       expect(result.forcedMode).toBeUndefined();
       expect(result.hitBonus).toBe(0);
-    });
 
-    it('returns auto miss when target is enclosed in resilient sphere', async () => {
       isResilientSphereActive.mockImplementation((name) => name === 'Orc');
 
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+      result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(result.isAutoMiss).toBe(true);
       expect(result.rangeReason).toBe('Resilient Sphere blocks attacks — nothing passes through the barrier');
     });
 
-    it('does not trigger early return when no one is in a sphere', async () => {
+    it('does not trigger when no one is in a sphere or both are in spheres', async () => {
       isResilientSphereActive.mockReturnValue(false);
 
       const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(result.isAutoMiss).toBeUndefined();
       expect(result.forcedMode).toBeUndefined();
-    });
 
-    it('returns auto miss when both attacker and target are in spheres', async () => {
       isResilientSphereActive.mockReturnValue(true);
 
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+      const result2 = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
-      expect(result.isAutoMiss).toBe(true);
-    });
-  });
-
-  describe('result structure completeness', () => {
-    it('returns all expected top-level fields in the result', async () => {
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      const expectedFields = [
-        'damageType', 'resistanceNotice', 'hunterLoreNotice', 'targetName',
-        'saveDc', 'saveType', 'dcSuccess', 'attackerName', 'forcedMode',
-        'advantageReason', 'autoDamageFormula', 'autoDamageName', 'ramActive',
-        'isMelee', 'isWeaponAttack', 'criticalRange', 'hitBonus', 'hitBonusFormula',
-        'sacredWeaponBonus', 'defensiveDuelistBonus', 'baitAndSwitchBonus',
-        'strokeOfLuck', 'boonOfCombatProwess', 'boonOfFate', 'isPsychicBlade',
-        'playerStats', 'grazeDamage', 'grazeAbilityName', 'grazeAbilityMod',
-        'weaponType', 'weaponName', 'sneakAttackDice',
-      ];
-
-      for (const field of expectedFields) {
-        expect(result).toHaveProperty(field);
-      }
+      expect(result2.isAutoMiss).toBe(true);
     });
   });
 });

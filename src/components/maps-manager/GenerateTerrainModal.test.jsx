@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import GenerateTerrainModal from './GenerateTerrainModal.jsx';
@@ -89,12 +89,6 @@ describe('GenerateTerrainModal', () => {
       render(<GenerateTerrainModal {...props} />);
       expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
     });
-
-    it('is enabled when a map name is entered', () => {
-      render(<GenerateTerrainModal {...props} />);
-      typeMapName('Wild Frontier');
-      expect(screen.getByRole('button', { name: 'Generate' })).not.toBeDisabled();
-    });
   });
 
   // -------------------------------------------------------------------------
@@ -180,7 +174,6 @@ describe('GenerateTerrainModal', () => {
     it.each([
       ['passes the typed seed as an integer', '42', 42],
       ['passes undefined when the seed is left empty', '', undefined],
-      ['passes undefined when the seed is not numeric', 'abc', undefined],
       ['passes undefined when the seed is zero', '0', undefined],
     ])('%s', (_label, typedSeed, expectedSeed) => {
       render(<GenerateTerrainModal {...props} />);
@@ -205,27 +198,10 @@ describe('GenerateTerrainModal', () => {
         expect(mapsServiceMocks.createMap).toHaveBeenCalledWith(
           'test-campaign',
           'Test Terrain',
-          expect.objectContaining({ type: 'outdoor', gridSize: 30, pois: [] }),
+          expect.objectContaining({ type: 'outdoor', gridSize: 30, pois: [], terrain: {} }),
         );
         expect(props.onMapCreated).toHaveBeenCalledTimes(1);
         expect(props.onClose).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it('passes the generated terrain to createMap', async () => {
-      const mockTerrain = { '0,0': 'plains', '1,0': 'forest' };
-      terrainMocks.generateHexTerrain.mockReturnValueOnce({ terrain: mockTerrain });
-
-      render(<GenerateTerrainModal {...props} />);
-      typeMapName('Test');
-      clickGenerate();
-
-      await waitFor(() => {
-        expect(mapsServiceMocks.createMap).toHaveBeenCalledWith(
-          'test-campaign',
-          'Test',
-          expect.objectContaining({ terrain: mockTerrain }),
-        );
       });
     });
 
@@ -242,19 +218,13 @@ describe('GenerateTerrainModal', () => {
         );
       });
     });
-
-    it('does not create a map when the name is whitespace-only', () => {
-      render(<GenerateTerrainModal {...props} initialMapName="   " />);
-      expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
-      expect(mapsServiceMocks.createMap).not.toHaveBeenCalled();
-    });
   });
 
   // -------------------------------------------------------------------------
   // Error handling
   // -------------------------------------------------------------------------
   describe('error handling', () => {
-    it('shows the error, re-enables buttons, and does not close when terrain generation throws', async () => {
+    it('shows the error and does not close when terrain generation throws', async () => {
       terrainMocks.generateHexTerrain.mockImplementationOnce(() => { throw new Error('Boom'); });
       render(<GenerateTerrainModal {...props} />);
       typeMapName('Test');

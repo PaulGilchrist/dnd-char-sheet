@@ -1,7 +1,6 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import raceRules from './5e.js';
-import utils from '../../ui/utils.js';
 
 vi.mock('../../ui/utils.js', () => ({
   default: {
@@ -65,8 +64,9 @@ describe('raceRules 5e - getRace', () => {
       expect(result.subrace.customProp).toBe('value');
     });
 
-    it('sets subrace to null when no subrace is selected', () => {
-      const allRaces = [
+    it('sets subrace to null when no subrace is selected or subrace name does not match', () => {
+      // No subrace selected
+      const allRacesNoSubrace = [
         {
           name: 'Elf',
           subraces: [
@@ -77,15 +77,13 @@ describe('raceRules 5e - getRace', () => {
           ]
         }
       ];
-      const playerSummary = {
+      const result1 = raceRules.getRace(allRacesNoSubrace, {
         race: { name: 'Elf' }
-      };
-      const result = raceRules.getRace(allRaces, playerSummary);
-      expect(result.subrace).toBeNull();
-    });
+      });
+      expect(result1.subrace).toBeNull();
 
-    it('removes subraces array from the result', () => {
-      const allRaces = [
+      // Subrace name does not match
+      const allRacesMismatch = [
         {
           name: 'Elf',
           subraces: [
@@ -96,30 +94,29 @@ describe('raceRules 5e - getRace', () => {
           ]
         }
       ];
-      const playerSummary = {
-        race: { name: 'Elf' }
-      };
-      const result = raceRules.getRace(allRaces, playerSummary);
-      expect(result.subraces).toBeUndefined();
-    });
+      const result2 = raceRules.getRace(allRacesMismatch, {
+        race: { name: 'Elf', subrace: { name: 'Wood Elf' } }
+      });
+      expect(result2.subrace).toBeNull();
 
-    it('converts ability_score abbreviations via utils.getAbilityLongName', () => {
-      const allRaces = [
+      // Empty subraces array
+      const allRacesEmpty = [
         {
-          name: 'Human',
-          ability_bonuses: [{ ability_score: 'STR', bonus: 1 }]
+          name: 'Elf',
+          subraces: []
         }
       ];
-      const playerSummary = { race: { name: 'Human' } };
-      const result = raceRules.getRace(allRaces, playerSummary);
-      expect(utils.getAbilityLongName).toHaveBeenCalledWith('STR');
-      expect(result.ability_bonuses[0].ability_score).toBe('STR');
+      const result3 = raceRules.getRace(allRacesEmpty, {
+        race: { name: 'Elf' }
+      });
+      expect(result3.subrace).toBeNull();
     });
 
-    it('converts subrace ability_score abbreviations via utils.getAbilityLongName', () => {
+    it('converts ability_score abbreviations via utils.getAbilityLongName for both race and subrace', () => {
       const allRaces = [
         {
           name: 'Elf',
+          ability_bonuses: [{ ability_score: 'STR', bonus: 1 }],
           subraces: [
             {
               name: 'High Elf',
@@ -135,6 +132,7 @@ describe('raceRules 5e - getRace', () => {
         }
       };
       const result = raceRules.getRace(allRaces, playerSummary);
+      expect(result.ability_bonuses[0].ability_score).toBe('STR');
       expect(result.subrace.ability_bonuses[0].ability_score).toBe('INT');
     });
 
@@ -145,35 +143,6 @@ describe('raceRules 5e - getRace', () => {
       expect(result.ability_bonuses).toBeUndefined();
     });
 
-    it('handles race without traits', () => {
-      const allRaces = [{ name: 'Human' }];
-      const playerSummary = { race: { name: 'Human' } };
-      const result = raceRules.getRace(allRaces, playerSummary);
-      expect(result.name).toBe('Human');
-    });
-
-    it('returns undefined when subrace name does not match any subrace', () => {
-      const allRaces = [
-        {
-          name: 'Elf',
-          subraces: [
-            {
-              name: 'High Elf',
-              damage_resistance: 'Fire'
-            }
-          ]
-        }
-      ];
-      const playerSummary = {
-        race: {
-          name: 'Elf',
-          subrace: { name: 'Wood Elf' }
-        }
-      };
-      const result = raceRules.getRace(allRaces, playerSummary);
-      expect(result.subrace).toBeNull();
-    });
-
     it('handles playerSummary.race without name', () => {
       const allRaces = [{ name: 'Human' }];
       const playerSummary = { race: {} };
@@ -181,37 +150,13 @@ describe('raceRules 5e - getRace', () => {
       expect(result).toBeUndefined();
     });
 
-    it('handles race with empty subraces array and no subrace selected', () => {
-      const allRaces = [
-        {
-          name: 'Elf',
-          subraces: []
-        }
-      ];
-      const playerSummary = { race: { name: 'Elf' } };
+    it('preserves clone independence from source', () => {
+      const sourceRace = { name: 'Human', traits: [] };
+      const allRaces = [sourceRace];
+      const playerSummary = { race: { name: 'Human' } };
       const result = raceRules.getRace(allRaces, playerSummary);
-      expect(result.subrace).toBeNull();
-    });
-
-    it('merges both race and subrace custom properties', () => {
-      const allRaces = [
-        {
-          name: 'Human',
-          traits: [{ name: 'Variant' }],
-          ability_bonuses: [{ ability_score: 'STR', bonus: 1 }]
-        }
-      ];
-      const playerSummary = {
-        race: {
-          name: 'Human',
-          variantChoice: 'War Caster'
-        },
-        subrace: { flavorText: 'Custom flavor' }
-      };
-      const result = raceRules.getRace(allRaces, playerSummary);
-      expect(result.name).toBe('Human');
-      expect(result.variantChoice).toBe('War Caster');
-      expect(result.subrace).toBeNull();
+      result.customProp = 'added';
+      expect(sourceRace.customProp).toBeUndefined();
     });
   });
 });

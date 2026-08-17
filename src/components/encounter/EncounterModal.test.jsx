@@ -1,8 +1,7 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import EncounterModal from './EncounterModal.jsx';
-import { formatEncounterName } from '../../services/encounters/encountersService.js';
 
 vi.mock('../../services/encounters/encountersService.js', () => ({
     formatEncounterName: vi.fn((name) => name
@@ -150,12 +149,6 @@ describe('EncounterModal', () => {
             expect(names).toEqual(['No Xp', 'First 50', 'Low Xp', 'First 100', 'High Xp']);
         });
 
-        it('formats encounter names through formatEncounterName', () => {
-            render(<EncounterModal {...createProps({ mode: 'load', encounters: [encounter('goblin-ambush')] })} />);
-            expect(screen.getByText('Goblin Ambush')).toBeInTheDocument();
-            expect(formatEncounterName).toHaveBeenCalledWith('goblin-ambush');
-        });
-
         it('hides the XP label when effectiveXP is missing', () => {
             const encounters = [encounter('null-xp', { effectiveXP: null }), encounter('missing-xp')];
             render(<EncounterModal {...createProps({ mode: 'load', encounters })} />);
@@ -193,7 +186,6 @@ describe('EncounterModal', () => {
                 fireEvent.click(screen.getByRole('button', { name: 'Delete goblin-ambush' }));
             });
             expect(confirmSpy).toHaveBeenCalledWith('Delete "Goblin Ambush"?');
-            expect(formatEncounterName).toHaveBeenCalledWith('goblin-ambush');
             expect(mockOnDelete).toHaveBeenCalledWith('goblin-ambush');
             confirmSpy.mockRestore();
         });

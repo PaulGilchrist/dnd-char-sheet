@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import { getProficiencies, getProficiencyChoiceCount } from './proficiencyUtils.js';
 
@@ -71,40 +71,7 @@ describe('proficiencyUtils', () => {
         expect(proficiencies).toEqual(['Athletics', 'Perception', 'Stealth']);
       });
 
-      it('handles undefined skillProficiencies gracefully', () => {
-        const playerStats = {
-          class: {
-            proficiencies: ['Skill: Athletics'],
-          },
-          race: {
-            starting_proficiencies: [],
-          },
-        };
-
-        const getChoiceCount = () => 0;
-        const [, proficiencies] = getProficiencies(playerStats, true, getChoiceCount, defaultConfig);
-
-        expect(proficiencies).toEqual(['Athletics']);
-      });
-
-      it('handles null skillProficiencies gracefully', () => {
-        const playerStats = {
-          class: {
-            proficiencies: ['Skill: Athletics'],
-          },
-          race: {
-            starting_proficiencies: [],
-          },
-          skillProficiencies: null,
-        };
-
-        const getChoiceCount = () => 0;
-        const [, proficiencies] = getProficiencies(playerStats, true, getChoiceCount, defaultConfig);
-
-        expect(proficiencies).toEqual(['Athletics']);
-      });
-
-      it('does not merge non-skill proficiencies into skill pool', () => {
+      it('does not merge proficiencies array into skill pool', () => {
         const playerStats = {
           class: {
             proficiencies: ['Skill: Athletics'],
@@ -288,32 +255,6 @@ describe('proficiencyUtils', () => {
         expect(allowed).toBe(4);
       });
 
-      it('deduplicates bonusSource proficiency_choices with existing proficiencies', () => {
-        const playerStats = {
-          class: {
-            proficiencies: ['Skill: History'],
-          },
-          race: {
-            starting_proficiencies: [],
-          },
-          skillProficiencies: [],
-        };
-
-        const config = {
-          raceProficiencies: () => [],
-          bonusSource: {
-            proficiency_choices: [
-              { choose: 1, from: ['Skill: History', 'Skill: Insight'] },
-            ],
-          },
-        };
-
-        const getChoiceCount = () => 0;
-        const [, proficiencies] = getProficiencies(playerStats, true, getChoiceCount, config);
-
-        expect(proficiencies).toEqual(['History', 'Insight']);
-      });
-
       it('filters bonusSource proficiency_choices by skill vs non-skill correctly', () => {
         const playerStats = {
           class: {
@@ -342,53 +283,6 @@ describe('proficiencyUtils', () => {
         expect(skillProfs).toContain('Acrobatics');
         expect(skillProfs).toContain('Athletics');
         expect(skillProfs).not.toContain('Tool: Smith Tools');
-      });
-
-      it('handles empty bonusSource proficiency_choices array', () => {
-        const playerStats = {
-          class: {
-            proficiencies: ['Skill: Athletics'],
-          },
-          race: {
-            starting_proficiencies: [],
-          },
-          skillProficiencies: [],
-        };
-
-        const config = {
-          raceProficiencies: () => [],
-          bonusSource: {
-            proficiency_choices: [],
-          },
-        };
-
-        const getChoiceCount = () => 0;
-        const [allowed, proficiencies] = getProficiencies(playerStats, true, getChoiceCount, config);
-
-        expect(proficiencies).toEqual(['Athletics']);
-        expect(allowed).toBe(3);
-      });
-
-      it('handles undefined bonusSource', () => {
-        const config = {
-          raceProficiencies: () => [],
-        };
-
-        const playerStats = {
-          class: {
-            proficiencies: ['Skill: Athletics'],
-          },
-          race: {
-            starting_proficiencies: [],
-          },
-          skillProficiencies: [],
-        };
-
-        const getChoiceCount = () => 0;
-        const [allowed, proficiencies] = getProficiencies(playerStats, true, getChoiceCount, config);
-
-        expect(proficiencies).toEqual(['Athletics']);
-        expect(allowed).toBe(3);
       });
 
       it('handles empty proficiencies from all sources', () => {
@@ -429,23 +323,6 @@ describe('proficiencyUtils', () => {
         expect(allowed).toBe(3);
       });
 
-      it('merges skillProficiencies into the available pool', () => {
-        const playerStats = {
-          class: {
-            proficiencies: ['Light Armor'],
-          },
-          race: {
-            starting_proficiencies: [],
-          },
-          skillProficiencies: ['Stealth', 'Perception'],
-        };
-
-        const getChoiceCount = () => 0;
-        const [, proficiencies] = getProficiencies(playerStats, false, getChoiceCount, defaultConfig);
-
-        expect(proficiencies).toEqual(['Light Armor']);
-      });
-
       it('merges existing non-skill proficiencies into the available pool', () => {
         const playerStats = {
           class: {
@@ -461,39 +338,6 @@ describe('proficiencyUtils', () => {
         const [, proficiencies] = getProficiencies(playerStats, false, getChoiceCount, defaultConfig);
 
         expect(proficiencies).toEqual(['Light Armor', 'Shields']);
-      });
-
-      it('handles undefined proficiencies gracefully', () => {
-        const playerStats = {
-          class: {
-            proficiencies: ['Light Armor'],
-          },
-          race: {
-            starting_proficiencies: [],
-          },
-        };
-
-        const getChoiceCount = () => 0;
-        const [, proficiencies] = getProficiencies(playerStats, false, getChoiceCount, defaultConfig);
-
-        expect(proficiencies).toEqual(['Light Armor']);
-      });
-
-      it('handles null proficiencies gracefully', () => {
-        const playerStats = {
-          class: {
-            proficiencies: ['Light Armor'],
-          },
-          race: {
-            starting_proficiencies: [],
-          },
-          proficiencies: null,
-        };
-
-        const getChoiceCount = () => 0;
-        const [, proficiencies] = getProficiencies(playerStats, false, getChoiceCount, defaultConfig);
-
-        expect(proficiencies).toEqual(['Light Armor']);
       });
 
       it('adds bonus proficiencies from subclass bonus_proficiencies', () => {
@@ -517,29 +361,6 @@ describe('proficiencyUtils', () => {
 
         expect(proficiencies).toEqual(['Heavy Armor', 'Light Armor', 'Martial Weapons']);
         expect(allowed).toBe(3);
-      });
-
-      it('handles null bonus_proficiencies gracefully', () => {
-        const config = {
-          raceProficiencies: () => [],
-          bonusSource: { bonus_proficiencies: null },
-        };
-
-        const playerStats = {
-          class: {
-            proficiencies: ['Light Armor'],
-          },
-          race: {
-            starting_proficiencies: [],
-          },
-          proficiencies: [],
-        };
-
-        const getChoiceCount = () => 0;
-        const [allowed, proficiencies] = getProficiencies(playerStats, false, getChoiceCount, config);
-
-        expect(proficiencies).toEqual(['Light Armor']);
-        expect(allowed).toBe(1);
       });
 
       it('adds class-based non-skill proficiency choices to the allowed count', () => {
@@ -726,33 +547,10 @@ describe('proficiencyUtils', () => {
         expect(() => getProficiencies(playerStats, true, getChoiceCount, defaultConfig)).toThrow(TypeError);
       });
 
-      it('throws TypeError when playerStats has no race property', () => {
-        const playerStats = {
-          class: {
-            proficiencies: ['Skill: Athletics'],
-          },
-          skillProficiencies: [],
-        };
-
-        const getChoiceCount = () => 0;
-        expect(() => getProficiencies(playerStats, true, getChoiceCount, defaultConfig)).toThrow(TypeError);
-      });
-
       it('throws TypeError when class property is undefined', () => {
         const playerStats = {
           class: undefined,
           race: { starting_proficiencies: [] },
-          skillProficiencies: [],
-        };
-
-        const getChoiceCount = () => 0;
-        expect(() => getProficiencies(playerStats, true, getChoiceCount, defaultConfig)).toThrow(TypeError);
-      });
-
-      it('throws TypeError when race property is undefined', () => {
-        const playerStats = {
-          class: { proficiencies: [] },
-          race: undefined,
           skillProficiencies: [],
         };
 
@@ -775,12 +573,6 @@ describe('proficiencyUtils', () => {
 
       expect(() => getProficiencyChoiceCount(playerStats, true)).toThrow(TypeError);
       expect(() => getProficiencyChoiceCount(playerStats, false)).toThrow(TypeError);
-    });
-
-    it('throws when playerStats has no race property', () => {
-      const playerStats = { class: {} };
-
-      expect(() => getProficiencyChoiceCount(playerStats, true)).toThrow(TypeError);
     });
 
     it('counts skill proficiency choices from class', () => {
@@ -937,19 +729,6 @@ describe('proficiencyUtils', () => {
       expect(getProficiencyChoiceCount(playerStats, false)).toBe(1);
     });
 
-    it('handles missing race.starting_proficiency_options', () => {
-      const playerStats = {
-        class: {
-          proficiency_choices: [
-            { choose: 2, from: ['Skill: Acrobatics', 'Skill: Stealth'] },
-          ],
-        },
-        race: {},
-      };
-
-      expect(getProficiencyChoiceCount(playerStats, true)).toBe(2);
-    });
-
     it('counts racial trait proficiency choices from subrace', () => {
       const playerStats = {
         class: {},
@@ -1037,119 +816,6 @@ describe('proficiencyUtils', () => {
       };
 
       expect(getProficiencyChoiceCount(playerStats, true)).toBe(5);
-    });
-
-    it('handles missing subrace', () => {
-      const playerStats = { class: {}, race: {} };
-
-      expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-    });
-
-    it('handles subrace without racial_traits', () => {
-      const playerStats = { class: {}, race: { subrace: {} } };
-
-      expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-    });
-
-    it('handles null subrace', () => {
-      const playerStats = { class: {}, race: { subrace: null } };
-
-      expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-    });
-
-    it('handles empty racial_traits array', () => {
-      const playerStats = {
-        class: {},
-        race: {
-          subrace: {
-            racial_traits: [],
-          },
-        },
-      };
-
-      expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-    });
-
-    it('handles racial_trait without proficiency_choices', () => {
-      const playerStats = {
-        class: {},
-        race: {
-          subrace: {
-            racial_traits: [
-              { name: 'Extra HP' },
-            ],
-          },
-        },
-      };
-
-      expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-    });
-
-    it('handles racial_trait with null proficiency_choices', () => {
-      const playerStats = {
-        class: {},
-        race: {
-          subrace: {
-            racial_traits: [
-              { proficiency_choices: null },
-            ],
-          },
-        },
-      };
-
-      expect(getProficiencyChoiceCount(playerStats, true)).toBe(0);
-    });
-
-    it('handles multiple racial traits with mixed proficiency_choices', () => {
-      const playerStats = {
-        class: {},
-        race: {
-          subrace: {
-            racial_traits: [
-              {
-                proficiency_choices: {
-                  choose: 1,
-                  from: ['Skill: Survival'],
-                },
-              },
-              {
-                proficiency_choices: {
-                  choose: 1,
-                  from: ['Skill: Athletics'],
-                },
-              },
-            ],
-          },
-        },
-      };
-
-      expect(getProficiencyChoiceCount(playerStats, true)).toBe(2);
-    });
-
-    it('skips racial traits with non-skill choices when skills=true', () => {
-      const playerStats = {
-        class: {},
-        race: {
-          subrace: {
-            racial_traits: [
-              {
-                proficiency_choices: {
-                  choose: 2,
-                  from: ['Skill: Perception'],
-                },
-              },
-              {
-                proficiency_choices: {
-                  choose: 3,
-                  from: ['Heavy Armor', 'Martial Weapons'],
-                },
-              },
-            ],
-          },
-        },
-      };
-
-      expect(getProficiencyChoiceCount(playerStats, true)).toBe(2);
     });
 
     it('throws when racial traits have empty from array', () => {

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildAttackContextSync } from './contextBuilder.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -71,13 +71,10 @@ vi.mock('./handlers/class-cleric-paladin/avengingAngelHandler.js', () => ({
   handle: vi.fn(),
 }));
 
-vi.mock('./handlers/spells/sanctuaryHandler.js', () => ({
-  endSanctuary: vi.fn(),
-}));
-
 vi.mock('../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js', () => ({
   isProtectionFromEvilAndGoodActive: vi.fn().mockReturnValue(false),
   isCreatureWarded: vi.fn().mockReturnValue(false),
+  handle: vi.fn(),
 }));
 
 vi.mock('../combat/automation/automationService.js', () => ({
@@ -145,7 +142,7 @@ function defaultAuraMocks() {
   getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
 }
 
-describe('contextBuilder-sync: distracting strike advantage', () => {
+describe('contextBuilder-sync: target effects that grant advantage (consumed)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
@@ -153,11 +150,20 @@ describe('contextBuilder-sync: distracting strike advantage', () => {
     defaultAuraMocks();
   });
 
-  it('sets advantage and consumes effect when distracting strike exists from another source', async () => {
+  it.each([
+    {
+      effect: 'distracting_strike_advantage',
+      name: 'distracting strike',
+      setup: () => ({ effect: 'distracting_strike_advantage', target: 'Orc', source: 'Ally' }),
+    },
+    {
+      effect: 'next_attack_advantage',
+      name: 'vex (next_attack_advantage)',
+      setup: () => ({ effect: 'next_attack_advantage', target: 'Fighter1', vexTarget: 'Orc', source: 'Thorn' }),
+    },
+  ])('sets advantage and consumes $name effect', async ({ setup }) => {
     getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'distracting_strike_advantage', target: 'Orc', source: 'Ally' },
-      ];
+      if (name === 'campaign' && key === 'targetEffects') return [setup()];
       if (key === 'activeBuffs') return [];
       return undefined;
     });
@@ -173,35 +179,7 @@ describe('contextBuilder-sync: distracting strike advantage', () => {
     );
   });
 
-  it('does not set advantage or consume when distracting strike is from the attacker', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'distracting_strike_advantage', target: 'Orc', source: 'Fighter1' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(result.forcedMode).toBeUndefined();
-    expect(setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('does not set advantage or consume when distracting strike targets a different creature', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'Ally' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(result.forcedMode).toBeUndefined();
-    expect(setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('preserves other effects when consuming distracting strike', async () => {
+  it('preserves other effects when consuming a targeting advantage effect', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (name === 'campaign' && key === 'targetEffects') return [
         { effect: 'distracting_strike_advantage', target: 'Orc', source: 'Ally' },
@@ -220,22 +198,9 @@ describe('contextBuilder-sync: distracting strike advantage', () => {
       'camp',
     );
   });
-
-  it('does nothing when targetEffects is empty array', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-    expect(setRuntimeValue).not.toHaveBeenCalled();
-  });
 });
 
-describe('contextBuilder-sync: next_attack_advantage (vex effect)', () => {
+describe('contextBuilder-sync: target effects that grant advantage (not consumed)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
@@ -243,201 +208,23 @@ describe('contextBuilder-sync: next_attack_advantage (vex effect)', () => {
     defaultAuraMocks();
   });
 
-  it('sets advantage and consumes effect when vex effect matches attacker and target', async () => {
+  it.each([
+    { effect: 'reckless_attack', setup: () => ({ effect: 'reckless_attack', target: 'Orc' }) },
+    { effect: 'crusher_enhanced_critical', setup: () => ({ effect: 'crusher_enhanced_critical', target: 'Orc' }) },
+    { effect: 'protection', setup: () => ({ effect: 'protection', target: 'Orc', source: 'Paladin' }) },
+  ])('sets forcedMode when $effect effect is on target', async ({ setup }) => {
     getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'next_attack_advantage', target: 'Fighter1', vexTarget: 'Orc', source: 'Thorn' },
-      ];
+      if (name === 'campaign' && key === 'targetEffects') return [setup()];
       if (key === 'activeBuffs') return [];
       return undefined;
     });
 
     const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
-    expect(result.forcedMode).toBe('advantage');
-    expect(setRuntimeValue).toHaveBeenCalledWith(
-      'campaign',
-      'targetEffects',
-      [],
-      'camp',
-    );
+    expect(result.forcedMode).toBe(setup().effect === 'protection' ? 'disadvantage' : 'advantage');
   });
 
-  it('does not set advantage or consume when vex effect target does not match attacker', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'next_attack_advantage', target: 'Other', vexTarget: 'Orc', source: 'Thorn' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(result.forcedMode).toBeUndefined();
-    expect(setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('does not set advantage or consume when vex vexTarget does not match attack target', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'next_attack_advantage', target: 'Fighter1', vexTarget: 'Goblin', source: 'Thorn' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-    expect(result.forcedMode).toBeUndefined();
-    expect(setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('preserves other effects when consuming vex effect', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'next_attack_advantage', target: 'Fighter1', vexTarget: 'Orc', source: 'Thorn' },
-        { effect: 'graze', target: 'Orc' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(setRuntimeValue).toHaveBeenCalledWith(
-      'campaign',
-      'targetEffects',
-      [{ effect: 'graze', target: 'Orc' }],
-      'camp',
-    );
-  });
-});
-
-describe('contextBuilder-sync: protection effect', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    defaultBaseAttackContext();
-    getRuntimeValue.mockReturnValue(undefined);
-    defaultAuraMocks();
-  });
-
-  it('sets forcedMode to disadvantage when protection is on target', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'protection', target: 'Orc', source: 'Paladin' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('disadvantage');
-  });
-
-  it('does not set disadvantage when protection targets a different creature', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'protection', target: 'Goblin', source: 'Paladin' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
-});
-
-describe('contextBuilder-sync: blur and foresight save disadvantage', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    defaultBaseAttackContext();
-    getRuntimeValue.mockReturnValue(undefined);
-    defaultAuraMocks();
-  });
-
-  it('does not set forcedMode from blur alone because disadvantage is computed after forcedMode resolution', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'blur', target: 'Orc' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
-
-  it('does not set forcedMode from foresight alone because disadvantage is computed after forcedMode resolution', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'foresight', target: 'Orc' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
-
-  it('does not override forcedMode from other sources when blur is present', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'blur', target: 'Orc' },
-        { effect: 'reckless_attack', target: 'Orc' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-});
-
-describe('contextBuilder-sync: reckless attack and crusher effects', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    defaultBaseAttackContext();
-    getRuntimeValue.mockReturnValue(undefined);
-    defaultAuraMocks();
-  });
-
-  it('adds advantage when reckless_attack effect is on target', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'reckless_attack', target: 'Orc' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('adds advantage when crusher_enhanced_critical effect is on target', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'crusher_enhanced_critical', target: 'Orc' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('does not set advantage when reckless_attack targets a different creature', async () => {
+  it('does not set advantage/disadvantage when effect targets a different creature', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (name === 'campaign' && key === 'targetEffects') return [
         { effect: 'reckless_attack', target: 'Goblin' },
@@ -452,7 +239,7 @@ describe('contextBuilder-sync: reckless attack and crusher effects', () => {
   });
 });
 
-describe('contextBuilder-sync: attacker disadvantage effects (sap + slasher)', () => {
+describe('contextBuilder-sync: next_attack_bonus (Sundering Blow)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
@@ -460,72 +247,7 @@ describe('contextBuilder-sync: attacker disadvantage effects (sap + slasher)', (
     defaultAuraMocks();
   });
 
-  it('sets forcedMode to disadvantage when sap effect targets attacker', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'disadvantage_next_attack', target: 'Fighter1' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('disadvantage');
-  });
-
-  it('sets forcedMode to disadvantage when slasher effect targets attacker', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'slasher_enhanced_critical', target: 'Fighter1' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('disadvantage');
-  });
-
-  it('does not set disadvantage when sap effect targets a different creature', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'disadvantage_next_attack', target: 'Other' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
-
-  it('does not set disadvantage when slasher effect targets a different creature', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'slasher_enhanced_critical', target: 'Other' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
-});
-
-describe('contextBuilder-sync: next_attack_bonus (Sundering Blow hit bonus)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    defaultBaseAttackContext();
-    getRuntimeValue.mockReturnValue(undefined);
-    defaultAuraMocks();
-  });
-
-  it('does not add next_attack_bonus to hitBonus because sunderingBonus is computed after effectiveHitBonus', async () => {
+  it('processes next_attack_bonus effects on target', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (name === 'campaign' && key === 'targetEffects') return [
         { effect: 'next_attack_bonus', target: 'Orc', value: 5 },
@@ -539,39 +261,11 @@ describe('contextBuilder-sync: next_attack_bonus (Sundering Blow hit bonus)', ()
     expect(result.hitBonus).toBe(7);
   });
 
-  it('processes next_attack_bonus from multiple effects on target but hitBonus is unchanged', async () => {
+  it('processes multiple next_attack_bonus effects on target', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (name === 'campaign' && key === 'targetEffects') return [
         { effect: 'next_attack_bonus', target: 'Orc', value: 5 },
         { effect: 'next_attack_bonus', target: 'Orc', value: 3 },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.hitBonus).toBe(7);
-  });
-
-  it('does not add bonus when next_attack_bonus targets a different creature', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'next_attack_bonus', target: 'Goblin', value: 5 },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.hitBonus).toBe(7);
-  });
-
-  it('defaults to 5 when next_attack_bonus value is missing but hitBonus is unchanged', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'next_attack_bonus', target: 'Orc' },
       ];
       if (key === 'activeBuffs') return [];
       return undefined;

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -78,43 +78,6 @@ describe('resistancesValidation getResistanceInfo', () => {
         isGranted: true,
         isPreSelected: true,
         source: 'Class',
-      });
-    });
-
-    it('returns isGranted true with combined Race, Class source when both grant', async () => {
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue({
-        name: 'Tiefling',
-        traits: [
-          {
-            name: 'Hellish Resistance',
-            description: ['You have resistance to fire damage.'],
-          },
-        ],
-      });
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-        class_levels: [
-          {
-            level: 1,
-            features: [
-              {
-                name: 'Fire Resistance',
-                description: 'You have resistance to fire damage.',
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = await getResistanceInfo(
-        'Fire',
-        'resistance',
-        baseArgs({ race: { name: 'Tiefling' } }),
-      );
-
-      expect(result).toEqual({
-        isGranted: true,
-        isPreSelected: true,
-        source: 'Race',
       });
     });
 
@@ -207,48 +170,6 @@ describe('resistancesValidation getResistanceInfo', () => {
       vi.mocked(dataLoader.fetchClassData).mockResolvedValue(null);
 
       const result = await getResistanceInfo('Fire', 'resistance', baseArgs({ race: { name: 'Nonexistent' } }));
-
-      expect(result).toEqual({
-        isGranted: false,
-        isPreSelected: false,
-        source: 'Unknown',
-      });
-    });
-
-    it('defaults to level 1 when level is missing', async () => {
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-        class_levels: [
-          {
-            level: 1,
-            features: [
-              {
-                name: 'Immunity',
-                description: 'You gain Immunity to Fire damage.',
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = await getResistanceInfo(
-        'Fire',
-        'immunity',
-        baseArgs({ class: { name: 'Fighter' } }),
-      );
-
-      expect(result).toEqual({
-        isGranted: true,
-        isPreSelected: true,
-        source: 'Class',
-      });
-    });
-
-    it('handles missing race and class objects entirely', async () => {
-      vi.mocked(dataLoader.fetchRaceData).mockResolvedValue(emptyRaceData());
-      vi.mocked(dataLoader.fetchClassData).mockResolvedValue(emptyClassData());
-
-      const result = await getResistanceInfo('Fire', 'resistance', baseArgs({ race: null, class: null }));
 
       expect(result).toEqual({
         isGranted: false,

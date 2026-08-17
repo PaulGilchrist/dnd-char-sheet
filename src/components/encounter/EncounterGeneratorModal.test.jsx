@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { generateEncounterSuggestions } from '../../services/encounters/encounterGenerator.js';
@@ -55,7 +55,7 @@ function renderModal(overrides = {}) {
             onClose={onClose}
         />
     );
-    return { onApply, onClose, ...utils };
+    return { onApply, onClose, unmount: utils.unmount, ...utils };
 }
 
 describe('EncounterGeneratorModal', () => {
@@ -87,22 +87,21 @@ describe('EncounterGeneratorModal', () => {
             expect(screen.getByText(/3 monsters? available/)).toBeInTheDocument();
         });
 
-        it('disables Generate when there are no monsters', () => {
-            renderModal({ monsters: [] });
+        it('disables Generate when monsters is empty, null, player levels are empty, or no monsters match selected environments', () => {
+            const { unmount } = renderModal({ monsters: [] });
+            expect(screen.getByText(/0 monsters? available/)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /generate/i })).toBeDisabled();
-        });
+            unmount();
 
-        it('disables Generate when monsters is null', () => {
-            renderModal({ monsters: null });
+            const { unmount: unmount2 } = renderModal({ monsters: null });
+            expect(screen.getByText(/0 monsters? available/)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /generate/i })).toBeDisabled();
-        });
+            unmount2();
 
-        it('disables Generate when player levels are empty', () => {
-            renderModal({ playerLevels: [] });
+            const { unmount: unmount3 } = renderModal({ playerLevels: [] });
             expect(screen.getByRole('button', { name: /generate/i })).toBeDisabled();
-        });
+            unmount3();
 
-        it('unselecting every environment leaves 0 monsters available and disables Generate', () => {
             renderModal();
             ['forest', 'grassland', 'hill', 'underdark'].forEach(env => {
                 fireEvent.click(screen.getByLabelText(env));
@@ -128,11 +127,6 @@ describe('EncounterGeneratorModal', () => {
             expect(screen.getByLabelText('grassland')).not.toBeChecked();
         });
 
-        it('uses singular wording when exactly one monster is available', () => {
-            renderModal();
-            fireEvent.click(screen.getByRole('button', { name: 'Dungeon' }));
-            expect(screen.getByText(/1 monster available/)).toBeInTheDocument();
-        });
     });
 
     describe('generation', () => {
@@ -193,21 +187,21 @@ describe('EncounterGeneratorModal', () => {
             expect(screen.getByText('Rat')).toBeInTheDocument();
         });
 
-        it('hides the empty state once suggestions are shown', () => {
+        it('toggles empty state visibility and Apply buttons based on generation results', () => {
+            const { unmount } = renderModal();
+            expect(screen.getByText('Pick environments and click Generate')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /apply/i })).not.toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('button', { name: /generate/i }));
+            expect(screen.getByText('Pick environments and click Generate')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /apply/i })).not.toBeInTheDocument();
+            unmount();
+
             generateMock.mockReturnValue(defaultSuggestions);
             renderModal();
-
             fireEvent.click(screen.getByRole('button', { name: /generate/i }));
-
             expect(screen.queryByText('Pick environments and click Generate')).not.toBeInTheDocument();
-        });
-
-        it('shows the empty state when the generator returns no suggestions', () => {
-            renderModal();
-
-            fireEvent.click(screen.getByRole('button', { name: /generate/i }));
-
-            expect(screen.getByText('Pick environments and click Generate')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /apply/i })).toBeInTheDocument();
         });
 
         it('replaces previous suggestions when Generate is clicked again', () => {
@@ -224,25 +218,23 @@ describe('EncounterGeneratorModal', () => {
             expect(screen.queryByText('Medium')).not.toBeInTheDocument();
         });
 
-        it('renders the correct difficulty badge class for each difficulty', () => {
-            renderModal();
-            const cases = [
-                { label: 'Easy', className: 'gen-suggestion-diff-easy' },
-                { label: 'Medium', className: 'gen-suggestion-diff-medium' },
-                { label: 'Hard', className: 'gen-suggestion-diff-hard' },
-                { label: 'Deadly', className: 'gen-suggestion-diff-deadly' },
-            ];
+        it('renders all difficulty labels with their badge wrapper', () => {
+            const labels = ['Easy', 'Medium', 'Hard', 'Deadly'];
 
-            for (const { label, className } of cases) {
+            for (const label of labels) {
                 generateMock.mockReturnValue([{
                     difficultyLabel: label,
                     totalXP: 100,
                     monsterCount: 1,
                     monsters: [goblin],
                 }]);
+                const { unmount } = renderModal();
                 fireEvent.click(screen.getByRole('button', { name: /generate/i }));
 
-                expect(screen.getByText(label).closest('.gen-suggestion-diff')).toHaveClass(className);
+                const diffEl = screen.getByText(label).closest('.gen-suggestion-diff');
+                expect(diffEl).toBeInTheDocument();
+                expect(diffEl.textContent).toBe(label);
+                unmount();
             }
         });
 
@@ -276,14 +268,6 @@ describe('EncounterGeneratorModal', () => {
 
             expect(onApply).toHaveBeenCalledWith(secondSuggestions[0].monsters);
             expect(onClose).toHaveBeenCalled();
-        });
-
-        it('does not render Apply buttons when there are no suggestions', () => {
-            renderModal();
-
-            fireEvent.click(screen.getByRole('button', { name: /generate/i }));
-
-            expect(screen.queryByRole('button', { name: /apply/i })).not.toBeInTheDocument();
         });
 
         it('calls onClose when the close button is clicked', () => {

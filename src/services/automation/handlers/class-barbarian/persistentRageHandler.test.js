@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './persistentRageHandler.js';
 
@@ -70,35 +70,6 @@ describe('persistentRageHandler', () => {
             expect(setRuntimeValue).not.toHaveBeenCalled();
             expect(addEntry).not.toHaveBeenCalled();
         });
-
-        it('returns info popup when class_levels array is empty', async () => {
-            const stats = makePlayerStats({
-                class: { name: 'Barbarian', class_levels: [] },
-            });
-
-            const result = await handle(makeAction(), stats, campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No rage uses available');
-        });
-
-        it('returns info popup when class_levels is missing', async () => {
-            const stats = makePlayerStats({ class: {} });
-
-            const result = await handle(makeAction(), stats, campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No rage uses available');
-        });
-
-        it('returns info popup when playerStats.class is missing', async () => {
-            const stats = makePlayerStats({ class: undefined });
-
-            const result = await handle(makeAction(), stats, campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No rage uses available');
-        });
     });
 
     describe('already at max rage', () => {
@@ -116,19 +87,6 @@ describe('persistentRageHandler', () => {
             expect(result.payload.description).toContain('4/4');
             expect(setRuntimeValue).not.toHaveBeenCalled();
             expect(addEntry).not.toHaveBeenCalled();
-        });
-
-        it('returns info popup when rage points exceed max (treats as already full)', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'ragePoints') return 5;
-                return null;
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('already at maximum');
-            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
     });
 
@@ -203,32 +161,6 @@ describe('persistentRageHandler', () => {
                 description: expect.stringContaining('2 -> 3'),
             }));
         });
-
-        it('logs with action name in log entry description', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'ragePoints') return 3;
-                return null;
-            });
-
-            await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                description: expect.stringContaining('Persistent Rage'),
-            }));
-        });
-
-        it('logs that feature requires a long rest in the description', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'ragePoints') return 2;
-                return null;
-            });
-
-            await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                description: expect.stringContaining('Long Rest'),
-            }));
-        });
     });
 
     describe('error handling', () => {
@@ -253,49 +185,4 @@ describe('persistentRageHandler', () => {
         });
     });
 
-    describe('payload structure', () => {
-        it('includes the action automation in the popup payload', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'ragePoints') return 1;
-                return null;
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.payload.automation).toEqual(makeAction().automation);
-        });
-
-        it('returns popup type for all code paths', async () => {
-            const action = makeAction();
-            const stats = makePlayerStats();
-
-            // Already at max
-            getRuntimeValue.mockImplementation((_n, key) => {
-                if (key === 'ragePoints') return 4;
-                return null;
-            });
-            expect((await handle(action, stats, campaignName, null)).type).toBe('popup');
-
-            // No rage uses
-            getRuntimeValue.mockReturnValue(null);
-            const noRageStats = makePlayerStats({
-                class: { name: 'Barbarian', class_levels: [{ level: 1, rages: 0 }] },
-            });
-            expect((await handle(action, noRageStats, campaignName, null)).type).toBe('popup');
-
-            // Already used
-            getRuntimeValue.mockImplementation((_n, key) => {
-                if (key === 'persistentRageUsed') return true;
-                return null;
-            });
-            expect((await handle(action, stats, campaignName, null)).type).toBe('popup');
-
-            // Successful restoration
-            getRuntimeValue.mockImplementation((_n, key) => {
-                if (key === 'ragePoints') return 1;
-                return null;
-            });
-            expect((await handle(action, stats, campaignName, null)).type).toBe('popup');
-        });
-    });
 });

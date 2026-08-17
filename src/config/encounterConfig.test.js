@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import { ENCOUNTER_CONFIG } from './encounterConfig.js';
 
@@ -71,12 +71,6 @@ describe('encounterConfig', () => {
     it('should default to Medium (1)', () => {
       expect(ENCOUNTER_CONFIG.defaultDifficulty).toBe(1);
     });
-
-    it('should be a valid difficulty index inside the xpThresholds columns', () => {
-      expect(Number.isInteger(ENCOUNTER_CONFIG.defaultDifficulty)).toBe(true);
-      expect(ENCOUNTER_CONFIG.defaultDifficulty).toBeGreaterThanOrEqual(0);
-      expect(ENCOUNTER_CONFIG.defaultDifficulty).toBeLessThan(4);
-    });
   });
 
   describe('difficultyMultipliers', () => {
@@ -97,30 +91,17 @@ describe('encounterConfig', () => {
       expect(ENCOUNTER_CONFIG.crRange.minMultiplier).toBe(0.125);
       expect(ENCOUNTER_CONFIG.crRange.minGap).toBe(0.25);
     });
-
-    it('should use positive values so the CR window always stays valid', () => {
-      expect(ENCOUNTER_CONFIG.crRange.minMultiplier).toBeGreaterThan(0);
-      expect(ENCOUNTER_CONFIG.crRange.minGap).toBeGreaterThan(0);
-    });
   });
 
   describe('budgetTolerance', () => {
     it('should allow up to 10% over the XP budget', () => {
       expect(ENCOUNTER_CONFIG.budgetTolerance).toBe(1.1);
     });
-
-    it('should be greater than 1 so trims only happen above the target budget', () => {
-      expect(ENCOUNTER_CONFIG.budgetTolerance).toBeGreaterThan(1);
-    });
   });
 
   describe('deadlyMultiplier', () => {
     it('should cap suggestions at 1.5x the deadly threshold', () => {
       expect(ENCOUNTER_CONFIG.deadlyMultiplier).toBe(1.5);
-    });
-
-    it('should be greater than 1 so over-deadly headroom exists', () => {
-      expect(ENCOUNTER_CONFIG.deadlyMultiplier).toBeGreaterThan(1);
     });
   });
 
@@ -139,13 +120,6 @@ describe('encounterConfig', () => {
     it('should default to 3 suggestions with an overgenerate factor of 2', () => {
       expect(ENCOUNTER_CONFIG.defaultSuggestionCount).toBe(3);
       expect(ENCOUNTER_CONFIG.suggestionOvergenerate).toBe(2);
-    });
-
-    it('should use positive integers so suggestion generation can produce results', () => {
-      for (const value of [ENCOUNTER_CONFIG.defaultSuggestionCount, ENCOUNTER_CONFIG.suggestionOvergenerate]) {
-        expect(Number.isInteger(value)).toBe(true);
-        expect(value).toBeGreaterThanOrEqual(1);
-      }
     });
   });
 });

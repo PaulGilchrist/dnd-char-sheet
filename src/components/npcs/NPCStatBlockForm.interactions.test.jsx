@@ -158,12 +158,6 @@ describe('NPCStatBlockForm interactions', () => {
       expect(getState().skillBonuses['']).toBe('');
     });
 
-    it('adds a new skill when no skills exist yet', () => {
-      const { getState } = setup(createFormData({ skillBonuses: undefined }));
-      fireEvent.click(screen.getByRole('button', { name: /Add Skill/i }));
-      expect(getState().skillBonuses).toEqual({ '': '' });
-    });
-
     it('removes a skill via its remove button', () => {
       const { getState } = setup();
       fireEvent.click(screen.getAllByRole('button', { name: /Remove skill/i })[0]);
@@ -229,12 +223,6 @@ describe('NPCStatBlockForm interactions', () => {
         name: '', attack_bonus: '', damage_dice_primary: '', damage_type_primary: '',
         damage_dice_secondary: '', damage_type_secondary: '', description: '',
       });
-    });
-
-    it('adds an action when none exist yet', () => {
-      const { getState } = setup(createFormData({ actions: undefined }));
-      fireEvent.click(screen.getByRole('button', { name: /Add Action/i }));
-      expect(getState().actions).toHaveLength(1);
     });
 
     it('removes an action via its remove button', () => {

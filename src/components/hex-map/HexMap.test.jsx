@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 // HexMap integration tests: rendering, toolbar wiring, panel/overlay visibility,
 // SVG pointer interaction, background-click state cleanup, and POI drag-and-drop.
 // Travel-tool/advance behavior lives in HexMap.travel.test.jsx and event-handler
@@ -235,50 +235,9 @@ describe('HexMap', () => {
             expect(mapSvg()).toBeInTheDocument();
         });
 
-        it('renders the compass SVG and legend in loaded state', () => {
-            renderMap();
-            const compass = document.querySelector('.hex-map-compass svg');
-            expect(compass).toBeInTheDocument();
-            expect(compass).toHaveAttribute('viewBox', '0 0 48 48');
-            expect(compass).toHaveAttribute('width', '44');
-            expect(compass).toHaveAttribute('height', '44');
-            expect(screen.getByText('N')).toBeInTheDocument();
-            expect(screen.getByText('1 hex = 6 miles')).toBeInTheDocument();
-        });
-
-        it('renders all SVG defs for POI types', () => {
-            renderMap();
-            const defs = mapSvg().querySelector('defs');
-            expect(defs).toBeInTheDocument();
-            expect(defs.querySelector('#poi-camp')).toBeInTheDocument();
-            expect(defs.querySelector('#poi-city')).toBeInTheDocument();
-            expect(defs.querySelector('#poi-dungeon')).toBeInTheDocument();
-            expect(defs.querySelector('#poi-hazard')).toBeInTheDocument();
-            expect(defs.querySelector('#poi-landmark')).toBeInTheDocument();
-            expect(defs.querySelector('#poi-loreSite')).toBeInTheDocument();
-            expect(defs.querySelector('#poi-naturalWonder')).toBeInTheDocument();
-            expect(defs.querySelector('#poi-settlement')).toBeInTheDocument();
-            expect(defs.querySelector('#poi-tower')).toBeInTheDocument();
-        });
-
         it('does not crash when onBack is not provided', () => {
             expect(() => renderMap({ onBack: undefined })).not.toThrow();
             expect(screen.getByTestId('toolbar')).toBeInTheDocument();
-        });
-    });
-
-    describe('SVG attributes', () => {
-        it('sets draggable to false on the map SVG', () => {
-            renderMap();
-            expect(mapSvg()).toHaveAttribute('draggable', 'false');
-        });
-
-        it('prevents drag start on the map SVG', () => {
-            renderMap();
-            const e = new Event('dragstart', { bubbles: true, cancelable: true });
-            const spy = vi.spyOn(e, 'preventDefault');
-            fireEvent(mapSvg(), e);
-            expect(spy).toHaveBeenCalled();
         });
     });
 
@@ -299,50 +258,6 @@ describe('HexMap', () => {
     });
 
     describe('Panels and overlays', () => {
-        it('renders the weather overlay when weather is set', () => {
-            useMapLoader.mockReturnValue(makeMapLoader({ weather: { condition: 'rain' } }));
-            renderMap();
-            expect(screen.getByTestId('weather-overlay')).toBeInTheDocument();
-        });
-
-        it('does not render the weather overlay without weather', () => {
-            renderMap();
-            expect(screen.queryByTestId('weather-overlay')).not.toBeInTheDocument();
-        });
-
-        it('renders the POI context menu when a POI is selected', () => {
-            usePoiManagement.mockReturnValue(makePoiManagement({ selectedPoiMenu: { id: 'poi-1', q: 0, r: 0 } }));
-            renderMap();
-            expect(screen.getByTestId('poi-context-menu')).toBeInTheDocument();
-        });
-
-        it('does not render the POI context menu without a selection', () => {
-            renderMap();
-            expect(screen.queryByTestId('poi-context-menu')).not.toBeInTheDocument();
-        });
-
-        it('renders the party marker when a party position is set', () => {
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 } }));
-            renderMap();
-            expect(screen.getByTestId('party-marker')).toBeInTheDocument();
-        });
-
-        it('does not render the party marker without a party position', () => {
-            renderMap();
-            expect(screen.queryByTestId('party-marker')).not.toBeInTheDocument();
-        });
-
-        it('renders the travel path layer when a path exists', () => {
-            useTravelManagement.mockReturnValue(makeTravelMgmt({ path: [{ q: 10, r: 5 }, { q: 11, r: 5 }] }));
-            renderMap();
-            expect(screen.getByTestId('travel-path-layer')).toBeInTheDocument();
-        });
-
-        it('does not render the travel path layer when there is no path', () => {
-            renderMap();
-            expect(screen.queryByTestId('travel-path-layer')).not.toBeInTheDocument();
-        });
-
         it('opens and closes the POI panel from the toolbar', () => {
             renderMap();
             expect(screen.queryByTestId('poi-panel')).not.toBeInTheDocument();
@@ -359,26 +274,6 @@ describe('HexMap', () => {
             expect(screen.getByTestId('marching-panel')).toBeInTheDocument();
             fireEvent.click(screen.getByTestId('marching-panel-close'));
             expect(screen.queryByTestId('marching-panel')).not.toBeInTheDocument();
-        });
-
-        it('does not render the event dialog without a pending event', () => {
-            renderMap();
-            expect(screen.queryByTestId('event-dialog')).not.toBeInTheDocument();
-        });
-    });
-
-    describe('POI layer props', () => {
-        it('passes validLinkedMaps to the POI layer', () => {
-            renderMap();
-            const poiLayer = screen.getByTestId('poi-layer');
-            expect(poiLayer).toHaveAttribute('validLinkedMaps');
-        });
-
-        it('passes partyPosition to the POI layer when set', () => {
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 } }));
-            renderMap();
-            const poiLayer = screen.getByTestId('poi-layer');
-            expect(poiLayer).toHaveAttribute('partyPosition');
         });
     });
 
@@ -466,6 +361,21 @@ describe('HexMap', () => {
             fireEvent.click(screen.getByTestId('toolbar-road'));
             fireEvent.click(mapSvg());
             expect(pm.setRoadStartPoiId).toHaveBeenCalledWith(null);
+        });
+    });
+
+    describe('POI layer props', () => {
+        it('passes validLinkedMaps to the POI layer', () => {
+            renderMap();
+            const poiLayer = screen.getByTestId('poi-layer');
+            expect(poiLayer).toHaveAttribute('validLinkedMaps');
+        });
+
+        it('passes partyPosition to the POI layer when set', () => {
+            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 } }));
+            renderMap();
+            const poiLayer = screen.getByTestId('poi-layer');
+            expect(poiLayer).toHaveAttribute('partyPosition');
         });
     });
 

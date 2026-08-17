@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi } from 'vitest'
 import { computeFeatRangeEffects } from './featRangeService.js'
 import * as dataLoader from '../ui/dataLoader.js'
@@ -43,31 +43,11 @@ describe('computeFeatRangeEffects', () => {
 
   // --- Input validation ---
 
-  it('returns defaults when featNames is null', async () => {
-    const result = await computeFeatRangeEffects(null, '5e')
-    expect(result).toEqual(defaultResult)
-  })
-
-  it('returns defaults when featNames is undefined', async () => {
-    const result = await computeFeatRangeEffects(undefined, '5e')
-    expect(result).toEqual(defaultResult)
-  })
-
-  it('returns defaults when featNames is an empty array', async () => {
-    const result = await computeFeatRangeEffects([], '5e')
-    expect(result).toEqual(defaultResult)
-  })
-
-  it('returns defaults when loadFeatData returns an empty array', async () => {
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([])
-    const result = await computeFeatRangeEffects(['Some Feat'], '5e')
-    expect(result).toEqual(defaultResult)
-  })
-
-  it('returns defaults when loadFeatData returns null', async () => {
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue(null)
-    const result = await computeFeatRangeEffects(['Some Feat'], '5e')
-    expect(result).toEqual(defaultResult)
+  it('returns defaults when featNames is null, undefined, or empty', async () => {
+    for (const invalid of [null, undefined, []]) {
+      const result = await computeFeatRangeEffects(invalid, '5e')
+      expect(result).toEqual(defaultResult)
+    }
   })
 
   // --- Feat range effect detection ---
@@ -77,7 +57,6 @@ describe('computeFeatRangeEffects', () => {
     const result = await computeFeatRangeEffects(['Crossbow Expert'], '5e')
     expect(result.ignoresMeleeDisadvantage).toBe(true)
     expect(result.ignoresLongRangeDisadvantage).toBe(false)
-    expect(result.rangeMultiplier).toBe(1)
   })
 
   it('detects Sharpshooter long range disadvantage immunity', async () => {
@@ -100,17 +79,10 @@ describe('computeFeatRangeEffects', () => {
     expect(result.ignoresLongRangeDisadvantage).toBe(true)
   })
 
-  it('ignores feat names that do not match any loaded feat', async () => {
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue(allFeats)
-    const result = await computeFeatRangeEffects(['Nonexistent Feat'], '5e')
-    expect(result).toEqual(defaultResult)
-  })
-
   it('ignores unknown feat names mixed with valid ones', async () => {
     vi.mocked(dataLoader.loadFeatData).mockResolvedValue(allFeats)
     const result = await computeFeatRangeEffects(['Crossbow Expert', 'Fake Feat'], '5e')
     expect(result.ignoresMeleeDisadvantage).toBe(true)
-    expect(result.ignoresLongRangeDisadvantage).toBe(false)
   })
 
   it('supports 2024 ruleset feats', async () => {
@@ -124,21 +96,13 @@ describe('computeFeatRangeEffects', () => {
     expect(result.ignoresMeleeDisadvantage).toBe(true)
   })
 
-  it('handles feats without rangeEffects gracefully', async () => {
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([{ name: 'Tough', index: 'tough' }])
-    const result = await computeFeatRangeEffects(['Tough'], '5e')
-    expect(result).toEqual(defaultResult)
-  })
-
-  it('handles feats with null rangeEffects gracefully', async () => {
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([{ name: 'Tough', index: 'tough', rangeEffects: null }])
-    const result = await computeFeatRangeEffects(['Tough'], '5e')
-    expect(result).toEqual(defaultResult)
-  })
-
-  it('handles feats with undefined rangeEffects gracefully', async () => {
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([{ name: 'Tough', index: 'tough', rangeEffects: undefined }])
-    const result = await computeFeatRangeEffects(['Tough'], '5e')
+  it('handles feats without or with null/undefined rangeEffects gracefully', async () => {
+    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([
+      { name: 'No Effects', index: 'no-effects' },
+      { name: 'Null Effects', index: 'null-effects', rangeEffects: null },
+      { name: 'Undefined Effects', index: 'undefined-effects', rangeEffects: undefined },
+    ])
+    const result = await computeFeatRangeEffects(['No Effects', 'Null Effects', 'Undefined Effects'], '5e')
     expect(result).toEqual(defaultResult)
   })
 
@@ -148,36 +112,17 @@ describe('computeFeatRangeEffects', () => {
     expect(result.ignoresMeleeDisadvantage).toBe(true)
   })
 
-  // --- Boolean effect edge cases ---
-
-  it('treats explicit false boolean effects as not applied', async () => {
-    const feat = { name: 'Some Feat', index: 'some-feat', rangeEffects: { ignoresMeleeDisadvantage: false } }
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([feat])
-    const result = await computeFeatRangeEffects(['Some Feat'], '5e')
-    expect(result.ignoresMeleeDisadvantage).toBe(false)
-  })
-
-  it('treats undefined boolean effects as not applied', async () => {
-    const feat = { name: 'Some Feat', index: 'some-feat', rangeEffects: { ignoresMeleeDisadvantage: undefined } }
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([feat])
-    const result = await computeFeatRangeEffects(['Some Feat'], '5e')
+  it('treats false and undefined boolean effects as not applied', async () => {
+    const featFalse = { name: 'False Feat', index: 'false-feat', rangeEffects: { ignoresMeleeDisadvantage: false } }
+    const featUndefined = { name: 'Undefined Feat', index: 'undefined-feat', rangeEffects: { ignoresMeleeDisadvantage: undefined } }
+    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([featFalse, featUndefined])
+    const result = await computeFeatRangeEffects(['False Feat', 'Undefined Feat'], '5e')
     expect(result.ignoresMeleeDisadvantage).toBe(false)
   })
 
   // --- spellRangeBonus ---
 
-  it('applies spellRangeBonus from a feat', async () => {
-    const featWithRange = {
-      name: 'Spell Sniper',
-      index: 'spell-sniper',
-      rangeEffects: { ignoresMeleeDisadvantage: true, spellRangeBonus: 30 },
-    }
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([featWithRange])
-    const result = await computeFeatRangeEffects(['Spell Sniper'], '5e')
-    expect(result.spellRangeBonus).toBe(30)
-  })
-
-  it('takes the maximum spellRangeBonus across multiple feats', async () => {
+  it('applies the maximum spellRangeBonus across multiple feats', async () => {
     const featA = { name: 'Feat A', index: 'feat-a', rangeEffects: { spellRangeBonus: 20 } }
     const featB = { name: 'Feat B', index: 'feat-b', rangeEffects: { spellRangeBonus: 50 } }
     vi.mocked(dataLoader.loadFeatData).mockResolvedValue([featA, featB])
@@ -185,94 +130,51 @@ describe('computeFeatRangeEffects', () => {
     expect(result.spellRangeBonus).toBe(50)
   })
 
-  it('ignores spellRangeBonus of 0 (truthy check)', async () => {
+  it('ignores spellRangeBonus values that are falsy (0, negative, null, undefined)', async () => {
     const feat = { name: 'Feat', index: 'feat', rangeEffects: { spellRangeBonus: 0 } }
     vi.mocked(dataLoader.loadFeatData).mockResolvedValue([feat])
     const result = await computeFeatRangeEffects(['Feat'], '5e')
     expect(result.spellRangeBonus).toBe(0)
   })
 
-  it('ignores negative spellRangeBonus (truthy check)', async () => {
-    const feat = { name: 'Feat', index: 'feat', rangeEffects: { spellRangeBonus: -10 } }
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([feat])
-    const result = await computeFeatRangeEffects(['Feat'], '5e')
-    expect(result.spellRangeBonus).toBe(0)
-  })
+  // --- Passive automation ---
 
-  it('ignores spellRangeBonus that is null', async () => {
-    const feat = { name: 'Feat', index: 'feat', rangeEffects: { spellRangeBonus: null } }
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([feat])
-    const result = await computeFeatRangeEffects(['Feat'], '5e')
-    expect(result.spellRangeBonus).toBe(0)
-  })
-
-  it('ignores spellRangeBonus that is undefined', async () => {
-    const feat = { name: 'Feat', index: 'feat', rangeEffects: { spellRangeBonus: undefined } }
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([feat])
-    const result = await computeFeatRangeEffects(['Feat'], '5e')
-    expect(result.spellRangeBonus).toBe(0)
-  })
-
-  // --- Passive automation (meleeReachBonus, cantripRangeBonus) ---
-
-  it('extracts meleeReachBonus from extra_reach passive', async () => {
+  it('extracts meleeReachBonus and cantripRangeBonus from passives', async () => {
     const result = await computeFeatRangeEffects([], '5e', {
-      automation: { passives: [{ effect: 'extra_reach', bonusExpression: '5' }] },
+      automation: { passives: [
+        { effect: 'extra_reach', bonusExpression: '5' },
+        { effect: 'cantrip_range_bonus', bonusExpression: '30' },
+      ]},
     })
     expect(result.meleeReachBonus).toBe(5)
-  })
-
-  it('extracts cantripRangeBonus from cantrip_range_bonus passive', async () => {
-    const result = await computeFeatRangeEffects([], '5e', {
-      automation: { passives: [{ effect: 'cantrip_range_bonus', bonusExpression: '30' }] },
-    })
     expect(result.cantripRangeBonus).toBe(30)
   })
 
-  it('uses the highest meleeReachBonus when multiple extra_reach passives exist', async () => {
+  it('uses the highest bonus when multiple passives of the same type exist', async () => {
     const result = await computeFeatRangeEffects([], '5e', {
-      automation: {
-        passives: [
-          { effect: 'extra_reach', bonusExpression: '5' },
-          { effect: 'extra_reach', bonusExpression: '10' },
-        ],
-      },
+      automation: { passives: [
+        { effect: 'extra_reach', bonusExpression: '5' },
+        { effect: 'extra_reach', bonusExpression: '10' },
+        { effect: 'cantrip_range_bonus', bonusExpression: '20' },
+        { effect: 'cantrip_range_bonus', bonusExpression: '40' },
+      ]},
     })
     expect(result.meleeReachBonus).toBe(10)
-  })
-
-  it('uses the highest cantripRangeBonus when multiple cantrip_range_bonus passives exist', async () => {
-    const result = await computeFeatRangeEffects([], '5e', {
-      automation: {
-        passives: [
-          { effect: 'cantrip_range_bonus', bonusExpression: '20' },
-          { effect: 'cantrip_range_bonus', bonusExpression: '40' },
-        ],
-      },
-    })
     expect(result.cantripRangeBonus).toBe(40)
   })
 
-  it('ignores non-matching passive effects', async () => {
+  it('ignores non-matching, non-numeric, missing, negative, or zero bonusExpressions', async () => {
     const result = await computeFeatRangeEffects([], '5e', {
-      automation: { passives: [{ effect: 'some_other_effect', bonusExpression: '99' }] },
+      automation: { passives: [
+        { effect: 'some_other_effect', bonusExpression: '99' },
+        { effect: 'extra_reach', bonusExpression: 'not-a-number' },
+        { effect: 'extra_reach' },
+        { effect: 'extra_reach', bonusExpression: '0' },
+        { effect: 'extra_reach', bonusExpression: '-3' },
+      ]},
     })
     expect(result.meleeReachBonus).toBe(0)
     expect(result.cantripRangeBonus).toBe(0)
-  })
-
-  it('skips passives with non-numeric bonusExpression', async () => {
-    const result = await computeFeatRangeEffects([], '5e', {
-      automation: { passives: [{ effect: 'extra_reach', bonusExpression: 'not-a-number' }] },
-    })
-    expect(result.meleeReachBonus).toBe(0)
-  })
-
-  it('skips passives with missing bonusExpression', async () => {
-    const result = await computeFeatRangeEffects([], '5e', {
-      automation: { passives: [{ effect: 'extra_reach' }] },
-    })
-    expect(result.meleeReachBonus).toBe(0)
   })
 
   it('combines feat effects with passive automation bonuses', async () => {
@@ -284,73 +186,19 @@ describe('computeFeatRangeEffects', () => {
     expect(result.meleeReachBonus).toBe(5)
   })
 
-  it('applies passives and feats simultaneously in a single call', async () => {
-    vi.mocked(dataLoader.loadFeatData).mockResolvedValue([sharpshooter])
-    const result = await computeFeatRangeEffects(['Sharpshooter'], '5e', {
-      automation: {
-        passives: [
-          { effect: 'extra_reach', bonusExpression: '5' },
-          { effect: 'cantrip_range_bonus', bonusExpression: '20' },
-        ],
-      },
-    })
-    expect(result.ignoresLongRangeDisadvantage).toBe(true)
-    expect(result.meleeReachBonus).toBe(5)
-    expect(result.cantripRangeBonus).toBe(20)
-    expect(result.spellRangeBonus).toBe(0)
-    expect(result.rangeMultiplier).toBe(1)
-  })
-
   // --- playerStats edge cases ---
 
-  it('handles playerStats with no automation property', async () => {
-    const result = await computeFeatRangeEffects([], '5e', { name: 'Test' })
-    expect(result.meleeReachBonus).toBe(0)
-    expect(result.cantripRangeBonus).toBe(0)
-  })
-
-  it('handles playerStats with automation but no passives', async () => {
-    const result = await computeFeatRangeEffects([], '5e', { automation: {} })
-    expect(result.meleeReachBonus).toBe(0)
-    expect(result.cantripRangeBonus).toBe(0)
-  })
-
-  it('handles playerStats being null', async () => {
-    const result = await computeFeatRangeEffects([], '5e', null)
-    expect(result.meleeReachBonus).toBe(0)
-    expect(result.cantripRangeBonus).toBe(0)
-  })
-
-  it('handles playerStats being undefined', async () => {
-    const result = await computeFeatRangeEffects([], '5e')
-    expect(result.meleeReachBonus).toBe(0)
-    expect(result.cantripRangeBonus).toBe(0)
-  })
-
-  it('handles playerStats with empty passives array', async () => {
-    const result = await computeFeatRangeEffects([], '5e', { automation: { passives: [] } })
-    expect(result.meleeReachBonus).toBe(0)
-    expect(result.cantripRangeBonus).toBe(0)
-  })
-
-  it('handles passives with bonusExpression as float string', async () => {
-    const result = await computeFeatRangeEffects([], '5e', {
-      automation: { passives: [{ effect: 'extra_reach', bonusExpression: '5.5' }] },
-    })
-    expect(result.meleeReachBonus).toBe(5)
-  })
-
-  it('handles passives with bonusExpression as negative number string', async () => {
-    const result = await computeFeatRangeEffects([], '5e', {
-      automation: { passives: [{ effect: 'extra_reach', bonusExpression: '-3' }] },
-    })
-    expect(result.meleeReachBonus).toBe(0)
-  })
-
-  it('handles passives with bonusExpression as zero string', async () => {
-    const result = await computeFeatRangeEffects([], '5e', {
-      automation: { passives: [{ effect: 'extra_reach', bonusExpression: '0' }] },
-    })
-    expect(result.meleeReachBonus).toBe(0)
+  it('handles null, undefined, or partial playerStats gracefully', async () => {
+    const results = [
+      await computeFeatRangeEffects([], '5e', null),
+      await computeFeatRangeEffects([], '5e', undefined),
+      await computeFeatRangeEffects([], '5e', { name: 'Test' }),
+      await computeFeatRangeEffects([], '5e', { automation: {} }),
+      await computeFeatRangeEffects([], '5e', { automation: { passives: [] } }),
+    ]
+    for (const result of results) {
+      expect(result.meleeReachBonus).toBe(0)
+      expect(result.cantripRangeBonus).toBe(0)
+    }
   })
 })

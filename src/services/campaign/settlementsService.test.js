@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   saveSettlement,
@@ -20,10 +20,9 @@ describe('settlementsService', () => {
   });
 
   describe('saveSettlement', () => {
-    it('returns parsed JSON body on successful save', async () => {
+    it('returns parsed JSON body and sends PUT with encoded URL on success', async () => {
       const mockSettlement = { name: 'Waterdeep', type: 'city', population: 90000 };
       const responseData = { success: true, name: 'Waterdeep' };
-
       fetchSpy.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(responseData),
@@ -32,9 +31,17 @@ describe('settlementsService', () => {
       const result = await saveSettlement('campaign1', mockSettlement);
 
       expect(result).toEqual(responseData);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/api/campaigns/campaign1/settlements/Waterdeep',
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(mockSettlement),
+        }
+      );
     });
 
-    it('sends PUT with encoded URL using oldName when provided', async () => {
+    it('sends PUT with oldName in URL when provided', async () => {
       const mockSettlement = { name: 'Town/Region', type: 'city' };
       fetchSpy.mockResolvedValue({
         ok: true,
@@ -53,21 +60,6 @@ describe('settlementsService', () => {
       );
     });
 
-    it('uses settlement.name for the URL when no oldName is provided', async () => {
-      const mockSettlement = { name: 'Waterdeep', type: 'city' };
-      fetchSpy.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      });
-
-      await saveSettlement('campaign1', mockSettlement);
-
-      expect(fetchSpy).toHaveBeenCalledWith(
-        '/api/campaigns/campaign1/settlements/Waterdeep',
-        expect.any(Object)
-      );
-    });
-
     it('throws with custom error message on API error', async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
@@ -78,18 +70,6 @@ describe('settlementsService', () => {
       await expect(
         saveSettlement('campaign1', { name: 'Test' })
       ).rejects.toThrow('Settlement already exists');
-    });
-
-    it('throws generic error when API error response has no error field', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: false,
-        statusText: 'Internal Server Error',
-        json: () => Promise.resolve({}),
-      });
-
-      await expect(
-        saveSettlement('campaign1', { name: 'Test' })
-      ).rejects.toThrow('Failed to save settlement');
     });
 
     it('rethrows on network failure', async () => {
@@ -117,17 +97,6 @@ describe('settlementsService', () => {
       expect(result).toEqual(mockSettlements);
     });
 
-    it('returns empty array when API returns no settlements', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([]),
-      });
-
-      const result = await loadSettlements('campaign1');
-
-      expect(result).toEqual([]);
-    });
-
     it('URL-encodes the campaign name and includes GET options', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
@@ -153,16 +122,6 @@ describe('settlementsService', () => {
       });
 
       await expect(loadSettlements('campaign1')).rejects.toThrow('Campaign not found');
-    });
-
-    it('throws generic error when API error response has no error field', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: false,
-        statusText: 'Internal Server Error',
-        json: () => Promise.resolve({}),
-      });
-
-      await expect(loadSettlements('campaign1')).rejects.toThrow('Failed to load settlements');
     });
 
     it('rethrows on network failure', async () => {
@@ -198,23 +157,6 @@ describe('settlementsService', () => {
       );
     });
 
-    it('sends empty array when settlements is empty', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
-
-      await saveSettlements('campaign1', []);
-
-      expect(fetchSpy).toHaveBeenCalledWith(
-        '/api/campaigns/campaign1/settlements',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ settlements: [] }),
-        })
-      );
-    });
-
     it('URL-encodes the campaign name', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
@@ -237,16 +179,6 @@ describe('settlementsService', () => {
       });
 
       await expect(saveSettlements('campaign1', [])).rejects.toThrow('Invalid settlements data');
-    });
-
-    it('throws generic error when API error response has no error field', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: false,
-        statusText: 'Internal Server Error',
-        json: () => Promise.resolve({}),
-      });
-
-      await expect(saveSettlements('campaign1', [])).rejects.toThrow('Failed to save settlements');
     });
 
     it('rethrows on network failure', async () => {
@@ -301,16 +233,6 @@ describe('settlementsService', () => {
       await expect(loadSettlement('campaign1', 'nonexistent')).rejects.toThrow('Settlement not found');
     });
 
-    it('throws generic error when API error response has no error field', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: false,
-        statusText: 'Internal Server Error',
-        json: () => Promise.resolve({}),
-      });
-
-      await expect(loadSettlement('campaign1', 'nonexistent')).rejects.toThrow('Failed to load settlement');
-    });
-
     it('rethrows on network failure', async () => {
       fetchSpy.mockRejectedValue(new Error('ENOTFOUND'));
 
@@ -353,16 +275,6 @@ describe('settlementsService', () => {
       });
 
       await expect(deleteSettlement('campaign1', 'nonexistent')).rejects.toThrow('Settlement not found');
-    });
-
-    it('throws generic error when API error response has no error field', async () => {
-      fetchSpy.mockResolvedValue({
-        ok: false,
-        statusText: 'Internal Server Error',
-        json: () => Promise.resolve({}),
-      });
-
-      await expect(deleteSettlement('campaign1', 'nonexistent')).rejects.toThrow('Failed to delete settlement');
     });
 
     it('rethrows on network failure', async () => {

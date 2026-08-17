@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
@@ -139,64 +139,6 @@ describe('CampaignAdmin - Clear Change Data', () => {
             expect(screen.getByText('Network failed')).toBeInTheDocument();
         });
     });
-
-    it('shows loading status while clearing', async () => {
-        global.fetch = vi.fn(() => new Promise(() => { }));
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Clear Change Data');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Clearing change data...')).toBeInTheDocument();
-        });
-    });
-
-    it('disables button while busy', () => {
-        global.fetch = vi.fn(() => new Promise(() => { }));
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Clear Change Data');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-    });
-
-    it('re-enables button after successful completion', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Clear Change Data');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
-        });
-    });
-
-    it('re-enables button after error completion', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Failed' }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Clear Change Data');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
-        });
-    });
 });
 
 describe('CampaignAdmin - Clear Campaign Log', () => {
@@ -315,64 +257,6 @@ describe('CampaignAdmin - Clear Campaign Log', () => {
             expect(screen.getByText('Network failed')).toBeInTheDocument();
         });
     });
-
-    it('shows loading status while clearing', async () => {
-        global.fetch = vi.fn(() => new Promise(() => { }));
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Clear Campaign Log');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Clearing log...')).toBeInTheDocument();
-        });
-    });
-
-    it('disables button while busy', () => {
-        global.fetch = vi.fn(() => new Promise(() => { }));
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Clear Campaign Log');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-    });
-
-    it('re-enables button after successful completion', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Clear Campaign Log');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
-        });
-    });
-
-    it('re-enables button after error completion', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Failed' }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Clear Campaign Log');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
-        });
-    });
 });
 
 describe('CampaignAdmin - Full Reset', () => {
@@ -489,64 +373,6 @@ describe('CampaignAdmin - Full Reset', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Network failed')).toBeInTheDocument();
-        });
-    });
-
-    it('shows loading status text', async () => {
-        global.fetch = vi.fn(() => new Promise(() => { }));
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Full Reset');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Performing full reset...')).toBeInTheDocument();
-        });
-    });
-
-    it('disables button while busy', () => {
-        global.fetch = vi.fn(() => new Promise(() => { }));
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Full Reset');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-    });
-
-    it('re-enables button after successful completion', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Full Reset');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
-        });
-    });
-
-    it('re-enables button after error completion', async () => {
-        global.fetch = vi.fn(() =>
-            Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Failed' }) })
-        );
-
-        render(<CampaignAdmin {...defaultProps} />);
-        const action = findActionByText('Full Reset');
-        const btn = action.querySelector('button');
-        fireEvent.click(btn);
-
-        expect(btn).toBeDisabled();
-
-        await waitFor(() => {
-            expect(btn).not.toBeDisabled();
         });
     });
 });

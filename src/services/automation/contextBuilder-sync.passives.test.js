@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildAttackContextSync } from './contextBuilder.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -183,40 +183,21 @@ describe('contextBuilder-sync: hunter lore', () => {
     expect(result.hunterLoreNotice).toBe('Vulnerabilities: fire');
   });
 
-  it('returns null hunterLoreNotice when target has no vulnerability, resistance, or immunity data', async () => {
+  it.each([
+    { name: 'target has no IRV data', target: { name: 'Orc' }, hasPassive: true },
+    { name: 'target is null', target: null, hasPassive: true },
+    { name: 'passive does not exist', target: { name: 'Orc' }, hasPassive: false },
+  ])('returns null hunterLoreNotice when $name', async ({ target, hasPassive }) => {
     buildBaseAttackContext.mockResolvedValue({
-      target: { name: 'Orc' },
-      targetName: 'Orc',
+      target,
+      targetName: target ? 'Orc' : null,
       resistanceNotice: null,
     });
-    const stats = {
-      ...mockStats,
-      automation: { passives: [{ type: 'passive_rule', effect: 'hunter_lore' }] },
-    };
+    const stats = hasPassive
+      ? { ...mockStats, automation: { passives: [{ type: 'passive_rule', effect: 'hunter_lore' }] } }
+      : mockStats;
 
     const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
-
-    expect(result.hunterLoreNotice).toBeNull();
-  });
-
-  it('returns null hunterLoreNotice when target is null', async () => {
-    buildBaseAttackContext.mockResolvedValue({
-      target: null,
-      targetName: null,
-      resistanceNotice: null,
-    });
-    const stats = {
-      ...mockStats,
-      automation: { passives: [{ type: 'passive_rule', effect: 'hunter_lore' }] },
-    };
-
-    const result = await buildAttackContextSync(mockAttack, stats, 'camp', 'normal', {});
-
-    expect(result.hunterLoreNotice).toBeNull();
-  });
-
-  it('returns null hunterLoreNotice when passive does not exist', async () => {
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
     expect(result.hunterLoreNotice).toBeNull();
   });
@@ -399,22 +380,16 @@ describe('contextBuilder-sync: graze damage', () => {
     expect(result.grazeAbilityMod).toBe(4);
   });
 
-  it('uses attack.abilityName when provided, defaults to Strength', async () => {
+  it('uses attack.abilityName when provided, defaults to Strength when omitted', async () => {
     collectWeaponMastery.mockReturnValue({ baseMastery: 'Graze', extraMasteries: [] });
-    const attack = { ...mockAttack, abilityName: 'Dexterity' };
 
-    const result = await buildAttackContextSync(attack, mockStats, 'camp', 'normal', {});
-
+    const dexAttack = { ...mockAttack, abilityName: 'Dexterity' };
+    let result = await buildAttackContextSync(dexAttack, mockStats, 'camp', 'normal', {});
     expect(result.grazeAbilityName).toBe('Dexterity');
     expect(result.grazeAbilityMod).toBe(3);
-  });
 
-  it('defaults to Strength when abilityName is undefined', async () => {
-    collectWeaponMastery.mockReturnValue({ baseMastery: 'Graze', extraMasteries: [] });
-    const attack = { ...mockAttack, abilityName: undefined };
-
-    const result = await buildAttackContextSync(attack, mockStats, 'camp', 'normal', {});
-
+    const undefAttack = { ...mockAttack, abilityName: undefined };
+    result = await buildAttackContextSync(undefAttack, mockStats, 'camp', 'normal', {});
     expect(result.grazeAbilityName).toBe('Strength');
   });
 

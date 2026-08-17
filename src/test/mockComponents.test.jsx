@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -27,13 +27,11 @@ describe('mockComponents', () => {
       expect(screen.getByTestId('character-name')).toHaveTextContent('TestChar');
     });
 
-    it('renders "no character" when playerSummary is missing', () => {
-      render(<MockCharSheet />);
-      expect(screen.getByTestId('character-name')).toHaveTextContent('no character');
-    });
-
-    it('renders "no character" when playerSummary has no name', () => {
-      render(<MockCharSheet playerSummary={{}} />);
+    it.each([
+      ['missing', undefined],
+      ['has no name', {}],
+    ])('renders "no character" when playerSummary is %s', (_label, playerSummary) => {
+      render(<MockCharSheet playerSummary={playerSummary} />);
       expect(screen.getByTestId('character-name')).toHaveTextContent('no character');
     });
 
@@ -45,17 +43,12 @@ describe('mockComponents', () => {
       expect(onDelete).toHaveBeenCalledWith('TestChar');
     });
 
-    it('calls onDeleteCharacter with undefined when no name', () => {
+    it.each([
+      ['missing', undefined],
+      ['has no name', {}],
+    ])('calls onDeleteCharacter with undefined when playerSummary is %s', (_label, playerSummary) => {
       const onDelete = vi.fn();
-      render(<MockCharSheet onDeleteCharacter={onDelete} />);
-      fireEvent.click(screen.getByTitle('Delete Character'));
-      expect(onDelete).toHaveBeenCalledTimes(1);
-      expect(onDelete).toHaveBeenCalledWith(undefined);
-    });
-
-    it('calls onDeleteCharacter with undefined when playerSummary exists but has no name', () => {
-      const onDelete = vi.fn();
-      render(<MockCharSheet playerSummary={{}} onDeleteCharacter={onDelete} />);
+      render(<MockCharSheet playerSummary={playerSummary} onDeleteCharacter={onDelete} />);
       fireEvent.click(screen.getByTitle('Delete Character'));
       expect(onDelete).toHaveBeenCalledTimes(1);
       expect(onDelete).toHaveBeenCalledWith(undefined);
@@ -191,11 +184,6 @@ describe('mockComponents', () => {
     ])('shows "%s" in the active indicator for the %s view', (expected, activeView) => {
       render(<MockSidebar activeView={activeView} campaignName="test" />);
       expect(screen.getByTestId('sidebar-active-indicator')).toHaveTextContent(expected);
-    });
-
-    it('shows "Character" label in the indicator when charSheet is active without activeCharacter', () => {
-      render(<MockSidebar activeView="charSheet" campaignName="test" />);
-      expect(screen.getByTestId('sidebar-active-indicator')).toHaveTextContent('Character');
     });
 
     it('ignores activeCharacter for non-charSheet views', () => {

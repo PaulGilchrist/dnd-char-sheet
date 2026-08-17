@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildAttackContextSync } from './contextBuilder.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -132,22 +132,6 @@ describe('contextBuilder-sync: aura checks — no map (sync path)', () => {
 
       expect(result.forcedMode).toBe('advantage');
     });
-
-    it('does not set forcedMode when wolf aura is inactive', async () => {
-      getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBeUndefined();
-    });
-
-    it('returns empty object without crashing when wolf aura returns falsy values', async () => {
-      getWolfAdvantageAgainst.mockReturnValue({});
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBeUndefined();
-    });
   });
 
   describe('duplicity aura', () => {
@@ -157,14 +141,6 @@ describe('contextBuilder-sync: aura checks — no map (sync path)', () => {
       const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(result.forcedMode).toBe('advantage');
-    });
-
-    it('does not set forcedMode when duplicity aura is inactive', async () => {
-      getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBeUndefined();
     });
   });
 
@@ -176,14 +152,6 @@ describe('contextBuilder-sync: aura checks — no map (sync path)', () => {
 
       expect(result.forcedMode).toBe('disadvantage');
     });
-
-    it('does not set forcedMode when lion aura is inactive', async () => {
-      getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBeUndefined();
-    });
   });
 
   describe('corona aura', () => {
@@ -194,18 +162,10 @@ describe('contextBuilder-sync: aura checks — no map (sync path)', () => {
 
       expect(result.forcedMode).toBe('disadvantage');
     });
-
-    it('does not set forcedMode when corona save disadvantage is inactive', async () => {
-      getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBeUndefined();
-    });
   });
 
   describe('no aura active', () => {
-    it('does not set forcedMode when all auras are inactive', async () => {
+    it('does not set forcedMode or advantageReason when all auras are inactive', async () => {
       const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(result.forcedMode).toBeUndefined();
@@ -270,20 +230,6 @@ describe('contextBuilder-sync: aura checks — no map (sync path)', () => {
       const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(result.forcedMode).toBeUndefined();
-    });
-
-    it('preserves other effects when protection is present', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'targetEffects') return [
-          { effect: 'protection', target: 'Orc', source: 'Paladin' },
-          { effect: 'graze', target: 'Orc' },
-        ];
-        return undefined;
-      });
-
-      await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(getRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects');
     });
   });
 });

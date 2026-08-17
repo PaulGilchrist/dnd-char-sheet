@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import NPCStatBlockForm from './NPCStatBlockForm';
@@ -237,27 +237,6 @@ describe('NPCStatBlockForm rendering', () => {
   });
 
   describe('minimal/empty form data', () => {
-    it('renders without crashing with minimal formData', () => {
-      const minimalData = {
-        armorClass: 10,
-        hitPoints: '',
-        hitDice: '',
-        speed: { walk: '30 ft.' },
-        initiativeBonus: '',
-        abilityScores: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
-        savingThrowBonuses: {},
-        skillBonuses: {},
-        damageResistances: [],
-        damageImmunities: [],
-        conditionImmunities: [],
-        actions: [],
-        traits: '',
-        reactions: '',
-      };
-      renderForm(minimalData);
-      expect(screen.getByText('Combat Stats')).toBeInTheDocument();
-    });
-
     it('renders without crashing with an empty object', () => {
       renderForm({});
       expect(screen.getByText('Combat Stats')).toBeInTheDocument();

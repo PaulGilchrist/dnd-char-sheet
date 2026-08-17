@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import raceRules from './2024.js';
 
@@ -37,26 +37,12 @@ describe('raceRules 2024 - getTraits', () => {
       expect(trait1.description).toBe('A trait with description field');
     });
 
-    it('returns empty arrays for empty traits input', () => {
-      const result = raceRules.addTraits([]);
-      expect(result.actions).toEqual([]);
-      expect(result.specialActions).toEqual([]);
-      expect(result.bonusActions).toEqual([]);
-      expect(result.reactions).toEqual([]);
-      expect(result.characterAdvancement).toEqual([]);
-    });
-
-    it('returns empty categorized object for null traits', () => {
-      const result = raceRules.addTraits(null);
-      expect(result.actions).toEqual([]);
-      expect(result.specialActions).toEqual([]);
-      expect(result.bonusActions).toEqual([]);
-      expect(result.reactions).toEqual([]);
-      expect(result.characterAdvancement).toEqual([]);
-    });
-
-    it('returns empty categorized object for undefined traits', () => {
-      const result = raceRules.addTraits(undefined);
+    it.each([
+      [],
+      null,
+      undefined
+    ])('returns empty categorized object for %s input', (input) => {
+      const result = raceRules.addTraits(input);
       expect(result.actions).toEqual([]);
       expect(result.specialActions).toEqual([]);
       expect(result.bonusActions).toEqual([]);
@@ -87,17 +73,14 @@ describe('raceRules 2024 - getTraits', () => {
       expect(trait1.automation).toEqual({ type: 'test' });
     });
 
-    it('skips null entries in traits array', () => {
+    it.each([
+      [null, 'null entry'],
+      [undefined, 'undefined entry']
+    ])('skips %s entries in traits array', (_value, _label) => {
       const traits = [null, { name: 'Trait1', description: 'Desc' }, null];
       const result = raceRules.addTraits(traits);
       expect(result.specialActions.length).toBe(1);
       expect(result.specialActions[0].name).toBe('Trait1');
-    });
-
-    it('skips undefined entries in traits array', () => {
-      const traits = [undefined, { name: 'Trait1', description: 'Desc' }];
-      const result = raceRules.addTraits(traits);
-      expect(result.specialActions.length).toBe(1);
     });
   });
 
@@ -121,49 +104,61 @@ describe('raceRules 2024 - getTraits', () => {
       ]);
     });
 
-    it('handles race without traits', () => {
-      const result = raceRules.getTraits({ race: {} });
-      expect(Object.keys(result)).toEqual([
-        'actions',
-        'bonusActions',
-        'reactions',
-        'specialActions',
-        'characterAdvancement'
-      ]);
+    it('returns empty categorized object for missing or empty traits sources', () => {
+      const cases = [
+        { race: {} },
+        {},
+        { race: { traits: [] } },
+        { race: { lineage: 'High Elf' } }
+      ];
+      for (const input of cases) {
+        const result = raceRules.getTraits(input);
+        expect(Object.keys(result)).toEqual([
+          'actions',
+          'bonusActions',
+          'reactions',
+          'specialActions',
+          'characterAdvancement'
+        ]);
+      }
     });
 
-    it('handles undefined race', () => {
-      const result = raceRules.getTraits({});
-      expect(Object.keys(result)).toEqual([
-        'actions',
-        'bonusActions',
-        'reactions',
-        'specialActions',
-        'characterAdvancement'
-      ]);
-    });
-
-    it('handles empty traits array', () => {
-      const result = raceRules.getTraits({ race: { traits: [] } });
-      expect(Object.keys(result)).toEqual([
-        'actions',
-        'bonusActions',
-        'reactions',
-        'specialActions',
-        'characterAdvancement'
-      ]);
-    });
-
-    it('handles null lineage', () => {
+    it('handles null lineage and subrace', () => {
       const input = {
         race: {
           lineage: null,
+          subrace: null,
           traits: [{ name: 'Darkvision', description: 'Can see in the dark' }]
         }
       };
       const result = raceRules.getTraits(input);
       const names = result.specialActions.map((t) => t.name);
       expect(names).toContain('Darkvision');
+    });
+
+    it('handles subrace without traits', () => {
+      const input = {
+        race: {
+          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }],
+          subrace: {}
+        }
+      };
+      const result = raceRules.getTraits(input);
+      const names = result.specialActions.map((t) => t.name);
+      expect(names).toContain('Darkvision');
+    });
+
+    it('handles lineage with no sub_traits', () => {
+      const input = {
+        race: {
+          lineage: 'High Elf',
+          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }]
+        }
+      };
+      const result = raceRules.getTraits(input);
+      const names = result.specialActions.map((t) => t.name);
+      expect(names).toContain('Darkvision');
+      expect(names).not.toContain('Ancestry (High Elf)');
     });
 
     it('includes lineage traits when lineage matches', () => {
@@ -249,68 +244,6 @@ describe('raceRules 2024 - getTraits', () => {
       };
       const result = raceRules.getTraits(input);
       expect(result.specialActions.filter((t) => t.name === 'Darkvision').length).toBe(1);
-    });
-
-    it('handles null subrace', () => {
-      const input = {
-        race: {
-          lineage: null,
-          subrace: null,
-          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }]
-        }
-      };
-      const result = raceRules.getTraits(input);
-      const names = result.specialActions.map((t) => t.name);
-      expect(names).toContain('Darkvision');
-    });
-
-    it('handles undefined subrace', () => {
-      const input = {
-        race: {
-          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }],
-          subrace: undefined
-        }
-      };
-      const result = raceRules.getTraits(input);
-      const names = result.specialActions.map((t) => t.name);
-      expect(names).toContain('Darkvision');
-    });
-
-    it('handles subrace without traits', () => {
-      const input = {
-        race: {
-          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }],
-          subrace: {}
-        }
-      };
-      const result = raceRules.getTraits(input);
-      const names = result.specialActions.map((t) => t.name);
-      expect(names).toContain('Darkvision');
-    });
-
-    it('handles race with no traits property', () => {
-      const input = { race: { lineage: 'High Elf' } };
-      const result = raceRules.getTraits(input);
-      expect(Object.keys(result)).toEqual([
-        'actions',
-        'bonusActions',
-        'reactions',
-        'specialActions',
-        'characterAdvancement'
-      ]);
-    });
-
-    it('handles lineage with no sub_traits', () => {
-      const input = {
-        race: {
-          lineage: 'High Elf',
-          traits: [{ name: 'Darkvision', description: 'Can see in the dark' }]
-        }
-      };
-      const result = raceRules.getTraits(input);
-      const names = result.specialActions.map((t) => t.name);
-      expect(names).toContain('Darkvision');
-      expect(names).not.toContain('Ancestry (High Elf)');
     });
 
     it('combines lineage and subrace traits together', () => {

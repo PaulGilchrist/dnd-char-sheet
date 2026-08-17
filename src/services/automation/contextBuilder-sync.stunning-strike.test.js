@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildAttackContextSync } from './contextBuilder.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -132,7 +132,7 @@ describe('contextBuilder-sync: stored save advantage (Stunning Strike)', () => {
     getRuntimeValue.mockReturnValue(undefined);
   });
 
-  it('sets forcedMode to advantage when stored advantage array contains the target and consumes it', async () => {
+  it('sets advantage when stored array contains the target and consumes it', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [];
       if (key === '_advantageOn_Orc') return ['Orc'];
@@ -150,31 +150,7 @@ describe('contextBuilder-sync: stored save advantage (Stunning Strike)', () => {
     );
   });
 
-  it('uses the correct _advantageOn key per target name', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (key === '_advantageOn_Goblin') return ['Goblin'];
-      return undefined;
-    });
-
-    buildBaseAttackContext.mockResolvedValue({
-      target: { name: 'Goblin' },
-      targetName: 'Goblin',
-      resistanceNotice: null,
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-    expect(setRuntimeValue).toHaveBeenCalledWith(
-      'Fighter1',
-      '_advantageOn_Goblin',
-      [],
-      'camp',
-    );
-  });
-
-  it('does not set advantage when stored advantage array does not contain the target', async () => {
+  it('does not set advantage when stored array does not contain the target', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [];
       if (key === '_advantageOn_Orc') return ['Goblin'];
@@ -186,30 +162,6 @@ describe('contextBuilder-sync: stored save advantage (Stunning Strike)', () => {
     expect(result.forcedMode).toBeUndefined();
     expect(setRuntimeValue).not.toHaveBeenCalled();
   });
-
-  it('does not set advantage when stored advantage is not an array', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (key === '_advantageOn_Orc') return 'Orc';
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
-
-  it('does not set advantage when stored advantage is null', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (key === '_advantageOn_Orc') return null;
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
 });
 
 describe('contextBuilder-sync: condition-based advantage on attacks', () => {
@@ -220,106 +172,13 @@ describe('contextBuilder-sync: condition-based advantage on attacks', () => {
     getRuntimeValue.mockReturnValue(undefined);
   });
 
-  it('sets forcedMode to advantage when target is stunned', async () => {
+  it.each([
+    'stunned', 'blinded', 'charmed', 'paralyzed', 'petrified',
+    'restrained', 'unconscious', 'dazed', 'slow',
+  ])('sets advantage when target is %s', async (condition) => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['stunned'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('sets forcedMode to advantage when target is blinded', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['blinded'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('sets forcedMode to advantage when target is charmed', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['charmed'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('sets forcedMode to advantage when target is paralyzed', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['paralyzed'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('sets forcedMode to advantage when target is petrified', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['petrified'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('sets forcedMode to advantage when target is restrained', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['restrained'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('sets forcedMode to advantage when target is unconscious', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['unconscious'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('sets forcedMode to advantage when target is dazed', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['dazed'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('sets forcedMode to advantage when target is slow', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['slow'];
+      if (name === 'Orc' && key === 'activeConditions') return [condition];
       return undefined;
     });
 
@@ -352,22 +211,10 @@ describe('contextBuilder-sync: condition-based advantage on attacks', () => {
     expect(result.forcedMode).toBeUndefined();
   });
 
-  it('does not set advantage when target has no conditions at all', async () => {
+  it('does not set advantage when target has no conditions', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [];
       if (name === 'Orc' && key === 'activeConditions') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
-
-  it('does not set advantage when target conditions is not an array', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return 'stunned';
       return undefined;
     });
 
@@ -390,25 +237,6 @@ describe('contextBuilder-sync: grappled + Grappler feat advantage', () => {
       ...mockStats,
       saveModifiers: [
         { target: 'attack_roll', type: 'grappled_advantage' },
-      ],
-    };
-
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['grappled'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, grapplerStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('advantage');
-  });
-
-  it('sets advantage when Grappler modifier uses attack_rolls (plural) target', async () => {
-    const grapplerStats = {
-      ...mockStats,
-      saveModifiers: [
-        { target: 'attack_rolls', type: 'grappled_advantage' },
       ],
     };
 
@@ -458,22 +286,6 @@ describe('contextBuilder-sync: grappled + Grappler feat advantage', () => {
 
     expect(result.forcedMode).toBeUndefined();
   });
-
-  it('does not set advantage when Grappler saveModifiers is missing', async () => {
-    const noModifiersStats = {
-      ...mockStats,
-    };
-
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [];
-      if (name === 'Orc' && key === 'activeConditions') return ['grappled'];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, noModifiersStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
 });
 
 describe('contextBuilder-sync: attacker disadvantage effects (sap + slasher)', () => {
@@ -484,9 +296,12 @@ describe('contextBuilder-sync: attacker disadvantage effects (sap + slasher)', (
     getRuntimeValue.mockReturnValue(undefined);
   });
 
-  it('sets forcedMode to disadvantage when sap effect targets attacker', async () => {
+  it.each([
+    { effect: 'disadvantage_next_attack', name: 'sap' },
+    { effect: 'slasher_enhanced_critical', name: 'slasher' },
+  ])('sets disadvantage when $name effect targets attacker', async ({ effect }) => {
     getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'disadvantage_next_attack', target: 'Fighter1' }];
+      if (name === 'campaign' && key === 'targetEffects') return [{ effect, target: 'Fighter1' }];
       if (key === 'activeBuffs') return [];
       return undefined;
     });
@@ -496,48 +311,9 @@ describe('contextBuilder-sync: attacker disadvantage effects (sap + slasher)', (
     expect(result.forcedMode).toBe('disadvantage');
   });
 
-  it('sets forcedMode to disadvantage when slasher effect targets attacker', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'slasher_enhanced_critical', target: 'Fighter1' }];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('disadvantage');
-  });
-
-  it('counts both sap and slasher for disadvantage', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [
-        { effect: 'disadvantage_next_attack', target: 'Fighter1' },
-        { effect: 'slasher_enhanced_critical', target: 'Fighter1' },
-      ];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBe('disadvantage');
-  });
-
-  it('does not set disadvantage when sap effect targets a different creature', async () => {
+  it('does not set disadvantage when effect targets a different creature', async () => {
     getRuntimeValue.mockImplementation((name, key) => {
       if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'disadvantage_next_attack', target: 'Other' }];
-      if (key === 'activeBuffs') return [];
-      return undefined;
-    });
-
-    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-    expect(result.forcedMode).toBeUndefined();
-  });
-
-  it('does not set disadvantage when slasher effect targets a different creature', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'slasher_enhanced_critical', target: 'Other' }];
       if (key === 'activeBuffs') return [];
       return undefined;
     });

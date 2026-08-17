@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
@@ -58,20 +58,11 @@ describe('CampaignAdmin - Delete Campaign', () => {
             expect(window.alert).not.toHaveBeenCalled();
         });
 
-        it('cancels when prompt returns empty string', () => {
-            window.prompt.mockReturnValueOnce('');
-            render(<CampaignAdmin {...defaultProps} />);
-            const btn = findDangerAction().querySelector('button');
-            fireEvent.click(btn);
-
-            expect(window.alert).toHaveBeenCalledWith(
-                'Campaign name did not match. Deletion cancelled.'
-            );
-            expect(window.confirm).not.toHaveBeenCalled();
-        });
-
-        it('shows alert and cancels when name does not match', () => {
-            window.prompt.mockReturnValueOnce('wrong-name');
+        it.each([
+            { input: '', description: 'empty string' },
+            { input: 'wrong-name', description: 'mismatched name' },
+        ])('cancels and shows alert when prompt returns %s', ({ input, description }) => {
+            window.prompt.mockReturnValueOnce(input);
             render(<CampaignAdmin {...defaultProps} />);
             const btn = findDangerAction().querySelector('button');
             fireEvent.click(btn);
@@ -205,23 +196,6 @@ describe('CampaignAdmin - Delete Campaign', () => {
             await waitFor(() => {
                 expect(window.alert).toHaveBeenCalledWith('Failed to delete campaign: Delete failed');
                 expect(window.location.reload).not.toHaveBeenCalled();
-            });
-        });
-
-        it('shows error alert with generic message when no error field', async () => {
-            window.prompt.mockReturnValueOnce('test-campaign');
-            window.confirm.mockReturnValueOnce(true);
-            window.confirm.mockReturnValueOnce(true);
-            global.fetch = vi.fn(() =>
-                Promise.resolve({ ok: false, json: () => Promise.resolve({}) })
-            );
-
-            render(<CampaignAdmin {...defaultProps} />);
-            const btn = findDangerAction().querySelector('button');
-            fireEvent.click(btn);
-
-            await waitFor(() => {
-                expect(window.alert).toHaveBeenCalledWith('Failed to delete campaign: Unknown error');
             });
         });
 

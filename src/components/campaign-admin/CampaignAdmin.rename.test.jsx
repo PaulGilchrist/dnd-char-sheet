@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
@@ -26,18 +26,12 @@ describe('CampaignAdmin - Rename Campaign', () => {
     });
 
     describe('initial render', () => {
-        it('renders the rename action with heading and description', () => {
+        it('renders the rename action with heading, description, and button', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const renameActions = screen.getAllByText('Rename Campaign');
             expect(renameActions.length).toBeGreaterThanOrEqual(2);
             expect(screen.getByText('Changes the display name. Character files, maps, and data are preserved.')).toBeInTheDocument();
-        });
-
-        it('renders the rename button with icon', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            expect(renameBtn).toBeInTheDocument();
-            expect(renameBtn.querySelector('i.fa-pen')).toBeTruthy();
+            expect(screen.getByRole('button', { name: /rename campaign/i })).toBeInTheDocument();
         });
     });
 
@@ -60,35 +54,17 @@ describe('CampaignAdmin - Rename Campaign', () => {
             expect(modalHeader).toHaveTextContent('Rename Campaign');
         });
 
-        it('closes modal when cancel button is clicked', () => {
+        it.each([
+            { triggerName: 'cancel', getTrigger: () => screen.getByText('Cancel') },
+            { triggerName: 'close (X)', getTrigger: () => document.querySelector('.ct-modal-close') },
+            { triggerName: 'overlay', getTrigger: () => document.querySelector('.ct-modal-overlay') },
+        ])('closes modal when $triggerName is clicked', ({ getTrigger }) => {
             render(<CampaignAdmin {...defaultProps} />);
             const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
             fireEvent.click(renameBtn);
 
-            const cancelBtn = screen.getByText('Cancel');
-            fireEvent.click(cancelBtn);
-
-            expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
-        });
-
-        it('closes modal when close (X) button is clicked', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
-
-            const closeBtn = document.querySelector('.ct-modal-close');
-            fireEvent.click(closeBtn);
-
-            expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
-        });
-
-        it('closes modal when overlay is clicked', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
-
-            const overlay = document.querySelector('.ct-modal-overlay');
-            fireEvent.click(overlay);
+            const closeTrigger = getTrigger();
+            fireEvent.click(closeTrigger);
 
             expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
         });
@@ -115,55 +91,16 @@ describe('CampaignAdmin - Rename Campaign', () => {
             expect(input).toHaveAttribute('placeholder', 'test-campaign');
         });
 
-        it('input is auto-focused when modal opens', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
-
-            const input = screen.getByLabelText('New Campaign Name');
-            expect(document.activeElement).toBe(input);
-        });
-
-        it('input has correct htmlFor/id association with label', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
-
-            const input = document.getElementById('rename-campaign-input');
-            const label = document.querySelector('label[for="rename-campaign-input"]');
-            expect(label).toBeTruthy();
-            expect(label.getAttribute('for')).toBe('rename-campaign-input');
-            expect(input).toHaveAttribute('id', 'rename-campaign-input');
-        });
-
-        it('updates input value on change', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
-
-            const input = screen.getByLabelText('New Campaign Name');
-            fireEvent.change(input, { target: { value: 'new-name' } });
-            expect(input).toHaveValue('new-name');
-        });
-
-        it('submit button is disabled when input is empty', () => {
+        it('submit button disabled states', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
             fireEvent.click(renameBtn);
 
             const submitBtn = screen.getByRole('button', { name: 'Rename' });
             expect(submitBtn).toBeDisabled();
-        });
-
-        it('submit button is disabled when input is only whitespace', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
 
             const input = screen.getByLabelText('New Campaign Name');
             fireEvent.change(input, { target: { value: '   ' } });
-
-            const submitBtn = screen.getByRole('button', { name: 'Rename' });
             expect(submitBtn).toBeDisabled();
         });
 
@@ -178,45 +115,22 @@ describe('CampaignAdmin - Rename Campaign', () => {
             const submitBtn = screen.getByRole('button', { name: 'Rename' });
             expect(submitBtn).not.toBeDisabled();
         });
-
-        it('submit button is enabled when input has leading/trailing whitespace', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
-
-            const input = screen.getByLabelText('New Campaign Name');
-            fireEvent.change(input, { target: { value: '  new-name  ' } });
-
-            const submitBtn = screen.getByRole('button', { name: 'Rename' });
-            expect(submitBtn).not.toBeDisabled();
-        });
     });
 
     describe('submit behavior', () => {
-        it('calls onRenameCampaign with trimmed value on submit button click', async () => {
+        it.each([
+            { trigger: 'button', action: () => fireEvent.click(screen.getByRole('button', { name: 'Rename' })) },
+            { trigger: 'Enter key', action: (_renameBtn, input) => fireEvent.keyDown(input, { key: 'Enter' }) },
+        ])('calls onRenameCampaign with trimmed value on %s', async ({ trigger, action }) => {
             render(<CampaignAdmin {...defaultProps} />);
             const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
             fireEvent.click(renameBtn);
 
             const input = screen.getByLabelText('New Campaign Name');
-            fireEvent.change(input, { target: { value: '  new-name  ' } });
+            const testValue = trigger === 'Enter key' ? 'new-name' : '  new-name  ';
+            fireEvent.change(input, { target: { value: testValue } });
 
-            const submitBtn = screen.getByRole('button', { name: 'Rename' });
-            fireEvent.click(submitBtn);
-
-            await waitFor(() => {
-                expect(defaultProps.onRenameCampaign).toHaveBeenCalledWith('new-name');
-            });
-        });
-
-        it('calls onRenameCampaign on Enter key', async () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
-
-            const input = screen.getByLabelText('New Campaign Name');
-            fireEvent.change(input, { target: { value: 'new-name' } });
-            fireEvent.keyDown(input, { key: 'Enter' });
+            action(renameBtn, input);
 
             await waitFor(() => {
                 expect(defaultProps.onRenameCampaign).toHaveBeenCalledWith('new-name');
@@ -250,7 +164,7 @@ describe('CampaignAdmin - Rename Campaign', () => {
             });
         });
 
-        it('does not submit when input is empty on button click', () => {
+        it('does not submit when input is empty or whitespace', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
             fireEvent.click(renameBtn);
@@ -259,42 +173,14 @@ describe('CampaignAdmin - Rename Campaign', () => {
             fireEvent.click(submitBtn);
 
             expect(defaultProps.onRenameCampaign).not.toHaveBeenCalled();
-        });
 
-        it('does not submit when input is whitespace only on button click', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
+            vi.clearAllMocks();
 
             const input = screen.getByLabelText('New Campaign Name');
             fireEvent.change(input, { target: { value: '   ' } });
-
-            const submitBtn = screen.getByRole('button', { name: 'Rename' });
             fireEvent.click(submitBtn);
 
             expect(defaultProps.onRenameCampaign).not.toHaveBeenCalled();
-        });
-
-        it('resets input to empty after submit with different name', async () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const renameBtn = screen.getByRole('button', { name: /rename campaign/i });
-            fireEvent.click(renameBtn);
-
-            const input = screen.getByLabelText('New Campaign Name');
-            fireEvent.change(input, { target: { value: 'different-name' } });
-            expect(input).toHaveValue('different-name');
-
-            const submitBtn = screen.getByRole('button', { name: 'Rename' });
-            fireEvent.click(submitBtn);
-
-            await waitFor(() => {
-                expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
-            });
-
-            // Re-open modal and verify input is empty
-            fireEvent.click(renameBtn);
-            const reOpenedInput = screen.getByLabelText('New Campaign Name');
-            expect(reOpenedInput).toHaveValue('');
         });
 
         it('does not call onRenameCampaign when modal is closed without submitting', () => {

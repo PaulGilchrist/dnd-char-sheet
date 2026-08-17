@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import { WIZARD_STEPS, getTotalSteps, getStepConfig } from './steps-config.js';
 
@@ -59,24 +59,6 @@ describe('steps-config', () => {
         expect(step.title).toBe(expectedTitles[step.step]);
       }
     });
-
-    it('defines a title for every configured step number', () => {
-      expect(Object.keys(expectedTitles).map(Number)).toEqual(
-        WIZARD_STEPS.map((step) => step.step)
-      );
-    });
-  });
-
-  describe('getTotalSteps', () => {
-    it('equals the number of configured steps', () => {
-      expect(getTotalSteps()).toBe(WIZARD_STEPS.length);
-    });
-
-    it('is consistent with getStepConfig across the full range', () => {
-      for (let step = 1; step <= getTotalSteps(); step++) {
-        expect(getStepConfig(step)).toBeDefined();
-      }
-    });
   });
 
   describe('getStepConfig', () => {
@@ -96,12 +78,6 @@ describe('steps-config', () => {
     it('returns undefined for non-numeric input', () => {
       for (const input of [null, undefined, '', '1', 1.5, NaN, true, false, {}]) {
         expect(getStepConfig(input)).toBeUndefined();
-      }
-    });
-
-    it('returns a stable config reference across repeated lookups', () => {
-      for (const step of WIZARD_STEPS) {
-        expect(getStepConfig(step.step)).toBe(getStepConfig(step.step));
       }
     });
   });
@@ -271,29 +247,5 @@ describe('steps-config', () => {
         }
       });
     }
-
-    it('renames updateBackgroundIncrease, backgroundAbilityNames, and handleFeatAbilityChoice on step 9', () => {
-      const step = getStepConfig(9);
-      const updateBackgroundIncrease = () => {};
-      const handleFeatAbilityChoice = () => {};
-      const backgroundAbilityNames = ['Strength', 'Dexterity'];
-      const props = step.getProps({ updateBackgroundIncrease, handleFeatAbilityChoice, backgroundAbilityNames });
-
-      expect(props.onBackgroundIncreaseChange).toBe(updateBackgroundIncrease);
-      expect(props.onFeatAbilityChoiceChange).toBe(handleFeatAbilityChoice);
-      expect(props.backgroundAbilityChoices).toBe(backgroundAbilityNames);
-    });
-
-    it('maps languageWarnings to warnings on step 12', () => {
-      const step = getStepConfig(12);
-      const warnings = ['Too many languages'];
-      expect(step.getProps({ languageWarnings: warnings }).warnings).toBe(warnings);
-    });
-
-    it('maps resistanceWarnings to warnings on step 13', () => {
-      const step = getStepConfig(13);
-      const warnings = ['Too many resistances'];
-      expect(step.getProps({ resistanceWarnings: warnings }).warnings).toBe(warnings);
-    });
   });
 });

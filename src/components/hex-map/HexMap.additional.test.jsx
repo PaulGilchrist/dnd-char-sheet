@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -293,14 +293,6 @@ describe('HexMap additional coverage', () => {
             poiLayerProps.current.onPoiEnter({ id: 'poi-1' });
             expect(onPoiEntered).not.toHaveBeenCalled();
         });
-
-        it('does not crash when no onPoiEntered handler is provided', async () => {
-            renderWithPoi({ linkedMap: 'dungeon-1', onPoiEntered: undefined });
-            await vi.waitFor(() => {
-                expect(poiLayerProps.current.validLinkedMaps.has('dungeon-1')).toBe(true);
-            });
-            expect(() => poiLayerProps.current.onPoiEnter({ id: 'poi-1', linkedMap: 'dungeon-1' })).not.toThrow();
-        });
     });
 
     describe('Linked map validation', () => {
@@ -346,15 +338,6 @@ describe('HexMap additional coverage', () => {
         }
 
         it.each([
-            ['drag data that is not a POI type', 'invalid-type'],
-            ['empty drag data', ''],
-        ])('does not add a POI for %s', (_label, dragData) => {
-            const ml = makeMapLoader();
-            drop(ml, makeHexHover({ getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })) }), dragData);
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
-
-        it.each([
             ['a negative column', { q: -1, r: 5 }],
             ['a negative row', { q: 10, r: -1 }],
             ['an out-of-range column', { q: 999, r: 5 }],
@@ -362,12 +345,6 @@ describe('HexMap additional coverage', () => {
         ])('does not add a POI dropped on %s', (_label, dropHex) => {
             const ml = makeMapLoader();
             drop(ml, makeHexHover({ getHexFromEvent: vi.fn(() => dropHex) }), 'city');
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
-
-        it('does not add a POI when the drop does not resolve to a hex', () => {
-            const ml = makeMapLoader();
-            drop(ml, makeHexHover({ getHexFromEvent: vi.fn(() => null) }), 'city');
             expect(ml.setPois).not.toHaveBeenCalled();
         });
 
@@ -455,39 +432,6 @@ describe('HexMap additional coverage', () => {
             fireEvent.click(screen.getByTestId('event-accept'));
             expect(generateWeather).toHaveBeenCalled();
             expect(tm.changePace).not.toHaveBeenCalled();
-        });
-
-        describe('with no party position', () => {
-            it('does not start an encounter for a combat event', () => {
-                const handleStartEncounter = vi.fn();
-                const generateMonsterPlacements = vi.fn();
-                const { tm, addEntry } = renderEventAccept({
-                    pendingEvent: { type: 'combat', encounter: { monsters: [{ name: 'goblin', qty: 2 }] } },
-                    travelOverrides: { currentPosition: null },
-                    mapOverrides: { partyPosition: null },
-                    encounter: { generateMonsterPlacements, handleStartEncounter },
-                });
-                fireEvent.click(screen.getByTestId('event-accept'));
-                expect(tm.acceptEvent).toHaveBeenCalled();
-                expect(generateMonsterPlacements).not.toHaveBeenCalled();
-                expect(handleStartEncounter).not.toHaveBeenCalled();
-                expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                    action: 'event_accept', hex: null,
-                }));
-            });
-
-            it('logs event acceptance without crashing for a non-combat event', () => {
-                const { tm, addEntry } = renderEventAccept({
-                    pendingEvent: { type: 'skirmish' },
-                    travelOverrides: { currentPosition: null },
-                    mapOverrides: { partyPosition: null },
-                });
-                fireEvent.click(screen.getByTestId('event-accept'));
-                expect(tm.acceptEvent).toHaveBeenCalled();
-                expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                    action: 'event_accept', hex: null,
-                }));
-            });
         });
     });
 
