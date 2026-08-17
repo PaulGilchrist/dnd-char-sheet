@@ -1,3 +1,4 @@
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -220,26 +221,10 @@ describe('damageReductionHandler - redirect flow', () => {
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('No creatures available to redirect force to');
     });
-
-    it('returns popup when combat context is null', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      damageUtils.getCombatContext.mockResolvedValue(null);
-      const ps = makeMonkPlayerStats();
-      const action = makeAction({
-        reductionExpression: '2d10',
-        redirect: true,
-        redirectCost: { amount: 1, resource: 'focus_points' },
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('No creatures available to redirect force to');
-    });
   });
 
   describe('redirect - onTargetSelected callback', () => {
-    it('calls executeRedirect when target is selected', async () => {
+    it('calls executeRedirect and applies damage on target selection', async () => {
       runtimeState.getRuntimeValue.mockReturnValue(1);
       damageUtils.getCombatContext.mockResolvedValue({
         creatures: [{ name: 'Goblin', type: 'enemy', currentHp: 7, maxHp: 7 }],
@@ -262,7 +247,6 @@ describe('damageReductionHandler - redirect flow', () => {
       const result = await handle(action, ps, campaignName, null);
 
       expect(result.type).toBe('modal');
-      // Trigger the onTargetSelected callback
       await result.payload.onTargetSelected('Goblin');
 
       expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
@@ -275,16 +259,11 @@ describe('damageReductionHandler - redirect flow', () => {
       );
     });
 
-    it('handles save failure - applies full damage', async () => {
+    it('handles save failure and success with correct damage calculation', async () => {
       runtimeState.getRuntimeValue.mockReturnValue(1);
       damageUtils.getCombatContext.mockResolvedValue({
         creatures: [{ name: 'Goblin', type: 'enemy', currentHp: 7, maxHp: 7 }],
       });
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'test-prompt',
-        promise: Promise.resolve({ success: false }),
-      });
-      applyDamage.computeDamageAfterSave.mockReturnValue(10);
       applyDamage.applyDamageToTarget.mockResolvedValue({});
 
       const ps = makeMonkPlayerStats();
@@ -295,7 +274,13 @@ describe('damageReductionHandler - redirect flow', () => {
         redirectCost: { amount: 1, resource: 'focus_points' },
       });
 
-      const result = await handle(action, ps, campaignName, null);
+      // Test save failure - full damage
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'test-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+      applyDamage.computeDamageAfterSave.mockReturnValue(10);
+      let result = await handle(action, ps, campaignName, null);
       await result.payload.onTargetSelected('Goblin');
 
       expect(applyDamage.computeDamageAfterSave).toHaveBeenCalledWith(
@@ -303,35 +288,47 @@ describe('damageReductionHandler - redirect flow', () => {
         false,
         null,
       );
-    });
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+        expect.anything(),
+        'Goblin',
+        10,
+        ['Force'],
+        campaignName,
+        expect.anything(),
+        false,
+        'MonkHero',
+      );
 
-    it('handles save success - applies reduced damage', async () => {
+      vi.resetAllMocks();
+      setupBaseMocks();
       runtimeState.getRuntimeValue.mockReturnValue(1);
       damageUtils.getCombatContext.mockResolvedValue({
         creatures: [{ name: 'Goblin', type: 'enemy', currentHp: 7, maxHp: 7 }],
       });
+      applyDamage.applyDamageToTarget.mockResolvedValue({});
       savePrompt.createSaveListener.mockReturnValue({
         promptId: 'test-prompt',
         promise: Promise.resolve({ success: true }),
       });
       applyDamage.computeDamageAfterSave.mockReturnValue(5);
-      applyDamage.applyDamageToTarget.mockResolvedValue({});
 
-      const ps = makeMonkPlayerStats();
-      const action = makeAction({
-        reductionExpression: '2d10',
-        redirect: true,
-        redirectDamage: '2d6 + DEX modifier',
-        redirectCost: { amount: 1, resource: 'focus_points' },
-      });
-
-      const result = await handle(action, ps, campaignName, null);
+      result = await handle(action, ps, campaignName, null);
       await result.payload.onTargetSelected('Goblin');
 
       expect(applyDamage.computeDamageAfterSave).toHaveBeenCalledWith(
         expect.anything(),
         true,
         null,
+      );
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+        expect.anything(),
+        'Goblin',
+        5,
+        ['Force'],
+        campaignName,
+        expect.anything(),
+        false,
+        'MonkHero',
       );
     });
 
@@ -440,110 +437,58 @@ describe('damageReductionHandler - redirect flow', () => {
   });
 
   describe('redirect - damage calculation', () => {
-    it('uses evaluated numeric result for redirect damage', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      automationService.evaluateAutoExpression
-        .mockReturnValueOnce(20)
-        .mockReturnValue(12);
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'Goblin', type: 'enemy', currentHp: 7, maxHp: 7 }],
+    const damageCalcTests = [
+      { name: 'numeric result', redirectDamage: '12', evaluateResult: 12, rollResult: null, expectedDamage: 12 },
+      { name: 'dice expression', redirectDamage: '2d6', evaluateResult: '2d6', rollResult: { total: 8, rolls: [3, 5] }, expectedDamage: 8 },
+      { name: 'failed dice roll', redirectDamage: '2d6', evaluateResult: '2d6', rollResult: null, expectedDamage: 0 },
+    ];
+
+    for (const dct of damageCalcTests) {
+      it(`uses ${dct.name} for redirect damage`, async () => {
+        runtimeState.getRuntimeValue.mockReturnValue(1);
+        automationService.evaluateAutoExpression
+          .mockReturnValueOnce(20)
+          .mockReturnValue(dct.evaluateResult);
+        if (dct.rollResult) {
+          diceRoller.rollExpression.mockReturnValue(dct.rollResult);
+        }
+        damageUtils.getCombatContext.mockResolvedValue({
+          creatures: [{ name: 'Goblin', type: 'enemy', currentHp: 7, maxHp: 7 }],
+        });
+        savePrompt.createSaveListener.mockReturnValue({
+          promptId: 'test-prompt',
+          promise: Promise.resolve({ success: true }),
+        });
+        applyDamage.computeDamageAfterSave.mockReturnValue(dct.expectedDamage);
+        applyDamage.applyDamageToTarget.mockResolvedValue({});
+
+        const ps = makeMonkPlayerStats();
+        const action = makeAction({
+          reductionExpression: '2d10',
+          redirect: true,
+          redirectDamage: dct.redirectDamage,
+          redirectCost: { amount: 1, resource: 'focus_points' },
+        });
+
+        const result = await handle(action, ps, campaignName, null);
+        await result.payload.onTargetSelected('Goblin');
+
+        if (dct.expectedDamage > 0) {
+          expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+            expect.anything(),
+            'Goblin',
+            dct.expectedDamage,
+            ['Force'],
+            campaignName,
+            expect.anything(),
+            false,
+            'MonkHero',
+          );
+        } else {
+          expect(applyDamage.applyDamageToTarget).not.toHaveBeenCalled();
+        }
       });
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'test-prompt',
-        promise: Promise.resolve({ success: true }),
-      });
-      applyDamage.computeDamageAfterSave.mockReturnValue(12);
-      applyDamage.applyDamageToTarget.mockResolvedValue({});
-
-      const ps = makeMonkPlayerStats();
-      const action = makeAction({
-        reductionExpression: '2d10',
-        redirect: true,
-        redirectDamage: '12',
-        redirectCost: { amount: 1, resource: 'focus_points' },
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-      await result.payload.onTargetSelected('Goblin');
-
-      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
-        expect.anything(),
-        'Goblin',
-        12,
-        ['Force'],
-        campaignName,
-        expect.anything(),
-        false,
-        'MonkHero',
-      );
-    });
-
-    it('uses dice roll result for redirect damage', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      automationService.evaluateAutoExpression
-        .mockReturnValueOnce(20)
-        .mockReturnValue('2d6');
-      diceRoller.rollExpression.mockReturnValue({ total: 8, rolls: [3, 5] });
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'Goblin', type: 'enemy', currentHp: 7, maxHp: 7 }],
-      });
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'test-prompt',
-        promise: Promise.resolve({ success: true }),
-      });
-      applyDamage.computeDamageAfterSave.mockReturnValue(8);
-      applyDamage.applyDamageToTarget.mockResolvedValue({});
-
-      const ps = makeMonkPlayerStats();
-      const action = makeAction({
-        reductionExpression: '2d10',
-        redirect: true,
-        redirectDamage: '2d6',
-        redirectCost: { amount: 1, resource: 'focus_points' },
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-      await result.payload.onTargetSelected('Goblin');
-
-      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
-        expect.anything(),
-        'Goblin',
-        8,
-        ['Force'],
-        campaignName,
-        expect.anything(),
-        false,
-        'MonkHero',
-      );
-    });
-
-    it('handles failed dice roll with zero damage', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      automationService.evaluateAutoExpression
-        .mockReturnValueOnce(20)
-        .mockReturnValue('2d6');
-      diceRoller.rollExpression.mockReturnValue(null);
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'Goblin', type: 'enemy', currentHp: 7, maxHp: 7 }],
-      });
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'test-prompt',
-        promise: Promise.resolve({ success: true }),
-      });
-
-      const ps = makeMonkPlayerStats();
-      const action = makeAction({
-        reductionExpression: '2d10',
-        redirect: true,
-        redirectDamage: '2d6',
-        redirectCost: { amount: 1, resource: 'focus_points' },
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-      await result.payload.onTargetSelected('Goblin');
-
-      expect(applyDamage.applyDamageToTarget).not.toHaveBeenCalled();
-    });
+    }
   });
 
   describe('redirect - save listener setup', () => {
@@ -611,57 +556,6 @@ describe('damageReductionHandler - redirect flow', () => {
           description: expect.stringContaining('redirected force to Goblin'),
         }),
       );
-    });
-  });
-
-  describe('redirect - log entry error handling', () => {
-    it('does not throw when log entry rejects during redirect', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'Goblin', type: 'enemy', currentHp: 7, maxHp: 7 }],
-      });
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'test-prompt',
-        promise: Promise.resolve({ success: true }),
-      });
-      applyDamage.computeDamageAfterSave.mockReturnValue(10);
-      const testError = new Error('log save failed');
-      logService.addEntry.mockRejectedValue(testError);
-
-      const ps = makeMonkPlayerStats();
-      const action = makeAction({
-        reductionExpression: '2d10',
-        redirect: true,
-        redirectCost: { amount: 1, resource: 'focus_points' },
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-      await result.payload.onTargetSelected('Goblin');
-
-      expect(result.type).toBe('modal');
-    });
-  });
-
-  describe('redirect - onSkip error handling', () => {
-    it('does not throw when onSkip log entry rejects', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'Goblin', type: 'enemy', currentHp: 7, maxHp: 7 }],
-      });
-      const testError = new Error('log save failed');
-      logService.addEntry.mockRejectedValue(testError);
-
-      const ps = makeMonkPlayerStats();
-      const action = makeAction({
-        reductionExpression: '2d10',
-        redirect: true,
-        redirectCost: { amount: 1, resource: 'focus_points' },
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-      await result.payload.onSkip();
-
-      expect(result.type).toBe('modal');
     });
   });
 

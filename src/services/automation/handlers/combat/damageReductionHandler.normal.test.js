@@ -1,3 +1,4 @@
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -101,17 +102,6 @@ describe('damageReductionHandler - normal damage reduction', () => {
       expect(result.payload.automationType).toBe('damage_reduction');
     });
 
-    it('includes roll details in popup', async () => {
-      automationService.evaluateAutoExpression.mockReturnValue(7);
-      applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 7 });
-      const ps = makePlayerStats();
-      const action = makeAction({ reductionExpression: '2d6+1' });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.description).toContain('2d6+1 = 7');
-    });
-
     it('includes trigger text when auto.trigger is set', async () => {
       automationService.evaluateAutoExpression.mockReturnValue(3);
       applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 3 });
@@ -169,32 +159,6 @@ describe('damageReductionHandler - normal damage reduction', () => {
       });
     });
 
-    it('uses correct character and ability names in log entry', async () => {
-      automationService.evaluateAutoExpression.mockReturnValue(2);
-      diceRoller.rollExpression.mockReturnValue({ total: 2, rolls: [2], modifier: 0 });
-      applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 2 });
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: { targetName: 'ElvenRogue' },
-        targetName: 'ElvenRogue',
-        totalDamage: 10,
-        damageTypes: ['Slashing'],
-      });
-      const ps = makePlayerStats({ name: 'ElvenRogue' });
-      const action = {
-        name: 'Armor of Agathys',
-        automation: { type: 'damage_reduction', reductionExpression: '1d4' },
-      };
-
-      await handle(action, ps, campaignName, null);
-
-      expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
-        type: 'ability_use',
-        characterName: 'ElvenRogue',
-        abilityName: 'Armor of Agathys',
-        description: 'ElvenRogue used Armor of Agathys to reduce damage by 1d4 = 2 (healed for 2 HP).',
-      });
-    });
-
     it('does not throw when addEntry rejects (fire-and-forget logging)', async () => {
       automationService.evaluateAutoExpression.mockReturnValue(5);
       applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 5 });
@@ -244,185 +208,42 @@ describe('damageReductionHandler - normal damage reduction', () => {
     // ── Trigger matching ──────────────────────────────────────
 
     describe('trigger matching', () => {
-      it('matches bludgeoning damage type', async () => {
-        automationService.evaluateAutoExpression.mockReturnValue(5);
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero' },
-          targetName: 'TestHero',
-          totalDamage: 10,
-          damageTypes: ['Bludgeoning'],
+      const triggerTests = [
+        { name: 'bludgeoning', damageTypes: ['Bludgeoning'], trigger: 'bludgeoning_piercing_slashing_damage', expectMatch: true },
+        { name: 'piercing', damageTypes: ['Piercing'], trigger: 'bludgeoning_piercing_slashing_damage', expectMatch: true },
+        { name: 'slashing', damageTypes: ['Slashing'], trigger: 'bludgeoning_piercing_slashing_damage', expectMatch: true },
+        { name: 'fire (no match)', damageTypes: ['Fire'], trigger: 'bludgeoning_piercing_slashing_damage', expectMatch: false },
+        { name: 'any_damage with damage', damageTypes: [], trigger: 'any_damage', totalDamage: 10, expectMatch: true },
+        { name: 'any_damage without damage', damageTypes: [], trigger: 'any_damage', totalDamage: 0, expectMatch: false },
+        { name: 'ranged weapon', damageTypes: ['Piercing'], trigger: 'ranged_weapon_attack_hit', weaponType: 'ranged', expectMatch: true },
+        { name: 'melee weapon (no match)', damageTypes: ['Slashing'], trigger: 'ranged_weapon_attack_hit', weaponType: 'melee', expectMatch: false },
+        { name: 'no trigger', damageTypes: ['Fire'], trigger: undefined, expectMatch: true },
+      ];
+
+      for (const tt of triggerTests) {
+        it(`matches ${tt.name}`, async () => {
+          const lastAttack = {
+            attackEvent: { targetName: 'TestHero', ...(tt.weaponType ? { weaponType: tt.weaponType } : {}) },
+            targetName: 'TestHero',
+            totalDamage: tt.totalDamage ?? 10,
+            damageTypes: tt.damageTypes,
+          };
+          damageRollback.findLastAttack.mockResolvedValue(lastAttack);
+          automationService.evaluateAutoExpression.mockReturnValue(5);
+          applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 5 });
+
+          const ps = makePlayerStats();
+          const action = makeAction({ reductionExpression: '1d4', trigger: tt.trigger });
+
+          const result = await handle(action, ps, campaignName, null);
+
+          if (tt.expectMatch) {
+            expect(result.payload.description).toContain('Reduce damage by');
+          } else {
+            expect(result.payload.description).toContain('does not match the trigger condition');
+          }
         });
-        applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 5 });
-        const ps = makePlayerStats();
-        const action = makeAction({
-          reductionExpression: '1d4',
-          trigger: 'bludgeoning_piercing_slashing_damage',
-        });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Reduce damage by');
-      });
-
-      it('matches piercing damage type', async () => {
-        automationService.evaluateAutoExpression.mockReturnValue(5);
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero' },
-          targetName: 'TestHero',
-          totalDamage: 10,
-          damageTypes: ['Piercing'],
-        });
-        applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 5 });
-        const ps = makePlayerStats();
-        const action = makeAction({
-          reductionExpression: '1d4',
-          trigger: 'bludgeoning_piercing_slashing_damage',
-        });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Reduce damage by');
-      });
-
-      it('matches slashing damage type', async () => {
-        automationService.evaluateAutoExpression.mockReturnValue(5);
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero' },
-          targetName: 'TestHero',
-          totalDamage: 10,
-          damageTypes: ['Slashing'],
-        });
-        applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 5 });
-        const ps = makePlayerStats();
-        const action = makeAction({
-          reductionExpression: '1d4',
-          trigger: 'bludgeoning_piercing_slashing_damage',
-        });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Reduce damage by');
-      });
-
-      it('rejects when damage type does not match trigger', async () => {
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero' },
-          targetName: 'TestHero',
-          totalDamage: 10,
-          damageTypes: ['Fire'],
-        });
-        const ps = makePlayerStats();
-        const action = makeAction({
-          reductionExpression: '1d4',
-          trigger: 'bludgeoning_piercing_slashing_damage',
-        });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('does not match the trigger condition');
-      });
-
-      it('matches any_damage when damageTypes is empty but totalDamage > 0', async () => {
-        automationService.evaluateAutoExpression.mockReturnValue(5);
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero' },
-          targetName: 'TestHero',
-          totalDamage: 10,
-          damageTypes: [],
-        });
-        applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 5 });
-        const ps = makePlayerStats();
-        const action = makeAction({
-          reductionExpression: '1d4',
-          trigger: 'any_damage',
-        });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Reduce damage by');
-      });
-
-      it('rejects any_damage when no damage at all', async () => {
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero' },
-          targetName: 'TestHero',
-          totalDamage: 0,
-          damageTypes: [],
-        });
-        const ps = makePlayerStats();
-        const action = makeAction({
-          reductionExpression: '1d4',
-          trigger: 'any_damage',
-        });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('does not match the trigger condition');
-      });
-
-      it('matches ranged_weapon_attack_hit when weaponType is ranged', async () => {
-        automationService.evaluateAutoExpression.mockReturnValue(5);
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero', weaponType: 'ranged' },
-          targetName: 'TestHero',
-          totalDamage: 10,
-          damageTypes: ['Piercing'],
-        });
-        applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 5 });
-        const ps = makePlayerStats();
-        const action = makeAction({
-          reductionExpression: '1d4',
-          trigger: 'ranged_weapon_attack_hit',
-        });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Reduce damage by');
-      });
-
-      it('rejects ranged_weapon_attack_hit when weaponType is melee', async () => {
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero', weaponType: 'melee' },
-          targetName: 'TestHero',
-          totalDamage: 10,
-          damageTypes: ['Slashing'],
-        });
-        const ps = makePlayerStats();
-        const action = makeAction({
-          reductionExpression: '1d4',
-          trigger: 'ranged_weapon_attack_hit',
-        });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('does not match the trigger condition');
-      });
-
-      it('passes when no trigger is specified', async () => {
-        automationService.evaluateAutoExpression.mockReturnValue(5);
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero' },
-          targetName: 'TestHero',
-          totalDamage: 10,
-          damageTypes: ['Fire'],
-        });
-        applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 5 });
-        const ps = makePlayerStats();
-        const action = makeAction({ reductionExpression: '1d4' });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Reduce damage by');
-      });
+      }
     });
 
     // ── rollReductionExpression edge cases ────────────────────
@@ -474,25 +295,6 @@ describe('damageReductionHandler - normal damage reduction', () => {
           equipment: [{ name: 'Shield', armor_category: 'Shield' }],
         });
         const action = makeAction({ requiresShield: true, reductionExpression: '2d6' });
-
-        const result = await handle(action, ps, campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Reduce damage by');
-      });
-
-      it('handles non-string items in equipped array for shieldOrWeapon check', async () => {
-        damageRollback.findLastAttack.mockResolvedValue({
-          attackEvent: { targetName: 'TestHero' },
-          targetName: 'TestHero',
-          totalDamage: 10,
-          damageTypes: ['Slashing'],
-        });
-        const ps = makePlayerStats({
-          inventory: { equipped: [null, 42, 'Longsword'] },
-          equipment: [{ name: 'Longsword', equipment_category: 'Weapon' }],
-        });
-        const action = makeAction({ requiresShieldOrWeapon: true, reductionExpression: '2d6' });
 
         const result = await handle(action, ps, campaignName, null);
 

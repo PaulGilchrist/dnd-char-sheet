@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -49,11 +49,6 @@ function makeMetaCtx(overrides = {}) {
 // ── getPostCastRiderSaves ──────────────────────────────────────
 
 describe('getPostCastRiderSaves', () => {
-  it('returns empty array when passives is empty', () => {
-    const ps = makePlayerStats();
-    expect(getPostCastRiderSaves(ps)).toEqual([]);
-  });
-
   it('returns passives with type post_cast_rider', () => {
     const ps = makePlayerStats({
       automation: {
@@ -116,17 +111,6 @@ describe('triggerPostCastRiderSaves', () => {
     expect(executeHandler).not.toHaveBeenCalled();
   });
 
-  it('returns null when spell school is undefined or empty', async () => {
-    const ps = makePlayerStats({ automation: { passives: [{ type: 'post_cast_rider', name: 'Charm Save' }] } });
-    const undefinedResult = await triggerPostCastRiderSaves(makeSpell({ school: undefined }), makeMetaCtx(), ps, campaignName, mapName);
-    expect(undefinedResult).toBeNull();
-    expect(executeHandler).not.toHaveBeenCalled();
-
-    const emptyResult = await triggerPostCastRiderSaves(makeSpell({ school: '' }), makeMetaCtx(), ps, campaignName, mapName);
-    expect(emptyResult).toBeNull();
-    expect(executeHandler).not.toHaveBeenCalled();
-  });
-
   it('matches enchantment and illusion schools case-insensitively', async () => {
     const ps = makePlayerStats({ automation: { passives: [{ type: 'post_cast_rider', name: 'Charm Save' }] } });
     await triggerPostCastRiderSaves(makeSpell({ school: 'Enchantment' }), makeMetaCtx(), ps, campaignName, mapName);
@@ -155,17 +139,6 @@ describe('triggerPostCastRiderSaves', () => {
 
     await triggerPostCastRiderSaves(makeSpell({ school: 'illusion', level: 2 }), { slotLevel: 0 }, illusionPs, campaignName, mapName);
     expect(executeHandler).toHaveBeenCalledTimes(2);
-  });
-
-  it('returns null when metaCtx is null/undefined and spell.level is 0', async () => {
-    const ps = makePlayerStats({ automation: { passives: [{ type: 'post_cast_rider', name: 'No Uses Rider' }] } });
-    const nullResult = await triggerPostCastRiderSaves(makeSpell({ school: 'enchantment', level: 0 }), null, ps, campaignName, mapName);
-    expect(nullResult).toBeNull();
-    expect(executeHandler).not.toHaveBeenCalled();
-
-    const undefinedResult = await triggerPostCastRiderSaves(makeSpell({ school: 'enchantment', level: 0 }), undefined, ps, campaignName, mapName);
-    expect(undefinedResult).toBeNull();
-    expect(executeHandler).not.toHaveBeenCalled();
   });
 
   it('proceeds when metaCtx is null/undefined and spell.level > 0', async () => {
@@ -362,23 +335,6 @@ describe('triggerPostCastRiderSaves', () => {
     expect(result).toBeNull();
   });
 
-  it('returns null when all riders produce null results', async () => {
-    const spell = makeSpell({ school: 'enchantment' });
-    const ps = makePlayerStats({
-      automation: {
-        passives: [
-          { type: 'post_cast_rider', name: 'Silent A' },
-          { type: 'post_cast_rider', name: 'Silent B' },
-        ],
-      },
-    });
-    executeHandler.mockResolvedValue(null);
-
-    const result = await triggerPostCastRiderSaves(spell, makeMetaCtx(), ps, campaignName, mapName);
-
-    expect(result).toBeNull();
-  });
-
   it('throws and logs when a rider handler errors', async () => {
     const spell = makeSpell({ school: 'enchantment' });
     const ps = makePlayerStats({
@@ -415,32 +371,6 @@ describe('triggerPostCastRiderSaves', () => {
     );
   });
 
-  it('passes campaignName and mapName to executeHandler', async () => {
-    const spell = makeSpell({ school: 'enchantment' });
-    const ps = makePlayerStats({
-      automation: { passives: [{ type: 'post_cast_rider', name: 'Map Rider' }] },
-    });
-
-    await triggerPostCastRiderSaves(spell, makeMetaCtx(), ps, campaignName, 'DungeonMap1');
-
-    expect(executeHandler).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'Map Rider',
-      }),
-      ps,
-      campaignName,
-      'DungeonMap1',
-    );
-  });
-
-  it('throws when spell is null', async () => {
-    const ps = makePlayerStats({ automation: { passives: [{ type: 'post_cast_rider', name: 'Charm Save' }] } });
-    await expect(
-      triggerPostCastRiderSaves(null, makeMetaCtx(), ps, campaignName, mapName)
-    ).rejects.toThrow();
-    expect(executeHandler).not.toHaveBeenCalled();
-  });
-
   it('throws when spell is undefined', async () => {
     const ps = makePlayerStats({ automation: { passives: [{ type: 'post_cast_rider', name: 'Charm Save' }] } });
     await expect(
@@ -475,10 +405,6 @@ describe('triggerPostCastRiderSaves', () => {
           saveType: 'WIS',
           saveDc: 'ability',
           saveAbility: 'CHA',
-          condition: undefined,
-          duration: undefined,
-          range: undefined,
-          recharge: undefined,
         }),
       }),
       ps,

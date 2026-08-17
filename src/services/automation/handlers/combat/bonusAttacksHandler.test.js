@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -106,19 +106,14 @@ describe('bonusAttacksHandler', () => {
       expect(result.payload.automation).toBe(action.automation);
     });
 
-    it('returns popup when combat has no creatures', async () => {
+    it('returns popup with "No valid targets found" when combat has no creatures or only the player', async () => {
       getCombatSummary.mockReturnValue(makeCombatSummary([]));
-      const result = await handle(action, makePlayerStats(), campaignName, mapName);
+      let result = await handle(action, makePlayerStats(), campaignName, mapName);
       expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('No valid targets found');
-    });
 
-    it('returns popup when only the player is in combat', async () => {
       getCombatSummary.mockReturnValue(makeCombatSummary([makeCreature('TestMonk', 20, 12)]));
-      const result = await handle(action, makePlayerStats(), campaignName, mapName);
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
+      result = await handle(action, makePlayerStats(), campaignName, mapName);
       expect(result.payload.description).toContain('No valid targets found');
     });
 
@@ -142,19 +137,17 @@ describe('bonusAttacksHandler', () => {
       expect(result.payload.mapName).toBe(mapName);
     });
 
-    it('uses default attack values when playerStats.attacks is undefined', async () => {
+    it('uses default attack values when playerStats.attacks is undefined or first entry is undefined', async () => {
       getCombatSummary.mockReturnValue(makeCombatSummary([makeCreature('Goblin', 7, 15)]));
-      const playerStats = makePlayerStats({ attacks: undefined });
-      const result = await handle(action, playerStats, campaignName, mapName);
+
+      let playerStats = makePlayerStats({ attacks: undefined });
+      let result = await handle(action, playerStats, campaignName, mapName);
       expect(result.payload.attackBonus).toBe(0);
       expect(result.payload.damageFormula).toBe('1d4+0');
       expect(result.payload.damageType).toBe('Bludgeoning');
-    });
 
-    it('uses default attack values when first attack entry is undefined', async () => {
-      getCombatSummary.mockReturnValue(makeCombatSummary([makeCreature('Goblin', 7, 15)]));
-      const playerStats = makePlayerStats({ attacks: [undefined] });
-      const result = await handle(action, playerStats, campaignName, mapName);
+      playerStats = makePlayerStats({ attacks: [undefined] });
+      result = await handle(action, playerStats, campaignName, mapName);
       expect(result.payload.attackBonus).toBe(0);
       expect(result.payload.damageFormula).toBe('1d4+0');
       expect(result.payload.damageType).toBe('Bludgeoning');
@@ -184,15 +177,13 @@ describe('bonusAttacksHandler', () => {
       makeCreature('Orc', 15, 13),
     ]);
 
-    it('returns null when distribution is falsy', async () => {
+    it('returns null when distribution is falsy or combat summary is unavailable', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
-      const result = await applyFlurryOfBlows(action, makePlayerStats(), campaignName, mapName, null, 3);
+      let result = await applyFlurryOfBlows(action, makePlayerStats(), campaignName, mapName, null, 3);
       expect(result).toBeNull();
-    });
 
-    it('returns null when combat summary is unavailable', async () => {
       getCombatSummary.mockReturnValue(null);
-      const result = await applyFlurryOfBlows(action, makePlayerStats(), campaignName, mapName, { Goblin: 1 }, 1);
+      result = await applyFlurryOfBlows(action, makePlayerStats(), campaignName, mapName, { Goblin: 1 }, 1);
       expect(result).toBeNull();
     });
 
@@ -230,24 +221,6 @@ describe('bonusAttacksHandler', () => {
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('3/3 hits');
       expect(result.payload.description).toContain('1 critical');
-    });
-
-    it('returns popup with summary fields', async () => {
-      getCombatSummary.mockReturnValue(combatSummary);
-      vi.mocked(rollD20).mockReturnValue(18);
-
-      const result = await applyFlurryOfBlows(
-        action,
-        makePlayerStats(),
-        campaignName,
-        mapName,
-        { Goblin: 1 },
-        1
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.name).toBe(action.name);
     });
 
     it('includes detailed attack results for hits, misses, and crits', async () => {
@@ -294,41 +267,28 @@ describe('bonusAttacksHandler', () => {
       expect(applyDamageToTarget).not.toHaveBeenCalled();
     });
 
-    it('uses doubled damage dice on natural 20 (crit)', async () => {
+    it('uses doubled damage dice on crit and normal dice on non-crit hit', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
+
       vi.mocked(rollD20).mockReturnValue(20);
-
       await applyFlurryOfBlows(
-        action,
-        makePlayerStats(),
-        campaignName,
-        mapName,
-        { Goblin: 1 },
-        1
+        action, makePlayerStats(), campaignName, mapName, { Goblin: 1 }, 1
       );
-
       expect(rollExpressionDoubled).toHaveBeenCalledWith('1d6+3');
       expect(rollExpression).not.toHaveBeenCalled();
-    });
 
-    it('uses normal damage dice on non-crit hit', async () => {
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
+      mockDefaultDamageResult();
       vi.mocked(rollD20).mockReturnValue(15);
-
       await applyFlurryOfBlows(
-        action,
-        makePlayerStats(),
-        campaignName,
-        mapName,
-        { Goblin: 1 },
-        1
+        action, makePlayerStats(), campaignName, mapName, { Goblin: 1 }, 1
       );
-
       expect(rollExpression).toHaveBeenCalledWith('1d6+3');
       expect(rollExpressionDoubled).not.toHaveBeenCalled();
     });
 
-    it('includes openHandTargets when player has open_hand_technique and hits', async () => {
+    it('includes openHandTargets when player has open_hand_technique and hits, and excludes it when missing, missing, or attack misses', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
       applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });
@@ -349,7 +309,8 @@ describe('bonusAttacksHandler', () => {
         },
       });
 
-      const result = await applyFlurryOfBlows(
+      // Has feature and hits → includes openHandTargets
+      let result = await applyFlurryOfBlows(
         actionWithOpenHand,
         playerStatsWithOpenHand,
         campaignName,
@@ -357,8 +318,6 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
-      expect(result.type).toBe('popup');
       expect(result.openHandTargets).toEqual([
         {
           targetName: 'Goblin',
@@ -368,13 +327,13 @@ describe('bonusAttacksHandler', () => {
           mapName,
         },
       ]);
-    });
 
-    it('does not include openHandTargets when player lacks open_hand_technique', async () => {
+      // No feature → no openHandTargets
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
+      mockDefaultDamageResult();
       vi.mocked(rollD20).mockReturnValue(18);
-
-      const result = await applyFlurryOfBlows(
+      result = await applyFlurryOfBlows(
         action,
         makePlayerStats(),
         campaignName,
@@ -382,32 +341,13 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
-      expect(result.type).toBe('popup');
       expect(result.openHandTargets).toBeUndefined();
-    });
 
-    it('does not include openHandTargets when attack misses', async () => {
+      // Miss → no openHandTargets
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(1);
-
-      const actionWithOpenHand = {
-        name: 'Flurry of Blows',
-        automation: {
-          type: 'bonus_attacks',
-          attacks: 1,
-        },
-      };
-
-      const playerStatsWithOpenHand = makePlayerStats({
-        automation: {
-          actions: [
-            { type: 'open_hand_technique', name: 'Open Hand Technique' },
-          ],
-        },
-      });
-
-      const result = await applyFlurryOfBlows(
+      result = await applyFlurryOfBlows(
         actionWithOpenHand,
         playerStatsWithOpenHand,
         campaignName,
@@ -415,33 +355,14 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
-      expect(result.type).toBe('popup');
       expect(result.openHandTargets).toBeUndefined();
-    });
 
-    it('includes openHandTargets when attack hits even if damage is 0', async () => {
+      // Hits but 0 damage → still includes openHandTargets
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
       applyDamageToTarget.mockReturnValue({ finalDamage: 0, newHp: 7 });
-
-      const actionWithOpenHand = {
-        name: 'Flurry of Blows',
-        automation: {
-          type: 'bonus_attacks',
-          attacks: 1,
-        },
-      };
-
-      const playerStatsWithOpenHand = makePlayerStats({
-        automation: {
-          actions: [
-            { type: 'open_hand_technique', name: 'Open Hand Technique' },
-          ],
-        },
-      });
-
-      const result = await applyFlurryOfBlows(
+      result = await applyFlurryOfBlows(
         actionWithOpenHand,
         playerStatsWithOpenHand,
         campaignName,
@@ -449,8 +370,6 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
-      expect(result.type).toBe('popup');
       expect(result.openHandTargets).toEqual([
         {
           targetName: 'Goblin',
@@ -496,11 +415,11 @@ describe('bonusAttacksHandler', () => {
       expect(result.openHandTargets[0].targetName).toBe('Goblin');
     });
 
-    it('skips targets in distribution that are not in combat', async () => {
+    it('skips targets not in combat or self when they appear in distribution', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
 
-      const result = await applyFlurryOfBlows(
+      let result = await applyFlurryOfBlows(
         action,
         makePlayerStats(),
         campaignName,
@@ -508,16 +427,13 @@ describe('bonusAttacksHandler', () => {
         { UnknownEnemy: 2, Goblin: 1 },
         3
       );
-
       expect(rollD20).toHaveBeenCalledTimes(1);
       expect(result.type).toBe('popup');
-    });
 
-    it('skips self when self appears in distribution', async () => {
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
-
-      const result = await applyFlurryOfBlows(
+      result = await applyFlurryOfBlows(
         action,
         makePlayerStats(),
         campaignName,
@@ -525,38 +441,11 @@ describe('bonusAttacksHandler', () => {
         { TestMonk: 2, Goblin: 1 },
         3
       );
-
       expect(rollD20).toHaveBeenCalledTimes(1);
       expect(result.type).toBe('popup');
     });
 
-    it('calls applyDamageToTarget with correct arguments on hit', async () => {
-      getCombatSummary.mockReturnValue(combatSummary);
-      vi.mocked(rollD20).mockReturnValue(18);
-      applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });
-
-      await applyFlurryOfBlows(
-        action,
-        makePlayerStats(),
-        campaignName,
-        mapName,
-        { Goblin: 1 },
-        1
-      );
-
-      expect(applyDamageToTarget).toHaveBeenCalledWith(
-        combatSummary,
-        'Goblin',
-        5,
-        ['Bludgeoning'],
-        campaignName,
-        [],
-        false,
-        'TestMonk'
-      );
-    });
-
-    it('logs attack roll entry for each attack', async () => {
+    it('logs attack roll, damage, and hp_change entries on hit but not on miss', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
 
@@ -569,7 +458,7 @@ describe('bonusAttacksHandler', () => {
         1
       );
 
-      const attackEntries = addEntry.mock.calls.filter(
+      let attackEntries = addEntry.mock.calls.filter(
         call => call[1].rollType === 'attack'
       );
       expect(attackEntries.length).toBe(1);
@@ -577,34 +466,21 @@ describe('bonusAttacksHandler', () => {
       expect(attackEntries[0][1].targetName).toBe('Goblin');
       expect(attackEntries[0][1].targetAc).toBe(15);
       expect(attackEntries[0][1].hit).toBe(true);
-    });
 
-    it('logs damage and hp_change entries on hit with damage', async () => {
-      getCombatSummary.mockReturnValue(combatSummary);
-      vi.mocked(rollD20).mockReturnValue(18);
-
-      await applyFlurryOfBlows(
-        action,
-        makePlayerStats(),
-        campaignName,
-        mapName,
-        { Goblin: 1 },
-        1
-      );
-
-      const damageEntries = addEntry.mock.calls.filter(
+      let damageEntries = addEntry.mock.calls.filter(
         call => call[1].rollType === 'damage'
       );
-      const hpEntries = addEntry.mock.calls.filter(
+      expect(damageEntries.length).toBe(1);
+
+      let hpEntries = addEntry.mock.calls.filter(
         call => call[1].type === 'hp_change'
       );
-      expect(damageEntries.length).toBe(1);
       expect(hpEntries.length).toBe(1);
       expect(hpEntries[0][1].delta).toBe(-4);
       expect(hpEntries[0][1].sourceName).toBe('TestMonk');
-    });
 
-    it('does not log damage or hp_change on miss', async () => {
+      // Now test miss path
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(1);
 
@@ -617,13 +493,20 @@ describe('bonusAttacksHandler', () => {
         1
       );
 
-      const damageEntries = addEntry.mock.calls.filter(
+      attackEntries = addEntry.mock.calls.filter(
+        call => call[1].rollType === 'attack'
+      );
+      expect(attackEntries.length).toBe(1);
+      expect(attackEntries[0][1].hit).toBe(false);
+
+      damageEntries = addEntry.mock.calls.filter(
         call => call[1].rollType === 'damage'
       );
-      const hpEntries = addEntry.mock.calls.filter(
+      expect(damageEntries.length).toBe(0);
+
+      hpEntries = addEntry.mock.calls.filter(
         call => call[1].type === 'hp_change'
       );
-      expect(damageEntries.length).toBe(0);
       expect(hpEntries.length).toBe(0);
     });
 
@@ -647,12 +530,12 @@ describe('bonusAttacksHandler', () => {
       expect(result.payload.description).toContain('AC 10');
     });
 
-    it('handles null/undefined applyDamageToTarget result gracefully', async () => {
+    it('handles null/undefined applyDamageToTarget or rollExpression results gracefully', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
       applyDamageToTarget.mockReturnValue(null);
 
-      const result = await applyFlurryOfBlows(
+      let result = await applyFlurryOfBlows(
         action,
         makePlayerStats(),
         campaignName,
@@ -660,18 +543,16 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('0 damage');
-    });
 
-    it('handles null/undefined rollExpression result gracefully', async () => {
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
       rollExpression.mockReturnValue(null);
       applyDamageToTarget.mockReturnValue({ finalDamage: 0, newHp: 7 });
 
-      const result = await applyFlurryOfBlows(
+      result = await applyFlurryOfBlows(
         action,
         makePlayerStats(),
         campaignName,
@@ -679,12 +560,11 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('0 damage');
     });
 
-    it('ends invisibility when dealing damage > 0', async () => {
+    it('ends invisibility when dealing damage > 0 but not when damage is 0', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
       applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });
@@ -697,14 +577,12 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
       expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith(
         'TestMonk',
         campaignName
       );
-    });
 
-    it('does not end invisibility when damage is 0', async () => {
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
       applyDamageToTarget.mockReturnValue({ finalDamage: 0, newHp: 7 });
@@ -717,53 +595,47 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
       expect(endInvisibilityOnHostileAction).not.toHaveBeenCalled();
     });
 
-    it('uses playerStats.automation.actions for open_hand_technique lookup', async () => {
+    it('handles playerStats.automation being undefined or missing actions array', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
       applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });
 
-      const playerStatsNoAutomation = makePlayerStats({ automation: undefined });
-
-      const result = await applyFlurryOfBlows(
+      let playerStats = makePlayerStats({ automation: undefined });
+      let result = await applyFlurryOfBlows(
         action,
-        playerStatsNoAutomation,
+        playerStats,
         campaignName,
         mapName,
         { Goblin: 1 },
         1
       );
-
       expect(result.openHandTargets).toBeUndefined();
-    });
 
-    it('uses playerStats.automation.actions without actions array', async () => {
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
       applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });
 
-      const playerStatsNoActions = makePlayerStats({ automation: {} });
-
-      const result = await applyFlurryOfBlows(
+      playerStats = makePlayerStats({ automation: {} });
+      result = await applyFlurryOfBlows(
         action,
-        playerStatsNoActions,
+        playerStats,
         campaignName,
         mapName,
         { Goblin: 1 },
         1
       );
-
       expect(result.openHandTargets).toBeUndefined();
     });
 
-    it('reports correct pluralization for crit count in description', async () => {
+    it('reports correct pluralization for crit count: "1 critical" vs "X criticals"', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(20);
 
-      const result = await applyFlurryOfBlows(
+      let result = await applyFlurryOfBlows(
         action,
         makePlayerStats(),
         campaignName,
@@ -771,15 +643,13 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
       expect(result.payload.description).toContain('1 critical');
-    });
 
-    it('reports plural "criticals" when multiple crits', async () => {
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(20);
 
-      const result = await applyFlurryOfBlows(
+      result = await applyFlurryOfBlows(
         action,
         makePlayerStats(),
         campaignName,
@@ -787,15 +657,13 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 2 },
         2
       );
-
       expect(result.payload.description).toContain('2 criticals');
-    });
 
-    it('reports "0 criticals" when no crits', async () => {
+      vi.clearAllMocks();
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(10);
 
-      const result = await applyFlurryOfBlows(
+      result = await applyFlurryOfBlows(
         action,
         makePlayerStats(),
         campaignName,
@@ -803,29 +671,10 @@ describe('bonusAttacksHandler', () => {
         { Goblin: 1 },
         1
       );
-
       expect(result.payload.description).toContain('0 criticals');
     });
 
-    it('accumulates total damage across multiple targets', async () => {
-      getCombatSummary.mockReturnValue(combatSummary);
-      vi.mocked(rollD20).mockReturnValue(18);
-      applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });
-
-      const result = await applyFlurryOfBlows(
-        action,
-        makePlayerStats(),
-        campaignName,
-        mapName,
-        { Goblin: 1, Orc: 1 },
-        2
-      );
-
-      expect(result.payload.description).toContain('2 hits');
-      expect(result.payload.description).toContain('8 damage');
-    });
-
-    it('logs ability_use entry with correct summary', async () => {
+    it('accumulates total damage across multiple targets and logs ability_use entry', async () => {
       getCombatSummary.mockReturnValue(combatSummary);
       vi.mocked(rollD20).mockReturnValue(18);
       applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });

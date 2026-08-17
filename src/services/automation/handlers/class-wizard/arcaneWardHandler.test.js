@@ -181,148 +181,61 @@ describe('arcaneWardHandler', () => {
             });
         });
 
-        describe('projected ward - ward has no HP', () => {
-            it('absorbs nothing when wardHp is 0, logs entries but makes no state changes', async () => {
-                setMocks(
-                    wardRuntime('Goblin', 0, 13, { rawDamage: 7 }, 5, 10),
-                    combatContext('TestWizard', 'Goblin'),
-                    { name: 'Goblin' },
-                );
+        describe('projected ward - absorption scenarios', () => {
+            it.each([
+                ['full', 10, 15, { rawDamage: 7 }, 5, 10, 10, 3, true],
+                ['partial', 5, 13, { rawDamage: 12 }, 8, 15, 13, 0, false],
+                ['zero absorption (ward empty)', 0, 13, { rawDamage: 7 }, 5, 10, 5, null, false],
+            ])('absorbs %s: wardHp=%d, max=%d, damage=%j, targetHp=%d, maxHp=%d → targetHp=%d, wardHp=%d, allAbsorbed=%s',
+                async (_label, wardHp, wardMax, projectedDamage, targetCurrentHp, targetMaxHp, expectedTargetHp, expectedWardHp, allAbsorbed) => {
+                    setMocks(
+                        wardRuntime('Goblin', wardHp, wardMax, projectedDamage, targetCurrentHp, targetMaxHp),
+                        combatContext('TestWizard', 'Goblin'),
+                        { name: 'Goblin' },
+                    );
 
-                await handle(
-                    { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    campaignName,
-                );
+                    const result = await handle(
+                        { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
+                        makeWizardStats('TestWizard', 5, 3),
+                        campaignName,
+                    );
 
-                // absorbed = min(7, 0) = 0, ward HP not reduced but target HP is still set (to same value)
-                expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'currentHitPoints', 5, campaignName);
-                expect(setRuntimeValue).not.toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', expect.any(Number), campaignName);
-                // but logging still happens
-                expect(addEntry).toHaveBeenCalledTimes(2);
-                expect(addEntry).toHaveBeenNthCalledWith(
-                    1,
-                    campaignName,
-                    expect.objectContaining({
-                        type: 'ability_use',
-                        characterName: 'TestWizard',
-                        abilityName: 'Arcane Ward',
-                    }),
-                );
-                expect(addEntry).toHaveBeenNthCalledWith(
-                    2,
-                    campaignName,
-                    expect.objectContaining({
-                        type: 'ward_absorbed',
-                        targetName: 'Goblin',
-                        damage: 0,
-                        wizardName: 'TestWizard',
-                        remainingWardHp: 0,
-                    }),
-                );
-            });
-        });
-
-        describe('projected ward - full absorption', () => {
-            it('absorbs all damage and restores target HP to max', async () => {
-                setMocks(
-                    wardRuntime('Goblin', 10, 15, { rawDamage: 7 }, 5, 10),
-                    combatContext('TestWizard', 'Goblin'),
-                    { name: 'Goblin' },
-                );
-
-                const result = await handle(
-                    { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    campaignName,
-                );
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.type).toBe('automation_info');
-                expect(result.payload.automationType).toBe('projected_ward');
-                expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'currentHitPoints', 10, campaignName);
-                expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 3, campaignName);
-                expect(result.payload.description).toContain('All damage absorbed');
-                expect(result.payload.description).toContain('absorbed 7');
-            });
-
-            it('caps target HP at maxHitPoints when restoration would exceed it', async () => {
-                setMocks(
-                    wardRuntime('Goblin', 10, 15, { rawDamage: 8 }, 9, 10),
-                    combatContext('TestWizard', 'Goblin'),
-                    { name: 'Goblin' },
-                );
-
-                await handle(
-                    { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    campaignName,
-                );
-
-                expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'currentHitPoints', 10, campaignName);
-                expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 2, campaignName);
-            });
-        });
-
-        describe('projected ward - partial absorption', () => {
-            it('absorbs what ward has and lets the rest through', async () => {
-                setMocks(
-                    wardRuntime('Ogre', 5, 13, { rawDamage: 12 }, 8, 15),
-                    combatContext('TestWizard', 'Ogre'),
-                    { name: 'Ogre' },
-                );
-
-                const result = await handle(
-                    { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    campaignName,
-                );
-
-                expect(result.type).toBe('popup');
-                expect(setRuntimeValue).toHaveBeenCalledWith('Ogre', 'currentHitPoints', 13, campaignName);
-                expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 0, campaignName);
-                expect(result.payload.description).toContain('absorbed 5');
-                expect(result.payload.description).toContain('7 remaining damage');
-            });
-        });
-
-        describe('projected ward - null target HP', () => {
-            it('skips target HP restoration when currentHitPoints is null but still reduces ward and logs', async () => {
-                setMocks(
-                    wardRuntime('Goblin', 5, 13, { rawDamage: 4 }, null, 10),
-                    combatContext('TestWizard', 'Goblin'),
-                    { name: 'Goblin' },
-                );
-
-                await handle(
-                    { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    campaignName,
-                );
-
-                expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'currentHitPoints', expect.any(Number), campaignName);
-                expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 1, campaignName);
-                expect(addEntry).toHaveBeenCalledTimes(2);
-            });
-        });
-
-        describe('projected ward - null maxHitPoints', () => {
-            it('caps target HP at currentHitPoints + absorbed when maxHitPoints is null', async () => {
-                setMocks(
-                    wardRuntime('Goblin', 5, 13, { rawDamage: 4 }, 8, null),
-                    combatContext('TestWizard', 'Goblin'),
-                    { name: 'Goblin' },
-                );
-
-                await handle(
-                    { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    campaignName,
-                );
-
-                // maxHitPoints is null, fallback is targetHp + absorbed = 8 + 4 = 12
-                expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'currentHitPoints', 12, campaignName);
-            });
+                    expect(result.type).toBe('popup');
+                    expect(result.payload.type).toBe('automation_info');
+                    expect(result.payload.automationType).toBe('projected_ward');
+                    expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'currentHitPoints', expectedTargetHp, campaignName);
+                    if (expectedWardHp !== null) {
+                        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', expectedWardHp, campaignName);
+                    } else {
+                        expect(setRuntimeValue).not.toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', expect.any(Number), campaignName);
+                    }
+                    expect(addEntry).toHaveBeenCalledTimes(2);
+                    expect(addEntry).toHaveBeenNthCalledWith(
+                        1,
+                        campaignName,
+                        expect.objectContaining({
+                            type: 'ability_use',
+                            characterName: 'TestWizard',
+                            abilityName: 'Arcane Ward',
+                        }),
+                    );
+                    expect(addEntry).toHaveBeenNthCalledWith(
+                        2,
+                        campaignName,
+                        expect.objectContaining({
+                            type: 'ward_absorbed',
+                            targetName: 'Goblin',
+                            wizardName: 'TestWizard',
+                            remainingWardHp: expect.any(Number),
+                        }),
+                    );
+                    if (allAbsorbed) {
+                        expect(result.payload.description).toContain('All damage absorbed');
+                    } else {
+                        expect(result.payload.description).toContain('remaining damage');
+                    }
+                },
+            );
         });
     });
 });

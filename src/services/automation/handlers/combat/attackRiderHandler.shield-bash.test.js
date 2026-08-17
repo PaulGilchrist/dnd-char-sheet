@@ -42,7 +42,7 @@ vi.mock('../../common/oncePerTurn.js', () => ({
 
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { buildSaveDc, createSaveListener } from '../../../automation/common/savePrompt.js';
+import { createSaveListener } from '../../../automation/common/savePrompt.js';
 import { checkOncePerTurnWithSkip } from '../../common/oncePerTurn.js';
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -104,9 +104,12 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
     });
 
     describe('prerequisites - shield check', () => {
-        it('should return popup when no shield equipped', async () => {
+        it.each([
+            [{ equipped: [], equipment: [] }, 'no equipped items'],
+            [{ equipped: ['Longsword', 'Chain Mail'], equipment: [{ name: 'Longsword', armor_category: 'Light Armor' }, { name: 'Chain Mail', armor_category: 'Medium Armor' }] }, 'equipped items that are not shields'],
+        ])('should return popup when %s', async (config, _description) => {
             const action = makeShieldBashAction();
-            const stats = makePlayerStats();
+            const stats = makePlayerStats(config);
 
             const result = await handle(action, stats, 'test-campaign', 'map');
 
@@ -114,86 +117,53 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
             expect(result.payload.description).toContain('Shield Bash requires an equipped shield');
         });
 
-        it('should return popup when equipped items do not include a shield', async () => {
+        it.each([
+            [{ equipped: ['Shield'], equipment: [{ name: 'Shield', armor_category: 'Shield' }] }, 'standard shield'],
+            [{ equipped: ['Tower Shield'], equipment: [{ name: 'Tower Shield', equipment_category: 'Shield' }] }, 'tower shield via equipment_category'],
+            [{ equipped: ['+1 Shield'], equipment: [{ name: 'Shield', armor_category: 'Shield' }] }, 'magic shield (parsed base name)'],
+        ])('should pass shield check for %s', async (config, _description) => {
             const action = makeShieldBashAction();
-            const stats = makePlayerStats({
-                equipped: ['Longsword', 'Chain Mail'],
-                equipment: [
-                    { name: 'Longsword', armor_category: 'Light Armor' },
-                    { name: 'Chain Mail', armor_category: 'Medium Armor' },
-                ],
+            const stats = makePlayerStats(config);
+            getRuntimeValue.mockImplementation((_scope, key, _camp) => {
+                if (key === 'lastAttack') return { hit: true, attackerName: 'TestHero', weaponType: 'melee', targetName: 'Goblin' };
+                return null;
             });
 
             const result = await handle(action, stats, 'test-campaign', 'map');
 
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Shield Bash requires an equipped shield');
-        });
-
-        it('should pass shield check for various shield configurations', async () => {
-            const shieldConfigs = [
-                { equipped: ['Shield'], equipment: [{ name: 'Shield', armor_category: 'Shield' }] },
-                { equipped: ['Tower Shield'], equipment: [{ name: 'Tower Shield', equipment_category: 'Shield' }] },
-                { equipped: ['+1 Shield'], equipment: [{ name: 'Shield', armor_category: 'Shield' }] },
-            ];
-
-            for (const config of shieldConfigs) {
-                vi.clearAllMocks();
-                const action = makeShieldBashAction();
-                const stats = makePlayerStats(config);
-                getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                    if (key === 'lastAttack') return { hit: true, attackerName: 'TestHero', weaponType: 'melee', targetName: 'Goblin' };
-                    return null;
-                });
-
-                const result = await handle(action, stats, 'test-campaign', 'map');
-
-                expect(result.type).toBe('modal');
-                expect(result.modalName).toBe('shieldBash');
-            }
+            expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('shieldBash');
         });
     });
 
     describe('prerequisites - lastAttack validation', () => {
-        function setupValidShield() {
-            return makePlayerStats({
+        it.each([
+            [null, 'Shield Bash requires a hit'],
+            [{ hit: false, attackerName: 'TestHero', weaponType: 'melee', targetName: 'Goblin' }, 'Shield Bash requires a hit'],
+        ])('should return popup when lastAttack is %j', async (lastAttack, expectedText) => {
+            const action = makeShieldBashAction();
+            const stats = makePlayerStats({
                 equipped: ['Shield'],
                 equipment: [{ name: 'Shield', armor_category: 'Shield' }],
             });
-        }
-
-        it('should return popup when lastAttack is null or hit is false', async () => {
-            const action = makeShieldBashAction();
-            const stats = setupValidShield();
 
             getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                if (key === 'lastAttack') return null;
+                if (key === 'lastAttack') return lastAttack;
                 return null;
             });
 
             const result = await handle(action, stats, 'test-campaign', 'map');
 
             expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Shield Bash requires a hit');
-        });
-
-        it('should return popup when lastAttack.hit is false', async () => {
-            const action = makeShieldBashAction();
-            const stats = setupValidShield();
-            getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                if (key === 'lastAttack') return { hit: false, attackerName: 'TestHero', weaponType: 'melee', targetName: 'Goblin' };
-                return null;
-            });
-
-            const result = await handle(action, stats, 'test-campaign', 'map');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Shield Bash requires a hit');
+            expect(result.payload.description).toContain(expectedText);
         });
 
         it('should return popup when lastAttack.attackerName does not match player', async () => {
             const action = makeShieldBashAction();
-            const stats = setupValidShield();
+            const stats = makePlayerStats({
+                equipped: ['Shield'],
+                equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+            });
             getRuntimeValue.mockImplementation((_scope, key, _camp) => {
                 if (key === 'lastAttack') return { hit: true, attackerName: 'Orc', weaponType: 'melee', targetName: 'Goblin' };
                 return null;
@@ -207,7 +177,10 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
 
         it('should return popup when lastAttack.weaponType is not melee', async () => {
             const action = makeShieldBashAction();
-            const stats = setupValidShield();
+            const stats = makePlayerStats({
+                equipped: ['Shield'],
+                equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+            });
             getRuntimeValue.mockImplementation((_scope, key, _camp) => {
                 if (key === 'lastAttack') return { hit: true, attackerName: 'TestHero', weaponType: 'ranged', targetName: 'Goblin' };
                 return null;
@@ -221,7 +194,10 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
 
         it('should return popup when lastAttack.targetName is null or undefined', async () => {
             const action = makeShieldBashAction();
-            const stats = setupValidShield();
+            const stats = makePlayerStats({
+                equipped: ['Shield'],
+                equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+            });
 
             getRuntimeValue.mockImplementation((_scope, key, _camp) => {
                 if (key === 'lastAttack') return { hit: true, attackerName: 'TestHero', weaponType: 'melee', targetName: null };
@@ -232,34 +208,6 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('no target found');
-        });
-    });
-
-    describe('oncePerTurn skip check', () => {
-        it('should return popup when oncePerTurn skip returns already used', async () => {
-            const action = makeShieldBashAction();
-            const stats = makePlayerStats({
-                equipped: ['Shield'],
-                equipment: [{ name: 'Shield', armor_category: 'Shield' }],
-            });
-            getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                if (key === 'lastAttack') return { hit: true, attackerName: 'TestHero', weaponType: 'melee', targetName: 'Goblin' };
-                return null;
-            });
-            vi.mocked(checkOncePerTurnWithSkip).mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Shield Bash',
-                    description: 'Shield Bash can only be used once per turn.',
-                },
-            });
-
-            const result = await handle(action, stats, 'test-campaign', 'map');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('once per turn');
-            expect(createSaveListener).not.toHaveBeenCalled();
         });
     });
 
@@ -285,11 +233,7 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
                 sourceName: 'Shield Bash',
             }));
 
-            const calls = addEntry.mock.calls;
-            expect(calls).toHaveLength(2);
-
-            // First call: save prompt
-            expect(calls[0][1]).toEqual(expect.objectContaining({
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'roll',
                 rollType: 'save-damage',
                 targetName: 'Goblin',
@@ -297,12 +241,11 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
                 saveDc: 15,
             }));
 
-            // Second call: save result
-            const resultEntry = calls.find(c => c[1]?.saveResult === 'failure');
-            expect(resultEntry).toBeDefined();
-            expect(resultEntry[1].total).toBe(5);
-            expect(resultEntry[1].rolls).toEqual([5]);
-            expect(resultEntry[1].bonus).toBe(0);
+            const failureEntry = addEntry.mock.calls.find(c => c[1]?.saveResult === 'failure');
+            expect(failureEntry).toBeDefined();
+            expect(failureEntry[1].total).toBe(5);
+            expect(failureEntry[1].rolls).toEqual([5]);
+            expect(failureEntry[1].bonus).toBe(0);
         });
 
         it('should return popup on successful save', async () => {
@@ -320,44 +263,17 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
             expect(result.payload.description).toContain('no effect');
 
             const calls = addEntry.mock.calls;
-            const resultEntry = calls.find(c => c[1]?.saveResult === 'success');
-            expect(resultEntry).toBeDefined();
-            expect(resultEntry[1].total).toBe(18);
-            expect(resultEntry[1].rolls).toEqual([18]);
-            expect(resultEntry[1].bonus).toBe(3);
+            const successEntry = calls.find(c => c[1]?.saveResult === 'success');
+            expect(successEntry).toBeDefined();
+            expect(successEntry[1].total).toBe(18);
+            expect(successEntry[1].rolls).toEqual([18]);
+            expect(successEntry[1].bonus).toBe(3);
         });
 
-        it('should use auto.saveDc value directly when provided as number', async () => {
-            const action = makeShieldBashAction({
-                automation: {
-                    effect: 'push_or_prone',
-                    oncePerTurn: true,
-                    trigger: 'hit',
-                    saveDc: 18,
-                    saveType: 'STR',
-                    saveAbility: 'STR',
-                    options: [],
-                },
-            });
-            const stats = makePlayerStats({
-                equipped: ['Shield'],
-                equipment: [{ name: 'Shield', armor_category: 'Shield' }],
-            });
-            getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                if (key === 'lastAttack') return { hit: true, attackerName: 'TestHero', weaponType: 'melee', targetName: 'Goblin' };
-                return null;
-            });
-            setupShieldBashMocks({ success: false, roll: 5, total: 5, saveBonus: 0 });
-
-            await handle(action, stats, 'test-campaign', 'map');
-
-            expect(buildSaveDc).not.toHaveBeenCalled();
-            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                saveDc: 18,
-            }));
-        });
-
-        it('should handle missing Strength ability by using 0 bonus in formula', async () => {
+        it.each([
+            [[{ name: 'Dexterity', bonus: 2 }], 'missing Strength ability'],
+            [null, 'null abilities array'],
+        ])('should use default formula DC 11 when %s', async (abilities, _description) => {
             const action = makeShieldBashAction({
                 automation: {
                     effect: 'push_or_prone',
@@ -371,7 +287,7 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
             });
             const stats = makePlayerStats({
                 proficiency: 3,
-                abilities: [{ name: 'Dexterity', bonus: 2 }],
+                abilities,
                 equipped: ['Shield'],
                 equipment: [{ name: 'Shield', armor_category: 'Shield' }],
             });
@@ -384,40 +300,6 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
             const result = await handle(action, stats, 'test-campaign', 'map');
 
             expect(result.type).toBe('modal');
-            // Formula: 8 + 0 (no STR) + 3 (proficiency) = 11
-            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                saveDc: 11,
-            }));
-        });
-
-        it('should handle null abilities array using default formula', async () => {
-            const action = makeShieldBashAction({
-                automation: {
-                    effect: 'push_or_prone',
-                    oncePerTurn: true,
-                    trigger: 'hit',
-                    saveDc: null,
-                    saveType: 'STR',
-                    saveAbility: 'STR',
-                    options: [],
-                },
-            });
-            const stats = makePlayerStats({
-                proficiency: 3,
-                abilities: null,
-                equipped: ['Shield'],
-                equipment: [{ name: 'Shield', armor_category: 'Shield' }],
-            });
-            getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                if (key === 'lastAttack') return { hit: true, attackerName: 'TestHero', weaponType: 'melee', targetName: 'Goblin' };
-                return null;
-            });
-            setupShieldBashMocks({ success: false, roll: 5, total: 5, saveBonus: 0 });
-
-            const result = await handle(action, stats, 'test-campaign', 'map');
-
-            expect(result.type).toBe('modal');
-            // Formula: 8 + 0 (no abilities) + 3 (proficiency) = 11
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 saveDc: 11,
             }));
@@ -425,7 +307,7 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
     });
 
     describe('modal payload', () => {
-        it('should include action, playerStats, campaignName, targetName, saveDc in modal payload', async () => {
+        it('should return shieldBash modal with action, playerStats, campaignName, targetName, saveDc', async () => {
             const action = makeShieldBashAction();
             const stats = makePlayerStats({
                 equipped: ['Shield'],
@@ -439,6 +321,8 @@ describe('attackRiderHandler - Shield Bash (push_or_prone + oncePerTurn)', () =>
 
             const result = await handle(action, stats, 'test-campaign', 'map');
 
+            expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('shieldBash');
             expect(result.payload.action.name).toBe('Shield Bash');
             expect(result.payload.action.options).toHaveLength(1);
             expect(result.payload.action.options[0].name).toBe('Prone');

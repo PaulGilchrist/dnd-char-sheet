@@ -165,6 +165,9 @@ describe('patientDefenseHandler — base Patient Defense', () => {
         expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
         expect(expirations.addExpiration).not.toHaveBeenCalled();
         expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'focusPoints', 1, campaignName);
+
+        // Reset mock to default for subsequent tests
+        buffToggle.isBuffActive.mockReset();
     });
 
     it('falls back to maxFocusPoints when runtime value is undefined', async () => {

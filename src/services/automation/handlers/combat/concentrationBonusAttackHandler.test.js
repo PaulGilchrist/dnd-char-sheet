@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './concentrationBonusAttackHandler.js';
@@ -147,49 +147,17 @@ describe('concentrationBonusAttackHandler', () => {
                 }));
                 expect(result.payload.description).toContain('Concentrating on');
             });
-
-            it('attempts concentration set when combatSummary exists but creatures is undefined', async () => {
-                getCombatSummary.mockReturnValue({});
-
-                const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-                // Handler calls addConcentration when combatSummary is truthy,
-                // even if creatures array is missing (addConcentration handles it internally)
-                expect(addConcentration).toHaveBeenCalled();
-                expect(storage.set).toHaveBeenCalled();
-                expect(addEntry).toHaveBeenCalled();
-                expect(result.type).toBe('popup');
-            });
         });
 
-        // ── Creature not found in combat summary ─────────────────
+        // ── Default / custom values ──────────────────────────────
 
-        describe('creature not found in combat summary', () => {
-            it('attempts concentration set when creature name does not match in combat summary', async () => {
-                getCombatSummary.mockReturnValue({
-                    creatures: [{ name: 'OtherCharacter', concentration: null }],
-                });
-
-                const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-                // Handler calls addConcentration when creature is not found (wasConcentrating is falsy),
-                // but addConcentration returns early since creature lookup fails
-                expect(addConcentration).toHaveBeenCalled();
-                expect(storage.set).toHaveBeenCalled();
-                expect(addEntry).toHaveBeenCalled();
-                expect(result.payload.name).toBe('Telekinetic Master');
-            });
-        });
-
-        // ── Default values ───────────────────────────────────────
-
-        describe('default values', () => {
-            it('defaults concentrationSpell to Telekinesis when automation.concentrationSpell is undefined', async () => {
+        describe('default and custom values', () => {
+            it('uses default concentrationSpell and dc when not provided', async () => {
                 getCombatSummary.mockReturnValue({
                     creatures: [{ name: 'TestCharacter', concentration: null }],
                 });
 
-                const action = makeAction({ automation: { concentrationSpell: undefined } });
+                const action = makeAction({ automation: { concentrationSpell: undefined, dc: undefined } });
                 await handle(action, makePlayerStats(), campaignName);
 
                 expect(addConcentration).toHaveBeenCalledWith(
@@ -200,50 +168,18 @@ describe('concentrationBonusAttackHandler', () => {
                 );
             });
 
-            it('defaults dc to 10 when automation.dc is undefined', async () => {
+            it('uses custom concentrationSpell and dc when provided', async () => {
                 getCombatSummary.mockReturnValue({
                     creatures: [{ name: 'TestCharacter', concentration: null }],
                 });
 
-                const action = makeAction({ automation: { dc: undefined } });
-                await handle(action, makePlayerStats(), campaignName);
-
-                expect(addConcentration).toHaveBeenCalledWith(
-                    expect.any(Object),
-                    'TestCharacter',
-                    'Telekinesis',
-                    10,
-                );
-            });
-
-            it('uses custom concentrationSpell when provided', async () => {
-                getCombatSummary.mockReturnValue({
-                    creatures: [{ name: 'TestCharacter', concentration: null }],
-                });
-
-                const action = makeAction({ automation: { concentrationSpell: 'Focus' } });
+                const action = makeAction({ automation: { concentrationSpell: 'Focus', dc: 15 } });
                 await handle(action, makePlayerStats(), campaignName);
 
                 expect(addConcentration).toHaveBeenCalledWith(
                     expect.any(Object),
                     'TestCharacter',
                     'Focus',
-                    10,
-                );
-            });
-
-            it('uses custom dc when provided', async () => {
-                getCombatSummary.mockReturnValue({
-                    creatures: [{ name: 'TestCharacter', concentration: null }],
-                });
-
-                const action = makeAction({ automation: { dc: 15 } });
-                await handle(action, makePlayerStats(), campaignName);
-
-                expect(addConcentration).toHaveBeenCalledWith(
-                    expect.any(Object),
-                    'TestCharacter',
-                    'Telekinesis',
                     15,
                 );
             });

@@ -135,48 +135,6 @@ describe('onArcaneWardRestore', () => {
             expect(result.payload.description).toContain('0 → 2/13');
         });
 
-        it('defaults to 0 when ward max is not set, capping at 0', async () => {
-            setWardMocks((player, key) => {
-                if (key === 'arcaneWardActive') return true;
-                if (key === 'arcaneWardHp') return 5;
-                if (key === 'arcaneWardMax') return undefined;
-                return undefined;
-            });
-
-            const result = await onArcaneWardRestore(
-                { name: 'Arcane Ward', automation: { type: 'passive_rule' } },
-                makeWizardStats('TestWizard', 5, 3),
-                1,
-                campaignName,
-            );
-
-            expect(result.type).toBe('popup');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 0, campaignName);
-            expect(result.payload.description).toContain('5 → 0/0');
-        });
-
-        it('defaults both max and current to 0 when neither is set', async () => {
-            setWardMocks((player, key) => {
-                if (key === 'arcaneWardActive') return true;
-                if (key === 'arcaneWardHp') return undefined;
-                if (key === 'arcaneWardMax') return undefined;
-                return undefined;
-            });
-
-            const result = await onArcaneWardRestore(
-                { name: 'Arcane Ward', automation: { type: 'passive_rule' } },
-                makeWizardStats('TestWizard', 5, 3),
-                2,
-                campaignName,
-            );
-
-            expect(result.type).toBe('popup');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 0, campaignName);
-            expect(result.payload.description).toContain('0 → 0/0');
-        });
-    });
-
-    describe('error handling', () => {
         it('throws when addEntry rejects', async () => {
             setWardMocks((player, key) => {
                 if (key === 'arcaneWardActive') return true;

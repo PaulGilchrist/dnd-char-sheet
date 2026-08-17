@@ -58,3 +58,10 @@ coverage-report
 # Openclaw backups
 *openclaw-backup*.tar.gz
 coverage-report.txt
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

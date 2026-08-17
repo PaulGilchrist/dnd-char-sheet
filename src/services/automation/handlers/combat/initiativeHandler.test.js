@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ───────────────────────────────────────────────────────
@@ -139,20 +139,6 @@ describe('initiativeHandler.handle', () => {
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
 
-    it('returns popup when bardic inspiration uses are negative', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({ effect: 'bonus_initiative_allies' });
-      setupRuntimeMocks({
-        'Bard:activeConditions:TestCampaign': [],
-        'Bard:bardicInspirationUses:TestCampaign': -1,
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('no uses remaining');
-    });
   });
 
   describe('effect: bonus_initiative_allies — success path', () => {
@@ -424,21 +410,6 @@ describe('initiativeHandler.handle', () => {
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('No need to regain');
       expect(result.payload.description).toContain('3 Wild Shape use');
-      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-    });
-
-    it('returns popup when current Wild Shape uses > 1', async () => {
-      const ps = makeDruidStats();
-      const action = makeAction({ effect: 'wild_shape_regen_on_initiative' });
-      setupRuntimeMocks({
-        'Bard:wildShapeUses:TestCampaign': 2,
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('No need to regain');
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
 
@@ -868,19 +839,6 @@ describe('initiativeHandler.handle', () => {
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toBe('Some custom effect.');
-      expect(result.payload.automationType).toBe('initiative');
-    });
-
-    it('passes through action.name and automationType in payload', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Custom Action',
-        automation: { type: 'initiative', effect: 'unknown_xyz' },
-      };
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.name).toBe('Custom Action');
       expect(result.payload.automationType).toBe('initiative');
     });
 

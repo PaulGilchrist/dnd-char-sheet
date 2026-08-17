@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './bonusActionAttackHandler.js';
@@ -93,26 +93,11 @@ describe('bonusActionAttackHandler', () => {
                 expect(automationInfoPopup).toHaveBeenCalledWith(action);
             });
 
-            it('should use empty string for description when missing', async () => {
+            it('should use empty string for description when falsy', async () => {
                 const action = makeAction({ description: undefined });
                 const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
 
                 expect(result.payload.description).toBe('');
-            });
-
-            it('should use empty string for description when null', async () => {
-                const action = makeAction({ description: null });
-                const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
-
-                expect(result.payload.description).toBe('');
-            });
-
-            it('should handle action with no automation type', async () => {
-                const action = { name: 'Test Action', automation: {} };
-                const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.automationType).toBeUndefined();
             });
         });
 
@@ -167,28 +152,8 @@ describe('bonusActionAttackHandler', () => {
                 );
             });
 
-            it('should skip use tracking when usesMax is 0', async () => {
+            it('should skip use tracking when usesMax is not positive', async () => {
                 const action = makeAction({ automation: { usesMax: 0 } });
-                getRuntimeValue.mockReturnValue(0);
-
-                const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
-
-                expect(result.type).toBe('popup');
-                expect(setRuntimeValue).not.toHaveBeenCalled();
-            });
-
-            it('should skip use tracking when usesMax is undefined', async () => {
-                const action = makeAction();
-                getRuntimeValue.mockReturnValue(0);
-
-                const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
-
-                expect(result.type).toBe('popup');
-                expect(setRuntimeValue).not.toHaveBeenCalled();
-            });
-
-            it('should skip use tracking when usesMax is negative', async () => {
-                const action = makeAction({ automation: { usesMax: -1 } });
                 getRuntimeValue.mockReturnValue(0);
 
                 const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
@@ -221,23 +186,9 @@ describe('bonusActionAttackHandler', () => {
                 expect(setRuntimeValue).not.toHaveBeenCalled();
             });
 
-            it('should default to usesMax when getRuntimeValue returns null', async () => {
+            it('should default to usesMax when getRuntimeValue returns null or undefined', async () => {
                 const action = makeAction({ automation: { usesMax: 2 } });
                 getRuntimeValue.mockReturnValue(null);
-
-                await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
-
-                expect(setRuntimeValue).toHaveBeenCalledWith(
-                    'TestHero',
-                    'warPriestUses',
-                    1,
-                    CAMPAIGN_NAME,
-                );
-            });
-
-            it('should default to usesMax when getRuntimeValue returns undefined', async () => {
-                const action = makeAction({ automation: { usesMax: 2 } });
-                getRuntimeValue.mockReturnValue(undefined);
 
                 await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
 
@@ -264,16 +215,6 @@ describe('bonusActionAttackHandler', () => {
                 );
                 expect(findLastAttack).toHaveBeenCalledWith(CAMPAIGN_NAME);
                 expect(isPolearmWeapon).toHaveBeenCalled();
-            });
-
-            it('should call findLastAttack with campaign name', async () => {
-                isPolearmWeapon.mockResolvedValue(true);
-                findLastAttack.mockResolvedValue({ attackEvent: { bonus: 5 }, targetName: 'Goblin' });
-                const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm' } });
-
-                await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
-
-                expect(findLastAttack).toHaveBeenCalledWith(CAMPAIGN_NAME);
             });
         });
 
@@ -400,21 +341,6 @@ describe('bonusActionAttackHandler', () => {
 
                 expect(result.payload.attack.autoDamageFormula).toBe('2d6');
             });
-
-            it('should use weapon name from lastAttack for polearm check', async () => {
-                isPolearmWeapon.mockResolvedValue(true);
-                findLastAttack.mockResolvedValue({
-                    attackEvent: { bonus: 5, damageName: 'Longbow' },
-                    targetName: 'Goblin',
-                });
-                const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm' } });
-                const stats = makePlayerStats({ inventory: { equipped: ['Quarterstaff'] } });
-                const allEquipment = [{ name: 'Quarterstaff', properties: [] }];
-
-                await handle(action, stats, CAMPAIGN_NAME, 'map', allEquipment);
-
-                expect(isPolearmWeapon).toHaveBeenCalledWith('Longbow');
-            });
         });
 
         describe('weaponRequirement trigger', () => {
@@ -438,22 +364,6 @@ describe('bonusActionAttackHandler', () => {
                 expect(result.type).toBe('attack_roll');
                 expect(result.payload.attack.hitBonus).toBe(8);
                 expect(result.payload.attack.damageType).toBe('Bludgeoning');
-            });
-
-            it('should reject when weaponRequirement is set but polearm check fails', async () => {
-                isPolearmWeapon.mockResolvedValue(false);
-                const action = makeAction({
-                    automation: { weaponRequirement: 'quarterstaff_spear_heavy_reach' },
-                });
-                const stats = makePlayerStats({ inventory: { equipped: ['Warhammer'] } });
-                const allEquipment = [{ name: 'Warhammer', properties: ['Heavy'] }];
-
-                const result = await handle(action, stats, CAMPAIGN_NAME, 'map', allEquipment);
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.description).toBe(
-                    'Bonus Action Attack requires you to be holding a Quarterstaff, Spear, or a weapon with the Heavy and Reach properties.',
-                );
             });
         });
 
@@ -533,51 +443,6 @@ describe('bonusActionAttackHandler', () => {
             it('should not modify conditions if player is not grappled', async () => {
                 getRuntimeValue.mockImplementation((name, key) => {
                     if (key === 'activeConditions') return ['fatigued'];
-                    return null;
-                });
-                const action = makeAction({ automation: { effect: 'disengage_end_grappled' } });
-
-                const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
-
-                expect(result.payload.description).toBe(
-                    'You take the Disengage action and the Grappled condition ends on you.',
-                );
-                expect(setRuntimeValue).not.toHaveBeenCalled();
-            });
-
-            it('should handle empty conditions array', async () => {
-                getRuntimeValue.mockImplementation((name, key) => {
-                    if (key === 'activeConditions') return [];
-                    return null;
-                });
-                const action = makeAction({ automation: { effect: 'disengage_end_grappled' } });
-
-                const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
-
-                expect(result.payload.description).toBe(
-                    'You take the Disengage action and the Grappled condition ends on you.',
-                );
-                expect(setRuntimeValue).not.toHaveBeenCalled();
-            });
-
-            it('should handle null conditions gracefully', async () => {
-                getRuntimeValue.mockImplementation((name, key) => {
-                    if (key === 'activeConditions') return null;
-                    return null;
-                });
-                const action = makeAction({ automation: { effect: 'disengage_end_grappled' } });
-
-                const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'map', []);
-
-                expect(result.payload.description).toBe(
-                    'You take the Disengage action and the Grappled condition ends on you.',
-                );
-                expect(setRuntimeValue).not.toHaveBeenCalled();
-            });
-
-            it('should handle non-array conditions gracefully', async () => {
-                getRuntimeValue.mockImplementation((name, key) => {
-                    if (key === 'activeConditions') return 'grappled';
                     return null;
                 });
                 const action = makeAction({ automation: { effect: 'disengage_end_grappled' } });

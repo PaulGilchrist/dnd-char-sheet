@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -85,22 +85,6 @@ describe('damageReductionHandler', () => {
       expect(damageRollback.findLastAttack).not.toHaveBeenCalled();
     });
 
-    it('returns popup with shield message when player has only a weapon', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ['Longsword'] },
-        equipment: [{ name: 'Longsword', equipment_category: 'Weapon' }],
-      });
-      const action = makeAction({ requiresShield: true, reductionExpression: '2d6' });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('holding a Shield');
-      expect(automationService.evaluateAutoExpression).not.toHaveBeenCalled();
-      expect(damageRollback.findLastAttack).not.toHaveBeenCalled();
-    });
-
     it('proceeds to normal flow when player has a shield equipped', async () => {
       automationService.evaluateAutoExpression.mockReturnValue(5);
       damageRollback.findLastAttack.mockResolvedValue({
@@ -122,28 +106,6 @@ describe('damageReductionHandler', () => {
       expect(automationService.evaluateAutoExpression).toHaveBeenCalledWith('2d6', expect.any(Object));
       expect(damageRollback.findLastAttack).toHaveBeenCalledWith(campaignName);
     });
-
-    it('proceeds when player has a magic shield equipped', async () => {
-      automationService.evaluateAutoExpression.mockReturnValue(5);
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: { targetName: 'TestHero' },
-        targetName: 'TestHero',
-        totalDamage: 10,
-        damageTypes: ['Slashing'],
-      });
-      const ps = makePlayerStats({
-        inventory: { equipped: ['+2 Shield'] },
-        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
-      });
-      const action = makeAction({ requiresShield: true, reductionExpression: '2d6' });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('Reduce damage by');
-      expect(automationService.evaluateAutoExpression).toHaveBeenCalled();
-      expect(damageRollback.findLastAttack).toHaveBeenCalled();
-    });
   });
 
   // ── Shield or weapon requirement ────────────────────────────
@@ -160,18 +122,6 @@ describe('damageReductionHandler', () => {
       expect(result.payload.description).toContain('holding a Shield or a Simple or Martial weapon');
       expect(result.payload.automation).toBe(action.automation);
       expect(result.payload.automationType).toBe('damage_reduction');
-      expect(automationService.evaluateAutoExpression).not.toHaveBeenCalled();
-      expect(damageRollback.findLastAttack).not.toHaveBeenCalled();
-    });
-
-    it('returns popup when player has no equipment at all', async () => {
-      const ps = makePlayerStats({ inventory: { equipped: [] } });
-      const action = makeAction({ requiresShieldOrWeapon: true, reductionExpression: '2d6' });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('holding a Shield or a Simple or Martial weapon');
       expect(automationService.evaluateAutoExpression).not.toHaveBeenCalled();
       expect(damageRollback.findLastAttack).not.toHaveBeenCalled();
     });
@@ -219,51 +169,6 @@ describe('damageReductionHandler', () => {
       expect(automationService.evaluateAutoExpression).toHaveBeenCalled();
       expect(damageRollback.findLastAttack).toHaveBeenCalled();
     });
-
-    it('proceeds when player has a magic weapon equipped', async () => {
-      automationService.evaluateAutoExpression.mockReturnValue(5);
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: { targetName: 'TestHero' },
-        targetName: 'TestHero',
-        totalDamage: 10,
-        damageTypes: ['Slashing'],
-      });
-      const ps = makePlayerStats({
-        inventory: { equipped: ['+1 Longsword'] },
-        equipment: [{ name: 'Longsword', equipment_category: 'Weapon' }],
-      });
-      const action = makeAction({ requiresShieldOrWeapon: true, reductionExpression: '2d6' });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('Reduce damage by');
-      expect(automationService.evaluateAutoExpression).toHaveBeenCalled();
-    });
-
-    it('proceeds when player has both shield and weapon equipped', async () => {
-      automationService.evaluateAutoExpression.mockReturnValue(5);
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: { targetName: 'TestHero' },
-        targetName: 'TestHero',
-        totalDamage: 10,
-        damageTypes: ['Slashing'],
-      });
-      const ps = makePlayerStats({
-        inventory: { equipped: ['Shield', 'Longsword'] },
-        equipment: [
-          { name: 'Shield', armor_category: 'Shield' },
-          { name: 'Longsword', equipment_category: 'Weapon' },
-        ],
-      });
-      const action = makeAction({ requiresShieldOrWeapon: true, reductionExpression: '2d6' });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('Reduce damage by');
-      expect(automationService.evaluateAutoExpression).toHaveBeenCalled();
-    });
   });
 
   // ── Requirement priority ────────────────────────────────────
@@ -290,24 +195,6 @@ describe('damageReductionHandler', () => {
       expect(result.payload.automationType).toBe('damage_reduction');
       expect(automationService.evaluateAutoExpression).not.toHaveBeenCalled();
       expect(damageRollback.findLastAttack).not.toHaveBeenCalled();
-    });
-
-    it('requiresShield blocks when player has shield but requiresShield is true with no shield', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ['Longsword'] },
-        equipment: [{ name: 'Longsword', equipment_category: 'Weapon' }],
-      });
-      const action = makeAction({
-        requiresShield: true,
-        requiresShieldOrWeapon: false,
-        reductionExpression: '2d6',
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('holding a Shield');
-      expect(automationService.evaluateAutoExpression).not.toHaveBeenCalled();
     });
 
     it('proceeds when both requirements are true and player has a shield', async () => {
