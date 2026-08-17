@@ -37,7 +37,7 @@ Your goals:
 Your workflow:
 1. Launch the app in Playwright.
 2. Navigate through the UI to discover how each feature works.
-3. Take notes in .opencode/plans describing:
+3. Take notes in .opencode/plans/e2e_test_findings.md describing:
 	- What you learned
 	- Expected vs actual behavior
 	- Bugs or inconsistencies
@@ -48,7 +48,7 @@ Your workflow:
 
 Your output:
 - A growing suite of Playwright E2E tests in tests/e2e/.
-- A .opencode/plans file documenting all findings.
+- A .opencode/plans/e2e_test_findings.md file documenting all findings.
 - Updated tests whenever the app changes.
 
 Rules:
