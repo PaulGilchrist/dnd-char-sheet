@@ -389,3 +389,385 @@ export async function setGoldPieces(page, amount) {
   await page.getByLabel('Gold Pieces *').fill(amount.toString());
   await page.waitForTimeout(200);
 }
+
+// ============================================================================
+// Combat Automation Helpers
+// ============================================================================
+
+/**
+ * Ensure the test campaign exists and select it.
+ */
+export async function ensureTestCampaign(page) {
+  await page.goto('/');
+  await page.waitForTimeout(1000);
+  const exists = await page.getByRole('button', { name: 'test-campaign' }).isVisible({ timeout: 10000 }).catch(() => false);
+  if (!exists) {
+    // Campaign doesn't exist, create it
+    await page.getByRole('button', { name: 'Add' }).click();
+    await page.getByPlaceholder('Enter campaign name').fill('test-campaign');
+    await page.getByRole('button', { name: 'Create' }).click();
+    await page.waitForTimeout(2000);
+  }
+  await selectCampaign(page, 'test-campaign');
+  await page.waitForTimeout(2000);
+  // Close any open wizard/modals
+  for (let i = 0; i < 10; i++) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+  }
+}
+
+/**
+ * Navigate to initiative and roll initiative.
+ */
+export async function startCombat(page) {
+  await navigateToInitiative(page);
+  const rollBtn = page.getByRole('button', { name: 'Roll Initiative' });
+  if (await rollBtn.count() > 0 && await rollBtn.isVisible()) {
+    await rollBtn.click();
+    await page.waitForTimeout(2000);
+  }
+}
+
+/**
+ * Find a creature card by name partial match.
+ */
+export async function findCreatureCard(page, namePart) {
+  const creatureCards = page.locator('.creature-card');
+  const count = await creatureCards.count();
+  for (let i = 0; i < count; i++) {
+    const nameEl = creatureCards.nth(i).locator('.creature-name');
+    const name = (await nameEl.textContent()) || '';
+    if (name.includes(namePart)) {
+      return creatureCards.nth(i);
+    }
+  }
+  return null;
+}
+
+/**
+ * Set target on a creature card by name.
+ */
+export async function setCreatureTarget(page, creatureNamePart, targetName) {
+  const card = await findCreatureCard(page, creatureNamePart);
+  if (!card) throw new Error(`Creature "${creatureNamePart}" not found`);
+  const targetSelect = card.locator('.creature-target select');
+  if (await targetSelect.count() > 0 && await targetSelect.isVisible()) {
+    await targetSelect.selectOption(targetName);
+    await page.waitForTimeout(500);
+  }
+}
+
+/**
+ * Navigate to a character sheet and wait for it.
+ */
+export async function goToCharacterSheet(page, characterName) {
+  await page.getByRole('button', { name: characterName }).click();
+  await expect(page.locator('.char-sheet')).toBeVisible({ timeout: 10000 });
+  await page.waitForTimeout(1000);
+}
+
+/**
+ * Log all action sections on a character sheet.
+ */
+export async function logActionSections(page) {
+  const sections = page.locator('.sectionHeader');
+  const count = await sections.count();
+  console.log(`Character sheet sections (${count}):`);
+  for (let i = 0; i < count; i++) {
+    console.log(`  ${i + 1}: ${(await sections.nth(i).textContent())?.trim()}`);
+  }
+  return count;
+}
+
+/**
+ * Log all attacks in an action container.
+ */
+export async function logAttacks(page, containerIndex = 0) {
+  const containers = page.locator('.char-actions');
+  if (await containers.count() <= containerIndex) {
+    console.log(`No action container at index ${containerIndex}`);
+    return [];
+  }
+  const container = containers.nth(containerIndex);
+  const attackNames = container.locator('.attacks .left');
+  const count = await attackNames.count();
+  console.log(`Attacks in container ${containerIndex} (${count}):`);
+  const names = [];
+  for (let i = 0; i < count; i++) {
+    const name = (await attackNames.nth(i).textContent())?.trim() || '';
+    console.log(`  ${i + 1}: ${name}`);
+    names.push(name);
+  }
+  return names;
+}
+
+/**
+ * Log special actions on a character sheet.
+ */
+export async function logSpecialActions(page) {
+  const specialActions = page.locator('.char-special-actions');
+  if (await specialActions.count() === 0) {
+    console.log('No special actions section');
+    return [];
+  }
+  const featureItems = specialActions.locator('div');
+  const count = await featureItems.count();
+  console.log(`Special action items (${count}):`);
+  const names = [];
+  for (let i = 0; i < count; i++) {
+    const text = (await featureItems.nth(i).textContent())?.trim() || '';
+    console.log(`  ${i + 1}: ${text.substring(0, 100)}`);
+    names.push(text);
+  }
+  return names;
+}
+
+/**
+ * Log automation badges on a character sheet.
+ */
+export async function logAutomationBadges(page) {
+  const badges = page.locator('.automation-badge');
+  const count = await badges.count();
+  console.log(`Automation badges: ${count}`);
+  return count;
+}
+
+/**
+ * Click an attack on the character sheet by name.
+ */
+export async function clickAttackOnSheet(page, attackName) {
+  // Try clicking the attack name in the attacks container
+  const attackEl = page.locator('.attacks').filter({ hasText: attackName }).first();
+  if (await attackEl.count() > 0 && await attackEl.isVisible()) {
+    await attackEl.click();
+    await page.waitForTimeout(1000);
+    return true;
+  }
+  // Fallback: click by text
+  const textEl = page.getByText(attackName).first();
+  if (await textEl.count() > 0 && await textEl.isVisible()) {
+    await textEl.click();
+    await page.waitForTimeout(1000);
+    return true;
+  }
+  console.log(`Attack "${attackName}" not found on sheet`);
+  return false;
+}
+
+/**
+ * Click a special action / class feature by name.
+ */
+export async function clickSpecialAction(page, actionName) {
+  const actionEl = page.locator('.char-special-actions').filter({ hasText: actionName }).first();
+  if (await actionEl.count() > 0 && await actionEl.isVisible()) {
+    await actionEl.click();
+    await page.waitForTimeout(1000);
+    return true;
+  }
+  console.log(`Special action "${actionName}" not found`);
+  return false;
+}
+
+/**
+ * Click a reaction by name.
+ */
+export async function clickReaction(page, reactionName) {
+  const reactionEl = page.locator('.char-actions').nth(2).filter({ hasText: reactionName }).first();
+  if (await reactionEl.count() > 0 && await reactionEl.isVisible()) {
+    await reactionEl.click();
+    await page.waitForTimeout(1000);
+    return true;
+  }
+  console.log(`Reaction "${reactionName}" not found`);
+  return false;
+}
+
+/**
+ * Click a bonus action by name.
+ */
+export async function clickBonusAction(page, actionName) {
+  const bonusEl = page.locator('.char-actions').nth(1).filter({ hasText: actionName }).first();
+  if (await bonusEl.count() > 0 && await bonusEl.isVisible()) {
+    await bonusEl.click();
+    await page.waitForTimeout(1000);
+    return true;
+  }
+  console.log(`Bonus action "${actionName}" not found`);
+  return false;
+}
+
+/**
+ * Wait for a modal to appear and return its content.
+ */
+export async function waitForModalContent(page, timeout = 10000) {
+  // Look for common modal patterns
+  const modal = page.locator('.modal, [role="dialog"], .modal-content').first();
+  await expect(modal).toBeVisible({ timeout });
+  const content = (await modal.textContent())?.trim() || '';
+  return content;
+}
+
+/**
+ * Close all open modals (up to 5 times).
+ */
+export async function closeAllModals(page) {
+  for (let i = 0; i < 5; i++) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(100);
+  }
+}
+
+/**
+ * Wait for a popup/info message to appear.
+ */
+export async function waitForInfoPopup(page, timeout = 5000) {
+  const popup = page.locator('.info-popup, .automation-info, [data-testid="automation-info"]').first();
+  if (await popup.count() > 0) {
+    return (await popup.textContent())?.trim() || '';
+  }
+  return '';
+}
+
+/**
+ * Get current creature turn info.
+ */
+export async function getActiveCreature(page) {
+  const activeCard = page.locator('.creature-card.active .creature-name').first();
+  if (await activeCard.count() > 0) {
+    return (await activeCard.textContent())?.trim() || '';
+  }
+  return '';
+}
+
+/**
+ * Navigate to a specific turn by creature name.
+ */
+export async function goToTurn(page, creatureNamePart) {
+  let current = await getActiveCreature(page);
+  let tries = 0;
+  const maxTries = 50;
+
+  while (current && !current.includes(creatureNamePart) && tries < maxTries) {
+    await nextTurn(page);
+    current = await getActiveCreature(page);
+    tries++;
+  }
+
+  // If we overshot, go back
+  if (current && !current.includes(creatureNamePart)) {
+    for (let i = 0; i < maxTries; i++) {
+      await prevTurn(page);
+      current = await getActiveCreature(page);
+      if (current && current.includes(creatureNamePart)) {
+        return true;
+      }
+    }
+  }
+
+  return current && current.includes(creatureNamePart);
+}
+
+/**
+ * Take a screenshot with a descriptive name.
+ */
+export async function takeScreenshot(page, name) {
+  const path = `tests/e2e/screensets/${name}.png`;
+  await page.screenshot({ path, fullPage: true });
+  console.log(`Screenshot: ${path}`);
+  return path;
+}
+
+/**
+ * Verify a character's summary text on their sheet.
+ */
+export async function verifyCharacterSummary(page, characterName, expectedClass) {
+  const summary = page.locator('[data-testid="char-summary-text"]');
+  if (await summary.count() > 0) {
+    const text = (await summary.textContent())?.trim() || '';
+    console.log(`Character summary: ${text}`);
+    if (expectedClass) {
+      expect(text).toContain(expectedClass);
+    }
+    return text;
+  }
+  return '';
+}
+
+/**
+ * Add multiple NPCs to the initiative.
+ */
+export async function addMultipleNPCs(page, npcNames) {
+  const added = [];
+  for (const npcName of npcNames) {
+    await page.getByRole('button', { name: '+ NPC' }).click();
+    await page.waitForTimeout(500);
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(100);
+    }
+    added.push(npcName);
+  }
+  return added;
+}
+
+/**
+ * Cast a spell by name from the character sheet.
+ */
+export async function castSpell(page, spellName) {
+  // Spells may be in Actions, Bonus Actions, or a dedicated Spells section
+  const spellEl = page.locator('.attacks, .char-spells').filter({ hasText: spellName }).first();
+  if (await spellEl.count() > 0 && await spellEl.isVisible()) {
+    await spellEl.click();
+    await page.waitForTimeout(1000);
+    return true;
+  }
+  console.log(`Spell "${spellName}" not found on sheet`);
+  return false;
+}
+
+/**
+ * Check if a specific automation type exists on the character sheet.
+ */
+export async function hasAutomationOnSheet(page, type) {
+  // type: 'action', 'bonusAction', 'reaction', 'specialAction'
+  switch (type) {
+    case 'action':
+      return (await page.locator('.char-actions').nth(0).locator('.attacks .left').count()) > 0;
+    case 'bonusAction':
+      return (await page.locator('.char-actions').nth(1).locator('.attacks .left').count()) > 0;
+    case 'reaction':
+      return (await page.locator('.char-actions').nth(2).locator('.attacks .left').count()) > 0;
+    case 'specialAction':
+      return (await page.locator('.char-special-actions div').count()) > 0;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Get all creature names and types from initiative.
+ */
+export async function getAllCreatures(page) {
+  const creatureCards = page.locator('.creature-card');
+  const count = await creatureCards.count();
+  const creatures = [];
+  for (let i = 0; i < count; i++) {
+    const card = creatureCards.nth(i);
+    const nameEl = card.locator('.creature-name');
+    const name = (await nameEl.textContent())?.trim() || '';
+    const cardClass = (await card.getAttribute('class')) || '';
+    const isPlayer = cardClass.includes('player');
+    creatures.push({ name, type: isPlayer ? 'player' : 'monster', index: i });
+  }
+  return creatures;
+}
+
+/**
+ * Wait for the character sheet to be fully loaded.
+ */
+export async function waitForCharacterSheet(page, characterName) {
+  await page.getByRole('button', { name: characterName }).click();
+  await expect(page.locator('.char-sheet')).toBeVisible({ timeout: 10000 });
+  await page.waitForTimeout(1000);
+}
