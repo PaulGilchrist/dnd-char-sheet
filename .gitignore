@@ -13,6 +13,9 @@ public/campaigns/Frostfall/*
 !public/campaigns/Testing\ G3/**
 !public/campaigns/Frostfall/**
 
+tests/e2e/screenshots
+tests/e2e/screensets
+
 # Per-campaign character change data (debounced in-memory state)
 public/campaigns/*/data/character-change-data.json
 public/campaigns/*/data/campaign-log.json

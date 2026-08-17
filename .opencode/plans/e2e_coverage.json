@@ -1,0 +1,4306 @@
+[
+  {
+    "id": 0,
+    "file": "backgrounds.json",
+    "type": "backgrounds",
+    "name": "Hermit's Wit",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 1,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Rage",
+    "sourceType": "combat_stance",
+    "tested": false
+  },
+  {
+    "id": 2,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Unarmored Defense",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 3,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Weapon Mastery",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 4,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Danger Sense",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 5,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Reckless Attack",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 6,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Primal Knowledge",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 7,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Fast Movement",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 8,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Feral Instinct",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 9,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Instinctive Pounce",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 10,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Brutal Strike",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 11,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Relentless Rage",
+    "sourceType": "reaction_save_heal",
+    "tested": false
+  },
+  {
+    "id": 12,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Brutal Strike",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 13,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Persistent Rage",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 14,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Brutal Strike (Level 17)",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 15,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Indomitable Might",
+    "sourceType": "conditional_replacement",
+    "tested": false
+  },
+  {
+    "id": 16,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Frenzy",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 17,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Mindless Rage",
+    "sourceType": "condition_immunity_while_active",
+    "tested": false
+  },
+  {
+    "id": 18,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Retaliation",
+    "sourceType": "reaction_damage",
+    "tested": false
+  },
+  {
+    "id": 19,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Intimidating Presence",
+    "sourceType": "save_attack",
+    "tested": false
+  },
+  {
+    "id": 20,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Rage of the Wilds",
+    "sourceType": "combat_stance",
+    "tested": false
+  },
+  {
+    "id": 21,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Aspect of the Wilds",
+    "sourceType": "animal_aspect",
+    "tested": false
+  },
+  {
+    "id": 22,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Power of the Wilds",
+    "sourceType": "combat_stance",
+    "tested": false
+  },
+  {
+    "id": 23,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Vitality of the Tree",
+    "sourceType": "temp_hp_buff",
+    "tested": false
+  },
+  {
+    "id": 24,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Branches of the Tree",
+    "sourceType": "reaction_debuff",
+    "tested": false
+  },
+  {
+    "id": 25,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Battering Roots",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 26,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Travel Along the Tree",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 27,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Divine Fury",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 28,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Warrior of the Gods",
+    "sourceType": "healing_pool",
+    "tested": false
+  },
+  {
+    "id": 29,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Fanatical Focus",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 30,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Zealous Presence",
+    "sourceType": "zealous_presence",
+    "tested": false
+  },
+  {
+    "id": 31,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Rage of the Gods",
+    "sourceType": "combat_stance",
+    "tested": false
+  },
+  {
+    "id": 32,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Bardic Inspiration",
+    "sourceType": "bardic_inspiration",
+    "tested": false
+  },
+  {
+    "id": 33,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Jack of All Trades",
+    "sourceType": "jack_of_all_trades",
+    "tested": false
+  },
+  {
+    "id": 34,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Font of Inspiration",
+    "sourceType": "font_of_inspiration",
+    "tested": false
+  },
+  {
+    "id": 35,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Countercharm",
+    "sourceType": "countercharm",
+    "tested": false
+  },
+  {
+    "id": 36,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Magical Secrets",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 37,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Superior Inspiration",
+    "sourceType": "initiative_action",
+    "tested": false
+  },
+  {
+    "id": 38,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Words of Creation",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 39,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Dazzling Footwork",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 40,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Inspiring Movement",
+    "sourceType": "reaction_bonus",
+    "tested": false
+  },
+  {
+    "id": 41,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Tandem Footwork",
+    "sourceType": "initiative_action",
+    "tested": false
+  },
+  {
+    "id": 42,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Leading Evasion",
+    "sourceType": "evasion",
+    "tested": false
+  },
+  {
+    "id": 43,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Beguiling Magic",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 44,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Mantle of Inspiration",
+    "sourceType": "temp_hp_buff",
+    "tested": false
+  },
+  {
+    "id": 45,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Mantle of Majesty",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 46,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Unbreakable Majesty",
+    "sourceType": "reaction_bonus",
+    "tested": false
+  },
+  {
+    "id": 47,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Cutting Words",
+    "sourceType": "reaction_debuff",
+    "tested": false
+  },
+  {
+    "id": 48,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Peerless Skill",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 49,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Combat Inspiration",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 50,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Battle Magic",
+    "sourceType": "bonus_action_attack",
+    "tested": false
+  },
+  {
+    "id": 51,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Divine Order",
+    "sourceType": "divine_order",
+    "tested": false
+  },
+  {
+    "id": 52,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Channel Divinity",
+    "sourceType": "resource_pool",
+    "tested": false
+  },
+  {
+    "id": 53,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Divine Spark",
+    "sourceType": "divine_spark",
+    "tested": false
+  },
+  {
+    "id": 54,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Turn Undead",
+    "sourceType": "set_condition",
+    "tested": false
+  },
+  {
+    "id": 55,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Searing Undead",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 56,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Blessed Strikes",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 57,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Divine Intervention",
+    "sourceType": "divine_intervention",
+    "tested": false
+  },
+  {
+    "id": 58,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Blessed Strikes",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 59,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Greater Divine Intervention",
+    "sourceType": "divine_intervention",
+    "tested": false
+  },
+  {
+    "id": 60,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Disciple of Life",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 61,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Preserve Life",
+    "sourceType": "healing_pool",
+    "tested": false
+  },
+  {
+    "id": 62,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Blessed Healer",
+    "sourceType": "post_cast_self_heal",
+    "tested": false
+  },
+  {
+    "id": 63,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Supreme Healing",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 64,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Radiance of the Dawn",
+    "sourceType": "radiance_of_dawn",
+    "tested": false
+  },
+  {
+    "id": 65,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Warding Flare",
+    "sourceType": "reaction_debuff",
+    "tested": false
+  },
+  {
+    "id": 66,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Warding Flare",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 67,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Corona of Light",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 68,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Blessing of the Trickster",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 69,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Invoke Duplicity",
+    "sourceType": "combat_stance",
+    "tested": false
+  },
+  {
+    "id": 70,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Trickster's Transposition",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 71,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Duplicity",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 72,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Guided Strike",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 73,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "War Priest",
+    "sourceType": "bonus_action_attack",
+    "tested": false
+  },
+  {
+    "id": 74,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "War God's Blessing",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 75,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Avatar of Battle",
+    "sourceType": "resistance",
+    "tested": false
+  },
+  {
+    "id": 76,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Primal Order",
+    "sourceType": "divine_order",
+    "tested": false
+  },
+  {
+    "id": 77,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Wild Shape",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 78,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Wild Companion",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 79,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Wild Resurgence",
+    "sourceType": "resource_pool",
+    "tested": false
+  },
+  {
+    "id": 80,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Elemental Fury",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 81,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Elemental Fury",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 82,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Beast Spells",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 83,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Evergreen Wild Shape",
+    "sourceType": "initiative_action",
+    "tested": false
+  },
+  {
+    "id": 84,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Nature Magician",
+    "sourceType": "resource_pool",
+    "tested": false
+  },
+  {
+    "id": 85,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Circle of the Land Spells",
+    "sourceType": "circle_of_the_land_spells",
+    "tested": false
+  },
+  {
+    "id": 86,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Land's Aid",
+    "sourceType": "save_attack",
+    "tested": false
+  },
+  {
+    "id": 87,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Natural Recovery",
+    "sourceType": "natural_recovery",
+    "tested": false
+  },
+  {
+    "id": 88,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Nature's Ward",
+    "sourceType": "land_resistance",
+    "tested": false
+  },
+  {
+    "id": 89,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Nature's Sanctuary",
+    "sourceType": "nature_sanctuary",
+    "tested": false
+  },
+  {
+    "id": 90,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Nature's Sanctuary (Move)",
+    "sourceType": "nature_sanctuary_move",
+    "tested": false
+  },
+  {
+    "id": 91,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Circle Forms",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 92,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Circle Forms",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 93,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Moonlight Step",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 94,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Lunar Form",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 95,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Wrath of the Sea",
+    "sourceType": "wrath_of_the_sea",
+    "tested": false
+  },
+  {
+    "id": 96,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Aquatic Affinity",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 97,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Stormborn",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 98,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Oceanic Gift",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 99,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Star Map",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 100,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Starry Form",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 101,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Cosmic Omen",
+    "sourceType": "cosmic_omen",
+    "tested": false
+  },
+  {
+    "id": 102,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Twinkling Constellations",
+    "sourceType": "twinkling_constellations",
+    "tested": false
+  },
+  {
+    "id": 103,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Full of Stars",
+    "sourceType": "resistance",
+    "tested": false
+  },
+  {
+    "id": 104,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Second Wind",
+    "sourceType": "self_healing",
+    "tested": false
+  },
+  {
+    "id": 105,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Weapon Mastery",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 106,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Action Surge",
+    "sourceType": "extra_action",
+    "tested": false
+  },
+  {
+    "id": 107,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Tactical Mind",
+    "sourceType": "tactical_mind",
+    "tested": false
+  },
+  {
+    "id": 108,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Tactical Shift",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 109,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Indomitable",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 110,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Tactical Master",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 111,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Indomitable",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 112,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Studied Attacks",
+    "sourceType": "auto_effect",
+    "tested": false
+  },
+  {
+    "id": 113,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Action Surge",
+    "sourceType": "extra_action",
+    "tested": false
+  },
+  {
+    "id": 114,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Indomitable",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 115,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Combat Superiority",
+    "sourceType": "combat_superiority",
+    "tested": false
+  },
+  {
+    "id": 116,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Know Your Enemy",
+    "sourceType": "know_enemy",
+    "tested": false
+  },
+  {
+    "id": 117,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Combat Superiority",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 118,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Relentless",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 119,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Ultimate Combat Superiority",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 120,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Critical",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 121,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Remarkable Athlete",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 122,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Heroic Warrior",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 123,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Superior Critical",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 124,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Survivor",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 125,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "War Bond",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 126,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "War Magic",
+    "sourceType": "war_magic_cantrip",
+    "tested": false
+  },
+  {
+    "id": 127,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Eldritch Strike",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 128,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Arcane Charge",
+    "sourceType": "arcane_charge",
+    "tested": false
+  },
+  {
+    "id": 129,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved War Magic",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 130,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Psionic Strike",
+    "sourceType": "psionic_strike",
+    "tested": false
+  },
+  {
+    "id": 131,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Protective Field",
+    "sourceType": "damage_reduction",
+    "tested": false
+  },
+  {
+    "id": 132,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Telekinetic Movement",
+    "sourceType": "telekinetic_movement",
+    "tested": false
+  },
+  {
+    "id": 133,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Telekinetic Adept",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 134,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Guarded Mind",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 135,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Bulwark of Force",
+    "sourceType": "bulwark_of_force",
+    "tested": false
+  },
+  {
+    "id": 136,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Telekinetic Master",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 137,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Uncanny Metabolism",
+    "sourceType": "initiative_action",
+    "tested": false
+  },
+  {
+    "id": 138,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Flurry of Blows",
+    "sourceType": "bonus_attacks",
+    "tested": false
+  },
+  {
+    "id": 139,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Patient Defense",
+    "sourceType": "patient_defense",
+    "tested": false
+  },
+  {
+    "id": 140,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Step of the Wind",
+    "sourceType": "step_of_the_wind",
+    "tested": false
+  },
+  {
+    "id": 141,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Unarmored Movement",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 142,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Deflect Attacks",
+    "sourceType": "damage_reduction",
+    "tested": false
+  },
+  {
+    "id": 143,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Slow Fall",
+    "sourceType": "damage_reduction",
+    "tested": false
+  },
+  {
+    "id": 144,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Stunning Strike",
+    "sourceType": "save_only",
+    "tested": false
+  },
+  {
+    "id": 145,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Empowered Strikes",
+    "sourceType": "damage_type_modifier",
+    "tested": false
+  },
+  {
+    "id": 146,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Evasion",
+    "sourceType": "evasion",
+    "tested": false
+  },
+  {
+    "id": 147,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Acrobatic Movement",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 148,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Heightened Flurry of Blows",
+    "sourceType": "bonus_attacks",
+    "tested": false
+  },
+  {
+    "id": 149,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Heightened Patient Defense",
+    "sourceType": "patient_defense",
+    "tested": false
+  },
+  {
+    "id": 150,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Heightened Step of the Wind",
+    "sourceType": "step_of_the_wind",
+    "tested": false
+  },
+  {
+    "id": 151,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Self-Restoration",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 152,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Deflect Energy",
+    "sourceType": "damage_reduction",
+    "tested": false
+  },
+  {
+    "id": 153,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Disciplined Survivor",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 154,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Perfect Focus",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 155,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Superior Defense",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 156,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Hand of Harm",
+    "sourceType": "reaction_damage",
+    "tested": false
+  },
+  {
+    "id": 157,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Hand of Healing",
+    "sourceType": "healing",
+    "tested": false
+  },
+  {
+    "id": 158,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Physician's Touch",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 159,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Flurry of Healing and Harm",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 160,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Hand of Ultimate Mercy",
+    "sourceType": "hand_of_ultimate_mercy",
+    "tested": false
+  },
+  {
+    "id": 161,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Shadow Step",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 162,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Shadow Step",
+    "sourceType": "shadow_step_rider",
+    "tested": false
+  },
+  {
+    "id": 163,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Cloak of Shadows",
+    "sourceType": "cloak_of_shadows",
+    "tested": false
+  },
+  {
+    "id": 164,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Elemental Attunement",
+    "sourceType": "elemental_attunement",
+    "tested": false
+  },
+  {
+    "id": 165,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Stride of the Elements",
+    "sourceType": "stride_of_the_elements",
+    "tested": false
+  },
+  {
+    "id": 166,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Elemental Strike",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 167,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Elemental Burst",
+    "sourceType": "elemental_burst",
+    "tested": false
+  },
+  {
+    "id": 168,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Stride of the Elements",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 169,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Elemental Epitome",
+    "sourceType": "elemental_epitome",
+    "tested": false
+  },
+  {
+    "id": 170,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Destructive Stride",
+    "sourceType": "destructive_stride",
+    "tested": false
+  },
+  {
+    "id": 171,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Open Hand Technique",
+    "sourceType": "open_hand_technique",
+    "tested": false
+  },
+  {
+    "id": 172,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Wholeness of Body",
+    "sourceType": "self_healing",
+    "tested": false
+  },
+  {
+    "id": 173,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Quivering Palm",
+    "sourceType": "quivering_palm",
+    "tested": false
+  },
+  {
+    "id": 174,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Lay On Hands",
+    "sourceType": "healing_pool",
+    "tested": false
+  },
+  {
+    "id": 175,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Weapon Mastery",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 176,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Paladin's Smite",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 177,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Channel Divinity",
+    "sourceType": "resource_pool",
+    "tested": false
+  },
+  {
+    "id": 178,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Faithful Steed",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 179,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Aura of Protection",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 180,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Abjure Foes",
+    "sourceType": "set_condition",
+    "tested": false
+  },
+  {
+    "id": 181,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Aura of Courage",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 182,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Radiant Strikes",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 183,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Restoring Touch",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 184,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Aura Expansion",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 185,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Sacred Weapon",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 186,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Aura of Devotion",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 187,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Smite of Protection",
+    "sourceType": "post_cast_smite_cover",
+    "tested": false
+  },
+  {
+    "id": 188,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Holy Nimbus",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 189,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Inspiring Smite",
+    "sourceType": "post_cast_inspiring_smite",
+    "tested": false
+  },
+  {
+    "id": 190,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Peerless Athlete",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 191,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Aura of Alacrity",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 192,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Glorious Defense",
+    "sourceType": "glorious_defense",
+    "tested": false
+  },
+  {
+    "id": 193,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Living Legend",
+    "sourceType": "living_legend",
+    "tested": false
+  },
+  {
+    "id": 194,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Nature's Wrath",
+    "sourceType": "set_condition",
+    "tested": false
+  },
+  {
+    "id": 195,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Aura of Warding",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 196,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Undying Sentinel",
+    "sourceType": "passive_immunity",
+    "tested": false
+  },
+  {
+    "id": 197,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Elder Champion",
+    "sourceType": "elder_champion",
+    "tested": false
+  },
+  {
+    "id": 198,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Vow of Enmity",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 199,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Relentless Avenger",
+    "sourceType": "relentless_avenger",
+    "tested": false
+  },
+  {
+    "id": 200,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Soul of Vengeance",
+    "sourceType": "soul_of_vengeance",
+    "tested": false
+  },
+  {
+    "id": 201,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Avenging Angel",
+    "sourceType": "avenging_angel",
+    "tested": false
+  },
+  {
+    "id": 202,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Favored Enemy",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 203,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Weapon Mastery",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 204,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Roving",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 205,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Tireless",
+    "sourceType": "tireless",
+    "tested": false
+  },
+  {
+    "id": 206,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Nature's Veil",
+    "sourceType": "natures_veil",
+    "tested": false
+  },
+  {
+    "id": 207,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Precise Hunter",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 208,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Foe Slayer",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 209,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Primal Companion",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 210,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Exceptional Training",
+    "sourceType": "primal_companion_bonus_action_command",
+    "tested": false
+  },
+  {
+    "id": 211,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Bestial Fury",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 212,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Share Spells",
+    "sourceType": "primal_companion_spell_share",
+    "tested": false
+  },
+  {
+    "id": 213,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Dreadful Strikes",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 214,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Otherworldly Glamour",
+    "sourceType": "otherworldly_glamour",
+    "tested": false
+  },
+  {
+    "id": 215,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Beguiling Twist",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 216,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Fey Reinforcements",
+    "sourceType": "fey_reinforcements",
+    "tested": false
+  },
+  {
+    "id": 217,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Misty Wanderer",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 218,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Dread Ambush",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 219,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Umbral Sight",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 220,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Iron Mind",
+    "sourceType": "save_proficiency",
+    "tested": false
+  },
+  {
+    "id": 221,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Stalker's Flurry",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 222,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Shadowy Dodge",
+    "sourceType": "shadowy_dodge",
+    "tested": false
+  },
+  {
+    "id": 223,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Hunter's Lore",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 224,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Hunter's Prey",
+    "sourceType": "hunter_prey",
+    "tested": false
+  },
+  {
+    "id": 225,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Defensive Tactics",
+    "sourceType": "defensive_tactics",
+    "tested": false
+  },
+  {
+    "id": 226,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Superior Hunter's Prey",
+    "sourceType": "superior_hunter_prey",
+    "tested": false
+  },
+  {
+    "id": 227,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Superior Hunter's Defense",
+    "sourceType": "superior_hunter_defense",
+    "tested": false
+  },
+  {
+    "id": 228,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Sneak Attack",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 229,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Weapon Mastery",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 230,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Cunning Action",
+    "sourceType": "bonus_action_choice",
+    "tested": false
+  },
+  {
+    "id": 231,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Steady Aim",
+    "sourceType": "steady_aim",
+    "tested": false
+  },
+  {
+    "id": 232,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Cunning Strike",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 233,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Uncanny Dodge",
+    "sourceType": "superior_hunter_defense",
+    "tested": false
+  },
+  {
+    "id": 234,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Evasion",
+    "sourceType": "evasion",
+    "tested": false
+  },
+  {
+    "id": 235,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Reliable Talent",
+    "sourceType": "reliable_talent",
+    "tested": false
+  },
+  {
+    "id": 236,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Cunning Strike",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 237,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Devious Strikes",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 238,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Slippery Mind",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 239,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Stroke of Luck",
+    "sourceType": "stroke_of_luck",
+    "tested": false
+  },
+  {
+    "id": 240,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Mage Hand Legerdemain",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 241,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Magical Ambush",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 242,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Versatile Trickster",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 243,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Spell Thief",
+    "sourceType": "spell_thief",
+    "tested": false
+  },
+  {
+    "id": 244,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Assassinate",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 245,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Infiltration Expertise",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 246,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Envenom Weapons",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 247,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Death Strike",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 248,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Psychic Blades",
+    "sourceType": "bonus_action_attack",
+    "tested": false
+  },
+  {
+    "id": 249,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Soul Blades",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 250,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Psychic Veil",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 251,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Rend Mind",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 252,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Fast Hands",
+    "sourceType": "fast_hands",
+    "tested": false
+  },
+  {
+    "id": 253,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Second-Storywork",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 254,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Supreme Sneak",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 255,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Use Magic Device",
+    "sourceType": "use_magic_device",
+    "tested": false
+  },
+  {
+    "id": 256,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Thief's Reflexes",
+    "sourceType": "extra_action",
+    "tested": false
+  },
+  {
+    "id": 257,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Innate Sorcery",
+    "sourceType": "sorcery_aura",
+    "tested": false
+  },
+  {
+    "id": 258,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Font of Magic",
+    "sourceType": "font_of_magic",
+    "tested": false
+  },
+  {
+    "id": 259,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Metamagic",
+    "sourceType": "spell_modifier",
+    "tested": false
+  },
+  {
+    "id": 260,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Sorcerous Restoration",
+    "sourceType": "resource_restoration",
+    "tested": false
+  },
+  {
+    "id": 261,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Sorcery Incarnate",
+    "sourceType": "sorcery_incarnate",
+    "tested": false
+  },
+  {
+    "id": 262,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Arcane Apotheosis",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 263,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Psionic Spells",
+    "sourceType": "psionic_spells_list",
+    "tested": false
+  },
+  {
+    "id": 264,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Telepathic Speech",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 265,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Psionic Sorcery",
+    "sourceType": "psionic_sorcery",
+    "tested": false
+  },
+  {
+    "id": 266,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Psychic Defenses",
+    "sourceType": "passive_immunity",
+    "tested": false
+  },
+  {
+    "id": 267,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Revelation in Flesh",
+    "sourceType": "revelation_in_flesh",
+    "tested": false
+  },
+  {
+    "id": 268,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Warping Implosion",
+    "sourceType": "save_attack",
+    "tested": false
+  },
+  {
+    "id": 269,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Clockwork Spells",
+    "sourceType": "psionic_spells_list",
+    "tested": false
+  },
+  {
+    "id": 270,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Restore Balance",
+    "sourceType": "restore_balance",
+    "tested": false
+  },
+  {
+    "id": 271,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Bastion of Law",
+    "sourceType": "bastion_of_law",
+    "tested": false
+  },
+  {
+    "id": 272,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Trance of Order",
+    "sourceType": "trance_of_order",
+    "tested": false
+  },
+  {
+    "id": 273,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Clockwork Cavalcade",
+    "sourceType": "clockwork_cavalcade",
+    "tested": false
+  },
+  {
+    "id": 274,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Draconic Spells",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 275,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Elemental Affinity",
+    "sourceType": "damage_type_choice",
+    "tested": false
+  },
+  {
+    "id": 276,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Dragon Wings",
+    "sourceType": "dragon_wings",
+    "tested": false
+  },
+  {
+    "id": 277,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Dragon Companion",
+    "sourceType": "dragon_companion",
+    "tested": false
+  },
+  {
+    "id": 278,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Wild Magic Surge",
+    "sourceType": "wild_magic_surge",
+    "tested": false
+  },
+  {
+    "id": 279,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Feats of Chaos",
+    "sourceType": "feats_of_chaos",
+    "tested": false
+  },
+  {
+    "id": 280,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Bend Fate",
+    "sourceType": "reaction_bonus",
+    "tested": false
+  },
+  {
+    "id": 281,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Controlled Chaos",
+    "sourceType": "auto_effect",
+    "tested": false
+  },
+  {
+    "id": 282,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Tamed Surge",
+    "sourceType": "wild_magic_tamed",
+    "tested": false
+  },
+  {
+    "id": 283,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Magical Cunning",
+    "sourceType": "magical_cunning",
+    "tested": false
+  },
+  {
+    "id": 284,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Contact Patron",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 285,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Eldritch Master",
+    "sourceType": "magical_cunning",
+    "tested": false
+  },
+  {
+    "id": 286,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Steps of the Fey",
+    "sourceType": "steps_of_the_fey",
+    "tested": false
+  },
+  {
+    "id": 287,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Misty Escape",
+    "sourceType": "misty_escape",
+    "tested": false
+  },
+  {
+    "id": 288,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Beguiling Defenses",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 289,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Bewitching Magic",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 290,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Healing Light",
+    "sourceType": "healing_pool",
+    "tested": false
+  },
+  {
+    "id": 291,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Radiant Soul",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 292,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Celestial Resilience",
+    "sourceType": "celestial_resilience",
+    "tested": false
+  },
+  {
+    "id": 293,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Searing Vengeance",
+    "sourceType": "searing_vengeance",
+    "tested": false
+  },
+  {
+    "id": 294,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Dark One's Blessing",
+    "sourceType": "dark_ones_blessing",
+    "tested": false
+  },
+  {
+    "id": 295,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Dark One's Own Luck",
+    "sourceType": "dark_ones_luck",
+    "tested": false
+  },
+  {
+    "id": 296,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Fiendish Resilience",
+    "sourceType": "damage_type_choice",
+    "tested": false
+  },
+  {
+    "id": 297,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Hurl Through Hell",
+    "sourceType": "hurl_through_hell",
+    "tested": false
+  },
+  {
+    "id": 298,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Awakened Mind",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 299,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Psychic Spells",
+    "sourceType": "psychic_spells",
+    "tested": false
+  },
+  {
+    "id": 300,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Clairvoyant Combatant",
+    "sourceType": "clairvoyant_combatant",
+    "tested": false
+  },
+  {
+    "id": 301,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Eldritch Hex",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 302,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Thought Shield",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 303,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Create Thrall",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 304,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Ritual Adept",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 305,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Arcane Recovery",
+    "sourceType": "resource_restoration",
+    "tested": false
+  },
+  {
+    "id": 306,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Memorize Spell",
+    "sourceType": "memorize_spell",
+    "tested": false
+  },
+  {
+    "id": 307,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Spell Mastery",
+    "sourceType": "spell_mastery",
+    "tested": false
+  },
+  {
+    "id": 308,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Signature Spells",
+    "sourceType": "signature_spells",
+    "tested": false
+  },
+  {
+    "id": 309,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Abjuration Savant",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 310,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Arcane Ward",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 311,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Arcane Ward - Bonus Action Restore",
+    "sourceType": "arcane_ward_bonus_action",
+    "tested": false
+  },
+  {
+    "id": 312,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Projected Ward",
+    "sourceType": "projected_ward",
+    "tested": false
+  },
+  {
+    "id": 313,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Spell Breaker",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 314,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Spell Resistance",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 315,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Divination Savant",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 316,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Portent",
+    "sourceType": "portent",
+    "tested": false
+  },
+  {
+    "id": 317,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Expert Divination",
+    "sourceType": "expert_divination",
+    "tested": false
+  },
+  {
+    "id": 318,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "The Third Eye",
+    "sourceType": "third_eye",
+    "tested": false
+  },
+  {
+    "id": 319,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Greater Portent",
+    "sourceType": "portent",
+    "tested": false
+  },
+  {
+    "id": 320,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Evocation Savant",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 321,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Potent Cantrip",
+    "sourceType": "potent_cantrip",
+    "tested": false
+  },
+  {
+    "id": 322,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Soulstitch Spells",
+    "sourceType": "soulstitch_spells",
+    "tested": false
+  },
+  {
+    "id": 323,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Empowered Evocation",
+    "sourceType": "empowered_evocation",
+    "tested": false
+  },
+  {
+    "id": 324,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Overchannel",
+    "sourceType": "overchannel",
+    "tested": false
+  },
+  {
+    "id": 325,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Illusion Savant",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 326,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Improved Illusions",
+    "sourceType": "improved_illusions",
+    "tested": false
+  },
+  {
+    "id": 327,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Phantasmal Creatures",
+    "sourceType": "phantasmal_creatures",
+    "tested": false
+  },
+  {
+    "id": 328,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Illusory Self",
+    "sourceType": "illusory_self",
+    "tested": false
+  },
+  {
+    "id": 329,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Illusory Reality",
+    "sourceType": "illusory_reality",
+    "tested": false
+  },
+  {
+    "id": 330,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Impersonation",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 331,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Climb Speed",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 332,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Hop Up",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 333,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Jumping",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 334,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Alert",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 335,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Fearless Aim",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 336,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Blink Steps",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 337,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Energy Resistances",
+    "sourceType": "boon_of_energy_resistance",
+    "tested": false
+  },
+  {
+    "id": 338,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Energy Redirection",
+    "sourceType": "reaction_damage",
+    "tested": false
+  },
+  {
+    "id": 339,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Improve Fate",
+    "sourceType": "modify_d20_roll",
+    "tested": false
+  },
+  {
+    "id": 340,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Fortified Health",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 341,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Overcome Defenses",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 342,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Overwhelming Strike",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 343,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Last Stand",
+    "sourceType": "auto_effect",
+    "tested": false
+  },
+  {
+    "id": 344,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Recover Vitality",
+    "sourceType": "healing_pool",
+    "tested": false
+  },
+  {
+    "id": 345,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "All-Around Adept",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 346,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Expertise",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 347,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Escape Artist",
+    "sourceType": "bonus_action_attack",
+    "tested": false
+  },
+  {
+    "id": 348,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Quickness",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 349,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Truesight",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 350,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Improved Dash",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 351,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Charge Attack",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 352,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Replenishing Meal",
+    "sourceType": "healing_bonus",
+    "tested": false
+  },
+  {
+    "id": 353,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Bolstering Treats",
+    "sourceType": "temp_hp_buff",
+    "tested": false
+  },
+  {
+    "id": 354,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Push",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 355,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Enhanced Critical",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 356,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Armor Class Bonus",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 357,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Parry",
+    "sourceType": "reaction_bonus",
+    "tested": false
+  },
+  {
+    "id": 358,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Enhanced Dual Wielding",
+    "sourceType": "bonus_attacks",
+    "tested": false
+  },
+  {
+    "id": 359,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Damage Bonus",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 360,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Defy Death",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 361,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Speedy Recovery",
+    "sourceType": "self_healing",
+    "tested": false
+  },
+  {
+    "id": 362,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Energy Mastery",
+    "sourceType": "damage_type_choice",
+    "tested": false
+  },
+  {
+    "id": 363,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Fey Magic",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 364,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Punch and Grab",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 365,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Attack Advantage",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 366,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Fast Wrestler",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 367,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Heavy Weapon Mastery",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 368,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Hew",
+    "sourceType": "bonus_action_attack",
+    "tested": false
+  },
+  {
+    "id": 369,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Battle Medic",
+    "sourceType": "healing",
+    "tested": false
+  },
+  {
+    "id": 370,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Healing Rerolls",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 371,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Damage Reduction",
+    "sourceType": "damage_reduction",
+    "tested": false
+  },
+  {
+    "id": 372,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Bolstering Performance",
+    "sourceType": "temp_hp_buff",
+    "tested": false
+  },
+  {
+    "id": 373,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Damage Reduction",
+    "sourceType": "damage_reduction",
+    "tested": false
+  },
+  {
+    "id": 374,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Advantage",
+    "sourceType": "lucky_point",
+    "tested": false
+  },
+  {
+    "id": 375,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Disadvantage",
+    "sourceType": "lucky_point",
+    "tested": false
+  },
+  {
+    "id": 376,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Concentration Breaker",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 377,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Guarded Mind",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 378,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Level 1 Spell",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 379,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Medium Armor Master",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 380,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Mounted Strike",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 381,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Leap Aside",
+    "sourceType": "reaction_bonus",
+    "tested": false
+  },
+  {
+    "id": 382,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Veer",
+    "sourceType": "reaction_bonus",
+    "tested": false
+  },
+  {
+    "id": 383,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Encouraging Song",
+    "sourceType": "heroic_inspiration_buff",
+    "tested": false
+  },
+  {
+    "id": 384,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Puncture",
+    "sourceType": "piercer_puncture",
+    "tested": false
+  },
+  {
+    "id": 385,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Enhanced Critical",
+    "sourceType": "damage_bonus",
+    "tested": false
+  },
+  {
+    "id": 386,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Potent Poison",
+    "sourceType": "ignore_resistance",
+    "tested": false
+  },
+  {
+    "id": 387,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Brew Poison",
+    "sourceType": "brew_poison",
+    "tested": false
+  },
+  {
+    "id": 388,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Apply Poison",
+    "sourceType": "apply_poison",
+    "tested": false
+  },
+  {
+    "id": 389,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Pole Strike",
+    "sourceType": "bonus_action_attack",
+    "tested": false
+  },
+  {
+    "id": 390,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Reactive Strike",
+    "sourceType": "reaction_damage",
+    "tested": false
+  },
+  {
+    "id": 391,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Shield Interposition",
+    "sourceType": "reaction_debuff",
+    "tested": false
+  },
+  {
+    "id": 392,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Saving Throw Proficiency",
+    "sourceType": "save_proficiency",
+    "tested": false
+  },
+  {
+    "id": 393,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Savage Strike",
+    "sourceType": "reroll_damage_once_per_turn",
+    "tested": false
+  },
+  {
+    "id": 394,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Guardian",
+    "sourceType": "reaction_damage",
+    "tested": false
+  },
+  {
+    "id": 395,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Halt",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 396,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Shadow Magic",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 397,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Bypass Cover",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 398,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Firing in Melee",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 399,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Long Shots",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 400,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Shield Bash",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 401,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Intervene Shield",
+    "sourceType": "damage_reduction",
+    "tested": false
+  },
+  {
+    "id": 402,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Blindsight",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 403,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Fog of War",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 404,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Sniper",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 405,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Hamstring",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 406,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Enhanced Critical",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 407,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Speed Increase",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 408,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Dash over Difficult Terrain",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 409,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Agile Movement",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 410,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Spell Sniper",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 411,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Tavern Brawler",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 412,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Increased Hit Points",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 413,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Telekinetic Shove",
+    "sourceType": "telekinetic_shove",
+    "tested": false
+  },
+  {
+    "id": 414,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Detect Thoughts",
+    "sourceType": "free_spell",
+    "tested": false
+  },
+  {
+    "id": 415,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Enhanced Unarmed Strike",
+    "sourceType": "attack_rider",
+    "tested": false
+  },
+  {
+    "id": 416,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Grapple Damage",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 417,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Concentration",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 418,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Reactive Spell",
+    "sourceType": "reaction_spell",
+    "tested": false
+  },
+  {
+    "id": 419,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Somatic Components",
+    "sourceType": "passive_buff",
+    "tested": false
+  },
+  {
+    "id": 420,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Mastery Property",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 421,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Ignore Loading",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 422,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Firing in Melee",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 423,
+    "file": "races.json",
+    "type": "races",
+    "name": "Celestial Resistance",
+    "sourceType": "resistance",
+    "tested": false
+  },
+  {
+    "id": 424,
+    "file": "races.json",
+    "type": "races",
+    "name": "Healing Hands",
+    "sourceType": "healing",
+    "tested": false
+  },
+  {
+    "id": 425,
+    "file": "races.json",
+    "type": "races",
+    "name": "LightBearer",
+    "sourceType": "cantrip_spellcasting_ability",
+    "tested": false
+  },
+  {
+    "id": 426,
+    "file": "races.json",
+    "type": "races",
+    "name": "Celestial Revelation",
+    "sourceType": "celestial_revelation",
+    "tested": false
+  },
+  {
+    "id": 427,
+    "file": "races.json",
+    "type": "races",
+    "name": "Heavenly Wings",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 428,
+    "file": "races.json",
+    "type": "races",
+    "name": "Inner Radiance",
+    "sourceType": "damage_aura",
+    "tested": false
+  },
+  {
+    "id": 429,
+    "file": "races.json",
+    "type": "races",
+    "name": "Necrotic Shroud",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 430,
+    "file": "races.json",
+    "type": "races",
+    "name": "Breath Weapon",
+    "sourceType": "save_attack",
+    "tested": false
+  },
+  {
+    "id": 431,
+    "file": "races.json",
+    "type": "races",
+    "name": "Draconic Flight",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 432,
+    "file": "races.json",
+    "type": "races",
+    "name": "Dwarven Resilience",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 433,
+    "file": "races.json",
+    "type": "races",
+    "name": "Stonecunning",
+    "sourceType": "stonecunning",
+    "tested": false
+  },
+  {
+    "id": 434,
+    "file": "races.json",
+    "type": "races",
+    "name": "Fey Ancestry",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 435,
+    "file": "races.json",
+    "type": "races",
+    "name": "Elfish Lineage",
+    "sourceType": "elfish_lineage",
+    "tested": false
+  },
+  {
+    "id": 436,
+    "file": "races.json",
+    "type": "races",
+    "name": "Gnomish Cunning",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 437,
+    "file": "races.json",
+    "type": "races",
+    "name": "Gnomish Lineage",
+    "sourceType": "gnomish_lineage",
+    "tested": false
+  },
+  {
+    "id": 438,
+    "file": "races.json",
+    "type": "races",
+    "name": "Cloud's Jaunt",
+    "sourceType": "teleport",
+    "tested": false
+  },
+  {
+    "id": 439,
+    "file": "races.json",
+    "type": "races",
+    "name": "Fire's Burn",
+    "sourceType": "fire_burn",
+    "tested": false
+  },
+  {
+    "id": 440,
+    "file": "races.json",
+    "type": "races",
+    "name": "Frost's Chill",
+    "sourceType": "frosts_chill",
+    "tested": false
+  },
+  {
+    "id": 441,
+    "file": "races.json",
+    "type": "races",
+    "name": "Hill's Tumble",
+    "sourceType": "hills_tumble",
+    "tested": false
+  },
+  {
+    "id": 442,
+    "file": "races.json",
+    "type": "races",
+    "name": "Stone's Endurance",
+    "sourceType": "stones_endurance",
+    "tested": false
+  },
+  {
+    "id": 443,
+    "file": "races.json",
+    "type": "races",
+    "name": "Storm's Thunder",
+    "sourceType": "storms_thunder",
+    "tested": false
+  },
+  {
+    "id": 444,
+    "file": "races.json",
+    "type": "races",
+    "name": "Large Form",
+    "sourceType": "large_form",
+    "tested": false
+  },
+  {
+    "id": 445,
+    "file": "races.json",
+    "type": "races",
+    "name": "Powerful Build",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 446,
+    "file": "races.json",
+    "type": "races",
+    "name": "Brave",
+    "sourceType": "conditional_advantage",
+    "tested": false
+  },
+  {
+    "id": 447,
+    "file": "races.json",
+    "type": "races",
+    "name": "Lucky",
+    "sourceType": "auto_reroll",
+    "tested": false
+  },
+  {
+    "id": 448,
+    "file": "races.json",
+    "type": "races",
+    "name": "Naturally Stealthy",
+    "sourceType": "passive_rule",
+    "tested": false
+  },
+  {
+    "id": 449,
+    "file": "races.json",
+    "type": "races",
+    "name": "Resourceful",
+    "sourceType": "meta",
+    "tested": false
+  },
+  {
+    "id": 450,
+    "file": "races.json",
+    "type": "races",
+    "name": "Adrenaline Rush",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 451,
+    "file": "races.json",
+    "type": "races",
+    "name": "Relentless Endurance",
+    "sourceType": "auto_effect",
+    "tested": false
+  },
+  {
+    "id": 452,
+    "file": "races.json",
+    "type": "races",
+    "name": "Fiendish Legacy",
+    "sourceType": "fiendish_legacy",
+    "tested": false
+  },
+  {
+    "id": 453,
+    "file": "races.json",
+    "type": "races",
+    "name": "Otherworldly Presence",
+    "sourceType": "cantrip_spellcasting_ability",
+    "tested": false
+  },
+  {
+    "id": 454,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Aid",
+    "sourceType": "aid",
+    "tested": false
+  },
+  {
+    "id": 455,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Animate Dead",
+    "sourceType": "animate_dead",
+    "tested": false
+  },
+  {
+    "id": 456,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Animate Objects",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 457,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Arcane Vigor",
+    "sourceType": "arcane_vigor",
+    "tested": false
+  },
+  {
+    "id": 458,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Arms of Hadar",
+    "sourceType": "save_only",
+    "tested": false
+  },
+  {
+    "id": 459,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Aura of Purity",
+    "sourceType": "aura_of_purity",
+    "tested": false
+  },
+  {
+    "id": 460,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Aura of Vitality",
+    "sourceType": "aura_of_vitality",
+    "tested": false
+  },
+  {
+    "id": 461,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Banishment",
+    "sourceType": "banishment",
+    "tested": false
+  },
+  {
+    "id": 462,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Beacon of Hope",
+    "sourceType": "beacon_of_hope",
+    "tested": false
+  },
+  {
+    "id": 463,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Bestial Spirit",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 464,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Blade Ward",
+    "sourceType": "blade_ward",
+    "tested": false
+  },
+  {
+    "id": 465,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Blindness/Deafness",
+    "sourceType": "blindness_deafness",
+    "tested": false
+  },
+  {
+    "id": 466,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Charm Person",
+    "sourceType": "charm_person",
+    "tested": false
+  },
+  {
+    "id": 467,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Color Spray",
+    "sourceType": "save_only",
+    "tested": false
+  },
+  {
+    "id": 468,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Counterspell",
+    "sourceType": "reaction_counterspell",
+    "tested": false
+  },
+  {
+    "id": 469,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Create Undead",
+    "sourceType": "create_undead",
+    "tested": false
+  },
+  {
+    "id": 470,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Draconic Spirit",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 471,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Enhance Ability",
+    "sourceType": "enhance_ability",
+    "tested": false
+  },
+  {
+    "id": 472,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Entangle",
+    "sourceType": "save_only",
+    "tested": false
+  },
+  {
+    "id": 473,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Eyebite",
+    "sourceType": "eyebite",
+    "tested": false
+  },
+  {
+    "id": 474,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Fear",
+    "sourceType": "fear",
+    "tested": false
+  },
+  {
+    "id": 475,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Feign Death",
+    "sourceType": "feign_death",
+    "tested": false
+  },
+  {
+    "id": 476,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Fey Spirit",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 477,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Fiendish Spirit",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 478,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Flesh to Stone",
+    "sourceType": "flesh_to_stone",
+    "tested": false
+  },
+  {
+    "id": 479,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Forcecage",
+    "sourceType": "forcecage",
+    "tested": false
+  },
+  {
+    "id": 480,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Foresight",
+    "sourceType": "foresight",
+    "tested": false
+  },
+  {
+    "id": 481,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Globe of Invulnerability",
+    "sourceType": "globe_of_invulnerability",
+    "tested": false
+  },
+  {
+    "id": 482,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Giant Insect",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 483,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Grease",
+    "sourceType": "save_only",
+    "tested": false
+  },
+  {
+    "id": 484,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Greater Invisibility",
+    "sourceType": "greater_invisibility",
+    "tested": false
+  },
+  {
+    "id": 485,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Greater Restoration",
+    "sourceType": "greater_restoration",
+    "tested": false
+  },
+  {
+    "id": 486,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Haste",
+    "sourceType": "buff_ally",
+    "tested": false
+  },
+  {
+    "id": 487,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Heroes' Feast",
+    "sourceType": "heroes_feast",
+    "tested": false
+  },
+  {
+    "id": 488,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Heroism",
+    "sourceType": "heroism",
+    "tested": false
+  },
+  {
+    "id": 489,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Hold Monster",
+    "sourceType": "hold_monster",
+    "tested": false
+  },
+  {
+    "id": 490,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Hold Person",
+    "sourceType": "hold_monster",
+    "tested": false
+  },
+  {
+    "id": 491,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Holy Aura",
+    "sourceType": "holy_aura",
+    "tested": false
+  },
+  {
+    "id": 492,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Hypnotic Pattern",
+    "sourceType": "hypnotic_pattern",
+    "tested": false
+  },
+  {
+    "id": 493,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Imprisonment",
+    "sourceType": "imprisonment",
+    "tested": false
+  },
+  {
+    "id": 494,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Invisibility",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 495,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Lesser Restoration",
+    "sourceType": "lesser_restoration",
+    "tested": false
+  },
+  {
+    "id": 496,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Mage Armor",
+    "sourceType": "mage_armor",
+    "tested": false
+  },
+  {
+    "id": 497,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Mass Cure Wounds",
+    "sourceType": "mass_cure_wounds",
+    "tested": false
+  },
+  {
+    "id": 498,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Mass Heal",
+    "sourceType": "mass_heal",
+    "tested": false
+  },
+  {
+    "id": 499,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Mass Healing Word",
+    "sourceType": "mass_healing_word",
+    "tested": false
+  },
+  {
+    "id": 500,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Mass Suggestion",
+    "sourceType": "mass_suggestion",
+    "tested": false
+  },
+  {
+    "id": 501,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Maze",
+    "sourceType": "maze",
+    "tested": false
+  },
+  {
+    "id": 502,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Otiluke's Freezing Sphere",
+    "sourceType": "freezing_sphere",
+    "tested": false
+  },
+  {
+    "id": 503,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Otiluke's Resilient Sphere",
+    "sourceType": "resilient_sphere",
+    "tested": false
+  },
+  {
+    "id": 504,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Otto's Irresistible Dance",
+    "sourceType": "ottos_dance",
+    "tested": false
+  },
+  {
+    "id": 505,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Pass Without Trace",
+    "sourceType": "pass_without_trace",
+    "tested": false
+  },
+  {
+    "id": 506,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Power Word Fortify",
+    "sourceType": "power_word_fortify",
+    "tested": false
+  },
+  {
+    "id": 507,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Power Word Heal",
+    "sourceType": "power_word_heal",
+    "tested": false
+  },
+  {
+    "id": 508,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Prayer of Healing",
+    "sourceType": "prayer_of_healing",
+    "tested": false
+  },
+  {
+    "id": 509,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Prismatic Spray",
+    "sourceType": "prismatic_spray",
+    "tested": false
+  },
+  {
+    "id": 510,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Protection from Energy",
+    "sourceType": "protection_from_energy",
+    "tested": false
+  },
+  {
+    "id": 511,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Protection from Evil and Good",
+    "sourceType": "protection_from_evil_and_good",
+    "tested": false
+  },
+  {
+    "id": 512,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Protection from Poison",
+    "sourceType": "protection_from_poison",
+    "tested": false
+  },
+  {
+    "id": 513,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Regenerate",
+    "sourceType": "healing_start_of_turn",
+    "tested": false
+  },
+  {
+    "id": 514,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Remove Curse",
+    "sourceType": "remove_curse",
+    "tested": false
+  },
+  {
+    "id": 515,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Resistance",
+    "sourceType": "damage_reduction",
+    "tested": false
+  },
+  {
+    "id": 516,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Sanctuary",
+    "sourceType": "sanctuary",
+    "tested": false
+  },
+  {
+    "id": 517,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "See Invisibility",
+    "sourceType": "temp_buff",
+    "tested": false
+  },
+  {
+    "id": 518,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Shield",
+    "sourceType": "shield",
+    "tested": false
+  },
+  {
+    "id": 519,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Shield of Faith",
+    "sourceType": "shield_of_faith",
+    "tested": false
+  },
+  {
+    "id": 520,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Sleep",
+    "sourceType": "sleep",
+    "tested": false
+  },
+  {
+    "id": 521,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Sleet Storm",
+    "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 522,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Slow",
+    "sourceType": "slow",
+    "tested": false
+  },
+  {
+    "id": 523,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Spare the Dying",
+    "sourceType": "spare_the_dying",
+    "tested": false
+  },
+  {
+    "id": 524,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Stone Skin",
+    "sourceType": "protection_from_energy",
+    "tested": false
+  },
+  {
+    "id": 525,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Suggestion",
+    "sourceType": "suggestion",
+    "tested": false
+  },
+  {
+    "id": 526,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Summon Aberration",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 527,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Summon Beast",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 528,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Summon Celestial",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 529,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Summon Construct",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 530,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Summon Elemental",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 531,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Summon Fiend",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 532,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Summon Undead",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 533,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Summon Fey",
+    "sourceType": "summon_spirit",
+    "tested": false
+  },
+  {
+    "id": 534,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Swift Quiver",
+    "sourceType": "concentration_bonus_attack",
+    "tested": false
+  },
+  {
+    "id": 535,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Symbol",
+    "sourceType": "hypnotic_pattern",
+    "tested": false
+  },
+  {
+    "id": 536,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Warding Bond",
+    "sourceType": "warding_bond",
+    "tested": false
+  },
+  {
+    "id": 537,
+    "file": "spells.json",
+    "type": "spells",
+    "name": "Web",
+    "sourceType": "unknown",
+    "tested": false
+  }
+]
