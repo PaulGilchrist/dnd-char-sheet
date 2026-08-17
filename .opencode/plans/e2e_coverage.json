@@ -5,7 +5,10 @@
     "type": "backgrounds",
     "name": "Hermit's Wit",
     "sourceType": "passive_buff",
-    "tested": false
+    "tested": true,
+    "testStatus": "passing",
+    "testDate": "2026-08-17",
+    "testFile": "tests/e2e/background-hermit-wit.spec.js"
   },
   {
     "id": 1,

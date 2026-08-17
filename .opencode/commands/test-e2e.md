@@ -11,7 +11,7 @@ High-level workflow:
 2. Identify the next untested automation.
 3. Load only that automation’s JSON metadata.
 4. Generate Playwright tests for that automation.
-5. Run the tests and fix failures.
+5. Run the tests and record failures.
 6. Update coverage.
 7. Stop immediately.
 
@@ -19,7 +19,33 @@ This ensures you never exceed context limits and can scale to hundreds of automa
 
 ---
 
-## 1. Coverage and continuation
+## 1. Beta Code Behavior
+
+The production codebase is currently in **beta**. Many automations are incomplete, partially implemented, or may not function as described in the JSON metadata. Because of this:
+
+1. **Failing tests are expected and valuable.**  
+   A failing test does not mean the test is wrong — it often means the automation is not yet implemented correctly.
+
+2. **Your job is to detect failures, not fix production code.**  
+   You must not modify or attempt to repair application logic.
+
+3. **When a test fails due to incorrect automation behavior:**  
+   - Document the failure in `.opencode/plans/e2e_test_findings.md`.
+   - Include expected behavior (from JSON metadata).
+   - Include actual behavior observed in the UI.
+   - Include any relevant screenshots or trace notes (if available).
+   - Mark the automation as `"tested"` but `"failing"` in `e2e_coverage.json`.
+
+4. **Only fix test code when the test itself is incorrect.**  
+   If selectors, navigation, or timing are wrong, correct the test.  
+   If the automation behavior is wrong, do not correct the app — document it.
+
+5. **Your purpose is discovery, not validation.**  
+   The primary goal is to identify broken or missing automations so they can be fixed later by developers.
+
+---
+
+## 2. Coverage and continuation
 
 At the start of each run:
 
@@ -38,7 +64,7 @@ At the start of each run:
 
 ---
 
-## 2. Automation manifest (single automation only)
+## 3. Automation manifest (single automation only)
 
 Once the next untested automation is identified:
 
@@ -50,7 +76,6 @@ Once the next untested automation is identified:
    - `races.json`
    - `spells.json`
    - `weapon-mastery.json`
-   - `fighting-styles.json`
 
 2. Load **only the JSON entry for that automation**.
 
@@ -68,7 +93,7 @@ Once the next untested automation is identified:
 
 ---
 
-## 3. Test goals for the selected automation
+## 4. Test goals for the selected automation
 
 For the single automation being processed:
 
@@ -96,18 +121,22 @@ For the single automation being processed:
 
 ---
 
-## 4. Playwright workflow
+## 5. Playwright workflow
 
 1. Playwright will automatically start the dev server using `npm run dev` and connect to `http://localhost:5173`.
 2. Navigate through the UI to perform the required actions.
 3. Write tests in `tests/e2e/<type>/<automation-name>.spec.ts`.
 4. Run the tests.
-5. Fix selectors or flows until tests pass.
-6. Update `e2e_coverage.json` to mark the automation as `"tested"`.
+5. If tests fail due to incorrect automation behavior:
+   - Document the failure.
+   - Do not attempt to fix production code.
+6. If tests fail due to incorrect test code:
+   - Fix selectors or flows until tests pass.
+7. Update `e2e_coverage.json` to mark the automation as `"tested"` and `"passing"` or `"failing"`.
 
 ---
 
-## 5. Output for each run
+## 6. Output for each run
 
 Each run must produce:
 
@@ -119,13 +148,14 @@ Each run must produce:
   - notes about UI flows
 - Updated `.opencode/plans/e2e_progress.md` describing:
   - which automation was tested
+  - whether it passed or failed
   - what remains
 
 After updating these files, **stop immediately**.
 
 ---
 
-## 6. Rules
+## 7. Rules
 
 - Process exactly one automation per run.
 - Never load all JSON files at once.
@@ -134,15 +164,15 @@ After updating these files, **stop immediately**.
 - Only read and write E2E-specific plan files (`e2e_*.md`, `e2e_*.json`).
 - Always use Playwright’s recommended selectors (`getByRole`, `getByLabel`, `getByText`).
 - Never assume how the app works — learn by interacting with it.
-- If a test fails, inspect the error and fix it.
+- Failing tests are expected due to beta code.
+- Document failures instead of fixing production code.
 - Continue until all automations in the JSON manifest are marked `"tested"`.
 
 ---
 
-## 7. Completion condition
+## 8. Completion condition
 
 When `e2e_coverage.json` shows all automations as `"tested"`:
 
 - Write a final summary in `e2e_progress.md`.
 - Stop all further E2E test generation.
-
