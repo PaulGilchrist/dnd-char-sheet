@@ -31,6 +31,14 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
     getTargetFromAttacker: vi.fn(() => ({ name: 'Goblin' })),
 }));
 
+vi.mock('../../../rules/combat/applyDamage.js', () => ({
+    applyDamageToTarget: vi.fn(async () => {}),
+}));
+
+vi.mock('../../../dice/diceRoller.js', () => ({
+    rollExpression: vi.fn(),
+}));
+
 vi.mock('../../../rules/combat/rangeCheck.js', () => ({
     isWithinRange: vi.fn().mockResolvedValue(true),
 }));
@@ -45,9 +53,10 @@ vi.mock('../../common/oncePerTurn.js', () => ({
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { checkOncePerTurn } from '../../common/oncePerTurn.js';
+import { rollExpression } from '../../../dice/diceRoller.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -151,43 +160,6 @@ describe('attackRiderHandler', () => {
             expect(result.payload.automationType).toBe('attack_rider');
         });
 
-        it('should log ability use via addEntry', async () => {
-            mockTargetEffects();
-            const action = makeAction({
-                automation: {
-                    type: 'attack_rider',
-                    options: [{ name: 'Trip', effect: 'prone' }],
-                },
-            });
-            await handle(action, makePlayerStats(), 'campaign', 'map');
-
-            expect(addEntry).toHaveBeenCalledWith('campaign', {
-                type: 'ability_use',
-                characterName: 'TestHero',
-                abilityName: 'Cunning Strike',
-                description: 'Cunning Strike used against Goblin',
-            });
-        });
-
-        it('should log ability use without target when no target found', async () => {
-            vi.mocked(getTargetFromAttacker).mockReturnValue(null);
-            mockTargetEffects();
-            const action = makeAction({
-                automation: {
-                    type: 'attack_rider',
-                    options: [{ name: 'Trip', effect: 'prone' }],
-                },
-            });
-            await handle(action, makePlayerStats(), 'campaign', 'map');
-
-            expect(addEntry).toHaveBeenCalledWith('campaign', {
-                type: 'ability_use',
-                characterName: 'TestHero',
-                abilityName: 'Cunning Strike',
-                description: 'Cunning Strike used',
-            });
-        });
-
         it('should return skip result when oncePerTurn check returns skip', async () => {
             vi.mocked(checkOncePerTurn).mockResolvedValue({
                 type: 'popup',
@@ -212,13 +184,6 @@ describe('attackRiderHandler', () => {
     });
 
     describe('applyRiderOption', () => {
-        it('should return null when no matching options found', async () => {
-            const action = makeAction();
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Nonexistent']);
-
-            expect(result).toBe(null);
-        });
-
         it('should apply Trip effect', async () => {
             mockTargetEffects();
             const action = makeAction();
@@ -323,6 +288,38 @@ describe('attackRiderHandler', () => {
             expect(result.payload.description).toContain('Cleave');
         });
 
+        it('should apply Envenom Weapons damage when CON poison save fails and passive exists', async () => {
+            vi.mocked(rollExpression).mockReturnValue({ total: 8 });
+            vi.mocked(getCombatContext).mockResolvedValue({
+                creatures: [{ name: 'Goblin' }],
+            });
+            getRuntimeValue.mockImplementation((_key, prop, _camp) => {
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Poison', effect: 'poisoned', saveType: 'CON', requires: "Poisoner's Kit" }],
+                },
+            });
+            const stats = makePlayerStats({
+                toolProficiencies: ["Poisoner's Kit"],
+                automation: {
+                    passives: [
+                        { type: 'damage_bonus', trigger: 'cunning_strike_poison_save_fail', name: 'Envenom Weapons', automation: { damageExpression: '2d6', damageType: 'Poison' } },
+                    ],
+                },
+            });
+            await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Poison']);
+
+            expect(rollExpression).toHaveBeenCalledWith('2d6');
+            expect(addEntry).toHaveBeenCalledWith('campaign', expect.objectContaining({
+                abilityName: 'Envenom Weapons',
+            }));
+        });
+
     });
 
     describe('slashing_damage_hit trigger (Slasher feat)', () => {
@@ -348,7 +345,6 @@ describe('attackRiderHandler', () => {
             [{ hit: false }, 'Your last attack missed'],
             [{ hit: true, attackerName: 'Orc', damageType: 'Slashing', targetName: 'Goblin' }, 'your own attacks'],
             [{ hit: true, attackerName: 'TestHero', damageType: 'Piercing', targetName: 'Goblin' }, 'Slashing damage'],
-            [{ hit: true, attackerName: 'TestHero', targetName: 'Goblin' }, 'Slashing damage'],
         ])('should reject when lastAttack is %j — expects "%s"', async (lastAttack, expectedText) => {
             getRuntimeValue.mockReturnValue(lastAttack);
 

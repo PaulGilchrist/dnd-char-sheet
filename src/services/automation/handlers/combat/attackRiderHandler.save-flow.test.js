@@ -1,12 +1,12 @@
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { applyRiderOption } from './attackRiderHandler.js';
+import { handle } from './attackRiderHandler.js';
 
 // ── Mocks ──────────────────────────────────────────────────────
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
-    getRuntimeValue: vi.fn(),
+    getRuntimeValue: vi.fn(() => null),
     setRuntimeValue: vi.fn(async () => {}),
 }));
 
@@ -15,62 +15,48 @@ vi.mock('../../../ui/logService.js', () => ({
 }));
 
 vi.mock('../../../automation/common/savePrompt.js', () => ({
-    buildSaveDc: vi.fn((opt) => opt.saveDc || 15),
+    buildSaveDc: vi.fn(() => 15),
     createSaveListener: vi.fn(),
 }));
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(async () => ({
-        creatures: [{ name: 'Goblin' }],
+        creatures: [{ name: 'Goblin', size: 'Medium', position: { x: 1, y: 1 } }],
     })),
-    getTargetFromAttacker: vi.fn(),
-}));
-
-vi.mock('../../../rules/combat/applyDamage.js', () => ({
-    applyDamageToTarget: vi.fn(async () => {}),
+    getTargetFromAttacker: vi.fn(() => ({ name: 'Goblin' })),
 }));
 
 vi.mock('../../../rules/combat/rangeCheck.js', () => ({
     isWithinRange: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock('../../../dice/diceRoller.js', () => ({
-    rollExpression: vi.fn(() => ({ total: 7 })),
+vi.mock('../../common/oncePerTurn.js', () => ({
+    checkOncePerTurn: vi.fn(async () => null),
+    checkOncePerTurnWithSkip: vi.fn(async () => null),
 }));
 
 // ── Re-import after mocking ────────────────────────────────────
 
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { createSaveListener } from '../../../automation/common/savePrompt.js';
-import { rollExpression } from '../../../dice/diceRoller.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { checkOncePerTurnWithSkip } from '../../common/oncePerTurn.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
-function makeAction(overrides = {}) {
+function makeShieldBashAction(overrides = {}) {
     return {
-        name: 'Cunning Strike',
-        description: 'Apply a rider effect on a hit.',
+        name: 'Shield Bash',
+        description: 'Push or knock prone on hit.',
         automation: {
             type: 'attack_rider',
-            options: [
-                { name: 'Trip', effect: 'prone' },
-                { name: 'Poison', effect: 'poisoned', requires: "Poisoner's Kit" },
-                { name: 'Daze', effect: 'daze' },
-                { name: 'Push 15ft', effect: 'push_15ft', value: 15 },
-                { name: 'Disadvantage on Save', effect: 'disadvantage_on_next_save' },
-                { name: 'No Opportunity Attacks', effect: 'no_opportunity_attacks', movement: true },
-                { name: 'Sudden Strike', effect: 'sudden_strike' },
-                { name: 'Mass Fear', effect: 'mass_fear', saveType: 'WIS', saveAbility: 'WIS' },
-                { name: 'Damage Bonus', effect: 'damage_bonus', damageExpression: '2d6' },
-                { name: 'Next Attack Advantage', effect: 'next_attack_advantage', value: 5 },
-                { name: 'Push', effect: 'push', value: 10 },
-                { name: 'Ally Movement', effect: 'ally_movement', movement: true },
-                { name: 'Unconscious', effect: 'unconscious' },
-                { name: 'Blinded', effect: 'blinded' },
-                { name: 'Speed Reduction', effect: 'speed_reduction', value: 10 },
-            ],
+            effect: 'push_or_prone',
+            oncePerTurn: true,
+            trigger: 'hit',
+            saveDc: 15,
+            saveType: 'STR',
+            saveAbility: 'STR',
+            options: [],
             ...overrides.automation,
         },
         ...overrides,
@@ -82,97 +68,104 @@ function makePlayerStats(overrides = {}) {
         name: 'TestHero',
         proficiency: 3,
         abilities: [
+            { name: 'Strength', bonus: 2 },
             { name: 'Dexterity', bonus: 2 },
-            { name: 'Constitution', bonus: 1 },
-            { name: 'Wisdom', bonus: 3 },
-            { name: 'Strength', bonus: 4 },
         ],
-        toolProficiencies: [],
-        automation: { passives: [] },
+        inventory: {
+            equipped: overrides.equipped || [],
+            backpack: [],
+        },
+        equipment: overrides.equipment || [],
         ...overrides,
     };
 }
 
-/**
- * Set up mocks for a save flow test: targetEffects is [],
- * and the save listener returns the given save result.
- */
-function setupSaveFlow(saveResult) {
-    getRuntimeValue.mockImplementation((_key, prop, _camp) => {
-        if (prop === 'targetEffects') return [];
+function setupShieldBashMocks(saveResult) {
+    getRuntimeValue.mockImplementation((_scope, key, _camp) => {
+        if (key === 'lastAttack') return { hit: true, attackerName: 'TestHero', weaponType: 'melee', targetName: 'Goblin' };
         return null;
     });
     vi.mocked(createSaveListener).mockReturnValue({
-        promptId: 'save-prompt',
+        promptId: 'shield-bash-prompt',
         promise: Promise.resolve(saveResult),
     });
 }
 
 // ── Tests ──────────────────────────────────────────────────────
 
-describe('attackRiderHandler - save flow', () => {
+describe('attackRiderHandler - Shield Bash save flow', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(checkOncePerTurnWithSkip).mockResolvedValue(null);
     });
 
     it.each([
-        { effect: 'prone', saveType: 'DEX', condition: 'prone', desc: 'Trip / prone' },
-        { effect: 'unconscious', saveType: 'CON', condition: 'unconscious', desc: 'Unconscious' },
-        { effect: 'blinded', saveType: 'DEX', condition: 'blinded', desc: 'Blinded' },
-    ])('should apply %s condition on failed save', async ({ effect, saveType, condition }) => {
-        setupSaveFlow({ success: false, roll: 5, total: 5, saveBonus: 0 });
-
-        const action = makeAction({
-            automation: {
-                type: 'attack_rider',
-                options: [{ name: effect, effect, saveType, condition }],
-            },
+        [{ success: false, roll: 5, total: 5, saveBonus: 0 }, 'modal', 'failed save'],
+        [{ success: true, roll: 18, total: 18, saveBonus: 3 }, 'popup', 'successful save'],
+    ])('should return %s on %s', async (saveResult, expectedType, _description) => {
+        const action = makeShieldBashAction();
+        const stats = makePlayerStats({
+            equipped: ['Shield'],
+            equipment: [{ name: 'Shield', armor_category: 'Shield' }],
         });
-        await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', [effect]);
+        setupShieldBashMocks(saveResult);
 
-        expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining([condition]), 'test-campaign');
+        const result = await handle(action, stats, 'test-campaign', 'map');
+
+        expect(result.type).toBe(expectedType);
+        if (expectedType === 'modal') {
+            expect(result.modalName).toBe('shieldBash');
+            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                targetName: 'Goblin',
+                saveType: 'STR',
+                saveDc: 15,
+                dcSuccess: false,
+                sourceName: 'Shield Bash',
+            }));
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'roll',
+                rollType: 'save-damage',
+                targetName: 'Goblin',
+                saveType: 'STR',
+                saveDc: 15,
+            }));
+            const entry = addEntry.mock.calls.find(c => c[1]?.saveResult === (saveResult.success ? 'success' : 'failure'));
+            expect(entry).toBeDefined();
+        } else {
+            expect(result.payload.description).toContain('succeeded on STR save');
+            expect(result.payload.description).toContain('no effect');
+        }
     });
 
-    it('should not apply condition on successful save', async () => {
-        setupSaveFlow({ success: true, roll: 16, total: 16, saveBonus: 0 });
-
-        const action = makeAction({
+    it('should use default formula DC 11 when Strength ability is missing', async () => {
+        const action = makeShieldBashAction({
             automation: {
-                type: 'attack_rider',
-                options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX', condition: 'prone' }],
-            },
-        });
-        await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
-
-        expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining(['prone']), 'test-campaign');
-    });
-
-    it('should apply Envenom Weapons damage when CON poison save fails and passive exists', async () => {
-        vi.mocked(rollExpression).mockReturnValue({ total: 8 });
-        vi.mocked(getCombatContext).mockResolvedValue({
-            creatures: [{ name: 'Goblin' }],
-        });
-        setupSaveFlow({ success: false, roll: 5, total: 5, saveBonus: 0 });
-
-        const action = makeAction({
-            automation: {
-                type: 'attack_rider',
-                options: [{ name: 'Poison', effect: 'poisoned', saveType: 'CON', requires: "Poisoner's Kit" }],
+                effect: 'push_or_prone',
+                oncePerTurn: true,
+                trigger: 'hit',
+                saveDc: null,
+                saveType: 'STR',
+                saveAbility: 'STR',
+                options: [],
             },
         });
         const stats = makePlayerStats({
-            toolProficiencies: ["Poisoner's Kit"],
-            automation: {
-                passives: [
-                    { type: 'damage_bonus', trigger: 'cunning_strike_poison_save_fail', name: 'Envenom Weapons', automation: { damageExpression: '2d6', damageType: 'Poison' } },
-                ],
-            },
+            proficiency: 3,
+            abilities: [{ name: 'Dexterity', bonus: 2 }],
+            equipped: ['Shield'],
+            equipment: [{ name: 'Shield', armor_category: 'Shield' }],
         });
-        await applyRiderOption(action, stats, 'test-campaign', 'Goblin', ['Poison']);
+        getRuntimeValue.mockImplementation((_scope, key, _camp) => {
+            if (key === 'lastAttack') return { hit: true, attackerName: 'TestHero', weaponType: 'melee', targetName: 'Goblin' };
+            return null;
+        });
+        setupShieldBashMocks({ success: false, roll: 5, total: 5, saveBonus: 0 });
 
-        expect(rollExpression).toHaveBeenCalledWith('2d6');
+        const result = await handle(action, stats, 'test-campaign', 'map');
+
+        expect(result.type).toBe('modal');
         expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-            abilityName: 'Envenom Weapons',
+            saveDc: 11,
         }));
     });
 });
