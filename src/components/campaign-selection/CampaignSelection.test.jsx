@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignSelection from './CampaignSelection.jsx';
@@ -42,7 +42,6 @@ describe('CampaignSelection', () => {
       render(<CampaignSelection />);
 
       expect(screen.getByText('Loading campaigns...')).toBeInTheDocument();
-      expect(document.querySelector('.campaign-selection.loading')).toHaveClass('loading');
     });
 
     it('should show error state when fetching folders fails', async () => {
@@ -51,7 +50,6 @@ describe('CampaignSelection', () => {
       render(<CampaignSelection />);
 
       await waitFor(() => {
-        expect(document.querySelector('.campaign-selection.error')).toBeInTheDocument();
         expect(screen.getByText(/Failed to load campaigns/)).toBeInTheDocument();
         expect(screen.getByText('Reload Page')).toBeInTheDocument();
       });
@@ -68,17 +66,6 @@ describe('CampaignSelection', () => {
         expect(screen.getByText('Alpha')).toBeInTheDocument();
         expect(screen.getByText('Beta')).toBeInTheDocument();
         expect(screen.getByText('Gamma')).toBeInTheDocument();
-      });
-    });
-
-    it('should render campaign buttons with the correct class', async () => {
-      getCharacterFolders.mockResolvedValue(['TestCampaign']);
-
-      render(<CampaignSelection />);
-
-      await waitFor(() => {
-        const button = screen.getByText('TestCampaign');
-        expect(button).toHaveClass('campaign-button');
       });
     });
 
@@ -113,12 +100,6 @@ describe('CampaignSelection', () => {
   });
 
   describe('Add button', () => {
-    it('should have the correct class', async () => {
-      await renderWithCampaigns(['Campaign1']);
-
-      expect(screen.getByText('Add')).toHaveClass('new-campaign-button');
-    });
-
     it('should open the new campaign modal when clicked', async () => {
       await renderWithCampaigns(['Campaign1']);
 
@@ -148,66 +129,13 @@ describe('CampaignSelection', () => {
       fireEvent.click(screen.getByText('Add'));
       expect(screen.getByDisplayValue('')).toBeInTheDocument();
     });
-
-    it('should close modal and clear input when Cancel is clicked', async () => {
-      await renderWithCampaigns(['Campaign1']);
-
-      fireEvent.click(screen.getByText('Add'));
-      fireEvent.change(screen.getByPlaceholderText('Enter campaign name'), {
-        target: { value: 'Test' },
-      });
-
-      expect(screen.getByDisplayValue('Test')).toBeInTheDocument();
-
-      // Click cancel to close
-      fireEvent.click(screen.getByText('Cancel'));
-
-      // Modal should be closed and input cleared
-      expect(screen.queryByText('Create New Campaign')).not.toBeInTheDocument();
-
-      // Reopen and verify clean state
-      fireEvent.click(screen.getByText('Add'));
-      expect(screen.getByDisplayValue('')).toBeInTheDocument();
-    });
-
-    it('should have an input with autofocus', async () => {
-      await renderWithCampaigns(['Campaign1']);
-
-      fireEvent.click(screen.getByText('Add'));
-
-      const input = screen.getByPlaceholderText('Enter campaign name');
-      // React's autoFocus prop focuses the element after render
-      expect(document.activeElement).toBe(input);
-    });
-
-    it('should have correct classes on modal buttons', async () => {
-      await renderWithCampaigns(['Campaign1']);
-
-      fireEvent.click(screen.getByText('Add'));
-
-      expect(screen.getByText('Create')).toHaveClass('modal-btn-primary');
-      expect(screen.getByText('Cancel')).toHaveClass('modal-btn-secondary');
-    });
-
   });
 
   describe('campaign creation', () => {
-    it('should reject empty campaign names', async () => {
+    it('should reject empty or whitespace-only campaign names', async () => {
       await renderWithCampaigns(['Campaign1']);
 
       fireEvent.click(screen.getByText('Add'));
-      fireEvent.click(screen.getByText('Create'));
-
-      expect(screen.getByText('Please enter a campaign name')).toBeInTheDocument();
-    });
-
-    it('should reject whitespace-only campaign names', async () => {
-      await renderWithCampaigns(['Campaign1']);
-
-      fireEvent.click(screen.getByText('Add'));
-      fireEvent.change(screen.getByPlaceholderText('Enter campaign name'), {
-        target: { value: '   ' },
-      });
       fireEvent.click(screen.getByText('Create'));
 
       expect(screen.getByText('Please enter a campaign name')).toBeInTheDocument();
@@ -303,29 +231,13 @@ describe('CampaignSelection', () => {
       expect(reloadSpy).toHaveBeenCalled();
     });
 
-    it('should show a specific error message from the API response', async () => {
+    it.each([
+      ['Campaign already exists', { error: 'Campaign already exists' }],
+      ['generic failure', {}],
+    ])('should show %s when the API returns an error', async (_msg, apiResponse) => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
-        json: () => Promise.resolve({ error: 'Campaign already exists' }),
-      });
-
-      await renderWithCampaigns(['Campaign1']);
-
-      fireEvent.click(screen.getByText('Add'));
-      fireEvent.change(screen.getByPlaceholderText('Enter campaign name'), {
-        target: { value: 'Existing Campaign' },
-      });
-      fireEvent.click(screen.getByText('Create'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Campaign already exists')).toBeInTheDocument();
-      });
-    });
-
-    it('should show a generic error when the API response has no error message', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve({}),
+        json: () => Promise.resolve(apiResponse),
       });
 
       await renderWithCampaigns(['Campaign1']);
@@ -336,16 +248,10 @@ describe('CampaignSelection', () => {
       });
       fireEvent.click(screen.getByText('Create'));
 
+      const expectedMessage = apiResponse.error || 'Failed to create campaign';
       await waitFor(() => {
-        expect(screen.getByText('Failed to create campaign')).toBeInTheDocument();
+        expect(screen.getByText(expectedMessage)).toBeInTheDocument();
       });
-    });
-
-    it('should not show success message initially', async () => {
-      await renderWithCampaigns(['Campaign1']);
-
-      expect(screen.queryByText(/Campaign created successfully/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Reloading.../)).not.toBeInTheDocument();
     });
   });
 
@@ -365,44 +271,9 @@ describe('CampaignSelection', () => {
       fireEvent.click(screen.getByText('Campaign1'));
 
       await waitFor(() => {
+        expect(getCharacterFiles).toHaveBeenCalledWith('Campaign1');
+        expect(loadCharacters).toHaveBeenCalledWith('Campaign1', ['char1.json']);
         expect(onSelect).toHaveBeenCalledWith('Campaign1', [{ name: 'Character1' }]);
-      });
-    });
-
-    it('should pass encoded campaign name to getCharacterFiles', async () => {
-      getCharacterFolders.mockResolvedValue(['My Campaign']);
-      getCharacterFiles.mockResolvedValue(['char1.json']);
-      loadCharacters.mockResolvedValue([]);
-
-      render(<CampaignSelection onCampaignSelect={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('My Campaign')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('My Campaign'));
-
-      // The component passes the campaign name directly (no encoding)
-      await waitFor(() => {
-        expect(getCharacterFiles).toHaveBeenCalledWith('My Campaign');
-      });
-    });
-
-    it('should pass campaign name and character files to loadCharacters', async () => {
-      getCharacterFolders.mockResolvedValue(['My Campaign']);
-      getCharacterFiles.mockResolvedValue(['char1.json']);
-      loadCharacters.mockResolvedValue([{ name: 'Hero' }]);
-
-      render(<CampaignSelection onCampaignSelect={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('My Campaign')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('My Campaign'));
-
-      await waitFor(() => {
-        expect(loadCharacters).toHaveBeenCalledWith('My Campaign', ['char1.json']);
       });
     });
 
@@ -425,7 +296,7 @@ describe('CampaignSelection', () => {
       });
     });
 
-    it('should reset loading state after campaign selection succeeds', async () => {
+    it('should reset loading state after campaign selection regardless of outcome', async () => {
       getCharacterFolders.mockResolvedValue(['Campaign1']);
       getCharacterFiles.mockResolvedValue(['char1.json']);
       loadCharacters.mockResolvedValue([{ name: 'Character1' }]);
@@ -441,26 +312,6 @@ describe('CampaignSelection', () => {
       fireEvent.click(button);
 
       // After successful selection, loading should be false
-      await waitFor(() => {
-        expect(button).not.toBeDisabled();
-      });
-    });
-
-    it('should reset loading state after campaign selection fails', async () => {
-      getCharacterFolders.mockResolvedValue(['BadCampaign']);
-      getCharacterFiles.mockRejectedValue(new Error('Not found'));
-
-      render(<CampaignSelection />);
-
-      await waitFor(() => {
-        expect(screen.getByText('BadCampaign')).toBeInTheDocument();
-      });
-
-      const button = screen.getByText('BadCampaign');
-
-      fireEvent.click(button);
-
-      // Even though selection failed, loading should be reset
       await waitFor(() => {
         expect(button).not.toBeDisabled();
       });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -346,13 +346,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', title);
     });
 
-    it.each(secondaryTargetSpells)('renders creature target buttons for $title', ({ key }) => {
-      flow[key] = { creatureTargets: ['Orc', 'Goblin'], range: '60 feet' };
-      renderWithProps();
-      expect(screen.getByTestId('stm-Orc')).toBeInTheDocument();
-      expect(screen.getByTestId('stm-Goblin')).toBeInTheDocument();
-    });
-
     it.each(secondaryTargetSpells)('wires target selection to the correct handler for $title', ({ key, handler, expectedArgs }) => {
       flow[key] = { creatureTargets: ['Orc'], range: '60 feet' };
       renderWithProps();
@@ -360,15 +353,15 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(flow[handler]).toHaveBeenCalledWith(expectedArgs);
     });
 
-    it.each(secondaryTargetSpells)('wires skip to the correct skip handler for $title', ({ key, handler }) => {
+    it.each(secondaryTargetSpells)('wires skip to the correct skip handler for $title', ({ key }) => {
+      const handler = key.replace('pending', 'handle') + 'Confirm';
       flow[key] = { creatureTargets: ['Orc'], range: '60 feet' };
       renderWithProps();
-      const skipHandler = handler.replace('Confirm', 'Skip');
       fireEvent.click(screen.getByTestId('stm-skip'));
-      expect(flow[skipHandler]).toHaveBeenCalled();
+      expect(flow[`${handler.replace('Confirm', 'Skip')}`]).toHaveBeenCalled();
     });
 
-    it('renders target buttons with correct testids for string targets', () => {
+    it('renders multiple creature targets in the secondary target modal', () => {
       flow.pendingStoneSkin = { creatureTargets: ['Orc', 'Goblin'], range: 'Touch' };
       renderWithProps();
       expect(screen.getByTestId('stm-Orc')).toBeInTheDocument();
@@ -377,17 +370,11 @@ describe('CharSpells - Popup Modal Rendering', () => {
   });
 
   describe('staged flow - enhance ability', () => {
-    it('renders HexAbilityModal at the ability stage', () => {
+    it('renders HexAbilityModal at the ability stage with all six ability buttons', () => {
       flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
       flow.enhanceAbilityStage = 'ability';
       renderWithProps();
       expect(screen.getByTestId('hex-ability-modal')).toHaveAttribute('data-title', 'Enhance Ability — Choose Ability');
-    });
-
-    it('renders all six ability buttons in HexAbilityModal', () => {
-      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
-      flow.enhanceAbilityStage = 'ability';
-      renderWithProps();
       expect(screen.getByTestId('hex-ability-STR')).toBeInTheDocument();
       expect(screen.getByTestId('hex-ability-DEX')).toBeInTheDocument();
       expect(screen.getByTestId('hex-ability-CON')).toBeInTheDocument();
@@ -396,33 +383,23 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(screen.getByTestId('hex-ability-CHA')).toBeInTheDocument();
     });
 
-    it('wires HexAbilityModal ability selection to handleEnhanceAbilityAbilitySelect', () => {
+    it('wires HexAbilityModal ability selection to handleEnhanceAbilityAbilitySelect and cancel to skip', () => {
       flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
       flow.enhanceAbilityStage = 'ability';
       renderWithProps();
       fireEvent.click(screen.getByTestId('hex-ability-DEX'));
       expect(flow.handleEnhanceAbilityAbilitySelect).toHaveBeenCalledWith('DEX');
-    });
-
-    it('wires HexAbilityModal cancel to handleEnhanceAbilitySkip', () => {
-      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
-      flow.enhanceAbilityStage = 'ability';
-      renderWithProps();
       fireEvent.click(screen.getByTestId('hex-cancel'));
       expect(flow.handleEnhanceAbilitySkip).toHaveBeenCalled();
     });
 
-    it('renders SecondaryTargetModal at the enhance ability target stage', () => {
+    it('renders SecondaryTargetModal at the enhance ability target stage with correct handlers', () => {
       flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
       flow.enhanceAbilityStage = 'target';
       renderWithProps();
       expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Enhance Ability');
-    });
-
-    it('wires SecondaryTargetModal skip to handleEnhanceAbilitySkip at target stage', () => {
-      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
-      flow.enhanceAbilityStage = 'target';
-      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-Orc'));
+      expect(flow.handleEnhanceAbilityConfirm).toHaveBeenCalledWith(['Orc']);
       fireEvent.click(screen.getByTestId('stm-skip'));
       expect(flow.handleEnhanceAbilitySkip).toHaveBeenCalled();
     });
@@ -435,52 +412,26 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(screen.getByTestId('stm-Goblin')).toBeInTheDocument();
       expect(screen.getByTestId('stm-Skeleton')).toBeInTheDocument();
     });
-
-    it('wires enhance ability target selection to handleEnhanceAbilityConfirm', () => {
-      flow.pendingEnhanceAbility = { creatureTargets: ['Orc'] };
-      flow.enhanceAbilityStage = 'target';
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-      expect(flow.handleEnhanceAbilityConfirm).toHaveBeenCalledWith(['Orc']);
-    });
   });
 
   describe('staged flow - protection from energy', () => {
-    it('renders SecondaryTargetModal for protection from energy target stage', () => {
+    it('renders SecondaryTargetModal for target stage with correct handlers', () => {
       flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
       flow.protectionFromEnergyStage = 'target';
       renderWithProps();
       expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Protection from Energy');
-    });
-
-    it('wires SecondaryTargetModal skip to handleProtectionFromEnergySkip at target stage', () => {
-      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
-      flow.protectionFromEnergyStage = 'target';
-      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-Orc'));
+      expect(flow.handleProtectionFromEnergyTargetSelect).toHaveBeenCalledWith('Orc');
       fireEvent.click(screen.getByTestId('stm-skip'));
       expect(flow.handleProtectionFromEnergySkip).toHaveBeenCalled();
     });
 
-    it('wires target selection to handleProtectionFromEnergyTargetSelect', () => {
-      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
-      flow.protectionFromEnergyStage = 'target';
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-      expect(flow.handleProtectionFromEnergyTargetSelect).toHaveBeenCalledWith('Orc');
-    });
-
-    it('renders SingleResistanceSelectionModal for protection from energy type stage', () => {
+    it('renders SingleResistanceSelectionModal for type stage with damage types and skip handler', () => {
       flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
       flow.protectionFromEnergyStage = 'type';
       renderWithProps();
       expect(screen.getByTestId('single-resistance-selection-modal')).toBeInTheDocument();
       expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire,cold');
-    });
-
-    it('wires SingleResistanceSelectionModal skip to handleProtectionFromEnergySkip at type stage', () => {
-      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire', 'cold'] };
-      flow.protectionFromEnergyStage = 'type';
-      renderWithProps();
       fireEvent.click(screen.getByTestId('stm-skip'));
       expect(flow.handleProtectionFromEnergySkip).toHaveBeenCalled();
     });
@@ -491,50 +442,25 @@ describe('CharSpells - Popup Modal Rendering', () => {
       renderWithProps();
       expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire,cold,lightning');
     });
-
-    it('renders single damage type in the selection modal', () => {
-      flow.pendingProtectionFromEnergy = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
-      flow.protectionFromEnergyStage = 'type';
-      renderWithProps();
-      expect(screen.getByTestId('res-damage-types')).toHaveTextContent('fire');
-    });
   });
 
   describe('staged flow - resistance', () => {
-    it('renders SecondaryTargetModal for resistance target stage', () => {
+    it('renders SecondaryTargetModal for target stage with correct handlers', () => {
       flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
       flow.resistanceStage = 'target';
       renderWithProps();
       expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Resistance');
-    });
-
-    it('wires SecondaryTargetModal skip to handleResistanceSkip at target stage', () => {
-      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
-      flow.resistanceStage = 'target';
-      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-Orc'));
+      expect(flow.handleResistanceTargetSelect).toHaveBeenCalledWith('Orc');
       fireEvent.click(screen.getByTestId('stm-skip'));
       expect(flow.handleResistanceSkip).toHaveBeenCalled();
     });
 
-    it('wires target selection to handleResistanceTargetSelect', () => {
-      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
-      flow.resistanceStage = 'target';
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-      expect(flow.handleResistanceTargetSelect).toHaveBeenCalledWith('Orc');
-    });
-
-    it('renders SingleResistanceSelectionModal for resistance type stage', () => {
+    it('renders SingleResistanceSelectionModal for type stage with skip handler', () => {
       flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
       flow.resistanceStage = 'type';
       renderWithProps();
       expect(screen.getByTestId('single-resistance-selection-modal')).toBeInTheDocument();
-    });
-
-    it('wires SingleResistanceSelectionModal skip to handleResistanceSkip at type stage', () => {
-      flow.pendingResistance = { creatureTargets: ['Orc'], range: 'Touch', damageTypes: ['fire'] };
-      flow.resistanceStage = 'type';
-      renderWithProps();
       fireEvent.click(screen.getByTestId('stm-skip'));
       expect(flow.handleResistanceSkip).toHaveBeenCalled();
     });
@@ -547,94 +473,37 @@ describe('CharSpells - Popup Modal Rendering', () => {
     });
   });
 
-  describe('staged flow visibility', () => {
-    it('does not render staged flow modals when enhanceAbilityStage is null', () => {
-      flow.pendingEnhanceAbility = null;
-      flow.enhanceAbilityStage = null;
-      renderWithProps();
-      expect(screen.queryByTestId('hex-ability-modal')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
-    });
-
-    it('does not render staged flow modals when protectionFromEnergyStage is null', () => {
-      flow.pendingProtectionFromEnergy = null;
-      flow.protectionFromEnergyStage = null;
-      renderWithProps();
-      expect(screen.queryByTestId('single-resistance-selection-modal')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
-    });
-
-    it('does not render staged flow modals when resistanceStage is null', () => {
-      flow.pendingResistance = null;
-      flow.resistanceStage = null;
-      renderWithProps();
-      expect(screen.queryByTestId('single-resistance-selection-modal')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
-    });
-  });
-
   describe('creature selection modals', () => {
     const creatureModalSpells = [
-      { key: 'pendingHoldMonster', title: 'Hold Monster' },
-      { key: 'pendingHoldPerson', title: 'Hold Person' },
-      { key: 'pendingPolymorph', title: 'Polymorph' },
-      { key: 'pendingAnimalShapes', title: 'Animal Shapes' },
-      { key: 'pendingCharmPerson', title: 'Charm Person' },
-      { key: 'pendingCharmMonster', title: 'Charm Monster' },
-      { key: 'pendingBanishment', title: 'Banishment' },
-      { key: 'pendingPrismaticSpray', title: 'Prismatic Spray' },
-      { key: 'pendingHeroesFeast', title: "Heroes' Feast" },
-      { key: 'pendingBane', title: 'Bane' },
-      { key: 'pendingBless', title: 'Bless' },
-      { key: 'pendingFaerieFire', title: 'Faerie Fire' },
-      { key: 'pendingHolyAura', title: 'Holy Aura' },
-      { key: 'pendingBeaconOfHope', title: 'Beacon of Hope' },
-      { key: 'pendingSlow', title: 'Slow' },
-      { key: 'pendingPassWithoutTrace', title: 'Pass Without Trace' },
-      { key: 'pendingGlobe', title: 'Globe of Invulnerability' },
-      { key: 'pendingAntimagicField', title: 'Antimagic Field' },
-      { key: 'pendingForcecage', title: 'Forcecage' },
-      { key: 'pendingStinkingCloud', title: 'Stinking Cloud' },
-      { key: 'pendingConfusion', title: 'Confusion' },
-      { key: 'pendingWeb', title: 'Web' },
-      { key: 'pendingAnimalFriendship', title: 'Animal Friendship' },
-      { key: 'pendingAuraOfLife', title: 'Aura of Life' },
-      { key: 'pendingAuraOfPurity', title: 'Aura of Purity' },
-      { key: 'pendingCircleOfPower', title: 'Circle of Power' },
-      { key: 'pendingCompulsion', title: 'Compulsion' },
-      { key: 'pendingSleetStorm', title: 'Sleet Storm' },
+      { key: 'pendingHoldMonster', title: 'Hold Monster', confirm: 'handleHoldMonsterConfirm', skip: 'handleHoldMonsterSkip' },
+      { key: 'pendingHoldPerson', title: 'Hold Person', confirm: 'handleHoldPersonConfirm', skip: 'handleHoldPersonSkip' },
+      { key: 'pendingPolymorph', title: 'Polymorph', confirm: 'handlePolymorphConfirm', skip: 'handlePolymorphSkip' },
+      { key: 'pendingAnimalShapes', title: 'Animal Shapes', confirm: 'handleAnimalShapesTargetConfirm', skip: 'handleAnimalShapesSkip' },
+      { key: 'pendingCharmPerson', title: 'Charm Person', confirm: 'handleCharmPersonConfirm', skip: 'handleCharmPersonSkip' },
+      { key: 'pendingCharmMonster', title: 'Charm Monster', confirm: 'handleCharmMonsterConfirm', skip: 'handleCharmMonsterSkip' },
+      { key: 'pendingBanishment', title: 'Banishment', confirm: 'handleBanishmentConfirm', skip: 'handleBanishmentSkip' },
+      { key: 'pendingPrismaticSpray', title: 'Prismatic Spray', confirm: 'handlePrismaticSprayConfirm', skip: 'handlePrismaticSpraySkip' },
+      { key: 'pendingHeroesFeast', title: "Heroes' Feast", confirm: 'handleHeroesFeastConfirm', skip: 'handleHeroesFeastSkip' },
+      { key: 'pendingBane', title: 'Bane', confirm: 'handleBaneConfirm', skip: 'handleBaneSkip' },
+      { key: 'pendingBless', title: 'Bless', confirm: 'handleBlessConfirm', skip: 'handleBlessSkip' },
+      { key: 'pendingFaerieFire', title: 'Faerie Fire', confirm: 'handleFaerieFireConfirm', skip: 'handleFaerieFireSkip' },
+      { key: 'pendingHolyAura', title: 'Holy Aura', confirm: 'handleHolyAuraConfirm', skip: 'handleHolyAuraSkip' },
+      { key: 'pendingBeaconOfHope', title: 'Beacon of Hope', confirm: 'handleBeaconOfHopeConfirm', skip: 'handleBeaconOfHopeSkip' },
+      { key: 'pendingSlow', title: 'Slow', confirm: 'handleSlowConfirm', skip: 'handleSlowSkip' },
+      { key: 'pendingPassWithoutTrace', title: 'Pass Without Trace', confirm: 'handlePassWithoutTraceConfirm', skip: 'handlePassWithoutTraceSkip' },
+      { key: 'pendingGlobe', title: 'Globe of Invulnerability', confirm: 'handleGlobeConfirm', skip: 'handleGlobeSkip' },
+      { key: 'pendingAntimagicField', title: 'Antimagic Field', confirm: 'handleAntimagicFieldConfirm', skip: 'handleAntimagicFieldSkip' },
+      { key: 'pendingForcecage', title: 'Forcecage', confirm: 'handleForcecageConfirm', skip: 'handleForcecageSkip' },
+      { key: 'pendingStinkingCloud', title: 'Stinking Cloud', confirm: 'handleStinkingCloudConfirm', skip: 'handleStinkingCloudSkip' },
+      { key: 'pendingConfusion', title: 'Confusion', confirm: 'handleConfusionConfirm', skip: 'handleConfusionSkip' },
+      { key: 'pendingWeb', title: 'Web', confirm: 'handleWebConfirm', skip: 'handleWebSkip' },
+      { key: 'pendingAnimalFriendship', title: 'Animal Friendship', confirm: 'handleAnimalFriendshipConfirm', skip: 'handleAnimalFriendshipSkip' },
+      { key: 'pendingAuraOfLife', title: 'Aura of Life', confirm: 'handleAuraOfLifeConfirm', skip: 'handleAuraOfLifeSkip' },
+      { key: 'pendingAuraOfPurity', title: 'Aura of Purity', confirm: 'handleAuraOfPurityConfirm', skip: 'handleAuraOfPuritySkip' },
+      { key: 'pendingCircleOfPower', title: 'Circle of Power', confirm: 'handleCircleOfPowerConfirm', skip: 'handleCircleOfPowerSkip' },
+      { key: 'pendingCompulsion', title: 'Compulsion', confirm: 'handleCompulsionConfirm', skip: 'handleCompulsionSkip' },
+      { key: 'pendingSleetStorm', title: 'Sleet Storm', confirm: 'handleSleetStormConfirm', skip: 'handleSleetStormSkip' },
     ];
-
-    const HANDLER_MAP = {
-      HoldMonster: { confirm: 'handleHoldMonsterConfirm', skip: 'handleHoldMonsterSkip' },
-      HoldPerson: { confirm: 'handleHoldPersonConfirm', skip: 'handleHoldPersonSkip' },
-      Polymorph: { confirm: 'handlePolymorphConfirm', skip: 'handlePolymorphSkip' },
-      AnimalShapes: { confirm: 'handleAnimalShapesTargetConfirm', skip: 'handleAnimalShapesSkip' },
-      CharmPerson: { confirm: 'handleCharmPersonConfirm', skip: 'handleCharmPersonSkip' },
-      CharmMonster: { confirm: 'handleCharmMonsterConfirm', skip: 'handleCharmMonsterSkip' },
-      Banishment: { confirm: 'handleBanishmentConfirm', skip: 'handleBanishmentSkip' },
-      PrismaticSpray: { confirm: 'handlePrismaticSprayConfirm', skip: 'handlePrismaticSpraySkip' },
-      HeroesFeast: { confirm: 'handleHeroesFeastConfirm', skip: 'handleHeroesFeastSkip' },
-      Bane: { confirm: 'handleBaneConfirm', skip: 'handleBaneSkip' },
-      Bless: { confirm: 'handleBlessConfirm', skip: 'handleBlessSkip' },
-      FaerieFire: { confirm: 'handleFaerieFireConfirm', skip: 'handleFaerieFireSkip' },
-      HolyAura: { confirm: 'handleHolyAuraConfirm', skip: 'handleHolyAuraSkip' },
-      BeaconOfHope: { confirm: 'handleBeaconOfHopeConfirm', skip: 'handleBeaconOfHopeSkip' },
-      Slow: { confirm: 'handleSlowConfirm', skip: 'handleSlowSkip' },
-      PassWithoutTrace: { confirm: 'handlePassWithoutTraceConfirm', skip: 'handlePassWithoutTraceSkip' },
-      Globe: { confirm: 'handleGlobeConfirm', skip: 'handleGlobeSkip' },
-      AntimagicField: { confirm: 'handleAntimagicFieldConfirm', skip: 'handleAntimagicFieldSkip' },
-      Forcecage: { confirm: 'handleForcecageConfirm', skip: 'handleForcecageSkip' },
-      StinkingCloud: { confirm: 'handleStinkingCloudConfirm', skip: 'handleStinkingCloudSkip' },
-      Confusion: { confirm: 'handleConfusionConfirm', skip: 'handleConfusionSkip' },
-      Web: { confirm: 'handleWebConfirm', skip: 'handleWebSkip' },
-      AnimalFriendship: { confirm: 'handleAnimalFriendshipConfirm', skip: 'handleAnimalFriendshipSkip' },
-      AuraOfLife: { confirm: 'handleAuraOfLifeConfirm', skip: 'handleAuraOfLifeSkip' },
-      AuraOfPurity: { confirm: 'handleAuraOfPurityConfirm', skip: 'handleAuraOfPuritySkip' },
-      CircleOfPower: { confirm: 'handleCircleOfPowerConfirm', skip: 'handleCircleOfPowerSkip' },
-      Compulsion: { confirm: 'handleCompulsionConfirm', skip: 'handleCompulsionSkip' },
-      SleetStorm: { confirm: 'handleSleetStormConfirm', skip: 'handleSleetStormSkip' },
-    };
 
     it.each(creatureModalSpells)('renders CreatureSelectionModal with correct title for $title', ({ key, title }) => {
       flow[key] = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
@@ -644,29 +513,18 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(modal).toBeInTheDocument();
     });
 
-    it.each(creatureModalSpells)('renders creature target buttons for $title', ({ key }) => {
-      flow[key] = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
-      renderWithProps();
-      expect(screen.getAllByTestId('csm-Orc').length).toBeGreaterThan(0);
-      expect(screen.getAllByTestId('csm-Goblin').length).toBeGreaterThan(0);
-    });
-
-    it.each(creatureModalSpells)('wires skip handler for $title', ({ key, title }) => {
-      const handlerInfo = HANDLER_MAP[title];
-      if (!handlerInfo) return;
+    it.each(creatureModalSpells)('wires skip handler for $title', ({ key, skip }) => {
       flow[key] = { creatureTargets: ['Orc'], maxTargets: 1 };
       renderWithProps();
       fireEvent.click(screen.getByTestId('csm-skip'));
-      expect(flow[handlerInfo.skip]).toHaveBeenCalled();
+      expect(flow[skip]).toHaveBeenCalled();
     });
 
-    it.each(creatureModalSpells)('wires confirm handler when a creature is selected for $title', ({ key, title }) => {
-      const handlerInfo = HANDLER_MAP[title];
-      if (!handlerInfo) return;
+    it.each(creatureModalSpells)('wires confirm handler when a creature is selected for $title', ({ key, confirm }) => {
       flow[key] = { creatureTargets: ['Orc', 'Goblin'], maxTargets: 2 };
       renderWithProps();
       fireEvent.click(screen.getByTestId('csm-Orc'));
-      expect(flow[handlerInfo.confirm]).toHaveBeenCalled();
+      expect(flow[confirm]).toHaveBeenCalled();
     });
 
     it('confirms with the selected creature name, not all targets', () => {

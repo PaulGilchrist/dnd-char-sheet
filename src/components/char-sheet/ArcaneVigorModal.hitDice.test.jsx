@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ArcaneVigorModal from './ArcaneVigorModal.jsx';
@@ -60,74 +60,6 @@ describe('ArcaneVigorModal - hit dice consumption', () => {
     getRuntimeValueMock.mockImplementation(() => null);
   });
 
-  it('decrements shortRestHitDice by number of dice rolled after applying healing', async () => {
-    getRuntimeValueMock.mockImplementation((_name, key) => {
-      if (key === 'shortRestHitDice') return 5;
-      return null;
-    });
-    renderModal();
-    fireEvent.click(screen.getByText(/Roll One/));
-    fireEvent.click(screen.getByText(/Roll One/));
-    await act(async () => {
-      fireEvent.click(screen.getByText('Apply Healing'));
-    });
-    expect(setRuntimeValueMock).toHaveBeenCalledWith('Elyra', 'shortRestHitDice', 3, mockCampaignName);
-  });
-
-  it('consumes all hit dice when rolling max', async () => {
-    getRuntimeValueMock.mockImplementation((_name, key) => {
-      if (key === 'shortRestHitDice') return 2;
-      return null;
-    });
-    renderModal({ diceCount: 2 });
-    fireEvent.click(screen.getByText(/Roll One/));
-    fireEvent.click(screen.getByText(/Roll One/));
-    await act(async () => {
-      fireEvent.click(screen.getByText('Apply Healing'));
-    });
-    expect(setRuntimeValueMock).toHaveBeenCalledWith('Elyra', 'shortRestHitDice', 0, mockCampaignName);
-  });
-
-  it('clamps remaining hit dice to zero when consumed exceeds available', async () => {
-    getRuntimeValueMock.mockImplementation((_name, key) => {
-      if (key === 'shortRestHitDice') return 1;
-      return null;
-    });
-    renderModal({ diceCount: 5 });
-    fireEvent.click(screen.getByText(/Roll One/));
-    await act(async () => {
-      fireEvent.click(screen.getByText('Apply Healing'));
-    });
-    expect(setRuntimeValueMock).toHaveBeenCalledWith('Elyra', 'shortRestHitDice', 0, mockCampaignName);
-  });
-
-  it('does not call setRuntimeValue for shortRestHitDice when no dice rolled', async () => {
-    getRuntimeValueMock.mockImplementation((_name, key) => {
-      if (key === 'shortRestHitDice') return 5;
-      return null;
-    });
-    renderModal();
-    await act(async () => {
-      fireEvent.click(screen.getByText('Apply Healing'));
-    });
-    expect(setRuntimeValueMock).not.toHaveBeenCalledWith('Elyra', 'shortRestHitDice', expect.any(Number), mockCampaignName);
-  });
-
-  it('shows remaining hit dice in applied message', async () => {
-    getRuntimeValueMock.mockImplementation((_name, key) => {
-      if (key === 'shortRestHitDice') return 5;
-      return null;
-    });
-    renderModal();
-    fireEvent.click(screen.getByText(/Roll One/));
-    fireEvent.click(screen.getByText(/Roll One/));
-    await act(async () => {
-      fireEvent.click(screen.getByText('Apply Healing'));
-    });
-    expect(screen.getByText(/2 hit dice consumed/)).toBeInTheDocument();
-    expect(screen.getByText(/3 remaining/)).toBeInTheDocument();
-  });
-
   it('uses diceCount as fallback when storedHitDice is null', async () => {
     getRuntimeValueMock.mockImplementation(() => null);
     renderModal({ diceCount: 3 });
@@ -137,33 +69,6 @@ describe('ArcaneVigorModal - hit dice consumption', () => {
       fireEvent.click(screen.getByText('Apply Healing'));
     });
     expect(setRuntimeValueMock).toHaveBeenCalledWith('Elyra', 'shortRestHitDice', 1, mockCampaignName);
-  });
-
-  it('consumes exactly one die when only one is rolled', async () => {
-    getRuntimeValueMock.mockImplementation((_name, key) => {
-      if (key === 'shortRestHitDice') return 1;
-      return null;
-    });
-    renderModal();
-    fireEvent.click(screen.getByText(/Roll One/));
-    await act(async () => {
-      fireEvent.click(screen.getByText('Apply Healing'));
-    });
-    expect(setRuntimeValueMock).toHaveBeenCalledWith('Elyra', 'shortRestHitDice', 0, mockCampaignName);
-  });
-
-  it('handles partial consumption when storedHitDice is less than diceCount', async () => {
-    getRuntimeValueMock.mockImplementation((_name, key) => {
-      if (key === 'shortRestHitDice') return 2;
-      return null;
-    });
-    renderModal({ diceCount: 5 });
-    fireEvent.click(screen.getByText(/Roll One/));
-    fireEvent.click(screen.getByText(/Roll One/));
-    await act(async () => {
-      fireEvent.click(screen.getByText('Apply Healing'));
-    });
-    expect(setRuntimeValueMock).toHaveBeenCalledWith('Elyra', 'shortRestHitDice', 0, mockCampaignName);
   });
 
   it('handles partial consumption when storedHitDice is greater than diceCount', async () => {

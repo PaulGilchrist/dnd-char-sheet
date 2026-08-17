@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -305,7 +305,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
   });
 
   describe('metamagic popup', () => {
-    it('renders MetamagicPopup with spell name and current SP', () => {
+    it('renders MetamagicPopup with spell name and current SP, and wires confirm/skip handlers', () => {
       flow.pendingMetamagic = {
         spellName: 'Fireball',
         spellLevel: 3,
@@ -316,47 +316,29 @@ describe('CharSpells - Popup Modal Rendering', () => {
       renderWithProps();
       expect(screen.getByTestId('metamagic-popup')).toHaveTextContent('Fireball');
       expect(screen.getByTestId('metamagic-sp')).toHaveTextContent('7');
-    });
-
-    it('wires MetamagicPopup confirm to handleConfirm', () => {
-      flow.pendingMetamagic = { spellName: 'Fireball', spellLevel: 3, _currentSP: 7, isPsionic: false, psionicCost: 0 };
-      renderWithProps();
       fireEvent.click(screen.getByTestId('metamagic-confirm'));
       expect(flow.handleConfirm).toHaveBeenCalled();
-    });
-
-    it('wires MetamagicPopup skip to handleSkip', () => {
-      flow.pendingMetamagic = { spellName: 'Fireball', spellLevel: 3, _currentSP: 7, isPsionic: false, psionicCost: 0 };
-      renderWithProps();
+      vi.mocked(flow.handleConfirm).mockClear();
       fireEvent.click(screen.getByTestId('metamagic-skip'));
       expect(flow.handleSkip).toHaveBeenCalled();
     });
   });
 
   describe('multi-target popup', () => {
-    it('renders MultiTargetPopup and shows spell name', () => {
+    it('renders MultiTargetPopup showing spell name, and wires confirm/skip handlers', () => {
       flow.pendingMultiTarget = { spellName: 'Aid', spellLevel: 2, range: '30 feet', creatureTargets: ['Orc', 'Goblin'] };
       renderWithProps();
       expect(screen.getByTestId('multi-target-popup')).toHaveTextContent('Aid');
-    });
-
-    it('wires MultiTargetPopup confirm to handleMultiTargetConfirm', () => {
-      flow.pendingMultiTarget = { spellName: 'Aid', spellLevel: 2, range: '30 feet', creatureTargets: ['Orc', 'Goblin'] };
-      renderWithProps();
       fireEvent.click(screen.getByTestId('mt-confirm'));
       expect(flow.handleMultiTargetConfirm).toHaveBeenCalled();
-    });
-
-    it('wires MultiTargetPopup skip to handleMultiTargetSkip', () => {
-      flow.pendingMultiTarget = { spellName: 'Aid', spellLevel: 2, range: '30 feet', creatureTargets: ['Orc', 'Goblin'] };
-      renderWithProps();
+      vi.mocked(flow.handleMultiTargetConfirm).mockClear();
       fireEvent.click(screen.getByTestId('mt-skip'));
       expect(flow.handleMultiTargetSkip).toHaveBeenCalled();
     });
   });
 
   describe('magic missile popup', () => {
-    it('renders MagicMissileTargetPopup with total missiles and current target name', () => {
+    it('renders MagicMissileTargetPopup with total missiles and current target name, and wires confirm/skip handlers', () => {
       flow.pendingMagicMissile = {
         spell: { name: 'Magic Missile', level: 1 },
         totalMissiles: 3,
@@ -368,57 +350,22 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(screen.getByTestId('magic-missile-popup')).toHaveTextContent('Magic Missile');
       expect(screen.getByTestId('mm-total')).toHaveTextContent('3');
       expect(screen.getByTestId('mm-current-target')).toHaveTextContent('Goblin');
-    });
-
-    it('wires MagicMissileTargetPopup confirm to handleMagicMissileConfirm', () => {
-      flow.pendingMagicMissile = {
-        spell: { name: 'Magic Missile', level: 1 },
-        totalMissiles: 3,
-        missileDamage: '1d4+1',
-        creatureTargets: ['Orc'],
-      };
-      renderWithProps();
       fireEvent.click(screen.getByTestId('mm-confirm'));
       expect(flow.handleMagicMissileConfirm).toHaveBeenCalled();
-    });
-
-    it('wires MagicMissileTargetPopup skip to handleMagicMissileSkip', () => {
-      flow.pendingMagicMissile = {
-        spell: { name: 'Magic Missile', level: 1 },
-        totalMissiles: 3,
-        missileDamage: '1d4+1',
-        creatureTargets: ['Orc'],
-      };
-      renderWithProps();
+      vi.mocked(flow.handleMagicMissileConfirm).mockClear();
       fireEvent.click(screen.getByTestId('mm-skip'));
       expect(flow.handleMagicMissileSkip).toHaveBeenCalled();
     });
   });
 
   describe('upcast popup', () => {
-    it('renders UpcastPopup showing the upcast spell name', () => {
+    it('renders UpcastPopup showing the spell name when pendingUpcast is set', () => {
       upcastFlow.pendingUpcast = { spell: { name: 'Fireball', level: 3 } };
       renderWithProps();
       expect(screen.getByTestId('upcast-popup')).toHaveTextContent('Fireball');
     });
 
-    it('wires upcast confirm to handleUpcastConfirm', () => {
-      upcastFlow.pendingUpcast = { spell: { name: 'Fireball', level: 3 } };
-      renderWithProps();
-      // The UpcastPopup mock doesn't render a confirm button, so we verify the handler
-      // was wired by checking that the popup renders (behavior test)
-      expect(screen.getByTestId('upcast-popup')).toBeInTheDocument();
-    });
-
-    it('wires upcast cancel to handleUpcastCancel', () => {
-      upcastFlow.pendingUpcast = { spell: { name: 'Fireball', level: 3 } };
-      renderWithProps();
-      // The UpcastPopup mock doesn't render a cancel button, so we verify the popup renders
-      // which means the handlers are wired in the component
-      expect(screen.getByTestId('upcast-popup')).toBeInTheDocument();
-    });
-
-    it('renders UpcastPopup only when pendingUpcast is set', () => {
+    it('does not render UpcastPopup when pendingUpcast is null', () => {
       upcastFlow.pendingUpcast = null;
       renderWithProps();
       expect(screen.queryByTestId('upcast-popup')).not.toBeInTheDocument();
@@ -426,22 +373,15 @@ describe('CharSpells - Popup Modal Rendering', () => {
   });
 
   describe('popup visibility when flow state is null', () => {
-    it('does not render MetamagicPopup when pendingMetamagic is null', () => {
-      flow.pendingMetamagic = null;
-      renderWithProps();
-      expect(screen.queryByTestId('metamagic-popup')).not.toBeInTheDocument();
-    });
+    const popupTests = [
+      { key: 'pendingMetamagic', testId: 'metamagic-popup' },
+      { key: 'pendingMultiTarget', testId: 'multi-target-popup' },
+      { key: 'pendingMagicMissile', testId: 'magic-missile-popup' },
+    ];
 
-    it('does not render MultiTargetPopup when pendingMultiTarget is null', () => {
-      flow.pendingMultiTarget = null;
+    it.each(popupTests)('does not render $testId when $key is null', ({ testId }) => {
       renderWithProps();
-      expect(screen.queryByTestId('multi-target-popup')).not.toBeInTheDocument();
-    });
-
-    it('does not render MagicMissileTargetPopup when pendingMagicMissile is null', () => {
-      flow.pendingMagicMissile = null;
-      renderWithProps();
-      expect(screen.queryByTestId('magic-missile-popup')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
     });
   });
 });

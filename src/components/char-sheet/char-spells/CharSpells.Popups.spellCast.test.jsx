@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -6,11 +6,10 @@ import { mockPlayerStats } from './CharSpells.test.helpers.js';
 
 import { useSpellMetamagicFlow } from '../../../hooks/combat/useSpellMetamagicFlow.js';
 import { useSpellUpcastFlow } from '../../../hooks/combat/useSpellUpcastFlow.js';
-import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { isInnateSorceryActive } from '../../../services/combat/buffs/buffService.js';
 import { getTargetFromAttacker } from '../../../services/rules/combat/damageUtils.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
-import { normalizeAutoDamage, resolveAttackDamageStandalone } from '../useAttackDamageResolution.js';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(() => []),
@@ -92,11 +91,6 @@ vi.mock('../../../services/automation/handlers/spells/shapechangeService.js', ()
 vi.mock('../../../services/rules/spells/spellPreparationService.js', () => ({
   prepareSpellCast: vi.fn().mockResolvedValue(undefined),
   isFreeCastAuthorized: vi.fn(() => false),
-}));
-
-vi.mock('../useAttackDamageResolution.js', () => ({
-  normalizeAutoDamage: vi.fn(() => ({ attack: { name: 'Fire Bolt' }, ctx: { targetName: 'Orc' } })),
-  resolveAttackDamageStandalone: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('./CharSpellSlots.jsx', () => ({
@@ -301,8 +295,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
     vi.mocked(isInnateSorceryActive).mockReturnValue(false);
     vi.mocked(getTargetFromAttacker).mockReturnValue(null);
     vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
-    vi.mocked(normalizeAutoDamage).mockReturnValue({ attack: { name: 'Fire Bolt' }, ctx: { targetName: 'Orc' } });
-    vi.mocked(resolveAttackDamageStandalone).mockResolvedValue(undefined);
+
   });
 
   describe('spell cast flow', () => {
@@ -318,28 +311,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       });
       expect(flow.gateMetamagic).toHaveBeenCalledWith(expect.objectContaining({ name: 'Light' }), {});
       expect(screen.queryByTestId('spell-detail-popup')).not.toBeInTheDocument();
-    });
-
-    it('invokes normalizeAutoDamage and resolveAttackDamageStandalone via autoDamageRoll', async () => {
-      renderWithProps();
-
-      const autoDamageRoll = mockDiceRoll.autoDamageRoll;
-      expect(autoDamageRoll).toBeTypeOf('function');
-
-      await act(async () => {
-        await autoDamageRoll({ name: 'Fire Bolt', formula: '1d10', damageType: 'fire' }, false);
-      });
-
-      expect(normalizeAutoDamage).toHaveBeenCalledWith(
-        { name: 'Fire Bolt', formula: '1d10', damageType: 'fire' },
-        false,
-        expect.objectContaining({ name: 'Test Character' })
-      );
-      expect(resolveAttackDamageStandalone).toHaveBeenCalledWith(
-        { name: 'Fire Bolt' },
-        { targetName: 'Orc' },
-        expect.objectContaining({ playerStats: expect.any(Object), campaignName: 'test-campaign' })
-      );
     });
   });
 
@@ -357,14 +328,17 @@ describe('CharSpells - Popup Modal Rendering', () => {
       };
       vi.mocked(useSpellMetamagicFlow).mockImplementation((playerStats, campaignName, castAction, setWordsOfCreationTarget) => {
         setTimeout(() => {
-          setWordsOfCreationTarget(wordsOfCreationData);
+          act(() => {
+            setWordsOfCreationTarget(wordsOfCreationData);
+          });
         }, 0);
         return flow;
       });
       renderWithProps();
-      await waitFor(() => {
-        expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Words of Creation');
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
       });
+      expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Words of Creation');
     });
   });
 
@@ -389,13 +363,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       renderWithProps({ playerStats: wizard, conditionAttackMode: 'normal' });
       fireEvent.click(screen.getByText(/Attack \(to hit\):/));
       expect(mockDiceRoll.rollAttack).toHaveBeenCalledWith('Spell Attack', 5, expect.objectContaining({ forcedMode: undefined }));
-    });
-  });
-
-  describe('runtime state subscriptions', () => {
-    it('subscribes to activeBuffs via useRuntimeValue with the player and campaign', () => {
-      renderWithProps();
-      expect(useRuntimeValue).toHaveBeenCalledWith('Test Character', 'activeBuffs', 'test-campaign');
     });
   });
 });

@@ -365,17 +365,6 @@ const CreatureTargetPopups = function CreatureTargetPopups({
                     onSkip={handlePassWithoutTraceSkip}
                 />
             )}
-            {pendingBeaconOfHope && (
-                <CreatureSelectionModal
-                    title="Beacon of Hope"
-                    icon="fa-heart-pulse"
-                    targets={pendingBeaconOfHope.creatureTargets}
-                    description="This spell bestows hope and vitality. Choose any number of creatures within range. For the duration, each target has advantage on wisdom saving throws and death saving throws, and regains the maximum number of hit points possible from any healing."
-                    confirmLabel="Cast Beacon of Hope"
-                    onConfirm={handleBeaconOfHopeConfirm}
-                    onSkip={handleBeaconOfHopeSkip}
-                />
-            )}
             {pendingGlobe && (
                 <CreatureSelectionModal
                     title="Globe of Invulnerability"

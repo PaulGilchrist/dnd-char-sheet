@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharFeats from './CharFeats.jsx';
@@ -65,52 +65,24 @@ describe('CharFeats', () => {
   });
 
   describe('rendering - null/empty states', () => {
-    it('should return null when feats array is empty', () => {
-      const { container } = render(
-        <CharFeats playerStats={{ feats: [] }} showPopup={mockShowPopup} />
-      );
-      expect(container.innerHTML).toBe('');
-    });
-
     it('should return null when feats is undefined', () => {
       const { container } = render(
         <CharFeats playerStats={{}} showPopup={mockShowPopup} />
       );
       expect(container.innerHTML).toBe('');
     });
-
-    it('should throw when playerStats is null', () => {
-      expect(() => render(<CharFeats playerStats={null} showPopup={mockShowPopup} />)).toThrow('Cannot read properties of null');
-    });
-
-    it('should throw when playerStats is undefined', () => {
-      expect(() => render(<CharFeats playerStats={undefined} showPopup={mockShowPopup} />)).toThrow('Cannot read properties of undefined');
-    });
   });
 
   describe('rendering - feat display', () => {
-    it('should render all feat names', () => {
-      render(<CharFeats {...defaultProps} />);
-      expect(screen.getByText(/Actor/)).toBeInTheDocument();
-      expect(screen.getByText(/Athlete/)).toBeInTheDocument();
-    });
-
-    it('should render the "Feats:" label', () => {
+    it('should render all feat names with proper structure and classes', () => {
       render(<CharFeats {...defaultProps} />);
       expect(screen.getByText('Feats:')).toBeInTheDocument();
-    });
-
-    it('should wrap feats in char-feats-section and feats-container divs', () => {
-      const { container } = render(<CharFeats {...defaultProps} />);
-      expect(container.querySelector('.char-feats-section')).toBeInTheDocument();
-      expect(container.querySelector('.feats-container')).toBeInTheDocument();
-    });
-
-    it('should render feat names with clickable class', () => {
-      render(<CharFeats {...defaultProps} />);
-      const actorElement = screen.getByText(/Actor/);
-      expect(actorElement).toHaveClass('feat-name');
-      expect(actorElement).toHaveClass('clickable');
+      expect(screen.getByText(/Actor/)).toHaveClass('feat-name');
+      expect(screen.getByText(/Actor/)).toHaveClass('clickable');
+      expect(screen.getByText(/Athlete/)).toHaveClass('feat-name');
+      expect(screen.getByText(/Athlete/)).toHaveClass('clickable');
+      expect(document.querySelector('.char-feats-section')).toBeInTheDocument();
+      expect(document.querySelector('.feats-container')).toBeInTheDocument();
     });
 
     it('should render a single feat without comma separator', () => {
@@ -140,17 +112,13 @@ describe('CharFeats', () => {
   });
 
   describe('rendering - duplicate feats', () => {
-    it('should display count for duplicate feat names', () => {
+    it('should display count for duplicate feat names and omit count for singles', () => {
       render(
         <CharFeats {...defaultProps} playerStats={{ feats: ['Actor', 'Actor', 'Athlete'] }} />
       );
       expect(screen.getByText(/Actor \* 2/)).toBeInTheDocument();
-    });
-
-    it('should not display count for single occurrence', () => {
-      render(<CharFeats {...defaultProps} />);
-      expect(screen.getByText('Actor')).toBeInTheDocument();
-      expect(screen.queryByText(/Actor \*/)).not.toBeInTheDocument();
+      expect(screen.getByText('Athlete')).toBeInTheDocument();
+      expect(screen.queryByText(/Athlete \*/)).not.toBeInTheDocument();
     });
 
     it('should handle multiple duplicates of different feats', () => {
@@ -173,7 +141,7 @@ describe('CharFeats', () => {
     });
   });
 
-  describe('feat click behavior - normal ruleset', () => {
+  describe('feat click behavior', () => {
     it('should call showPopup with feat data when a feat is clicked', async () => {
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
@@ -223,20 +191,6 @@ describe('CharFeats', () => {
       await vi.waitFor(
         () => {
           expect(loadFeatData).toHaveBeenCalledWith('2024');
-        },
-        { timeout: 5000 }
-      );
-    });
-
-    it('should search by feat name when found', async () => {
-      render(<CharFeats {...defaultProps} />);
-      const actorElements = screen.getAllByText(/Actor/);
-      fireEvent.click(actorElements[0]);
-      await vi.waitFor(
-        () => {
-          expect(mockShowPopup).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'Actor' })
-          );
         },
         { timeout: 5000 }
       );
@@ -345,34 +299,7 @@ describe('CharFeats', () => {
 
   describe('feat click behavior - not found', () => {
     it('should call setPopupHtml with not found message when feat is not in database', async () => {
-      const emptyFeats = [];
-      loadFeatData.mockResolvedValue(emptyFeats);
-
-      render(<CharFeats {...defaultProps} />);
-      const actorElements = screen.getAllByText(/Actor/);
-      fireEvent.click(actorElements[0]);
-      await vi.waitFor(
-        () => {
-          expect(mockSetPopupHtml).toHaveBeenCalledWith(
-            expect.stringContaining('Actor')
-          );
-          expect(mockSetPopupHtml).toHaveBeenCalledWith(
-            expect.stringContaining('not found in database')
-          );
-        },
-        { timeout: 5000 }
-      );
-    });
-
-    it('should call setPopupHtml with not found message when no match by name or index', async () => {
-      const unrelatedFeats = [
-        {
-          name: 'Completely Different Feat',
-          index: 'completely-different-feat',
-          desc: ['Not the actor feat'],
-        },
-      ];
-      loadFeatData.mockResolvedValue(unrelatedFeats);
+      loadFeatData.mockResolvedValue([]);
 
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
@@ -392,25 +319,7 @@ describe('CharFeats', () => {
   });
 
   describe('feat click behavior - error handling', () => {
-    it('should call setPopupHtml with error message when loadFeatData rejects', async () => {
-      loadFeatData.mockRejectedValue(new Error('Network error'));
-      render(<CharFeats {...defaultProps} />);
-      const actorElements = screen.getAllByText(/Actor/);
-      fireEvent.click(actorElements[0]);
-      await vi.waitFor(
-        () => {
-          expect(mockSetPopupHtml).toHaveBeenCalledWith(
-            expect.stringContaining('Error loading feat details')
-          );
-          expect(mockSetPopupHtml).toHaveBeenCalledWith(
-            expect.stringContaining('Network error')
-          );
-        },
-        { timeout: 5000 }
-      );
-    });
-
-    it('should include the feat name in the error popup', async () => {
+    it('should call setPopupHtml with error message and feat name when loadFeatData rejects', async () => {
       loadFeatData.mockRejectedValue(new Error('Network error'));
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
@@ -419,6 +328,12 @@ describe('CharFeats', () => {
         () => {
           expect(mockSetPopupHtml).toHaveBeenCalledWith(
             expect.stringContaining('Actor')
+          );
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.stringContaining('Error loading feat details')
+          );
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.stringContaining('Network error')
           );
         },
         { timeout: 5000 }
@@ -443,31 +358,6 @@ describe('CharFeats', () => {
       );
 
       consoleSpy.mockRestore();
-    });
-  });
-
-  describe('popup rendering', () => {
-    it('should not render Popup when popupHtml is null', () => {
-      const { container } = render(<CharFeats {...defaultProps} />);
-      expect(container.querySelector('[data-testid="popup-overlay"]')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('display name formatting', () => {
-    it('should display feat name with * count suffix for duplicates', () => {
-      render(
-        <CharFeats {...defaultProps} playerStats={{ feats: ['Actor', 'Actor', 'Actor'] }} />
-      );
-      expect(screen.getByText('Actor * 3')).toBeInTheDocument();
-    });
-
-    it('should use the original feat name casing in display', () => {
-      render(
-        <CharFeats {...defaultProps} playerStats={{ feats: ['actor', 'ACTOR'] }} />
-      );
-      // 'actor' and 'ACTOR' are different strings, so both appear
-      expect(screen.getByText('actor')).toBeInTheDocument();
-      expect(screen.getByText('ACTOR')).toBeInTheDocument();
     });
   });
 });

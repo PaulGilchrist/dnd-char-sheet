@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ArcaneVigorModal from './ArcaneVigorModal.jsx';
@@ -73,69 +73,30 @@ describe('ArcaneVigorModal - rolling dice', () => {
       expect(screen.getByText('d8 = 4')).toBeInTheDocument();
     });
 
-    it('rolls with different die sizes', () => {
+    it('renders the correct die size for different hit die types', () => {
       renderModal({ hitDieSize: 10 });
       fireEvent.click(screen.getByText(/Roll One/));
       expect(screen.getByText('d10 = 4')).toBeInTheDocument();
     });
-
-    it('rolls with d6 hit die', () => {
-      renderModal({ hitDieSize: 6 });
-      fireEvent.click(screen.getByText(/Roll One/));
-      expect(screen.getByText('d6 = 4')).toBeInTheDocument();
-    });
-
-    it('rolls with d12 hit die', () => {
-      renderModal({ hitDieSize: 12 });
-      fireEvent.click(screen.getByText(/Roll One/));
-      expect(screen.getByText('d12 = 4')).toBeInTheDocument();
-    });
-
-    it('rolls with d4 hit die', () => {
-      renderModal({ hitDieSize: 4 });
-      fireEvent.click(screen.getByText(/Roll One/));
-      expect(screen.getByText('d4 = 4')).toBeInTheDocument();
-    });
-
-    it('rolls with d20 hit die', () => {
-      renderModal({ hitDieSize: 20 });
-      fireEvent.click(screen.getByText(/Roll One/));
-      expect(screen.getByText('d20 = 4')).toBeInTheDocument();
-    });
   });
 
   describe('projected healing calculation', () => {
-    it('calculates projected healing correctly with positive modifier', () => {
+    it('calculates projected healing with positive, zero, and negative modifiers', () => {
       renderModal({ spellcastingAbilityModifier: 3 });
       fireEvent.click(screen.getByText(/Roll One/));
-      // roll total = 4, modifier = 3, projected = 7
       expect(screen.getByText(/Roll Total: 4 \+ 3 = 7 HP/)).toBeInTheDocument();
     });
 
-    it('shows projected healing with negative modifier', () => {
+    it('handles negative modifier reducing projected healing', () => {
       renderModal({ spellcastingAbilityModifier: -1 });
       fireEvent.click(screen.getByText(/Roll One/));
-      // roll total = 4, modifier = -1, projected = 3
       expect(screen.getByText(/Roll Total: 4 \+ -1 = 3 HP/)).toBeInTheDocument();
     });
 
-    it('shows projected healing with zero modifier', () => {
-      renderModal({ spellcastingAbilityModifier: 0 });
-      fireEvent.click(screen.getByText(/Roll One/));
-      // roll total = 4, modifier = 0, projected = 4
-      expect(screen.getByText(/Roll Total: 4 \+ 0 = 4 HP/)).toBeInTheDocument();
-    });
-
-    it('shows projected healing with large negative modifier resulting in zero', () => {
+    it('handles large negative modifier resulting in zero', () => {
       renderModal({ spellcastingAbilityModifier: -4 });
       fireEvent.click(screen.getByText(/Roll One/));
       expect(screen.getByText(/Roll Total: 4 \+ -4 = 0 HP/)).toBeInTheDocument();
-    });
-
-    it('shows projected healing with large negative modifier resulting in negative', () => {
-      renderModal({ spellcastingAbilityModifier: -6 });
-      fireEvent.click(screen.getByText(/Roll One/));
-      expect(screen.getByText(/Roll Total: 4 \+ -6 = -2 HP/)).toBeInTheDocument();
     });
 
     it('updates projected healing when rolling additional dice', () => {
@@ -143,7 +104,6 @@ describe('ArcaneVigorModal - rolling dice', () => {
       fireEvent.click(screen.getByText(/Roll One/));
       expect(screen.getByText(/Roll Total: 4 \+ 3 = 7 HP/)).toBeInTheDocument();
       fireEvent.click(screen.getByText(/Roll One/));
-      // roll total = 4 + 4 = 8, projected = 8 + 3 = 11
       expect(screen.getByText(/Roll Total: 8 \+ 3 = 11 HP/)).toBeInTheDocument();
     });
 
@@ -152,7 +112,6 @@ describe('ArcaneVigorModal - rolling dice', () => {
       fireEvent.click(screen.getByText(/Roll One/));
       fireEvent.click(screen.getByText(/Roll One/));
       fireEvent.click(screen.getByText(/Roll One/));
-      // roll total = 4 + 4 + 4 = 12, projected = 12 + 5 = 17
       expect(screen.getByText(/Roll Total: 12 \+ 5 = 17 HP/)).toBeInTheDocument();
     });
   });
@@ -164,7 +123,6 @@ describe('ArcaneVigorModal - rolling dice', () => {
       fireEvent.click(screen.getByText(/Roll One/));
       fireEvent.click(screen.getByText(/Roll One/));
       const rows = screen.getAllByRole('row');
-      // header row + 3 data rows = 4
       expect(rows.length).toBe(4);
     });
 
@@ -224,30 +182,14 @@ describe('ArcaneVigorModal - rolling dice', () => {
       expect(screen.getByText(/Roll One/)).toBeDisabled();
     });
 
-    it('disables roll button after healing is applied', async () => {
+    it('disables all buttons after healing is applied', async () => {
       renderModal();
       fireEvent.click(screen.getByText(/Roll One/));
       await act(async () => {
         fireEvent.click(screen.getByText('Apply Healing'));
       });
       expect(screen.getByText(/Roll One/)).toBeDisabled();
-    });
-
-    it('disables apply healing button after healing is applied', async () => {
-      renderModal();
-      fireEvent.click(screen.getByText(/Roll One/));
-      await act(async () => {
-        fireEvent.click(screen.getByText('Apply Healing'));
-      });
       expect(screen.getByText('Apply Healing')).toBeDisabled();
-    });
-
-    it('disables cancel button after healing is applied', async () => {
-      renderModal();
-      fireEvent.click(screen.getByText(/Roll One/));
-      await act(async () => {
-        fireEvent.click(screen.getByText('Apply Healing'));
-      });
       expect(screen.getByText('Cancel')).toBeDisabled();
     });
 

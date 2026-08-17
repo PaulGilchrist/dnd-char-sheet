@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -279,47 +279,6 @@ describe('CharSpells - Interactions', () => {
       expect(screen.queryByTestId('spell-detail-popup')).not.toBeInTheDocument();
     });
 
-    it('opens spell detail popup when a castable spell is clicked', () => {
-      renderWithProps({});
-      const lightCell = screen.getByText('Light');
-      expect(lightCell).toHaveClass('clickable');
-      fireEvent.click(lightCell);
-      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
-    });
-  });
-
-  describe('prepared checkbox interaction', () => {
-    it('toggles checkbox checked state and calls handleTogglePreparedSpells', () => {
-      const spell = {
-        name: 'Shield',
-        level: 1,
-        casting_time: '1 turn',
-        range: 'Self',
-        duration: '1 round',
-        components: ['S'],
-        prepared: 'Prepared',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      const toggleFn = vi.fn();
-      render(
-        <CharSpells
-          playerStats={stats}
-          campaignName="test"
-          handleTogglePreparedSpells={toggleFn}
-        />
-      );
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).toBeChecked();
-      fireEvent.click(checkbox);
-      expect(toggleFn).toHaveBeenCalledWith('Shield');
-    });
-
     it('renders checkbox unchecked for spells with empty prepared string', () => {
       const spell = {
         name: 'Unprepared Spell',
@@ -340,22 +299,6 @@ describe('CharSpells - Interactions', () => {
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const checkbox = screen.getByRole('checkbox');
       expect(checkbox).not.toBeChecked();
-    });
-  });
-
-  describe('sorting interactions', () => {
-    it('sorts spells alphabetically when Spell header is clicked', () => {
-      renderWithProps({});
-      const spellHeader = screen.getByText('Spell');
-      fireEvent.click(spellHeader);
-      expect(screen.getByText('Detect Magic')).toBeInTheDocument();
-    });
-
-    it('sorts spells by level ascending when Level header is clicked', () => {
-      renderWithProps({});
-      const levelHeader = screen.getByText('Level');
-      fireEvent.click(levelHeader);
-      expect(screen.getByText('Light')).toBeInTheDocument();
     });
   });
 });

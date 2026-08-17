@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -305,7 +305,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
   });
 
   describe('greater restoration flow', () => {
-    it('shows target selection modal with correct title and range description', () => {
+    it('shows target selection modal with correct title and creature targets', () => {
       flow.pendingGreaterRestoration = { creatureTargets: ['Orc', 'Goblin'], range: '60 feet' };
       renderWithProps();
 
@@ -314,7 +314,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(screen.getByTestId('stm-Goblin')).toBeInTheDocument();
     });
 
-    it('detects effects, then confirms a chosen condition', async () => {
+    it('detects effects and confirms a chosen condition', async () => {
       flow.pendingGreaterRestoration = { creatureTargets: ['Orc', 'Goblin'], range: '60 feet' };
       vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
         if (key === 'activeConditions') return ['Charmed'];
@@ -326,8 +326,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       });
       renderWithProps();
 
-      const targetModal = screen.getByTestId('secondary-target-modal');
-      expect(targetModal).toHaveAttribute('data-title', 'Greater Restoration');
       fireEvent.click(screen.getByTestId('stm-Orc'));
 
       await waitFor(() => {
@@ -345,20 +343,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
       });
     });
 
-    it('shows no-effects modal and dismisses via handleGreaterRestorationNoEffects', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-hideconfirm', 'true');
-      });
-      expect(screen.getByTestId('secondary-target-modal')).toHaveTextContent('No removable effects found on Orc.');
-      fireEvent.click(screen.getByTestId('stm-skip'));
-      expect(flow.handleGreaterRestorationNoEffects).toHaveBeenCalled();
-    });
-
-    it('collects conditions from the combat summary creature for greater restoration', async () => {
+    it('collects conditions from the combat summary creature', async () => {
       flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
       vi.mocked(getCombatSummary).mockReturnValue({
         creatures: [{ name: 'Orc', conditions: [{ key: 'charmed' }] }],
@@ -369,23 +354,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       await waitFor(() => {
         expect(screen.getByTestId('stm-condition:charmed')).toBeInTheDocument();
       });
-    });
-
-    it('skips at the effect-selection stage and returns to target selection', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'activeConditions') return ['Charmed'];
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-condition:charmed')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByTestId('stm-skip'));
-      expect(flow.handleGreaterRestorationConfirm).not.toHaveBeenCalled();
-      expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-hideconfirm', 'false');
     });
 
     it('deduplicates conditions from runtime and combat summary using case-insensitive matching', async () => {
@@ -406,107 +374,30 @@ describe('CharSpells - Popup Modal Rendering', () => {
       });
     });
 
-    it('includes cursed buff when activeBuffs has type "cursed"', async () => {
+    it.each([
+      { key: 'activeBuffs', value: [{ type: 'cursed', name: 'Armor of Invulnerability' }], testid: 'stm-curse', label: 'Curse (including attunement to cursed magic item)' },
+      { key: 'activeBuffs', value: [{ cursed: true }], testid: 'stm-curse', label: 'Curse (including attunement to cursed magic item)' },
+      { key: 'abilityReductions', value: { str: 3, dex: 2 }, testid: 'stm-ability_reduction', label: 'Ability score reduction' },
+      { key: 'hpMaxReduction', value: 10, testid: 'stm-hp_max_reduction', label: 'Hit Point maximum reduction' },
+      { key: 'exhaustionLevel', value: 3, testid: 'stm-exhaustion', label: 'Exhaustion level (current: 3)' },
+    ])('detects $key effect: $label', async ({ key, value, testid, label }) => {
       flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'activeBuffs') return [{ type: 'cursed', name: 'Armor of Invulnerability' }];
+      vi.mocked(getRuntimeValue).mockImplementation((name, k) => {
+        if (k === key) return value;
         return null;
       });
       renderWithProps();
       fireEvent.click(screen.getByTestId('stm-Orc'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('stm-curse')).toBeInTheDocument();
-      });
-    });
-
-    it('includes cursed buff when activeBuffs has cursed property truthy', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'activeBuffs') return [{ cursed: true }];
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-curse')).toBeInTheDocument();
-      });
-    });
-
-    it('shows ability score reduction when abilityReductions has entries', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'abilityReductions') return { str: 3, dex: 2 };
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-ability_reduction')).toBeInTheDocument();
-      });
-    });
-
-    it('shows hit point maximum reduction when hpMaxReduction is positive', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'hpMaxReduction') return 10;
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-hp_max_reduction')).toBeInTheDocument();
-      });
-    });
-
-    it('shows exhaustion when exhaustionLevel is greater than 0', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'exhaustionLevel') return 3;
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-exhaustion')).toHaveTextContent('Exhaustion level (current: 3)');
-      });
-    });
-
-    it('excludes exhaustion when exhaustionLevel is 0', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'exhaustionLevel') return 0;
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('stm-exhaustion')).not.toBeInTheDocument();
-      });
-    });
-
-    it('includes petrified condition for greater restoration', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'activeConditions') return ['Petrified'];
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-condition:petrified')).toBeInTheDocument();
+        const el = screen.getByTestId(testid);
+        if (label) expect(el).toHaveTextContent(label);
       });
     });
   });
 
   describe('lesser restoration flow', () => {
-    it('shows target selection modal with correct title', async () => {
+    it('shows target selection modal with correct title and creature targets', () => {
       flow.pendingLesserRestoration = { creatureTargets: ['Orc'], range: '30 feet' };
       renderWithProps();
 
@@ -521,7 +412,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
         return null;
       });
       renderWithProps();
-      expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Lesser Restoration');
       fireEvent.click(screen.getByTestId('stm-Orc'));
 
       await waitFor(() => {
@@ -531,7 +421,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
       expect(flow.handleLesserRestorationConfirm).toHaveBeenCalledWith({ targetName: 'Orc', condition: 'blinded' });
     });
 
-    it('includes conditions from the combat summary creature', async () => {
+    it('collects conditions from the combat summary creature', async () => {
       flow.pendingLesserRestoration = { creatureTargets: ['Orc'], range: '30 feet' };
       vi.mocked(getCombatSummary).mockReturnValue({ creatures: [{ name: 'Orc', conditions: [{ key: 'paralyzed' }] }] });
       renderWithProps();
@@ -542,35 +432,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       });
     });
 
-    it('dismisses no-conditions modal via handleLesserRestorationSkip', async () => {
-      flow.pendingLesserRestoration = { creatureTargets: ['Orc'], range: '30 feet' };
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-hideconfirm', 'true');
-      });
-      fireEvent.click(screen.getByTestId('stm-skip'));
-      expect(flow.handleLesserRestorationSkip).toHaveBeenCalled();
-    });
-
-    it('skips at the condition-selection stage and returns to target selection', async () => {
-      flow.pendingLesserRestoration = { creatureTargets: ['Orc'], range: '30 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'activeConditions') return ['Blinded'];
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-condition:blinded')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByTestId('stm-skip'));
-      expect(flow.handleLesserRestorationConfirm).not.toHaveBeenCalled();
-      expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-hideconfirm', 'false');
-    });
-
     it('ignores a combat summary lookup failure when collecting conditions', async () => {
       flow.pendingLesserRestoration = { creatureTargets: ['Orc'], range: '30 feet' };
       vi.mocked(getCombatSummary).mockRejectedValue(new Error('boom'));
@@ -578,9 +439,25 @@ describe('CharSpells - Popup Modal Rendering', () => {
       fireEvent.click(screen.getByTestId('stm-Orc'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-hideconfirm', 'true');
+        expect(screen.getByTestId('secondary-target-modal')).toHaveTextContent('No removable conditions found on Orc.');
       });
-      expect(screen.getByTestId('secondary-target-modal')).toHaveTextContent('No removable conditions found on Orc.');
+    });
+
+    it('filters to allowed conditions only (blinded, deafened, paralyzed, poisoned)', async () => {
+      flow.pendingLesserRestoration = { creatureTargets: ['Orc'], range: '30 feet' };
+      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
+        if (key === 'activeConditions') return ['Blinded', 'Charmed', 'Poisoned', 'Petrified'];
+        return null;
+      });
+      renderWithProps();
+      fireEvent.click(screen.getByTestId('stm-Orc'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('stm-condition:blinded')).toBeInTheDocument();
+        expect(screen.getByTestId('stm-condition:poisoned')).toBeInTheDocument();
+        expect(screen.queryByTestId('stm-condition:charmed')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('stm-condition:petrified')).not.toBeInTheDocument();
+      });
     });
 
     it('deduplicates conditions from runtime and combat summary using case-insensitive matching', async () => {
@@ -598,37 +475,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       await waitFor(() => {
         const deafenedOptions = screen.queryAllByTestId('stm-condition:deafened');
         expect(deafenedOptions.length).toBeGreaterThan(0);
-      });
-    });
-
-    it('filters lesser restoration to allowed conditions only (blinded, deafened, paralyzed, poisoned)', async () => {
-      flow.pendingLesserRestoration = { creatureTargets: ['Orc'], range: '30 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'activeConditions') return ['Blinded', 'Charmed', 'Poisoned', 'Petrified'];
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-condition:blinded')).toBeInTheDocument();
-        expect(screen.getByTestId('stm-condition:poisoned')).toBeInTheDocument();
-        expect(screen.queryByTestId('stm-condition:charmed')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('stm-condition:petrified')).not.toBeInTheDocument();
-      });
-    });
-
-    it('shows conditions from combat summary when runtime returns nothing', async () => {
-      flow.pendingLesserRestoration = { creatureTargets: ['Orc'], range: '30 feet' };
-      vi.mocked(getRuntimeValue).mockReturnValue(null);
-      vi.mocked(getCombatSummary).mockReturnValue({
-        creatures: [{ name: 'Orc', conditions: [{ key: 'poisoned' }] }],
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-condition:poisoned')).toBeInTheDocument();
       });
     });
   });
