@@ -257,3 +257,4 @@ export const getTotalSteps = () => WIZARD_STEPS.length;
  * Get the step configuration for a given step number.
  */
 export const getStepConfig = (stepNumber) => WIZARD_STEPS.find((step) => step.step === stepNumber);
+

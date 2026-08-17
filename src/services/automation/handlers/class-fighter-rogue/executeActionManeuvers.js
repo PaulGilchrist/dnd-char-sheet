@@ -1,77 +1,40 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { resolveTarget } from '../../common/targetResolver.js';
-import { rollExpression } from '../../../dice/diceRoller.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-import { getManeuversForRules } from './combatSuperiorityQueries.js';
 import {
-    hasRelentless,
-    getRelentlessUsedRound,
-    setRelentlessUsed,
-    getSuperiorityDice,
+    findManeuver,
+    checkSuperiorityDice,
+    expendSuperiorityDie,
+    rollManeuverDie,
+    buildManeuverNotFoundPopup,
+    buildNoDiceRemainingPopup,
+    filterMeleeAttacks,
 } from './combatSuperiorityUtils.js';
 
 // ── Bonus Action Maneuvers ──────────────────────────────────────────────
 
 export async function executeBonusActionManeuver(action, playerStats, campaignName, maneuverName) {
-    const allManeuvers = await getManeuversForRules(playerStats.rules);
-    const maneuver = allManeuvers.find(m => m.name === maneuverName);
+    const maneuver = await findManeuver(maneuverName, playerStats.rules);
 
     if (!maneuver) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuverName,
-                description: `Maneuver "${maneuverName}" not found.`,
-            },
-        };
+        return buildManeuverNotFoundPopup(maneuverName, maneuverName);
     }
 
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    const relentless = hasRelentless(playerStats);
-    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
+    const { superiorityDice, hasDiceRemaining } = checkSuperiorityDice(playerStats, campaignName);
 
-    if (superiorityDice <= 0 && !(relentless && !relentlessUsed)) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuver.name,
-                description: `${maneuver.name}: No Superiority Dice remaining. Recharges on a Short or Long Rest.`,
-            },
-        };
+    if (!hasDiceRemaining) {
+        return buildNoDiceRemainingPopup(maneuver.name);
     }
-
-    const superiorityDieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
 
     const targetInfo = await resolveTarget(campaignName, playerStats.name);
     const targetName = targetInfo?.target?.name || null;
 
-    let dieValue;
-    let dieDescription;
-    let expendedDie = true;
-
-    if (relentless && !relentlessUsed) {
-        const relentlessRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = relentlessRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue} (Relentless).`;
-        setRelentlessUsed(playerStats, campaignName);
-        expendedDie = false;
-    } else {
-        const dieRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = dieRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue}.`;
-    }
-
-    if (expendedDie) {
-        await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice - 1, campaignName);
-    }
+    const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
+    await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
     const logEntry = {
         type: 'ability_use',
@@ -183,58 +146,20 @@ export async function executeBonusActionManeuver(action, playerStats, campaignNa
 // ── Grant Attack Maneuvers ──────────────────────────────────────────────
 
 export async function executeGrantAttackManeuver(action, playerStats, campaignName, maneuverName) {
-    const allManeuvers = await getManeuversForRules(playerStats.rules);
-    const maneuver = allManeuvers.find(m => m.name === maneuverName);
+    const maneuver = await findManeuver(maneuverName, playerStats.rules);
 
     if (!maneuver) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuverName,
-                description: `Maneuver "${maneuverName}" not found.`,
-            },
-        };
+        return buildManeuverNotFoundPopup(maneuverName, maneuverName);
     }
 
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    const relentless = hasRelentless(playerStats);
-    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
+    const { superiorityDice, hasDiceRemaining } = checkSuperiorityDice(playerStats, campaignName);
 
-    if (superiorityDice <= 0 && !(relentless && !relentlessUsed)) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuver.name,
-                description: `${maneuver.name}: No Superiority Dice remaining. Recharges on a Short or Long Rest.`,
-            },
-        };
+    if (!hasDiceRemaining) {
+        return buildNoDiceRemainingPopup(maneuver.name);
     }
 
-    const superiorityDieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
-
-    let dieValue;
-    let dieDescription;
-    let expendedDie = true;
-
-    if (relentless && !relentlessUsed) {
-        const relentlessRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = relentlessRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue} (Relentless).`;
-        setRelentlessUsed(playerStats, campaignName);
-        expendedDie = false;
-    } else {
-        const dieRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = dieRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue}.`;
-    }
-
-    if (expendedDie) {
-        await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice - 1, campaignName);
-    }
+    const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
+    await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
     const cs = await getCombatContext(campaignName);
     const allies = (cs?.creatures || []).filter(c => c.name !== playerStats.name);
@@ -279,58 +204,20 @@ export async function executeGrantAttackManeuver(action, playerStats, campaignNa
 // ── Movement Maneuvers ──────────────────────────────────────────────────
 
 export async function executeMovementManeuver(action, playerStats, campaignName, maneuverName) {
-    const allManeuvers = await getManeuversForRules(playerStats.rules);
-    const maneuver = allManeuvers.find(m => m.name === maneuverName);
+    const maneuver = await findManeuver(maneuverName, playerStats.rules);
 
     if (!maneuver) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuverName,
-                description: `Maneuver "${maneuverName}" not found.`,
-            },
-        };
+        return buildManeuverNotFoundPopup(maneuverName, maneuverName);
     }
 
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    const relentless = hasRelentless(playerStats);
-    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
+    const { superiorityDice, hasDiceRemaining } = checkSuperiorityDice(playerStats, campaignName);
 
-    if (superiorityDice <= 0 && !(relentless && !relentlessUsed)) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuver.name,
-                description: `${maneuver.name}: No Superiority Dice remaining. Recharges on a Short or Long Rest.`,
-            },
-        };
+    if (!hasDiceRemaining) {
+        return buildNoDiceRemainingPopup(maneuver.name);
     }
 
-    const superiorityDieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
-
-    let dieValue;
-    let dieDescription;
-    let expendedDie = true;
-
-    if (relentless && !relentlessUsed) {
-        const relentlessRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = relentlessRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue} (Relentless).`;
-        setRelentlessUsed(playerStats, campaignName);
-        expendedDie = false;
-    } else {
-        const dieRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = dieRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue}.`;
-    }
-
-    if (expendedDie) {
-        await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice - 1, campaignName);
-    }
+    const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
+    await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
     const logEntry = {
         type: 'ability_use',
@@ -356,58 +243,20 @@ export async function executeMovementManeuver(action, playerStats, campaignName,
 // ── Skill Check Maneuvers ───────────────────────────────────────────────
 
 export async function executeSkillCheckManeuver(action, playerStats, campaignName, maneuverName) {
-    const allManeuvers = await getManeuversForRules(playerStats.rules);
-    const maneuver = allManeuvers.find(m => m.name === maneuverName);
+    const maneuver = await findManeuver(maneuverName, playerStats.rules);
 
     if (!maneuver) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuverName,
-                description: `Maneuver "${maneuverName}" not found.`,
-            },
-        };
+        return buildManeuverNotFoundPopup(maneuverName, maneuverName);
     }
 
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    const relentless = hasRelentless(playerStats);
-    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
+    const { superiorityDice, hasDiceRemaining } = checkSuperiorityDice(playerStats, campaignName);
 
-    if (superiorityDice <= 0 && !(relentless && !relentlessUsed)) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuver.name,
-                description: `${maneuver.name}: No Superiority Dice remaining. Recharges on a Short or Long Rest.`,
-            },
-        };
+    if (!hasDiceRemaining) {
+        return buildNoDiceRemainingPopup(maneuver.name);
     }
 
-    const superiorityDieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
-
-    let dieValue;
-    let dieDescription;
-    let expendedDie = true;
-
-    if (relentless && !relentlessUsed) {
-        const relentlessRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = relentlessRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue} (Relentless).`;
-        setRelentlessUsed(playerStats, campaignName);
-        expendedDie = false;
-    } else {
-        const dieRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = dieRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue}.`;
-    }
-
-    if (expendedDie) {
-        await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice - 1, campaignName);
-    }
+    const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
+    await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
     await setRuntimeValue(playerStats.name, 'pendingSkillCheckBonus', dieValue, campaignName);
 
@@ -450,61 +299,23 @@ export async function executeSkillCheckManeuver(action, playerStats, campaignNam
 // ── Reaction Maneuvers ──────────────────────────────────────────────────
 
 export async function executeReactionManeuver(action, playerStats, campaignName, maneuverName) {
-    const allManeuvers = await getManeuversForRules(playerStats.rules);
-    const maneuver = allManeuvers.find(m => m.name === maneuverName);
+    const maneuver = await findManeuver(maneuverName, playerStats.rules);
 
     if (!maneuver) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuverName,
-                description: `Maneuver "${maneuverName}" not found.`,
-            },
-        };
+        return buildManeuverNotFoundPopup(maneuverName, maneuverName);
     }
 
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    const relentless = hasRelentless(playerStats);
-    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
+    const { superiorityDice, hasDiceRemaining } = checkSuperiorityDice(playerStats, campaignName);
 
-    if (superiorityDice <= 0 && !(relentless && !relentlessUsed)) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuver.name,
-                description: `${maneuver.name}: No Superiority Dice remaining. Recharges on a Short or Long Rest.`,
-            },
-        };
+    if (!hasDiceRemaining) {
+        return buildNoDiceRemainingPopup(maneuver.name);
     }
-
-    const superiorityDieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
 
     const targetInfo = await resolveTarget(campaignName, playerStats.name);
     const targetName = targetInfo?.target?.name || null;
 
-    let dieValue;
-    let dieDescription;
-    let expendedDie = true;
-
-    if (relentless && !relentlessUsed) {
-        const relentlessRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = relentlessRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue} (Relentless).`;
-        setRelentlessUsed(playerStats, campaignName);
-        expendedDie = false;
-    } else {
-        const dieRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = dieRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue}.`;
-    }
-
-    if (expendedDie) {
-        await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice - 1, campaignName);
-    }
+    const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
+    await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
     const logEntry = {
         type: 'ability_use',
@@ -523,13 +334,7 @@ export async function executeReactionManeuver(action, playerStats, campaignName,
     if (maneuver.effect === 'melee_attack_reaction') {
         await setRuntimeValue(playerStats.name, 'pendingRiposteDieValue', dieValue, campaignName);
 
-        const meleeAttacks = (playerStats.attacks || []).filter(a => {
-            if (a.weaponType === 'melee' || a.attackType === 'melee') return true;
-            if (a.range === 5 || a.range === '5' || a.range === '5 ft' || a.range === '5_ft') return a.type === 'Action' || a.actionType === 'Action';
-            if (a.isRanged === false) return true;
-            if (Array.isArray(a.properties) && a.properties.some(p => String(p).toLowerCase() === 'melee')) return true;
-            return false;
-        });
+        const meleeAttacks = filterMeleeAttacks(playerStats.attacks);
         const attack = meleeAttacks.length > 0 ? meleeAttacks[0] : (playerStats.attacks || [])[0];
 
         if (!attack) {
@@ -585,58 +390,20 @@ export async function executeReactionManeuver(action, playerStats, campaignName,
 // ── Commanding Presence Reaction ────────────────────────────────────────
 
 export async function executeCommandingPresenceReaction(action, playerStats, campaignName, maneuverName) {
-    const allManeuvers = await getManeuversForRules(playerStats.rules);
-    const maneuver = allManeuvers.find(m => m.name === maneuverName);
+    const maneuver = await findManeuver(maneuverName, playerStats.rules);
 
     if (!maneuver) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuverName,
-                description: `Maneuver "${maneuverName}" not found.`,
-            },
-        };
+        return buildManeuverNotFoundPopup(maneuverName, maneuverName);
     }
 
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    const relentless = hasRelentless(playerStats);
-    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
+    const { superiorityDice, hasDiceRemaining } = checkSuperiorityDice(playerStats, campaignName);
 
-    if (superiorityDice <= 0 && !(relentless && !relentlessUsed)) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuver.name,
-                description: `${maneuver.name}: No Superiority Dice remaining. Recharges on a Short or Long Rest.`,
-            },
-        };
+    if (!hasDiceRemaining) {
+        return buildNoDiceRemainingPopup(maneuver.name);
     }
 
-    const superiorityDieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
-
-    let dieValue;
-    let dieDescription;
-    let expendedDie = true;
-
-    if (relentless && !relentlessUsed) {
-        const relentlessRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = relentlessRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue} (Relentless).`;
-        setRelentlessUsed(playerStats, campaignName);
-        expendedDie = false;
-    } else {
-        const dieRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = dieRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue}.`;
-    }
-
-    if (expendedDie) {
-        await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice - 1, campaignName);
-    }
+    const { dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
+    await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
     const logEntry = {
         type: 'ability_use',

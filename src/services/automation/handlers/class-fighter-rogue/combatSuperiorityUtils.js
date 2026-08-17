@@ -8,6 +8,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
+import { loadManeuvers } from '../../../ui/dataLoader.js';
 
 export function applyConditionToTarget(targetName, conditionKey, campaignName, combatSummary, saveDc, saveType, playerStats) {
     if (!combatSummary) {
@@ -83,7 +84,123 @@ export function rollManeuverDie(maneuver, playerStats, campaignName) {
         dieDescription = `Rolled d${superiorityDieSize} for ${dieValue}.`;
     }
 
-    return { dieValue, dieDescription, expendedDie, relentlessUsed };
+    return { dieValue, dieDescription, expendedDie, relentlessUsed, superiorityDieSize };
+}
+
+export async function findManeuver(maneuverName, rules) {
+    const allManeuvers = await loadManeuvers(rules || '2024');
+    return allManeuvers.find(m => m.name === maneuverName) || null;
+}
+
+export function checkSuperiorityDice(playerStats, campaignName) {
+    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
+    const relentless = hasRelentless(playerStats);
+    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
+    const currentRound = getCurrentCombatRound();
+    const relentlessUsed = relentless && storedRound === currentRound;
+    const hasDiceRemaining = superiorityDice > 0 || (relentless && !relentlessUsed);
+    return { superiorityDice, relentless, relentlessUsed, hasDiceRemaining };
+}
+
+export async function expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice) {
+    if (expendedDie) {
+        await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice - 1, campaignName);
+    }
+}
+
+export function buildManeuverNotFoundPopup(actionName, maneuverName) {
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: actionName,
+            description: `Maneuver "${maneuverName}" not found.`,
+        },
+    };
+}
+
+export function buildNoDiceRemainingPopup(maneuverName) {
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: maneuverName,
+            description: `${maneuverName}: No Superiority Dice remaining. Recharges on a Short or Long Rest.`,
+        },
+    };
+}
+
+export async function processManeuverSaveResult(maneuver, targetName, saveDc, success, playerStats, campaignName) {
+    let description = '';
+    if (!success) {
+        if (maneuver.effect === 'frightened') {
+            description += ` ${targetName} is Frightened until the end of your next turn.`;
+            const cs = await getCombatContext(campaignName);
+            applyConditionToTarget(targetName, 'frightened', campaignName, cs, saveDc, maneuver.saveType, playerStats);
+            await addExpiration(playerStats.name, targetName, [
+                { type: 'condition', condition: 'frightened' },
+            ], campaignName, 2);
+        } else if (maneuver.effect === 'disarm') {
+            description += ` ${targetName} dropped the object it was holding.`;
+        } else if (maneuver.effect === 'push') {
+            const pushDistance = maneuver.value || 15;
+            description += ` ${targetName} was pushed ${pushDistance} feet away.`;
+            await addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerStats.name,
+                abilityName: maneuver.name,
+                description: `${playerStats.name} pushed ${targetName} ${pushDistance} feet away.`,
+                targetName: targetName,
+            }).catch(() => {});
+        } else if (maneuver.effect === 'goad') {
+            description += ` ${targetName} has Disadvantage on attacks against targets other than you.`;
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const newEffect = {
+                target: targetName,
+                source: playerStats.name,
+                effect: 'taunting_step',
+                duration: 'until_end_of_user_next_turn',
+            };
+            const updatedEffects = [...storedEffects, newEffect];
+            setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
+        } else if (maneuver.effect === 'prone') {
+            description += ` ${targetName} fell Prone.`;
+            const cs = await getCombatContext(campaignName);
+            applyConditionToTarget(targetName, 'prone', campaignName, cs, saveDc, maneuver.saveType, playerStats);
+        } else if (maneuver.conditionInflicted) {
+            description += ` ${targetName} gained the ${maneuver.conditionInflicted} condition.`;
+        } else {
+            description += ` The effect was applied to ${targetName}.`;
+        }
+    }
+    return description;
+}
+
+export function buildManeuverSaveDescription(maneuver, saveDc) {
+    let description = ` Target must make a ${maneuver.saveType} save DC ${saveDc}`;
+    if (maneuver.conditionInflicted) {
+        description += ` or gain ${maneuver.conditionInflicted} condition`;
+    } else if (maneuver.effect === 'disarm') {
+        description += ` or drop one object it's holding`;
+    } else if (maneuver.effect === 'push') {
+        description += ` or be pushed ${maneuver.value || 15} feet away (no lingering effect)`;
+    } else if (maneuver.effect === 'goad') {
+        description += ` or have Disadvantage on attacks against targets other than you`;
+    } else {
+        description += ` or suffer the effect`;
+    }
+    description += '.';
+    return description;
+}
+
+export function filterMeleeAttacks(attacks) {
+    return (attacks || []).filter(a => {
+        if (a.weaponType === 'melee' || a.attackType === 'melee') return true;
+        if (a.range === 5 || a.range === '5' || a.range === '5 ft' || a.range === '5_ft') return a.type === 'Action' || a.actionType === 'Action';
+        if (a.isRanged === false) return true;
+        if (Array.isArray(a.properties) && a.properties.some(p => String(p).toLowerCase() === 'melee')) return true;
+        return false;
+    });
 }
 
 export async function executeBaitAndSwitchChoice(action, playerStats, campaignName, chosenName) {

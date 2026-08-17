@@ -1,18 +1,17 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { resolveTarget } from '../../common/targetResolver.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
-import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
-import { addEntry } from '../../../ui/logService.js';
-import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { getManeuversForRules } from './combatSuperiorityQueries.js';
 import {
-    applyConditionToTarget,
-    hasRelentless,
-    getRelentlessUsedRound,
-    getSuperiorityDice,
+    checkSuperiorityDice,
+    expendSuperiorityDie,
     rollManeuverDie,
+    buildManeuverNotFoundPopup,
+    buildNoDiceRemainingPopup,
+    processManeuverSaveResult,
+    buildManeuverSaveDescription,
 } from './combatSuperiorityUtils.js';
 import { validateSizeLimit } from './executeManeuver.js';
 
@@ -22,38 +21,17 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
     const maneuver = allManeuvers.find(m => m.name === maneuverName);
 
     if (!maneuver) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuverName,
-                description: `Maneuver "${maneuverName}" not found.`,
-            },
-        };
+        return buildManeuverNotFoundPopup(maneuverName, maneuverName);
     }
 
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    const relentless = hasRelentless(playerStats);
-    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
+    const { superiorityDice, hasDiceRemaining } = checkSuperiorityDice(playerStats, campaignName);
 
-    if (superiorityDice <= 0 && !(relentless && !relentlessUsed)) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: maneuver.name,
-                description: `${maneuver.name}: No Superiority Dice remaining. Recharges on a Short or Long Rest.`,
-            },
-        };
+    if (!hasDiceRemaining) {
+        return buildNoDiceRemainingPopup(maneuver.name);
     }
 
     const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
-
-    if (expendedDie) {
-        await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice - 1, campaignName);
-    }
+    await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
     const targetInfo = await resolveTarget(campaignName, playerStats.name);
     const targetName = targetInfo?.target?.name || attackInfo?.targetName || null;
@@ -137,63 +115,12 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
 
         description += ` Target made ${maneuver.saveType} save DC ${saveDc}: ${success ? 'Success' : 'Failure'}.`;
 
-        if (!success) {
-            if (maneuver.effect === 'frightened') {
-                description += ` ${targetName} is Frightened until the end of your next turn.`;
-                const cs = await getCombatContext(campaignName);
-                applyConditionToTarget(targetName, 'frightened', campaignName, cs, saveDc, maneuver.saveType, playerStats);
-                await addExpiration(playerStats.name, targetName, [
-                    { type: 'condition', condition: 'frightened' },
-                ], campaignName, 2);
-            } else if (maneuver.effect === 'disarm') {
-                description += ` ${targetName} dropped the object it was holding.`;
-            } else if (maneuver.effect === 'push') {
-                const pushDistance = maneuver.value || 15;
-                description += ` ${targetName} was pushed ${pushDistance} feet away.`;
-                await addEntry(campaignName, {
-                    type: 'ability_use',
-                    characterName: playerStats.name,
-                    abilityName: maneuver.name,
-                    description: `${playerStats.name} pushed ${targetName} ${pushDistance} feet away.`,
-                    targetName: targetName,
-                }).catch(() => {});
-            } else if (maneuver.effect === 'goad') {
-                description += ` ${targetName} has Disadvantage on attacks against targets other than you.`;
-                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                const newEffect = {
-                    target: targetName,
-                    source: playerStats.name,
-                    effect: 'taunting_step',
-                    duration: 'until_end_of_user_next_turn',
-                };
-                const updatedEffects = [...storedEffects, newEffect];
-                setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
-            } else if (maneuver.effect === 'prone') {
-                description += ` ${targetName} fell Prone.`;
-                const cs = await getCombatContext(campaignName);
-                applyConditionToTarget(targetName, 'prone', campaignName, cs, saveDc, maneuver.saveType, playerStats);
-            } else if (maneuver.conditionInflicted) {
-                description += ` ${targetName} gained the ${maneuver.conditionInflicted} condition.`;
-            } else {
-                description += ` The effect was applied to ${targetName}.`;
-            }
-        }
+        const saveEffectDesc = await processManeuverSaveResult(maneuver, targetName, saveDc, success, playerStats, campaignName);
+        description += saveEffectDesc;
     }
     else if (maneuver.saveType) {
         const saveDc = buildSaveDc(auto, playerStats);
-        description += ` Target must make a ${maneuver.saveType} save DC ${saveDc}`;
-        if (maneuver.conditionInflicted) {
-            description += ` or gain ${maneuver.conditionInflicted} condition`;
-        } else if (maneuver.effect === 'disarm') {
-            description += ` or drop one object it's holding`;
-        } else if (maneuver.effect === 'push') {
-            description += ` or be pushed ${maneuver.value || 15} feet away (no lingering effect)`;
-        } else if (maneuver.effect === 'goad') {
-            description += ` or have Disadvantage on attacks against targets other than you`;
-        } else {
-            description += ` or suffer the effect`;
-        }
-        description += '.';
+        description += buildManeuverSaveDescription(maneuver, saveDc);
     }
 
     if (maneuver.effect === 'next_attack_advantage' || maneuver.effect === 'distracting_strike_advantage') {

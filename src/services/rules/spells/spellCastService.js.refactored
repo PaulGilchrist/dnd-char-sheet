@@ -1,5 +1,0 @@
-// spellCastService.js — Barrel/entry point for spell casting logic
-// Re-exports from the execution/ subfolder modules
-
-export { executeSpellCast, refundSpellBreakerSlot } from './spellCastService/execution/index.js';
-export { checkGlobeOfInvulnerability, checkForcecageBlocked } from './spellCastService/execution/blockChecks.js';
