@@ -4,8 +4,8 @@
 - **Status**: In Progress
 - **Started**: 2026-08-17
 - **Total Automations**: 538
-- **Tested**: 1
-- **Remaining**: 537
+- **Tested**: 2
+- **Remaining**: 536
 
 ## Automation Test Log
 
@@ -20,7 +20,18 @@
 - **Tests Run**: 10
 - **Notes**: All tests passed. Initiative bonus applied correctly. No visible automation badge found on creature cards.
 
-## Remaining Automations (537)
+### 2. Rage (ID: 1) - ✅ TESTED / PASSING
+- **File**: classes.json
+- **Type**: classes
+- **Automation Type**: combat_stance
+- **Effect**: stance with resistance, STR advantage, damage bonus
+- **Description**: Barbarian combat stance - bonus action to enter rage, granting resistance to bludgeoning/piercing/slashing, advantage on STR checks/saves, and +damage bonus
+- **Test File**: tests/e2e/rage-combat-stance.spec.js
+- **Date Tested**: 2026-08-17
+- **Tests Run**: 8
+- **Notes**: All tests passed. Rage activates via special action click. Badge shows "BPS Resist, STR Adv, +4 dmg" confirming all three effects (resistance, STR advantage, +4 damage at level 20).
+
+## Remaining Automations (536)
 
 ### Backgrounds (1 total, 0 remaining)
 - ~~Hermit's Wit~~ - tested

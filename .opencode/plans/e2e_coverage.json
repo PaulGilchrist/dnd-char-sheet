@@ -16,7 +16,10 @@
     "type": "classes",
     "name": "Rage",
     "sourceType": "combat_stance",
-    "tested": false
+    "tested": true,
+    "testStatus": "passing",
+    "testDate": "2026-08-17",
+    "testFile": "tests/e2e/rage-combat-stance.spec.js"
   },
   {
     "id": 2,
