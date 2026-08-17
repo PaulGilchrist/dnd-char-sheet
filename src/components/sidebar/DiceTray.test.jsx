@@ -42,7 +42,7 @@ describe('DiceTray', () => {
   });
 
   describe('rolling', () => {
-    it.each(DICE)('calls onRoll with the result of rolling $label', ({ label, sides }) => {
+    it.each(DICE)('calls onRoll with the result of rolling $label', ({ label, sides: _sides }) => {
       const onRoll = vi.fn();
       vi.spyOn(diceRoller, 'rollDie').mockReturnValue(MOCK_ROLL_VALUE);
       renderDiceTray({ onRoll });

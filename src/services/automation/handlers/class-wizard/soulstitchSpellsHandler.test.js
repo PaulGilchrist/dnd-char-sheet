@@ -1,8 +1,9 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn().mockResolvedValue(undefined),
+  setRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../../../services/encounters/combatData.js', () => ({
@@ -55,6 +56,13 @@ describe('soulstitchSpellsHandler.handle', () => {
       expect(result).toBeNull();
     });
 
+    it('should return null when spell school is empty string', async () => {
+      const action = makeAction({}, { school: '', dc: 15 });
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result).toBeNull();
+    });
+
     it('should return null when spell is missing entirely', async () => {
       const action = makeAction({}, undefined);
       const result = await handle(action, makePlayerStats(), campaignName, null);
@@ -64,6 +72,13 @@ describe('soulstitchSpellsHandler.handle', () => {
 
     it('should return null when spell has no save (no dc or saveType)', async () => {
       const action = makeAction({}, { school: 'Evocation' });
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when spell dc is falsy (0)', async () => {
+      const action = makeAction({}, { school: 'Evocation', dc: 0 });
       const result = await handle(action, makePlayerStats(), campaignName, null);
 
       expect(result).toBeNull();
@@ -86,6 +101,25 @@ describe('soulstitchSpellsHandler.handle', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should return null when combat summary creatures is null', async () => {
+      const action = makeEvocationAction();
+      combatData.getCombatSummary.mockReturnValue({ creatures: null });
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return modal with empty eligibleTargets when combat summary creatures is empty array', async () => {
+      const action = makeEvocationAction();
+      combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.eligibleTargets).toEqual([]);
+    });
   });
 
   describe('modal payload construction', () => {
@@ -97,7 +131,6 @@ describe('soulstitchSpellsHandler.handle', () => {
 
       const result = await handle(action, makePlayerStats(), campaignName, null);
 
-      expect(result).not.toBeNull();
       expect(result.type).toBe('modal');
       expect(result.modalName).toBe('soulstitchSpells');
     });
@@ -113,7 +146,7 @@ describe('soulstitchSpellsHandler.handle', () => {
       expect(result.payload.mapName).toBe('DungeonMap');
     });
 
-    it('should store action and playerStats in payload', async () => {
+    it('should store action and playerStats in payload by reference', async () => {
       const action = makeEvocationAction();
       const stats = makePlayerStats({ name: 'ArcaneCaster' });
       combatData.getCombatSummary.mockReturnValue({
@@ -124,6 +157,28 @@ describe('soulstitchSpellsHandler.handle', () => {
 
       expect(result.payload.action).toBe(action);
       expect(result.payload.playerStats).toBe(stats);
+    });
+
+    it('should include campaignName in payload', async () => {
+      const action = makeEvocationAction();
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'Goblin1' }],
+      });
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.payload.campaignName).toBe(campaignName);
+    });
+
+    it('should include spellSchool in payload as lowercase', async () => {
+      const action = makeAction({}, { school: 'EVOCATION', dc: 15 });
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'Goblin1' }],
+      });
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.payload.spellSchool).toBe('evocation');
     });
   });
 
@@ -161,6 +216,29 @@ describe('soulstitchSpellsHandler.handle', () => {
 
       expect(result.payload.maxSelections).toBe(2);
     });
+
+    it('should default spell slot level to 1 when spell.level is 0', async () => {
+      const action = makeAction({}, { school: 'Evocation', dc: 15, level: 0 });
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'Goblin1' }],
+      });
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.payload.maxSelections).toBe(2);
+    });
+
+    it('should prefer action.spellSlotLevel over spell.level', async () => {
+      const action = makeAction({}, { school: 'Evocation', dc: 15, level: 5 });
+      action.spellSlotLevel = 2;
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'Goblin1' }],
+      });
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.payload.maxSelections).toBe(3);
+    });
   });
 
   describe('target resolution', () => {
@@ -197,6 +275,18 @@ describe('soulstitchSpellsHandler.handle', () => {
         creatures: [{ name: 'Goblin1' }],
       });
       useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.payload.chosenCreatures).toEqual([]);
+    });
+
+    it('should default chosenCreatures to empty array when runtime returns null', async () => {
+      const action = makeEvocationAction();
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'Goblin1' }],
+      });
+      useRuntimeState.getRuntimeValue.mockReturnValue(null);
 
       const result = await handle(action, makePlayerStats(), campaignName, null);
 
@@ -245,6 +335,21 @@ describe('soulstitchSpellsHandler.handle', () => {
 
       expect(result.payload.spellName).toBe('Unknown');
     });
+
+    it('should use action.name as featureName when provided', async () => {
+      const action = {
+        name: 'Custom Feature',
+        automation: { type: 'soulstitch' },
+        spell: { school: 'Evocation', dc: 15 },
+      };
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'Goblin1' }],
+      });
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.payload.featureName).toBe('Custom Feature');
+    });
   });
 
   describe('saveType fallback', () => {
@@ -258,6 +363,36 @@ describe('soulstitchSpellsHandler.handle', () => {
 
       expect(result).not.toBeNull();
       expect(result.type).toBe('modal');
+    });
+
+    it('should allow spell without dc when auto.saveType is present', async () => {
+      const action = makeAction({ saveType: 'constitution' }, { school: 'Evocation' });
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'Goblin1' }],
+      });
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('modal');
+    });
+  });
+
+  describe('player name key construction', () => {
+    it('should build castKey with underscores for names containing spaces', async () => {
+      const action = makeEvocationAction();
+      const stats = makePlayerStats({ name: 'John The Wizard' });
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'Goblin1' }],
+      });
+      useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+      await handle(action, stats, campaignName, null);
+
+      expect(useRuntimeState.getRuntimeValue).toHaveBeenCalledWith(
+        'John The Wizard',
+        expect.stringMatching(/_John_The_Wizard_Soulstitch_Spells_cast_/),
+        campaignName,
+      );
     });
   });
 });
@@ -273,6 +408,7 @@ describe('soulstitchSpellsHandler.applySoulstitchSelection', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Soulstitch Spells');
       expect(result.payload.description).toContain('No creatures chosen');
     });
 
@@ -280,6 +416,41 @@ describe('soulstitchSpellsHandler.applySoulstitchSelection', () => {
       await applySoulstitchSelection(makeAction(), makePlayerStats(), campaignName, []);
 
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+    });
+
+    it('should not call addEntry when no creatures selected', async () => {
+      await applySoulstitchSelection(makeAction(), makePlayerStats(), campaignName, []);
+
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('should return info popup when selectedNames is null', async () => {
+      const result = await applySoulstitchSelection(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('No creatures chosen');
+    });
+
+    it('should return info popup when selectedNames is undefined', async () => {
+      const result = await applySoulstitchSelection(makeAction(), makePlayerStats(), campaignName, undefined);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('No creatures chosen');
+    });
+
+    it('should use custom featureName in empty selection popup', async () => {
+      const customAction = {
+        name: 'Custom Soulstitch',
+        automation: { type: 'soulstitch' },
+        spell: { school: 'Evocation', dc: 15 },
+      };
+
+      const result = await applySoulstitchSelection(customAction, makePlayerStats(), campaignName, []);
+
+      expect(result.payload.name).toBe('Custom Soulstitch');
+      expect(result.payload.description).toContain('Custom Soulstitch');
     });
   });
 
@@ -322,6 +493,16 @@ describe('soulstitchSpellsHandler.applySoulstitchSelection', () => {
       }));
     });
 
+    it('should log description with creature count and names', async () => {
+      const selectedNames = ['Goblin1', 'Goblin2', 'Goblin3'];
+
+      await applySoulstitchSelection(makeAction(), makePlayerStats(), campaignName, selectedNames);
+
+      expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        description: 'Soulstitch Spells: 3 creature(s) chosen for automatic save success: Goblin1, Goblin2, Goblin3',
+      }));
+    });
+
     it('should return success popup with creature names and automation payload', async () => {
       const selectedNames = ['Goblin1', 'Goblin2'];
 
@@ -345,6 +526,49 @@ describe('soulstitchSpellsHandler.applySoulstitchSelection', () => {
 
       expect(result.payload.name).toBe('Custom Soulstitch');
       expect(result.payload.description).toContain('Custom Soulstitch');
+    });
+
+    it('should call setRuntimeValue twice (cast key + persistent key)', async () => {
+      await applySoulstitchSelection(makeAction(), makePlayerStats(), campaignName, ['Goblin1']);
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledTimes(2);
+    });
+
+    it('should include all creature names in popup description', async () => {
+      const selectedNames = ['Goblin1', 'Goblin2', 'Goblin3'];
+
+      const result = await applySoulstitchSelection(makeAction(), makePlayerStats(), campaignName, selectedNames);
+
+      expect(result.payload.description).toContain('Goblin1, Goblin2, Goblin3');
+      expect(result.payload.description).toContain('automatically succeed on saves and take no damage');
+    });
+  });
+
+  describe('player name key construction', () => {
+    it('should build castKey with underscores for names containing spaces', async () => {
+      const stats = makePlayerStats({ name: 'John The Wizard' });
+
+      await applySoulstitchSelection(makeAction(), stats, campaignName, ['Goblin1']);
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'John The Wizard',
+        expect.stringMatching(/_John_The_Wizard_Soulstitch_Spells_cast_/),
+        ['Goblin1'],
+        campaignName,
+      );
+    });
+
+    it('should build persistentKey with underscores for names containing spaces', async () => {
+      const stats = makePlayerStats({ name: 'John The Wizard' });
+
+      await applySoulstitchSelection(makeAction(), stats, campaignName, ['Goblin1']);
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'John The Wizard',
+        '_John_The_Wizard_Soulstitch_Spells_active',
+        ['Goblin1'],
+        campaignName,
+      );
     });
   });
 });

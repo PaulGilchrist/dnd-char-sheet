@@ -1,11 +1,17 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     executeSweepingAttack,
     executeBaitAndSwitchChoice,
     executeCommanderStrikeChoice,
     executeRallyChoice,
+    validateSizeLimit,
 } from './combatSuperiorityHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import * as damageUtils from '../../../../services/rules/combat/damageUtils.js';
+import * as applyDamage from '../../../../services/rules/combat/applyDamage.js';
+import * as expirations from '../../../../services/rules/effects/expirations.js';
+import * as tempHpService from '../../../../services/automation/handlers/buffs/tempHpService.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
@@ -47,57 +53,20 @@ vi.mock('../../../../services/rules/combat/damageUtils.js', () => ({
     getCombatContext: vi.fn().mockResolvedValue({ creatures: [{ name: 'Goblin' }] }),
 }));
 
-vi.mock('../../../../services/automation/common/targetResolver.js', () => ({
-    resolveTarget: vi.fn().mockResolvedValue(null),
-}));
-
-vi.mock('../../../../services/dice/diceRoller.js', () => ({
-    rollExpression: vi.fn(() => ({ total: 4 })),
-}));
-
-vi.mock('../../../../services/combat/automation/automationService.js', () => ({
-    evaluateAutoExpression: vi.fn((expr) => {
-        if (expr === 'superiority_die') return 8;
-        if (expr === '1d6') return 6;
-        return expr;
-    }),
-    playerIsImmuneToCondition: vi.fn(() => false),
-}));
-
-vi.mock('../../../../services/automation/common/savePrompt.js', () => ({
-    buildSaveDc: vi.fn(() => 15),
-    createSaveListener: vi.fn(() => ({
-        promise: Promise.resolve({ success: false }),
-    })),
+vi.mock('../../../../services/rules/combat/applyDamage.js', () => ({
+    applyDamageToTarget: vi.fn(() => ({ finalDamage: 4 })),
 }));
 
 vi.mock('../../../../services/rules/effects/expirations.js', () => ({
     addExpiration: vi.fn(async () => {}),
 }));
 
-vi.mock('../../../../services/rules/combat/applyDamage.js', () => ({
-    applyDamageToTarget: vi.fn(() => ({ finalDamage: 4 })),
-}));
-
-vi.mock('../../../../services/rules/combat/rangeValidation.js', () => ({
-    getDistanceFeet: vi.fn(() => 5),
-    rangeToFeet: vi.fn((range) => {
-        if (range === '5_ft') return 5;
-        if (range === '8_ft') return 8;
-        return 5;
-    }),
-}));
-
-vi.mock('../../../../services/rules/combat/rangeCheck.js', () => ({
-    isWithinRange: vi.fn().mockResolvedValue(true),
+vi.mock('../../../../services/automation/handlers/buffs/tempHpService.js', () => ({
+    setTempHp: vi.fn(async () => {}),
 }));
 
 vi.mock('../../../../services/ui/logService.js', () => ({
     addEntry: vi.fn(async () => {}),
-}));
-
-vi.mock('../../../../services/automation/handlers/buffs/tempHpService.js', () => ({
-    setTempHp: vi.fn(async () => {}),
 }));
 
 const makePlayerStats = (overrides = {}) => ({
@@ -125,7 +94,7 @@ describe('executeSweepingAttack', () => {
         vi.clearAllMocks();
     });
 
-    it('returns error when no pending data', async () => {
+    it('returns popup with error when no pending data', async () => {
         getRuntimeValue.mockReturnValue(null);
 
         const result = await executeSweepingAttack(
@@ -136,10 +105,13 @@ describe('executeSweepingAttack', () => {
         );
 
         expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.name).toBe('Sweeping Attack');
         expect(result.payload.description).toContain('No pending data');
+        expect(result.payload.description).toContain('attack rider');
     });
 
-    it('returns error when secondary target not in pending list', async () => {
+    it('returns popup with error when secondary target not in pending list', async () => {
         getRuntimeValue.mockReturnValue({
             dieValue: 4,
             damageType: 'slashing',
@@ -155,10 +127,11 @@ describe('executeSweepingAttack', () => {
         );
 
         expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('not a valid secondary target');
+        expect(result.payload.name).toBe('Sweeping Attack');
+        expect(result.payload.description).toContain('Goblin is not a valid secondary target');
     });
 
-    it('applies damage to secondary target when valid', async () => {
+    it('applies damage to valid secondary target and clears pending data', async () => {
         getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
             if (key === 'pendingSweepingAttack') return {
                 dieValue: 4,
@@ -170,12 +143,9 @@ describe('executeSweepingAttack', () => {
             return undefined;
         });
 
-        const combatContext = {
+        damageUtils.getCombatContext.mockResolvedValue({
             creatures: [{ name: 'Skeleton' }],
-        };
-
-        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
-        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+        });
 
         const result = await executeSweepingAttack(
             { name: 'Test', automation: { type: 'combat_superiority' } },
@@ -185,9 +155,118 @@ describe('executeSweepingAttack', () => {
         );
 
         expect(result.type).toBe('popup');
+        expect(result.payload.name).toBe('Sweeping Attack');
         expect(result.payload.description).toContain('Skeleton takes');
         expect(result.payload.description).toContain('slashing damage');
+        expect(result.logEntries).toHaveLength(1);
+        expect(result.logEntries[0].type).toBe('ability_use');
+        expect(result.logEntries[0].description).toContain('Skeleton takes');
         expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'pendingSweepingAttack', null, 'test-campaign');
+    });
+
+    it('uses dieValue as actualDamage when combat context is null', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'pendingSweepingAttack') return {
+                dieValue: 4,
+                damageType: 'slashing',
+                targetName: 'Goblin',
+                secondaryTargets: [{ name: 'Skeleton' }],
+            };
+            if (key === 'targetEffects') return [];
+            return undefined;
+        });
+
+        damageUtils.getCombatContext.mockResolvedValue(null);
+
+        const result = await executeSweepingAttack(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Skeleton'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Skeleton takes 4 slashing damage');
+        expect(applyDamage.applyDamageToTarget).not.toHaveBeenCalled();
+    });
+
+    it('uses applyDamageToTarget result when combat context exists', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'pendingSweepingAttack') return {
+                dieValue: 6,
+                damageType: 'bludgeoning',
+                targetName: 'Goblin',
+                secondaryTargets: [{ name: 'Ogre' }],
+            };
+            if (key === 'targetEffects') return [];
+            return undefined;
+        });
+
+        damageUtils.getCombatContext.mockResolvedValue({
+            creatures: [{ name: 'Ogre' }],
+        });
+        applyDamage.applyDamageToTarget.mockReturnValue({ finalDamage: 2 });
+
+        const result = await executeSweepingAttack(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Ogre'
+        );
+
+        expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+            expect.objectContaining({ creatures: [{ name: 'Ogre' }] }),
+            'Ogre',
+            6,
+            ['bludgeoning'],
+            'test-campaign',
+            [],
+            false,
+            'TestFighter'
+        );
+        expect(result.payload.description).toContain('Ogre takes 2 bludgeoning damage');
+        expect(result.logEntries[0].description).toContain('Ogre takes 2 bludgeoning damage');
+    });
+
+    it('updates targetEffects via setRuntimeValue', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'pendingSweepingAttack') return {
+                dieValue: 4,
+                damageType: 'slashing',
+                targetName: 'Goblin',
+                secondaryTargets: [{ name: 'Skeleton' }],
+            };
+            if (key === 'targetEffects') return [{ target: 'Existing', effect: 'prone' }];
+            return undefined;
+        });
+
+        damageUtils.getCombatContext.mockResolvedValue({
+            creatures: [{ name: 'Skeleton' }],
+        });
+
+        await executeSweepingAttack(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Skeleton'
+        );
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.arrayContaining([
+                { target: 'Existing', effect: 'prone' },
+                expect.objectContaining({
+                    target: 'Skeleton',
+                    source: 'Sweeping Attack',
+                    effect: 'secondary_damage',
+                    value: 4,
+                    damageType: 'slashing',
+                    duration: 'instant',
+                }),
+            ]),
+            'test-campaign'
+        );
     });
 });
 
@@ -198,7 +277,7 @@ describe('executeBaitAndSwitchChoice', () => {
         vi.clearAllMocks();
     });
 
-    it('returns error when chosenName is null', async () => {
+    it('returns popup with error when chosenName is null', async () => {
         const result = await executeBaitAndSwitchChoice(
             { dieValue: 4, maneuverName: 'Bait and Switch' },
             makePlayerStats(),
@@ -207,10 +286,12 @@ describe('executeBaitAndSwitchChoice', () => {
         );
 
         expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.name).toBe('Bait and Switch');
         expect(result.payload.description).toContain('No target selected');
     });
 
-    it('returns error when playerStats is null', async () => {
+    it('returns popup with error when playerStats is null', async () => {
         const result = await executeBaitAndSwitchChoice(
             { dieValue: 4, maneuverName: 'Bait and Switch' },
             null,
@@ -222,7 +303,7 @@ describe('executeBaitAndSwitchChoice', () => {
         expect(result.payload.description).toContain('No target selected');
     });
 
-    it('returns error when campaignName is null', async () => {
+    it('returns popup with error when campaignName is null', async () => {
         const result = await executeBaitAndSwitchChoice(
             { dieValue: 4, maneuverName: 'Bait and Switch' },
             makePlayerStats(),
@@ -234,7 +315,7 @@ describe('executeBaitAndSwitchChoice', () => {
         expect(result.payload.description).toContain('No target selected');
     });
 
-    it('sets bait and switch state on chosen target', async () => {
+    it('sets bait and switch state and expiration on chosen target', async () => {
         const result = await executeBaitAndSwitchChoice(
             { dieValue: 4, maneuverName: 'Bait and Switch' },
             makePlayerStats(),
@@ -243,12 +324,24 @@ describe('executeBaitAndSwitchChoice', () => {
         );
 
         expect(result.type).toBe('popup');
+        expect(result.payload.name).toBe('Bait and Switch');
         expect(result.payload.description).toContain('Ally1 gains +4 AC');
+        expect(result.payload.description).toContain("start of TestFighter's next turn");
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'baitAndSwitchActive', true, 'test-campaign');
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'baitAndSwitchBonus', 4, 'test-campaign');
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'baitAndSwitchSource', 'Bait and Switch', 'test-campaign');
+        expect(expirations.addExpiration).toHaveBeenCalledWith(
+            'TestFighter',
+            'Ally1',
+            expect.arrayContaining([{ type: 'bait_and_switch_clear' }]),
+            'test-campaign',
+            undefined,
+            'TestFighter'
+        );
         expect(result.logEntries).toHaveLength(1);
         expect(result.logEntries[0].type).toBe('ability_use');
+        expect(result.logEntries[0].characterName).toBe('TestFighter');
+        expect(result.logEntries[0].abilityName).toBe('Bait and Switch');
     });
 
     it('uses default maneuver name when not provided', async () => {
@@ -259,6 +352,8 @@ describe('executeBaitAndSwitchChoice', () => {
             'Ally1'
         );
 
+        expect(result.payload.name).toBe('Bait and Switch');
+        expect(result.payload.description).toContain('Ally1 gains +6 AC');
         expect(result.logEntries[0].description).toContain('Bait and Switch');
     });
 });
@@ -270,7 +365,7 @@ describe('executeCommanderStrikeChoice', () => {
         vi.clearAllMocks();
     });
 
-    it('returns error when chosenName is null', async () => {
+    it('returns popup with error when chosenName is null', async () => {
         const result = await executeCommanderStrikeChoice(
             { dieValue: 4, maneuverName: "Commander's Strike" },
             makePlayerStats(),
@@ -279,10 +374,12 @@ describe('executeCommanderStrikeChoice', () => {
         );
 
         expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.name).toBe("Commander's Strike");
         expect(result.payload.description).toContain('No target selected');
     });
 
-    it('returns error when playerStats is null', async () => {
+    it('returns popup with error when playerStats is null', async () => {
         const result = await executeCommanderStrikeChoice(
             { dieValue: 4, maneuverName: "Commander's Strike" },
             null,
@@ -294,7 +391,7 @@ describe('executeCommanderStrikeChoice', () => {
         expect(result.payload.description).toContain('No target selected');
     });
 
-    it('returns error when campaignName is null', async () => {
+    it('returns popup with error when campaignName is null', async () => {
         const result = await executeCommanderStrikeChoice(
             { dieValue: 4, maneuverName: "Commander's Strike" },
             makePlayerStats(),
@@ -306,7 +403,7 @@ describe('executeCommanderStrikeChoice', () => {
         expect(result.payload.description).toContain('No target selected');
     });
 
-    it('sets commander strike state on chosen ally', async () => {
+    it('sets commander strike state on chosen ally without expiration', async () => {
         const result = await executeCommanderStrikeChoice(
             { dieValue: 4, maneuverName: "Commander's Strike" },
             makePlayerStats(),
@@ -315,12 +412,16 @@ describe('executeCommanderStrikeChoice', () => {
         );
 
         expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Ally1 will add 4 to their next attack');
+        expect(result.payload.name).toBe("Commander's Strike");
+        expect(result.payload.description).toContain("Ally1 will add 4 to their next attack's damage roll");
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'commanderStrikeActive', true, 'test-campaign');
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'commanderStrikeBonus', 4, 'test-campaign');
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'commanderStrikeSource', "Commander's Strike", 'test-campaign');
+        expect(expirations.addExpiration).not.toHaveBeenCalled();
         expect(result.logEntries).toHaveLength(1);
         expect(result.logEntries[0].type).toBe('ability_use');
+        expect(result.logEntries[0].characterName).toBe('TestFighter');
+        expect(result.logEntries[0].abilityName).toBe("Commander's Strike");
     });
 
     it('uses default maneuver name when not provided', async () => {
@@ -331,7 +432,8 @@ describe('executeCommanderStrikeChoice', () => {
             'Ally1'
         );
 
-        expect(result.payload.description).toContain("Commander's Strike");
+        expect(result.payload.name).toBe("Commander's Strike");
+        expect(result.payload.description).toContain("Ally1 will add 6 to their next attack's damage roll");
     });
 });
 
@@ -342,7 +444,7 @@ describe('executeRallyChoice', () => {
         vi.clearAllMocks();
     });
 
-    it('returns error when chosenName is null', async () => {
+    it('returns popup with error when chosenName is null', async () => {
         const result = await executeRallyChoice(
             { dieValue: 4, maneuverName: 'Rally' },
             makePlayerStats(),
@@ -354,10 +456,12 @@ describe('executeRallyChoice', () => {
         );
 
         expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.name).toBe('Rally');
         expect(result.payload.description).toContain('No target selected');
     });
 
-    it('returns error when playerStats is null', async () => {
+    it('returns popup with error when playerStats is null', async () => {
         const result = await executeRallyChoice(
             { dieValue: 4, maneuverName: 'Rally' },
             null,
@@ -372,7 +476,7 @@ describe('executeRallyChoice', () => {
         expect(result.payload.description).toContain('No target selected');
     });
 
-    it('returns error when campaignName is null', async () => {
+    it('returns popup with error when campaignName is null', async () => {
         const result = await executeRallyChoice(
             { dieValue: 4, maneuverName: 'Rally' },
             makePlayerStats(),
@@ -387,9 +491,7 @@ describe('executeRallyChoice', () => {
         expect(result.payload.description).toContain('No target selected');
     });
 
-    it('sets temp HP on chosen ally', async () => {
-        const { setTempHp } = await import('../../../../services/automation/handlers/buffs/tempHpService.js');
-
+    it('sets temp HP and expiration on chosen ally', async () => {
         const result = await executeRallyChoice(
             { dieValue: 4, maneuverName: 'Rally' },
             makePlayerStats(),
@@ -401,10 +503,23 @@ describe('executeRallyChoice', () => {
         );
 
         expect(result.type).toBe('popup');
+        expect(result.payload.name).toBe('Rally');
+        expect(result.payload.description).toBe('Rally description');
+        expect(tempHpService.setTempHp).toHaveBeenCalledWith('Ally1', 8, 'test-campaign');
+        expect(expirations.addExpiration).toHaveBeenCalledWith(
+            'TestFighter',
+            'Ally1',
+            expect.arrayContaining([{ type: 'rally_clear' }]),
+            'test-campaign',
+            undefined,
+            'TestFighter'
+        );
         expect(result.logEntries).toHaveLength(1);
         expect(result.logEntries[0].type).toBe('ability_use');
+        expect(result.logEntries[0].characterName).toBe('TestFighter');
+        expect(result.logEntries[0].abilityName).toBe('Rally');
         expect(result.logEntries[0].description).toContain('gains 8 temporary hit points');
-        expect(setTempHp).toHaveBeenCalledWith('Ally1', 8, 'test-campaign');
+        expect(result.logEntries[0].d10Roll).toBe(4);
     });
 
     it('uses default maneuver name when not provided', async () => {
@@ -418,6 +533,7 @@ describe('executeRallyChoice', () => {
             'Rally description'
         );
 
+        expect(result.payload.name).toBe('Rally');
         expect(result.logEntries[0].description).toContain('Rally');
     });
 });
@@ -430,8 +546,6 @@ describe('validateSizeLimit', () => {
     });
 
     it('returns valid when maneuver has no sizeLimit', async () => {
-        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
-
         const result = await validateSizeLimit(
             {},
             'Goblin',
@@ -443,8 +557,6 @@ describe('validateSizeLimit', () => {
     });
 
     it('returns valid when targetName is null', async () => {
-        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
-
         const result = await validateSizeLimit(
             { sizeLimit: 'large_or_smaller' },
             null,
@@ -456,8 +568,6 @@ describe('validateSizeLimit', () => {
     });
 
     it('returns valid when combat context is null', async () => {
-        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
-        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
         damageUtils.getCombatContext.mockResolvedValue(null);
 
         const result = await validateSizeLimit(
@@ -471,8 +581,6 @@ describe('validateSizeLimit', () => {
     });
 
     it('returns valid when target not found in combat context', async () => {
-        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
-        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
         damageUtils.getCombatContext.mockResolvedValue({ creatures: [{ name: 'Other' }] });
 
         const result = await validateSizeLimit(
@@ -485,9 +593,22 @@ describe('validateSizeLimit', () => {
         expect(result).toEqual({ valid: true });
     });
 
+    it('returns valid when target has no size property', async () => {
+        damageUtils.getCombatContext.mockResolvedValue({
+            creatures: [{ name: 'Goblin' }]
+        });
+
+        const result = await validateSizeLimit(
+            { sizeLimit: 'large_or_smaller', name: 'Trip Attack' },
+            'Goblin',
+            'test-campaign',
+            makePlayerStats()
+        );
+
+        expect(result).toEqual({ valid: true });
+    });
+
     it('returns valid when target size is within limit (large_or_smaller)', async () => {
-        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
-        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
         damageUtils.getCombatContext.mockResolvedValue({
             creatures: [{ name: 'Goblin', size: 'Small' }]
         });
@@ -503,8 +624,6 @@ describe('validateSizeLimit', () => {
     });
 
     it('returns valid when target size is within limit (medium_or_smaller)', async () => {
-        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
-        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
         damageUtils.getCombatContext.mockResolvedValue({
             creatures: [{ name: 'Goblin', size: 'Small' }]
         });
@@ -520,8 +639,6 @@ describe('validateSizeLimit', () => {
     });
 
     it('returns valid when target size is within limit (one_size_larger)', async () => {
-        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
-        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
         damageUtils.getCombatContext.mockResolvedValue({
             creatures: [{ name: 'Hobgoblin', size: 'Large' }]
         });
@@ -537,8 +654,6 @@ describe('validateSizeLimit', () => {
     });
 
     it('returns invalid when target is too large for large_or_smaller', async () => {
-        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
-        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
         damageUtils.getCombatContext.mockResolvedValue({
             creatures: [{ name: 'Ogre', size: 'Large' }]
         });
@@ -556,8 +671,6 @@ describe('validateSizeLimit', () => {
     });
 
     it('returns invalid when target is too large for one_size_larger', async () => {
-        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
-        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
         damageUtils.getCombatContext.mockResolvedValue({
             creatures: [{ name: 'Huge Beast', size: 'Huge' }]
         });

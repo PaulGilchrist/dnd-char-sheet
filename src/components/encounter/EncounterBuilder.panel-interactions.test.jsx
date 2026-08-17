@@ -1,7 +1,6 @@
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import EncounterBuilder from './EncounterBuilder.jsx';
+import { screen, fireEvent } from '@testing-library/react';
 
 vi.mock('../../hooks/ui/useMonstersData.js', () => ({
   useMonstersData: vi.fn(() => ({ monsters: [], loading: false })),

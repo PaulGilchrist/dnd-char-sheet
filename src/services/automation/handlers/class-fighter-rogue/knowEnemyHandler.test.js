@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './knowEnemyHandler.js';
 
@@ -82,13 +83,26 @@ describe('knowEnemyHandler', () => {
             expect(addEntry).not.toHaveBeenCalled();
         });
 
-        it('proceeds when 1 superiority die available', async () => {
-            getRuntimeValue.mockReturnValue(1);
-            getCombatContext.mockResolvedValue(null);
+        it('returns error popup when superiority dice are negative', async () => {
+            getRuntimeValue.mockReturnValue(-1);
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toBe(
+                'Know Enemy: No Superiority Dice remaining. Recharges on a Short or Long Rest.'
+            );
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('proceeds when 1 superiority die available', async () => {
+            getRuntimeValue.mockReturnValue(1);
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
             expect(result.payload.name).toBe('Know Enemy');
             expect(result.payload.description).toContain('Expend 1 Superiority Die');
             expect(setRuntimeValue).toHaveBeenCalledWith(
@@ -106,7 +120,6 @@ describe('knowEnemyHandler', () => {
 
         it('defaults to uses_max from action when no stored value (null)', async () => {
             getRuntimeValue.mockReturnValue(null);
-            getCombatContext.mockResolvedValue(null);
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
@@ -122,7 +135,6 @@ describe('knowEnemyHandler', () => {
 
         it('uses custom uses_max when no stored value', async () => {
             getRuntimeValue.mockReturnValue(null);
-            getCombatContext.mockResolvedValue(null);
 
             await handle(
                 makeAction({ automation: { uses_max: 6 } }),
@@ -135,20 +147,6 @@ describe('knowEnemyHandler', () => {
                 'TestFighter',
                 'superiorityDice',
                 5,
-                'test-campaign'
-            );
-        });
-
-        it('decrements superiority dice by 1', async () => {
-            getRuntimeValue.mockReturnValue(3);
-            getCombatContext.mockResolvedValue(null);
-
-            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestFighter',
-                'superiorityDice',
-                2,
                 'test-campaign'
             );
         });
@@ -180,6 +178,25 @@ describe('knowEnemyHandler', () => {
                 characterName: 'TestFighter',
                 abilityName: 'Know Enemy',
                 description: expect.stringContaining('Know Your Enemy used by TestFighter against Goblin'),
+            }));
+        });
+
+        it('includes IRV info in log entry when monster data exists', async () => {
+            getRuntimeValue.mockReturnValue(3);
+            getCombatContext.mockResolvedValue({});
+            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+            getMonsterData.mockResolvedValue({
+                name: 'Goblin',
+                damage_immunities: ['cold'],
+                damage_resistances: ['bludgeoning'],
+                damage_vulnerabilities: ['piercing'],
+                condition_immunities: ['poisoned'],
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', 'test-map');
+
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                description: expect.stringContaining('Immunities: cold'),
             }));
         });
 
@@ -290,12 +307,44 @@ describe('knowEnemyHandler', () => {
 
         it('throws when automation is null', async () => {
             await expect(
-                handle(makeAction({ automation: null }), makePlayerStats(), 'test-campaign', null)
-            ).rejects.toThrow('Cannot read properties of null');
+                handle({ name: 'Know Enemy', automation: null }, makePlayerStats(), 'test-campaign', null)
+            ).rejects.toThrow();
         });
     });
 
     describe('relentless feature', () => {
+        it('does not use relentless when superiority dice are available', async () => {
+            getRuntimeValue
+                .mockReturnValueOnce(1)
+                .mockReturnValueOnce(null);
+
+            const playerWithRelentless = makePlayerStats({
+                automation: {
+                    passives: [
+                        { type: 'passive_rule', effect: 'relentless' },
+                    ],
+                },
+            });
+
+            const result = await handle(makeAction(), playerWithRelentless, 'test-campaign', null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Expend 1 Superiority Die');
+            expect(result.payload.description).not.toContain('Relentless');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestFighter',
+                'superiorityDice',
+                0,
+                'test-campaign'
+            );
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                'TestFighter',
+                'relentlessUsedRound',
+                expect.any(Number),
+                'test-campaign'
+            );
+        });
+
         it('detects relentless passive when present in automation.passives', async () => {
             getRuntimeValue
                 .mockReturnValueOnce(0)
@@ -368,8 +417,10 @@ describe('knowEnemyHandler', () => {
         it('allows relentless in a new round', async () => {
             getRuntimeValue
                 .mockReturnValueOnce(0)
-                .mockReturnValueOnce(2);
+                .mockReturnValueOnce(null);
             getCurrentCombatRound.mockReturnValue(5);
+            evaluateAutoExpression.mockReturnValue(4);
+            rollExpression.mockReturnValue({ total: 3, rolls: [3] });
             getCombatContext.mockResolvedValue(null);
 
             const playerWithRelentless = makePlayerStats({

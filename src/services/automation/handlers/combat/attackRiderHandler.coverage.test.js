@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { applyRiderOption } from './attackRiderHandler.js';
@@ -19,19 +20,10 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
         round: 1,
         activeCreatureName: 'TestHero',
     })),
-    getTargetFromAttacker: vi.fn(() => ({ name: 'Goblin' })),
-}));
-
-vi.mock('../../../rules/combat/rangeValidation.js', () => ({
-    getDistanceFeet: vi.fn(() => 5),
 }));
 
 vi.mock('../../../rules/combat/rangeCheck.js', () => ({
     isWithinRange: vi.fn().mockResolvedValue(true),
-}));
-
-vi.mock('../../../../../services/encounters/combatData.js', () => ({
-    getCurrentCombatRound: vi.fn(() => 1),
 }));
 
 vi.mock('../../../automation/common/savePrompt.js', () => ({
@@ -42,7 +34,7 @@ vi.mock('../../../automation/common/savePrompt.js', () => ({
     })),
 }));
 
-// ── Re-import after mocking ────────────────────────────────────
+// ── Re-imports after mocking ───────────────────────────────────
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
@@ -102,7 +94,6 @@ describe('attackRiderHandler - rider effect descriptions', () => {
     });
 
     it('should include poisoned description with Constitution save', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -112,13 +103,14 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         const stats = makePlayerStats({ toolProficiencies: ["Poisoner's Kit"] });
         const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Poison']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Constitution save');
         expect(result.payload.description).toContain('Poisoned for 1 minute');
         expect(result.payload.description).toContain('repeats save');
     });
 
     it('should include prone description with Dexterity save', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -127,12 +119,13 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Dexterity save');
         expect(result.payload.description).toContain('Prone condition');
     });
 
-    it('should include push description with distance value', async () => {
-        getRuntimeValue.mockReturnValue([]);
+    it('should include push effect description with distance and verify no targetEffects set', async () => {
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -141,12 +134,13 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Push']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('pushed 10 feet away');
         expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects', expect.anything());
     });
 
     it('should include push_15ft description', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -155,11 +149,12 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Push 15ft']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Push 15ft applied to Goblin');
     });
 
-    it('should include next_attack_advantage description with value', async () => {
-        getRuntimeValue.mockReturnValue([]);
+    it('should include next_attack_advantage description with custom value', async () => {
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -168,12 +163,13 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Advantage']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('+5');
         expect(result.payload.description).toContain('Goblin');
     });
 
-    it('should include next_attack_advantage description with default value', async () => {
-        getRuntimeValue.mockReturnValue([]);
+    it('should include next_attack_advantage description with default value when value prop missing', async () => {
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -182,12 +178,13 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Advantage']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('+5');
         expect(result.payload.description).toContain('Goblin');
     });
 
     it('should include unconscious description with Constitution save', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -196,13 +193,14 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Unconscious']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Constitution save');
         expect(result.payload.description).toContain('Unconscious for 1 minute');
         expect(result.payload.description).toContain('repeats save');
     });
 
     it('should include blinded description with Dexterity save', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -211,12 +209,13 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Blinded']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Dexterity save');
         expect(result.payload.description).toContain('Blinded until end of its next turn');
     });
 
     it('should include ally_movement description with movement', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -225,12 +224,13 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Ally Move']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('ally moves');
         expect(result.payload.description).toContain('without provoking Opportunity Attacks');
     });
 
     it('should include daze description with Constitution save', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -239,12 +239,13 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Daze']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Constitution save');
         expect(result.payload.description).toContain('one of: move, action, or Bonus Action');
     });
 
-    it('should include no_opportunity_attacks description without movement using noOpportunityAttacks boolean', async () => {
-        getRuntimeValue.mockReturnValue([]);
+    it('should include no_opportunity_attacks description using noOpportunityAttacks boolean without effect field', async () => {
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -253,12 +254,13 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['No OA']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('cannot make Opportunity Attacks');
         expect(result.payload.description).toContain('start of your next turn');
     });
 
     it('should include disadvantage_on_next_save description', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -267,11 +269,12 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Disadvantage']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Disadvantage on the next saving throw');
     });
 
     it('should include damage_bonus with default 1d6 expression', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -280,11 +283,12 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Damage Bonus']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('1d6 extra damage');
     });
 
     it('should include damage_bonus with custom damageExpression', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -293,7 +297,37 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Damage Bonus']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('2d6 extra damage');
+    });
+
+    it('should include speed_reduction description with value', async () => {
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                options: [{ name: 'Hamstring', effect: 'speed_reduction', value: 15 }],
+            },
+        });
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Hamstring']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.description).toContain('Speed reduced by 15 ft');
+    });
+
+    it('should include speed_reduction description with default value when value prop missing', async () => {
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                options: [{ name: 'Hamstring', effect: 'speed_reduction' }],
+            },
+        });
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Hamstring']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.description).toContain('Speed reduced by 10 ft');
     });
 });
 
@@ -318,6 +352,7 @@ describe('attackRiderHandler - Psychic Veil removal', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Mass Fear']);
 
+        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('Mass Fear');
         expect(result.payload.description).toContain('affected');
         expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'activeConditions', ['poisoned'], 'campaign');
@@ -360,6 +395,7 @@ describe('attackRiderHandler - Psychic Veil removal', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip']);
 
+        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('Trip');
         expect(setRuntimeValue).not.toHaveBeenCalledWith('TestHero', 'activeBuffs', expect.any(Array), 'campaign');
     });
@@ -449,21 +485,25 @@ describe('attackRiderHandler - targetEffects field population', () => {
     });
 
     it('should set targetEffects with repeatingSave field', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
-                options: [{ name: 'Poison', effect: 'poisoned', repeatingSave: true }],
+                options: [{ name: 'Poison', effect: 'poisoned', requires: "Poisoner's Kit", repeatingSave: true }],
             },
         });
         const stats = makePlayerStats({ toolProficiencies: ["Poisoner's Kit"] });
         await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Poison']);
 
-        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
+        const callArgs = setRuntimeValue.mock.calls.find(
+            call => call[1] === 'targetEffects'
+        );
+        expect(callArgs).toBeDefined();
+        expect(callArgs[2]).toEqual(expect.arrayContaining([
+            expect.objectContaining({ repeatingSave: true }),
+        ]));
     });
 
     it('should set targetEffects with damageDoubled from option', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -472,11 +512,16 @@ describe('attackRiderHandler - targetEffects field population', () => {
         });
         await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Double Damage']);
 
-        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
+        const callArgs = setRuntimeValue.mock.calls.find(
+            call => call[1] === 'targetEffects'
+        );
+        expect(callArgs).toBeDefined();
+        expect(callArgs[2]).toEqual(expect.arrayContaining([
+            expect.objectContaining({ damageDoubled: true }),
+        ]));
     });
 
     it('should set targetEffects with damageDoubled from automation fallback', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -486,11 +531,16 @@ describe('attackRiderHandler - targetEffects field population', () => {
         });
         await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Double Damage']);
 
-        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
+        const callArgs = setRuntimeValue.mock.calls.find(
+            call => call[1] === 'targetEffects'
+        );
+        expect(callArgs).toBeDefined();
+        expect(callArgs[2]).toEqual(expect.arrayContaining([
+            expect.objectContaining({ damageDoubled: true }),
+        ]));
     });
 
     it('should set targetEffects with saveType, saveDc, saveAbility fields', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -499,11 +549,16 @@ describe('attackRiderHandler - targetEffects field population', () => {
         });
         await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip']);
 
-        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
+        const callArgs = setRuntimeValue.mock.calls.find(
+            call => call[1] === 'targetEffects'
+        );
+        expect(callArgs).toBeDefined();
+        expect(callArgs[2]).toEqual(expect.arrayContaining([
+            expect.objectContaining({ saveType: 'DEX', saveDc: 15, saveAbility: 'DEX' }),
+        ]));
     });
 
     it('should set targetEffects with sizeLimit field when no requires', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -512,11 +567,16 @@ describe('attackRiderHandler - targetEffects field population', () => {
         });
         await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip']);
 
-        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
+        const callArgs = setRuntimeValue.mock.calls.find(
+            call => call[1] === 'targetEffects'
+        );
+        expect(callArgs).toBeDefined();
+        expect(callArgs[2]).toEqual(expect.arrayContaining([
+            expect.objectContaining({ sizeLimit: 'large_or_smaller' }),
+        ]));
     });
 
     it('should set targetEffects with cost and movement fields', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -525,21 +585,32 @@ describe('attackRiderHandler - targetEffects field population', () => {
         });
         await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Costly Trip']);
 
-        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
+        const callArgs = setRuntimeValue.mock.calls.find(
+            call => call[1] === 'targetEffects'
+        );
+        expect(callArgs).toBeDefined();
+        expect(callArgs[2]).toEqual(expect.arrayContaining([
+            expect.objectContaining({ cost: '1d6', movement: true }),
+        ]));
     });
 
     it('should set targetEffects with ignoreResistance and restoreCost fields', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
-                options: [{ name: 'Special', effect: 'poisoned', ignoreResistance: true, restoreCost: '1d6' }],
+                options: [{ name: 'Special', effect: 'poisoned', requires: "Poisoner's Kit", ignoreResistance: true, restoreCost: '1d6' }],
             },
         });
         const stats = makePlayerStats({ toolProficiencies: ["Poisoner's Kit"] });
         await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Special']);
 
-        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
+        const callArgs = setRuntimeValue.mock.calls.find(
+            call => call[1] === 'targetEffects'
+        );
+        expect(callArgs).toBeDefined();
+        expect(callArgs[2]).toEqual(expect.arrayContaining([
+            expect.objectContaining({ ignoreResistance: true, restoreCost: '1d6' }),
+        ]));
     });
 });
 
@@ -550,7 +621,7 @@ describe('attackRiderHandler - oncePerTurn marks used round', () => {
 
     it('should set usedRound runtime value using action name when oncePerTurn option is applied', async () => {
         getRuntimeValue.mockReturnValue(0);
-        getCombatContext.mockResolvedValue({
+        vi.mocked(getCombatContext).mockResolvedValue({
             creatures: [{ name: 'Goblin', size: 'Medium', position: { x: 1, y: 1 } }],
             round: 1,
             activeCreatureName: 'TestHero',
@@ -579,7 +650,7 @@ describe('attackRiderHandler - Cunning Strike cost with multiple options', () =>
             automation: {
                 type: 'attack_rider',
                 options: [
-                    { name: 'Costly 1', effect: 'poisoned', cost: '2d6' },
+                    { name: 'Costly 1', effect: 'poisoned', cost: '2d6', requires: "Poisoner's Kit" },
                     { name: 'Costly 2', effect: 'prone', cost: '1d6' },
                 ],
             },
@@ -596,7 +667,7 @@ describe('attackRiderHandler - Cunning Strike cost with multiple options', () =>
             automation: {
                 type: 'attack_rider',
                 options: [
-                    { name: 'Costly 1', effect: 'poisoned', cost: '2d6' },
+                    { name: 'Costly 1', effect: 'poisoned', cost: '2d6', requires: "Poisoner's Kit" },
                     { name: 'Costly 2', effect: 'prone', cost: '1d6' },
                 ],
             },
@@ -604,6 +675,8 @@ describe('attackRiderHandler - Cunning Strike cost with multiple options', () =>
         const stats = makePlayerStats({ toolProficiencies: ["Poisoner's Kit"] });
         const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Costly 1', 'Costly 2']);
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Forgoing 3d6 Sneak Attack damage dice');
     });
 });
@@ -614,7 +687,6 @@ describe('attackRiderHandler - mass_fear description format', () => {
     });
 
     it('should include Mass Fear description with target name', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -623,13 +695,13 @@ describe('attackRiderHandler - mass_fear description format', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Mass Fear']);
 
+        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('Mass Fear');
         expect(result.payload.description).toContain('affected');
         expect(result.payload.description).toContain('Goblin');
     });
 
     it('should use default saveType WIS when not specified', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -638,6 +710,7 @@ describe('attackRiderHandler - mass_fear description format', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Mass Fear']);
 
+        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('Mass Fear');
     });
 });
@@ -648,7 +721,6 @@ describe('attackRiderHandler - tool requirement matching', () => {
     });
 
     it('should match tool requirement case-insensitively', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const stats = makePlayerStats({
             toolProficiencies: ["poisoner's kit"],
         });
@@ -665,7 +737,6 @@ describe('attackRiderHandler - tool requirement matching', () => {
     });
 
     it('should reject when tool proficiency does not include the required name', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const stats = makePlayerStats({
             toolProficiencies: ["Poisoner's Tools"],
         });
@@ -677,6 +748,7 @@ describe('attackRiderHandler - tool requirement matching', () => {
         });
         const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Poison']);
 
+        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('cannot be used');
     });
 });
@@ -687,7 +759,6 @@ describe('attackRiderHandler - no target handling', () => {
     });
 
     it('should return info popup noting no target for manual application', async () => {
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
@@ -697,7 +768,28 @@ describe('attackRiderHandler - no target handling', () => {
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', null, ['Trip']);
 
         expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('No target selected');
         expect(result.payload.description).toContain('manual application');
+    });
+});
+
+describe('attackRiderHandler - edge cases', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('should return null when optionNames is an empty array', async () => {
+        const action = makeAction();
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', []);
+
+        expect(result).toBe(null);
+    });
+
+    it('should return null when all option names are invalid', async () => {
+        const action = makeAction();
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['NonExistent1', 'NonExistent2']);
+
+        expect(result).toBe(null);
     });
 });

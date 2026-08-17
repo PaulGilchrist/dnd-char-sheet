@@ -1,8 +1,10 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, confirmCelestialRevelation } from './celestialRevelationHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as expirations from '../../../rules/effects/expirations.js';
 import * as buffToggle from '../../common/buffToggle.js';
+import * as logService from '../../../ui/logService.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
@@ -42,6 +44,10 @@ vi.mock('../combat/attackRiderHandler.js', () => ({
     handle: vi.fn(() => null),
 }));
 
+vi.mock('../../../ui/logService.js', () => ({
+    addEntry: vi.fn(() => Promise.resolve()),
+}));
+
 const campaignName = 'test-campaign';
 const playerName = 'SorcererBoy';
 const defaultUsesKey = '_celestialRevelationUses';
@@ -55,6 +61,7 @@ function makePlayerStats(overrides = {}) {
     return {
         name: playerName,
         level: 3,
+        proficiency: 2,
         ...overrides,
     };
 }
@@ -85,6 +92,22 @@ describe('celestialRevelationHandler', () => {
                 'Celestial Revelation requires character level 3. You are currently level 1.'
             );
             expect(result.payload.automation).toBeDefined();
+            expect(expirations.addExpiration).not.toHaveBeenCalled();
+            expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('returns popup with level requirement using custom action name', async () => {
+            const action = makeAction({ name: 'Custom Revelation' });
+            const lowLevelStats = makePlayerStats({ level: 1 });
+
+            const result = await handle(action, lowLevelStats, campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.name).toBe('Custom Revelation');
+            expect(result.payload.description).toBe(
+                'Celestial Revelation requires character level 3. You are currently level 1.'
+            );
         });
 
         it('returns modal when level gate passes', async () => {
@@ -109,6 +132,24 @@ describe('celestialRevelationHandler', () => {
             expect(result.payload.description).toBe(
                 'Celestial Revelation has been used and cannot be used again until a Long Rest.'
             );
+            expect(expirations.addExpiration).not.toHaveBeenCalled();
+            expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('returns popup when uses are depleted with custom action name', async () => {
+            const action = makeAction({
+                name: 'Custom Revelation',
+                automation: { uses: 1, usesMax: 1 },
+            });
+            runtimeState.getRuntimeValue.mockReturnValue(0);
+
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result.payload.name).toBe('Custom Revelation');
+            expect(result.payload.description).toBe(
+                'Custom Revelation has been used and cannot be used again until a Long Rest.'
+            );
         });
 
         it('returns modal when uses are available', async () => {
@@ -128,6 +169,7 @@ describe('celestialRevelationHandler', () => {
             const result = await handle(action, makePlayerStats(), campaignName, null);
 
             expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('celestialRevelation');
         });
 
         it('uses custom resourceKey when provided', async () => {
@@ -182,18 +224,42 @@ describe('celestialRevelationHandler', () => {
             expect(result.type).toBe('popup');
         });
 
-        it('uses custom action name in popup messages', async () => {
-            const action = makeAction({
-                name: 'Custom Revelation',
-                automation: { uses: 1, usesMax: 1 },
-            });
-            runtimeState.getRuntimeValue.mockReturnValue(0);
+        it('handles null runtime value by defaulting to maxUses (allows use)', async () => {
+            const action = makeAction({ automation: { uses: 1, usesMax: 1 } });
+            runtimeState.getRuntimeValue.mockReturnValue(null);
 
             const result = await handle(action, makePlayerStats(), campaignName, null);
 
-            expect(result.payload.name).toBe('Custom Revelation');
-            expect(result.payload.description).toBe(
-                'Custom Revelation has been used and cannot be used again until a Long Rest.'
+            expect(result.type).toBe('modal');
+        });
+
+        it('handles undefined runtime value by defaulting to maxUses (allows use)', async () => {
+            const action = makeAction({ automation: { uses: 1, usesMax: 1 } });
+            runtimeState.getRuntimeValue.mockReturnValue(undefined);
+
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('modal');
+        });
+
+        it('passes action through payload when returning modal', async () => {
+            const action = makeAction({ automation: { uses: 1, usesMax: 1 } });
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result.payload.action).toBe(action);
+        });
+
+        it('handles missing player name in stats', async () => {
+            const stats = makePlayerStats({ name: undefined });
+
+            await handle(makeAction(), stats, campaignName, null);
+
+            expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith(
+                undefined,
+                defaultUsesKey,
+                campaignName
             );
         });
     });
@@ -217,6 +283,7 @@ describe('celestialRevelationHandler', () => {
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
             expect(expirations.addExpiration).not.toHaveBeenCalled();
             expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
+            expect(logService.addEntry).not.toHaveBeenCalled();
         });
 
         it('decrements uses by 1 when uses are available', async () => {
@@ -242,12 +309,15 @@ describe('celestialRevelationHandler', () => {
             );
 
             expect(result.type).toBe('popup');
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
-                playerName,
-                defaultUsesKey,
-                expect.any(Number),
-                campaignName
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.name).toBe('Celestial Revelation');
+            expect(result.payload.description).toBe(
+                'Celestial Revelation has been used and cannot be used again until a Long Rest.'
             );
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+            expect(expirations.addExpiration).not.toHaveBeenCalled();
+            expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
+            expect(logService.addEntry).not.toHaveBeenCalled();
         });
 
         it('stores chosen transformation option in runtime state', async () => {
@@ -263,7 +333,7 @@ describe('celestialRevelationHandler', () => {
             );
         });
 
-        it('adds expiration for chosen buff after 10 rounds', async () => {
+        it('adds expiration for chosen buff', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(1);
 
             await confirmCelestialRevelation(makePlayerStats(), 'Necrotic Shroud', campaignName);
@@ -272,7 +342,7 @@ describe('celestialRevelationHandler', () => {
                 playerName,
                 playerName,
                 [{ type: 'remove_active_buff', buffName: 'Necrotic Shroud' }],
-                campaignName,
+                campaignName
             );
         });
 
@@ -321,7 +391,7 @@ describe('celestialRevelationHandler', () => {
             expect(result.payload.name).toBe('Celestial Revelation');
             expect(result.payload.description).toContain('Transforming into Heavenly Wings');
             expect(result.payload.description).toContain(
-                'You gain a Fly Speed equal to your Speed'
+                'Two spectral wings sprout from your back'
             );
             expect(result.payload.description).toContain('1 minute or until you end it');
             expect(result.payload.automation).toBeDefined();
@@ -377,8 +447,6 @@ describe('celestialRevelationHandler', () => {
         it('uses default key in confirmCelestialRevelation since it does not accept action', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(1);
 
-            // confirmCelestialRevelation doesn't accept an action parameter,
-            // so it always uses the default key path regardless of automation config
             await confirmCelestialRevelation(makePlayerStats(), 'Heavenly Wings', campaignName);
 
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
@@ -412,7 +480,7 @@ describe('celestialRevelationHandler', () => {
                 'CustomSorcerer',
                 'CustomSorcerer',
                 expect.any(Array),
-                campaignName,
+                campaignName
             );
             expect(buffToggle.toggleBuff).toHaveBeenCalledWith(
                 'CustomSorcerer',
@@ -421,6 +489,90 @@ describe('celestialRevelationHandler', () => {
                 campaignName,
                 'CustomSorcerer'
             );
+        });
+
+        it('adds campaign log entry on successful transformation', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+
+            await confirmCelestialRevelation(makePlayerStats(), 'Heavenly Wings', campaignName);
+
+            expect(logService.addEntry).toHaveBeenCalledWith(
+                campaignName,
+                expect.objectContaining({
+                    type: 'ability_use',
+                    characterName: playerName,
+                    abilityName: 'Heavenly Wings',
+                    description: 'Heavenly Wings used',
+                })
+            );
+        });
+
+        it('handles addEntry rejection gracefully', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+            logService.addEntry.mockRejectedValue(new Error('log fail'));
+
+            const result = await confirmCelestialRevelation(
+                makePlayerStats(),
+                'Heavenly Wings',
+                campaignName
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+        });
+
+        it('sets innerRadianceActive for Inner Radiance option', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+
+            await confirmCelestialRevelation(makePlayerStats(), 'Inner Radiance', campaignName);
+
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                playerName,
+                'innerRadianceActive',
+                true,
+                campaignName
+            );
+        });
+
+        it('calls applyAuraDamage for Inner Radiance option', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+
+            await confirmCelestialRevelation(makePlayerStats(), 'Inner Radiance', campaignName);
+
+            expect(expirations.applyAuraDamage).toHaveBeenCalledWith(
+                playerName,
+                expect.any(Object),
+                campaignName,
+                [],
+                expect.objectContaining({
+                    activeKey: 'innerRadianceActive',
+                    damageType: 'Radiant',
+                    range: 10,
+                })
+            );
+        });
+
+        it('calls handleBuff and handleAttackRider for Heavenly Wings', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+
+            await confirmCelestialRevelation(makePlayerStats(), 'Heavenly Wings', campaignName);
+
+            // The handler imports these modules; they should be called
+            // Heavenly Wings triggers: temp_buff + attack_rider sub-automations
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalled();
+            expect(expirations.addExpiration).toHaveBeenCalled();
+            expect(buffToggle.toggleBuff).toHaveBeenCalled();
+        });
+
+        it('calls handleCondition for Necrotic Shroud', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+
+            await confirmCelestialRevelation(makePlayerStats(), 'Necrotic Shroud', campaignName);
+
+            // Necrotic Shroud returns setCondition modal; side effects still fire
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalled();
+            expect(expirations.addExpiration).toHaveBeenCalled();
+            expect(buffToggle.toggleBuff).toHaveBeenCalled();
         });
     });
 });

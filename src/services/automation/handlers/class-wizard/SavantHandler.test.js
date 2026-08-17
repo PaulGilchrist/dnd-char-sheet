@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { handle, onSavantSelected, onSavantLevelUp } from './SavantHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { loadSpells } from '../../../ui/dataLoader.js';
@@ -9,7 +10,7 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
 
 vi.mock('../../../ui/dataLoader.js', () => ({
     loadSpells: vi.fn(),
-  loadWildMagicSurgeTable: vi.fn(async () => []),
+    loadWildMagicSurgeTable: vi.fn(async () => []),
 }));
 
 const mockPlayerStats = {
@@ -35,7 +36,7 @@ describe('SavantHandler', () => {
     });
 
     describe('handle', () => {
-        it('should return modal with spell options and current selections', async () => {
+        it('should return modal with spell options, optionDetails, and current selections', async () => {
             getRuntimeValue.mockReturnValue(['Shield', 'Detect Magic']);
             loadSpells.mockResolvedValue(mockAbjurationSpells);
 
@@ -52,6 +53,18 @@ describe('SavantHandler', () => {
             expect(result.payload.school).toBe('Abjuration');
             expect(result.payload.spellOptions).toEqual(['Shield', 'Absorb Elements', 'Detect Magic', 'Mage Armor', 'Alarm']);
             expect(result.payload.selectedSpells).toEqual(['Shield', 'Detect Magic']);
+
+            // Verify optionDetails contains structured spell data
+            expect(result.payload.optionDetails).toBeDefined();
+            expect(result.payload.optionDetails['Shield']).toEqual({
+                name: 'Shield',
+                level: 1,
+                casting_time: '1 reaction',
+                range: '5 ft.',
+                description: 'An invisible barrier of magical force.',
+                damage: null,
+            });
+            expect(Object.keys(result.payload.optionDetails)).toHaveLength(5);
         });
 
         it('should return info popup when no spells available for school', async () => {
@@ -68,6 +81,7 @@ describe('SavantHandler', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.name).toBe('Abjuration Savant');
             expect(result.payload.description).toContain('No Abjuration school spells');
         });
 
@@ -118,6 +132,21 @@ describe('SavantHandler', () => {
             expect(loadSpells).toHaveBeenCalledWith('2024');
         });
 
+        it('should default to 2024 when playerStats.rules is null', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            loadSpells.mockResolvedValue([]);
+
+            await handle(
+                { name: 'Abjuration Savant' },
+                { ...mockPlayerStats, rules: null },
+                mockCampaignName,
+                null,
+                'Abjuration'
+            );
+
+            expect(loadSpells).toHaveBeenCalledWith('2024');
+        });
+
         it('should use correct modal name per school', async () => {
             const schools = [
                 ['Divination', 'divinationSavant'],
@@ -126,7 +155,6 @@ describe('SavantHandler', () => {
             ];
 
             for (const [school, modalName] of schools) {
-                vi.clearAllMocks();
                 getRuntimeValue.mockReturnValue([]);
                 loadSpells.mockResolvedValue([
                     { name: 'Test Spell', school, level: 1, classes: ['Wizard'] },
@@ -158,6 +186,49 @@ describe('SavantHandler', () => {
             );
 
             expect(result.payload.selectedSpells).toEqual([]);
+            expect(result.payload.spellOptions).toEqual(['Shield', 'Absorb Elements', 'Detect Magic', 'Mage Armor', 'Alarm']);
+        });
+
+        it('should include action, playerStats, and campaignName in modal payload', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            loadSpells.mockResolvedValue(mockAbjurationSpells);
+
+            const action = { name: 'Abjuration Savant', someCustomProp: 'value' };
+            const result = await handle(
+                action,
+                mockPlayerStats,
+                mockCampaignName,
+                null,
+                'Abjuration'
+            );
+
+            expect(result.payload.action).toBe(action);
+            expect(result.payload.playerStats).toBe(mockPlayerStats);
+            expect(result.payload.campaignName).toBe(mockCampaignName);
+        });
+
+        it('should provide default casting_time and range when spell data lacks them', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            loadSpells.mockResolvedValue([
+                { name: 'Minimal Spell', school: 'Abjuration', level: 0, classes: ['Wizard'] },
+            ]);
+
+            const result = await handle(
+                { name: 'Abjuration Savant' },
+                mockPlayerStats,
+                mockCampaignName,
+                null,
+                'Abjuration'
+            );
+
+            expect(result.payload.optionDetails['Minimal Spell']).toEqual({
+                name: 'Minimal Spell',
+                level: 0,
+                casting_time: '1 action',
+                range: '',
+                description: '',
+                damage: null,
+            });
         });
     });
 
@@ -180,8 +251,10 @@ describe('SavantHandler', () => {
                 true
             );
             expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('Shield');
             expect(result.payload.description).toContain('Detect Magic');
+            expect(result.payload.name).toBe('Abjuration Savant');
         });
 
         it('should append new spells to existing selection', async () => {
@@ -223,37 +296,86 @@ describe('SavantHandler', () => {
                 true
             );
             expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('cleared');
         });
 
-        it('should reject invalid selections (same spell, missing spell, or empty string)', async () => {
-            const invalidCases = [
-                { spell1: 'Fire Bolt', spell2: 'Fire Bolt', school: 'Evocation', feature: 'Evocation Savant' },
-                { spell1: 'Minor Illusion', spell2: null, school: 'Illusion', feature: 'Illusion Savant' },
-                { spell1: 'Shield', spell2: null, school: 'Abjuration', feature: 'Abjuration Savant' },
-                { spell1: '', spell2: 'Shield', school: 'Abjuration', feature: 'Abjuration Savant' },
-                { spell1: 'Shield', spell2: '', school: 'Abjuration', feature: 'Abjuration Savant' },
-            ];
+        it('should reject duplicate spell selection', async () => {
+            const result = await onSavantSelected(
+                { name: 'Evocation Savant' },
+                mockPlayerStats,
+                mockCampaignName,
+                'Fire Bolt',
+                'Fire Bolt',
+                'Evocation'
+            );
 
-            for (const { spell1, spell2, school, feature } of invalidCases) {
-                vi.clearAllMocks();
-
-                const result = await onSavantSelected(
-                    { name: feature },
-                    mockPlayerStats,
-                    mockCampaignName,
-                    spell1,
-                    spell2,
-                    school
-                );
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.description).toContain('Two different');
-                expect(setRuntimeValue).not.toHaveBeenCalled();
-            }
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Two different');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('should not add duplicate spells', async () => {
+        it('should reject missing first spell', async () => {
+            const result = await onSavantSelected(
+                { name: 'Illusion Savant' },
+                mockPlayerStats,
+                mockCampaignName,
+                null,
+                'Minor Illusion',
+                'Illusion'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Two different');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('should reject missing second spell', async () => {
+            const result = await onSavantSelected(
+                { name: 'Abjuration Savant' },
+                mockPlayerStats,
+                mockCampaignName,
+                'Shield',
+                null,
+                'Abjuration'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Two different');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('should reject empty string spell names', async () => {
+            const result1 = await onSavantSelected(
+                { name: 'Abjuration Savant' },
+                mockPlayerStats,
+                mockCampaignName,
+                '',
+                'Shield',
+                'Abjuration'
+            );
+
+            expect(result1.type).toBe('popup');
+            expect(result1.payload.description).toContain('Two different');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+
+            vi.clearAllMocks();
+
+            const result2 = await onSavantSelected(
+                { name: 'Abjuration Savant' },
+                mockPlayerStats,
+                mockCampaignName,
+                'Shield',
+                '',
+                'Abjuration'
+            );
+
+            expect(result2.type).toBe('popup');
+            expect(result2.payload.description).toContain('Two different');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('should not add duplicate spells to existing selection', async () => {
             getRuntimeValue.mockReturnValue(['Shield', 'Detect Magic']);
 
             await onSavantSelected(
@@ -282,7 +404,6 @@ describe('SavantHandler', () => {
             ];
 
             for (const [school, spells, key] of schools) {
-                vi.clearAllMocks();
                 getRuntimeValue.mockReturnValue([]);
 
                 await onSavantSelected(
@@ -302,6 +423,45 @@ describe('SavantHandler', () => {
                     true
                 );
             }
+        });
+
+        it('should treat non-array existing selection as empty', async () => {
+            getRuntimeValue.mockReturnValue('not-an-array');
+
+            await onSavantSelected(
+                { name: 'Abjuration Savant' },
+                mockPlayerStats,
+                mockCampaignName,
+                'Shield',
+                'Detect Magic',
+                'Abjuration'
+            );
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestWizard',
+                '_Abjuration_Savant_selection',
+                ['Shield', 'Detect Magic'],
+                mockCampaignName,
+                true
+            );
+        });
+
+        it('should include automation property in payload when action has it', async () => {
+            const actionWithAutomation = {
+                name: 'Abjuration Savant',
+                automation: { type: 'feature', source: 'wizard' },
+            };
+
+            const result = await onSavantSelected(
+                actionWithAutomation,
+                mockPlayerStats,
+                mockCampaignName,
+                'Shield',
+                'Detect Magic',
+                'Abjuration'
+            );
+
+            expect(result.payload.automation).toEqual({ type: 'feature', source: 'wizard' });
         });
     });
 
@@ -326,35 +486,58 @@ describe('SavantHandler', () => {
                 true
             );
             expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('Mage Armor');
+            expect(result.payload.name).toBe('Abjuration Savant');
         });
 
-        it('should reject non-matching school spell and null spell', async () => {
-            getRuntimeValue.mockReturnValue(['Shield']);
+        it('should reject spell from wrong school', async () => {
             loadSpells.mockResolvedValue([
                 ...mockAbjurationSpells,
                 { name: 'Fire Bolt', school: 'Evocation', level: 0 },
             ]);
 
-            let result = await onSavantLevelUp(
+            const result = await onSavantLevelUp(
                 { name: 'Abjuration Savant' },
                 mockPlayerStats,
                 mockCampaignName,
                 'Fire Bolt',
                 'Abjuration'
             );
+
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('not an Abjuration school spell');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
 
-            result = await onSavantLevelUp(
+        it('should reject null spell name', async () => {
+            const result = await onSavantLevelUp(
                 { name: 'Abjuration Savant' },
                 mockPlayerStats,
                 mockCampaignName,
                 null,
                 'Abjuration'
             );
+
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('must be selected');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('should reject unknown spell name not in spell list', async () => {
+            loadSpells.mockResolvedValue(mockAbjurationSpells);
+
+            const result = await onSavantLevelUp(
+                { name: 'Abjuration Savant' },
+                mockPlayerStats,
+                mockCampaignName,
+                'Nonexistent Spell',
+                'Abjuration'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('not an Abjuration school spell');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
         it('should not add duplicate spell on level up', async () => {
@@ -386,7 +569,6 @@ describe('SavantHandler', () => {
             ];
 
             for (const [school, existing, newSpell, key] of schools) {
-                vi.clearAllMocks();
                 getRuntimeValue.mockReturnValue([existing]);
                 loadSpells.mockResolvedValue([
                     { name: newSpell, school, level: 1, classes: ['Wizard'] },
@@ -424,6 +606,47 @@ describe('SavantHandler', () => {
             );
 
             expect(loadSpells).toHaveBeenCalledWith('5e');
+        });
+
+        it('should treat non-array existing selection as empty', async () => {
+            getRuntimeValue.mockReturnValue('not-an-array');
+            loadSpells.mockResolvedValue(mockAbjurationSpells);
+
+            await onSavantLevelUp(
+                { name: 'Abjuration Savant' },
+                mockPlayerStats,
+                mockCampaignName,
+                'Shield',
+                'Abjuration'
+            );
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestWizard',
+                '_Abjuration_Savant_selection',
+                ['Shield'],
+                mockCampaignName,
+                true
+            );
+        });
+
+        it('should include automation property in payload when action has it', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            loadSpells.mockResolvedValue(mockAbjurationSpells);
+
+            const actionWithAutomation = {
+                name: 'Abjuration Savant',
+                automation: { type: 'levelup', source: 'wizard' },
+            };
+
+            const result = await onSavantLevelUp(
+                actionWithAutomation,
+                mockPlayerStats,
+                mockCampaignName,
+                'Shield',
+                'Abjuration'
+            );
+
+            expect(result.payload.automation).toEqual({ type: 'levelup', source: 'wizard' });
         });
     });
 });

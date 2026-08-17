@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, isActive, deactivate } from './dragonWingsHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -128,7 +129,7 @@ describe('dragonWingsHandler', () => {
                 }));
             });
 
-            it('uses custom feature name in popup and buff entry', async () => {
+            it('uses custom feature name in popup', async () => {
                 mockRuntimeGet({ [usesKey]: 1 });
                 classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
                 const action = makeAction({ name: 'Custom Wings' });
@@ -164,6 +165,43 @@ describe('dragonWingsHandler', () => {
                     ]),
                     campaignName,
                 );
+            });
+
+            it('includes automation object in popup payload', async () => {
+                mockRuntimeGet({ [usesKey]: 1 });
+                classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
+
+                const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+                expect(result.payload.automation).toEqual(makeAction().automation);
+            });
+
+            it('handles activeBuffs being null on activation', async () => {
+                mockRuntimeGet({ [usesKey]: 1, activeBuffs: null });
+                classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
+
+                const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+                expect(result.type).toBe('popup');
+                expect(result.payload.description).toContain('activated');
+                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                    playerName,
+                    'activeBuffs',
+                    expect.arrayContaining([
+                        expect.objectContaining({ name: 'Dragon Wings' }),
+                    ]),
+                    campaignName,
+                );
+            });
+
+            it('handles getClassFeatures returning null on activation', async () => {
+                mockRuntimeGet({ [usesKey]: 1 });
+                classFeatures.getClassFeatures.mockReturnValue(null);
+
+                const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+                expect(result.type).toBe('popup');
+                expect(result.payload.description).toContain('activated');
             });
         });
 
@@ -266,6 +304,31 @@ describe('dragonWingsHandler', () => {
                     campaignName,
                     10,
                 );
+            });
+
+            it('adds campaign log entry on restore', async () => {
+                mockRuntimeGet({ [usesKey]: 0 });
+                classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
+
+                await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+                expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                    type: 'ability_use',
+                    characterName: playerName,
+                    abilityName: 'Dragon Wings',
+                }));
+            });
+
+            it('uses custom feature name in restore description', async () => {
+                mockRuntimeGet({ [usesKey]: 0 });
+                classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
+                const action = makeAction({ name: 'Custom Wings' });
+
+                const result = await handle(action, makePlayerStats(), campaignName, null);
+
+                expect(result.payload.name).toBe('Custom Wings');
+                expect(result.payload.description).toContain('Custom Wings');
+                expect(result.payload.description).toContain('restored');
             });
 
             it('returns error popup when no uses remaining and insufficient sorcery points', async () => {

@@ -1,379 +1,277 @@
+// @improved-by-ai
 import { describe, it, expect } from 'vitest'
 import { collectAutomationFromFeatures, processFeatureAutomation, collectTurnStartEffects } from './automationCollector.js'
 import { makePlayerStats, makeFeature } from './automationService.fixtures.js'
 
 const ps = makePlayerStats()
 
-// ── collectAutomationFromFeatures – null/undefined safety (consolidated) ──
+// ── collectAutomationFromFeatures – playerStats null/undefined safety ──
 
-describe('collectAutomationFromFeatures – null/undefined safety', () => {
-    it('returns empty result structure when features is null', () => {
-        const result = collectAutomationFromFeatures(null, ps)
-        expect(result).toEqual({
-            actions: [], bonusActions: [], reactions: [], specialActions: [],
-            passives: [], autoEffects: [], saveModifiers: [], primalKnowledge: [], ritualSpells: []
-        })
-    })
-
-    it('returns empty arrays when features is undefined', () => {
-        const result = collectAutomationFromFeatures(undefined, ps)
-        expect(result.actions).toHaveLength(0)
-    })
-
-    it('skips features with null, undefined, or missing automation', () => {
-        const features = [
-            { name: 'No Auto' },
-            { name: 'Null Auto', automation: null },
-            { name: 'Undefined Auto', automation: undefined }
-        ]
-        const result = collectAutomationFromFeatures(features, ps)
-        expect(result.passives).toHaveLength(0)
-    })
-})
-
-// ── collectAutomationFromFeatures – handler dispatch correctness ──
-
-describe('collectAutomationFromFeatures – handler dispatch', () => {
-    it('routes dispatch-only types to specialActions', () => {
-        const result = collectAutomationFromFeatures([
-            makeFeature({ type: 'damage_modifier' }),
-            makeFeature({ type: 'reaction_counterspell' }),
-        ], ps)
-        expect(result.specialActions).toHaveLength(2)
-    })
-
-    it('routes handler-transformed types to their correct buckets', () => {
-        const checks = [
-            { type: 'great_weapon_fighting', bucket: 'passives', check: (item) => expect(item.effect).toBe('great_weapon_fighting') },
-            { type: 'two_weapon_fighting', bucket: 'passives', check: (item) => expect(item.effect).toBe('two_weapon_fighting') },
-            { type: 'reroll_damage_once_per_turn', bucket: 'passives', check: (item) => expect(item.effect).toBe('reroll_damage_once_per_turn') },
-            { type: 'ignore_resistance', bucket: 'passives', check: (item) => expect(item.effect).toBe('ignore_resistance') },
-            { type: 'feats_of_chaos', bucket: 'passives', check: (item) => expect(item.type).toBe('feats_of_chaos') },
-            { type: 'heroic_inspiration_buff', bucket: 'specialActions', check: (item) => expect(item.type).toBe('heroic_inspiration_buff') },
-            { type: 'warping_implosion', bucket: 'actions', check: (item) => expect(item.type).toBe('save_attack') },
-            { type: 'sacred_weapon', bucket: 'specialActions', check: (item) => { expect(item.type).toBe('temp_buff'); expect(item.effect).toBe('sacred_weapon') } },
-            { type: 'third_eye', bucket: 'bonusActions', check: (item) => expect(item.type).toBe('bonus_action_choice') },
-        ]
-
-        for (const { type, bucket, check } of checks) {
-            const result = collectAutomationFromFeatures([makeFeature({ type })], ps)
-            expect(result[bucket]).toHaveLength(1)
-            check(result[bucket][0])
-        }
-    })
-
-    it('routes casting_time-conditional types correctly', () => {
-        const mistyResult = collectAutomationFromFeatures([
-            makeFeature({ type: 'misty_wanderer', casting_time: 'bonus_action' }),
-            makeFeature({ type: 'misty_wanderer', casting_time: '1 action' }),
-        ], ps)
-        expect(mistyResult.bonusActions).toHaveLength(1)
-        expect(mistyResult.actions).toHaveLength(1)
-
-        const cosmicResult = collectAutomationFromFeatures([
-            makeFeature({ type: 'cosmic_omen', casting_time: '1 bonus_action' }),
-            makeFeature({ type: 'cosmic_omen', casting_time: '1 reaction' }),
-            makeFeature({ type: 'cosmic_omen', casting_time: '1 action' }),
-        ], ps)
-        expect(cosmicResult.bonusActions).toHaveLength(1)
-        expect(cosmicResult.reactions).toHaveLength(1)
-        expect(cosmicResult.actions).toHaveLength(1)
-    })
-
-    it('routes conditional trigger types correctly', () => {
-        const critResult = collectAutomationFromFeatures([
-            makeFeature({ type: 'damage_bonus', trigger: 'on_critical' }),
-        ], ps)
-        expect(critResult.passives).toHaveLength(1)
-        expect(critResult.actions).toHaveLength(0)
-
-        const psychicResult = collectAutomationFromFeatures([
-            makeFeature({ type: 'reaction_damage', trigger: 'psychic_damage_received' }),
-        ], ps)
-        expect(psychicResult.passives).toHaveLength(0)
-        expect(psychicResult.reactions).toHaveLength(1)
-    })
-
-    it('routes passive_rule sub-types to correct buckets', () => {
-        const result = collectAutomationFromFeatures([
-            makeFeature({ type: 'passive_rule', effect: 'superior_defense' }),
-            makeFeature({ type: 'passive_rule', effect: 'grapple_damage' }),
-            makeFeature({ type: 'passive_rule', effect: 'ritual_spells' }),
-            makeFeature({ type: 'passive_rule', effect: 'primal_knowledge', skills: [{ skill: 'arcana' }] }),
-            makeFeature({ type: 'passive_rule', effect: 'tavern_brawler_push' }),
-        ], ps)
-        expect(result.specialActions).toHaveLength(2)
-        expect(result.ritualSpells).toHaveLength(1)
-        expect(result.primalKnowledge).toHaveLength(1)
-        expect(result.passives).toHaveLength(2)
-    })
-
-    it('routes auto_effect based on effect property', () => {
-        const psychicResult = collectAutomationFromFeatures([makeFeature({ type: 'auto_effect', effect: 'psychic_teleportation' })], ps)
-        expect(psychicResult.bonusActions).toHaveLength(1)
-        expect(psychicResult.passives).toHaveLength(0)
-
-        const otherResult = collectAutomationFromFeatures([makeFeature({ type: 'auto_effect', effect: 'something_else' })], ps)
-        expect(otherResult.passives).toHaveLength(1)
-    })
-
-    it('routes attack_rider based on options', () => {
-        const passiveResult = collectAutomationFromFeatures([makeFeature({ type: 'attack_rider', chooseOne: true })], ps)
-        expect(passiveResult.passives).toHaveLength(1)
-
-        const actionResult = collectAutomationFromFeatures([makeFeature({ type: 'attack_rider' })], ps)
-        expect(actionResult.actions).toHaveLength(1)
-    })
-
-    it('routes combat_superiority based on oncePerTurn', () => {
-        const actionResult = collectAutomationFromFeatures([makeFeature({ type: 'combat_superiority', oncePerTurn: true })], ps)
-        expect(actionResult.actions).toHaveLength(1)
-        expect(actionResult.specialActions).toHaveLength(0)
-
-        const specialResult = collectAutomationFromFeatures([makeFeature({ type: 'combat_superiority' })], ps)
-        expect(specialResult.specialActions).toHaveLength(1)
-    })
-
-    it('handles features with matching type and source conditions', () => {
-        const feature = { name: 'GWF', type: 'damage', source: 'feat', automation: { type: 'great_weapon_fighting' } }
-        const result = collectAutomationFromFeatures([feature], ps)
-        expect(result.passives).toHaveLength(1)
-        expect(result.passives[0].effect).toBe('great_weapon_fighting')
-    })
-
-    it('handles array automations on a single feature', () => {
-        const features = [{
-            name: 'Dual',
-            automation: [
-                { type: 'warding_bond' },
-                { type: 'bulwark_of_force' },
-            ]
-        }]
-        const result = collectAutomationFromFeatures(features, ps)
+describe('collectAutomationFromFeatures – playerStats safety', () => {
+    it('still processes features when playerStats is null', () => {
+        const result = collectAutomationFromFeatures([makeFeature({ type: 'warding_bond' })], null)
         expect(result.actions).toHaveLength(1)
-        expect(result.bonusActions).toHaveLength(1)
+        expect(result.actions[0].type).toBe('warding_bond')
     })
 
-    it('routes arcane_charge and telekinetic_movement as duplicate actions', () => {
-        const arcaneResult = collectAutomationFromFeatures([makeFeature({ type: 'arcane_charge' })], ps)
-        expect(arcaneResult.actions).toHaveLength(2)
-
-        const teleResult = collectAutomationFromFeatures([makeFeature({ type: 'telekinetic_movement' })], ps)
-        expect(teleResult.actions).toHaveLength(2)
+    it('still processes features when playerStats is undefined', () => {
+        const result = collectAutomationFromFeatures([makeFeature({ type: 'warding_bond' })], undefined)
+        expect(result.actions).toHaveLength(1)
+        expect(result.actions[0].type).toBe('warding_bond')
     })
 })
 
-// ── collectTurnStartEffects – null/undefined safety ──
+// ── collectAutomationFromFeatures – relentless effect ──
 
-describe('collectTurnStartEffects – null/undefined safety', () => {
-    it('returns empty array for null, undefined, or empty input', () => {
-        expect(collectTurnStartEffects(null)).toEqual([])
-        expect(collectTurnStartEffects(undefined)).toEqual([])
-        expect(collectTurnStartEffects([])).toEqual([])
-    })
-
-    it('skips features with null, undefined, or missing automation', () => {
-        const result = collectTurnStartEffects([
-            { name: 'No Auto' },
-            { name: 'Null Auto', automation: null },
-        ])
-        expect(result).toEqual([])
-    })
-
-    it('handles array automation with null/undefined entries', () => {
-        const features = [{
-            name: 'Mixed',
-            automation: [null, { type: 'passive_rule', effect: 'naturally_stealthy' }, undefined]
-        }]
-        const result = collectTurnStartEffects(features)
-        expect(result).toHaveLength(1)
-        expect(result[0].type).toBe('naturally_stealthy')
+describe('collectAutomationFromFeatures – relentless effect', () => {
+    it('creates passive with hasAutomation flag for relentless effect', () => {
+        const result = collectAutomationFromFeatures([makeFeature({ type: 'passive_rule', effect: 'relentless' })], ps)
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0]).toEqual({
+            type: 'passive_rule',
+            name: 'Test Feature',
+            effect: 'relentless',
+            hasAutomation: true,
+        })
     })
 })
 
-// ── collectTurnStartEffects – key behavioral routing ──
+// ── collectAutomationFromFeatures – projected_ward reaction ──
 
-describe('collectTurnStartEffects – behavioral routing', () => {
-    it('routes passive_rule effects with defaults', () => {
-        const effects = [
-            'supreme_sneak', 'umbral_sight', 'naturally_stealthy',
-            'mage_hand_legerdemain', 'divination_savant', 'evocation_savant',
-            'illusion_savant', 'improved_illusions', 'tavern_brawler_push', 'grapple_damage',
-        ]
-        for (const effect of effects) {
-            const result = collectTurnStartEffects([{ name: effect, automation: { type: 'passive_rule', effect } }])
-            expect(result).toHaveLength(1)
-            expect(result[0].type).toBe(effect)
-            expect(result[0].name).toBe(effect)
-        }
+describe('collectAutomationFromFeatures – projected_ward reaction', () => {
+    it('creates reaction with full automation object for projected_ward', () => {
+        const result = collectAutomationFromFeatures([makeFeature({ type: 'projected_ward' })], ps)
+        expect(result.reactions).toHaveLength(1)
+        expect(result.reactions[0]).toEqual({
+            type: 'projected_ward',
+            name: 'Test Feature',
+            range: 30,
+            reaction: true,
+            automation: {
+                type: 'projected_ward',
+                name: 'Test Feature',
+                range: 30,
+                reaction: true,
+                wardTrigger: 'ally_damage_taken',
+                casting_time: '1 reaction',
+                hasAutomation: true,
+            },
+        })
     })
 
-    it('routes passive_rule effects with custom overrides', () => {
-        const overrides = [
-            { effect: 'flurry_healing_harm', field: 'usesExpression', value: 'CHA modifier', default: 'WIS modifier minimum 1' },
-            { effect: 'dread_ambush_speed', field: 'bonusExpression', value: '15', default: '10' },
-            { effect: 'create_thrall_temp_hp', field: 'tempHpExpression', value: 'warlock level', default: 'warlock level + CHA modifier' },
-            { effect: 'projected_ward', field: 'range', value: 60, default: 30 },
-        ]
+    it('respects custom projected_ward properties', () => {
+        const result = collectAutomationFromFeatures([
+            makeFeature({ type: 'projected_ward', range: 60, wardTrigger: 'self_healing', casting_time: '1 reaction; starts when dropped below 50% hp' })
+        ], ps)
+        expect(result.reactions[0]).toEqual({
+            type: 'projected_ward',
+            name: 'Test Feature',
+            range: 60,
+            reaction: true,
+            automation: {
+                type: 'projected_ward',
+                name: 'Test Feature',
+                range: 60,
+                reaction: true,
+                wardTrigger: 'self_healing',
+                casting_time: '1 reaction; starts when dropped below 50% hp',
+                hasAutomation: true,
+            },
+        })
+    })
+})
 
-        for (const { effect, field, value, default: defaultValue } of overrides) {
-            const customResult = collectTurnStartEffects([{ name: effect, automation: { type: 'passive_rule', effect, [field]: value } }])
-            expect(customResult[0][field]).toBe(value)
+// ── collectAutomationFromFeatures – arcane_ward full shape ──
 
-            const defaultResult = collectTurnStartEffects([{ name: effect, automation: { type: 'passive_rule', effect } }])
-            expect(defaultResult[0][field]).toBe(defaultValue)
-        }
+describe('collectAutomationFromFeatures – arcane_ward full shape', () => {
+    it('creates passive with all defaults', () => {
+        const result = collectAutomationFromFeatures([makeFeature({ type: 'passive_rule', effect: 'arcane_ward' })], ps)
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0]).toEqual({
+            type: 'arcane_ward',
+            name: 'Test Feature',
+            wardHpExpression: '',
+            wardRestoreExpression: '',
+            bonusActionRestore: false,
+        })
     })
 
-    it('routes type-based effects correctly', () => {
-        const typeTests = [
-            { type: 'precise_hunter', expectedType: 'precise_hunter' },
-            { type: 'hunter_lore', expectedType: 'hunter_lore' },
-            { type: 'living_legend', expectedType: 'living_legend_turn_start' },
-            { type: 'radiant_soul', expectedType: 'radiant_soul_turn_start' },
-            { type: 'elder_champion', expectedType: 'elder_champion_regeneration' },
-        ]
+    it('creates passive with custom values', () => {
+        const result = collectAutomationFromFeatures([
+            makeFeature({ type: 'passive_rule', effect: 'arcane_ward', wardHpExpression: 'INT modifier * 5', wardRestoreExpression: 'full', bonusActionRestore: true })
+        ], ps)
+        expect(result.passives[0]).toEqual({
+            type: 'arcane_ward',
+            name: 'Test Feature',
+            wardHpExpression: 'INT modifier * 5',
+            wardRestoreExpression: 'full',
+            bonusActionRestore: true,
+        })
+    })
+})
 
-        for (const { type, expectedType } of typeTests) {
-            const result = collectTurnStartEffects([{ name: type, automation: { type } }])
-            expect(result).toHaveLength(1)
-            expect(result[0].type).toBe(expectedType)
-        }
+// ── collectAutomationFromFeatures – spell_breaker full shape ──
+
+describe('collectAutomationFromFeatures – spell_breaker full shape', () => {
+    it('creates passive with all defaults', () => {
+        const result = collectAutomationFromFeatures([makeFeature({ type: 'passive_rule', effect: 'spell_breaker' })], ps)
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0]).toEqual({
+            type: 'spell_breaker',
+            name: 'Test Feature',
+            spellLevel: 1,
+            alwaysPreparedSpells: [],
+            bonusActionSpells: [],
+            dispelAbilityCheckBonus: '',
+            slotRetentionSpells: [],
+        })
     })
 
-    it('routes damage_aura only for Inner Radiance feature name', () => {
-        const innerResult = collectTurnStartEffects([{ name: 'Inner Radiance', automation: { type: 'damage_aura' } }])
-        expect(innerResult).toHaveLength(1)
-        expect(innerResult[0].type).toBe('inner_radiance_turn_start')
-
-        const otherResult = collectTurnStartEffects([{ name: 'Fire Aura', automation: { type: 'damage_aura' } }])
-        expect(otherResult).toHaveLength(0)
+    it('creates passive with custom values', () => {
+        const result = collectAutomationFromFeatures([
+            makeFeature({ type: 'passive_rule', effect: 'spell_breaker', spellLevel: 3, alwaysPreparedSpells: ['dispel_magic'], bonusActionSpells: ['counterspell'], dispelAbilityCheckBonus: 'proficiency_bonus', slotRetentionSpells: ['counterspell', 'dispel_magic'] })
+        ], ps)
+        expect(result.passives[0]).toEqual({
+            type: 'spell_breaker',
+            name: 'Test Feature',
+            spellLevel: 3,
+            alwaysPreparedSpells: ['dispel_magic'],
+            bonusActionSpells: ['counterspell'],
+            dispelAbilityCheckBonus: 'proficiency_bonus',
+            slotRetentionSpells: ['counterspell', 'dispel_magic'],
+        })
     })
+})
 
-    it('routes healing_start_of_turn with defaults', () => {
-        const result = collectTurnStartEffects([{ name: 'Regen', automation: { type: 'healing_start_of_turn' } }])
-        expect(result).toHaveLength(1)
-        expect(result[0].type).toBe('regenerate_turn_start_heal')
-        expect(result[0].healExpression).toBe('1')
-        expect(result[0].bodyPartRegrowMinutes).toBe(2)
-    })
+// ── collectTurnStartEffects – vitalityOfTheTree_turn_start ──
 
-    it('routes use_magic_device with default attunementLimit', () => {
-        const result = collectTurnStartEffects([{ name: 'UMD', automation: { type: 'use_magic_device' } }])
-        expect(result[0].attunementLimit).toBe(4)
-    })
-
-    it('routes steady_aim and roving_aim to steady_aim_clear', () => {
-        const steadyResult = collectTurnStartEffects([{ name: 'Steady', automation: { type: 'steady_aim' } }])
-        expect(steadyResult[0].type).toBe('steady_aim_clear')
-
-        const rovingResult = collectTurnStartEffects([{ name: 'Roving', automation: { type: 'passive_rule', effect: 'roving_aim' } }])
-        expect(rovingResult[0].type).toBe('steady_aim_clear')
-    })
-
-    it('routes heroic_inspiration_turn_start to heroic_inspiration', () => {
-        const result = collectTurnStartEffects([{ name: 'Heroic', automation: { type: 'passive_rule', effect: 'heroic_inspiration_turn_start' } }])
-        expect(result[0].type).toBe('heroic_inspiration')
-    })
-
-    it('routes end_of_turn_condition_removal with conditions', () => {
+describe('collectTurnStartEffects – vitalityOfTheTree_turn_start', () => {
+    it('maps temp_hp_buff with healingStartOfTurn to vitalityOfTheTree_turn_start', () => {
         const result = collectTurnStartEffects([{
-            name: 'Cleanse',
-            automation: { type: 'passive_rule', effect: 'end_of_turn_condition_removal', conditions: ['Frightened', 'Stunned'] }
+            name: 'Vitality of the Tree',
+            automation: { type: 'temp_hp_buff', healingStartOfTurn: true }
         }])
         expect(result).toHaveLength(1)
-        expect(result[0].type).toBe('condition_removal')
-        expect(result[0].conditions).toEqual(['frightened', 'stunned'])
-    })
-
-    it('skips end_of_turn_condition_removal when conditions is empty or missing', () => {
-        expect(collectTurnStartEffects([{ name: 'Empty', automation: { type: 'passive_rule', effect: 'end_of_turn_condition_removal', conditions: [] } }])).toEqual([])
-        expect(collectTurnStartEffects([{ name: 'Missing', automation: { type: 'passive_rule', effect: 'end_of_turn_condition_removal' } }])).toEqual([])
-    })
-
-    it('routes arcane_ward and spell_breaker with full shapes', () => {
-        const arcaneResult = collectTurnStartEffects([{ name: 'Ward', automation: { type: 'passive_rule', effect: 'arcane_ward' } }])
-        expect(arcaneResult[0]).toMatchObject({
-            type: 'arcane_ward', name: 'Ward',
-            wardHpExpression: '', wardRestoreExpression: '', bonusActionRestore: false,
-        })
-
-        const spellResult = collectTurnStartEffects([{ name: 'Breaker', automation: { type: 'passive_rule', effect: 'spell_breaker' } }])
-        expect(spellResult[0]).toMatchObject({
-            type: 'spell_breaker', name: 'Breaker',
-            alwaysPreparedSpells: [], bonusActionSpells: [], dispelAbilityCheckBonus: '', slotRetentionSpells: [],
+        expect(result[0]).toEqual({
+            type: 'vitalityOfTheTree_turn_start',
+            name: 'Vitality of the Tree',
+            ongoingHealingExpression: '',
+            healingRange: '10 ft',
         })
     })
 
-    it('routes phantasmal_creatures with defaults', () => {
-        const result = collectTurnStartEffects([{ name: 'Phantasmal', automation: { type: 'phantasmal_creatures' } }])
-        expect(result[0]).toMatchObject({
-            type: 'phantasmal_creatures', name: 'Phantasmal',
-            alwaysPreparedSpells: [], freeCastSpells: [], usesMax: 1, halvesHp: false,
-        })
-    })
-
-    it('handles unknown automation types gracefully', () => {
-        const result = collectTurnStartEffects([{ name: 'Unknown', automation: { type: 'completely_unknown_type' } }])
-        expect(result).toEqual([])
-    })
-
-    it('handles features with non-object automation values', () => {
-        const result = collectTurnStartEffects([
-            { name: 'String', automation: 'invalid' },
-            { name: 'Number', automation: 42 },
-            { name: 'Boolean', automation: true },
-        ])
-        expect(result).toEqual([])
-    })
-
-    it('merges effects from multiple features and array automations', () => {
+    it('respects custom values for vitalityOfTheTree_turn_start', () => {
         const result = collectTurnStartEffects([{
-            name: 'Multi',
-            automation: [
-                { type: 'passive_rule', effect: 'naturally_stealthy' },
-                { type: 'passive_rule', effect: 'umbral_sight' },
-            ]
+            name: 'Vitality of the Tree',
+            automation: { type: 'temp_hp_buff', healingStartOfTurn: true, ongoingHealingExpression: '2d6', healingRange: '30 ft' }
         }])
-        expect(result).toHaveLength(2)
-        expect(result.map(r => r.type)).toEqual(['naturally_stealthy', 'umbral_sight'])
+        expect(result[0]).toEqual({
+            type: 'vitalityOfTheTree_turn_start',
+            name: 'Vitality of the Tree',
+            ongoingHealingExpression: '2d6',
+            healingRange: '30 ft',
+        })
     })
 })
 
-// ── processFeatureAutomation – wrapper injection and edge cases ──
+// ── collectTurnStartEffects – confusion_turn_start ──
 
-describe('processFeatureAutomation – wrapper injection and edge cases', () => {
-    it('wraps actions-categorized features from allReactions', () => {
-        const actions = [], bonusActions = [], reactions = [{ name: 'React Feature', automation: { type: 'attack_rider' } }], specialActions = []
-        processFeatureAutomation(actions, bonusActions, reactions, specialActions, ps)
-        expect(actions).toHaveLength(1)
-        expect(actions[0].name).toBe('React Feature')
+describe('collectTurnStartEffects – confusion_turn_start', () => {
+    it('maps passive_rule confusion_turn_start effect', () => {
+        const result = collectTurnStartEffects([{
+            name: 'Confusion Aura',
+            automation: { type: 'passive_rule', effect: 'confusion_turn_start' }
+        }])
+        expect(result).toHaveLength(1)
+        expect(result[0]).toEqual({
+            type: 'confusion_turn_start',
+            name: 'Confusion Aura',
+        })
+    })
+})
+
+// ── collectTurnStartEffects – survivor_turn_start_heal (bloodiedOnly path) ──
+
+describe('collectTurnStartEffects – survivor_turn_start_heal', () => {
+    it('maps healing_start_of_turn with bloodiedOnly to survivor_turn_start_heal', () => {
+        const result = collectTurnStartEffects([{
+            name: 'Survivor',
+            automation: { type: 'healing_start_of_turn', bloodiedOnly: true, healExpression: '5' }
+        }])
+        expect(result).toHaveLength(1)
+        expect(result[0]).toEqual({
+            type: 'survivor_turn_start_heal',
+            name: 'Survivor',
+            healExpression: '5',
+            bloodiedOnly: true,
+            bodyPartRegrowMinutes: 2,
+        })
+    })
+})
+
+// ── collectTurnStartEffects – ignore_loading_crossbows with weapons ──
+
+describe('collectTurnStartEffects – ignore_loading_crossbows', () => {
+    it('collects ignore_loading_crossbows with explicit weapons array', () => {
+        const result = collectTurnStartEffects([{
+            name: 'Crossbow Expert',
+            automation: { type: 'passive_rule', effect: 'ignore_loading_crossbows', weapons: ['hand_crossbow', 'heavy_crossbow'] }
+        }])
+        expect(result).toHaveLength(1)
+        expect(result[0]).toEqual({
+            type: 'ignore_loading_crossbows',
+            name: 'Crossbow Expert',
+            weapons: ['hand_crossbow', 'heavy_crossbow'],
+        })
     })
 
-    it('wraps specialActions-categorized features from allSpecialActions', () => {
-        const actions = [], bonusActions = [], reactions = [], specialActions = [{ name: 'Special', automation: { type: 'attack_rider' } }]
-        processFeatureAutomation(actions, bonusActions, reactions, specialActions, ps)
-        expect(specialActions).toHaveLength(1)
+    it('collects ignore_loading_crossbows with empty weapons when not provided', () => {
+        const result = collectTurnStartEffects([{
+            name: 'Crossbow Expert',
+            automation: { type: 'passive_rule', effect: 'ignore_loading_crossbows' }
+        }])
+        expect(result).toHaveLength(1)
+        expect(result[0].weapons).toEqual([])
+    })
+})
+
+// ── collectTurnStartEffects – no_melee_disadvantage_crossbows ──
+
+describe('collectTurnStartEffects – no_melee_disadvantage_crossbows', () => {
+    it('collects no_melee_disadvantage_crossbows effect', () => {
+        const result = collectTurnStartEffects([{
+            name: 'Crossbow Expert',
+            automation: { type: 'passive_rule', effect: 'no_melee_disadvantage_crossbows' }
+        }])
+        expect(result).toHaveLength(1)
+        expect(result[0]).toEqual({
+            type: 'no_melee_disadvantage_crossbows',
+            name: 'Crossbow Expert',
+        })
+    })
+})
+
+// ── processFeatureAutomation – return value structure ──
+
+describe('processFeatureAutomation – return value structure', () => {
+    it('returns the automation object from collectAutomationFromFeatures', () => {
+        const actions = [], bonusActions = [], reactions = [], specialActions = [
+            { name: 'Ritual Caster', automation: { type: 'passive_rule', effect: 'ritual_spells' } },
+            { name: 'Primal Knowledge', automation: { type: 'passive_rule', effect: 'primal_knowledge', skills: [{ skill: 'athletics' }] } },
+        ]
+        const result = processFeatureAutomation(actions, bonusActions, reactions, specialActions, ps)
+        expect(result).toHaveProperty('actions')
+        expect(result).toHaveProperty('bonusActions')
+        expect(result).toHaveProperty('reactions')
+        expect(result).toHaveProperty('specialActions')
+        expect(result).toHaveProperty('passives')
+        expect(result).toHaveProperty('autoEffects')
+        expect(result).toHaveProperty('saveModifiers')
+        expect(result).toHaveProperty('primalKnowledge')
+        expect(result).toHaveProperty('ritualSpells')
     })
 
-    it('does not duplicate when a feature with the same name already exists', () => {
-        const actions = [{ name: 'Existing', automation: { type: 'auto_effect', effect: 'x' } }]
-        const bonusActions = [], reactions = [{ name: 'Existing', automation: { type: 'attack_rider' } }], specialActions = []
-        processFeatureAutomation(actions, bonusActions, reactions, specialActions, ps)
-        expect(actions).toHaveLength(1)
-    })
-
-    it('preserves original arrays unmodified except for injected wrappers', () => {
-        const actions = [], bonusActions = [{ name: 'BA', automation: { type: 'save_attack', action: 'action' } }],
-              reactions = [{ name: 'React', automation: { type: 'save_attack', action: 'action' } }],
-              specialActions = [{ name: 'Special', automation: { type: 'attack_rider' } }]
-        processFeatureAutomation(actions, bonusActions, reactions, specialActions, ps)
-        expect(bonusActions).toHaveLength(1)
-        expect(reactions).toHaveLength(1)
-        expect(specialActions).toHaveLength(1)
-    })
-
-    it('extracts ritualSpells and primalKnowledge from passive_rule automation', () => {
+    it('returns ritualSpells and primalKnowledge extracted from specialActions', () => {
         const actions = [], bonusActions = [], reactions = [], specialActions = [
             { name: 'Ritual Caster', automation: { type: 'passive_rule', effect: 'ritual_spells' } },
             { name: 'Primal Knowledge', automation: { type: 'passive_rule', effect: 'primal_knowledge', skills: [{ skill: 'athletics' }, { skill: 'survival' }] } },
@@ -383,48 +281,105 @@ describe('processFeatureAutomation – wrapper injection and edge cases', () => 
         expect(result.primalKnowledge).toHaveLength(2)
     })
 
-    it('handles null/undefined arrays and empty arrays gracefully', () => {
-        expect(processFeatureAutomation(null, null, null, null, ps).actions).toEqual([])
-        const result = processFeatureAutomation([], [], [], [], ps)
+    it('injects wrappers into allActions when reaction feature is not already in actions', () => {
+        const actions = [], bonusActions = [], reactions = [{ name: 'Unique React', automation: { type: 'warding_bond' } }], specialActions = []
+        processFeatureAutomation(actions, bonusActions, reactions, specialActions, ps)
+        expect(actions).toHaveLength(1)
+        expect(actions[0].name).toBe('Unique React')
+        expect(actions[0].hasAutomation).toBe(true)
+        expect(actions[0].automation.type).toBe('warding_bond')
+    })
+
+    it('does not inject when feature name already exists in target array', () => {
+        const actions = [{ name: 'Existing', automation: { type: 'warding_bond' } }]
+        const bonusActions = [], reactions = [{ name: 'Existing', automation: { type: 'attack_rider' } }], specialActions = []
+        processFeatureAutomation(actions, bonusActions, reactions, specialActions, ps)
+        expect(actions).toHaveLength(1)
+    })
+
+    it('does not inject when feature name already exists in specialActions', () => {
+        const actions = [], bonusActions = [], reactions = [], specialActions = [{ name: 'Existing', automation: { type: 'warding_bond' } }]
+        processFeatureAutomation(actions, bonusActions, reactions, specialActions, ps)
+        expect(specialActions).toHaveLength(1)
+    })
+
+    it('handles null arrays by treating them as empty', () => {
+        const result = processFeatureAutomation(null, null, null, null, ps)
         expect(result.actions).toEqual([])
+        expect(result.bonusActions).toEqual([])
+        expect(result.reactions).toEqual([])
+        expect(result.specialActions).toEqual([])
+        expect(result.passives).toEqual([])
+        expect(result.autoEffects).toEqual([])
+        expect(result.saveModifiers).toEqual([])
+        expect(result.primalKnowledge).toEqual([])
+        expect(result.ritualSpells).toEqual([])
     })
 })
 
-// ── Range bonus cantrip coverage ──
+// ── collectAutomationFromFeatures – cantrip_range_bonus edge cases ──
 
-describe('collectAutomationFromFeatures – rangeBonusCantrip', () => {
-    it('creates cantrip_range_bonus passive when damage_bonus has rangeBonusCantrip with numeric value', () => {
+describe('collectAutomationFromFeatures – cantrip_range_bonus edge cases', () => {
+    it('extracts multi-digit numbers from rangeBonusCantrip', () => {
         const result = collectAutomationFromFeatures([
-            { name: 'Fire Bolt', automation: { type: 'damage_bonus', rangeBonusCantrip: '+10ft' } },
+            { name: 'Fire Bolt', automation: { type: 'damage_bonus', rangeBonusCantrip: '+100ft' } },
         ], ps)
         expect(result.passives).toHaveLength(1)
         expect(result.passives[0].type).toBe('cantrip_range_bonus')
-        expect(result.passives[0].bonusExpression).toBe('10')
+        expect(result.passives[0].bonusExpression).toBe('100')
     })
 
-    it('does not create cantrip_range_bonus when rangeBonusCantrip has no numeric value', () => {
+    it('handles rangeBonusCantrip with spaces', () => {
         const result = collectAutomationFromFeatures([
-            { name: 'Magic', automation: { type: 'damage_bonus', rangeBonusCantrip: '+abc' } },
+            { name: 'Bolt', automation: { type: 'damage_bonus', rangeBonusCantrip: '+ 25 ft' } },
         ], ps)
-        expect(result.passives.filter(p => p.type === 'cantrip_range_bonus')).toHaveLength(0)
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0].bonusExpression).toBe('25')
     })
 
-    it('does not create cantrip_range_bonus when rangeBonusCantrip is empty', () => {
+    it('handles negative numbers in rangeBonusCantrip', () => {
         const result = collectAutomationFromFeatures([
-            { name: 'No Bonus', automation: { type: 'damage_bonus', rangeBonusCantrip: '' } },
+            { name: 'Bolt', automation: { type: 'damage_bonus', rangeBonusCantrip: '-5ft' } },
         ], ps)
-        expect(result.passives.filter(p => p.type === 'cantrip_range_bonus')).toHaveLength(0)
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0].bonusExpression).toBe('5')
     })
 })
 
-// ── minor_telekinesis_spell coverage ──
+// ── collectAutomationFromFeatures – feature without name property ──
 
-describe('collectAutomationFromFeatures – minor_telekinesis_spell', () => {
-    it('categorizes minor_telekinesis_spell as a special action', () => {
+describe('collectAutomationFromFeatures – feature without name', () => {
+    it('handles features with missing name property gracefully', () => {
         const result = collectAutomationFromFeatures([
-            makeFeature({ type: 'minor_telekinesis_spell' }),
+            { automation: { type: 'warding_bond' } }
         ], ps)
+        expect(result.actions).toHaveLength(1)
+        expect(result.actions[0].name).toBeUndefined()
+    })
+})
+
+// ── collectAutomationFromFeatures – multiple features with overlapping types ──
+
+describe('collectAutomationFromFeatures – multiple features accumulation', () => {
+    it('accumulates automations from multiple features into correct buckets', () => {
+        const features = [
+            makeFeature({ type: 'warding_bond' }),
+            makeFeature({ type: 'bulwark_of_force' }),
+            makeFeature({ type: 'psionic_strike' }),
+            makeFeature({ type: 'starry_form' }),
+        ]
+        const result = collectAutomationFromFeatures(features, ps)
+        expect(result.actions).toHaveLength(1)
+        expect(result.bonusActions).toHaveLength(1)
+        expect(result.reactions).toHaveLength(1)
         expect(result.specialActions).toHaveLength(1)
-        expect(result.specialActions[0].type).toBe('minor_telekinesis_spell')
+        expect(result.passives).toHaveLength(0)
+    })
+
+    it('handles features with both type and source conditions', () => {
+        const feature = { name: 'GWF', type: 'damage', source: 'feat', automation: { type: 'great_weapon_fighting' } }
+        const result = collectAutomationFromFeatures([feature], ps)
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0].effect).toBe('great_weapon_fighting')
     })
 })

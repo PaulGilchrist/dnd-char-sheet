@@ -1,6 +1,11 @@
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ── Mocks BEFORE imports ───────────────────────────────────────
+
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
-    getRuntimeValue: vi.fn(() => null),
-    setRuntimeValue: vi.fn(),
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
@@ -16,11 +21,15 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
     addExpiration: vi.fn(),
 }));
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// ── Imports ────────────────────────────────────────────────────
+
 import { handle } from './patientDefenseHandler.js';
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { addEntry } from '../../../ui/logService.js';
-import { toggleBuff, isBuffActive } from '../../common/buffToggle.js';
+import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
+import * as logService from '../../../ui/logService.js';
+import * as buffToggle from '../../common/buffToggle.js';
+import * as expirations from '../../../rules/effects/expirations.js';
+
+// ── Helpers ────────────────────────────────────────────────────
 
 const campaignName = 'test-campaign';
 
@@ -40,148 +49,367 @@ function makeAction(overrides = {}) {
         description: 'Take Disengage as Bonus Action, or expend 1 Focus Point for Disengage + Dodge.',
         automation: {
             type: 'patient_defense',
-            cost: { resource: 'focus_points', amount: 1 },
+            cost: { amount: 1 },
             ...overrides.automation,
         },
         ...overrides,
     };
 }
 
-describe('patientDefenseHandler', () => {
+function setupRuntimeMocks(mocks) {
+    runtimeState.getRuntimeValue.mockImplementation((player, prop, camp) => {
+        const key = `${player}:${prop}:${camp}`;
+        if (key in mocks) {
+            return mocks[key];
+        }
+        return undefined;
+    });
+}
+
+// ── Tests: insufficient focus points ──────────────────────────
+
+describe('patientDefenseHandler — insufficient focus points', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    describe('Patient Defense', () => {
-        it('should return popup with enhanced action when focus points available', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'focusPoints') return 2;
-                return null;
-            });
-
-            const action = makeAction();
-            const playerStats = makePlayerStats(2, 2);
-
-            const result = await handle(action, playerStats, campaignName);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.name).toBe('Patient Defense');
-            expect(result.payload.description).toContain('Disengage and Dodge');
-            expect(result.payload.description).toContain('1 Focus Points remaining');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'focusPoints', 1, campaignName);
-            expect(isBuffActive).toHaveBeenCalledWith('TestMonk', 'Dodge', campaignName);
-            expect(toggleBuff).toHaveBeenCalledWith('TestMonk', 'Dodge', {
-                effect: 'dodge',
-                duration: 'until_start_of_next_turn',
-            }, campaignName, 'TestMonk');
-            expect(addEntry).toHaveBeenCalled();
+    it('returns popup with disengage only when focus points are 0', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 0,
         });
 
-        it('should not toggle Dodge if already active', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'focusPoints') return 2;
-                return null;
-            });
-            isBuffActive.mockReturnValue(true);
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 0);
+        const result = await handle(action, playerStats, campaignName);
 
-            const action = makeAction();
-            const playerStats = makePlayerStats(2, 2);
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.name).toBe('Patient Defense');
+        expect(result.payload.description).toContain('Disengage');
+        expect(result.payload.description).toContain('0/1 Focus Points');
+        expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
+        expect(expirations.addExpiration).not.toHaveBeenCalled();
+        expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith('TestMonk', 'tempHp', expect.any(Number), campaignName);
+    });
 
-            await handle(action, playerStats, campaignName);
-
-            expect(toggleBuff).not.toHaveBeenCalled();
+    it('returns popup with disengage only for heightened version when focus points are 0', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 0,
         });
 
-        it('should return popup with disengage only when no focus points available', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'focusPoints') return 0;
-                return null;
-            });
+        const action = makeAction({ name: 'Heightened Patient Defense' });
+        const playerStats = makePlayerStats(10, 0, 6);
+        const result = await handle(action, playerStats, campaignName);
 
-            const action = makeAction();
-            const playerStats = makePlayerStats(2, 0);
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.name).toBe('Heightened Patient Defense');
+        expect(result.payload.description).toContain('Disengage');
+        expect(result.payload.description).toContain('0/1 Focus Points');
+        expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
+        expect(expirations.addExpiration).not.toHaveBeenCalled();
+        expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith('TestMonk', 'tempHp', expect.any(Number), campaignName);
+    });
+});
 
-            const result = await handle(action, playerStats, campaignName);
+// ── Tests: successful execution — base Patient Defense ────────
 
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.name).toBe('Patient Defense');
-            expect(result.payload.description).toContain('Disengage');
-            expect(result.payload.description).toContain('0/1 Focus Points');
-            expect(addEntry).toHaveBeenCalled();
+describe('patientDefenseHandler — base Patient Defense', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('deducts focus, activates Dodge, and returns popup with remaining focus', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
         });
 
-        it('should fall back to maxFocusPoints when runtime value is null', async () => {
-            getRuntimeValue.mockReturnValue(null);
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 2);
+        const result = await handle(action, playerStats, campaignName);
 
-            const action = makeAction();
-            const playerStats = makePlayerStats(2, 3);
-
-            const result = await handle(action, playerStats, campaignName);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Disengage and Dodge');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'focusPoints', 2, campaignName);
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.name).toBe('Patient Defense');
+        expect(result.payload.description).toContain('Disengage and Dodge');
+        expect(result.payload.description).toContain('1 Focus Points remaining');
+        expect(result.payload.automation).toEqual({
+            type: 'patient_defense',
+            cost: { amount: 1 },
+        });
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'focusPoints', 1, campaignName);
+        expect(buffToggle.toggleBuff).toHaveBeenCalledWith('TestMonk', 'Dodge', {
+            effect: 'dodge',
+            duration: 'until_start_of_next_turn',
+        }, campaignName, 'TestMonk');
+        expect(expirations.addExpiration).toHaveBeenCalledWith('TestMonk', 'TestMonk', [
+            { type: 'remove_active_buff', buffName: 'Dodge' }
+        ], campaignName, undefined, 'TestMonk');
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'ability_use',
+            characterName: 'TestMonk',
+            abilityName: 'Patient Defense',
+            description: 'TestMonk used Patient Defense to Disengage and Dodge',
         });
     });
 
-    describe('Heightened Patient Defense', () => {
-        it('should return popup with temp HP when focus points available', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'focusPoints') return 2;
-                if (key === 'tempHp') return 0;
-                return null;
-            });
-            isBuffActive.mockReturnValue(false);
+    it('does not toggle Dodge or add expiration if Dodge is already active', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+        });
+        buffToggle.isBuffActive.mockReturnValue(true);
 
-            const action = makeAction({ name: 'Heightened Patient Defense' });
-            const playerStats = makePlayerStats(10, 2, 6);
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 2);
 
-            const result = await handle(action, playerStats, campaignName);
+        await handle(action, playerStats, campaignName);
 
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.name).toBe('Heightened Patient Defense');
-            expect(result.payload.description).toContain('Disengage and Dodge');
-            expect(result.payload.description).toContain('temporary hit points');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'focusPoints', 1, campaignName);
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'tempHp', expect.any(Number), campaignName);
-            expect(toggleBuff).toHaveBeenCalled();
-            expect(addEntry).toHaveBeenCalled();
+        expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
+        expect(expirations.addExpiration).not.toHaveBeenCalled();
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'focusPoints', 1, campaignName);
+
+        buffToggle.isBuffActive.mockReturnValue(false);
+    });
+
+    it('falls back to maxFocusPoints when runtime value is undefined', async () => {
+        setupRuntimeMocks({});
+
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 3);
+        const result = await handle(action, playerStats, campaignName);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Disengage and Dodge');
+        expect(result.payload.description).toContain('2 Focus Points remaining');
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'focusPoints', 2, campaignName);
+    });
+
+    it('handles focus points as a string value', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': '2',
         });
 
-        it('should return popup with disengage only when no focus points available', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'focusPoints') return 0;
-                return null;
-            });
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 2);
+        const result = await handle(action, playerStats, campaignName);
 
-            const action = makeAction({ name: 'Heightened Patient Defense' });
-            const playerStats = makePlayerStats(10, 0);
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('1 Focus Points remaining');
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'focusPoints', 1, campaignName);
+    });
+});
 
-            const result = await handle(action, playerStats, campaignName);
+// ── Tests: successful execution — Heightened Patient Defense ──
 
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.name).toBe('Heightened Patient Defense');
-            expect(result.payload.description).toContain('Disengage');
-            expect(result.payload.description).toContain('0/1 Focus Points');
-            expect(addEntry).toHaveBeenCalled();
+describe('patientDefenseHandler — heightened Patient Defense', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('deducts focus, grants temp HP, and returns popup with details', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+            'TestMonk:tempHp:test-campaign': 0,
         });
 
-        it('should not grant temp HP when no focus points available', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'focusPoints') return 0;
-                return null;
-            });
+        const action = makeAction({ name: 'Heightened Patient Defense' });
+        const playerStats = makePlayerStats(10, 2, 6);
+        const result = await handle(action, playerStats, campaignName);
 
-            const action = makeAction({ name: 'Heightened Patient Defense' });
-            const playerStats = makePlayerStats(10, 0);
-
-            await handle(action, playerStats, campaignName);
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('TestMonk', 'tempHp', expect.any(Number), campaignName);
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.name).toBe('Heightened Patient Defense');
+        expect(result.payload.description).toContain('Disengage and Dodge');
+        expect(result.payload.description).toContain('temporary hit points');
+        expect(result.payload.description).toContain('1 Focus Points remaining');
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'focusPoints', 1, campaignName);
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'tempHp', expect.any(Number), campaignName);
+        expect(buffToggle.toggleBuff).toHaveBeenCalled();
+        expect(expirations.addExpiration).toHaveBeenCalled();
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'ability_use',
+            characterName: 'TestMonk',
+            abilityName: 'Heightened Patient Defense',
+            description: expect.stringContaining('temporary hit points'),
         });
+    });
+
+    it('preserves existing temp HP when new roll is lower', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+            'TestMonk:tempHp:test-campaign': 10,
+        });
+        buffToggle.isBuffActive.mockReturnValue(true);
+
+        const action = makeAction({ name: 'Heightened Patient Defense' });
+        const playerStats = makePlayerStats(10, 2, 6);
+
+        await handle(action, playerStats, campaignName);
+
+        // setRuntimeValue should be called with tempHp = 10 (existing, since roll could be lower)
+        const tempHpCalls = runtimeState.setRuntimeValue.mock.calls.filter(
+            call => call[1] === 'tempHp',
+        );
+        expect(tempHpCalls.length).toBe(1);
+        expect(tempHpCalls[0][2]).toBeGreaterThanOrEqual(1);
+        expect(tempHpCalls[0][2]).toBeLessThanOrEqual(12);
+
+        // Reset to default for subsequent tests
+        buffToggle.isBuffActive.mockReturnValue(false);
+    });
+});
+
+// ── Tests: popup payload structure ────────────────────────────
+
+describe('patientDefenseHandler — popup payload structure', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('includes automationType in popup payload', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+        });
+
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 2);
+        const result = await handle(action, playerStats, campaignName);
+
+        expect(result.payload.automationType).toBe('patient_defense');
+    });
+
+    it('includes correct name in popup payload for base version', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+        });
+
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 2);
+        const result = await handle(action, playerStats, campaignName);
+
+        expect(result.payload.name).toBe('Patient Defense');
+    });
+
+    it('includes correct name in popup payload for heightened version', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+        });
+
+        const action = makeAction({ name: 'Heightened Patient Defense' });
+        const playerStats = makePlayerStats(10, 2, 6);
+        const result = await handle(action, playerStats, campaignName);
+
+        expect(result.payload.name).toBe('Heightened Patient Defense');
+    });
+
+    it('includes character name in popup description', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+        });
+
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 2);
+        const result = await handle(action, playerStats, campaignName);
+
+        expect(result.payload.description).toContain('TestMonk');
+    });
+});
+
+// ── Tests: log entry descriptions ─────────────────────────────
+
+describe('patientDefenseHandler — log entry descriptions', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('logs temp HP count for heightened version', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+            'TestMonk:tempHp:test-campaign': 0,
+        });
+
+        const action = makeAction({ name: 'Heightened Patient Defense' });
+        const playerStats = makePlayerStats(10, 2, 6);
+
+        await handle(action, playerStats, campaignName);
+
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'ability_use',
+            characterName: 'TestMonk',
+            abilityName: 'Heightened Patient Defense',
+            description: expect.stringContaining('temporary hit points'),
+        });
+    });
+
+    it('logs disengage-only description when focus points are insufficient', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 0,
+        });
+
+        const action = makeAction({ name: 'Heightened Patient Defense' });
+        const playerStats = makePlayerStats(10, 0, 6);
+
+        await handle(action, playerStats, campaignName);
+
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'ability_use',
+            characterName: 'TestMonk',
+            abilityName: 'Heightened Patient Defense',
+            description: 'TestMonk used Heightened Patient Defense to Disengage as a bonus action (no Focus Points available for Dodge).',
+        });
+    });
+});
+
+// ── Tests: error handling ─────────────────────────────────────
+
+describe('patientDefenseHandler — error handling', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('does not throw when addEntry rejects', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+        });
+
+        logService.addEntry.mockRejectedValue(new Error('log error'));
+
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 2);
+        const result = await handle(action, playerStats, campaignName);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('1 Focus Points remaining');
+    });
+});
+
+// ── Tests: automation config variations ───────────────────────
+
+describe('patientDefenseHandler — automation config variations', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles action without automation property', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+        });
+
+        const action = { name: 'Patient Defense' };
+        const playerStats = makePlayerStats(2, 2);
+
+        await expect(handle(action, playerStats, campaignName)).rejects.toThrow();
+    });
+
+    it('handles automation without cost property (defaults to 1)', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 2,
+        });
+
+        const action = makeAction({ automation: {} });
+        const playerStats = makePlayerStats(2, 2);
+        const result = await handle(action, playerStats, campaignName);
+
+        expect(result.payload.description).toContain('1 Focus Points remaining');
     });
 });

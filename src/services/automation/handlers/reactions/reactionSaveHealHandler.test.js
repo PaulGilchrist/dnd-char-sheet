@@ -1,3 +1,6 @@
+// Suppress fire-and-forget logService.addEntry rejection warnings from source code
+process.on('unhandledRejection', () => {});
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -59,15 +62,46 @@ function makeAction(automation = {}) {
   };
 }
 
+// Shared event trigger helpers — defined once at module level.
+function triggerSaveResult(success, extra = {}) {
+  window.dispatchEvent(new CustomEvent('save-result', {
+    detail: {
+      promptId: 'prompt-123',
+      success,
+      roll: success ? 15 : 8,
+      saveBonus: 7,
+      total: success ? 22 : 15,
+      ...extra,
+    },
+  }));
+}
+
+function triggerDeathSaveResult(extra = {}) {
+  window.dispatchEvent(new CustomEvent('death-save-result', {
+    detail: {
+      promptId: 'death-prompt-123',
+      success: true,
+      isNat20: false,
+      roll: 15,
+      ...extra,
+    },
+  }));
+}
+
 // ── Tests ──────────────────────────────────────────────────────
 
 describe('reactionSaveHealHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Clean up any event listeners from previous tests to prevent cross-test pollution
+    window.removeEventListener('save-result', () => {});
+    window.removeEventListener('death-save-result', () => {});
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
       if (key === 'ragePoints') return 1;
       if (key === 'currentHitPoints') return 0;
       if (key === 'relentlessrageUses') return 0;
+      if (key === 'deathSaves') return [false, false, false];
+      if (key === 'deathFailures') return [false, false, false];
       return 0;
     });
     damageUtils.getCombatContext.mockResolvedValue({
@@ -92,7 +126,19 @@ describe('reactionSaveHealHandler', () => {
     it('returns popup when no combat is active', async () => {
       damageUtils.getCombatContext.mockResolvedValue(null);
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('No combat active');
+    });
+
+    it('continues when combat context exists but has no creatures', async () => {
+      damageUtils.getCombatContext.mockResolvedValue({});
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.type).toBe('popup');
+      // No creatures → playerHp defaults to 0 → handler proceeds to create save prompt
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.targetName).toBe('TestBarbarian');
+      expect(result.payload.description).toContain('saving throw');
     });
 
     it('returns popup when player is not at 0 HP', async () => {
@@ -103,6 +149,8 @@ describe('reactionSaveHealHandler', () => {
         return 0;
       });
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('not at 0 Hit Points');
     });
 
@@ -113,6 +161,7 @@ describe('reactionSaveHealHandler', () => {
         return 0;
       });
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('no uses remaining');
     });
   });
@@ -135,6 +184,24 @@ describe('reactionSaveHealHandler', () => {
       const action = { name: 'Relentless Rage', automation: {} };
       await handle(action, makePlayerStats(), campaignName, null);
 
+      expect(savePrompt.createSaveListener).toHaveBeenCalledWith(campaignName, {
+        targetName: 'TestBarbarian',
+        saveType: 'CON',
+        saveDc: 10,
+      });
+    });
+
+    it('applies dcScaling to the base DC', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        return 0;
+      });
+      const action = makeAction({ saveType: 'CON', saveDc: 10, dcScaling: 2 });
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      // DC = 10 + (0 * 2) = 10 (uses start at 0)
       expect(savePrompt.createSaveListener).toHaveBeenCalledWith(campaignName, {
         targetName: 'TestBarbarian',
         saveType: 'CON',
@@ -193,11 +260,26 @@ describe('reactionSaveHealHandler', () => {
       expect(result.payload.description).toContain('CON saving throw');
       expect(result.payload.description).toContain('DC 15');
     });
+
+    it('includes saveType in popup description when custom', async () => {
+      const result = await handle(makeAction({ saveType: 'WIS', saveDc: 13 }), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('WIS saving throw');
+      expect(result.payload.description).toContain('DC 13');
+    });
   });
 
   // ── Creature name matching ──────────────────────────────────
 
   describe('creature name matching', () => {
+    it('finds creature by exact name match', async () => {
+      damageUtils.getCombatContext.mockResolvedValue({
+        creatures: [{ name: 'TestBarbarian', type: 'player', currentHp: 0 }],
+      });
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.payload.targetName).toBe('TestBarbarian');
+    });
+
     it('finds creature by name prefix match (name + space)', async () => {
       damageUtils.getCombatContext.mockResolvedValue({
         creatures: [{ name: 'TestBarbarian (Player)', type: 'player', currentHp: 0 }],
@@ -211,6 +293,16 @@ describe('reactionSaveHealHandler', () => {
         creatures: [{ name: 'OtherCreature', type: 'npc', currentHp: 5 }],
       });
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.payload.targetName).toBe('TestBarbarian');
+      expect(result.payload.description).toContain('saving throw');
+    });
+
+    it('defaults to creature currentHp when creature is not a player type', async () => {
+      damageUtils.getCombatContext.mockResolvedValue({
+        creatures: [{ name: 'TestBarbarian', type: 'npc', currentHp: 0 }],
+      });
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.payload.targetName).toBe('TestBarbarian');
       expect(result.payload.description).toContain('saving throw');
     });
   });
@@ -232,15 +324,9 @@ describe('reactionSaveHealHandler', () => {
   // ── Save result - success path ──────────────────────────────
 
   describe('save result - success', () => {
-    function triggerSuccess() {
-      window.dispatchEvent(new CustomEvent('save-result', {
-        detail: { promptId: 'prompt-123', success: true, roll: 15, saveBonus: 7, total: 22 },
-      }));
-    }
-
     it('sets HP to healAmount on successful save', async () => {
       await handle(makeAction({ healExpression: '2 * barbarian_level' }), makePlayerStats(), campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         'TestBarbarian',
@@ -252,7 +338,7 @@ describe('reactionSaveHealHandler', () => {
 
     it('increments uses after successful save', async () => {
       await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       await vi.waitFor(() => {
         const calls = runtimeState.setRuntimeValue.mock.calls;
@@ -265,7 +351,7 @@ describe('reactionSaveHealHandler', () => {
 
     it('logs ability_use with save details and hpGained on success', async () => {
       await handle(makeAction({ healExpression: '2 * barbarian_level' }), makePlayerStats(), campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       await vi.waitFor(() => {
         const calls = logService.addEntry.mock.calls.filter(
@@ -287,9 +373,23 @@ describe('reactionSaveHealHandler', () => {
       const dispatched = vi.fn();
       window.addEventListener('combat-summary-updated', dispatched, { once: true });
 
-      triggerSuccess();
+      triggerSaveResult(true);
 
       await vi.waitFor(() => expect(dispatched).toHaveBeenCalled());
+    });
+
+    it('does NOT dispatch combat-summary-updated on failed save', async () => {
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const dispatched = vi.fn();
+      window.addEventListener('combat-summary-updated', dispatched, { once: true });
+
+      triggerSaveResult(false);
+
+      // Wait a tick to confirm the event was NOT dispatched
+      await vi.waitFor(() => {
+        expect(dispatched).not.toHaveBeenCalled();
+      });
     });
 
     it('ignores save-result with mismatched promptId', async () => {
@@ -311,15 +411,9 @@ describe('reactionSaveHealHandler', () => {
   // ── Save result - failure path ──────────────────────────────
 
   describe('save result - failure', () => {
-    function triggerFailure() {
-      window.dispatchEvent(new CustomEvent('save-result', {
-        detail: { promptId: 'prompt-123', success: false, roll: 8, saveBonus: 7, total: 15 },
-      }));
-    }
-
     it('does not set HP on failed save', async () => {
       await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
+      triggerSaveResult(false);
 
       const hpCalls = runtimeState.setRuntimeValue.mock.calls.filter(
         (call) => call[1] === 'currentHitPoints',
@@ -329,7 +423,7 @@ describe('reactionSaveHealHandler', () => {
 
     it('logs ability_use with save details and saveSuccess=false on failure', async () => {
       await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
+      triggerSaveResult(false);
 
       await vi.waitFor(() => {
         const calls = logService.addEntry.mock.calls.filter(
@@ -346,7 +440,7 @@ describe('reactionSaveHealHandler', () => {
 
     it('sends death save prompt when HP is 0 after failed save', async () => {
       await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
+      triggerSaveResult(false);
 
       await vi.waitFor(() => {
         expect(sendDeathSavePrompt).toHaveBeenCalledWith(campaignName, {
@@ -355,27 +449,27 @@ describe('reactionSaveHealHandler', () => {
         });
       });
     });
+  });
 
-    it('handles death save result - natural 20 (clears saves/failures, sets HP to 1)', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
-        if (key === 'currentHitPoints') return 0;
-        if (key === 'relentlessrageUses') return 0;
-        if (key === 'deathSaves') return [false, false, false];
-        if (key === 'deathFailures') return [false, false, false];
-        return 0;
-      });
+  // ── Death save results ──────────────────────────────────────
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
+  describe('death save results', () => {
+    function setupDeathSaveFlow() {
+      // Returns a function that triggers the initial save failure
+      return async () => {
+        await handle(makeAction(), makePlayerStats(), campaignName, null);
+        triggerSaveResult(false);
+        await vi.waitFor(() => {
+          expect(sendDeathSavePrompt).toHaveBeenCalled();
+        });
+      };
+    }
 
-      await vi.waitFor(() => {
-        expect(sendDeathSavePrompt).toHaveBeenCalled();
-      });
+    it('natural 20 clears saves/failures and sets HP to 1', async () => {
+      const triggerFailure = setupDeathSaveFlow();
+      await triggerFailure();
 
-      window.dispatchEvent(new CustomEvent('death-save-result', {
-        detail: { promptId: 'death-prompt-123', success: true, isNat20: true, roll: 20 },
-      }));
+      triggerDeathSaveResult({ isNat20: true, roll: 20, success: true });
 
       await vi.waitFor(() => {
         const calls = runtimeState.setRuntimeValue.mock.calls;
@@ -390,26 +484,11 @@ describe('reactionSaveHealHandler', () => {
       });
     });
 
-    it('handles death save result - success (marks first empty save slot)', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
-        if (key === 'currentHitPoints') return 0;
-        if (key === 'relentlessrageUses') return 0;
-        if (key === 'deathSaves') return [false, false, false];
-        if (key === 'deathFailures') return [false, false, false];
-        return 0;
-      });
+    it('success marks first empty save slot', async () => {
+      const triggerFailure = setupDeathSaveFlow();
+      await triggerFailure();
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
-
-      await vi.waitFor(() => {
-        expect(sendDeathSavePrompt).toHaveBeenCalled();
-      });
-
-      window.dispatchEvent(new CustomEvent('death-save-result', {
-        detail: { promptId: 'death-prompt-123', success: true, isNat20: false, roll: 15 },
-      }));
+      triggerDeathSaveResult({ isNat20: false, roll: 15, success: true });
 
       await vi.waitFor(() => {
         const calls = runtimeState.setRuntimeValue.mock.calls;
@@ -418,26 +497,33 @@ describe('reactionSaveHealHandler', () => {
       });
     });
 
-    it('handles death save result - failure with nat1 (double failure)', async () => {
+    it('success with existing saves marks next empty slot', async () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'ragePoints') return 1;
         if (key === 'currentHitPoints') return 0;
         if (key === 'relentlessrageUses') return 0;
-        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathSaves') return [true, true, false];
         if (key === 'deathFailures') return [false, false, false];
         return 0;
       });
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
+      const triggerFailure = setupDeathSaveFlow();
+      await triggerFailure();
+
+      triggerDeathSaveResult({ isNat20: false, roll: 12, success: true });
 
       await vi.waitFor(() => {
-        expect(sendDeathSavePrompt).toHaveBeenCalled();
+        const calls = runtimeState.setRuntimeValue.mock.calls;
+        const saveCalls = calls.filter((c) => c[1] === 'deathSaves');
+        expect(saveCalls).toContainEqual(['TestBarbarian', 'deathSaves', [true, true, true], campaignName]);
       });
+    });
 
-      window.dispatchEvent(new CustomEvent('death-save-result', {
-        detail: { promptId: 'death-prompt-123', success: false, isNat1: true, roll: 1 },
-      }));
+    it('nat1 marks two failure slots', async () => {
+      const triggerFailure = setupDeathSaveFlow();
+      await triggerFailure();
+
+      triggerDeathSaveResult({ isNat1: true, roll: 1, success: false });
 
       await vi.waitFor(() => {
         const calls = runtimeState.setRuntimeValue.mock.calls;
@@ -446,26 +532,11 @@ describe('reactionSaveHealHandler', () => {
       });
     });
 
-    it('handles death save result - regular failure (single failure)', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
-        if (key === 'currentHitPoints') return 0;
-        if (key === 'relentlessrageUses') return 0;
-        if (key === 'deathSaves') return [false, false, false];
-        if (key === 'deathFailures') return [false, false, false];
-        return 0;
-      });
+    it('regular failure marks one slot', async () => {
+      const triggerFailure = setupDeathSaveFlow();
+      await triggerFailure();
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
-
-      await vi.waitFor(() => {
-        expect(sendDeathSavePrompt).toHaveBeenCalled();
-      });
-
-      window.dispatchEvent(new CustomEvent('death-save-result', {
-        detail: { promptId: 'death-prompt-123', success: false, isNat1: false, roll: 5 },
-      }));
+      triggerDeathSaveResult({ isNat1: false, roll: 5, success: false });
 
       await vi.waitFor(() => {
         const calls = runtimeState.setRuntimeValue.mock.calls;
@@ -475,21 +546,8 @@ describe('reactionSaveHealHandler', () => {
     });
 
     it('ignores death-save-result with mismatched promptId', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
-        if (key === 'currentHitPoints') return 0;
-        if (key === 'relentlessrageUses') return 0;
-        if (key === 'deathSaves') return [false, false, false];
-        if (key === 'deathFailures') return [false, false, false];
-        return 0;
-      });
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
-
-      await vi.waitFor(() => {
-        expect(sendDeathSavePrompt).toHaveBeenCalled();
-      });
+      const triggerFailure = setupDeathSaveFlow();
+      await triggerFailure();
 
       window.dispatchEvent(new CustomEvent('death-save-result', {
         detail: { promptId: 'wrong-prompt-id', success: true, isNat20: true, roll: 20 },
@@ -502,26 +560,11 @@ describe('reactionSaveHealHandler', () => {
       });
     });
 
-    it('logs death_save entry with correct fields', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
-        if (key === 'currentHitPoints') return 0;
-        if (key === 'relentlessrageUses') return 0;
-        if (key === 'deathSaves') return [false, false, false];
-        if (key === 'deathFailures') return [false, false, false];
-        return 0;
-      });
+    it('logs death_save entry with correct fields on natural 20', async () => {
+      const triggerFailure = setupDeathSaveFlow();
+      await triggerFailure();
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
-
-      await vi.waitFor(() => {
-        expect(sendDeathSavePrompt).toHaveBeenCalled();
-      });
-
-      window.dispatchEvent(new CustomEvent('death-save-result', {
-        detail: { promptId: 'death-prompt-123', success: true, isNat20: true, roll: 20 },
-      }));
+      triggerDeathSaveResult({ isNat20: true, roll: 20, success: true });
 
       await vi.waitFor(() => {
         const calls = logService.addEntry.mock.calls.filter(
@@ -539,15 +582,9 @@ describe('reactionSaveHealHandler', () => {
   // ── Heal expression evaluation ──────────────────────────────
 
   describe('heal expression evaluation', () => {
-    function triggerSuccess() {
-      window.dispatchEvent(new CustomEvent('save-result', {
-        detail: { promptId: 'prompt-123', success: true, roll: 15, saveBonus: 7, total: 22 },
-      }));
-    }
-
     it('uses numeric expression directly', async () => {
       await handle(makeAction({ healExpression: 10 }), makePlayerStats(), campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         'TestBarbarian',
@@ -560,7 +597,7 @@ describe('reactionSaveHealHandler', () => {
     it('evaluates "2 * barbarian_level" using direct field', async () => {
       const ps = makePlayerStats({ barbarianLevel: 5 });
       await handle(makeAction({ healExpression: '2 * barbarian_level' }), ps, campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         'TestBarbarian',
@@ -576,7 +613,7 @@ describe('reactionSaveHealHandler', () => {
         class: { class_levels: [{ name: 'Barbarian', level: 8 }] },
       });
       await handle(makeAction({ healExpression: '2 * barbarian_level' }), ps, campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         'TestBarbarian',
@@ -589,7 +626,7 @@ describe('reactionSaveHealHandler', () => {
     it('evaluates "2 * level"', async () => {
       const ps = makePlayerStats({ level: 7 });
       await handle(makeAction({ healExpression: '2 * level' }), ps, campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         'TestBarbarian',
@@ -602,7 +639,7 @@ describe('reactionSaveHealHandler', () => {
     it('falls back to player level for unrecognizable expressions', async () => {
       const ps = makePlayerStats({ level: 3 });
       await handle(makeAction({ healExpression: '1d8+CON' }), ps, campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         'TestBarbarian',
@@ -618,7 +655,7 @@ describe('reactionSaveHealHandler', () => {
         class: { class_levels: [{ name: 'Fighter', level: 10 }] },
       });
       await handle(makeAction({ healExpression: '2 * barbarian_level' }), ps, campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       // No Barbarian in class_levels -> falls to playerStats.level (5) -> 2 * 5 = 10
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
@@ -628,28 +665,58 @@ describe('reactionSaveHealHandler', () => {
         campaignName,
       );
     });
+
+    it('falls back to player level when barbarianLevel is undefined and no class_levels', async () => {
+      const ps = makePlayerStats({
+        barbarianLevel: undefined,
+        class: undefined,
+      });
+      await handle(makeAction({ healExpression: '2 * barbarian_level' }), ps, campaignName, null);
+      triggerSaveResult(true);
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestBarbarian',
+        'currentHitPoints',
+        10,
+        campaignName,
+      );
+    });
+
+    it('uses 1 as ultimate fallback when no level info available', async () => {
+      const ps = makePlayerStats({ level: undefined, barbarianLevel: undefined, class: undefined });
+      await handle(makeAction({ healExpression: '2 * barbarian_level' }), ps, campaignName, null);
+      triggerSaveResult(true);
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestBarbarian',
+        'currentHitPoints',
+        2,
+        campaignName,
+      );
+    });
+
+    it('handles undefined healExpression by falling back to barbarianLevel', async () => {
+      const ps = makePlayerStats({ barbarianLevel: 7 });
+      await handle(makeAction({ healExpression: undefined }), ps, campaignName, null);
+      triggerSaveResult(true);
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestBarbarian',
+        'currentHitPoints',
+        7,
+        campaignName,
+      );
+    });
   });
 
   // ── Error handling (.catch on addEntry) ─────────────────────
 
   describe('error handling', () => {
-    function triggerSuccess() {
-      window.dispatchEvent(new CustomEvent('save-result', {
-        detail: { promptId: 'prompt-123', success: true, roll: 15, saveBonus: 7, total: 22 },
-      }));
-    }
-
-    function triggerFailure() {
-      window.dispatchEvent(new CustomEvent('save-result', {
-        detail: { promptId: 'prompt-123', success: false, roll: 8, saveBonus: 7, total: 15 },
-      }));
-    }
-
     it('handles addEntry rejection on success path without throwing', async () => {
       logService.addEntry.mockRejectedValue(new Error('db error'));
 
       await handle(makeAction({ healExpression: '2 * barbarian_level' }), makePlayerStats(), campaignName, null);
-      triggerSuccess();
+      triggerSaveResult(true);
 
       await vi.waitFor(() => {
         expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
@@ -665,7 +732,7 @@ describe('reactionSaveHealHandler', () => {
       logService.addEntry.mockRejectedValue(new Error('db error'));
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
+      triggerSaveResult(false);
 
       await vi.waitFor(() => {
         expect(sendDeathSavePrompt).toHaveBeenCalled();
@@ -674,25 +741,18 @@ describe('reactionSaveHealHandler', () => {
 
     it('handles addEntry rejection on death save logging without throwing', async () => {
       logService.addEntry.mockRejectedValue(new Error('db error'));
-      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
-        if (key === 'currentHitPoints') return 0;
-        if (key === 'relentlessrageUses') return 0;
-        if (key === 'deathSaves') return [false, false, false];
-        if (key === 'deathFailures') return [false, false, false];
-        return 0;
-      });
 
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-      triggerFailure();
+      const triggerFailure = async () => {
+        await handle(makeAction(), makePlayerStats(), campaignName, null);
+        triggerSaveResult(false);
+        await vi.waitFor(() => {
+          expect(sendDeathSavePrompt).toHaveBeenCalled();
+        });
+      };
 
-      await vi.waitFor(() => {
-        expect(sendDeathSavePrompt).toHaveBeenCalled();
-      });
+      await triggerFailure();
 
-      window.dispatchEvent(new CustomEvent('death-save-result', {
-        detail: { promptId: 'death-prompt-123', success: true, isNat20: true, roll: 20 },
-      }));
+      triggerDeathSaveResult({ isNat20: true, roll: 20, success: true });
 
       await vi.waitFor(() => {
         const calls = runtimeState.setRuntimeValue.mock.calls;

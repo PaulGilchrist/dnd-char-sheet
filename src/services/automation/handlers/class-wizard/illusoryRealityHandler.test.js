@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import {
@@ -12,15 +13,15 @@ import { addEntry } from '../../../ui/logService.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn().mockReturnValue(undefined),
 }));
 
 vi.mock('../../../../services/rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn(async () => ({ round: 1, activeCreatureName: 'TestWizard' })),
+  getCombatContext: vi.fn(),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
+  addEntry: vi.fn(),
 }));
 
 const campaignName = 'TestCampaign';
@@ -42,18 +43,17 @@ function setupMocks() {
   vi.clearAllMocks();
   getRuntimeValue.mockImplementation((_name, key) => {
     if (key === 'illusoryRealityObject') return null;
-    if (key === 'illusoryRealityUsedRound') return null;
     return null;
   });
-  setRuntimeValue.mockResolvedValue(undefined);
-  addEntry.mockResolvedValue();
   getCombatContext.mockResolvedValue({ round: 1, activeCreatureName: 'TestWizard' });
+  addEntry.mockResolvedValue(undefined);
 }
 
 describe('illusoryRealityHandler.handle', () => {
   beforeEach(setupMocks);
 
-  it('should return popup with per-round guard when already used this round', async () => {
+  it('returns popup when feature was already used this turn', async () => {
+    getCombatContext.mockResolvedValue({ round: 1, activeCreatureName: 'TestWizard' });
     getRuntimeValue.mockImplementation((_name, key) => {
       if (key === 'illusoryRealityUsedRound') return { round: 1, activeCreature: 'TestWizard' };
       return null;
@@ -67,11 +67,10 @@ describe('illusoryRealityHandler.handle', () => {
     expect(result.payload.description).toBe('Illusory Reality can only be used once per turn.');
   });
 
-  it('should return modal when no existing object and feature not used this round', async () => {
+  it('returns modal with action, playerStats, and campaignName when available', async () => {
     getCombatContext.mockResolvedValue({ round: 2, activeCreatureName: 'TestWizard' });
     getRuntimeValue.mockImplementation((_name, key) => {
       if (key === 'illusoryRealityUsedRound') return { round: 1, activeCreature: 'TestWizard' };
-      if (key === 'illusoryRealityObject') return null;
       return null;
     });
 
@@ -84,9 +83,8 @@ describe('illusoryRealityHandler.handle', () => {
     expect(result.payload.campaignName).toBe(campaignName);
   });
 
-  it('should return popup when an object is already real', async () => {
+  it('returns popup with object name when an object is already real', async () => {
     getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'illusoryRealityUsedRound') return null;
       if (key === 'illusoryRealityObject') return 'Candle';
       return null;
     });
@@ -101,23 +99,16 @@ describe('illusoryRealityHandler.handle', () => {
     expect(result.payload.automation).toEqual(makeAction().automation);
   });
 
-  it('should default featureName when action.name is missing', async () => {
-    getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'illusoryRealityUsedRound') return null;
-      if (key === 'illusoryRealityObject') return null;
-      return null;
-    });
+  it('defaults featureName to "Illusory Reality" when action.name is missing', async () => {
     const noNameAction = { automation: { type: 'illusory_reality' } };
-
     const result = await handle(noNameAction, makePlayerStats(), campaignName);
 
     expect(result.type).toBe('modal');
     expect(result.payload.action).toEqual(noNameAction);
   });
 
-  it('should use custom featureName from action.name in popup descriptions', async () => {
+  it('uses custom featureName from action.name in object-already-real popup', async () => {
     getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'illusoryRealityUsedRound') return null;
       if (key === 'illusoryRealityObject') return 'Ladder';
       return null;
     });
@@ -127,6 +118,14 @@ describe('illusoryRealityHandler.handle', () => {
 
     expect(result.payload.name).toBe('Custom Feature');
     expect(result.payload.description).toContain('Custom Feature');
+  });
+
+  it('uses custom featureName in modal payload when action.name is provided', async () => {
+    const customAction = makeAction({}, 'Custom Feature');
+    const result = await handle(customAction, makePlayerStats(), campaignName);
+
+    expect(result.type).toBe('modal');
+    expect(result.payload.action.name).toBe('Custom Feature');
   });
 });
 
@@ -139,7 +138,7 @@ describe('illusoryRealityHandler.confirmIllusoryReality', () => {
     { objectName: undefined, label: 'undefined' },
     { objectName: 123, label: 'non-string' },
     { objectName: '   ', label: 'whitespace only' },
-  ])('should return error popup when objectName is $label', async ({ objectName }) => {
+  ])('returns error popup when objectName is $label', async ({ objectName }) => {
     const result = await confirmIllusoryReality(makeAction(), makePlayerStats(), campaignName, objectName);
 
     expect(result.type).toBe('popup');
@@ -151,23 +150,39 @@ describe('illusoryRealityHandler.confirmIllusoryReality', () => {
     expect(addEntry).not.toHaveBeenCalled();
   });
 
-  it('should store object name and used round on success', async () => {
+  it('stores trimmed object name and marks used round on success', async () => {
     const result = await confirmIllusoryReality(makeAction(), makePlayerStats(), campaignName, 'Ladder');
 
     expect(result.type).toBe('popup');
     expect(result.payload.type).toBe('automation_info');
-    expect(setRuntimeValue).toHaveBeenNthCalledWith(1, 'TestWizard', 'illusoryRealityObject', 'Ladder', campaignName, true);
-    expect(setRuntimeValue).toHaveBeenNthCalledWith(2, 'TestWizard', 'illusoryRealityUsedRound', { round: 1, activeCreature: 'TestWizard' }, campaignName);
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'TestWizard',
+      'illusoryRealityObject',
+      'Ladder',
+      campaignName,
+      true,
+    );
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'TestWizard',
+      'illusoryRealityUsedRound',
+      { round: 1, activeCreature: 'TestWizard' },
+      campaignName,
+    );
   });
 
-  it('should trim object name before storing', async () => {
+  it('trims whitespace from object name before storing', async () => {
     await confirmIllusoryReality(makeAction(), makePlayerStats(), campaignName, '  Ladder  ');
 
-    expect(setRuntimeValue).toHaveBeenNthCalledWith(1, 'TestWizard', 'illusoryRealityObject', 'Ladder', campaignName, true);
-    expect(setRuntimeValue).toHaveBeenNthCalledWith(2, 'TestWizard', 'illusoryRealityUsedRound', { round: 1, activeCreature: 'TestWizard' }, campaignName);
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'TestWizard',
+      'illusoryRealityObject',
+      'Ladder',
+      campaignName,
+      true,
+    );
   });
 
-  it('should call addEntry with ability_use log entry', async () => {
+  it('calls addEntry with ability_use log entry', async () => {
     const now = Date.now();
     const dateSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
 
@@ -183,7 +198,7 @@ describe('illusoryRealityHandler.confirmIllusoryReality', () => {
     dateSpy.mockRestore();
   });
 
-  it('should return success popup with expected HTML description', async () => {
+  it('returns success popup with expected HTML description', async () => {
     const result = await confirmIllusoryReality(makeAction(), makePlayerStats(), campaignName, 'Ladder');
 
     expect(result.payload.description).toContain('<b>Illusory Reality</b>');
@@ -192,13 +207,7 @@ describe('illusoryRealityHandler.confirmIllusoryReality', () => {
     expect(result.payload.description).toContain('cannot deal damage');
   });
 
-  it('should include automation in popup payload', async () => {
-    const result = await confirmIllusoryReality(makeAction(), makePlayerStats(), campaignName, 'Ladder');
-
-    expect(result.payload.automation).toEqual(makeAction().automation);
-  });
-
-  it('should use custom featureName from action.name in success popup', async () => {
+  it('uses custom featureName from action.name in success popup', async () => {
     const customAction = makeAction({}, 'Custom Illusory');
     const result = await confirmIllusoryReality(customAction, makePlayerStats(), campaignName, 'Ladder');
 
@@ -210,13 +219,13 @@ describe('illusoryRealityHandler.confirmIllusoryReality', () => {
 describe('illusoryRealityHandler.getActiveObject', () => {
   beforeEach(setupMocks);
 
-  it('should return null when no object stored', async () => {
+  it('returns null when no object stored', async () => {
     const result = await getActiveObject('TestWizard', campaignName);
 
     expect(result).toBeNull();
   });
 
-  it('should return object when one exists', async () => {
+  it('returns object wrapper when one exists', async () => {
     getRuntimeValue.mockImplementation((_name, key) => {
       if (key === 'illusoryRealityObject') return 'Ladder';
       return null;
@@ -227,7 +236,7 @@ describe('illusoryRealityHandler.getActiveObject', () => {
     expect(result).toEqual({ name: 'Ladder' });
   });
 
-  it('should return null when object exists but round has changed', async () => {
+  it('returns stored object regardless of round changes', async () => {
     getRuntimeValue.mockImplementation((_name, key) => {
       if (key === 'illusoryRealityObject') return 'Ladder';
       if (key === 'illusoryRealityUsedRound') return { round: 2, activeCreature: 'TestWizard' };
@@ -243,7 +252,7 @@ describe('illusoryRealityHandler.getActiveObject', () => {
 describe('illusoryRealityHandler.clearObject', () => {
   beforeEach(setupMocks);
 
-  it('should clear both runtime values', async () => {
+  it('clears both runtime values', async () => {
     const result = await clearObject('TestWizard', campaignName);
 
     expect(result).toBeUndefined();

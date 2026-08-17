@@ -61,7 +61,7 @@ describe('CampaignAdmin - Delete Campaign', () => {
         it.each([
             { input: '', description: 'empty string' },
             { input: 'wrong-name', description: 'mismatched name' },
-        ])('cancels and shows alert when prompt returns %s', ({ input, description }) => {
+        ])('cancels and shows alert when prompt returns %s', ({ input, description: _description }) => {
             window.prompt.mockReturnValueOnce(input);
             render(<CampaignAdmin {...defaultProps} />);
             const btn = findDangerAction().querySelector('button');

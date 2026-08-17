@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './shieldHandler.js';
@@ -42,7 +43,6 @@ function makeAction(overrides = {}) {
 describe('shieldHandler', () => {
     beforeEach(() => {
         vi.resetAllMocks();
-        vi.spyOn(console, 'error').mockReturnValue();
     });
 
     describe('deactivation (wasActive: true)', () => {
@@ -135,6 +135,19 @@ describe('shieldHandler', () => {
             expect(damageRollback.rollbackDamage).not.toHaveBeenCalled();
         });
 
+        it('should skip rollback when targetAc is undefined', async () => {
+            buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+            damageUtils.getCombatContext.mockResolvedValue({});
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: { d20: 2, bonus: 3, targetAc: undefined, rawDamage: 10 },
+                attackerName: 'Goblin',
+            });
+
+            await handle(makeAction(), mockPlayerStats, mockCampaignName, null);
+
+            expect(damageRollback.rollbackDamage).not.toHaveBeenCalled();
+        });
+
         it('should rollback damage and log when attack would miss with +5 AC', async () => {
             buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
             damageUtils.getCombatContext.mockResolvedValue({});
@@ -181,7 +194,7 @@ describe('shieldHandler', () => {
             }));
         });
 
-        it('should skip logging when rollbackDamage returns 0 or negative', async () => {
+        it('should skip logging when rollbackDamage returns 0', async () => {
             buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
             damageUtils.getCombatContext.mockResolvedValue({});
             damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
@@ -195,7 +208,21 @@ describe('shieldHandler', () => {
             expect(logService.addEntry).not.toHaveBeenCalled();
         });
 
-        it('should handle rawDamage being undefined by defaulting to 0 and skipping rollback', async () => {
+        it('should skip logging when rollbackDamage returns a negative value', async () => {
+            buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+            damageUtils.getCombatContext.mockResolvedValue({});
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: { d20: 2, bonus: 3, targetAc: 15, rawDamage: 10 },
+                attackerName: 'Goblin',
+            });
+            damageRollback.rollbackDamage.mockResolvedValue(-5);
+
+            await handle(makeAction(), mockPlayerStats, mockCampaignName, null);
+
+            expect(logService.addEntry).not.toHaveBeenCalled();
+        });
+
+        it('should skip rollback when rawDamage is undefined', async () => {
             buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
             damageUtils.getCombatContext.mockResolvedValue({});
             damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
@@ -207,6 +234,19 @@ describe('shieldHandler', () => {
 
             expect(damageRollback.rollbackDamage).not.toHaveBeenCalled();
             expect(logService.addEntry).not.toHaveBeenCalled();
+        });
+
+        it('should skip rollback when bonus is undefined producing a NaN rollTotal', async () => {
+            buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+            damageUtils.getCombatContext.mockResolvedValue({});
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: { d20: 2, bonus: undefined, targetAc: 15, rawDamage: 10 },
+                attackerName: 'Goblin',
+            });
+
+            await handle(makeAction(), mockPlayerStats, mockCampaignName, null);
+
+            expect(damageRollback.rollbackDamage).not.toHaveBeenCalled();
         });
 
         it('should catch and log errors from addEntry without throwing', async () => {

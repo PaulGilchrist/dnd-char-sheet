@@ -1,6 +1,7 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { handle, applyRiderOption } from './attackRiderHandler.js';
+import { applyRiderOption } from './attackRiderHandler.js';
 import { setGetCombatContextSyncOverride, clearGetCombatContextSyncOverride } from './cunningStrikeUtils.js';
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -34,8 +35,6 @@ vi.mock('../../common/oncePerTurn.js', () => ({
 // ── Re-import after mocking ────────────────────────────────────
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { markOncePerTurn } from '../../common/oncePerTurn.js';
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -72,45 +71,124 @@ function makePlayerStats(overrides = {}) {
 
 // ── Tests ──────────────────────────────────────────────────────
 
-describe('attackRiderHandler - validateCunningStrikeOption size checks', () => {
+describe('attackRiderHandler - sizeLimit: large_or_smaller', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         getRuntimeValue.mockReturnValue([]);
+        getRuntimeValue.mockImplementation((_scope, key) => {
+            if (key === 'targetEffects') return [];
+            return null;
+        });
     });
 
     afterEach(() => {
         clearGetCombatContextSyncOverride();
     });
 
-    it('should reject Trip when target is Huge (too large)', async () => {
+    it('should reject Trip when target is Huge', async () => {
         setGetCombatContextSyncOverride({ name: 'HugeGiant', size: 'Huge' });
         const action = makeAction();
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'HugeGiant', ['Trip']);
 
-        expect(result.payload.description).toContain('too large for Trip');
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('<b>Trip</b> cannot be used');
         expect(result.payload.description).toContain('Huge');
+        expect(result.payload.description).toContain('Large or smaller');
     });
 
-    it('should reject Trip when target is Gargantuan (too large)', async () => {
-        setGetCombatContextSyncOverride({ name: 'GargantuanDragon', size: 'Gargantuan' });
+    it('should reject Trip when target is Gargantuan', async () => {
+        setGetCombatContextSyncOverride({ name: 'Dragon', size: 'Gargantuan' });
         const action = makeAction();
-        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'GargantuanDragon', ['Trip']);
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Dragon', ['Trip']);
 
-        expect(result.payload.description).toContain('too large for Trip');
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('<b>Trip</b> cannot be used');
         expect(result.payload.description).toContain('Gargantuan');
+        expect(result.payload.description).toContain('Large or smaller');
     });
 
-    it('should allow Trip when target is Large (within limit)', async () => {
+    it('should allow Trip when target is Large (boundary)', async () => {
         setGetCombatContextSyncOverride({ name: 'Ogre', size: 'Large' });
-        getRuntimeValue.mockReturnValue([]);
         const action = makeAction();
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Ogre', ['Trip']);
 
         expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Trip');
+        expect(result.payload.description).toContain('Trip applied to Ogre');
+        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
     });
 
-    it('should reject Charger Push when target is too large for player size', async () => {
+    it('should allow Trip when target is Medium', async () => {
+        setGetCombatContextSyncOverride({ name: 'Goblin', size: 'Medium' });
+        const action = makeAction();
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Trip applied to Goblin');
+    });
+
+    it('should allow Trip when target is Small', async () => {
+        setGetCombatContextSyncOverride({ name: 'Kobold', size: 'Small' });
+        const action = makeAction();
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Kobold', ['Trip']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Trip applied to Kobold');
+    });
+
+    it('should allow Trip when target is Tiny', async () => {
+        setGetCombatContextSyncOverride({ name: 'Rat', size: 'Tiny' });
+        const action = makeAction();
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Rat', ['Trip']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Trip applied to Rat');
+    });
+
+    it('should pass through when combat context is unavailable (no size info)', async () => {
+        clearGetCombatContextSyncOverride();
+        const action = makeAction();
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Trip applied to Goblin');
+    });
+
+    it('should mark oncePerTurn after passing size validation', async () => {
+        setGetCombatContextSyncOverride({ name: 'Ogre', size: 'Large' });
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                oncePerTurn: true,
+                options: [{ name: 'Trip', effect: 'prone', sizeLimit: 'large_or_smaller' }],
+            },
+        });
+        await applyRiderOption(action, makePlayerStats(), 'campaign', 'Ogre', ['Trip']);
+
+        expect(markOncePerTurn).toHaveBeenCalledWith(
+            'Cunning Strike',
+            '_CunningStrike_usedRound',
+            expect.any(Object),
+            'campaign'
+        );
+    });
+});
+
+describe('attackRiderHandler - sizeLimit: one_size_larger', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        getRuntimeValue.mockReturnValue([]);
+        getRuntimeValue.mockImplementation((_scope, key) => {
+            if (key === 'targetEffects') return [];
+            if (key === '_cunningStrikeCostUsed') return 0;
+            return null;
+        });
+    });
+
+    afterEach(() => {
+        clearGetCombatContextSyncOverride();
+    });
+
+    it('should reject when target is two sizes larger than player', async () => {
         setGetCombatContextSyncOverride({ name: 'HugeGiant', size: 'Huge' });
         const stats = makePlayerStats({ size: 'Medium' });
         const action = makeAction({
@@ -122,13 +200,29 @@ describe('attackRiderHandler - validateCunningStrikeOption size checks', () => {
         });
         const result = await applyRiderOption(action, stats, 'campaign', 'HugeGiant', ['Charger Push']);
 
-        expect(result.payload.description).toContain('too large for Charger push');
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('<b>Charger Push</b> cannot be used');
         expect(result.payload.description).toContain('Huge');
     });
 
-    it('should allow Charger Push when target is one size larger than player', async () => {
+    it('should reject when target is Gargantuan and player is Medium', async () => {
+        setGetCombatContextSyncOverride({ name: 'Tyrannosaurus', size: 'Gargantuan' });
+        const stats = makePlayerStats({ size: 'Medium' });
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                oncePerTurn: true,
+                options: [{ name: 'Charger Push', effect: 'push', sizeLimit: 'one_size_larger', value: 10 }],
+            },
+        });
+        const result = await applyRiderOption(action, stats, 'campaign', 'Tyrannosaurus', ['Charger Push']);
+
+        expect(result.payload.description).toContain('<b>Charger Push</b> cannot be used');
+        expect(result.payload.description).toContain('Gargantuan');
+    });
+
+    it('should allow when target is one size larger than player (Medium player → Large target)', async () => {
         setGetCombatContextSyncOverride({ name: 'Ogre', size: 'Large' });
-        getRuntimeValue.mockReturnValue(0);
         const stats = makePlayerStats({ size: 'Medium' });
         const action = makeAction({
             automation: {
@@ -143,9 +237,8 @@ describe('attackRiderHandler - validateCunningStrikeOption size checks', () => {
         expect(result.payload.description).toContain('Ogre was pushed');
     });
 
-    it('should allow Charger Push when player is Large and target is Huge', async () => {
-        setGetCombatContextSyncOverride({ name: 'HugeGiant', size: 'Huge' });
-        getRuntimeValue.mockReturnValue(0);
+    it('should allow when target is one size larger than player (Large player → Huge target)', async () => {
+        setGetCombatContextSyncOverride({ name: 'Giant', size: 'Huge' });
         const stats = makePlayerStats({ size: 'Large' });
         const action = makeAction({
             automation: {
@@ -154,132 +247,14 @@ describe('attackRiderHandler - validateCunningStrikeOption size checks', () => {
                 options: [{ name: 'Charger Push', effect: 'push', sizeLimit: 'one_size_larger', value: 10 }],
             },
         });
-        const result = await applyRiderOption(action, stats, 'campaign', 'HugeGiant', ['Charger Push']);
+        const result = await applyRiderOption(action, stats, 'campaign', 'Giant', ['Charger Push']);
 
         expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('HugeGiant was pushed');
+        expect(result.payload.description).toContain('Giant was pushed');
     });
 
-    it('should pass through when getCombatContextSync returns null (no size info)', async () => {
-        clearGetCombatContextSyncOverride();
-        getRuntimeValue.mockReturnValue([]);
-        const action = makeAction();
-        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip']);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Trip');
-    });
-});
-
-describe('attackRiderHandler - applyCunningStrikeCost fallback', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        clearGetCombatContextSyncOverride();
-    });
-
-    it('should use 0 as default when getRuntimeValue returns null for Cunning Strike cost', async () => {
-        // When getRuntimeValue returns null for the cost key, the ?? 0 fallback is used
-        getRuntimeValue.mockImplementation((scope, key, _camp) => {
-            if (key === 'targetEffects') return [];
-            if (key === '_cunningStrikeCostUsed') return null;
-            return null;
-        });
-        const stats = makePlayerStats({
-            inventory: { equipped: [], backpack: [] },
-            toolProficiencies: ["Poisoner's Kit"],
-        });
-        const action = makeAction({
-            automation: {
-                type: 'attack_rider',
-                options: [{ name: 'Costly Strike', effect: 'poisoned', cost: '1d6', requires: "Poisoner's Kit" }],
-            },
-        });
-        const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Costly Strike']);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Costly Strike');
-        // Should set cost to 0 + 1 = 1 (using the ?? 0 fallback when getRuntimeValue returns null)
-        expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', '_cunningStrikeCostUsed', 1, 'campaign');
-    });
-});
-
-describe('attackRiderHandler - item-based tool requirement', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        getRuntimeValue.mockReturnValue([]);
-    });
-
-    it('should allow Poison when character has Poisoner\'s Kit in inventory', async () => {
-        const stats = makePlayerStats({
-            inventory: {
-                equipped: ["Poisoner's Kit"],
-                backpack: [],
-            },
-        });
-        const action = makeAction({
-            automation: {
-                type: 'attack_rider',
-                options: [{ name: 'Poison', effect: 'poisoned', requires: "Poisoner's Kit" }],
-            },
-        });
-        const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Poison']);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Poison');
-        expect(result.payload.description).not.toContain('cannot be used');
-    });
-
-    it('should allow Poison when character has Poisoner\'s Kit in backpack', async () => {
-        const stats = makePlayerStats({
-            inventory: {
-                equipped: [],
-                backpack: ["Poisoner's Kit"],
-            },
-        });
-        const action = makeAction({
-            automation: {
-                type: 'attack_rider',
-                options: [{ name: 'Poison', effect: 'poisoned', requires: "Poisoner's Kit" }],
-            },
-        });
-        const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Poison']);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Poison');
-        expect(result.payload.description).not.toContain('cannot be used');
-    });
-
-    it('should allow Poison when inventory item is an object with name', async () => {
-        const stats = makePlayerStats({
-            inventory: {
-                equipped: [{ name: "Poisoner's Kit", category: 'tool' }],
-                backpack: [],
-            },
-        });
-        const action = makeAction({
-            automation: {
-                type: 'attack_rider',
-                options: [{ name: 'Poison', effect: 'poisoned', requires: "Poisoner's Kit" }],
-            },
-        });
-        const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Poison']);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Poison');
-        expect(result.payload.description).not.toContain('cannot be used');
-    });
-});
-
-describe('attackRiderHandler - getCombatContextSync direct override', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        getRuntimeValue.mockReturnValue([]);
-        clearGetCombatContextSyncOverride();
-    });
-
-    it('should use direct override parameter in getCombatContextSync', async () => {
-        // This tests the overrideContext parameter path in getCombatContextSync
-        // which is used internally when validateCunningStrikeOption calls it
+    it('should allow when target is same size as player', async () => {
+        setGetCombatContextSyncOverride({ name: 'Hobgoblin', size: 'Medium' });
         const stats = makePlayerStats({ size: 'Medium' });
         const action = makeAction({
             automation: {
@@ -288,107 +263,203 @@ describe('attackRiderHandler - getCombatContextSync direct override', () => {
                 options: [{ name: 'Charger Push', effect: 'push', sizeLimit: 'one_size_larger', value: 10 }],
             },
         });
-        // Use the module-level override to simulate getCombatContextSync returning a value
+        const result = await applyRiderOption(action, stats, 'campaign', 'Hobgoblin', ['Charger Push']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Hobgoblin was pushed');
+    });
+
+    it('should allow when target is smaller than player', async () => {
+        setGetCombatContextSyncOverride({ name: 'Goblin', size: 'Small' });
+        const stats = makePlayerStats({ size: 'Large' });
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                oncePerTurn: true,
+                options: [{ name: 'Charger Push', effect: 'push', sizeLimit: 'one_size_larger', value: 10 }],
+            },
+        });
+        const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Charger Push']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Goblin was pushed');
+    });
+
+    it('should reject when Tiny player targets Large (two sizes larger)', async () => {
         setGetCombatContextSyncOverride({ name: 'Ogre', size: 'Large' });
+        const stats = makePlayerStats({ size: 'Tiny' });
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                oncePerTurn: true,
+                options: [{ name: 'Charger Push', effect: 'push', sizeLimit: 'one_size_larger', value: 10 }],
+            },
+        });
         const result = await applyRiderOption(action, stats, 'campaign', 'Ogre', ['Charger Push']);
 
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Ogre was pushed');
-    });
-});
-
-describe('attackRiderHandler - handle oncePerTurn path', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        getRuntimeValue.mockReturnValue([]);
+        expect(result.payload.description).toContain('<b>Charger Push</b> cannot be used');
+        expect(result.payload.description).toContain('Large');
     });
 
-    it('should use action name for usedKey when not a Cunning Strike feature', async () => {
-        getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-            if (key === 'targetEffects') return [];
-            return null;
-        });
-        const action = {
-            name: 'Charger',
+    it('should allow Tiny player to target Small (one size larger)', async () => {
+        setGetCombatContextSyncOverride({ name: 'Kobold', size: 'Small' });
+        const stats = makePlayerStats({ size: 'Tiny' });
+        const action = makeAction({
             automation: {
                 type: 'attack_rider',
                 oncePerTurn: true,
-                options: [{ name: 'Push', effect: 'push', value: 10 }],
+                options: [{ name: 'Charger Push', effect: 'push', sizeLimit: 'one_size_larger', value: 10 }],
             },
-        };
-        const result = await handle(action, makePlayerStats(), 'campaign', 'map');
+        });
+        const result = await applyRiderOption(action, stats, 'campaign', 'Kobold', ['Charger Push']);
 
         expect(result.type).toBe('popup');
-        expect(markOncePerTurn).toHaveBeenCalledWith('Charger', '_Charger_usedRound', expect.any(Object), 'campaign');
+        expect(result.payload.description).toContain('Kobold was pushed');
     });
 
-    it('should mark oncePerTurn when single option is applied in handle', async () => {
-        getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-            if (key === 'targetEffects') return [];
-            return null;
-        });
-        const action = {
-            name: 'Cunning Strike',
+    it('should pass through when combat context is unavailable', async () => {
+        clearGetCombatContextSyncOverride();
+        const stats = makePlayerStats({ size: 'Medium' });
+        const action = makeAction({
             automation: {
                 type: 'attack_rider',
                 oncePerTurn: true,
-                options: [{ name: 'Trip', effect: 'prone' }],
+                options: [{ name: 'Charger Push', effect: 'push', sizeLimit: 'one_size_larger', value: 10 }],
             },
-        };
-        const result = await handle(action, makePlayerStats(), 'campaign', 'map');
+        });
+        const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Charger Push']);
 
         expect(result.type).toBe('popup');
-        expect(markOncePerTurn).toHaveBeenCalledWith('Cunning Strike', '_CunningStrike_usedRound', expect.any(Object), 'campaign');
+        expect(result.payload.description).toContain('Goblin was pushed');
     });
 });
 
-describe('attackRiderHandler - Stalker\'s Flurry secondary targets', () => {
+describe('attackRiderHandler - size validation with other prerequisites', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         getRuntimeValue.mockReturnValue([]);
+        getRuntimeValue.mockImplementation((_scope, key) => {
+            if (key === 'targetEffects') return [];
+            if (key === '_cunningStrikeCostUsed') return 0;
+            return null;
+        });
     });
 
-    it('should set stalkersFlurrySecondaryTargets when sudden_strike has secondary targets within range', async () => {
-        vi.mocked(getCombatContext).mockResolvedValue({
-            creatures: [
-                { name: 'Goblin', size: 'Medium', position: { x: 1, y: 1 } },
-                { name: 'Skeleton', size: 'Medium', position: { x: 2, y: 1 } },
-            ],
+    afterEach(() => {
+        clearGetCombatContextSyncOverride();
+    });
+
+    it('should reject for missing tool even when size is valid', async () => {
+        setGetCombatContextSyncOverride({ name: 'Goblin', size: 'Medium' });
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                options: [{ name: 'Poison', effect: 'poisoned', requires: "Poisoner's Kit" }],
+            },
         });
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Poison']);
+
+        expect(result.payload.description).toContain("Requires Poisoner's Kit");
+        expect(result.payload.description).toContain('cannot be used');
+    });
+
+    it('should allow when both tool and size requirements are met', async () => {
+        setGetCombatContextSyncOverride({ name: 'Goblin', size: 'Medium' });
         const stats = makePlayerStats({
-            automation: { passives: [] },
+            toolProficiencies: ["Poisoner's Kit"],
         });
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
-                options: [{ name: 'Sudden Strike', effect: 'sudden_strike' }],
+                options: [{ name: 'Poison', effect: 'poisoned', requires: "Poisoner's Kit" }],
             },
         });
-        const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Sudden Strike']);
+        const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Poison']);
 
         expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Sudden Strike enabled');
-        expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'stalkersFlurrySecondaryTargets', expect.any(Array), 'campaign');
-        expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'stalkersFlurryPrimaryTarget', 'Goblin', 'campaign');
+        expect(result.payload.description).toContain('Poison applied');
     });
 
-    it('should not set stalkersFlurrySecondaryTargets when no secondary targets within range', async () => {
-        vi.mocked(getCombatContext).mockResolvedValue({
-            creatures: [
-                { name: 'Goblin', size: 'Medium', position: { x: 1, y: 1 } },
-                { name: 'Skeleton', size: 'Medium', position: { x: 10, y: 10 } },
-            ],
-        });
-        vi.mocked(isWithinRange).mockResolvedValue(false);
-        const stats = makePlayerStats({ automation: { passives: [] } });
+    it('should reject size validation before checking tool requirement', async () => {
+        // Trip has no tool requirement but has sizeLimit; Huge target should be rejected
+        setGetCombatContextSyncOverride({ name: 'Colossus', size: 'Gargantuan' });
         const action = makeAction({
             automation: {
                 type: 'attack_rider',
-                options: [{ name: 'Sudden Strike', effect: 'sudden_strike' }],
+                options: [{ name: 'Trip', effect: 'prone', sizeLimit: 'large_or_smaller' }],
             },
         });
-        await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Sudden Strike']);
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Colossus', ['Trip']);
 
-        expect(setRuntimeValue).not.toHaveBeenCalledWith('TestHero', 'stalkersFlurrySecondaryTargets', expect.any(Array), 'campaign');
+        expect(result.payload.description).toContain('<b>Trip</b> cannot be used');
+        expect(result.payload.description).toContain('Gargantuan');
     });
+
+    it('should allow option without sizeLimit regardless of target size', async () => {
+        setGetCombatContextSyncOverride({ name: 'Titan', size: 'Gargantuan' });
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                options: [{ name: 'Daze', effect: 'daze' }],
+            },
+        });
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Titan', ['Daze']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Daze applied');
+    });
+});
+
+describe('attackRiderHandler - size validation with multiple options', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        getRuntimeValue.mockReturnValue([]);
+        getRuntimeValue.mockImplementation((_scope, key) => {
+            if (key === 'targetEffects') return [];
+            if (key === '_cunningStrikeCostUsed') return 0;
+            return null;
+        });
+    });
+
+    afterEach(() => {
+        clearGetCombatContextSyncOverride();
+    });
+
+    it('should reject when any option fails size validation', async () => {
+        setGetCombatContextSyncOverride({ name: 'HugeGiant', size: 'Huge' });
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                oncePerTurn: true,
+                options: [
+                    { name: 'Trip', effect: 'prone', sizeLimit: 'large_or_smaller' },
+                    { name: 'Daze', effect: 'daze' },
+                ],
+            },
+        });
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'HugeGiant', ['Trip', 'Daze']);
+
+        expect(result.payload.description).toContain('<b>Trip</b> cannot be used');
+        expect(result.payload.description).toContain('Huge');
+    });
+
+    it('should allow when all options pass size validation', async () => {
+        setGetCombatContextSyncOverride({ name: 'Ogre', size: 'Large' });
+        const action = makeAction({
+            automation: {
+                type: 'attack_rider',
+                oncePerTurn: true,
+                options: [
+                    { name: 'Trip', effect: 'prone', sizeLimit: 'large_or_smaller' },
+                    { name: 'Daze', effect: 'daze' },
+                ],
+            },
+        });
+        const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Ogre', ['Trip', 'Daze']);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Trip');
+        expect(result.payload.description).toContain('Daze');
+    });
+
 });

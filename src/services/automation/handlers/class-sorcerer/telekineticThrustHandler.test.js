@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { handle, applyTelekineticThrust } from './telekineticThrustHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';
@@ -31,7 +32,7 @@ vi.mock('../../../../services/ui/storage.js', () => ({
     },
 }));
 
-vi.mock('../../../../services/combat/conditions/conditionSaveService.js', () => ({
+vi.mock('../../../combat/conditions/conditionSaveService.js', () => ({
     addCondition: vi.fn(),
 }));
 
@@ -50,44 +51,41 @@ const makePlayerStats = (overrides = {}) => ({
     ...overrides,
 });
 
+function setupSaveMock(saveResult = { success: true, total: 15, roll: 12, saveBonus: 3 }) {
+    savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'test-id',
+        promise: Promise.resolve(saveResult),
+    });
+}
+
 describe('telekineticThrustHandler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        damageUtils.getCombatContext.mockReturnValue(null);
+        damageUtils.getCombatContext.mockResolvedValue(null);
         savePrompt.buildSaveDc.mockReturnValue(13);
         runtimeState.getRuntimeValue.mockReturnValue(null);
     });
 
     describe('handle', () => {
-        function setupSaveMock() {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: true, total: 15, roll: 12, saveBonus: 3 }),
-            });
-        }
-
-        beforeEach(() => {
-            runtimeState.getRuntimeValue.mockReturnValue([]);
-        });
-
-        it('should return info popup when no options available', async () => {
+        it('returns info popup when no options available', async () => {
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', 'map');
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('ready');
+            expect(result.payload.description).toContain('Psionic Strike');
         });
 
-        it('should return no-target popup when options exist but no target', async () => {
+        it('returns no-target popup when options exist but no target', async () => {
             const result = await handle(makeActionWithOptions(), makePlayerStats(), 'test-campaign', 'map');
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('No target selected');
         });
 
-        it('should create save listener when options exist and target is present', async () => {
+        it('creates save listener when options exist and target is present', async () => {
             setupSaveMock();
-            damageUtils.getCombatContext.mockReturnValue({
+            damageUtils.getCombatContext.mockResolvedValue({
                 attacker: { nextTargetAttacking: 'Goblin' },
             });
             damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
@@ -101,7 +99,7 @@ describe('telekineticThrustHandler', () => {
             });
         });
 
-        it('should add campaign log entry for ability use', async () => {
+        it('adds campaign log entry for ability use', async () => {
             await handle(makeAction(), makePlayerStats(), 'test-campaign', 'map');
 
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
@@ -111,8 +109,8 @@ describe('telekineticThrustHandler', () => {
             }));
         });
 
-        it('should include target name in log description when target exists', async () => {
-            damageUtils.getCombatContext.mockReturnValue({
+        it('includes target name in log description when target exists', async () => {
+            damageUtils.getCombatContext.mockResolvedValue({
                 attacker: { nextTargetAttacking: 'Goblin' },
             });
             damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
@@ -124,7 +122,7 @@ describe('telekineticThrustHandler', () => {
             }));
         });
 
-        it('should omit target from log description when no target exists', async () => {
+        it('omits target from log description when no target exists', async () => {
             await handle(makeAction(), makePlayerStats(), 'test-campaign', 'map');
 
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
@@ -132,9 +130,9 @@ describe('telekineticThrustHandler', () => {
             }));
         });
 
-        it('should use custom saveType when specified in automation', async () => {
+        it('uses custom saveType when specified in automation', async () => {
             setupSaveMock();
-            damageUtils.getCombatContext.mockReturnValue({
+            damageUtils.getCombatContext.mockResolvedValue({
                 attacker: { nextTargetAttacking: 'Goblin' },
             });
             damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
@@ -148,9 +146,9 @@ describe('telekineticThrustHandler', () => {
             });
         });
 
-        it('should default to STR saveType when not specified in automation options', async () => {
+        it('defaults to STR saveType when not specified in automation options', async () => {
             setupSaveMock();
-            damageUtils.getCombatContext.mockReturnValue({
+            damageUtils.getCombatContext.mockResolvedValue({
                 attacker: { nextTargetAttacking: 'Goblin' },
             });
             damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
@@ -172,9 +170,9 @@ describe('telekineticThrustHandler', () => {
             });
         });
 
-        it('should return a popup with save result when target exists and save resolves', async () => {
+        it('returns a popup with save result when target exists and save resolves', async () => {
             setupSaveMock();
-            damageUtils.getCombatContext.mockReturnValue({
+            damageUtils.getCombatContext.mockResolvedValue({
                 attacker: { nextTargetAttacking: 'Goblin' },
             });
             damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
@@ -185,7 +183,7 @@ describe('telekineticThrustHandler', () => {
             expect(result.payload.description).toContain('Success');
         });
 
-        it('should handle addEntry rejection gracefully in handle()', async () => {
+        it('handles addEntry rejection gracefully in handle()', async () => {
             logService.addEntry.mockRejectedValue(new Error('log error'));
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', 'map');
@@ -194,7 +192,7 @@ describe('telekineticThrustHandler', () => {
             expect(result.payload.description).toContain('ready');
         });
 
-        it('should handle undefined auto.options in handle()', async () => {
+        it('handles undefined auto.options in handle()', async () => {
             const actionWithoutOptions = {
                 name: 'Telekinetic Thrust',
                 automation: { type: 'telekinetic_thrust', saveType: 'STR' },
@@ -209,17 +207,14 @@ describe('telekineticThrustHandler', () => {
     });
 
     describe('applyTelekineticThrust', () => {
-        it('should return null when no options available', async () => {
+        it('returns null when no options available', async () => {
             const result = await applyTelekineticThrust(makeAction(), makePlayerStats(), 'test-campaign', 'Goblin', 13, 'STR');
 
             expect(result).toBeNull();
         });
 
-        it('should clear pendingRiderChoice before processing', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: true, total: 15, roll: 12, saveBonus: 3 }),
-            });
+        it('clears pendingRiderChoice before processing', async () => {
+            setupSaveMock();
 
             await applyTelekineticThrust(
                 makeActionWithOptions(),
@@ -238,7 +233,7 @@ describe('telekineticThrustHandler', () => {
             );
         });
 
-        it('should return popup with no-target message when targetName is null', async () => {
+        it('returns popup with no-target message when targetName is null', async () => {
             const result = await applyTelekineticThrust(
                 makeActionWithOptions(),
                 makePlayerStats(),
@@ -252,11 +247,8 @@ describe('telekineticThrustHandler', () => {
             expect(result.payload.description).toContain('No target selected');
         });
 
-        it('should create a save listener and wait for the result', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 8, saveBonus: 2 }),
-            });
+        it('creates a save listener and waits for the result', async () => {
+            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
 
             await applyTelekineticThrust(
                 makeActionWithOptions(),
@@ -274,11 +266,8 @@ describe('telekineticThrustHandler', () => {
             });
         });
 
-        it('should return a popup indicating success when save passes', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: true, total: 15, roll: 12, saveBonus: 3 }),
-            });
+        it('returns a popup indicating success when save passes', async () => {
+            setupSaveMock({ success: true, total: 15, roll: 12, saveBonus: 3 });
 
             const result = await applyTelekineticThrust(
                 makeActionWithOptions(),
@@ -294,11 +283,8 @@ describe('telekineticThrustHandler', () => {
             expect(result.payload.description).toContain('No effect applied');
         });
 
-        it('should return a popup indicating failure and apply effect when save fails', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 8, saveBonus: 2 }),
-            });
+        it('returns a popup indicating failure and applies effect when save fails', async () => {
+            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
 
             const result = await applyTelekineticThrust(
                 makeActionWithOptions(),
@@ -314,12 +300,8 @@ describe('telekineticThrustHandler', () => {
             expect(result.payload.description).toContain('Push');
         });
 
-        it('should handle missing combatContext gracefully on failure', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 8, saveBonus: 2 }),
-            });
-            runtimeState.getRuntimeValue.mockReturnValue([]);
+        it('handles missing combatContext gracefully on failure', async () => {
+            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
             damageUtils.getCombatContext.mockResolvedValue(null);
 
             const result = await applyTelekineticThrust(
@@ -335,11 +317,8 @@ describe('telekineticThrustHandler', () => {
             expect(result.payload.description).toContain('Failure');
         });
 
-        it('should apply prone condition and push when save fails and target is not already prone', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 8, saveBonus: 2 }),
-            });
+        it('applies prone condition and push when save fails and target is not already prone', async () => {
+            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
 
             const combatContext = {
                 creatures: [
@@ -377,11 +356,8 @@ describe('telekineticThrustHandler', () => {
             }));
         });
 
-        it('should skip prone condition when target is already prone', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 8, saveBonus: 2 }),
-            });
+        it('skips prone condition when target is already prone', async () => {
+            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
 
             const combatContext = {
                 creatures: [
@@ -405,11 +381,8 @@ describe('telekineticThrustHandler', () => {
             expect(storage.set).not.toHaveBeenCalled();
         });
 
-        it('should use option name in result message for unknown effect types', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 8, saveBonus: 2 }),
-            });
+        it('uses option name in result message for unknown effect types', async () => {
+            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
 
             const combatContext = {
                 creatures: [
@@ -441,11 +414,8 @@ describe('telekineticThrustHandler', () => {
             expect(result.payload.description).toContain('Unique Effect');
         });
 
-        it('should handle missing target creature gracefully on failure', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 8, saveBonus: 2 }),
-            });
+        it('handles missing target creature gracefully on failure', async () => {
+            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
 
             const combatContext = {
                 creatures: [],
@@ -466,11 +436,8 @@ describe('telekineticThrustHandler', () => {
             expect(conditionSaveService.addCondition).not.toHaveBeenCalled();
         });
 
-        it('should handle addEntry rejection on first entry in applyTelekineticThrust', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: true, total: 15, roll: 12, saveBonus: 3 }),
-            });
+        it('handles addEntry rejection on first entry', async () => {
+            setupSaveMock({ success: true, total: 15, roll: 12, saveBonus: 3 });
             logService.addEntry.mockRejectedValueOnce(new Error('log error')).mockResolvedValue(undefined);
 
             const result = await applyTelekineticThrust(
@@ -486,11 +453,8 @@ describe('telekineticThrustHandler', () => {
             expect(result.payload.description).toContain('Success');
         });
 
-        it('should handle addEntry rejection on second entry in applyTelekineticThrust', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: true, total: 15, roll: 12, saveBonus: 3 }),
-            });
+        it('handles addEntry rejection on second entry', async () => {
+            setupSaveMock({ success: true, total: 15, roll: 12, saveBonus: 3 });
             logService.addEntry.mockResolvedValue(undefined).mockRejectedValueOnce(new Error('log error'));
 
             const result = await applyTelekineticThrust(
@@ -506,7 +470,7 @@ describe('telekineticThrustHandler', () => {
             expect(result.payload.description).toContain('Success');
         });
 
-        it('should handle undefined auto.options in applyTelekineticThrust', async () => {
+        it('handles undefined auto.options in applyTelekineticThrust', async () => {
             const actionWithoutOptions = {
                 name: 'Telekinetic Thrust',
                 automation: { type: 'telekinetic_thrust', saveType: 'STR' },
@@ -524,11 +488,8 @@ describe('telekineticThrustHandler', () => {
             expect(result).toBeNull();
         });
 
-        it('should handle saveResult with missing total, roll, and saveBonus', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: true }),
-            });
+        it('handles saveResult with missing total, roll, and saveBonus', async () => {
+            setupSaveMock({ success: true });
 
             const result = await applyTelekineticThrust(
                 makeActionWithOptions(),
@@ -548,11 +509,8 @@ describe('telekineticThrustHandler', () => {
             }));
         });
 
-        it('should handle saveResult with saveBonus of 0', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: true, total: 13, roll: 13, saveBonus: 0 }),
-            });
+        it('uses formula without bonus when saveBonus is 0', async () => {
+            setupSaveMock({ success: true, total: 13, roll: 13, saveBonus: 0 });
 
             const result = await applyTelekineticThrust(
                 makeActionWithOptions(),
@@ -570,11 +528,8 @@ describe('telekineticThrustHandler', () => {
             }));
         });
 
-        it('should use default push value when option has no value property', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 8, saveBonus: 2 }),
-            });
+        it('uses default push value when option has no value property', async () => {
+            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
 
             const combatContext = {
                 creatures: [
@@ -606,11 +561,8 @@ describe('telekineticThrustHandler', () => {
             }));
         });
 
-        it('should handle addEntry rejection in applyThrustEffect', async () => {
-            savePrompt.createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 8, saveBonus: 2 }),
-            });
+        it('handles addEntry rejection in applyThrustEffect', async () => {
+            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
 
             const combatContext = {
                 creatures: [
@@ -632,7 +584,23 @@ describe('telekineticThrustHandler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Failure');
         });
+
+        it('rejects when save listener promise rejects', async () => {
+            savePrompt.createSaveListener.mockReturnValue({
+                promptId: 'test-id',
+                promise: Promise.reject(new Error('save failed')),
+            });
+
+            await expect(
+                applyTelekineticThrust(
+                    makeActionWithOptions(),
+                    makePlayerStats(),
+                    'test-campaign',
+                    'Goblin',
+                    13,
+                    'STR'
+                )
+            ).rejects.toThrow('save failed');
+        });
     });
 });
-
-// end of file

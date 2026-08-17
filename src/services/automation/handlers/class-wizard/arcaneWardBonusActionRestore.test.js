@@ -1,4 +1,3 @@
-
 import {
     onArcaneWardBonusActionRestore,
 } from './arcaneWardHandler.js';
@@ -7,6 +6,10 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
     setRuntimeValue: vi.fn(),
+}));
+
+vi.mock('../../../ui/logService.js', () => ({
+    addEntry: vi.fn().mockResolvedValue(undefined),
 }));
 
 const campaignName = 'test-campaign';
@@ -46,6 +49,7 @@ describe('onArcaneWardBonusActionRestore', () => {
             campaignName,
         );
 
+        expect(result.type).toBe('popup');
         expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 9, campaignName);
         expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'spell_slots_level_2', 1, campaignName);
         expect(result.payload.description).toContain('restored 4 HP');
@@ -63,14 +67,17 @@ describe('onArcaneWardBonusActionRestore', () => {
             return undefined;
         });
 
-        await onArcaneWardBonusActionRestore(
+        const result = await onArcaneWardBonusActionRestore(
             { name: 'Arcane Ward', automation: { type: 'arcane_ward_bonus_action' } },
             makeWizardStats('TestWizard', 5, 3),
             campaignName,
         );
 
+        expect(result.type).toBe('popup');
         expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 7, campaignName);
         expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'spell_slots_level_1', 2, campaignName);
+        expect(result.payload.description).toContain('restored 2 HP');
+        expect(result.payload.description).toContain('level 1');
     });
 
     it('returns info popup when no spell slots are available', async () => {
@@ -120,12 +127,74 @@ describe('onArcaneWardBonusActionRestore', () => {
             return undefined;
         });
 
-        await onArcaneWardBonusActionRestore(
+        const result = await onArcaneWardBonusActionRestore(
             { name: 'Arcane Ward', automation: { type: 'arcane_ward_bonus_action' } },
             makeWizardStats('TestWizard', 5, 3),
             campaignName,
         );
 
+        expect(result.type).toBe('popup');
         expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 13, campaignName);
+        expect(result.payload.description).toContain('13/13');
+    });
+
+    it('defaults ward HP to 0 when not set', async () => {
+        setWardMocks((player, key) => {
+            if (key === 'arcaneWardActive') return true;
+            if (key === 'arcaneWardHp') return undefined;
+            if (key === 'arcaneWardMax') return 13;
+            if (key === 'spell_slots_level_1') return 3;
+            return undefined;
+        });
+
+        const result = await onArcaneWardBonusActionRestore(
+            { name: 'Arcane Ward', automation: { type: 'arcane_ward_bonus_action' } },
+            makeWizardStats('TestWizard', 5, 3),
+            campaignName,
+        );
+
+        expect(result.type).toBe('popup');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 2, campaignName);
+        expect(result.payload.description).toContain('0 → 2');
+    });
+
+    it('defaults ward max to 0 when not set, capping at 0', async () => {
+        setWardMocks((player, key) => {
+            if (key === 'arcaneWardActive') return true;
+            if (key === 'arcaneWardHp') return 5;
+            if (key === 'arcaneWardMax') return undefined;
+            if (key === 'spell_slots_level_1') return 3;
+            return undefined;
+        });
+
+        const result = await onArcaneWardBonusActionRestore(
+            { name: 'Arcane Ward', automation: { type: 'arcane_ward_bonus_action' } },
+            makeWizardStats('TestWizard', 5, 3),
+            campaignName,
+        );
+
+        expect(result.type).toBe('popup');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 0, campaignName);
+        expect(result.payload.description).toContain('5 → 0');
+    });
+
+    it('restores ward when active with 0 current HP', async () => {
+        setWardMocks((player, key) => {
+            if (key === 'arcaneWardActive') return true;
+            if (key === 'arcaneWardHp') return 0;
+            if (key === 'arcaneWardMax') return 13;
+            if (key === 'spell_slots_level_1') return 3;
+            return undefined;
+        });
+
+        const result = await onArcaneWardBonusActionRestore(
+            { name: 'Arcane Ward', automation: { type: 'arcane_ward_bonus_action' } },
+            makeWizardStats('TestWizard', 5, 3),
+            campaignName,
+        );
+
+        expect(result.type).toBe('popup');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 2, campaignName);
+        expect(result.payload.description).toContain('0 → 2');
     });
 });

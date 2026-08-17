@@ -1,38 +1,58 @@
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { handle } from './contactPatronHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
-    setRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(async () => {}),
 }));
 
-const makeAction = (auto = {}) => ({
-    name: 'Contact Patron',
-    automation: { type: 'contact_patron', uses: 1, ...auto },
-});
+const campaignName = 'campaign';
 
-const makePlayerStats = (overrides = {}) => ({
-    name: 'TestWarlock',
-    ...overrides,
+function makeAction(overrides = {}) {
+    return {
+        name: 'Contact Patron',
+        automation: { type: 'contact_patron', ...overrides.automation },
+        ...overrides,
+    };
+}
+
+function makePlayerStats(overrides = {}) {
+    return {
+        name: 'TestWarlock',
+        ...overrides,
+    };
+}
+
+beforeEach(() => {
+    vi.clearAllMocks();
 });
 
 describe('contactPatronHandler', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
     describe('zero remaining', () => {
         it('should return info popup when stored count is 0', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(0);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.name).toBe('Contact Patron');
             expect(result.payload.description).toContain('No free casts remaining');
             expect(result.payload.description).toContain('Long Rest');
-            expect(result.payload.automation).toEqual({ type: 'contact_patron', uses: 1 });
+            expect(result.payload.automation).toEqual({ type: 'contact_patron' });
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('should return info popup when stored count is negative', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(-3);
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('No free casts remaining');
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
         });
     });
@@ -41,7 +61,7 @@ describe('contactPatronHandler', () => {
         it('should decrement from 1 to 0 and return success popup', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(1);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
@@ -49,58 +69,54 @@ describe('contactPatronHandler', () => {
             expect(result.payload.description).toContain('Contact Other Plane');
             expect(result.payload.description).toContain('automatically succeed');
             expect(result.payload.description).toContain('0 remaining');
-            expect(result.payload.automation).toEqual({ type: 'contact_patron', uses: 1 });
+            expect(result.payload.automation).toEqual({ type: 'contact_patron' });
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'TestWarlock',
                 '_Contact_Patron_freeCastCount',
                 0,
-                'campaign'
+                campaignName
             );
         });
 
         it('should use automation.uses as the max and decrement from there', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(5);
 
-            const result = await handle(makeAction({ uses: 5 }), makePlayerStats(), 'campaign');
+            const result = await handle(makeAction({ automation: { uses: 5 } }), makePlayerStats(), campaignName);
 
             expect(result.payload.description).toContain('4 remaining');
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'TestWarlock',
                 '_Contact_Patron_freeCastCount',
                 4,
-                'campaign'
+                campaignName
             );
         });
 
         it('should default to usesMax when no stored runtime value exists', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(null);
 
-            const result = await handle(makeAction({ uses: 3 }), makePlayerStats(), 'campaign');
+            const result = await handle(makeAction({ automation: { uses: 3 } }), makePlayerStats(), campaignName);
 
             expect(result.payload.description).toContain('2 remaining');
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'TestWarlock',
                 '_Contact_Patron_freeCastCount',
                 2,
-                'campaign'
+                campaignName
             );
         });
 
         it('should default uses to 1 when automation.uses is missing', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(null);
 
-            const action = {
-                name: 'Contact Patron',
-                automation: { type: 'contact_patron' },
-            };
-            const result = await handle(action, makePlayerStats(), 'campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(result.payload.description).toContain('0 remaining');
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'TestWarlock',
                 '_Contact_Patron_freeCastCount',
                 0,
-                'campaign'
+                campaignName
             );
         });
     });
@@ -111,10 +127,10 @@ describe('contactPatronHandler', () => {
 
             const action = {
                 name: 'My Patron Contact',
-                automation: { type: 'contact_patron', uses: 1 },
+                automation: { type: 'contact_patron' },
             };
 
-            const result = await handle(action, makePlayerStats(), 'campaign');
+            const result = await handle(action, makePlayerStats(), campaignName);
 
             expect(result.payload.name).toBe('My Patron Contact');
             expect(result.payload.description).toContain('0 remaining');
@@ -122,7 +138,7 @@ describe('contactPatronHandler', () => {
                 'TestWarlock',
                 '_My_Patron_Contact_freeCastCount',
                 0,
-                'campaign'
+                campaignName
             );
         });
 
@@ -131,16 +147,54 @@ describe('contactPatronHandler', () => {
 
             const action = {
                 name: 'Contact   Patron   Twice',
-                automation: { type: 'contact_patron', uses: 1 },
+                automation: { type: 'contact_patron' },
             };
 
-            await handle(action, makePlayerStats(), 'campaign');
+            await handle(action, makePlayerStats(), campaignName);
 
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'TestWarlock',
                 '_Contact_Patron_Twice_freeCastCount',
                 0,
-                'campaign'
+                campaignName
+            );
+        });
+
+        it('should use default name when action.name is missing', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+
+            const action = {
+                automation: { type: 'contact_patron' },
+            };
+
+            const result = await handle(action, makePlayerStats(), campaignName);
+
+            expect(result.payload.name).toBe('Contact Patron');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'TestWarlock',
+                '_Contact_Patron_freeCastCount',
+                0,
+                campaignName
+            );
+        });
+    });
+
+    describe('playerStats.name usage', () => {
+        it('should use playerStats.name as the character key for runtime operations', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+
+            const result = await handle(
+                makeAction(),
+                makePlayerStats({ name: 'CustomWarlock' }),
+                campaignName
+            );
+
+            expect(result.payload.name).toBe('Contact Patron');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'CustomWarlock',
+                '_Contact_Patron_freeCastCount',
+                0,
+                campaignName
             );
         });
     });

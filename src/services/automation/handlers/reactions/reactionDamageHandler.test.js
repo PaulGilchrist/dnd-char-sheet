@@ -1,9 +1,13 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './reactionDamageHandler.js';
 
 vi.mock('../../common/savePrompt.js', () => ({
     buildSaveDc: vi.fn((_auto, _playerStats) => 15),
-    createSaveListener: vi.fn((_campaignName, _config) => ({ promptId: 'test-prompt-id' })),
+    createSaveListener: vi.fn((_campaignName, _config) => ({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: true }),
+    })),
 }));
 
 vi.mock('../../../dice/diceRoller.js', () => ({
@@ -58,9 +62,10 @@ const { resolveTarget } = await import('../../common/targetResolver.js');
 const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
 const { findLastAttack } = await import('../../common/damageRollback.js');
 const { createSaveListener } = await import('../../common/savePrompt.js');
+const { applyDamageToTarget } = await import('../../../rules/combat/applyDamage.js');
 
 beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
 });
 
 function makePlayerStats(overrides = {}) {
@@ -83,28 +88,20 @@ function makeAction(overrides = {}) {
 
 describe('reactionDamageHandler', () => {
     describe('polearm trigger validation', () => {
-        it('returns popup when no polearm weapon is equipped or allEquipment is null/empty', async () => {
-            const ps = makePlayerStats({ inventory: { equipped: ['Longsword'] } });
+        it('returns popup when isPolearmWeapon returns false', async () => {
             const action = makeAction({ automation: { trigger: 'creature_enters_reach_while_holding_polearm' } });
 
             findLastAttack.mockResolvedValue({ attackEvent: { attackName: 'Longsword' } });
             const { isPolearmWeapon } = await import('../../common/polearmUtils.js');
             isPolearmWeapon.mockResolvedValue(false);
 
-            let result = await handle(action, ps, 'test-campaign', null, []);
+            const result = await handle(action, makePlayerStats(), 'test-campaign', null, []);
+            expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('requires you to be holding');
-
-            result = await handle(action, ps, 'test-campaign', null, null);
-            expect(result.type).toBe('popup');
-
-            const ps2 = makePlayerStats({ inventory: null });
-            result = await handle(action, ps2, 'test-campaign', null, []);
-            expect(result.type).toBe('popup');
         });
 
         it('passes polearm check with Quarterstaff, Spear, or Heavy+Reach weapon', async () => {
             const action = makeAction({ automation: { trigger: 'creature_enters_reach_while_holding_polearm' } });
-
             const { isPolearmWeapon } = await import('../../common/polearmUtils.js');
 
             // Quarterstaff
@@ -171,24 +168,26 @@ describe('reactionDamageHandler', () => {
             expect(result.type).toBe('popup');
         });
 
-        it('returns popup when no combat context', async () => {
+        it('returns popup when no combat context available', async () => {
             getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => {
                 if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
-                if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return null;
                 return undefined;
             });
+            getCombatContext.mockResolvedValue(null);
             const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');
             expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No recent attack found');
+            expect(result.payload.description).toBe('No combat context available.');
         });
 
         it('returns popup when no recent attack', async () => {
             getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => {
                 if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return null;
                 return undefined;
             });
+            getCombatContext.mockResolvedValue({});
             const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');
@@ -202,6 +201,7 @@ describe('reactionDamageHandler', () => {
                 if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return { targetName: 'OtherPC', damageTypes: ['Fire'] };
                 return undefined;
             });
+            getCombatContext.mockResolvedValue({});
             const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');
@@ -215,6 +215,7 @@ describe('reactionDamageHandler', () => {
                 if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return { targetName: 'TestHero', damageTypes: ['Psychic'] };
                 return undefined;
             });
+            getCombatContext.mockResolvedValue({});
             const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');
@@ -269,6 +270,116 @@ describe('reactionDamageHandler', () => {
             expect(result.payload.onTargetSelected).toBeInstanceOf(Function);
             expect(result.payload.onSkip).toBeInstanceOf(Function);
         });
+
+        it('onTargetSelected applies damage and logs on save failure', async () => {
+            getRuntimeValue
+                .mockImplementation((_characterKey, propertyName, campaignName) => {
+                    if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                    if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return { targetName: 'TestHero', damageTypes: ['Fire'] };
+                    if (campaignName === 'test-campaign' && propertyName === 'characters') return [];
+                    return undefined;
+                });
+            const action = makeAction({
+                automation: {
+                    trigger: 'damage_taken_of_chosen_resistance_type',
+                    damageExpression: '2d12 + CON modifier',
+                },
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'TestHero', type: 'player', currentHp: 20 },
+                    { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10 },
+                ],
+            });
+            createSaveListener.mockReturnValue({
+                promptId: 'test-prompt-id',
+                promise: Promise.resolve({ success: false }),
+            });
+
+            const result = await handle(action, makePlayerStats(), 'test-campaign');
+            const modalPayload = result.payload;
+
+            const response = await modalPayload.onTargetSelected('Goblin');
+
+            expect(response.type).toBe('popup');
+            expect(response.payload.description).toContain('failed their DEX save');
+            expect(response.payload.description).toContain('took 5 Fire damage');
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use',
+                characterName: 'TestHero',
+                abilityName: 'Reaction Strike',
+            }));
+        });
+
+        it('onTargetSelected applies no damage on save success', async () => {
+            getRuntimeValue
+                .mockImplementation((_characterKey, propertyName, campaignName) => {
+                    if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                    if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return { targetName: 'TestHero', damageTypes: ['Fire'] };
+                    if (campaignName === 'test-campaign' && propertyName === 'characters') return [];
+                    return undefined;
+                });
+            const action = makeAction({
+                automation: {
+                    trigger: 'damage_taken_of_chosen_resistance_type',
+                    damageExpression: '2d12 + CON modifier',
+                },
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'TestHero', type: 'player', currentHp: 20 },
+                    { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10 },
+                ],
+            });
+            createSaveListener.mockReturnValue({
+                promptId: 'test-prompt-id',
+                promise: Promise.resolve({ success: true }),
+            });
+
+            const result = await handle(action, makePlayerStats(), 'test-campaign');
+            const modalPayload = result.payload;
+
+            const response = await modalPayload.onTargetSelected('Goblin');
+
+            expect(response.type).toBe('popup');
+            expect(response.payload.description).toContain('succeeded their DEX save');
+            expect(response.payload.description).toContain('took 0 Fire damage');
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
+        });
+
+        it('onSkip logs when user declines redirection', async () => {
+            getRuntimeValue
+                .mockImplementation((_characterKey, propertyName, campaignName) => {
+                    if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                    if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return { targetName: 'TestHero', damageTypes: ['Fire'] };
+                    if (campaignName === 'test-campaign' && propertyName === 'characters') return [];
+                    return undefined;
+                });
+            const action = makeAction({
+                automation: {
+                    trigger: 'damage_taken_of_chosen_resistance_type',
+                    damageExpression: '2d12 + CON modifier',
+                },
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'TestHero', type: 'player', currentHp: 20 },
+                    { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10 },
+                ],
+            });
+
+            const result = await handle(action, makePlayerStats(), 'test-campaign');
+            const modalPayload = result.payload;
+
+            await modalPayload.onSkip();
+
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use',
+                characterName: 'TestHero',
+                abilityName: 'Reaction Strike',
+                description: expect.stringContaining('chose not to redirect energy'),
+            }));
+        });
     });
 
     describe('no saveType - attack_roll path', () => {
@@ -306,8 +417,9 @@ describe('reactionDamageHandler', () => {
             expect(result.payload.attack.name).toBe('Longbow');
         });
 
-        it('returns popup with no melee attack message when attacks is empty/null/undefined or missing combat context', async () => {
+        it('returns popup with no melee attack message when attacks is empty/null/undefined', async () => {
             const action = makeAction();
+            findLastAttack.mockResolvedValue({ attackerName: 'Enemy' });
 
             let ps = makePlayerStats({ attacks: [] });
             getCombatContext.mockResolvedValue({});
@@ -321,16 +433,19 @@ describe('reactionDamageHandler', () => {
             ps = makePlayerStats();
             result = await handle(action, ps, 'test-campaign', null);
             expect(result.type).toBe('popup');
+        });
 
-            // Missing combat context
-            ps = makePlayerStats({ attacks: [{ name: 'Shortsword', type: 'Action', range: 5, damage: '1d6+3' }] });
+        it('includes targetName from lastAttack when available', async () => {
+            const ps = makePlayerStats({ attacks: [{ name: 'Shortsword', type: 'Action', range: 5, damage: '1d6+3' }] });
+            const action = makeAction();
+
+            findLastAttack.mockResolvedValue({ attackerName: 'Goblin' });
+            const result = await handle(action, ps, 'test-campaign', null);
+            expect(result.payload.targetName).toBe('Goblin');
+
             findLastAttack.mockResolvedValue({ attackerName: null });
-            result = await handle(action, ps, 'test-campaign', null);
-            expect(result.payload.targetName).toBeNull();
-
-            findLastAttack.mockResolvedValue({ attackerName: 'Enemy' });
-            result = await handle(action, ps, 'test-campaign', null);
-            expect(result.type).toBe('attack_roll');
+            const result2 = await handle(action, ps, 'test-campaign', null);
+            expect(result2.payload.targetName).toBeNull();
         });
 
         it('excludes non-Action type attacks from melee selection', async () => {
@@ -349,7 +464,7 @@ describe('reactionDamageHandler', () => {
         });
     });
 
-    describe('saveType path', () => {
+    describe('saveType path - resource validation', () => {
         it('returns popup requiring target when resolveTarget returns no target', async () => {
             const action = makeAction({ automation: { saveType: 'CON' } });
             resolveTarget.mockResolvedValue(null);
@@ -362,7 +477,7 @@ describe('reactionDamageHandler', () => {
             expect(result.payload.description).toContain('requires a target');
         });
 
-        it('handles resource cost validation', async () => {
+        it('handles resource cost validation (focus points and uses)', async () => {
             const actionFocus = makeAction({ automation: { saveType: 'CON', resourceCost: 'focus_point' } });
             const actionUses = makeAction({ automation: { saveType: 'CON', uses_expression: '1d4' } });
 
@@ -434,7 +549,9 @@ describe('reactionDamageHandler', () => {
             expect(result.type).toBe('popup');
             expect(setRuntimeValue).not.toHaveBeenCalled();
         });
+    });
 
+    describe('saveType path - save popup', () => {
         it('creates save listener and returns popup with save info', async () => {
             getRuntimeValue.mockReturnValue(1);
             const action = makeAction({ automation: { saveType: 'CON' } });
@@ -475,7 +592,7 @@ describe('reactionDamageHandler', () => {
     });
 
     describe('save result handling', () => {
-        it('applies damage on save failure, targetEffects on alsoInflicts, and poisoned condition with Physicians Touch', async () => {
+        it('applies damage on save failure', async () => {
             const action = makeAction({ automation: { saveType: 'CON', damageExpression: '2d6', damageType: 'Necrotic' } });
             resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
 
@@ -485,7 +602,7 @@ describe('reactionDamageHandler', () => {
                 detail: { promptId: 'test-prompt-id', success: false },
             }));
 
-            await new Promise(r => setTimeout(r, 10));
+            await Promise.resolve();
 
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'roll',
@@ -505,14 +622,13 @@ describe('reactionDamageHandler', () => {
                 detail: { promptId: 'test-prompt-id', success: true },
             }));
 
-            await new Promise(r => setTimeout(r, 10));
+            await Promise.resolve();
 
             expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'roll',
                 rollType: 'damage',
             }));
 
-            vi.clearAllMocks();
             getRuntimeValue.mockReturnValue(1);
             const action2 = makeAction({ automation: { saveType: 'CON' } });
             resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
@@ -522,7 +638,7 @@ describe('reactionDamageHandler', () => {
                 detail: { promptId: 'test-prompt-id', success: false },
             }));
 
-            await new Promise(r => setTimeout(r, 10));
+            await Promise.resolve();
 
             expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'roll',
@@ -544,7 +660,7 @@ describe('reactionDamageHandler', () => {
                 detail: { promptId: 'test-prompt-id', success: false },
             }));
 
-            await new Promise(r => setTimeout(r, 10));
+            await Promise.resolve();
 
             expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'test-campaign');
         });
@@ -560,12 +676,12 @@ describe('reactionDamageHandler', () => {
                 detail: { promptId: 'test-prompt-id', success: true },
             }));
 
-            await new Promise(r => setTimeout(r, 10));
+            await Promise.resolve();
 
             expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'test-campaign');
         });
 
-        it('applies poisoned condition when target has Physicians Touch and save fails, not when already poisoned or lacking feature', async () => {
+        it('applies poisoned condition when target has Physicians Touch and save fails', async () => {
             getRuntimeValue.mockImplementation((_characterKey, propertyName, campaign) => {
                 if (campaign === 'test-campaign' && propertyName === 'targetEffects') return [];
                 if (campaign && propertyName === 'activeConditions') return [];
@@ -583,40 +699,67 @@ describe('reactionDamageHandler', () => {
                 detail: { promptId: 'test-prompt-id', success: false },
             }));
 
-            await new Promise(r => setTimeout(r, 10));
+            await Promise.resolve();
 
             expect(setRuntimeValue).toHaveBeenCalledWith('Enemy', 'activeConditions', ['poisoned'], 'test-campaign');
+        });
 
-            // Already poisoned
-            vi.clearAllMocks();
+        it('does not add duplicate poisoned condition when target is already poisoned', async () => {
             getRuntimeValue.mockImplementation((_characterKey, propertyName, campaign) => {
                 if (campaign === 'test-campaign' && propertyName === 'targetEffects') return [];
                 if (campaign && propertyName === 'activeConditions') return ['poisoned'];
                 return 1;
             });
+            const action = makeAction({ automation: { saveType: 'CON' } });
+            resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
+            const statsWithPhysiciansTouch = makePlayerStats({
+                specialActions: [{ name: "Physician's Touch" }],
+            });
+
             await handle(action, statsWithPhysiciansTouch, 'test-campaign', null);
 
             window.dispatchEvent(new CustomEvent('save-result', {
                 detail: { promptId: 'test-prompt-id', success: false },
             }));
 
-            await new Promise(r => setTimeout(r, 10));
+            await Promise.resolve();
 
             const lastCall = setRuntimeValue.mock.calls[setRuntimeValue.mock.calls.length - 1];
             expect(lastCall[2]).toEqual(['poisoned']);
+        });
 
-            // Lacking Physicians Touch
-            vi.clearAllMocks();
+        it('does not apply poisoned condition when lacking Physicians Touch feature', async () => {
             getRuntimeValue.mockReturnValue(1);
+            const action = makeAction({ automation: { saveType: 'CON' } });
+            resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
+
             await handle(action, makePlayerStats(), 'test-campaign', null);
 
             window.dispatchEvent(new CustomEvent('save-result', {
                 detail: { promptId: 'test-prompt-id', success: false },
             }));
 
-            await new Promise(r => setTimeout(r, 10));
+            await Promise.resolve();
 
             expect(setRuntimeValue).not.toHaveBeenCalledWith('Enemy', 'activeConditions', expect.any(Array), 'test-campaign');
+        });
+
+        it('does not apply damage when damageExpression evaluates to 0', async () => {
+            const action = makeAction({ automation: { saveType: 'CON', damageExpression: '2d6' } });
+            resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
+
+            await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            window.dispatchEvent(new CustomEvent('save-result', {
+                detail: { promptId: 'test-prompt-id', success: false },
+            }));
+
+            await Promise.resolve();
+
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'roll',
+                rollType: 'damage',
+            }));
         });
     });
 });

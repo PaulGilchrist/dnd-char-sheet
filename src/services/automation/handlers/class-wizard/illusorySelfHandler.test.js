@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { handle } from './illusorySelfHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as damageRollback from '../../common/damageRollback.js';
@@ -60,17 +61,17 @@ function makeAttackEvent(overrides = {}) {
     };
 }
 
-function mockUses(remaining) {
+function mockCurrentUses(current) {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'illusorySelfUses') return remaining;
+        if (key === 'illusorySelfUses') return current;
         return null;
     });
 }
 
-function mockUsesAndSlots(remaining, slotLevels = {}) {
+function mockCurrentUsesAndSlots(current, slotOverrides = {}) {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'illusorySelfUses') return remaining;
-        if (slotLevels[key] !== undefined) return slotLevels[key];
+        if (key === 'illusorySelfUses') return current;
+        if (key in slotOverrides) return slotOverrides[key];
         if (key.startsWith('spell_slots_level_')) return 0;
         return null;
     });
@@ -98,6 +99,18 @@ describe('illusorySelfHandler', () => {
             expect(result.payload.description).toContain('Reaction');
         });
 
+        it('returns info popup when attackEvent exists but hit is undefined', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent({ hit: undefined }),
+                attackerName: 'Goblin',
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('already missed');
+        });
+
         it('returns info popup when the attack already missed', async () => {
             damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
                 attackEvent: makeAttackEvent({ hit: false }),
@@ -118,7 +131,7 @@ describe('illusorySelfHandler', () => {
                 attackEvent: makeAttackEvent(),
                 attackerName: 'Goblin',
             });
-            mockUses(0);
+            mockCurrentUses(0);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
 
@@ -138,7 +151,7 @@ describe('illusorySelfHandler', () => {
                 attackEvent: makeAttackEvent(),
                 attackerName: 'Goblin',
             });
-            mockUses(1);
+            mockCurrentUses(1);
 
             const result = await handle(
                 makeAction({ automation: { type: 'illusory_self', trigger: 'attack_hit', uses: 1, recharge: 'short_or_long_rest' } }),
@@ -151,6 +164,24 @@ describe('illusorySelfHandler', () => {
             expect(result.payload.description).toContain('no uses remaining');
             expect(result.payload.description).toContain('Short or Long Rest');
         });
+
+        it('uses default maxUses of 1 when automation.uses is undefined', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent(),
+                attackerName: 'Goblin',
+            });
+            mockCurrentUses(1);
+
+            const result = await handle(
+                makeAction({ automation: { type: 'illusory_self', trigger: 'attack_hit' } }),
+                makePlayerStats(),
+                campaignName,
+                'test-map',
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('no uses remaining');
+        });
     });
 
     describe('spell slot restore', () => {
@@ -159,14 +190,29 @@ describe('illusorySelfHandler', () => {
                 attackEvent: makeAttackEvent(),
                 attackerName: 'Goblin',
             });
-            mockUsesAndSlots(1, { spell_slots_level_2: 4 });
+            mockCurrentUsesAndSlots(1, { spell_slots_level_2: 4 });
 
             await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
 
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                1,
                 playerName,
                 'spell_slots_level_2',
                 3,
+                campaignName,
+            );
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
+                playerName,
+                'illusorySelfUses',
+                0,
+                campaignName,
+            );
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                3,
+                playerName,
+                'illusorySelfUses',
+                1,
                 campaignName,
             );
             expect(addEntry).toHaveBeenCalledWith(
@@ -184,7 +230,7 @@ describe('illusorySelfHandler', () => {
                 attackEvent: makeAttackEvent(),
                 attackerName: 'Goblin',
             });
-            mockUsesAndSlots(1, { spell_slots_level_2: 0, spell_slots_level_3: 3 });
+            mockCurrentUsesAndSlots(1, { spell_slots_level_2: 0, spell_slots_level_3: 3 });
 
             await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
 
@@ -207,9 +253,67 @@ describe('illusorySelfHandler', () => {
                 attackEvent: makeAttackEvent(),
                 attackerName: 'Goblin',
             });
-            mockUsesAndSlots(1);
+            mockCurrentUsesAndSlots(1);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('No spell slots available');
+        });
+
+        it('respects custom spellSlotRestore.minLevel', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent(),
+                attackerName: 'Goblin',
+            });
+            mockCurrentUsesAndSlots(1, { spell_slots_level_3: 2, spell_slots_level_4: 1 });
+
+            await handle(
+                makeAction({ automation: { type: 'illusory_self', trigger: 'attack_hit', uses: 1, recharge: 'short_or_long_rest', spellSlotRestore: { minLevel: 3 } } }),
+                makePlayerStats(),
+                campaignName,
+                'test-map',
+            );
+
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                playerName,
+                'spell_slots_level_3',
+                1,
+                campaignName,
+            );
+        });
+
+        it('returns no spell slots available when minLevel exceeds highest available slot', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent(),
+                attackerName: 'Goblin',
+            });
+            mockCurrentUsesAndSlots(1, { spell_slots_level_2: 4 });
+
+            const result = await handle(
+                makeAction({ automation: { type: 'illusory_self', trigger: 'attack_hit', uses: 1, recharge: 'short_or_long_rest', spellSlotRestore: { minLevel: 4 } } }),
+                makePlayerStats(),
+                campaignName,
+                'test-map',
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('No spell slots available');
+        });
+
+        it('handles player with no spellAbilities property', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent(),
+                attackerName: 'Goblin',
+            });
+            mockCurrentUsesAndSlots(1);
+
+            const result = await handle(
+                makeAction(),
+                { name: playerName, level: 10, spellAbilities: undefined },
+                campaignName,
+                'test-map',
+            );
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('No spell slots available');
@@ -223,7 +327,7 @@ describe('illusorySelfHandler', () => {
                 attackerName: 'Dragon',
             });
             damageRollback.rollbackDamage.mockResolvedValue(12);
-            mockUses(0);
+            mockCurrentUses(0);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
 
@@ -237,12 +341,32 @@ describe('illusorySelfHandler', () => {
                 attackerName: 'Goblin',
             });
             damageRollback.rollbackDamage.mockResolvedValue(0);
-            mockUses(0);
+            mockCurrentUses(0);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
 
             expect(result.payload.description).not.toContain('Damage Negated');
             expect(result.payload.description).not.toContain('HP restored');
+        });
+
+        it('calls addEntry even when no damage is rolled back', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent(),
+                attackerName: 'Goblin',
+            });
+            damageRollback.rollbackDamage.mockResolvedValue(0);
+            mockCurrentUses(0);
+
+            await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
+
+            expect(addEntry).toHaveBeenCalledWith(
+                campaignName,
+                expect.objectContaining({
+                    type: 'ability_use',
+                    abilityName: 'Illusory Self',
+                    description: expect.stringContaining("Goblin's attack misses"),
+                }),
+            );
         });
     });
 
@@ -252,7 +376,7 @@ describe('illusorySelfHandler', () => {
                 attackEvent: makeAttackEvent(),
                 attackerName: 'Dragon',
             });
-            mockUses(0);
+            mockCurrentUses(0);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
 
@@ -265,7 +389,19 @@ describe('illusorySelfHandler', () => {
                 attackEvent: makeAttackEvent(),
                 attackerName: null,
             });
-            mockUses(0);
+            mockCurrentUses(0);
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
+
+            expect(result.payload.description).toContain('Unknown creature');
+        });
+
+        it('uses "Unknown creature" when attacker name is undefined', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent(),
+                attackerName: undefined,
+            });
+            mockCurrentUses(0);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
 
@@ -279,11 +415,28 @@ describe('illusorySelfHandler', () => {
                 attackEvent: makeAttackEvent(),
                 attackerName: 'Goblin',
             });
-            mockUses(0);
+            mockCurrentUses(0);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
 
             expect(result.payload.description).toContain('0 / 1');
+        });
+
+        it('shows correct remaining uses with maxUses greater than 1', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent(),
+                attackerName: 'Goblin',
+            });
+            mockCurrentUses(1);
+
+            const result = await handle(
+                makeAction({ automation: { type: 'illusory_self', trigger: 'attack_hit', uses: 3, recharge: 'short_or_long_rest', spellSlotRestore: { minLevel: 2 } } }),
+                makePlayerStats(),
+                campaignName,
+                'test-map',
+            );
+
+            expect(result.payload.description).toContain('1 / 3');
         });
     });
 
@@ -293,7 +446,7 @@ describe('illusorySelfHandler', () => {
                 attackEvent: makeAttackEvent(),
                 attackerName: 'Goblin',
             });
-            mockUsesAndSlots(1, { spell_slots_level_2: 4 });
+            mockCurrentUsesAndSlots(1, { spell_slots_level_2: 4 });
             addEntry.mockRejectedValue(new Error('DB error'));
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
@@ -320,7 +473,7 @@ describe('illusorySelfHandler', () => {
                 attackerName: 'Goblin',
             });
             damageRollback.rollbackDamage.mockResolvedValue(0);
-            mockUses(0);
+            mockCurrentUses(0);
             addEntry.mockRejectedValue(new Error('DB error'));
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');

@@ -1,11 +1,7 @@
+// @improved-by-ai
 // ── automationInfoBuilder.fixtures.test.js ───────────────────────────
 // Tests for automationInfoBuilder.fixtures.js — the utility functions
 // that support the handler tests.
-//
-// What we test:
-//   • normalizeAbilityName canonicalizes ability names correctly
-//   • createMockAutomationExpressions returns mock functions with correct behavior
-//   • BASE_STATS and makeFeature are correct shape
 
 import { describe, it, expect } from 'vitest'
 import {
@@ -19,72 +15,54 @@ import {
 // ── normalizeAbilityName ─────────────────────────────────────────────
 
 describe('normalizeAbilityName', () => {
-    it('returns null for null input', () => {
-        expect(normalizeAbilityName(null)).toBeNull()
+    const abilityPairs = [
+        ['str', 'Strength'],
+        ['STR', 'Strength'],
+        ['Str', 'Strength'],
+        ['dex', 'Dexterity'],
+        ['DEX', 'Dexterity'],
+        ['DeX', 'Dexterity'],
+        ['con', 'Constitution'],
+        ['CON', 'Constitution'],
+        ['CoN', 'Constitution'],
+        ['int', 'Intelligence'],
+        ['INT', 'Intelligence'],
+        ['wis', 'Wisdom'],
+        ['WIS', 'Wisdom'],
+        ['cha', 'Charisma'],
+        ['CHA', 'Charisma'],
+        ['strength', 'Strength'],
+        ['STRENGTH', 'Strength'],
+        ['dexterity', 'Dexterity'],
+        ['DEXTERITY', 'Dexterity'],
+        ['constitution', 'Constitution'],
+        ['CONSTITUTION', 'Constitution'],
+        ['intelligence', 'Intelligence'],
+        ['INTELLIGENCE', 'Intelligence'],
+        ['wisdom', 'Wisdom'],
+        ['WISDOM', 'Wisdom'],
+        ['charisma', 'Charisma'],
+        ['CHARISMA', 'Charisma'],
+    ]
+
+    it.each(abilityPairs)('normalizes %p to %p', (input, expected) => {
+        expect(normalizeAbilityName(input)).toBe(expected)
     })
 
-    it('returns null for undefined input', () => {
-        expect(normalizeAbilityName(undefined)).toBeNull()
-    })
-
-    it('returns null for empty string', () => {
-        expect(normalizeAbilityName('')).toBeNull()
-    })
-
-    it('normalizes lowercase short names', () => {
-        expect(normalizeAbilityName('str')).toBe('Strength')
-        expect(normalizeAbilityName('dex')).toBe('Dexterity')
-        expect(normalizeAbilityName('con')).toBe('Constitution')
-        expect(normalizeAbilityName('int')).toBe('Intelligence')
-        expect(normalizeAbilityName('wis')).toBe('Wisdom')
-        expect(normalizeAbilityName('cha')).toBe('Charisma')
-    })
-
-    it('normalizes uppercase short names', () => {
-        expect(normalizeAbilityName('STR')).toBe('Strength')
-        expect(normalizeAbilityName('DEX')).toBe('Dexterity')
-        expect(normalizeAbilityName('CON')).toBe('Constitution')
-        expect(normalizeAbilityName('INT')).toBe('Intelligence')
-        expect(normalizeAbilityName('WIS')).toBe('Wisdom')
-        expect(normalizeAbilityName('CHA')).toBe('Charisma')
-    })
-
-    it('normalizes mixed-case short names', () => {
-        expect(normalizeAbilityName('Str')).toBe('Strength')
-        expect(normalizeAbilityName('DeX')).toBe('Dexterity')
-        expect(normalizeAbilityName('CoN')).toBe('Constitution')
-    })
-
-    it('normalizes full ability names (lowercase)', () => {
-        expect(normalizeAbilityName('strength')).toBe('Strength')
-        expect(normalizeAbilityName('dexterity')).toBe('Dexterity')
-        expect(normalizeAbilityName('constitution')).toBe('Constitution')
-        expect(normalizeAbilityName('intelligence')).toBe('Intelligence')
-        expect(normalizeAbilityName('wisdom')).toBe('Wisdom')
-        expect(normalizeAbilityName('charisma')).toBe('Charisma')
-    })
-
-    it('normalizes full ability names (uppercase)', () => {
-        expect(normalizeAbilityName('STRENGTH')).toBe('Strength')
-        expect(normalizeAbilityName('DEXTERITY')).toBe('Dexterity')
-        expect(normalizeAbilityName('CONSTITUTION')).toBe('Constitution')
-        expect(normalizeAbilityName('INTELLIGENCE')).toBe('Intelligence')
-        expect(normalizeAbilityName('WISDOM')).toBe('Wisdom')
-        expect(normalizeAbilityName('CHARISMA')).toBe('Charisma')
-    })
-
-    it('returns null for names with extra words after the ability name', () => {
-        // normalizeAbilityName strips spaces and does an exact match,
-        // so "strength ability" becomes "strengthability" which does not match
-        expect(normalizeAbilityName('strength ability')).toBeNull()
-        expect(normalizeAbilityName('dexterity saving throw')).toBeNull()
-        expect(normalizeAbilityName('charisma check')).toBeNull()
+    it.each([null, undefined, ''])('returns null for falsy input: %p', (input) => {
+        expect(normalizeAbilityName(input)).toBeNull()
     })
 
     it('returns null for unknown ability names', () => {
         expect(normalizeAbilityName('foo')).toBeNull()
         expect(normalizeAbilityName('bar')).toBeNull()
         expect(normalizeAbilityName('123')).toBeNull()
+    })
+
+    it('returns null for names with extra words that produce non-matching keys', () => {
+        expect(normalizeAbilityName('strength ability')).toBeNull()
+        expect(normalizeAbilityName('dexterity saving throw')).toBeNull()
+        expect(normalizeAbilityName('charisma check')).toBeNull()
     })
 })
 
@@ -95,15 +73,6 @@ describe('createMockAutomationExpressions', () => {
 
     beforeEach(() => {
         mockExprs = createMockAutomationExpressions()
-    })
-
-    it('returns an object with all expected methods', () => {
-        expect(mockExprs.evaluateAutoExpression).toBeDefined()
-        expect(mockExprs.resolveHealingPoolExpression).toBeDefined()
-        expect(mockExprs.getSaveDc).toBeDefined()
-        expect(mockExprs.resolveUses).toBeDefined()
-        expect(mockExprs.resolveDiceExpression).toBeDefined()
-        expect(mockExprs.resolveScaling).toBeDefined()
     })
 
     describe('evaluateAutoExpression', () => {
@@ -120,13 +89,14 @@ describe('createMockAutomationExpressions', () => {
     })
 
     describe('resolveHealingPoolExpression', () => {
-        it('returns base when no scaling', () => {
+        it('returns base when no scaling provided', () => {
             expect(mockExprs.resolveHealingPoolExpression('2d8', null, BASE_STATS)).toBe('2d8')
             expect(mockExprs.resolveHealingPoolExpression('2d8', undefined, BASE_STATS)).toBe('2d8')
         })
 
-        it('returns base when no stats', () => {
+        it('returns base when stats is null/undefined', () => {
             expect(mockExprs.resolveHealingPoolExpression('2d8', { '5': '3d8' }, null)).toBe('2d8')
+            expect(mockExprs.resolveHealingPoolExpression('2d8', { '5': '3d8' }, undefined)).toBe('2d8')
         })
 
         it('resolves scaling by level', () => {
@@ -154,42 +124,40 @@ describe('createMockAutomationExpressions', () => {
         })
 
         it('normalizes ability name internally', () => {
-            // lowercase short form
             expect(mockExprs.getSaveDc(BASE_STATS, 'wis', 3)).toBe(16)
-            // uppercase short form
             expect(mockExprs.getSaveDc(BASE_STATS, 'WIS', 3)).toBe(16)
-            // full name
             expect(mockExprs.getSaveDc(BASE_STATS, 'wisdom', 3)).toBe(16)
         })
 
-        it('defaults to 0 when ability bonus not found', () => {
+        it('uses 0 ability bonus when ability is not found', () => {
             expect(mockExprs.getSaveDc(BASE_STATS, 'Unknown', 3)).toBe(11)
         })
 
-        it('defaults to 0 proficiency when not provided', () => {
+        it('defaults proficiency to 0 when not provided', () => {
             expect(mockExprs.getSaveDc(BASE_STATS, 'WIS')).toBe(13)
         })
 
-        it('returns 0 when stats has no abilities', () => {
+        it('handles stats with missing abilities gracefully', () => {
             expect(mockExprs.getSaveDc({ abilities: null }, 'WIS', 3)).toBe(11)
         })
     })
 
     describe('resolveUses', () => {
-        it('returns number directly', () => {
+        it('returns a number directly', () => {
             expect(mockExprs.resolveUses(BASE_STATS, 5)).toBe(5)
             expect(mockExprs.resolveUses(BASE_STATS, 0)).toBe(0)
         })
 
-        it('returns proficiency for "proficiency_bonus"', () => {
+        it('returns proficiency for "proficiency_bonus" string', () => {
             expect(mockExprs.resolveUses(BASE_STATS, 'proficiency_bonus')).toBe(3)
         })
 
-        it('returns level for unknown string', () => {
+        it('returns stats level for any other string value', () => {
             expect(mockExprs.resolveUses(BASE_STATS, 'level')).toBe(5)
+            expect(mockExprs.resolveUses(BASE_STATS, 'anything')).toBe(5)
         })
 
-        it('returns level for null/undefined', () => {
+        it('returns stats level for null/undefined', () => {
             expect(mockExprs.resolveUses(BASE_STATS, null)).toBe(5)
             expect(mockExprs.resolveUses(BASE_STATS, undefined)).toBe(5)
         })
@@ -226,13 +194,17 @@ describe('createMockAutomationExpressions', () => {
             ]
             expect(mockExprs.resolveScaling({ ...BASE_STATS, level: 3 }, scaling)).toBeNull()
         })
+
+        it('returns null for empty scaling array', () => {
+            expect(mockExprs.resolveScaling(BASE_STATS, [])).toBeNull()
+        })
     })
 })
 
 // ── BASE_STATS ───────────────────────────────────────────────────────
 
 describe('BASE_STATS', () => {
-    it('has all six ability scores with correct bonuses', () => {
+    it('has correct level, proficiency, and six ability scores', () => {
         expect(BASE_STATS.level).toBe(5)
         expect(BASE_STATS.proficiency).toBe(3)
         expect(BASE_STATS.abilities).toHaveLength(6)

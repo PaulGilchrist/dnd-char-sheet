@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './psionicStrikeHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -49,6 +50,7 @@ import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/d
 import { loadCombatSummary } from '../../../encounters/combatData.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
+import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
 
 const { getRuntimeValue, setRuntimeValue } = runtimeState;
 const { addEntry } = logService;
@@ -85,6 +87,25 @@ function makeRollResult(total, sides = 8) {
     return { total, rolls: [total], modifier: 0, formula: `1d${sides}` };
 }
 
+function mockSuccessfulRuntimeValues(overrides = {}) {
+    const {
+        psionicEnergy = 5,
+        psionicStrikeUsedThisTurn = null,
+        currentTurn = 'turn-1',
+        targetEffects = [],
+        ...otherKeys
+    } = overrides;
+
+    getRuntimeValue.mockImplementation((player, key, _campaign) => {
+        if (player === 'characters' && key === 'characters') return [];
+        if (key === 'psionicEnergy') return psionicEnergy;
+        if (key === 'psionicStrikeUsedThisTurn') return psionicStrikeUsedThisTurn;
+        if (key === 'currentTurn') return currentTurn;
+        if (key === 'targetEffects') return targetEffects;
+        return otherKeys[key] ?? null;
+    });
+}
+
 describe('psionicStrikeHandler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -92,6 +113,8 @@ describe('psionicStrikeHandler', () => {
         getTargetFromAttacker.mockReturnValue({ name: 'Target Goblin' });
         loadCombatSummary.mockResolvedValue({ creatures: [] });
         applyDamageToTarget.mockReturnValue(undefined);
+        rollExpression.mockReturnValue(makeRollResult(5));
+        setRuntimeValue.mockResolvedValue(undefined);
     });
 
     describe('resource validation', () => {
@@ -129,10 +152,9 @@ describe('psionicStrikeHandler', () => {
                 if (player === 'characters' && key === 'characters') return [];
                 if (key === 'psionicEnergy') return 3;
                 if (key === 'psionicStrikeUsedThisTurn') return null;
+                if (key === 'currentTurn') return 'turn-1';
                 return null;
             });
-            rollExpression.mockReturnValue(makeRollResult(4));
-            setRuntimeValue.mockResolvedValue(undefined);
 
             const result = await handle(
                 makeAction(),
@@ -150,10 +172,9 @@ describe('psionicStrikeHandler', () => {
                 if (player === 'characters' && key === 'characters') return [];
                 if (key === 'psionicEnergy') return 3;
                 if (key === 'psionicStrikeUsedThisTurn') return null;
+                if (key === 'currentTurn') return 'turn-1';
                 return null;
             });
-            rollExpression.mockReturnValue(makeRollResult(4));
-            setRuntimeValue.mockResolvedValue(undefined);
 
             const result = await handle(
                 makeAction(),
@@ -163,6 +184,33 @@ describe('psionicStrikeHandler', () => {
 
             expect(result.payload.description).toContain('Target Goblin');
             expect(result.payload.description).toContain('Psionic Energy: 2/6');
+        });
+
+        it('uses custom resource name from automation config', async () => {
+            const customAction = makeAction({
+                automation: { ...DEFAULT_ACTION.automation, resource: 'customResource' },
+            });
+            getRuntimeValue.mockImplementation((player, key, _campaign) => {
+                if (player === 'characters' && key === 'characters') return [];
+                if (key === 'customResource') return 2;
+                if (key === 'currentTurn') return 'turn-1';
+                return null;
+            });
+
+            const result = await handle(
+                customAction,
+                makePlayerStats(),
+                'test-campaign'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Target Goblin');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Test Fighter',
+                'customResource',
+                1,
+                'test-campaign'
+            );
         });
     });
 
@@ -194,8 +242,6 @@ describe('psionicStrikeHandler', () => {
                 if (key === 'psionicEnergy') return 5;
                 return null;
             });
-            rollExpression.mockReturnValue(makeRollResult(4));
-            setRuntimeValue.mockResolvedValue(undefined);
 
             const result = await handle(
                 makeAction({ automation: { oncePerTurn: false } }),
@@ -221,15 +267,8 @@ describe('psionicStrikeHandler', () => {
         });
 
         it('marks turn usage when oncePerTurn is true and not yet used', async () => {
-            getRuntimeValue.mockImplementation((player, key) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-3';
-                return null;
-            });
+            mockSuccessfulRuntimeValues({ psionicEnergy: 5, currentTurn: 'turn-3' });
             rollExpression.mockReturnValue(makeRollResult(6));
-            setRuntimeValue.mockResolvedValue(undefined);
 
             await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
@@ -255,8 +294,6 @@ describe('psionicStrikeHandler', () => {
                 if (key === 'currentTurn') return undefined;
                 return null;
             });
-            rollExpression.mockReturnValue(makeRollResult(6));
-            setRuntimeValue.mockResolvedValue(undefined);
 
             await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
@@ -267,19 +304,32 @@ describe('psionicStrikeHandler', () => {
                 'test-campaign'
             );
         });
+
+        it('allows use on a different turn', async () => {
+            getRuntimeValue.mockImplementation((player, key) => {
+                if (key === 'psionicEnergy') return 5;
+                if (key === 'psionicStrikeUsedThisTurn') return 'turn-1';
+                if (key === 'currentTurn') return 'turn-2';
+                return null;
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Target Goblin');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Test Fighter',
+                'psionicStrikeUsedThisTurn',
+                'turn-2',
+                'test-campaign'
+            );
+        });
     });
 
     describe('damage calculation', () => {
         it('rolls die and calculates damage with INT modifier', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
+            mockSuccessfulRuntimeValues();
             rollExpression.mockReturnValue(makeRollResult(5));
-            setRuntimeValue.mockResolvedValue(undefined);
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
@@ -295,15 +345,7 @@ describe('psionicStrikeHandler', () => {
         });
 
         it('uses INT modifier of 0 when Intelligence ability is missing', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
-            rollExpression.mockReturnValue(makeRollResult(5));
-            setRuntimeValue.mockResolvedValue(undefined);
+            mockSuccessfulRuntimeValues();
 
             const result = await handle(
                 makeAction(),
@@ -316,15 +358,7 @@ describe('psionicStrikeHandler', () => {
         });
 
         it('applies negative INT modifier', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
-            rollExpression.mockReturnValue(makeRollResult(5));
-            setRuntimeValue.mockResolvedValue(undefined);
+            mockSuccessfulRuntimeValues();
 
             const result = await handle(
                 makeAction(),
@@ -338,15 +372,8 @@ describe('psionicStrikeHandler', () => {
         });
 
         it('uses psionicDieSize as fallback when rollExpression returns null', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
+            mockSuccessfulRuntimeValues();
             rollExpression.mockReturnValue(null);
-            setRuntimeValue.mockResolvedValue(undefined);
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
@@ -355,19 +382,21 @@ describe('psionicStrikeHandler', () => {
         });
 
         it('uses psionicDieSize as fallback when dieRoll.total is falsy', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
+            mockSuccessfulRuntimeValues();
             rollExpression.mockReturnValue({ total: 0, rolls: [0] });
-            setRuntimeValue.mockResolvedValue(undefined);
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
             expect(result.payload.description).toContain('Target Goblin');
+            expect(result.payload.description).toContain('Rolled 8 for 8');
+        });
+
+        it('uses psionicDieSize as fallback when dieRoll.total is undefined', async () => {
+            mockSuccessfulRuntimeValues();
+            rollExpression.mockReturnValue({ rolls: [] });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
             expect(result.payload.description).toContain('Rolled 8 for 8');
         });
     });
@@ -376,15 +405,8 @@ describe('psionicStrikeHandler', () => {
         function testDieSize(level, expectedDie) {
             it(`uses 1d${expectedDie} for level ${level}`, async () => {
                 const playerStats = makePlayerStats({ level });
-                getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                    if (player === 'characters' && key === 'characters') return [];
-                    if (key === 'psionicEnergy') return 8;
-                    if (key === 'psionicStrikeUsedThisTurn') return null;
-                    if (key === 'currentTurn') return 'turn-1';
-                    return null;
-                });
+                mockSuccessfulRuntimeValues({ psionicEnergy: 8 });
                 rollExpression.mockReturnValue(makeRollResult(7, expectedDie));
-                setRuntimeValue.mockResolvedValue(undefined);
 
                 await handle(makeAction(), playerStats, 'test-campaign');
 
@@ -400,15 +422,7 @@ describe('psionicStrikeHandler', () => {
 
     describe('logging', () => {
         it('calls addEntry with ability_use log entry', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
-            rollExpression.mockReturnValue(makeRollResult(5));
-            setRuntimeValue.mockResolvedValue(undefined);
+            mockSuccessfulRuntimeValues();
 
             await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
@@ -421,15 +435,7 @@ describe('psionicStrikeHandler', () => {
         });
 
         it('calls addEntry with roll log entry', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
-            rollExpression.mockReturnValue(makeRollResult(5));
-            setRuntimeValue.mockResolvedValue(undefined);
+            mockSuccessfulRuntimeValues();
 
             await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
@@ -443,16 +449,46 @@ describe('psionicStrikeHandler', () => {
             }));
         });
 
-        it('handles addEntry failure gracefully', async () => {
+        it('calls addEntry exactly twice on success', async () => {
+            mockSuccessfulRuntimeValues();
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(addEntry).toHaveBeenCalledTimes(2);
+        });
+
+        it('calls addEntry three times when telekinetic_thrust is active', async () => {
             getRuntimeValue.mockImplementation((player, key, _campaign) => {
                 if (player === 'characters' && key === 'characters') return [];
                 if (key === 'psionicEnergy') return 5;
                 if (key === 'psionicStrikeUsedThisTurn') return null;
                 if (key === 'currentTurn') return 'turn-1';
+                if (key === 'targetEffects') return [];
                 return null;
             });
             rollExpression.mockReturnValue(makeRollResult(5));
-            setRuntimeValue.mockResolvedValue(undefined);
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Target Goblin', conditions: [] }],
+            });
+            buildSaveDc.mockReturnValue(14);
+            createSaveListener.mockReturnValue({
+                promptId: 'test-id',
+                promise: Promise.resolve({ success: true, total: 15 }),
+            });
+
+            const playerWithThrust = makePlayerStats({
+                automation: {
+                    reactions: [{ type: 'telekinetic_thrust', saveType: 'STR', saveDc: 'ability', saveAbility: 'INT', options: [{ name: 'Prone + Push 10ft', effect: 'prone_and_push', value: 10 }] }],
+                },
+            });
+
+            await handle(makeAction(), playerWithThrust, 'test-campaign');
+
+            expect(addEntry).toHaveBeenCalledTimes(3);
+        });
+
+        it('handles addEntry failure gracefully', async () => {
+            mockSuccessfulRuntimeValues();
             addEntry.mockRejectedValue(new Error('Network error'));
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
@@ -465,15 +501,7 @@ describe('psionicStrikeHandler', () => {
 
     describe('result structure', () => {
         it('returns popup with correct payload shape', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
-            rollExpression.mockReturnValue(makeRollResult(5));
-            setRuntimeValue.mockResolvedValue(undefined);
+            mockSuccessfulRuntimeValues();
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
@@ -535,6 +563,19 @@ describe('psionicStrikeHandler', () => {
             expect(rollExpression).not.toHaveBeenCalled();
             expect(addEntry).not.toHaveBeenCalled();
         });
+
+        it('returns error popup when target is an empty string', async () => {
+            getTargetFromAttacker.mockReturnValue({ name: '' });
+            getRuntimeValue.mockImplementation((player, key) => {
+                if (key === 'psionicEnergy') return 5;
+                return null;
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('No target available');
+        });
     });
 
     describe('telekinetic thrust integration', () => {
@@ -544,10 +585,10 @@ describe('psionicStrikeHandler', () => {
                 if (key === 'psionicEnergy') return 5;
                 if (key === 'psionicStrikeUsedThisTurn') return null;
                 if (key === 'currentTurn') return 'turn-1';
+                if (key === 'targetEffects') return [];
                 return null;
             });
             rollExpression.mockReturnValue(makeRollResult(5));
-            setRuntimeValue.mockResolvedValue(undefined);
             getCombatContext.mockResolvedValue({
                 creatures: [{ name: 'Target Goblin', conditions: [] }],
             });
@@ -565,15 +606,7 @@ describe('psionicStrikeHandler', () => {
         });
 
         it('does nothing when player lacks telekinetic_thrust automation', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
-            rollExpression.mockReturnValue(makeRollResult(5));
-            setRuntimeValue.mockResolvedValue(undefined);
+            mockSuccessfulRuntimeValues();
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
@@ -619,6 +652,14 @@ describe('psionicStrikeHandler', () => {
                     creatures: [{ name: 'Target Goblin', conditions: [] }],
                 })
                 .mockResolvedValueOnce(null);
+
+            const result = await handle(makeAction(), playerWithThrust, 'test-campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('failed');
+        });
+
+        it('skips prone condition when target is already prone', async () => {
             getRuntimeValue.mockImplementation((player, key, _campaign) => {
                 if (player === 'characters' && key === 'characters') return [];
                 if (key === 'psionicEnergy') return 5;
@@ -627,11 +668,52 @@ describe('psionicStrikeHandler', () => {
                 if (key === 'targetEffects') return [];
                 return null;
             });
+            rollExpression.mockReturnValue(makeRollResult(5));
+            getCombatContext
+                .mockResolvedValueOnce({
+                    creatures: [{ name: 'Target Goblin', conditions: [{ key: 'prone' }] }],
+                })
+                .mockResolvedValueOnce({
+                    creatures: [{ name: 'Target Goblin', conditions: [{ key: 'prone' }] }],
+                });
+            buildSaveDc.mockReturnValue(14);
+            createSaveListener.mockReturnValue({
+                promptId: 'test-id',
+                promise: Promise.resolve({ success: false, total: 10, roll: 6, saveBonus: 4 }),
+            });
 
-            const result = await handle(makeAction(), playerWithThrust, 'test-campaign');
+            await handle(makeAction(), playerWithThrust, 'test-campaign');
 
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('failed');
+            expect(addCondition).not.toHaveBeenCalled();
+        });
+
+        it('passes save listener correct campaign name and parameters', async () => {
+            setupWithThrust();
+
+            await handle(makeAction(), playerWithThrust, 'test-campaign');
+
+            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
+                targetName: 'Target Goblin',
+                saveType: 'STR',
+                saveDc: 14,
+            });
+        });
+
+        it('uses custom saveType from telekinetic_thrust config', async () => {
+            setupWithThrust();
+            const playerWithDexSave = makePlayerStats({
+                automation: {
+                    reactions: [{ type: 'telekinetic_thrust', saveType: 'DEX', saveDc: 'ability', saveAbility: 'INT', options: [{ name: 'Prone + Push 10ft', effect: 'prone_and_push', value: 10 }] }],
+                },
+            });
+
+            await handle(makeAction(), playerWithDexSave, 'test-campaign');
+
+            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
+                targetName: 'Target Goblin',
+                saveType: 'DEX',
+                saveDc: 14,
+            });
         });
     });
 });

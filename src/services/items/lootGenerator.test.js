@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 
 import {
@@ -56,6 +57,30 @@ describe('normalizeCurrency', () => {
     const result = normalizeCurrency(-5.25);
     expect(result).toEqual({ pp: -1, gp: -6, sp: -3, cp: -5 });
   });
+
+  it('propagates NaN input to all denominations', () => {
+    const result = normalizeCurrency(NaN);
+    expect(result.pp).toBeNaN();
+    expect(result.gp).toBeNaN();
+    expect(result.sp).toBeNaN();
+    expect(result.cp).toBeNaN();
+  });
+
+  it('produces Infinity for pp and NaN for gp/sp/cp with Infinity input', () => {
+    const result = normalizeCurrency(Infinity);
+    expect(result.pp).toBe(Infinity);
+    expect(result.gp).toBeNaN();
+    expect(result.sp).toBeNaN();
+    expect(result.cp).toBeNaN();
+  });
+
+  it('produces -Infinity for pp and NaN for gp/sp/cp with negative Infinity input', () => {
+    const result = normalizeCurrency(-Infinity);
+    expect(result.pp).toBe(-Infinity);
+    expect(result.gp).toBeNaN();
+    expect(result.sp).toBeNaN();
+    expect(result.cp).toBeNaN();
+  });
 });
 
 describe('formatCurrencyString', () => {
@@ -93,6 +118,21 @@ describe('formatCurrencyString', () => {
     const result = formatCurrencyString({ pp: 99, gp: 99, sp: 99, cp: 99 });
     expect(result).toBe('99 platinum pieces, 99 gold pieces, 99 silver coins, 99 copper coins');
   });
+
+  it('omits zero denominations in the middle of the currency object', () => {
+    const result = formatCurrencyString({ pp: 1, gp: 0, sp: 1, cp: 0 });
+    expect(result).toBe('1 platinum piece, 1 silver coin');
+  });
+
+  it('handles negative values by including them in the output', () => {
+    const result = formatCurrencyString({ pp: -1, gp: -2, sp: -3, cp: -4 });
+    expect(result).toBe('-1 platinum pieces, -2 gold pieces, -3 silver coins, -4 copper coins');
+  });
+
+  it('handles a mix of positive and negative values', () => {
+    const result = formatCurrencyString({ pp: 1, gp: -1, sp: 0, cp: 0 });
+    expect(result).toBe('1 platinum piece, -1 gold pieces');
+  });
 });
 
 describe('calculateEncounterXp', () => {
@@ -102,32 +142,22 @@ describe('calculateEncounterXp', () => {
     expect(calculateEncounterXp([])).toBe(0);
   });
 
-  it('returns 0 for number/object inputs (no .length property)', () => {
+  it('returns 0 for inputs without .length property (number, object)', () => {
     expect(calculateEncounterXp(42)).toBe(0);
     expect(calculateEncounterXp({ name: 'Goblin' })).toBe(0);
   });
 
-  it('throws for string input (has .length but no .reduce)', () => {
+  it('throws for string input (array-like but not an array)', () => {
     expect(() => calculateEncounterXp('goblins')).toThrow(TypeError);
   });
 
-  it('sums xp for a single monster without qty', () => {
-    const monsters = [{ name: 'Goblin', xp: 50 }];
-    expect(calculateEncounterXp(monsters)).toBe(50);
+  it('sums xp multiplied by qty for a single monster', () => {
+    const monsters = [{ name: 'Goblin', xp: 50, qty: 2 }];
+    expect(calculateEncounterXp(monsters)).toBe(100);
   });
 
   it('defaults missing qty to 1', () => {
     const monsters = [{ name: 'Goblin', xp: 50 }];
-    expect(calculateEncounterXp(monsters)).toBe(50);
-  });
-
-  it('multiplies xp by qty when present', () => {
-    const monsters = [{ name: 'Orc', xp: 200, qty: 3 }];
-    expect(calculateEncounterXp(monsters)).toBe(600);
-  });
-
-  it('treats qty of 0 as 1 (falsy default)', () => {
-    const monsters = [{ name: 'Gnome', xp: 50, qty: 0 }];
     expect(calculateEncounterXp(monsters)).toBe(50);
   });
 
@@ -136,9 +166,15 @@ describe('calculateEncounterXp', () => {
     expect(calculateEncounterXp(monsters)).toBe(0);
   });
 
-  it('defaults both xp and qty to 0', () => {
-    const monsters = [{ name: 'Empty' }];
-    expect(calculateEncounterXp(monsters)).toBe(0);
+  it('treats falsy qty (0, null, undefined) as 1 via || operator', () => {
+    expect(calculateEncounterXp([{ name: 'A', xp: 50, qty: 0 }])).toBe(50);
+    expect(calculateEncounterXp([{ name: 'B', xp: 50, qty: null }])).toBe(50);
+    expect(calculateEncounterXp([{ name: 'C', xp: 50, qty: undefined }])).toBe(50);
+  });
+
+  it('multiplies xp by qty when present', () => {
+    const monsters = [{ name: 'Orc', xp: 200, qty: 3 }];
+    expect(calculateEncounterXp(monsters)).toBe(600);
   });
 
   it('handles mixed monsters with and without xp and qty', () => {
@@ -156,5 +192,28 @@ describe('calculateEncounterXp', () => {
       { name: 'Orc', xp: 200, qty: 3 },
     ];
     expect(calculateEncounterXp(monsters)).toBe(650);
+  });
+
+  it('handles negative xp values', () => {
+    const monsters = [
+      { name: 'Friendly NPC', xp: -50 },
+      { name: 'Hostile NPC', xp: 100 },
+    ];
+    expect(calculateEncounterXp(monsters)).toBe(50);
+  });
+
+  it('handles negative qty values', () => {
+    const monsters = [{ name: 'Negative', xp: 50, qty: -2 }];
+    expect(calculateEncounterXp(monsters)).toBe(-100);
+  });
+
+  it('handles very large qty values', () => {
+    const monsters = [{ name: 'Horde', xp: 10, qty: 1000 }];
+    expect(calculateEncounterXp(monsters)).toBe(10000);
+  });
+
+  it('skips non-object array elements (string xp/qty are undefined → 0)', () => {
+    const monsters = ['Goblin', { name: 'Orc', xp: 200 }];
+    expect(calculateEncounterXp(monsters)).toBe(200);
   });
 });

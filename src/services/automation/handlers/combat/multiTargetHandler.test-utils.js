@@ -60,13 +60,14 @@ export function makePlayerStats(overrides = {}) {
   };
 }
 
-export function makeAction(automation = {}) {
+export function makeAction(automation = {}, overrides = {}) {
   return {
     name: 'Word of Creation',
     automation: {
       range: '30 ft',
       ...automation,
     },
+    ...overrides,
   };
 }
 

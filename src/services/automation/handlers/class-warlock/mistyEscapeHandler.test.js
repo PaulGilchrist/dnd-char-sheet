@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './mistyEscapeHandler.js';
 
@@ -58,31 +59,38 @@ function makeRecentAttack(overrides = {}) {
         attackEvent: { timestamp: Date.now() },
         attackerName: 'Goblin',
         targetName: 'WarlockGirl',
-        primaryDamage: 10,
-        secondaryDamage: 0,
         totalDamage: 10,
-        damageTypes: ['Fire'],
         ...overrides,
     };
 }
 
+function setupModalMocks(overrides = {}) {
+    findLastAttack.mockResolvedValue(makeRecentAttack(overrides.attack));
+    buildSaveDc.mockReturnValue(overrides.saveDc !== undefined ? overrides.saveDc : 15);
+    evaluateAutoExpression.mockReturnValue(overrides.uses !== undefined ? overrides.uses : 1);
+    getRuntimeValue.mockReturnValue(overrides.runtimeValue !== undefined ? overrides.runtimeValue : 1);
+    getCombatContext.mockResolvedValue(overrides.combatContext !== undefined ? overrides.combatContext : {
+        creatures: [
+            { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
+            { name: 'WarlockGirl', type: 'player', currentHp: 20, maxHp: 20 },
+        ],
+    });
+}
+
 beforeEach(() => {
-    vi.clearAllMocks();
-    buildSaveDc.mockReturnValue(15);
-    getCombatContext.mockResolvedValue({ creatures: [] });
-    evaluateAutoExpression.mockReturnValue(1);
+    vi.resetAllMocks();
 });
 
 describe('mistyEscapeHandler', () => {
     describe('guard: no recent damage', () => {
-        it('returns popup when no recent damage taken', async () => {
-            const testCases = [
-                { attack: { attackEvent: null, targetName: null, totalDamage: 0 } },
-                { attack: { targetName: 'OtherPlayer' } },
-                { attack: { totalDamage: 0, primaryDamage: 0 } },
-            ];
+        const testCases = [
+            { attack: { attackEvent: null, targetName: null, totalDamage: 0 }, description: 'no attackEvent' },
+            { attack: { targetName: 'OtherPlayer' }, description: 'damage taken by different target' },
+            { attack: { totalDamage: 0, primaryDamage: 0 }, description: 'zero totalDamage' },
+        ];
 
-            for (const { attack } of testCases) {
+        for (const { attack, description } of testCases) {
+            it(`returns popup when ${description}`, async () => {
                 findLastAttack.mockResolvedValue(makeRecentAttack(attack));
 
                 const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
@@ -90,25 +98,13 @@ describe('mistyEscapeHandler', () => {
                 expect(result.type).toBe('popup');
                 expect(result.payload.type).toBe('automation_info');
                 expect(result.payload.description).toContain('No recent damage taken');
-            }
-        });
+            });
+        }
     });
 
     describe('modal return', () => {
-        function setupSuccessfulHandler() {
-            findLastAttack.mockResolvedValue(makeRecentAttack());
-            buildSaveDc.mockReturnValue(15);
-            getCombatContext.mockResolvedValue({
-                creatures: [
-                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
-                    { name: 'WarlockGirl', type: 'player', currentHp: 20, maxHp: 20 },
-                ],
-            });
-            getRuntimeValue.mockReturnValue(1);
-        }
-
         it('returns modal with mode and targets when damage was taken', async () => {
-            setupSuccessfulHandler();
+            setupModalMocks();
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
@@ -120,14 +116,14 @@ describe('mistyEscapeHandler', () => {
             expect(result.payload.featureName).toBe('Misty Escape');
             expect(result.payload.newCount).toBe(1);
             expect(result.payload.freeCastCountKey).toBe('_Steps_of_the_Fey_freeCastCount');
-            // Should filter out the warlock from targets
             expect(result.payload.targets.length).toBe(1);
             expect(result.payload.targets[0].name).toBe('Goblin');
+            expect(result.payload.action).toBeDefined();
+            expect(result.payload.playerStats).toBeDefined();
         });
 
         it('returns modal with empty targets when no creatures in combat', async () => {
-            setupSuccessfulHandler();
-            getCombatContext.mockResolvedValue({ creatures: [] });
+            setupModalMocks({ combatContext: { creatures: [] } });
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
@@ -137,8 +133,7 @@ describe('mistyEscapeHandler', () => {
         });
 
         it('returns modal with zero count when no uses remaining', async () => {
-            setupSuccessfulHandler();
-            getRuntimeValue.mockReturnValue(0);
+            setupModalMocks({ runtimeValue: 0 });
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
@@ -148,9 +143,17 @@ describe('mistyEscapeHandler', () => {
             expect(result.payload.freeCastCountKey).toBe('_Steps_of_the_Fey_freeCastCount');
         });
 
+        it('defaults newCount to usesMax when getRuntimeValue returns undefined', async () => {
+            setupModalMocks({ runtimeValue: undefined });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.newCount).toBe(1);
+        });
+
         it('respects custom saveType and feature name from automation config', async () => {
-            setupSuccessfulHandler();
-            buildSaveDc.mockReturnValue(17);
+            setupModalMocks({ saveDc: 17 });
 
             const result = await handle(
                 makeAction({ name: 'Shadow Blink', automation: { saveType: 'CHA' } }),
@@ -162,13 +165,58 @@ describe('mistyEscapeHandler', () => {
             expect(result.payload.featureName).toBe('Shadow Blink');
             expect(result.payload.saveDc).toBe(17);
         });
+
+        it('uses custom uses_expression from automation config', async () => {
+            setupModalMocks({ uses: 3 });
+
+            await handle(
+                makeAction({ automation: { uses_expression: '2d4' } }),
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(evaluateAutoExpression).toHaveBeenCalledWith('2d4', expect.any(Object));
+        });
+
+        it('falls back to 1 when evaluateAutoExpression returns falsy', async () => {
+            setupModalMocks({ uses: null });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.newCount).toBe(1);
+        });
+
+        it('returns modal with empty targets when combat context is null', async () => {
+            setupModalMocks({ combatContext: null });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.targets).toEqual([]);
+        });
+
+        it('filters out the player from eligible targets', async () => {
+            setupModalMocks({
+                combatContext: {
+                    creatures: [
+                        { name: 'WarlockGirl', type: 'player', currentHp: 20, maxHp: 20 },
+                        { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
+                        { name: 'Orc', type: 'npc', currentHp: 15, maxHp: 20 },
+                    ],
+                },
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.targets.length).toBe(2);
+            expect(result.payload.targets.every(t => t.name !== 'WarlockGirl')).toBe(true);
+        });
     });
 
     describe('logging', () => {
         it('logs ability use with correct type, character, and feature name', async () => {
-            findLastAttack.mockResolvedValue(makeRecentAttack());
-            buildSaveDc.mockReturnValue(15);
-            getRuntimeValue.mockReturnValue(1);
+            setupModalMocks();
 
             await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
@@ -180,15 +228,32 @@ describe('mistyEscapeHandler', () => {
         });
 
         it('logs with custom feature name', async () => {
-            findLastAttack.mockResolvedValue(makeRecentAttack());
-            buildSaveDc.mockReturnValue(15);
-            getRuntimeValue.mockReturnValue(1);
+            setupModalMocks();
 
             await handle(makeAction({ name: 'My Misty Escape' }), makePlayerStats(), 'test-campaign', null);
 
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 abilityName: 'My Misty Escape',
             }));
+        });
+
+        it('logs description mentioning Misty Step cast', async () => {
+            setupModalMocks();
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                description: expect.stringContaining('Misty Step cast'),
+            }));
+        });
+
+        it('does not throw when logging fails', async () => {
+            setupModalMocks();
+            addEntry.mockImplementation(() => Promise.reject(new Error('log failed')));
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('modal');
         });
     });
 });

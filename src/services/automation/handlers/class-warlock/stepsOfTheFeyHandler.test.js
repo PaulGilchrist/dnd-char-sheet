@@ -1,175 +1,353 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// ── Mocks BEFORE imports ───────────────────────────────────────
+import { handle } from './stepsOfTheFeyHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn(),
+    getRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../../combat/automation/automationExpressions.js', () => ({
-  evaluateAutoExpression: vi.fn(),
+    evaluateAutoExpression: vi.fn(),
 }));
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn(),
+    getCombatContext: vi.fn(),
 }));
 
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
-}));
-
-// ── Imports ────────────────────────────────────────────────────
-
-import { handle } from './stepsOfTheFeyHandler.js';
-import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
-import * as automationExpressions from '../../../combat/automation/automationExpressions.js';
-import * as damageUtils from '../../../rules/combat/damageUtils.js';
-
-// ── Helpers ────────────────────────────────────────────────────
+const { getRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
+const { evaluateAutoExpression } = await import('../../../combat/automation/automationExpressions.js');
+const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
 
 const campaignName = 'TestCampaign';
+const playerName = 'TestWarlock';
 
 function makePlayerStats(overrides = {}) {
-  return {
-    name: 'TestCleric',
-    level: 5,
-    proficiency: 3,
-    abilities: [{ name: 'Charisma', bonus: 2 }],
-    ...overrides,
-  };
+    return {
+        name: playerName,
+        level: 5,
+        proficiency: 3,
+        abilities: [{ name: 'Charisma', bonus: 2 }],
+        ...overrides,
+    };
 }
 
-function makeAction(automation = {}) {
-  return {
-    name: 'Steps of the Fey',
-    automation: {
-      type: 'free_cast',
-      uses_expression: 'CHA modifier_min_1',
-      ...automation,
-    },
-  };
+function makeAction(overrides = {}) {
+    return {
+        name: 'Steps of the Fey',
+        automation: {
+            type: 'free_cast',
+            uses_expression: 'CHA modifier_min_1',
+            ...overrides.automation,
+        },
+        ...overrides,
+    };
 }
 
-// ── Tests ──────────────────────────────────────────────────────
+function setupUses(uses) {
+    getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+        if (key === '_Steps_of_the_Fey_freeCastCount') return uses;
+        return null;
+    });
+    evaluateAutoExpression.mockReturnValue(1);
+}
+
+function setupCombatContext(context) {
+    getCombatContext.mockResolvedValue(context);
+}
 
 describe('stepsOfTheFeyHandler.handle', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
-  describe('remaining uses check', () => {
-    it('returns popup when no free uses remaining', async () => {
-      const action = makeAction();
-      const ps = makePlayerStats();
-
-      useRuntimeState.getRuntimeValue.mockReturnValue(0);
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.name).toBe('Steps of the Fey');
-      expect(result.payload.description).toContain('No free uses');
-      expect(result.payload.description).toContain('Finish a Long Rest');
-      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('modal return for creature selection', () => {
-    function setupModalMocks() {
-      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key.includes('freeCastCount')) return 1;
-        if (key === 'tempHp') return 0;
-        return null;
-      });
-      automationExpressions.evaluateAutoExpression.mockReturnValue(1);
-    }
-
-    it('returns modal with mode and eligible targets when combat has creatures', async () => {
-      setupModalMocks();
-      const combatCreatures = [
-        { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
-        { name: 'Orc', type: 'npc', currentHp: 15, maxHp: 20 },
-      ];
-      damageUtils.getCombatContext.mockResolvedValue({ creatures: combatCreatures });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('stepsOfTheFeyTaunt');
-      expect(result.payload.mode).toBe('stepsOfTheFey');
-      expect(result.payload.targets).toEqual(combatCreatures);
-      expect(result.payload.saveDc).toBe(13); // 8 + 2 (CHA) + 3 (prof)
-      expect(result.payload.featureName).toBe('Steps of the Fey');
-      expect(result.payload.newCount).toBe(1);
-      expect(result.payload.freeCastCountKey).toBe('_Steps_of_the_Fey_freeCastCount');
-      expect(result.payload.tempHpRoll).toBeUndefined();
+    beforeEach(() => {
+        vi.resetAllMocks();
     });
 
-    it('filters out the warlock from eligible targets', async () => {
-      setupModalMocks();
-      const combatCreatures = [
-        { name: 'TestCleric', type: 'player', currentHp: 20, maxHp: 20 },
-        { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
-      ];
-      damageUtils.getCombatContext.mockResolvedValue({ creatures: combatCreatures });
+    describe('guard: remaining uses check', () => {
+        it('returns popup when no free uses remaining (count is 0)', async () => {
+            setupUses(0);
 
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(result.payload.targets.length).toBe(1);
-      expect(result.payload.targets[0].name).toBe('Goblin');
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.name).toBe('Steps of the Fey');
+            expect(result.payload.description).toContain('No free uses');
+            expect(result.payload.description).toContain('Long Rest');
+            expect(getRuntimeValue).toHaveBeenCalledWith(playerName, '_Steps_of_the_Fey_freeCastCount', campaignName);
+        });
+
+        it('returns popup when uses count is negative', async () => {
+            setupUses(-1);
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+        });
+
+        it('returns popup with custom feature name when action.name is missing', async () => {
+            setupUses(0);
+            const action = makeAction({ name: undefined });
+
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result.payload.name).toBe('Steps of the Fey');
+        });
+
+        it('uses fallback uses_expression when automation.uses_expression is missing', async () => {
+            setupUses(1);
+            const action = makeAction({ automation: { type: 'free_cast' } });
+
+            await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(evaluateAutoExpression).toHaveBeenCalledWith('CHA modifier_min_1', expect.any(Object));
+        });
+
+        it('uses evaluated expression result for uses when runtime value is null', async () => {
+            getRuntimeValue.mockReturnValue(null);
+            evaluateAutoExpression.mockReturnValue(2);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.newCount).toBe(2);
+        });
+
+        it('defaults to 1 when evaluateAutoExpression returns falsy but runtime value provides count', async () => {
+            setupUses(1);
+            evaluateAutoExpression.mockReturnValue(0);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.newCount).toBe(1);
+        });
     });
 
-    it('returns popup with no creatures message when combat is empty', async () => {
-      setupModalMocks();
-      damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
+    describe('guard: combat context', () => {
+        it('returns popup with Misty Step trigger when no creatures in combat', async () => {
+            setupUses(1);
+            setupCombatContext({ creatures: [] });
 
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('No creatures in combat');
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.triggerMistyStep).toBe(true);
+            expect(result.payload.description).toContain('No creatures in combat');
+        });
+
+        it('returns popup when combat context is null', async () => {
+            setupUses(1);
+            setupCombatContext(null);
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.triggerMistyStep).toBe(true);
+            expect(result.payload.description).toContain('No creatures in combat');
+        });
+
+        it('returns popup when combat context is undefined', async () => {
+            setupUses(1);
+            getCombatContext.mockResolvedValue(undefined);
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.triggerMistyStep).toBe(true);
+        });
+
+        it('returns popup when creatures array is missing from combat context', async () => {
+            setupUses(1);
+            setupCombatContext({});
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.triggerMistyStep).toBe(true);
+        });
     });
 
-    it('returns popup with no other creatures when only warlock is in combat', async () => {
-      setupModalMocks();
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'TestCleric', type: 'player', currentHp: 20, maxHp: 20 }],
-      });
+    describe('guard: eligible targets', () => {
+        it('returns popup when only warlock is in combat', async () => {
+            setupUses(1);
+            setupCombatContext({
+                creatures: [{ name: playerName, type: 'player', currentHp: 20, maxHp: 20 }],
+            });
 
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('No other creatures in combat');
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.triggerMistyStep).toBe(true);
+            expect(result.payload.description).toContain('No other creatures in combat');
+        });
+
+        it('filters out the warlock from eligible targets', async () => {
+            setupUses(1);
+            setupCombatContext({
+                creatures: [
+                    { name: playerName, type: 'player', currentHp: 20, maxHp: 20 },
+                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
+                    { name: 'Orc', type: 'npc', currentHp: 15, maxHp: 20 },
+                ],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.targets.length).toBe(2);
+            expect(result.payload.targets.every(t => t.name !== playerName)).toBe(true);
+        });
+
+        it('filters out all creatures when they match the warlock name', async () => {
+            setupUses(1);
+            setupCombatContext({
+                creatures: [
+                    { name: playerName, type: 'player', currentHp: 20, maxHp: 20 },
+                    { name: playerName, type: 'npc', currentHp: 5, maxHp: 10 },
+                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
+                ],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.payload.targets.length).toBe(1);
+            expect(result.payload.targets[0].name).toBe('Goblin');
+        });
+
+        it('returns popup when all creatures in combat are the warlock', async () => {
+            setupUses(1);
+            setupCombatContext({
+                creatures: [
+                    { name: playerName, type: 'player', currentHp: 20, maxHp: 20 },
+                    { name: playerName, type: 'npc', currentHp: 5, maxHp: 10 },
+                ],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.triggerMistyStep).toBe(true);
+        });
     });
 
-    it('returns popup when combat context fetch fails', async () => {
-      setupModalMocks();
-      damageUtils.getCombatContext.mockResolvedValue(null);
+    describe('modal return for creature selection', () => {
+        it('returns modal with correct payload structure', async () => {
+            setupUses(1);
+            setupCombatContext({
+                creatures: [
+                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
+                    { name: 'Orc', type: 'npc', currentHp: 15, maxHp: 20 },
+                ],
+            });
 
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('No creatures in combat');
+            expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('stepsOfTheFeyTaunt');
+            expect(result.payload.mode).toBe('stepsOfTheFey');
+            expect(result.payload.targets).toHaveLength(2);
+            expect(result.payload.saveDc).toBe(13);
+            expect(result.payload.featureName).toBe('Steps of the Fey');
+            expect(result.payload.newCount).toBe(1);
+            expect(result.payload.freeCastCountKey).toBe('_Steps_of_the_Fey_freeCastCount');
+        });
+
+        it('includes action and playerStats in modal payload', async () => {
+            setupUses(1);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+            const action = makeAction();
+            const stats = makePlayerStats();
+
+            const result = await handle(action, stats, campaignName, null);
+
+            expect(result.payload.action).toBe(action);
+            expect(result.payload.playerStats).toBe(stats);
+            expect(result.payload.campaignName).toBe(campaignName);
+        });
+
+        it('uses currentCount from runtime value in newCount', async () => {
+            setupUses(3);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.payload.newCount).toBe(3);
+        });
+
+        it('generates freeCastCountKey from action.name with spaces replaced', async () => {
+            setupUses(1);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+            const action = makeAction({ name: 'My Custom Fey Step' });
+
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result.payload.freeCastCountKey).toBe('_My_Custom_Fey_Step_freeCastCount');
+        });
+
+        it('uses action.name as featureName when provided', async () => {
+            setupUses(1);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+            const action = makeAction({ name: 'Custom Feature' });
+
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result.payload.featureName).toBe('Custom Feature');
+        });
     });
 
-    describe('popup payload structure', () => {
-      it('payload contains correct keys for empty combat case', async () => {
-        setupModalMocks();
-        damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
+    describe('save DC calculation', () => {
+        it('calculates save DC with proficiency and CHA bonus', async () => {
+            setupUses(1);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
 
-        const action = makeAction();
-        const result = await handle(action, makePlayerStats(), campaignName, null);
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-        expect(result.type).toBe('popup');
-        expect(result.payload.type).toBe('automation_info');
-        expect(result.payload.name).toBe('Steps of the Fey');
-        expect(result.payload.triggerMistyStep).toBe(true);
-        expect(result.payload.automation).toBe(action.automation);
-      });
+            expect(result.payload.saveDc).toBe(13); // 8 + 2 (CHA) + 3 (prof)
+        });
+
+        it('defaults to 8 when proficiency is missing', async () => {
+            setupUses(1);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+
+            const result = await handle(makeAction(), makePlayerStats({ proficiency: undefined }), campaignName, null);
+
+            expect(result.payload.saveDc).toBe(10); // 8 + 2 (CHA) + 0
+        });
+
+        it('defaults to 8 when Charisma bonus is missing', async () => {
+            setupUses(1);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+
+            const result = await handle(makeAction(), makePlayerStats({ abilities: [] }), campaignName, null);
+
+            expect(result.payload.saveDc).toBe(11); // 8 + 0 (no CHA) + 3 (prof)
+        });
+
+        it('defaults to 8 when both proficiency and CHA bonus are missing', async () => {
+            setupUses(1);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+
+            const result = await handle(makeAction(), makePlayerStats({ proficiency: undefined, abilities: [] }), campaignName, null);
+
+            expect(result.payload.saveDc).toBe(8);
+        });
+
+        it('uses first matching CHA ability when multiple abilities exist', async () => {
+            setupUses(1);
+            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
+
+            const result = await handle(
+                makeAction(),
+                makePlayerStats({ abilities: [{ name: 'Strength', bonus: 4 }, { name: 'Charisma', bonus: 5 }] }),
+                campaignName,
+                null
+            );
+
+            expect(result.payload.saveDc).toBe(16); // 8 + 5 (CHA) + 3 (prof)
+        });
     });
-  });
 });

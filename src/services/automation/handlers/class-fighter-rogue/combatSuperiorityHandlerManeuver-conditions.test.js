@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { executeManeuver } from './combatSuperiorityHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -69,6 +70,8 @@ vi.mock('../../../../services/rules/effects/expirations.js', () => ({
     addExpiration: vi.fn(async () => {}),
 }));
 
+import * as expirations from '../../../../services/rules/effects/expirations.js';
+
 vi.mock('../../../../services/rules/combat/applyDamage.js', () => ({
     applyDamageToTarget: vi.fn(() => ({ finalDamage: 4 })),
 }));
@@ -123,37 +126,6 @@ describe('executeManeuver — condition/save effects', () => {
         });
     });
 
-    it('returns error popup when maneuver not found', async () => {
-        const result = await executeManeuver(
-            { name: 'Test', automation: { type: 'combat_superiority' } },
-            makePlayerStats(),
-            'test-campaign',
-            'Nonexistent Maneuver'
-        );
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.type).toBe('automation_info');
-        expect(result.payload.description).toContain('not found');
-    });
-
-    it('returns error popup when no dice and no relentless', async () => {
-        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
-            if (key === 'superiorityDice') return 0;
-            if (key === SELECTION_KEY) return ['Trip Attack'];
-            return undefined;
-        });
-
-        const result = await executeManeuver(
-            { name: 'Test', automation: { type: 'combat_superiority' } },
-            makePlayerStats(),
-            'test-campaign',
-            'Trip Attack'
-        );
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('No Superiority Dice remaining');
-    });
-
     it('handles prone effect with save failure', async () => {
         getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
             if (key === 'superiorityDice') return 4;
@@ -169,11 +141,52 @@ describe('executeManeuver — condition/save effects', () => {
             'Trip Attack'
         );
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Target made STR save DC 15: Failure');
         expect(result.payload.description).toContain('fell Prone');
+        expect(result.payload.description).toContain('Target: Goblin');
+        expect(result.payload.description).toContain('Added 4 to the damage roll');
+        expect(result.logEntries).toHaveLength(1);
+        expect(result.logEntries[0].type).toBe('ability_use');
+        expect(result.logEntries[0].characterName).toBe('TestFighter');
+        expect(result.logEntries[0].abilityName).toBe('Trip Attack');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'superiorityDice', 3, 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'Goblin',
+            'activeConditions',
+            expect.arrayContaining(['prone']),
+            'test-campaign'
+        );
     });
 
-    it('handles goad effect with save failure', async () => {
+    it('handles prone effect with save success', async () => {
+        const savePrompt = await import('../../../../services/automation/common/savePrompt.js');
+        savePrompt.createSaveListener.mockReturnValue({
+            promise: Promise.resolve({ success: true }),
+        });
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            if (key === 'activeConditions') return [];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Target made STR save DC 15: Success');
+        expect(result.payload.description).not.toContain('fell Prone');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'superiorityDice', 3, 'test-campaign');
+    });
+
+    it('handles goad effect with save failure and sets targetEffects', async () => {
         getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
             if (key === 'superiorityDice') return 4;
             if (key === SELECTION_KEY) return ['Goading Attack'];
@@ -188,7 +201,54 @@ describe('executeManeuver — condition/save effects', () => {
             'Goading Attack'
         );
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Target made WIS save DC 15: Failure');
         expect(result.payload.description).toContain('Disadvantage on attacks against targets other than you');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'superiorityDice', 3, 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Goblin',
+                    source: 'TestFighter',
+                    effect: 'taunting_step',
+                    duration: 'until_end_of_user_next_turn',
+                }),
+            ]),
+            'test-campaign'
+        );
+    });
+
+    it('handles goad effect with save success', async () => {
+        const savePrompt = await import('../../../../services/automation/common/savePrompt.js');
+        savePrompt.createSaveListener.mockReturnValue({
+            promise: Promise.resolve({ success: true }),
+        });
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Goading Attack'];
+            if (key === 'targetEffects') return [];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Goading Attack'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Target made WIS save DC 15: Success');
+        expect(result.payload.description).not.toContain('Disadvantage on attacks');
+        expect(setRuntimeValue).not.toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.anything(),
+            'test-campaign'
+        );
     });
 
     it('handles frightened effect with save failure and expiration', async () => {
@@ -206,10 +266,18 @@ describe('executeManeuver — condition/save effects', () => {
             'Menacing Attack'
         );
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Target made WIS save DC 15: Failure');
         expect(result.payload.description).toContain('Frightened');
-        expect(vi.mocked(setRuntimeValue).mock.calls.some(
-            (call) => call[0] === 'TestFighter' && call[1] === 'superiorityDice'
-        )).toBe(true);
+        expect(result.payload.description).toContain('end of your next turn');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'superiorityDice', 3, 'test-campaign');
+        expect(expirations.addExpiration).toHaveBeenCalledWith(
+            'TestFighter',
+            'Goblin',
+            expect.arrayContaining([{ type: 'condition', condition: 'frightened' }]),
+            'test-campaign',
+            2
+        );
     });
 
     it('handles frightened effect with save success', async () => {
@@ -221,6 +289,7 @@ describe('executeManeuver — condition/save effects', () => {
         getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
             if (key === 'superiorityDice') return 4;
             if (key === SELECTION_KEY) return ['Menacing Attack'];
+            if (key === 'activeConditions') return [];
             return undefined;
         });
 
@@ -231,10 +300,13 @@ describe('executeManeuver — condition/save effects', () => {
             'Menacing Attack'
         );
 
+        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('Target made WIS save DC 15: Success');
+        expect(result.payload.description).not.toContain('Frightened');
+        expect(expirations.addExpiration).not.toHaveBeenCalled();
     });
 
-    it('handles distracting_strike_advantage effect', async () => {
+    it('handles distracting_strike_advantage effect and sets targetEffects', async () => {
         getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
             if (key === 'superiorityDice') return 4;
             if (key === SELECTION_KEY) return ['Distracting Strike'];
@@ -249,8 +321,23 @@ describe('executeManeuver — condition/save effects', () => {
             'Distracting Strike'
         );
 
+        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('next attack against');
         expect(result.payload.description).toContain('Advantage');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'superiorityDice', 3, 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Goblin',
+                    source: 'TestFighter',
+                    effect: 'distracting_strike_advantage',
+                    duration: 'until_end_of_turn',
+                }),
+            ]),
+            'test-campaign'
+        );
     });
 
     it('handles push effect with save failure', async () => {
@@ -267,7 +354,52 @@ describe('executeManeuver — condition/save effects', () => {
             'Pushing Attack'
         );
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Target made STR save DC 15: Failure');
         expect(result.payload.description).toContain('was pushed 15 feet');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'superiorityDice', 3, 'test-campaign');
+    });
+
+    it('handles push effect with custom value', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Pushing Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Pushing Attack'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('was pushed 15 feet');
+    });
+
+    it('handles push effect with save success', async () => {
+        const savePrompt = await import('../../../../services/automation/common/savePrompt.js');
+        savePrompt.createSaveListener.mockReturnValue({
+            promise: Promise.resolve({ success: true }),
+        });
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Pushing Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Pushing Attack'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Target made STR save DC 15: Success');
+        expect(result.payload.description).not.toContain('was pushed');
     });
 
     it('handles disarm effect with save failure', async () => {
@@ -284,6 +416,57 @@ describe('executeManeuver — condition/save effects', () => {
             'Disarming Attack'
         );
 
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Target made STR save DC 15: Failure');
         expect(result.payload.description).toContain('dropped the object');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'superiorityDice', 3, 'test-campaign');
+    });
+
+    it('handles disarm effect with save success', async () => {
+        const savePrompt = await import('../../../../services/automation/common/savePrompt.js');
+        savePrompt.createSaveListener.mockReturnValue({
+            promise: Promise.resolve({ success: true }),
+        });
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Disarming Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Disarming Attack'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Target made STR save DC 15: Success');
+        expect(result.payload.description).not.toContain('dropped the object');
+    });
+
+    it('returns popup with logEntries for basic maneuver', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            if (key === 'activeConditions') return [];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.effect).toBe('prone');
+        expect(result.dieValue).toBe(4);
+        expect(result.logEntries).toHaveLength(1);
+        expect(result.logEntries[0].type).toBe('ability_use');
+        expect(result.logEntries[0].characterName).toBe('TestFighter');
+        expect(result.logEntries[0].abilityName).toBe('Trip Attack');
     });
 });

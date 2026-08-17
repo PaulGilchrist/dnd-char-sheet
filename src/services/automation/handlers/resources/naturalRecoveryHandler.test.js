@@ -1,24 +1,18 @@
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 
 import { handle } from './naturalRecoveryHandler.js';
 
-// ── Helpers ──────────────────────────────────────────────────────
-
-function makeAction(overrides = {}) {
-  return {
-    name: 'Natural Recovery',
-    description: 'Recover expended spell slots',
-    automation: { type: 'natural_recovery' },
-    ...overrides,
-  };
-}
-
 // ── Tests ────────────────────────────────────────────────────────
 
 describe('naturalRecoveryHandler.handle', () => {
-  describe('default modal structure', () => {
-    it('should return a modal result with naturalRecovery modalName', async () => {
-      const action = makeAction();
+  describe('modal structure', () => {
+    it('should return a modal result with naturalRecovery modalName and payload containing action fields', async () => {
+      const action = {
+        name: 'Natural Recovery',
+        description: 'Recover expended spell slots',
+        automation: { type: 'natural_recovery' },
+      };
       const result = await handle(action, {}, 'campaign', 'map');
 
       expect(result).toEqual({
@@ -32,33 +26,17 @@ describe('naturalRecoveryHandler.handle', () => {
       });
     });
 
-    it('should pass through action.name into payload.name', async () => {
-      const action = makeAction({ name: 'Custom Name' });
+    it('should pass through custom action fields into payload', async () => {
+      const action = {
+        name: 'Custom Name',
+        description: 'Custom description',
+        automation: { type: 'natural_recovery', extra: 'data', count: 5 },
+      };
       const result = await handle(action, {}, 'campaign', 'map');
 
       expect(result.payload.name).toBe('Custom Name');
-    });
-
-    it('should pass through action.description into payload.description', async () => {
-      const action = makeAction({ description: 'Custom description text' });
-      const result = await handle(action, {}, 'campaign', 'map');
-
-      expect(result.payload.description).toBe('Custom description text');
-    });
-
-    it('should pass through the automation object into payload.automation', async () => {
-      const automation = { type: 'natural_recovery', extra: 'data', count: 5 };
-      const action = makeAction({ automation });
-      const result = await handle(action, {}, 'campaign', 'map');
-
-      expect(result.payload.automation).toEqual(automation);
-    });
-
-    it('should use playerStats.name and campaignName parameters without altering them in the result', async () => {
-      const action = makeAction();
-      const result = await handle(action, { name: 'Elder Druid' }, 'MyCampaign', 'map');
-
-      expect(result.payload.name).toBe('Natural Recovery');
+      expect(result.payload.description).toBe('Custom description');
+      expect(result.payload.automation).toEqual({ type: 'natural_recovery', extra: 'data', count: 5 });
     });
   });
 
@@ -92,20 +70,6 @@ describe('naturalRecoveryHandler.handle', () => {
 
       expect(result.payload.automation).toBe(undefined);
     });
-
-    it('should pass through complex automation objects unchanged', async () => {
-      const automation = {
-        type: 'natural_recovery',
-        restore_expression: '1d4',
-        max_slots: 3,
-        classes: ['Druid'],
-        subclasses: ['Circle of the Land'],
-      };
-      const action = makeAction({ automation });
-      const result = await handle(action, {}, 'campaign', 'map');
-
-      expect(result.payload.automation).toEqual(automation);
-    });
   });
 
   describe('edge cases', () => {
@@ -120,27 +84,28 @@ describe('naturalRecoveryHandler.handle', () => {
     });
 
     it('should return modal with empty name when action.name is empty string', async () => {
-      const action = makeAction({ name: '' });
+      const action = { name: '', automation: { type: 'natural_recovery' } };
       const result = await handle(action, {}, 'campaign', 'map');
 
       expect(result.payload.name).toBe('');
     });
 
-    it('should handle playerStats with extra fields without error', async () => {
+    it('should ignore playerStats, campaignName, and map parameters', async () => {
+      const action = { name: 'Natural Recovery', automation: { type: 'natural_recovery' } };
       const playerStats = {
         name: 'Druid',
         level: 10,
         automation: { passives: [{ type: 'natural_recovery' }] },
       };
-      const action = makeAction();
-      const result = await handle(action, playerStats, 'campaign', 'map');
 
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('naturalRecovery');
+      const result = await handle(action, playerStats, 'MyCampaign', 'combat-map');
+
+      expect(result.payload.name).toBe('Natural Recovery');
+      expect(result.payload.automation).toEqual({ type: 'natural_recovery' });
     });
 
     it('should handle campaignName being null', async () => {
-      const action = makeAction();
+      const action = { name: 'Natural Recovery', automation: { type: 'natural_recovery' } };
       const result = await handle(action, {}, null, 'map');
 
       expect(result.type).toBe('modal');
@@ -148,7 +113,7 @@ describe('naturalRecoveryHandler.handle', () => {
     });
 
     it('should handle map parameter being undefined', async () => {
-      const action = makeAction();
+      const action = { name: 'Natural Recovery', automation: { type: 'natural_recovery' } };
       const result = await handle(action, {}, 'campaign', undefined);
 
       expect(result.type).toBe('modal');

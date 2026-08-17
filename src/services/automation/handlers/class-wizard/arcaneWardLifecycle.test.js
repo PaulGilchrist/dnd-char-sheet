@@ -1,4 +1,4 @@
-
+// @improved-by-ai
 import {
     onArcaneWardDestroy,
     onArcaneWardLevelUp,
@@ -43,6 +43,7 @@ describe('onArcaneWardDestroy', () => {
             campaignName,
         );
 
+        expect(setRuntimeValue).toHaveBeenCalledTimes(3);
         expect(setRuntimeValue).toHaveBeenNthCalledWith(
             1,
             'TestWizard',
@@ -64,8 +65,20 @@ describe('onArcaneWardDestroy', () => {
             0,
             campaignName,
         );
+        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('destroyed');
         expect(result.payload.description).toContain('Long Rest');
+    });
+
+    it('makes exactly 3 setRuntimeValue calls and no addEntry calls', async () => {
+        await onArcaneWardDestroy(
+            { name: 'Arcane Ward' },
+            makeWizardStats('TestWizard', 5, 3),
+            campaignName,
+        );
+
+        expect(setRuntimeValue).toHaveBeenCalledTimes(3);
+        expect(addEntry).not.toHaveBeenCalled();
     });
 });
 
@@ -74,7 +87,7 @@ describe('onArcaneWardLevelUp', () => {
         vi.clearAllMocks();
     });
 
-    it('computes correct max HP: 2 × level + INT modifier', async () => {
+    it('computes correct max HP: 2 x level + INT modifier', async () => {
         setWardMocks((player, key) => {
             if (key === 'arcaneWardActive') return true;
             if (key === 'arcaneWardHp') return 10;
@@ -161,10 +174,36 @@ describe('onArcaneWardLevelUp', () => {
         );
 
         expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('not active');
     });
 
-    it('handles missing or undefined Intelligence ability by using 0 modifier', async () => {
+    it('handles missing Intelligence ability by using 0 modifier', async () => {
+        setWardMocks((player, key) => {
+            if (key === 'arcaneWardActive') return true;
+            if (key === 'arcaneWardHp') return 5;
+            if (key === 'arcaneWardMax') return 10;
+            return undefined;
+        });
+
+        const noAbilitiesStats = {
+            name: 'TestWizard',
+            rules: '2024',
+            level: 5,
+            abilities: [],
+        };
+
+        await onArcaneWardLevelUp(
+            { name: 'Arcane Ward' },
+            noAbilitiesStats,
+            campaignName,
+        );
+
+        // 2*5 + 0 = 10
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardMax', 10, campaignName);
+    });
+
+    it('handles missing abilities array by using 0 modifier', async () => {
         setWardMocks((player, key) => {
             if (key === 'arcaneWardActive') return true;
             if (key === 'arcaneWardHp') return 5;
@@ -187,6 +226,43 @@ describe('onArcaneWardLevelUp', () => {
         // 2*5 + 0 = 10
         expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardMax', 10, campaignName);
     });
+
+    it('sets current HP to round of scaled value when prevMax is 0', async () => {
+        setWardMocks((player, key) => {
+            if (key === 'arcaneWardActive') return true;
+            if (key === 'arcaneWardHp') return undefined;
+            if (key === 'arcaneWardMax') return 0;
+            return undefined;
+        });
+
+        await onArcaneWardLevelUp(
+            { name: 'Arcane Ward' },
+            makeWizardStats('TestWizard', 5, 3),
+            campaignName,
+        );
+
+        // prevMaxHp=0, so no scaling happens; currentHp defaults to 0 via ?? 0
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardMax', 13, campaignName);
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 0, campaignName);
+    });
+
+    it('sets current HP to 0 when both current and max are undefined', async () => {
+        setWardMocks((player, key) => {
+            if (key === 'arcaneWardActive') return true;
+            if (key === 'arcaneWardHp') return undefined;
+            if (key === 'arcaneWardMax') return undefined;
+            return undefined;
+        });
+
+        await onArcaneWardLevelUp(
+            { name: 'Arcane Ward' },
+            makeWizardStats('TestWizard', 5, 3),
+            campaignName,
+        );
+
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardMax', 13, campaignName);
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 0, campaignName);
+    });
 });
 
 describe('onAbjurationSpellCast', () => {
@@ -205,6 +281,7 @@ describe('onAbjurationSpellCast', () => {
             campaignName,
         );
 
+        expect(setRuntimeValue).toHaveBeenCalledTimes(3);
         expect(setRuntimeValue).toHaveBeenNthCalledWith(
             1,
             'TestWizard',
@@ -226,6 +303,8 @@ describe('onAbjurationSpellCast', () => {
             13,
             campaignName,
         );
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('created');
         expect(result.payload.description).toContain('Shield');
     });
@@ -327,6 +406,25 @@ describe('onAbjurationSpellCast', () => {
         expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 10, campaignName);
     });
 
+    it('defaults to spell slot level 1 when value is undefined', async () => {
+        setWardMocks((player, key) => {
+            if (key === 'arcaneWardActive') return true;
+            if (key === 'arcaneWardHp') return 8;
+            if (key === 'arcaneWardMax') return 13;
+            return undefined;
+        });
+
+        await onAbjurationSpellCast(
+            { name: 'Arcane Ward' },
+            makeWizardStats('TestWizard', 5, 3),
+            'Shield',
+            undefined,
+            campaignName,
+        );
+
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 10, campaignName);
+    });
+
     it('throws when addEntry rejects during ward creation', async () => {
         setWardMocks(() => false);
         addEntry.mockRejectedValueOnce(new Error('log failure'));
@@ -360,5 +458,78 @@ describe('onAbjurationSpellCast', () => {
                 campaignName,
             ),
         ).rejects.toThrow('log failure');
+    });
+
+    it('logs ward creation via addEntry', async () => {
+        setWardMocks(() => false);
+
+        await onAbjurationSpellCast(
+            { name: 'Arcane Ward' },
+            makeWizardStats('TestWizard', 5, 3),
+            'Shield',
+            1,
+            campaignName,
+        );
+
+        expect(addEntry).toHaveBeenCalledTimes(1);
+        expect(addEntry).toHaveBeenCalledWith(
+            campaignName,
+            expect.objectContaining({
+                type: 'ability_use',
+                characterName: 'TestWizard',
+                abilityName: 'Arcane Ward',
+                description: expect.stringContaining('Shield'),
+            }),
+        );
+    });
+
+    it('logs ward restoration via addEntry', async () => {
+        setWardMocks((player, key) => {
+            if (key === 'arcaneWardActive') return true;
+            if (key === 'arcaneWardHp') return 8;
+            if (key === 'arcaneWardMax') return 13;
+            return undefined;
+        });
+
+        await onAbjurationSpellCast(
+            { name: 'Arcane Ward' },
+            makeWizardStats('TestWizard', 5, 3),
+            'Mage Armor',
+            1,
+            campaignName,
+        );
+
+        expect(addEntry).toHaveBeenCalledTimes(1);
+        expect(addEntry).toHaveBeenCalledWith(
+            campaignName,
+            expect.objectContaining({
+                type: 'ability_use',
+                characterName: 'TestWizard',
+                abilityName: 'Arcane Ward',
+                description: expect.stringContaining('restored'),
+            }),
+        );
+    });
+
+    it('handles missing Intelligence ability when creating a new ward', async () => {
+        setWardMocks(() => false);
+
+        const noAbilitiesStats = {
+            name: 'TestWizard',
+            rules: '2024',
+            level: 5,
+        };
+
+        await onAbjurationSpellCast(
+            { name: 'Arcane Ward' },
+            noAbilitiesStats,
+            'Shield',
+            1,
+            campaignName,
+        );
+
+        // 2*5 + 0 = 10
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardMax', 10, campaignName);
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 10, campaignName);
     });
 });

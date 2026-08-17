@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './reactionDebuffHandler.js';
 
@@ -129,34 +130,64 @@ function freshAttackEvent(options = {}) {
   };
 }
 
+function setupDefaultPath(overrides = {}) {
+  const {
+    getRuntimeValueReturn,
+    usesExpression,
+    evaluateAutoExpressionReturn,
+    attackEventOverride,
+    actionOverrides,
+    ...mockOverrides
+  } = overrides;
+
+  const action = makeAction(actionOverrides);
+  if (usesExpression !== undefined) {
+    action.automation.uses_expression = usesExpression;
+  }
+
+  if (evaluateAutoExpressionReturn !== undefined) {
+    automationService.evaluateAutoExpression.mockReturnValue(evaluateAutoExpressionReturn);
+  }
+
+  if (getRuntimeValueReturn !== undefined) {
+    useRuntimeState.getRuntimeValue.mockReturnValue(getRuntimeValueReturn);
+  }
+
+  targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
+  damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
+  damageRollback.findLastAttack.mockResolvedValue({
+    attackEvent: freshAttackEvent(attackEventOverride),
+    attackerName: 'Goblin',
+    targetName: 'Goblin',
+    primaryDamage: 0,
+    secondaryDamage: 0,
+    totalDamage: 0,
+    damageTypes: [],
+    ...mockOverrides,
+  });
+
+  return { action };
+}
+
 const campaignName = 'TestCampaign';
 const mapName = 'DungeonMap';
 
 describe('reactionDebuffHandler — uses decrement & logging', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
   });
 
-  describe('uses decrement', () => {
-    it('increments uses count after success with string expression', async () => {
-      const ps = makePlayerStats({});
-      const action = makeAction({ uses_expression: 'proficiency_bonus' });
-      automationService.evaluateAutoExpression.mockReturnValue(2);
-
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: freshAttackEvent({ d20: 5, bonus: 3, hit: false }),
-        attackerName: 'Goblin',
-        targetName: 'Goblin',
-        primaryDamage: 0,
-        secondaryDamage: 0,
-        totalDamage: 0,
-        damageTypes: [],
+  describe('uses decrement on successful path', () => {
+    it('decrements uses from evaluated expression value when current is undefined', async () => {
+      const { action } = setupDefaultPath({
+        usesExpression: 'proficiency_bonus',
+        evaluateAutoExpressionReturn: 2,
       });
 
-      await handle(action, ps, campaignName, mapName);
+      const result = await handle(action, makePlayerStats(), campaignName, mapName);
 
+      expect(result.type).toBe('popup');
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
         'Bard',
         'cuttingwordsUses',
@@ -165,14 +196,66 @@ describe('reactionDebuffHandler — uses decrement & logging', () => {
       );
     });
 
-    it('decrements bardicInspirationUses with bardic inspiration fallback', async () => {
-      const ps = makePlayerStats({});
-      const action = makeAction({});
+    it('decrements from current value when getRuntimeValue returns a number', async () => {
+      const { action } = setupDefaultPath({
+        usesExpression: 3,
+        evaluateAutoExpressionReturn: 3,
+        getRuntimeValueReturn: 2,
+      });
+
+      const result = await handle(action, makePlayerStats(), campaignName, mapName);
+
+      expect(result.type).toBe('popup');
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Bard',
+        'cuttingwordsUses',
+        1,
+        campaignName
+      );
+    });
+
+    it('decrements from max when getRuntimeValue returns null', async () => {
+      const { action } = setupDefaultPath({
+        usesExpression: 3,
+        evaluateAutoExpressionReturn: 3,
+        getRuntimeValueReturn: null,
+      });
+
+      const result = await handle(action, makePlayerStats(), campaignName, mapName);
+
+      expect(result.type).toBe('popup');
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Bard',
+        'cuttingwordsUses',
+        2,
+        campaignName
+      );
+    });
+
+    it('uses bardicInspirationUses key when no uses_expression is set', async () => {
+      const { action } = setupDefaultPath({});
+
+      const result = await handle(action, makePlayerStats(), campaignName, mapName);
+
+      expect(result.type).toBe('popup');
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Bard',
+        'bardicInspirationUses',
+        3,
+        campaignName
+      );
+    });
+
+    it('does not decrement when uses_expression is 0 and bardic max is 0', async () => {
+      const ps = makePlayerStats({
+        _trackedResources: { bardicInspirationUses: { current: 0, max: 0 } },
+      });
+      const action = makeAction({ uses_expression: 0 });
 
       targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
       damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
       damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: freshAttackEvent({ d20: 5, bonus: 3, hit: false }),
+        attackEvent: freshAttackEvent(),
         attackerName: 'Goblin',
         targetName: 'Goblin',
         primaryDamage: 0,
@@ -180,23 +263,6 @@ describe('reactionDebuffHandler — uses decrement & logging', () => {
         totalDamage: 0,
         damageTypes: [],
       });
-      useRuntimeState.getRuntimeValue.mockReturnValue(2);
-
-      await handle(action, ps, campaignName, mapName);
-
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Bard',
-        'bardicInspirationUses',
-        1,
-        campaignName
-      );
-    });
-
-    it('does not decrement uses on early return (uses exhausted)', async () => {
-      const ps = makePlayerStats({});
-      const action = makeAction({ uses_expression: 3 });
-      automationService.evaluateAutoExpression.mockReturnValue(3);
-      useRuntimeState.getRuntimeValue.mockReturnValue(0);
 
       await handle(action, ps, campaignName, mapName);
 

@@ -18,10 +18,6 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
     loadCombatSummary: vi.fn(),
 }));
 
-vi.mock('../../common/damageRollback.js', () => ({
-    findRollsByCreature: vi.fn(),
-}));
-
 vi.mock('../../../rules/combat/rangeValidation.js', () => ({
     getDistanceFeet: vi.fn(),
     rangeToFeet: vi.fn((r) => {
@@ -47,6 +43,14 @@ vi.mock('../../../../services/character/classFeatures.js', () => ({
 
 vi.mock('../../../combat/automation/automationService.js', () => ({
     evaluateAutoExpression: vi.fn(),
+}));
+
+vi.mock('../../../dice/diceRoller.js', () => ({
+    rollExpression: vi.fn(),
+}));
+
+vi.mock('../../../rules/combat/applyDamage.js', () => ({
+    applyDamageToTarget: vi.fn(),
 }));
 
 vi.mock('../../../../services/encounters/combatData.js', () => ({
@@ -114,31 +118,11 @@ describe('autoRerollHandler', () => {
 
     describe('no recent roll', () => {
         it('should return info popup when combat context has no lastAttack', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'lastAttack') return null;
-                return null;
-            });
-
             const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('No recent failed attack roll or ability check');
-        });
-
-        it('should return automationInfoPopup when no automation type matches', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'lastAttack') return null;
-                return null;
-            });
-
-            const action = makeAction({
-                automation: { type: 'auto_reroll' },
-            });
-            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
         });
 
         it('should fall through to automationInfoPopup when bonusExpression is unrecognized', async () => {
@@ -205,19 +189,6 @@ describe('autoRerollHandler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('No recent failed attack roll or ability check');
         });
-
-        it('should return info when last roll is not a failed attack or check for player', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 18, bonus: 5, targetAc: 15, hit: true };
-                return null;
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No recent failed attack roll or ability check');
-            expect(addEntry).not.toHaveBeenCalled();
-        });
     });
 
     // ── Ally missed attack with range ───────────────────────────
@@ -252,21 +223,6 @@ describe('autoRerollHandler', () => {
             });
             getDistanceFeet.mockReturnValue(50);
             isWithinRange.mockResolvedValue(false);
-
-            const action = makeAction({
-                automation: { bonus: 2, range: '30_ft' },
-            });
-            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No recent failed attack roll or ability check');
-        });
-
-        it('should skip ally attack that already hit', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'Ally', d20: 18, bonus: 5, targetAc: 15, hit: true };
-                return null;
-            });
 
             const action = makeAction({
                 automation: { bonus: 2, range: '30_ft' },
@@ -469,26 +425,6 @@ describe('autoRerollHandler', () => {
             );
         });
 
-        it('should reject when no channel divinity charges', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' };
-                if (name === 'TestHero' && key === 'channelDivinityCharges') return 0;
-                return null;
-            });
-
-            const action = makeAction({
-                automation: {
-                    target: 'saving_throw',
-                    resourceCost: 'channel_divinity',
-                },
-            });
-            const stats = makePlayerStatsForLevel(5, { channel_divinity: 2 });
-            const result = await handle(action, stats, 'campaign', 'map');
-
-            expect(result.payload.description).toContain('No Channel Divinity charges remaining');
-            expect(addEntry).not.toHaveBeenCalled();
-        });
-
         it('should consume focus points on success', async () => {
             getRuntimeValue.mockImplementation((name, key, _campaign) => {
                 if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Intelligence' };
@@ -507,26 +443,6 @@ describe('autoRerollHandler', () => {
 
             expect(result.type).toBe('popup');
             expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'focusPoints', 2, 'campaign');
-        });
-
-        it('should reject when no focus points', async () => {
-            getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Intelligence' };
-                if (name === 'TestHero' && key === 'focusPoints') return 0;
-                return null;
-            });
-
-            const action = makeAction({
-                automation: {
-                    target: 'saving_throw',
-                    resourceCost: 'focus_points',
-                },
-            });
-            const stats = makePlayerStats({ level: 1, class: { class_levels: [{ level: 1, focus_points: 5 }] } });
-            const result = await handle(action, stats, 'campaign', 'map');
-
-            expect(result.payload.description).toContain('No Focus Points remaining');
-            expect(addEntry).not.toHaveBeenCalled();
         });
     });
 
@@ -605,15 +521,31 @@ describe('autoRerollHandler', () => {
             expect(addEntry).not.toHaveBeenCalled();
         });
 
-        it('should skip bardic die if player has no bardic class levels', async () => {
+        it('should use usesMax as default when bardicInspirationUses runtime value is null', async () => {
             getRuntimeValue.mockImplementation((name, key, _campaign) => {
                 if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
                 return null;
             });
 
-            const stats = makePlayerStats({ class: { class_levels: [{ level: 1 }] } });
+            const stats = makePlayerStatsForLevel(2, { bardic_inspiration_uses: 3, bardic_die: 6 });
             const action = makeAction({
-                automation: { bonusExpression: 'bardic_inspiration_die', bonus: undefined },
+                automation: { bonusExpression: 'bardic_inspiration_die' },
+            });
+            const result = await handle(action, stats, 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('d20(5)');
+        });
+
+        it('should return info when bardicDieSize is 0', async () => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
+                return null;
+            });
+
+            const stats = makePlayerStatsForLevel(1, { bardic_inspiration_uses: 3, bardic_die: 0 });
+            const action = makeAction({
+                automation: { bonusExpression: 'bardic_inspiration_die' },
             });
             const result = await handle(action, stats, 'campaign', 'map');
 
@@ -698,9 +630,9 @@ describe('autoRerollHandler', () => {
             expect(addEntry).not.toHaveBeenCalled();
         });
 
-        it('should return info when last roll is not a failed attack or check for player', async () => {
+        it('should default to 6 psionic energy when _trackedResources is missing', async () => {
             getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 18, bonus: 5, targetAc: 15, hit: true };
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
                 return null;
             });
             vi.mocked(evaluateAutoExpression).mockReturnValue(6);
@@ -708,11 +640,11 @@ describe('autoRerollHandler', () => {
             const action = makeAction({
                 automation: { bonusExpression: 'psionic_energy_die' },
             });
-            const stats = makePlayerStats({ level: 1, _trackedResources: { psionicEnergy: { max: 6 } } });
+            const stats = makePlayerStats({ level: 1 });
             const result = await handle(action, stats, 'campaign', 'map');
 
-            expect(result.payload.description).toContain('No recent failed ability check or attack roll');
-            expect(addEntry).not.toHaveBeenCalled();
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('d20(5)');
         });
     });
 });

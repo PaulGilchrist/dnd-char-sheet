@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -115,6 +116,28 @@ describe('signatureSpellsHandler.handle', () => {
 
       expect(dataLoader.loadSpells).toHaveBeenCalledWith('2024');
     });
+
+    it('defaults to 2024 ruleset when rules is null', async () => {
+      const action = makeAction();
+      const ps = makePlayerStats({ rules: null });
+
+      useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
+      dataLoader.loadSpells.mockResolvedValue([]);
+
+      await handle(action, ps, campaignName, null);
+
+      expect(dataLoader.loadSpells).toHaveBeenCalledWith('2024');
+    });
+
+    it('rejects with popup when loadSpells throws', async () => {
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
+      dataLoader.loadSpells.mockRejectedValue(new Error('Network error'));
+
+      await expect(handle(action, ps, campaignName, null)).rejects.toThrow('Network error');
+    });
   });
 
   describe('spells already selected', () => {
@@ -135,7 +158,7 @@ describe('signatureSpellsHandler.handle', () => {
       expect(result.payload.automation).toBe(action.automation);
     });
 
-    it('returns modal when at least one spell is still available', async () => {
+    it('returns modal with full payload when at least one spell is still available', async () => {
       const action = makeAction();
       const ps = makePlayerStats();
 
@@ -143,12 +166,60 @@ describe('signatureSpellsHandler.handle', () => {
         .mockReturnValueOnce(['Fireball', 'Counterspell']) // selection
         .mockReturnValueOnce(true) // Fireball used
         .mockReturnValueOnce(undefined); // Counterspell still available
+      dataLoader.loadSpells.mockResolvedValue(level3SpellData);
 
       const result = await handle(action, ps, campaignName, null);
 
       expect(result.type).toBe('modal');
       expect(result.modalName).toBe('signatureSpells');
       expect(result.payload.selectedSpells).toEqual(['Fireball', 'Counterspell']);
+      expect(result.payload.level3Options).toEqual(['Fireball', 'Counterspell', 'Haste']);
+      expect(result.payload.action).toBe(action);
+      expect(result.payload.playerStats).toBe(ps);
+      expect(result.payload.campaignName).toBe(campaignName);
+    });
+
+    it('treats empty array selection the same as no selection', async () => {
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      useRuntimeState.getRuntimeValue.mockReturnValue([]);
+      dataLoader.loadSpells.mockResolvedValue(level3SpellData);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.modalName).toBe('signatureSpells');
+      expect(result.payload.selectedSpells).toEqual([]);
+    });
+
+    it('treats null selection the same as no selection', async () => {
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      useRuntimeState.getRuntimeValue.mockReturnValue(null);
+      dataLoader.loadSpells.mockResolvedValue(level3SpellData);
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.modalName).toBe('signatureSpells');
+      expect(result.payload.selectedSpells).toEqual([]);
+    });
+
+    it('marks spells with spaces in names correctly as used', async () => {
+      const action = makeAction();
+      const ps = makePlayerStats();
+
+      useRuntimeState.getRuntimeValue
+        .mockReturnValueOnce(['Vicious Mockery', 'Shield']) // selection with spaces
+        .mockReturnValueOnce(true) // Vicious Mockery used (key: SignatureSpells_Vicious_Mockery_used)
+        .mockReturnValueOnce(undefined); // Shield still available
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.selectedSpells).toEqual(['Vicious Mockery', 'Shield']);
     });
   });
 });
@@ -189,39 +260,72 @@ describe('signatureSpellsHandler.onSignatureSpellsSelected', () => {
     );
   });
 
-  it('rejects invalid selections (missing spell, empty string, or duplicate)', async () => {
+  it('rejects when spell1 is missing and spell2 is provided', async () => {
     const action = makeAction();
     const ps = makePlayerStats();
 
-    // Missing spell1
-    let result = await onSignatureSpellsSelected(action, ps, campaignName, null, 'Counterspell');
+    const result = await onSignatureSpellsSelected(action, ps, campaignName, null, 'Counterspell');
+
     expect(result.type).toBe('popup');
     expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
     expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-    vi.clearAllMocks();
+  });
 
-    // Missing spell2
-    result = await onSignatureSpellsSelected(action, ps, campaignName, 'Fireball', null);
+  it('rejects when spell2 is missing and spell1 is provided', async () => {
+    const action = makeAction();
+    const ps = makePlayerStats();
+
+    const result = await onSignatureSpellsSelected(action, ps, campaignName, 'Fireball', null);
+
+    expect(result.type).toBe('popup');
     expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
     expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-    vi.clearAllMocks();
+  });
 
-    // Empty string spell1
-    result = await onSignatureSpellsSelected(action, ps, campaignName, '', 'Counterspell');
+  it('rejects when spell1 is an empty string', async () => {
+    const action = makeAction();
+    const ps = makePlayerStats();
+
+    const result = await onSignatureSpellsSelected(action, ps, campaignName, '', 'Counterspell');
+
+    expect(result.type).toBe('popup');
     expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
     expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-    vi.clearAllMocks();
+  });
 
-    // Empty string spell2
-    result = await onSignatureSpellsSelected(action, ps, campaignName, 'Fireball', '');
+  it('rejects when spell2 is an empty string', async () => {
+    const action = makeAction();
+    const ps = makePlayerStats();
+
+    const result = await onSignatureSpellsSelected(action, ps, campaignName, 'Fireball', '');
+
+    expect(result.type).toBe('popup');
     expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
     expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-    vi.clearAllMocks();
+  });
 
-    // Duplicate spells
-    result = await onSignatureSpellsSelected(action, ps, campaignName, 'Fireball', 'Fireball');
+  it('rejects when both spells are the same value', async () => {
+    const action = makeAction();
+    const ps = makePlayerStats();
+
+    const result = await onSignatureSpellsSelected(action, ps, campaignName, 'Fireball', 'Fireball');
+
+    expect(result.type).toBe('popup');
     expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
     expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  it('clears selection when both spells are empty strings', async () => {
+    const action = makeAction();
+    const ps = makePlayerStats();
+
+    const result = await onSignatureSpellsSelected(action, ps, campaignName, '', '');
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toBe('Signature Spells selection cleared.');
+    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+      'TestWizard', 'SignatureSpells_selection', null, campaignName, true,
+    );
   });
 });
 
@@ -275,6 +379,45 @@ describe('signatureSpellsHandler.onSignatureSpellsCast', () => {
     expect(result.type).toBe('popup');
     expect(result.payload.description).toContain('already been cast');
     expect(result.payload.description).toContain('Short or Long Rest');
+    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  it('handles non-array selection (string) gracefully', async () => {
+    const action = makeAction();
+    const ps = makePlayerStats();
+
+    useRuntimeState.getRuntimeValue.mockReturnValueOnce('Fireball');
+
+    const result = await onSignatureSpellsCast(action, ps, campaignName, 'Fireball');
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toBe('Fireball is not a selected signature spell.');
+    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  it('handles null selection gracefully', async () => {
+    const action = makeAction();
+    const ps = makePlayerStats();
+
+    useRuntimeState.getRuntimeValue.mockReturnValueOnce(null);
+
+    const result = await onSignatureSpellsCast(action, ps, campaignName, 'Fireball');
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toBe('Fireball is not a selected signature spell.');
+    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  it('handles empty selection array gracefully', async () => {
+    const action = makeAction();
+    const ps = makePlayerStats();
+
+    useRuntimeState.getRuntimeValue.mockReturnValueOnce([]);
+
+    const result = await onSignatureSpellsCast(action, ps, campaignName, 'Fireball');
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toBe('Fireball is not a selected signature spell.');
     expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
   });
 });

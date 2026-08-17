@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { handle, confirmArcaneCharge } from './arcaneChargeHandler.js';
 
 const campaignName = 'test-campaign';
@@ -18,6 +19,10 @@ function makePlayerStats(overrides = {}) {
 }
 
 describe('arcaneChargeHandler', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     describe('handle', () => {
         it('should return a modal with arcaneCharge name and payload containing action, playerStats, campaignName, and distance', async () => {
             const action = makeAction();
@@ -49,6 +54,16 @@ describe('arcaneChargeHandler', () => {
             const result = await handle(action, playerStats, campaignName);
 
             expect(result.payload.distance).toBe('60 ft');
+        });
+
+        it('should pass the exact action reference in payload.action', async () => {
+            const action = makeAction();
+            const playerStats = makePlayerStats();
+
+            const result = await handle(action, playerStats, campaignName);
+
+            expect(result.payload.action).toBe(action);
+            expect(result.payload.action.automation.type).toBe('arcane_charge');
         });
     });
 
@@ -95,6 +110,26 @@ describe('arcaneChargeHandler', () => {
             expect(result.payload.automationType).toBe('arcane_charge');
             expect(result.payload.description).toBe('Custom Name: Teleported 45 ft to an unoccupied space you can see.');
         });
+
+        it('should pass through undefined action name as-is in payload.name', async () => {
+            const action = { automation: { type: 'arcane_charge', distance: '30 ft' } };
+            const playerStats = makePlayerStats();
+
+            const result = await confirmArcaneCharge(action, playerStats, campaignName);
+
+            expect(result.payload.name).toBe(undefined);
+            expect(result.payload.description).toContain('undefined');
+        });
+
+        it('should include automation field in popup payload', async () => {
+            const action = makeAction();
+            const playerStats = makePlayerStats();
+
+            const result = await confirmArcaneCharge(action, playerStats, campaignName);
+
+            expect(result.payload.automation).toBeDefined();
+            expect(result.payload.automation.type).toBe('arcane_charge');
+            expect(result.payload.automation.distance).toBe('30 ft');
+        });
     });
 });
-

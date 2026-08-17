@@ -1,3 +1,5 @@
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './guardedMindHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';
@@ -11,17 +13,24 @@ vi.mock('../../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-const makeAction = (auto = {}) => ({
-    name: 'Guarded Mind',
-    automation: { type: 'guarded_mind', resource: 'psionicEnergy', ...auto },
-});
+const campaignName = 'test-campaign';
+const playerName = 'TestHero';
 
-const makePlayerStats = (overrides = {}) => ({
-    name: 'TestHero',
-    level: 10,
-    _trackedResources: { psionicEnergy: { max: 6 } },
-    ...overrides,
-});
+function makeAction(overrides = {}) {
+    return {
+        name: 'Guarded Mind',
+        automation: { type: 'guarded_mind', resource: 'psionicEnergy', ...overrides.automation },
+    };
+}
+
+function makePlayerStats(overrides = {}) {
+    return {
+        name: playerName,
+        level: 10,
+        _trackedResources: { psionicEnergy: { max: 6 } },
+        ...overrides,
+    };
+}
 
 describe('guardedMindHandler', () => {
     beforeEach(() => {
@@ -34,7 +43,7 @@ describe('guardedMindHandler', () => {
         it('should return error popup when no psionic energy remaining', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(0);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
@@ -45,7 +54,7 @@ describe('guardedMindHandler', () => {
         it('should return error popup when psionic energy is negative', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(-1);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('No Psionic Energy remaining');
@@ -56,13 +65,19 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(5)
                 .mockReturnValueOnce(['charmed', 'blinded']);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero', 'psionicEnergy', 4, 'test-campaign'
+            expect(runtimeState.getRuntimeValue).toHaveBeenNthCalledWith(
+                1, playerName, 'psionicEnergy', campaignName
+            );
+            expect(runtimeState.getRuntimeValue).toHaveBeenNthCalledWith(
+                2, playerName, 'activeConditions', campaignName
             );
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero', 'activeConditions', ['blinded'], 'test-campaign'
+                playerName, 'psionicEnergy', 4, campaignName
+            );
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                playerName, 'activeConditions', ['blinded'], campaignName
             );
             expect(result.payload.description).toContain('Ended charmed');
             expect(result.payload.description).toContain('Psionic Energy: 4/6');
@@ -73,10 +88,10 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(3)
                 .mockReturnValueOnce(['frightened', 'poisoned']);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero', 'activeConditions', ['poisoned'], 'test-campaign'
+                playerName, 'activeConditions', ['poisoned'], campaignName
             );
             expect(result.payload.description).toContain('Ended frightened');
             expect(result.payload.description).toContain('Psionic Energy: 2/6');
@@ -87,10 +102,10 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(2)
                 .mockReturnValueOnce(['charmed', 'frightened', 'poisoned']);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero', 'activeConditions', ['poisoned'], 'test-campaign'
+                playerName, 'activeConditions', ['poisoned'], campaignName
             );
             expect(result.payload.description).toContain('Ended charmed and frightened');
         });
@@ -100,10 +115,10 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(4)
                 .mockReturnValueOnce(['blinded', 'charmed', 'poisoned', 'frightened']);
 
-            await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero', 'activeConditions', ['blinded', 'poisoned'], 'test-campaign'
+                playerName, 'activeConditions', ['blinded', 'poisoned'], campaignName
             );
         });
 
@@ -112,21 +127,35 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(6)
                 .mockReturnValueOnce(['blinded', 'poisoned']);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(result.payload.description).toContain('Ended none');
             expect(result.payload.description).toContain('Psionic Energy: 5/6');
         });
 
-        it('should handle empty or undefined conditions as no matching conditions', async () => {
+        it('should handle empty conditions as no matching conditions', async () => {
             runtimeState.getRuntimeValue
                 .mockReturnValueOnce(3)
                 .mockReturnValueOnce([]);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(result.payload.description).toContain('Ended none');
             expect(result.payload.description).toContain('Psionic Energy: 2/6');
+        });
+
+        it('should handle null conditions as no matching conditions', async () => {
+            runtimeState.getRuntimeValue
+                .mockReturnValueOnce(3)
+                .mockReturnValueOnce(null);
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+            expect(result.payload.description).toContain('Ended none');
+            expect(result.payload.description).toContain('Psionic Energy: 2/6');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                playerName, 'activeConditions', [], campaignName
+            );
         });
 
         it('should use default max resource when resources object or key is missing', async () => {
@@ -134,7 +163,11 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(3)
                 .mockReturnValueOnce(['charmed']);
 
-            const result = await handle(makeAction(), makePlayerStats({ _trackedResources: { otherResource: { max: 10 } } }), 'test-campaign');
+            const result = await handle(
+                makeAction(),
+                makePlayerStats({ _trackedResources: { otherResource: { max: 10 } } }),
+                campaignName
+            );
 
             expect(result.payload.description).toContain('Psionic Energy: 2/6');
         });
@@ -144,7 +177,7 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(5)
                 .mockReturnValueOnce(['charmed']);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(result.payload.automationType).toBe('guarded_mind');
             expect(result.payload.automation).toEqual(makeAction().automation);
@@ -156,10 +189,13 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(8)
                 .mockReturnValueOnce(['charmed']);
 
-            const customAction = makeAction({ resource: 'runeCharge' });
+            const customAction = makeAction({ automation: { resource: 'runeCharge' } });
 
-            const result = await handle(customAction, makePlayerStats(), 'test-campaign');
+            const result = await handle(customAction, makePlayerStats(), campaignName);
 
+            expect(runtimeState.getRuntimeValue).toHaveBeenNthCalledWith(
+                1, playerName, 'runeCharge', campaignName
+            );
             expect(result.payload.description).toContain('Psionic Energy: 7/6');
         });
 
@@ -168,13 +204,25 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(5)
                 .mockReturnValueOnce(['charmed']);
 
-            await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            await handle(makeAction(), makePlayerStats(), campaignName);
 
-            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+            expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                 type: 'ability_use',
                 characterName: 'TestHero',
                 abilityName: 'Guarded Mind',
             }));
+        });
+
+        it('should handle addEntry rejection gracefully', async () => {
+            runtimeState.getRuntimeValue
+                .mockReturnValueOnce(5)
+                .mockReturnValueOnce(['charmed']);
+            logService.addEntry.mockRejectedValueOnce(new Error('log fail'));
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
         });
 
         it('should treat case-insensitive conditions correctly', async () => {
@@ -182,10 +230,10 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(4)
                 .mockReturnValueOnce(['CHARMED', 'Frightened', 'blinded']);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero', 'activeConditions', ['blinded'], 'test-campaign'
+                playerName, 'activeConditions', ['blinded'], campaignName
             );
             expect(result.payload.description).toContain('CHARMED');
             expect(result.payload.description).toContain('Frightened');
@@ -196,9 +244,12 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(2)
                 .mockReturnValueOnce('not-an-array');
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(result.payload.description).toContain('Ended none');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                playerName, 'activeConditions', [], campaignName
+            );
         });
 
         it('should decrement from runtime value even when it exceeds max', async () => {
@@ -206,13 +257,12 @@ describe('guardedMindHandler', () => {
                 .mockReturnValueOnce(10)
                 .mockReturnValueOnce(['charmed']);
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero', 'psionicEnergy', 9, 'test-campaign'
+                playerName, 'psionicEnergy', 9, campaignName
             );
             expect(result.payload.description).toContain('Psionic Energy: 9/6');
         });
     });
 });
-

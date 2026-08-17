@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { applyRiderOption } from './attackRiderHandler.js';
@@ -15,28 +16,16 @@ vi.mock('../../../ui/logService.js', () => ({
 
 vi.mock('../../../automation/common/savePrompt.js', () => ({
     buildSaveDc: vi.fn((opt) => opt.saveDc || 15),
-    createSaveListener: vi.fn(() => ({
-        promptId: 'test-prompt',
-        promise: Promise.resolve({ success: false, roll: 5, total: 5, saveBonus: 0 }),
-    })),
+    createSaveListener: vi.fn(),
 }));
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn(async () => ({
-        creatures: [{ name: 'Goblin', size: 'Medium', position: { x: 1, y: 1 } }],
-    })),
+    getCombatContext: vi.fn(),
     getTargetFromAttacker: vi.fn(() => ({ name: 'Goblin' })),
 }));
 
 vi.mock('../../../rules/combat/rangeCheck.js', () => ({
     isWithinRange: vi.fn().mockResolvedValue(true),
-}));
-
-vi.mock('./massFearHandler.js', () => ({
-    resolveMassFear: vi.fn(async () => ({
-        type: 'popup',
-        payload: { type: 'automation_info', description: 'Mass Fear resolved' },
-    })),
 }));
 
 vi.mock('../../../dice/diceRoller.js', () => ({
@@ -49,6 +38,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { createSaveListener } from '../../../automation/common/savePrompt.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -97,23 +87,48 @@ function makePlayerStats(overrides = {}) {
     };
 }
 
+/**
+ * Set up mocks for a save flow test: targetEffects is [],
+ * and the save listener returns the given save result.
+ */
+function setupSaveFlow(saveResult) {
+    getRuntimeValue.mockImplementation((_key, prop, _camp) => {
+        if (prop === 'targetEffects') return [];
+        return null;
+    });
+    vi.mocked(createSaveListener).mockReturnValue({
+        promptId: 'save-prompt',
+        promise: Promise.resolve(saveResult),
+    });
+}
+
+/**
+ * Set up mocks for a save flow test where the target has active conditions/buffs.
+ */
+function setupSaveFlowWithState(targetEffects, activeBuffs, activeConditions) {
+    getRuntimeValue.mockImplementation((key, prop, _camp) => {
+        if (prop === 'targetEffects') return targetEffects;
+        if (prop === 'activeBuffs' && key === 'TestHero') return activeBuffs;
+        if (prop === 'activeConditions' && key === 'TestHero') return activeConditions;
+        if (prop === 'activeConditions' && key === 'Goblin') return activeConditions;
+        return null;
+    });
+    vi.mocked(createSaveListener).mockReturnValue({
+        promptId: 'save-prompt',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5, saveBonus: 0 }),
+    });
+}
+
 // ── Tests ──────────────────────────────────────────────────────
 
-describe('attackRiderHandler - applyRiderEffect save flow', () => {
+describe('attackRiderHandler - save flow', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    describe('saveType handling', () => {
-        it('should create save listener and return null when saveType is set', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            vi.mocked(createSaveListener).mockReturnValue({
-                promptId: 'save-prompt',
-                promise: Promise.resolve({ success: false, roll: 5, total: 5, saveBonus: 0 }),
-            });
+    describe('saveType creates save listener', () => {
+        it('should return null and create save listener when saveType is set', async () => {
+            setupSaveFlow({ success: false, roll: 5, total: 5, saveBonus: 0 });
 
             const action = makeAction({
                 automation: {
@@ -131,10 +146,72 @@ describe('attackRiderHandler - applyRiderEffect save flow', () => {
             }));
         });
 
+        it('should return null when saveType is set even on successful save', async () => {
+            setupSaveFlow({ success: true, roll: 18, total: 18, saveBonus: 3 });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX', saveDc: 14 }],
+                },
+            });
+            const result = await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
+
+            expect(result).toBeNull();
+            expect(createSaveListener).toHaveBeenCalled();
+        });
+
+        it('should not apply condition when saveType exists but condition field is absent', async () => {
+            setupSaveFlow({ success: false, roll: 5, total: 5, saveBonus: 0 });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX', saveAbility: 'DEX' }],
+                },
+            });
+            const result = await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
+
+            expect(result).toBeNull();
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'activeConditions', expect.any(Array), 'test-campaign');
+        });
+    });
+
+    describe('save failure applies condition', () => {
         it('should apply condition on failed save', async () => {
+            setupSaveFlow({ success: false, roll: 5, total: 5, saveBonus: 0 });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX', condition: 'prone' }],
+                },
+            });
+            const result = await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
+
+            expect(result).toBeNull();
+            expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining(['prone']), 'test-campaign');
+        });
+
+        it('should not apply condition on successful save', async () => {
+            setupSaveFlow({ success: true, roll: 18, total: 18, saveBonus: 3 });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX', condition: 'prone' }],
+                },
+            });
+            const result = await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
+
+            expect(result).toBeNull();
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'activeConditions', expect.any(Array), 'test-campaign');
+        });
+
+        it('should preserve existing conditions when adding a new one', async () => {
             getRuntimeValue.mockImplementation((_key, prop, _camp) => {
                 if (prop === 'targetEffects') return [];
-                if (prop === 'activeConditions' && _key === 'Goblin') return [];
+                if (prop === 'activeConditions' && _key === 'Goblin') return ['frightened'];
                 return null;
             });
             vi.mocked(createSaveListener).mockReturnValue({
@@ -150,40 +227,13 @@ describe('attackRiderHandler - applyRiderEffect save flow', () => {
             });
             await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
 
-            expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining(['prone']), 'test-campaign');
+            expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining(['frightened', 'prone']), 'test-campaign');
         });
+    });
 
-        it('should not apply condition on successful save', async () => {
-            getRuntimeValue.mockImplementation((_key, prop, _camp) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            vi.mocked(createSaveListener).mockReturnValue({
-                promptId: 'save-prompt',
-                promise: Promise.resolve({ success: true, roll: 18, total: 18, saveBonus: 3 }),
-            });
-
-            const action = makeAction({
-                automation: {
-                    type: 'attack_rider',
-                    options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX', condition: 'prone' }],
-                },
-            });
-            const result = await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
-
-            expect(result).toBeNull();
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'activeConditions', expect.any(Array), 'test-campaign');
-        });
-
-        it('should log save result to campaign log', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            vi.mocked(createSaveListener).mockReturnValue({
-                promptId: 'save-prompt',
-                promise: Promise.resolve({ success: false, roll: 7, total: 7, saveBonus: 0 }),
-            });
+    describe('save result logging', () => {
+        it('should log save result to campaign log on failure', async () => {
+            setupSaveFlow({ success: false, roll: 7, total: 7, saveBonus: 0 });
 
             const action = makeAction({
                 automation: {
@@ -198,20 +248,44 @@ describe('attackRiderHandler - applyRiderEffect save flow', () => {
                 description: expect.stringContaining('failed'),
             }));
         });
+
+        it('should log save result to campaign log on success', async () => {
+            setupSaveFlow({ success: true, roll: 15, total: 15, saveBonus: 2 });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX', condition: 'prone' }],
+                },
+            });
+            await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
+
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use',
+                description: expect.stringContaining('succeeded'),
+            }));
+        });
+
+        it('should include roll value and DC in log description', async () => {
+            setupSaveFlow({ success: false, roll: 12, total: 12, saveBonus: 0 });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX', saveDc: 14, condition: 'prone' }],
+                },
+            });
+            await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
+
+            const logCall = addEntry.mock.calls[addEntry.mock.calls.length - 1];
+            expect(logCall[1].description).toContain('12');
+            expect(logCall[1].description).toContain('DC 14');
+        });
     });
 
-    describe('saveType with Psychic Veil removal', () => {
+    describe('Psychic Veil removal with saveType', () => {
         it('should remove Psychic Veil buff and invisible condition on save failure', async () => {
-            getRuntimeValue.mockImplementation((key, prop, _camp) => {
-                if (prop === 'targetEffects') return [];
-                if (prop === 'activeBuffs' && key === 'TestHero') return [{ name: 'Psychic Veil' }];
-                if (prop === 'activeConditions' && key === 'TestHero') return ['invisible', 'poisoned'];
-                return null;
-            });
-            vi.mocked(createSaveListener).mockReturnValue({
-                promptId: 'save-prompt',
-                promise: Promise.resolve({ success: false, roll: 5, total: 5, saveBonus: 0 }),
-            });
+            setupSaveFlowWithState([], [{ name: 'Psychic Veil' }], ['invisible', 'poisoned']);
 
             const action = makeAction({
                 automation: {
@@ -246,23 +320,64 @@ describe('attackRiderHandler - applyRiderEffect save flow', () => {
             });
             await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
 
-            // Psychic Veil removal happens regardless of save result
             expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'activeConditions', [], 'test-campaign');
             expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'activeBuffs', [], 'test-campaign');
         });
-    });
 
-    describe('Envenom Weapons on poison save fail', () => {
-        it('should apply 2d6 Poison damage when Envenom Weapons passive exists and CON save fails', async () => {
-            getRuntimeValue.mockImplementation((_key, prop, _camp) => {
+        it('should remove only invisible condition, preserving other conditions', async () => {
+            getRuntimeValue.mockImplementation((key, prop, _camp) => {
                 if (prop === 'targetEffects') return [];
+                if (prop === 'activeBuffs' && key === 'TestHero') return [{ name: 'Psychic Veil' }];
+                if (prop === 'activeConditions' && key === 'TestHero') return ['invisible', 'poisoned', 'exhaustion'];
                 return null;
             });
             vi.mocked(createSaveListener).mockReturnValue({
                 promptId: 'save-prompt',
                 promise: Promise.resolve({ success: false, roll: 5, total: 5, saveBonus: 0 }),
             });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX' }],
+                },
+            });
+            await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'activeConditions', ['poisoned', 'exhaustion'], 'test-campaign');
+        });
+
+        it('should not remove anything when Psychic Veil is not active', async () => {
+            getRuntimeValue.mockImplementation((key, prop, _camp) => {
+                if (prop === 'targetEffects') return [];
+                if (prop === 'activeBuffs' && key === 'TestHero') return [{ name: 'Shield of Faith' }];
+                return null;
+            });
+            vi.mocked(createSaveListener).mockReturnValue({
+                promptId: 'save-prompt',
+                promise: Promise.resolve({ success: false, roll: 5, total: 5, saveBonus: 0 }),
+            });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Trip', effect: 'prone', saveType: 'DEX' }],
+                },
+            });
+            await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Trip']);
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('TestHero', 'activeConditions', expect.any(Array), 'test-campaign');
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('TestHero', 'activeBuffs', expect.any(Array), 'test-campaign');
+        });
+    });
+
+    describe('Envenom Weapons on poison save fail', () => {
+        it('should apply 2d6 Poison damage when Envenom Weapons passive exists and CON save fails', async () => {
+            setupSaveFlow({ success: false, roll: 5, total: 5, saveBonus: 0 });
             vi.mocked(rollExpression).mockReturnValue({ total: 8 });
+            vi.mocked(getCombatContext).mockResolvedValue({
+                creatures: [{ name: 'Goblin' }],
+            });
 
             const action = makeAction({
                 automation: {
@@ -288,14 +403,7 @@ describe('attackRiderHandler - applyRiderEffect save flow', () => {
         });
 
         it('should not apply Envenom Weapons damage when save succeeds', async () => {
-            getRuntimeValue.mockImplementation((_key, prop, _camp) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            vi.mocked(createSaveListener).mockReturnValue({
-                promptId: 'save-prompt',
-                promise: Promise.resolve({ success: true, roll: 18, total: 18, saveBonus: 3 }),
-            });
+            setupSaveFlow({ success: true, roll: 18, total: 18, saveBonus: 3 });
 
             const action = makeAction({
                 automation: {
@@ -317,14 +425,7 @@ describe('attackRiderHandler - applyRiderEffect save flow', () => {
         });
 
         it('should not apply Envenom Weapons when passive does not exist', async () => {
-            getRuntimeValue.mockImplementation((_key, prop, _camp) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            vi.mocked(createSaveListener).mockReturnValue({
-                promptId: 'save-prompt',
-                promise: Promise.resolve({ success: false, roll: 5, total: 5, saveBonus: 0 }),
-            });
+            setupSaveFlow({ success: false, roll: 5, total: 5, saveBonus: 0 });
 
             const action = makeAction({
                 automation: {
@@ -339,6 +440,55 @@ describe('attackRiderHandler - applyRiderEffect save flow', () => {
             await applyRiderOption(action, stats, 'test-campaign', 'Goblin', ['Poison']);
 
             expect(rollExpression).not.toHaveBeenCalled();
+        });
+
+        it('should skip damage application when combat context is null', async () => {
+            setupSaveFlow({ success: false, roll: 5, total: 5, saveBonus: 0 });
+            vi.mocked(getCombatContext).mockResolvedValue(null);
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Poison', effect: 'poisoned', saveType: 'CON', requires: "Poisoner's Kit" }],
+                },
+            });
+            const stats = makePlayerStats({
+                toolProficiencies: ["Poisoner's Kit"],
+                automation: {
+                    passives: [
+                        { type: 'damage_bonus', trigger: 'cunning_strike_poison_save_fail', name: 'Envenom Weapons', automation: { damageExpression: '2d6', damageType: 'Poison' } },
+                    ],
+                },
+            });
+            await applyRiderOption(action, stats, 'test-campaign', 'Goblin', ['Poison']);
+
+            // rollExpression is called but damage is not applied because combatSummary is null
+            expect(rollExpression).toHaveBeenCalledWith('2d6');
+            expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({ abilityName: 'Envenom Weapons' }));
+        });
+
+        it('should not apply damage when rollExpression returns null', async () => {
+            setupSaveFlow({ success: false, roll: 5, total: 5, saveBonus: 0 });
+            vi.mocked(rollExpression).mockReturnValue(null);
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Poison', effect: 'poisoned', saveType: 'CON', requires: "Poisoner's Kit" }],
+                },
+            });
+            const stats = makePlayerStats({
+                toolProficiencies: ["Poisoner's Kit"],
+                automation: {
+                    passives: [
+                        { type: 'damage_bonus', trigger: 'cunning_strike_poison_save_fail', name: 'Envenom Weapons', automation: { damageExpression: '2d6', damageType: 'Poison' } },
+                    ],
+                },
+            });
+            await applyRiderOption(action, stats, 'test-campaign', 'Goblin', ['Poison']);
+
+            // rollExpression was called but returned null, so no damage applied
+            expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({ abilityName: 'Envenom Weapons' }));
         });
     });
 
@@ -360,6 +510,25 @@ describe('attackRiderHandler - applyRiderEffect save flow', () => {
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'ability_use',
                 description: expect.stringContaining('Hamstring'),
+            }));
+        });
+
+        it('should use default value of 10 when speed_reduction has no value prop', async () => {
+            getRuntimeValue.mockImplementation((_key, prop) => {
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+
+            const action = makeAction({
+                automation: {
+                    type: 'attack_rider',
+                    options: [{ name: 'Hamstring', effect: 'speed_reduction' }],
+                },
+            });
+            await applyRiderOption(action, makePlayerStats(), 'test-campaign', 'Goblin', ['Hamstring']);
+
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                description: expect.stringContaining('10 ft'),
             }));
         });
     });

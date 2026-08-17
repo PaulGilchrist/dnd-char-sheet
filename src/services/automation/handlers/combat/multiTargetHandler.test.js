@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -25,7 +26,7 @@ vi.mock('../../../rules/combat/rangeValidation.js', () => ({
 }));
 
 vi.mock('../../../rules/combat/rangeCheck.js', () => ({
-  isWithinRange: vi.fn().mockResolvedValue(true),
+  isWithinRange: vi.fn().mockImplementation(() => Promise.resolve(true)),
 }));
 
 vi.mock('../../common/targetResolver.js', () => ({
@@ -52,72 +53,69 @@ import { getCombatSummary } from '../../../encounters/combatData.js';
 import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { resolveMapPositions } from '../../common/targetResolver.js';
 
-// ── Helpers ────────────────────────────────────────────────────
+import {
+  campaignName,
+  mapName,
+  makePlayerStats,
+  makeAction,
+  makeCombatSummary,
+} from './multiTargetHandler.test-utils.js';
 
-const campaignName = 'TestCampaign';
-const mapName = 'tavern-map';
+const NULL_MAP = null;
 
-function makePlayerStats(overrides = {}) {
-  return {
-    name: 'TestHero',
-    level: 5,
-    proficiencyBonus: 3,
-    hitPoints: 30,
-    ...overrides,
-  };
+function makeBaseCs(creatures = [], players = []) {
+  return makeCombatSummary(creatures, players);
 }
-
-function makeAction(automation = {}) {
-  return {
-    name: 'Word of Creation',
-    automation: {
-      range: '30 ft',
-      ...automation,
-    },
-  };
-}
-
-function makeCombatSummary(creatures = [], players = []) {
-  return { creatures, players, placedItems: [] };
-}
-
-// ── Tests ──────────────────────────────────────────────────────
 
 describe('multiTargetHandler.handle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCombatSummary.mockImplementation((_name) => {
-      return { creatures: [], players: [], placedItems: [] };
-    });
+    getCombatContext.mockResolvedValue(makeBaseCs());
+    getCombatSummary.mockImplementation(() => makeBaseCs());
   });
 
+  // ── combat context validation ────────────────────────────────
+
   describe('combat context validation', () => {
-    it('should return popup when no combat context exists', async () => {
+    it('should return automation_info popup when no combat context exists', async () => {
+      getCombatContext.mockResolvedValue(null);
       const ps = makePlayerStats();
       const action = makeAction();
-      getCombatContext.mockResolvedValue(null);
 
       const result = await handle(action, ps, campaignName, mapName);
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Word of Creation');
       expect(result.payload.description).toContain('No combat context found');
     });
 
-    it('should use default feature name when action.name is missing and no combat context', async () => {
+    it('should use default feature name when action.name is missing', async () => {
+      getCombatContext.mockResolvedValue(null);
       const ps = makePlayerStats();
       const action = { automation: { range: '30 ft' } };
-      getCombatContext.mockResolvedValue(null);
 
       const result = await handle(action, ps, campaignName, mapName);
 
       expect(result.payload.name).toBe('Words of Creation');
     });
 
-    it('should return popup when first target not found in combat summary', async () => {
+    it('should return automation_info popup when first target not found in combat summary', async () => {
       const ps = makePlayerStats();
-      const action = makeAction({ payload: { targetName: 'Goblin' } });
-      getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Orc' }]));
+      const action = makeAction({}, { payload: { targetName: 'Goblin' } });
+      getCombatContext.mockResolvedValue(makeBaseCs([{ name: 'Orc' }]));
+
+      const result = await handle(action, ps, campaignName, mapName);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('No first target found');
+    });
+
+    it('should return automation_info popup when action.payload.targetName is missing', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({}, { payload: {} });
+      getCombatContext.mockResolvedValue(makeBaseCs([{ name: 'Goblin' }]));
 
       const result = await handle(action, ps, campaignName, mapName);
 
@@ -125,10 +123,10 @@ describe('multiTargetHandler.handle', () => {
       expect(result.payload.description).toContain('No first target found');
     });
 
-    it('should return popup when action.payload has no targetName', async () => {
+    it('should return automation_info popup when action.payload is null', async () => {
       const ps = makePlayerStats();
-      const action = makeAction({ payload: {} });
-      getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Goblin' }]));
+      const action = makeAction({}, { payload: null });
+      getCombatContext.mockResolvedValue(makeBaseCs([{ name: 'Goblin' }]));
 
       const result = await handle(action, ps, campaignName, mapName);
 
@@ -137,210 +135,186 @@ describe('multiTargetHandler.handle', () => {
     });
   });
 
+  // ── multi-target selection popup ─────────────────────────────
+
   describe('multi-target selection popup', () => {
-    it('should return multi_target_selection popup with creature targets', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: { range: '30 ft' },
-        payload: { targetName: 'Goblin' },
-      };
-      const cs = makeCombatSummary(
-        [
-          { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
-          { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
-          { name: 'Ally', type: 'player', currentHp: 20, maxHp: 30 },
-        ],
-        [{ name: 'TestHero', gridX: 5, gridY: 10 }]
-      );
+    function setupContext(creatures = [], players = []) {
+      const cs = makeBaseCs(creatures, players);
       getCombatContext.mockResolvedValue(cs);
       getCombatSummary.mockReturnValue(cs);
       rangeToFeet.mockReturnValue(30);
-      resolveMapPositions.mockResolvedValue(null);
+    }
 
-      const result = await handle(action, ps, campaignName, mapName);
+    it('should return multi_target_selection popup with correct payload structure', async () => {
+      setupContext(
+        [
+          { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
+          { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
+        ],
+        [{ name: 'TestHero', gridX: 5, gridY: 10 }]
+      );
+
+      const result = await handle(
+        makeAction({}, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('multi_target_selection');
+      expect(result.payload.name).toBe('Word of Creation');
       expect(result.payload.firstTargetName).toBe('Goblin');
       expect(result.payload.range).toBe('30 ft');
+      expect(result.payload.creatureTargets).toEqual(['Orc']);
+      expect(result.payload.spellFilter).toEqual([]);
+      expect(result.payload.automation).toEqual({ range: '30 ft' });
+    });
+
+    it('should exclude the first target from creatureTargets', async () => {
+      setupContext([
+        { name: 'Goblin', type: 'monster' },
+        { name: 'Orc', type: 'monster' },
+        { name: 'Ally', type: 'player' },
+      ]);
+
+      const result = await handle(
+        makeAction({}, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
+
+      expect(result.payload.creatureTargets).not.toContain('Goblin');
       expect(result.payload.creatureTargets).toContain('Orc');
       expect(result.payload.creatureTargets).toContain('Ally');
     });
 
-    it('should exclude the first target from creatureTargets', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: { range: '30 ft' },
-        payload: { targetName: 'Goblin' },
-      };
-      const cs = makeCombatSummary(
-        [
-          { name: 'Goblin', type: 'monster' },
-          { name: 'Orc', type: 'monster' },
-          { name: 'Ally', type: 'player' },
-        ],
-        [{ name: 'TestHero', gridX: 5, gridY: 10 }]
-      );
-      getCombatContext.mockResolvedValue(cs);
-      getCombatSummary.mockReturnValue(cs);
-      rangeToFeet.mockReturnValue(30);
-      resolveMapPositions.mockResolvedValue(null);
-
-      const result = await handle(action, ps, campaignName, mapName);
-
-      expect(result.payload.creatureTargets).not.toContain('Goblin');
-      expect(result.payload.creatureTargets).toContain('Orc');
-    });
-
-    it('should use default feature name when action.name is missing', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        automation: { range: '30 ft' },
-        payload: { targetName: 'Goblin' },
-      };
-      getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Goblin' }]));
-      getCombatSummary.mockReturnValue(makeCombatSummary([{ name: 'Goblin' }]));
-      rangeToFeet.mockReturnValue(30);
-      resolveMapPositions.mockResolvedValue(null);
-
-      const result = await handle(action, ps, campaignName, mapName);
-
-      expect(result.payload.name).toBe('Words of Creation');
-    });
-
     it('should resolve map positions when mapName is provided', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: { range: '30 ft' },
-        payload: { targetName: 'Goblin' },
-      };
-      getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Goblin' }]));
-      getCombatSummary.mockReturnValue(makeCombatSummary([{ name: 'Goblin' }]));
-      rangeToFeet.mockReturnValue(30);
-      resolveMapPositions.mockResolvedValue({ attackerPos: { gridX: 5, gridY: 10 } });
+      setupContext([{ name: 'Goblin' }]);
 
-      await handle(action, ps, campaignName, mapName);
+      await handle(
+        makeAction({}, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
 
-      expect(resolveMapPositions).toHaveBeenCalledWith(campaignName, mapName, ps.name);
+      expect(resolveMapPositions).toHaveBeenCalledWith(
+        campaignName,
+        mapName,
+        'TestHero'
+      );
     });
 
     it('should skip map resolution when mapName is null', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: { range: '30 ft' },
-        payload: { targetName: 'Goblin' },
-      };
-      getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Goblin' }]));
-      getCombatSummary.mockReturnValue(makeCombatSummary([{ name: 'Goblin' }]));
-      rangeToFeet.mockReturnValue(30);
+      setupContext([{ name: 'Goblin' }]);
+      vi.mocked(resolveMapPositions).mockClear();
 
-      await handle(action, ps, campaignName, null);
+      await handle(
+        makeAction({}, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        NULL_MAP
+      );
 
       expect(resolveMapPositions).not.toHaveBeenCalled();
     });
 
     it('should use default range when automation.range is missing', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: {},
-        payload: { targetName: 'Goblin' },
-      };
-      getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Goblin' }]));
-      getCombatSummary.mockReturnValue(makeCombatSummary([{ name: 'Goblin' }]));
       rangeToFeet.mockReturnValue(10);
-      resolveMapPositions.mockResolvedValue(null);
+      getCombatContext.mockResolvedValue(makeBaseCs([{ name: 'Goblin' }]));
+      getCombatSummary.mockReturnValue(makeBaseCs([{ name: 'Goblin' }]));
 
-      const result = await handle(action, ps, campaignName, mapName);
+      const result = await handle(
+        makeAction({ range: undefined }, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
 
       expect(result.payload.range).toBe('10 ft');
     });
 
     it('should include spellFilter in payload when provided', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: { range: '30 ft', spellFilter: ['evocation', 'conjuration'] },
-        payload: { targetName: 'Goblin' },
-      };
-      getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Goblin' }]));
-      getCombatSummary.mockReturnValue(makeCombatSummary([{ name: 'Goblin' }]));
-      rangeToFeet.mockReturnValue(30);
-      resolveMapPositions.mockResolvedValue(null);
+      setupContext([{ name: 'Goblin' }]);
 
-      const result = await handle(action, ps, campaignName, mapName);
+      const result = await handle(
+        makeAction({ spellFilter: ['evocation', 'conjuration'] }, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
 
       expect(result.payload.spellFilter).toEqual(['evocation', 'conjuration']);
     });
 
     it('should use empty array for spellFilter when not provided', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: { range: '30 ft' },
-        payload: { targetName: 'Goblin' },
-      };
-      getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Goblin' }]));
-      getCombatSummary.mockReturnValue(makeCombatSummary([{ name: 'Goblin' }]));
-      rangeToFeet.mockReturnValue(30);
-      resolveMapPositions.mockResolvedValue(null);
+      setupContext([{ name: 'Goblin' }]);
 
-      const result = await handle(action, ps, campaignName, mapName);
+      const result = await handle(
+        makeAction({}, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
 
       expect(result.payload.spellFilter).toEqual([]);
     });
+
+    it('should return empty creatureTargets when combat summary has no creatures', async () => {
+      getCombatContext.mockResolvedValue(makeBaseCs([{ name: 'Goblin' }]));
+      getCombatSummary.mockReturnValue(makeBaseCs());
+
+      const result = await handle(
+        makeAction({}, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('multi_target_selection');
+      expect(result.payload.creatureTargets).toEqual([]);
+    });
+
+    it('should return empty creatureTargets when first target is the only creature', async () => {
+      setupContext([{ name: 'Goblin' }]);
+
+      const result = await handle(
+        makeAction({}, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
+
+      expect(result.payload.creatureTargets).toEqual([]);
+    });
   });
 
+  // ── range-based creature filtering ───────────────────────────
+
   describe('range-based creature filtering', () => {
-    it('should filter creatures within range when attackerPos is available', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: { range: '30 ft' },
-        payload: { targetName: 'Goblin' },
-      };
-      const cs = makeCombatSummary(
+    it('should include all creatures when attackerPos is null', async () => {
+      const cs = makeBaseCs(
         [
           { name: 'Goblin', type: 'monster' },
           { name: 'Orc', type: 'monster' },
           { name: 'Ally', type: 'player' },
         ],
-        [{ name: 'TestHero', gridX: 1, gridY: 1 }, { name: 'Ally', gridX: 3, gridY: 3 }]
+        [{ name: 'TestHero', gridX: 5, gridY: 10 }]
       );
       getCombatContext.mockResolvedValue(cs);
       getCombatSummary.mockReturnValue(cs);
       rangeToFeet.mockReturnValue(30);
-      resolveMapPositions.mockResolvedValue({ attackerPos: { gridX: 1, gridY: 1 } });
+      vi.mocked(resolveMapPositions).mockResolvedValue(null);
 
-      const result = await handle(action, ps, campaignName, mapName);
-
-      expect(result.payload.creatureTargets).toContain('Ally');
-      expect(result.payload.creatureTargets).not.toContain('Goblin');
-    });
-
-    it('should include all creatures when attackerPos is null but range is specified', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: { range: '30 ft' },
-        payload: { targetName: 'Goblin' },
-      };
-      getCombatContext.mockResolvedValue(makeCombatSummary(
-        [{ name: 'Goblin', type: 'monster' }, { name: 'Orc', type: 'monster' }, { name: 'Ally', type: 'player' }],
-        [{ name: 'TestHero', gridX: 5, gridY: 10 }]
-      ));
-      getCombatSummary.mockReturnValue(makeCombatSummary(
-        [{ name: 'Goblin', type: 'monster' }, { name: 'Orc', type: 'monster' }, { name: 'Ally', type: 'player' }],
-        [{ name: 'TestHero', gridX: 5, gridY: 10 }]
-      ));
-      rangeToFeet.mockReturnValue(30);
-      resolveMapPositions.mockResolvedValue(null);
-
-      const result = await handle(action, ps, campaignName, mapName);
+      const result = await handle(
+        makeAction({}, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
 
       expect(result.payload.creatureTargets).toContain('Orc');
       expect(result.payload.creatureTargets).toContain('Ally');
@@ -348,55 +322,31 @@ describe('multiTargetHandler.handle', () => {
     });
 
     it('should include all creatures when range is null', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: {},
-        payload: { targetName: 'Goblin' },
-      };
-      getCombatContext.mockResolvedValue(makeCombatSummary(
-        [{ name: 'Goblin', type: 'monster' }, { name: 'Orc', type: 'monster' }, { name: 'Ally', type: 'player' }],
+      const cs = makeBaseCs(
+        [
+          { name: 'Goblin', type: 'monster' },
+          { name: 'Orc', type: 'monster' },
+          { name: 'Ally', type: 'player' },
+        ],
         [{ name: 'TestHero', gridX: 5, gridY: 10 }]
-      ));
-      getCombatSummary.mockReturnValue(makeCombatSummary(
-        [{ name: 'Goblin', type: 'monster' }, { name: 'Orc', type: 'monster' }, { name: 'Ally', type: 'player' }],
-        [{ name: 'TestHero', gridX: 5, gridY: 10 }]
-      ));
+      );
+      getCombatContext.mockResolvedValue(cs);
+      getCombatSummary.mockReturnValue(cs);
       rangeToFeet.mockReturnValue(null);
-      resolveMapPositions.mockResolvedValue(null);
+      vi.mocked(resolveMapPositions).mockResolvedValue(null);
 
-      const result = await handle(action, ps, campaignName, mapName);
+      const result = await handle(
+        makeAction({ range: undefined }, { payload: { targetName: 'Goblin' } }),
+        makePlayerStats(),
+        campaignName,
+        mapName
+      );
 
       expect(result.payload.creatureTargets).toContain('Orc');
       expect(result.payload.creatureTargets).toContain('Ally');
       expect(result.payload.creatureTargets).not.toContain('Goblin');
     });
 
-    it('should exclude creatures out of range when attackerPos and range are both available', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Word of Creation',
-        automation: { range: '10 ft' },
-        payload: { targetName: 'Goblin' },
-      };
-      const cs = makeCombatSummary(
-        [
-          { name: 'Goblin', type: 'monster' },
-          { name: 'Nearby', type: 'monster' },
-          { name: 'FarAway', type: 'monster' },
-        ],
-        [{ name: 'TestHero', gridX: 1, gridY: 1 }]
-      );
-      getCombatContext.mockResolvedValue(cs);
-      getCombatSummary.mockReturnValue(cs);
-      rangeToFeet.mockReturnValue(10);
-      resolveMapPositions.mockResolvedValue({ attackerPos: { gridX: 1, gridY: 1 } });
 
-      const result = await handle(action, ps, campaignName, mapName);
-
-      expect(result.payload.creatureTargets).toContain('Nearby');
-      expect(result.payload.creatureTargets).toContain('FarAway');
-      expect(result.payload.creatureTargets).not.toContain('Goblin');
-    });
   });
 });

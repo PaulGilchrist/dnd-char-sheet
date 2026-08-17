@@ -1,41 +1,50 @@
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { handle, confirmMistyWanderer } from './mistyWandererHandler.js';
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { evaluateAutoExpression } from '../../../combat/automation/automationExpressions.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
-    setRuntimeValue: vi.fn().mockResolvedValue(undefined),
+    setRuntimeValue: vi.fn().mockImplementation(async () => {}),
 }));
 
 vi.mock('../../../combat/automation/automationExpressions.js', () => ({
     evaluateAutoExpression: vi.fn(),
 }));
 
-const makeAction = (auto = {}) => ({
-    name: 'Misty Wanderer',
-    description: 'Cast Misty Step without spell slot.',
-    automation: {
-        type: 'misty_wanderer',
-        uses_expression: 'WIS modifier_min_1',
-        recharge: 'long_rest',
-        range: '5_ft',
-        casting_time: '1 bonus action',
-        ...auto,
-    },
-});
+const { getRuntimeValue, setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
+const { evaluateAutoExpression } = await import('../../../combat/automation/automationExpressions.js');
 
-const makePlayerStats = (overrides = {}) => ({
-    name: 'Test Character',
-    abilities: [
-        { name: 'Strength', bonus: 0 },
-        { name: 'Dexterity', bonus: 0 },
-        { name: 'Constitution', bonus: 0 },
-        { name: 'Intelligence', bonus: 0 },
-        { name: 'Wisdom', bonus: 3 },
-        { name: 'Charisma', bonus: 0 },
-    ],
-    ...overrides,
-});
+function makeAction(overrides = {}) {
+    return {
+        name: 'Misty Wanderer',
+        description: 'Cast Misty Step without spell slot.',
+        automation: {
+            type: 'misty_wanderer',
+            uses_expression: 'WIS modifier_min_1',
+            recharge: 'long_rest',
+            range: '5_ft',
+            casting_time: '1 bonus action',
+            ...overrides.automation,
+        },
+        ...overrides,
+    };
+}
+
+function makePlayerStats(overrides = {}) {
+    return {
+        name: 'Test Character',
+        abilities: [
+            { name: 'Strength', bonus: 0 },
+            { name: 'Dexterity', bonus: 0 },
+            { name: 'Constitution', bonus: 0 },
+            { name: 'Intelligence', bonus: 0 },
+            { name: 'Wisdom', bonus: 3 },
+            { name: 'Charisma', bonus: 0 },
+        ],
+        ...overrides,
+    };
+}
 
 describe('mistyWandererHandler', () => {
     beforeEach(() => {
@@ -44,28 +53,32 @@ describe('mistyWandererHandler', () => {
     });
 
     describe('handle', () => {
-        it('should return modal with usesMax when free casts are available', async () => {
+        it('returns modal with payload when free casts are available', async () => {
             getRuntimeValue.mockReturnValue(3);
 
             const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
 
-            expect(result).toEqual({
-                type: 'modal',
-                modalName: 'mistyWanderer',
-                payload: {
-                    action: expect.objectContaining({
-                        name: 'Misty Wanderer',
-                    }),
-                    playerStats: expect.objectContaining({
-                        name: 'Test Character',
-                    }),
-                    campaignName: 'campaign',
-                    usesMax: 3,
-                },
-            });
+            expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('mistyWanderer');
+            expect(result.payload.usesMax).toBe(3);
+            expect(result.payload.action).toBeDefined();
+            expect(result.payload.playerStats).toBeDefined();
+            expect(result.payload.campaignName).toBe('campaign');
         });
 
-        it('should fall back to usesMax of 1 when expression evaluation returns falsy or stored count is null', async () => {
+        it('returns info popup when no free casts remaining', async () => {
+            getRuntimeValue.mockReturnValue(0);
+
+            const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.name).toBe('Misty Wanderer');
+            expect(result.payload.description).toBe('No free casts remaining. Finish a Long Rest to regain them.');
+            expect(result.payload.automation).toBeDefined();
+        });
+
+        it('falls back to usesMax of 1 when expression evaluation returns falsy', async () => {
             evaluateAutoExpression.mockReturnValue(null);
             getRuntimeValue.mockReturnValue(null);
 
@@ -75,20 +88,36 @@ describe('mistyWandererHandler', () => {
             expect(result.payload.usesMax).toBe(1);
         });
 
-        it('should evaluate custom uses_expression via evaluateAutoExpression', async () => {
+        it('evaluates custom uses_expression from automation config', async () => {
             evaluateAutoExpression.mockReturnValue(5);
             getRuntimeValue.mockReturnValue(5);
 
-            const customAction = makeAction({ uses_expression: 'WIS modifier' });
+            const customAction = makeAction({ automation: { uses_expression: 'WIS modifier' } });
 
             const result = await handle(customAction, makePlayerStats(), 'campaign', 'map');
 
             expect(result.payload.usesMax).toBe(5);
+            expect(evaluateAutoExpression).toHaveBeenCalledWith('WIS modifier', expect.any(Object));
+        });
+
+        it('uses custom feature name for the runtime key', async () => {
+            getRuntimeValue.mockReturnValue(2);
+
+            const customAction = makeAction({ name: 'Shadow Blink' });
+
+            const result = await handle(customAction, makePlayerStats(), 'campaign', 'map');
+
+            expect(result.payload.usesMax).toBe(3);
+            expect(getRuntimeValue).toHaveBeenCalledWith(
+                'Test Character',
+                '_Shadow_Blink_freeCastCount',
+                'campaign',
+            );
         });
     });
 
     describe('confirmMistyWanderer', () => {
-        it('should decrement counter and return success without ally', async () => {
+        it('decrements counter and returns success popup without ally', async () => {
             getRuntimeValue.mockReturnValue(3);
 
             const result = await confirmMistyWanderer(makeAction(), makePlayerStats(), 'campaign', false, null);
@@ -101,11 +130,13 @@ describe('mistyWandererHandler', () => {
             );
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.name).toBe('Misty Wanderer');
             expect(result.payload.description).toBe('Misty Wanderer: Cast Misty Step (2 remaining).');
             expect(result.payload.triggerMistyStep).toBe(true);
+            expect(result.payload.automation).toBeDefined();
         });
 
-        it('should include ally in description when bringing ally', async () => {
+        it('includes ally description when bringing an ally', async () => {
             getRuntimeValue.mockReturnValue(3);
 
             const result = await confirmMistyWanderer(makeAction(), makePlayerStats(), 'campaign', true, 'Ally Name');
@@ -121,7 +152,16 @@ describe('mistyWandererHandler', () => {
             );
         });
 
-        it('should return info popup when no free casts remaining', async () => {
+        it('omits ally text when bringAlly is true but allyName is null', async () => {
+            getRuntimeValue.mockReturnValue(3);
+
+            const result = await confirmMistyWanderer(makeAction(), makePlayerStats(), 'campaign', true, null);
+
+            expect(result.payload.description).toBe('Misty Wanderer: Cast Misty Step (2 remaining).');
+            expect(result.payload.description).not.toContain('Brought');
+        });
+
+        it('returns info popup when no free casts remaining', async () => {
             getRuntimeValue.mockReturnValue(0);
 
             const result = await confirmMistyWanderer(makeAction(), makePlayerStats(), 'campaign', false, null);
@@ -129,27 +169,39 @@ describe('mistyWandererHandler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toBe('No free casts remaining. Finish a Long Rest to regain them.');
+            expect(result.payload.triggerMistyStep).toBeUndefined();
             expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('should use custom feature name in the output', async () => {
+        it('decrements to 0 remaining and reports correctly', async () => {
+            getRuntimeValue.mockReturnValue(1);
+
+            const result = await confirmMistyWanderer(makeAction(), makePlayerStats(), 'campaign', false, null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Test Character',
+                '_Misty_Wanderer_freeCastCount',
+                0,
+                'campaign',
+            );
+            expect(result.payload.description).toBe('Misty Wanderer: Cast Misty Step (0 remaining).');
+        });
+
+        it('uses custom feature name in the output', async () => {
             getRuntimeValue.mockReturnValue(2);
-            const customAction = {
-                name: 'Custom Feature',
-                description: 'Cast Misty Step without spell slot.',
-                automation: {
-                    type: 'misty_wanderer',
-                    uses_expression: 'WIS modifier_min_1',
-                    recharge: 'long_rest',
-                    range: '5_ft',
-                    casting_time: '1 bonus action',
-                },
-            };
+
+            const customAction = makeAction({ name: 'Custom Feature' });
 
             const result = await confirmMistyWanderer(customAction, makePlayerStats(), 'campaign', false, null);
 
-            expect(result.payload.description).toBe('Custom Feature: Cast Misty Step (1 remaining).');
             expect(result.payload.name).toBe('Custom Feature');
+            expect(result.payload.description).toBe('Custom Feature: Cast Misty Step (1 remaining).');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Test Character',
+                '_Custom_Feature_freeCastCount',
+                1,
+                'campaign',
+            );
         });
     });
 });

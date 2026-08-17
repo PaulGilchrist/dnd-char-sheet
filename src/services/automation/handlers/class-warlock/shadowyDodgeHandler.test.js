@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { handle } from './shadowyDodgeHandler.js';
 import * as damageRollback from '../../common/damageRollback.js';
 import * as logService from '../../../ui/logService.js';
@@ -80,6 +81,58 @@ describe('shadowyDodgeHandler', () => {
             expect(logService.addEntry).not.toHaveBeenCalled();
         });
 
+        it('should return popup when findLastAttack returns null', async () => {
+            damageRollback.findLastAttack.mockResolvedValue(null);
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('No recent attack roll against you found');
+            expect(logService.addEntry).not.toHaveBeenCalled();
+        });
+
+        it('should return popup when attack target name does not match player', async () => {
+            const freshTimestamp = Date.now();
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { timestamp: freshTimestamp, d20: 15, bonus: 7, targetAc: 14, hit: true },
+                attackerName: 'Goblin',
+                targetName: 'Other Character',
+                primaryDamage: 10,
+                secondaryDamage: 0,
+                totalDamage: 10,
+                damageTypes: ['slashing'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('No recent attack roll against you found');
+        });
+
+        it('should call findLastAttack with the campaign name', async () => {
+            const freshTimestamp = Date.now();
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { timestamp: freshTimestamp, d20: 10, bonus: 5, targetAc: 13, hit: true },
+                attackerName: 'Goblin',
+                targetName: 'Test Rogue',
+                primaryDamage: 6,
+                secondaryDamage: 0,
+                totalDamage: 6,
+                damageTypes: [],
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(damageRollback.findLastAttack).toHaveBeenCalledWith('test-campaign');
+        });
+
+        it('should propagate error when findLastAttack throws', async () => {
+            damageRollback.findLastAttack.mockRejectedValue(new Error('database error'));
+
+            await expect(handle(makeAction(), makePlayerStats(), 'test-campaign', null))
+                .rejects.toThrow('database error');
+        });
+
         it('should simulate disadvantage and show miss when second roll causes failure', async () => {
             mockRandom([0.05]);
             const freshTimestamp = Date.now();
@@ -126,6 +179,7 @@ describe('shadowyDodgeHandler', () => {
 
             expect(result.payload.description).toContain('Orc');
             expect(result.payload.description).toContain('still hits');
+            expect(result.payload.description).toContain('Teleported 30 feet');
         });
 
         it('should show "already missed" when original attack missed', async () => {
@@ -144,6 +198,7 @@ describe('shadowyDodgeHandler', () => {
 
             expect(result.payload.description).toContain('already missed');
             expect(result.payload.description).toContain('Disadvantage has no additional effect');
+            expect(result.payload.description).toContain('Teleported 30 feet');
         });
 
         it('should use effectiveAc when present, falling back to targetAc', async () => {
@@ -237,6 +292,7 @@ describe('shadowyDodgeHandler', () => {
 
             expect(damageRollback.rollbackDamage).toHaveBeenCalledWith('Goblin', 'Test Rogue', 'test-campaign', 'Shadowy Dodge');
             expect(result.payload.description).toContain('Damage negated: 10 HP restored');
+            expect(result.payload.description).toContain('Teleported 30 feet');
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 description: expect.stringContaining('10 damage was negated'),
             }));
@@ -316,6 +372,7 @@ describe('shadowyDodgeHandler', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.name).toBe('Shadowy Dodge');
+            expect(result.payload.description).toContain('Teleported 30 feet');
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'ability_use',
                 characterName: 'Test Rogue',
@@ -379,6 +436,7 @@ describe('shadowyDodgeHandler', () => {
 
             expect(result.payload.description).toContain('vs AC —');
             expect(result.payload.description).toContain('N/A');
+            expect(result.payload.description).toContain('Teleported 30 feet');
         });
 
         it('should show HIT when finalHit is true', async () => {
@@ -397,6 +455,7 @@ describe('shadowyDodgeHandler', () => {
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(result.payload.description).toContain('still hits');
+            expect(result.payload.description).toContain('Teleported 30 feet');
         });
     });
 });

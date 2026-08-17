@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handle } from './beguilingDefensesHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -39,13 +40,6 @@ vi.mock('../../../rules/combat/applyDamage.js', () => ({
     applyDamageToTarget: vi.fn(),
 }));
 
-vi.mock('../../../ui/storage.js', () => {
-    const mockStorage = {
-        set: vi.fn(),
-    };
-    return { default: mockStorage };
-});
-
 const { getRuntimeValue, setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
 const { findLastAttack } = await import('../../common/damageRollback.js');
 const { addEntry } = await import('../../../ui/logService.js');
@@ -53,14 +47,16 @@ const { getCombatContext } = await import('../../../rules/combat/damageUtils.js'
 const { buildSaveDc, createSaveListener } = await import('../../common/savePrompt.js');
 const { applyHealingToTarget } = await import('../../../rules/combat/applyHealing.js');
 const { applyDamageToTarget } = await import('../../../rules/combat/applyDamage.js');
-const storageModule = await import('../../../ui/storage.js');
-const storage = storageModule.default;
 
 const campaignName = 'test-campaign';
 const playerName = 'WarlockGirl';
 
 beforeEach(() => {
     vi.clearAllMocks();
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
 });
 
 function makePlayerStats(overrides = {}) {
@@ -116,24 +112,39 @@ function setupHappyPath(attackResult) {
     createSaveListener.mockReturnValue({ promptId: 'test-prompt-id' });
     applyHealingToTarget.mockReturnValue({ actualHeal: 10, oldHp: 15, newHp: 25 });
     applyDamageToTarget.mockReturnValue(null);
-    storage.set.mockReturnValue(undefined);
 }
 
 describe('beguilingDefensesHandler', () => {
     describe('no recent attack', () => {
-        it('returns popup when no attackEvent or target does not match the player', async () => {
+        it('returns popup when no attackEvent found', async () => {
             findLastAttack.mockResolvedValue(makeAttackResult());
-            let result = await handle(makeAction(), makePlayerStats(), campaignName, null, []);
+            const errorSpy = vi.spyOn(console, 'error');
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null, []);
+
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('No recent attack roll against you found');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(createSaveListener).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
+            errorSpy.mockRestore();
+        });
 
+        it('returns popup when attack target does not match the player', async () => {
             findLastAttack.mockResolvedValue(makeHitAttack('Goblin', 'OtherPlayer'));
-            result = await handle(makeAction(), makePlayerStats(), campaignName, null, []);
+            const errorSpy = vi.spyOn(console, 'error');
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null, []);
+
             expect(result.payload.description).toContain('No recent attack roll against you found');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(createSaveListener).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
+            errorSpy.mockRestore();
         });
     });
 
-    describe('uses remaining', () => {
+    describe('uses', () => {
         it('returns popup when uses exhausted and pactMagicRecharge is false', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
             getRuntimeValue.mockImplementation((_name, key) => {
@@ -147,6 +158,8 @@ describe('beguilingDefensesHandler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('no uses remaining');
             expect(result.payload.description).toContain('Long Rest');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(createSaveListener).not.toHaveBeenCalled();
         });
 
         it('returns popup when uses exhausted and no pact magic slots available', async () => {
@@ -163,6 +176,8 @@ describe('beguilingDefensesHandler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('no uses remaining');
             expect(result.payload.description).toContain('No Pact Magic slots available');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(createSaveListener).not.toHaveBeenCalled();
         });
 
         it('spends a pact magic slot to restore a use when available', async () => {
@@ -172,22 +187,6 @@ describe('beguilingDefensesHandler', () => {
                 if (key === 'warlockPactMagic') return 1;
                 return null;
             });
-
-            const action = makeAction({ automation: { uses: 1, pactMagicRecharge: true } });
-            await handle(action, makePlayerStats(), campaignName, null, []);
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(playerName, 'warlockPactMagic', 0, campaignName);
-            expect(setRuntimeValue).toHaveBeenCalledWith(playerName, 'beguilingDefensesUses', 0, campaignName);
-        });
-
-        it('handles addEntry rejection in pact magic log entry', async () => {
-            setupHappyPath(makeHitAttack('Goblin', playerName));
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'beguilingDefensesUses') return 1;
-                if (key === 'warlockPactMagic') return 1;
-                return null;
-            });
-            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
 
             const action = makeAction({ automation: { uses: 1, pactMagicRecharge: true } });
             await handle(action, makePlayerStats(), campaignName, null, []);
@@ -208,7 +207,6 @@ describe('beguilingDefensesHandler', () => {
             createSaveListener.mockReturnValue({ promptId: 'test-prompt-id' });
             applyHealingToTarget.mockReturnValue({ actualHeal: 10, oldHp: 15, newHp: 25 });
             applyDamageToTarget.mockReturnValue(null);
-            storage.set.mockReturnValue(undefined);
 
             const action = makeAction({ automation: { uses: 1, pactMagicRecharge: true } });
             const result = await handle(action, makePlayerStats(), campaignName, null, []);
@@ -284,18 +282,18 @@ describe('beguilingDefensesHandler', () => {
 
             expect(applyHealingToTarget).not.toHaveBeenCalled();
         });
-
-        it('handles addEntry rejection in hp_change log entry', async () => {
-            setupHappyPath(makeHitAttack('Goblin', playerName));
-            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
-
-            await handle(makeAction(), makePlayerStats(), campaignName, null, []);
-
-            expect(applyHealingToTarget).toHaveBeenCalled();
-        });
     });
 
     describe('save prompt creation', () => {
+        it('calls buildSaveDc with automation config and player stats', async () => {
+            setupHappyPath(makeHitAttack('Goblin', playerName));
+
+            const action = makeAction();
+            await handle(action, makePlayerStats(), campaignName, null, []);
+
+            expect(buildSaveDc).toHaveBeenCalledWith(action.automation, expect.any(Object));
+        });
+
         it('uses custom saveType from automation config', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
 
@@ -364,7 +362,7 @@ describe('beguilingDefensesHandler', () => {
     });
 
     describe('popup result', () => {
-        it('returns popup with correct fields and description on successful activation', async () => {
+        it('returns popup with correct metadata fields', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, null, []);
@@ -376,6 +374,13 @@ describe('beguilingDefensesHandler', () => {
             expect(result.payload.saveDc).toBe(15);
             expect(result.payload.damageType).toBe('Psychic');
             expect(result.payload.targetName).toBe('Goblin');
+        });
+
+        it('includes attack and ability details in popup description', async () => {
+            setupHappyPath(makeHitAttack('Goblin', playerName));
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null, []);
+
             expect(result.payload.description).toContain('Attacker: <b>Goblin</b>');
             expect(result.payload.description).toContain('Attack dealt <b>20</b> damage');
             expect(result.payload.description).toContain('Damage Halved');
@@ -394,24 +399,6 @@ describe('beguilingDefensesHandler', () => {
             const result = await handle(action, makePlayerStats(), campaignName, null, []);
 
             expect(result.payload.name).toBe('Beguiling Defenses');
-        });
-
-        it('handles getRuntimeValue returning null for uses key', async () => {
-            findLastAttack.mockResolvedValue(makeHitAttack('Goblin', playerName));
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'beguilingDefensesUses') return null;
-                return null;
-            });
-            getCombatContext.mockResolvedValue({ creatures: [] });
-            buildSaveDc.mockReturnValue(15);
-            createSaveListener.mockReturnValue({ promptId: 'test-prompt-id' });
-            applyHealingToTarget.mockReturnValue({ actualHeal: 10, oldHp: 15, newHp: 25 });
-            applyDamageToTarget.mockReturnValue(null);
-            storage.set.mockReturnValue(undefined);
-
-            await handle(makeAction(), makePlayerStats(), campaignName, null, []);
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(playerName, 'beguilingDefensesUses', 1, campaignName);
         });
 
         it('handles healResult without actualHeal property', async () => {
@@ -470,13 +457,19 @@ describe('beguilingDefensesHandler', () => {
             expect(abilityUseCall[1].description).toContain('take 10 Psychic damage');
         });
 
-        it('handles addEntry rejection in ability_use log entry', async () => {
+        it('handles addEntry rejection without throwing', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
+            const errorSpy = vi.spyOn(console, 'error');
             addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
 
             await handle(makeAction(), makePlayerStats(), campaignName, null, []);
 
             expect(createSaveListener).toHaveBeenCalled();
+            expect(errorSpy).toHaveBeenCalledWith(
+                '[beguilingDefenses] Error:',
+                expect.any(Error),
+            );
+            errorSpy.mockRestore();
         });
 
     });

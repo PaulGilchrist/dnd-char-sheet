@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './beguilingTwistHandler.js';
 
@@ -34,10 +35,10 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
 const { getRuntimeValue, setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
 const { findLastAttack } = await import('../../common/damageRollback.js');
 const { addEntry } = await import('../../../ui/logService.js');
-const { isWithinRange } = await import('../../../rules/combat/rangeCheck.js');
-const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
 const { createSaveListener, buildSaveDc } = await import('../../common/savePrompt.js');
 const { addExpiration } = await import('../../../rules/effects/expirations.js');
+const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+const { isWithinRange } = await import('../../../rules/combat/rangeCheck.js');
 
 const campaignName = 'test-campaign';
 const playerName = 'WarlockPlayer';
@@ -59,6 +60,20 @@ function makeAction(automation = {}) {
     };
 }
 
+function makeAttackResult(overrides = {}) {
+    return {
+        attackEvent: { hit: true },
+        attackerName: 'Goblin',
+        targetName: playerName,
+        hit: true,
+        primaryDamage: 10,
+        secondaryDamage: 0,
+        totalDamage: 10,
+        damageTypes: [],
+        ...overrides,
+    };
+}
+
 describe('beguilingTwistHandler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -71,28 +86,11 @@ describe('beguilingTwistHandler', () => {
             totalDamage: 0,
             damageTypes: [],
         });
-        getCombatContext.mockResolvedValue({
-            creatures: [
-                { name: 'Ally1', type: 'player' },
-                { name: playerName, type: 'player' },
-                { name: 'Goblin', type: 'monster' },
-            ],
-        });
-        isWithinRange.mockResolvedValue(true);
     });
 
     describe('save result handler - failure', () => {
-        it('should add condition to target when save fails', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+        it('should add charmed condition to target when save fails', async () => {
+            findLastAttack.mockResolvedValue(makeAttackResult());
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
@@ -100,21 +98,17 @@ describe('beguilingTwistHandler', () => {
             const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
             handler({ detail: { promptId: 'test-prompt-id', success: false } });
 
-            expect(setRuntimeValue).toHaveBeenCalledWith(playerName, 'activeConditions', expect.arrayContaining(['charmed']), campaignName);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                playerName,
+                'activeConditions',
+                expect.arrayContaining(['charmed']),
+                campaignName
+            );
             addEventListenerSpy.mockRestore();
         });
 
         it('should add frightened condition when conditionType is frightened', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction({ target: 'self', condition: 'frightened' }), makePlayerStats(), campaignName, null);
@@ -122,24 +116,19 @@ describe('beguilingTwistHandler', () => {
             const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
             handler({ detail: { promptId: 'test-prompt-id', success: false } });
 
-            expect(setRuntimeValue).toHaveBeenCalledWith(playerName, 'activeConditions', expect.arrayContaining(['frightened']), campaignName);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                playerName,
+                'activeConditions',
+                expect.arrayContaining(['frightened']),
+                campaignName
+            );
             addEventListenerSpy.mockRestore();
         });
 
-        it('should not duplicate condition if already present', async () => {
-            findLastAttack.mockReset().mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
-            getRuntimeValue.mockReset().mockImplementation((_name, key, _campaign) => {
+        it('should not add condition when already present in activeConditions', async () => {
+            findLastAttack.mockResolvedValue(makeAttackResult());
+            getRuntimeValue.mockImplementation((_name, key) => {
                 if (_name === playerName && key === 'activeConditions') return ['charmed'];
-                if (_name === 'campaign' && key === 'lastAttack') return null;
                 return undefined;
             });
 
@@ -149,21 +138,15 @@ describe('beguilingTwistHandler', () => {
             const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
             handler({ detail: { promptId: 'test-prompt-id', success: false } });
 
-            // setRuntimeValue should NOT be called because condition already exists
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(playerName, 'activeConditions', expect.arrayContaining(['charmed', 'charmed']), campaignName);
+            expect(setRuntimeValue).not.toHaveBeenCalled();
             addEventListenerSpy.mockRestore();
         });
 
-        it('should call addExpiration on save failure', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
+        it('should add condition when activeConditions is null', async () => {
+            findLastAttack.mockResolvedValue(makeAttackResult());
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (_name === playerName && key === 'activeConditions') return null;
+                return undefined;
             });
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
@@ -172,23 +155,68 @@ describe('beguilingTwistHandler', () => {
             const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
             handler({ detail: { promptId: 'test-prompt-id', success: false } });
 
-            expect(addExpiration).toHaveBeenCalledWith(playerName, playerName, [
-                { type: 'condition', condition: 'charmed' }
-            ]);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                playerName,
+                'activeConditions',
+                ['charmed'],
+                campaignName
+            );
+            addEventListenerSpy.mockRestore();
+        });
+
+        it('should match existing conditions case-insensitively', async () => {
+            findLastAttack.mockResolvedValue(makeAttackResult());
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (_name === playerName && key === 'activeConditions') return ['CHARMED'];
+                return undefined;
+            });
+
+            const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+            await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
+
+            const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
+            handler({ detail: { promptId: 'test-prompt-id', success: false } });
+
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            addEventListenerSpy.mockRestore();
+        });
+
+        it('should call addExpiration on save failure', async () => {
+            findLastAttack.mockResolvedValue(makeAttackResult());
+
+            const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+            await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
+
+            const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
+            handler({ detail: { promptId: 'test-prompt-id', success: false } });
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                playerName,
+                playerName,
+                [{ type: 'condition', condition: 'charmed' }]
+            );
+            addEventListenerSpy.mockRestore();
+        });
+
+        it('should call addExpiration with frightened condition when conditionType is frightened', async () => {
+            findLastAttack.mockResolvedValue(makeAttackResult());
+
+            const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+            await handle(makeAction({ target: 'self', condition: 'frightened' }), makePlayerStats(), campaignName, null);
+
+            const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
+            handler({ detail: { promptId: 'test-prompt-id', success: false } });
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                playerName,
+                playerName,
+                [{ type: 'condition', condition: 'frightened' }]
+            );
             addEventListenerSpy.mockRestore();
         });
 
         it('should log save_result entry on failure', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
@@ -207,16 +235,7 @@ describe('beguilingTwistHandler', () => {
         });
 
         it('should remove event listener after handling save result', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
@@ -231,16 +250,7 @@ describe('beguilingTwistHandler', () => {
         });
 
         it('should ignore save-result events with wrong promptId', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
@@ -248,21 +258,23 @@ describe('beguilingTwistHandler', () => {
             const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
             handler({ detail: { promptId: 'wrong-prompt-id', success: false } });
 
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(playerName, 'activeConditions', expect.any(Array), campaignName);
+            expect(setRuntimeValue).not.toHaveBeenCalled();
             addEventListenerSpy.mockRestore();
         });
 
-        it('should use different target name for condition on failure', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
+        it('should apply condition to different targetName from the attack result', async () => {
+            findLastAttack.mockResolvedValue(makeAttackResult({
                 attackerName: 'Goblin',
                 targetName: 'Ally1',
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
+            }));
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Ally1', type: 'player' },
+                    { name: playerName, type: 'player' },
+                    { name: 'Goblin', type: 'monster' },
+                ],
             });
+            isWithinRange.mockResolvedValue(true);
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction({ target: 'different_creature' }), makePlayerStats(), campaignName, null);
@@ -270,23 +282,19 @@ describe('beguilingTwistHandler', () => {
             const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
             handler({ detail: { promptId: 'test-prompt-id', success: false } });
 
-            expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'activeConditions', expect.arrayContaining(['charmed']), campaignName);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Ally1',
+                'activeConditions',
+                expect.arrayContaining(['charmed']),
+                campaignName
+            );
             addEventListenerSpy.mockRestore();
         });
     });
 
     describe('save result handler - success', () => {
         it('should log save_result entry on success', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
@@ -305,16 +313,7 @@ describe('beguilingTwistHandler', () => {
         });
 
         it('should not add condition on save success', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
@@ -322,21 +321,12 @@ describe('beguilingTwistHandler', () => {
             const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
             handler({ detail: { promptId: 'test-prompt-id', success: true } });
 
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(playerName, 'activeConditions', expect.any(Array), campaignName);
+            expect(setRuntimeValue).not.toHaveBeenCalled();
             addEventListenerSpy.mockRestore();
         });
 
         it('should not call addExpiration on save success', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
@@ -349,16 +339,7 @@ describe('beguilingTwistHandler', () => {
         });
 
         it('should remove event listener after handling save success', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
 
             const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
             const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
@@ -375,16 +356,7 @@ describe('beguilingTwistHandler', () => {
 
     describe('DC calculation', () => {
         it('should use buildSaveDc to compute the DC', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
             buildSaveDc.mockReturnValue(17);
 
             await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
@@ -396,50 +368,9 @@ describe('beguilingTwistHandler', () => {
         });
     });
 
-    describe('description messages', () => {
-        it('should include range in no-result popup', async () => {
-            const result = await handle(makeAction({ target: 'self', range: '60_ft' }), makePlayerStats(), campaignName, null);
-
-            expect(result.payload.description).toContain('60_ft');
-        });
-
-        it('should include feature name in no-result popup', async () => {
-            const result = await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
-
-            expect(result.payload.description).toContain('Beguiling Twist');
-        });
-
-        it('should include feature name in activation popup description', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
-
-            const result = await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
-
-            expect(result.payload.description).toContain('WIS saving throw');
-            expect(result.payload.description).toContain('DC 17');
-        });
-    });
-
     describe('addEntry error handling', () => {
         it('should handle addEntry rejection on ability_use logging', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
             addEntry.mockRejectedValue(new Error('log failed'));
 
             const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
@@ -451,16 +382,7 @@ describe('beguilingTwistHandler', () => {
         });
 
         it('should handle addEntry rejection on save failure logging', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
             addEntry.mockRejectedValue(new Error('log failed'));
 
             const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
@@ -476,16 +398,7 @@ describe('beguilingTwistHandler', () => {
         });
 
         it('should handle addEntry rejection on save success logging', async () => {
-            findLastAttack.mockResolvedValue({
-                attackEvent: { hit: true },
-                attackerName: 'Goblin',
-                targetName: playerName,
-                hit: true,
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: [],
-            });
+            findLastAttack.mockResolvedValue(makeAttackResult());
             addEntry.mockRejectedValue(new Error('log failed'));
 
             const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();

@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handle } from './beguilingDefensesHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -39,13 +40,6 @@ vi.mock('../../../rules/combat/applyDamage.js', () => ({
     applyDamageToTarget: vi.fn(),
 }));
 
-vi.mock('../../../ui/storage.js', () => {
-    const mockStorage = {
-        set: vi.fn(),
-    };
-    return { default: mockStorage };
-});
-
 const { getRuntimeValue, setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
 const { findLastAttack } = await import('../../common/damageRollback.js');
 const { addEntry } = await import('../../../ui/logService.js');
@@ -53,14 +47,16 @@ const { getCombatContext } = await import('../../../rules/combat/damageUtils.js'
 const { buildSaveDc, createSaveListener } = await import('../../common/savePrompt.js');
 const { applyHealingToTarget } = await import('../../../rules/combat/applyHealing.js');
 const { applyDamageToTarget } = await import('../../../rules/combat/applyDamage.js');
-const storageModule = await import('../../../ui/storage.js');
-const storage = storageModule.default;
 
 const campaignName = 'test-campaign';
 const playerName = 'WarlockGirl';
 
 beforeEach(() => {
     vi.clearAllMocks();
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
 });
 
 function makePlayerStats(overrides = {}) {
@@ -116,7 +112,13 @@ function setupHappyPath(attackResult) {
     createSaveListener.mockReturnValue({ promptId: 'test-prompt-id' });
     applyHealingToTarget.mockReturnValue({ actualHeal: 10, oldHp: 15, newHp: 25 });
     applyDamageToTarget.mockReturnValue(null);
-    storage.set.mockReturnValue(undefined);
+}
+
+function getSaveResultHandler(addEventListenerSpy) {
+    const saveResultCall = addEventListenerSpy.mock.calls.find(
+        call => call[0] === 'save-result'
+    );
+    return saveResultCall[1];
 }
 
 describe('beguilingDefensesHandler - save results', () => {
@@ -128,10 +130,7 @@ describe('beguilingDefensesHandler - save results', () => {
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -142,8 +141,9 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            // Wait for async addEntry calls to complete
-            await new Promise(r => setTimeout(r, 10));
+            await vi.waitFor(() => {
+                expect(applyDamageToTarget).toHaveBeenCalled();
+            }, { timeout: 100 });
 
             expect(applyDamageToTarget).toHaveBeenCalledWith(
                 expect.any(Object),
@@ -165,7 +165,6 @@ describe('beguilingDefensesHandler - save results', () => {
                 saveRoll: 8,
                 saveBonus: 4,
             }));
-            spy.mockRestore();
         });
 
         it('ignores save-result event with wrong promptId', async () => {
@@ -175,10 +174,7 @@ describe('beguilingDefensesHandler - save results', () => {
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'wrong-prompt-id',
@@ -189,11 +185,10 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            await new Promise(r => setTimeout(r, 10));
-
-            expect(applyDamageToTarget).not.toHaveBeenCalled();
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'lastAttack', expect.any(Object));
-            spy.mockRestore();
+            await vi.waitFor(() => {
+                expect(applyDamageToTarget).not.toHaveBeenCalled();
+                expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'lastAttack', expect.any(Object));
+            }, { timeout: 100 });
         });
 
         it('stores save result in lastAttack when existing data is present', async () => {
@@ -208,15 +203,11 @@ describe('beguilingDefensesHandler - save results', () => {
             createSaveListener.mockReturnValue({ promptId: 'test-prompt-id' });
             applyHealingToTarget.mockReturnValue({ actualHeal: 10, oldHp: 15, newHp: 25 });
             applyDamageToTarget.mockReturnValue(null);
-            storage.set.mockReturnValue(undefined);
 
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -227,23 +218,22 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            await new Promise(r => setTimeout(r, 10));
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'lastAttack',
-                expect.objectContaining({
-                    attackId: 'old-attack',
-                    saveResult: 'failure',
-                    saveDc: 15,
-                    saveType: 'WIS',
-                    saveRoll: 8,
-                    saveBonus: 4,
-                    saveTotal: 12,
-                }),
-                campaignName
-            );
-            spy.mockRestore();
+            await vi.waitFor(() => {
+                expect(setRuntimeValue).toHaveBeenCalledWith(
+                    'campaign',
+                    'lastAttack',
+                    expect.objectContaining({
+                        attackId: 'old-attack',
+                        saveResult: 'failure',
+                        saveDc: 15,
+                        saveType: 'WIS',
+                        saveRoll: 8,
+                        saveBonus: 4,
+                        saveTotal: 12,
+                    }),
+                    campaignName
+                );
+            }, { timeout: 100 });
         });
 
         it('stores save success result in lastAttack when existing data is present', async () => {
@@ -258,15 +248,11 @@ describe('beguilingDefensesHandler - save results', () => {
             createSaveListener.mockReturnValue({ promptId: 'test-prompt-id' });
             applyHealingToTarget.mockReturnValue({ actualHeal: 10, oldHp: 15, newHp: 25 });
             applyDamageToTarget.mockReturnValue(null);
-            storage.set.mockReturnValue(undefined);
 
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -277,23 +263,22 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            await new Promise(r => setTimeout(r, 10));
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'lastAttack',
-                expect.objectContaining({
-                    attackId: 'old-attack',
-                    saveResult: 'success',
-                    saveDc: 15,
-                    saveType: 'WIS',
-                    saveRoll: 14,
-                    saveBonus: 4,
-                    saveTotal: 18,
-                }),
-                campaignName
-            );
-            spy.mockRestore();
+            await vi.waitFor(() => {
+                expect(setRuntimeValue).toHaveBeenCalledWith(
+                    'campaign',
+                    'lastAttack',
+                    expect.objectContaining({
+                        attackId: 'old-attack',
+                        saveResult: 'success',
+                        saveDc: 15,
+                        saveType: 'WIS',
+                        saveRoll: 14,
+                        saveBonus: 4,
+                        saveTotal: 18,
+                    }),
+                    campaignName
+                );
+            }, { timeout: 100 });
         });
 
         it('does not apply psychic damage when halfDamage is 0 on save failure', async () => {
@@ -313,15 +298,11 @@ describe('beguilingDefensesHandler - save results', () => {
             createSaveListener.mockReturnValue({ promptId: 'test-prompt-id' });
             applyHealingToTarget.mockReturnValue({ actualHeal: 0, oldHp: 15, newHp: 15 });
             applyDamageToTarget.mockReturnValue(null);
-            storage.set.mockReturnValue(undefined);
 
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -332,23 +313,19 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            await new Promise(r => setTimeout(r, 10));
-
-            expect(applyDamageToTarget).not.toHaveBeenCalled();
-            spy.mockRestore();
+            await vi.waitFor(() => {
+                expect(applyDamageToTarget).not.toHaveBeenCalled();
+            }, { timeout: 100 });
         });
 
-        it('passes empty characters array to applyDamageToTarget when characters is empty', async () => {
+        it('passes characters array to applyDamageToTarget', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
             getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }], lastAttack: {} });
 
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, []);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -359,19 +336,18 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            await new Promise(r => setTimeout(r, 10));
-
-            expect(applyDamageToTarget).toHaveBeenCalledWith(
-                expect.any(Object),
-                'Goblin',
-                10,
-                ['Psychic'],
-                campaignName,
-                [],
-                false,
-                playerName
-            );
-            spy.mockRestore();
+            await vi.waitFor(() => {
+                expect(applyDamageToTarget).toHaveBeenCalledWith(
+                    expect.any(Object),
+                    'Goblin',
+                    10,
+                    ['Psychic'],
+                    campaignName,
+                    [],
+                    false,
+                    playerName
+                );
+            }, { timeout: 100 });
         });
 
         it('logs save success on save success', async () => {
@@ -381,10 +357,7 @@ describe('beguilingDefensesHandler - save results', () => {
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -395,33 +368,29 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            // Wait for async addEntry calls to complete
-            await new Promise(r => setTimeout(r, 10));
-
-            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                type: 'save_result',
-                targetName: 'Goblin',
-                saveDc: 15,
-                saveType: 'WIS',
-                success: true,
-                saveRoll: 14,
-                saveBonus: 4,
-            }));
-            spy.mockRestore();
+            await vi.waitFor(() => {
+                expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                    type: 'save_result',
+                    targetName: 'Goblin',
+                    saveDc: 15,
+                    saveType: 'WIS',
+                    success: true,
+                    saveRoll: 14,
+                    saveBonus: 4,
+                }));
+            }, { timeout: 100 });
         });
 
         it('handles addEntry rejection in psychic damage log on save failure', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
             getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }], lastAttack: {} });
+            const errorSpy = vi.spyOn(console, 'error');
             addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
 
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -432,24 +401,26 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            await new Promise(r => setTimeout(r, 10));
-
-            expect(applyDamageToTarget).toHaveBeenCalled();
-            spy.mockRestore();
+            await vi.waitFor(() => {
+                expect(applyDamageToTarget).toHaveBeenCalled();
+                expect(errorSpy).toHaveBeenCalledWith(
+                    '[beguilingDefenses] Error:',
+                    expect.any(Error),
+                );
+            }, { timeout: 100 });
+            errorSpy.mockRestore();
         });
 
         it('handles addEntry rejection in save success log', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
             getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }], lastAttack: {} });
+            const errorSpy = vi.spyOn(console, 'error');
             addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
 
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -460,22 +431,23 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            await new Promise(r => setTimeout(r, 10));
-
-            spy.mockRestore();
+            await vi.waitFor(() => {
+                expect(errorSpy).toHaveBeenCalledWith(
+                    '[beguilingDefenses] Error:',
+                    expect.any(Error),
+                );
+            }, { timeout: 100 });
+            errorSpy.mockRestore();
         });
 
-        it('uses empty array fallback when characters is null in applyDamageToTarget', async () => {
+        it('passes empty array fallback when characters is null in applyDamageToTarget', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
             getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }], lastAttack: {} });
 
             const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, null);
 
-            const saveResultHandler = spy.mock.calls.find(
-                call => call[0] === 'save-result'
-            );
-            const handler = saveResultHandler[1];
+            const handler = getSaveResultHandler(spy);
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -486,19 +458,42 @@ describe('beguilingDefensesHandler - save results', () => {
                 },
             });
 
-            await new Promise(r => setTimeout(r, 10));
+            await vi.waitFor(() => {
+                expect(applyDamageToTarget).toHaveBeenCalledWith(
+                    expect.any(Object),
+                    'Goblin',
+                    10,
+                    ['Psychic'],
+                    campaignName,
+                    [],
+                    false,
+                    playerName
+                );
+            }, { timeout: 100 });
+        });
 
-            expect(applyDamageToTarget).toHaveBeenCalledWith(
-                expect.any(Object),
-                'Goblin',
-                10,
-                ['Psychic'],
-                campaignName,
-                [],
-                false,
-                playerName
-            );
-            spy.mockRestore();
+        it('removes event listener after handling save result', async () => {
+            setupHappyPath(makeHitAttack('Goblin', playerName));
+            getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }], lastAttack: {} });
+
+            const addSpy = vi.spyOn(window, 'addEventListener');
+            const removeSpy = vi.spyOn(window, 'removeEventListener');
+            await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
+
+            const handler = getSaveResultHandler(addSpy);
+            handler({
+                detail: {
+                    promptId: 'test-prompt-id',
+                    success: false,
+                    total: 12,
+                    roll: 8,
+                    bonus: 4,
+                },
+            });
+
+            await vi.waitFor(() => {
+                expect(removeSpy).toHaveBeenCalledWith('save-result', expect.any(Function));
+            }, { timeout: 100 });
         });
     });
 });

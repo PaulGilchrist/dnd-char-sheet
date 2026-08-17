@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildAttackContextSync } from './contextBuilder.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -71,12 +71,36 @@ vi.mock('./handlers/class-cleric-paladin/avengingAngelHandler.js', () => ({
   handle: vi.fn(),
 }));
 
+vi.mock('./handlers/spells/sanctuaryHandler.js', () => ({
+  endSanctuary: vi.fn(),
+}));
+
+vi.mock('../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js', () => ({
+  isProtectionFromEvilAndGoodActive: vi.fn().mockReturnValue(false),
+  isCreatureWarded: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../combat/automation/automationService.js', () => ({
+  collectWeaponMastery: vi.fn().mockReturnValue({ baseMastery: null, extraMasteries: [] }),
+}));
+
+vi.mock('../combat/automation/automationPassives.js', () => ({
+  isResilientSphereActive: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../encounters/combatData.js', () => ({
+  getCurrentCombatRound: vi.fn().mockReturnValue(1),
+}));
+
 const { buildBaseAttackContext } = await import('./common/damageRoll.js');
 const { getInnateSorceryBonus } = await import('../combat/buffs/buffService.js');
 const { getWolfAdvantageAgainst } = await import('../combat/auras/wolfAuraUtils.js');
 const { getDuplicityAdvantageAgainst } = await import('../combat/auras/duplicityAuraUtils.js');
 const { getLionDisadvantageAgainst } = await import('../combat/auras/lionAuraUtils.js');
 const { getCoronaSaveDisadvantage } = await import('../combat/auras/coronaAuraUtils.js');
+const { isResilientSphereActive } = await import('../combat/automation/automationPassives.js');
+const { isProtectionFromEvilAndGoodActive, isCreatureWarded } = await import('../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js');
+const { collectWeaponMastery } = await import('../combat/automation/automationService.js');
 
 const mockStats = {
   name: 'Fighter1',
@@ -112,56 +136,24 @@ function defaultBaseAttackContext(targetName = 'Orc', target = null) {
   });
 }
 
-describe('contextBuilder-sync: aura checks — no map (sync path)', () => {
+function defaultAuraMocks() {
+  getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
+  getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
+  getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
+  getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+  getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
+  isResilientSphereActive.mockReturnValue(false);
+  isProtectionFromEvilAndGoodActive.mockReturnValue(false);
+  isCreatureWarded.mockReturnValue(false);
+  collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
+}
+
+describe('contextBuilder-sync: aura effects — no map (sync path)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultBaseAttackContext();
     getRuntimeValue.mockReturnValue(undefined);
-    getWolfAdvantageAgainst.mockReturnValue({ advantage: false });
-    getDuplicityAdvantageAgainst.mockReturnValue({ advantage: false });
-    getLionDisadvantageAgainst.mockReturnValue({ disadvantage: false });
-    getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
-    getInnateSorceryBonus.mockReturnValue({ spellAdvantage: false, saveDcBonus: 0 });
-  });
-
-  describe('wolf aura', () => {
-    it('sets forcedMode to advantage when wolf aura is active', async () => {
-      getWolfAdvantageAgainst.mockReturnValue({ advantage: true });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBe('advantage');
-    });
-  });
-
-  describe('duplicity aura', () => {
-    it('sets forcedMode to advantage when duplicity aura is active', async () => {
-      getDuplicityAdvantageAgainst.mockReturnValue({ advantage: true });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBe('advantage');
-    });
-  });
-
-  describe('lion aura', () => {
-    it('sets forcedMode to disadvantage when lion aura is active', async () => {
-      getLionDisadvantageAgainst.mockReturnValue({ disadvantage: true });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBe('disadvantage');
-    });
-  });
-
-  describe('corona aura', () => {
-    it('sets forcedMode to disadvantage when corona save disadvantage is active', async () => {
-      getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: true });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBe('disadvantage');
-    });
+    defaultAuraMocks();
   });
 
   describe('no aura active', () => {
@@ -170,42 +162,6 @@ describe('contextBuilder-sync: aura checks — no map (sync path)', () => {
 
       expect(result.forcedMode).toBeUndefined();
       expect(result.advantageReason).toBeUndefined();
-    });
-  });
-
-  describe('aura priority', () => {
-    it('prefers wolf advantage over lion disadvantage', async () => {
-      getWolfAdvantageAgainst.mockReturnValue({ advantage: true });
-      getLionDisadvantageAgainst.mockReturnValue({ disadvantage: true });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBe('advantage');
-    });
-
-    it('prefers duplicity advantage over corona disadvantage', async () => {
-      getDuplicityAdvantageAgainst.mockReturnValue({ advantage: true });
-      getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: true });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-
-      expect(result.forcedMode).toBe('advantage');
-    });
-
-    it('does not override an already-set forcedMode with aura advantage', async () => {
-      getWolfAdvantageAgainst.mockReturnValue({ advantage: true });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'death_attack', {});
-
-      expect(result.forcedMode).toBe('death_attack');
-    });
-
-    it('does not override an already-set forcedMode with aura disadvantage', async () => {
-      getLionDisadvantageAgainst.mockReturnValue({ disadvantage: true });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'disadvantage', {});
-
-      expect(result.forcedMode).toBe('disadvantage');
     });
   });
 

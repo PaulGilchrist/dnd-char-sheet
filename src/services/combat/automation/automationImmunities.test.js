@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import {
@@ -22,12 +23,10 @@ function makeFeature(automation, name = 'Test Feature') {
 // ── getConditionImmunities ────────────────────────────────────────
 
 describe('getConditionImmunities', () => {
-  it.each([
-    [null],
-    [undefined],
-    [[]],
-  ])('returns empty array when features is %s', (features) => {
-    expect(getConditionImmunities(features)).toEqual([])
+  it('returns empty array when features is null, undefined, or empty', () => {
+    expect(getConditionImmunities(null)).toEqual([])
+    expect(getConditionImmunities(undefined)).toEqual([])
+    expect(getConditionImmunities([])).toEqual([])
   })
 
   it('returns empty array when features have no automation property', () => {
@@ -78,17 +77,25 @@ describe('getConditionImmunities', () => {
     const result = getConditionImmunities([feature])
     expect(result).toContain('charmed')
   })
+
+  it('pushes falsy conditionImmunity values without filtering', () => {
+    const features = [makeFeature({
+      type: 'passive_immunity',
+      conditionImmunity: '',
+      damageResistance: [],
+    })]
+    const result = getConditionImmunities(features)
+    expect(result).toContain('')
+  })
 })
 
 // ── getConditionalImmunities ──────────────────────────────────────
 
 describe('getConditionalImmunities', () => {
-  it.each([
-    [null],
-    [undefined],
-    [[]],
-  ])('returns empty array when features is %s', (features) => {
-    expect(getConditionalImmunities(features)).toEqual([])
+  it('returns empty array when features is null, undefined, or empty', () => {
+    expect(getConditionalImmunities(null)).toEqual([])
+    expect(getConditionalImmunities(undefined)).toEqual([])
+    expect(getConditionalImmunities([])).toEqual([])
   })
 
   it('returns empty array when features have no automation property', () => {
@@ -163,7 +170,7 @@ describe('playerIsImmuneToCondition', () => {
 
   // ── Null / missing argument guards ──
 
-  it('returns false when required arguments are missing', () => {
+  it('returns false when conditionKey or playerStats is falsy', () => {
     expect(playerIsImmuneToCondition({ conditionKey: null, playerStats })).toBe(false)
     expect(playerIsImmuneToCondition({ conditionKey: undefined, playerStats })).toBe(false)
     expect(playerIsImmuneToCondition({ conditionKey: '', playerStats })).toBe(false)
@@ -174,13 +181,25 @@ describe('playerIsImmuneToCondition', () => {
     expect(playerIsImmuneToCondition({ conditionKey: 'charmed', playerStats: stats })).toBe(false)
   })
 
+  it('returns false when conditionKey is a falsy number like 0', () => {
+    expect(playerIsImmuneToCondition({ conditionKey: 0, playerStats })).toBe(false)
+  })
+
   // ── playerStats.immunities array ──
 
-  it('returns true when condition is in playerStats.immunities', () => {
+  it('returns true when condition is in playerStats.immunities (case-insensitive)', () => {
     playerStats.immunities = ['charmed', 'frightened']
     expect(playerIsImmuneToCondition({ conditionKey: 'charmed', playerStats })).toBe(true)
-    expect(playerIsImmuneToCondition({ conditionKey: 'frightened', playerStats })).toBe(true)
+    expect(playerIsImmuneToCondition({ conditionKey: 'Frightened', playerStats })).toBe(true)
     expect(playerIsImmuneToCondition({ conditionKey: 'poisoned', playerStats })).toBe(false)
+  })
+
+  it('returns false when playerStats.immunities is not an array', () => {
+    playerStats.immunities = 'charmed'
+    expect(playerIsImmuneToCondition({ conditionKey: 'charmed', playerStats })).toBe(false)
+
+    playerStats.immunities = 42
+    expect(playerIsImmuneToCondition({ conditionKey: 'charmed', playerStats })).toBe(false)
   })
 
   // ── passive_immunity ──
@@ -191,26 +210,34 @@ describe('playerIsImmuneToCondition', () => {
 
     playerStats.allFeatures = [makeFeature({ type: 'passive_immunity', conditionImmunity: 'charmed petrified' })]
     expect(playerIsImmuneToCondition({ conditionKey: 'petrified', playerStats })).toBe(true)
-    expect(playerIsImmuneToCondition({ conditionKey: 'charmed', playerStats })).toBe(true)
+    expect(playerIsImmuneToCondition({ conditionKey: 'Charmed', playerStats })).toBe(true)
 
     playerStats.allFeatures = [makeFeature({ type: 'passive_immunity', conditionImmunity: 'charmed, frightened' })]
     expect(playerIsImmuneToCondition({ conditionKey: 'frightened', playerStats })).toBe(true)
   })
 
-  it('matches damageResistance with damage: prefix', () => {
+  it('matches damageResistance with damage: prefix (case-insensitive)', () => {
     playerStats.allFeatures = [makeFeature({
       type: 'passive_immunity',
-      damageResistance: ['fire', 'cold'],
+      damageResistance: ['Fire', 'Cold'],
     })]
     expect(playerIsImmuneToCondition({ conditionKey: 'damage:fire', playerStats })).toBe(true)
-    expect(playerIsImmuneToCondition({ conditionKey: 'damage:cold', playerStats })).toBe(true)
+    expect(playerIsImmuneToCondition({ conditionKey: 'damage:COLD', playerStats })).toBe(true)
     expect(playerIsImmuneToCondition({ conditionKey: 'damage:lightning', playerStats })).toBe(false)
+  })
+
+  it('does not match damage: with empty suffix', () => {
+    playerStats.allFeatures = [makeFeature({
+      type: 'passive_immunity',
+      damageResistance: ['fire'],
+    })]
+    expect(playerIsImmuneToCondition({ conditionKey: 'damage:', playerStats })).toBe(false)
   })
 
   // ── land_resistance ──
 
-  it('matches conditionImmunity from land_resistance', () => {
-    playerStats.allFeatures = [makeFeature({ type: 'land_resistance', conditionImmunity: 'charmed' })]
+  it('matches conditionImmunity from land_resistance (case-insensitive)', () => {
+    playerStats.allFeatures = [makeFeature({ type: 'land_resistance', conditionImmunity: 'Charmed' })]
     expect(playerIsImmuneToCondition({ conditionKey: 'charmed', playerStats })).toBe(true)
   })
 
@@ -250,11 +277,19 @@ describe('playerIsImmuneToCondition', () => {
       campaignName,
     })).toBe(false)
 
-    // Missing getRuntimeValue/campaignName → not immune
+    // Only getRuntimeValue provided without campaignName → not immune (requires both)
     mockGetRuntimeValue.mockClear()
     expect(playerIsImmuneToCondition({
       conditionKey: 'charmed',
-      playerStats: [feature],
+      playerStats,
+      getRuntimeValue: mockGetRuntimeValue,
+    })).toBe(false)
+
+    // Only campaignName provided without getRuntimeValue → not immune (requires both)
+    expect(playerIsImmuneToCondition({
+      conditionKey: 'charmed',
+      playerStats,
+      campaignName: 'TestCampaign',
     })).toBe(false)
   })
 
@@ -284,6 +319,18 @@ describe('playerIsImmuneToCondition', () => {
     mockGetRuntimeValue.mockReturnValue('not-an-array')
     expect(playerIsImmuneToCondition({
       conditionKey: 'charmed',
+      playerStats,
+      getRuntimeValue: mockGetRuntimeValue,
+      campaignName,
+    })).toBe(false)
+  })
+
+  it('handles activeBuffs entry with non-array conditionImmunity gracefully', () => {
+    mockGetRuntimeValue.mockReturnValue([
+      { name: 'feign_death', conditionImmunity: 'poisoned' },
+    ])
+    expect(playerIsImmuneToCondition({
+      conditionKey: 'poisoned',
       playerStats,
       getRuntimeValue: mockGetRuntimeValue,
       campaignName,
@@ -343,6 +390,15 @@ describe('playerIsImmuneToCondition', () => {
       conditionKey: 'charmed',
       playerStats,
       campaignName: 'TestCampaign',
+    })).toBe(false)
+
+    // Empty string sourceCreatureType is falsy → not immune
+    pfegModule.isCreatureWarded.mockReturnValue(true)
+    expect(playerIsImmuneToCondition({
+      conditionKey: 'charmed',
+      playerStats,
+      campaignName: 'TestCampaign',
+      sourceCreatureType: '',
     })).toBe(false)
 
     pfegModule.isProtectionFromEvilAndGoodActive.mockReturnValue(false)
@@ -406,5 +462,16 @@ describe('hasSelfRestoration', () => {
       ],
     }
     expect(hasSelfRestoration(playerStats2)).toBe(true)
+  })
+
+  it('handles array automation on a single feature', () => {
+    const playerStats = {
+      name: 'Test',
+      allFeatures: [makeFeature([
+        { type: 'passive_rule', effect: 'end_of_turn_condition_removal' },
+        { type: 'passive_immunity', conditionImmunity: 'charmed' },
+      ], 'Dual Feature')],
+    }
+    expect(hasSelfRestoration(playerStats)).toBe(true)
   })
 })

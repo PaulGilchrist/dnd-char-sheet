@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { handle, confirmTeleport, clearExtendedFlag, isExtendedAvailable } from './tempTeleportHandler.js';
@@ -22,11 +23,21 @@ vi.mock('../../common/targetResolver.js', () => ({
     resolveTarget: vi.fn(async () => ({ target: { name: 'Goblin' } })),
 }));
 
+vi.mock('../../../ui/logService.js', () => ({
+    addEntry: vi.fn(() => Promise.resolve()),
+}));
+
 // ── Re-import after mocking ────────────────────────────────────
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { resolveTarget } from '../../common/targetResolver.js';
 import { buildSaveDc } from '../../common/savePrompt.js';
+import { addEntry } from '../../../ui/logService.js';
+
+// ── Constants ──────────────────────────────────────────────────
+
+const CAMPAIGN_NAME = 'test-campaign';
+const PLAYER_NAME = 'TestHero';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -46,12 +57,22 @@ function makeAction(overrides = {}) {
 
 function makePlayerStats(overrides = {}) {
     return {
-        name: 'TestHero',
+        name: PLAYER_NAME,
         proficiency: 3,
         abilities: [{ name: 'Wisdom', bonus: 2 }],
         automation: { passives: [] },
         ...overrides,
     };
+}
+
+function setupMoonlightStepMocks(uses) {
+    getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'moonlightStepUses') return uses;
+        if (key === 'targetEffects') return [];
+        if (key === 'spell_slots_level_2') return 3;
+        if (key === 'spell_slots_level_3') return 2;
+        return null;
+    });
 }
 
 // ── Tests ──────────────────────────────────────────────────────
@@ -69,25 +90,42 @@ describe('tempTeleportHandler', () => {
     });
 
     describe('handle', () => {
-        it('returns modal with payload for basic teleport', async () => {
+        it('returns teleport modal with payload for basic teleport', async () => {
             const action = makeAction();
             const stats = makePlayerStats();
 
-            const result = await handle(action, stats, 'test-campaign', 'test-map');
+            const result = await handle(action, stats, CAMPAIGN_NAME, 'test-map');
 
             expect(result.type).toBe('modal');
             expect(result.modalName).toBe('teleport');
             expect(result.payload.action).toBe(action);
             expect(result.payload.playerStats).toBe(stats);
-            expect(result.payload.campaignName).toBe('test-campaign');
+            expect(result.payload.campaignName).toBe(CAMPAIGN_NAME);
         });
 
-        it('returns info popup when moonlight_step_teleport has zero uses', async () => {
+        it('returns teleport modal when action is null', async () => {
+            const stats = makePlayerStats();
+            const result = await handle(null, stats, CAMPAIGN_NAME, 'test-map');
+
+            expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('teleport');
+        });
+
+        it('returns teleport modal when action has no automation', async () => {
+            const action = { name: 'Test' };
+            const stats = makePlayerStats();
+            const result = await handle(action, stats, CAMPAIGN_NAME, 'test-map');
+
+            expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('teleport');
+        });
+
+        it('returns info popup when moonlight_step_teleport has zero uses and no spell slots', async () => {
             getRuntimeValue.mockReturnValue(0);
             const action = makeAction({
                 automation: { effect: 'moonlight_step_teleport' },
             });
-            const result = await handle(action, makePlayerStats(), 'test-campaign', 'test-map');
+            const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'test-map');
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
@@ -96,25 +134,79 @@ describe('tempTeleportHandler', () => {
             expect(result.payload.description).toContain('Long Rest');
         });
 
-        it('returns modal when moonlight_step_teleport has uses remaining or null', async () => {
+        it('returns moonlightStepFallback modal when moonlight_step_teleport has zero uses but spell slots available', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'moonlightStepUses') return 0;
+                if (key === 'targetEffects') return [];
+                if (key === 'spell_slots_level_2') return 3;
+                if (key === 'spell_slots_level_3') return 2;
+                return null;
+            });
+            const stats = makePlayerStats({
+                spellAbilities: { spell_slots_level_2: 3 },
+            });
             const action = makeAction({
                 automation: { effect: 'moonlight_step_teleport' },
             });
+            const result = await handle(action, stats, CAMPAIGN_NAME, 'test-map');
 
+            expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('moonlightStepFallback');
+            expect(result.payload.slotLevel).toBe(2);
+            expect(result.payload.action).toBe(action);
+            expect(result.payload.playerStats).toBe(stats);
+            expect(result.payload.campaignName).toBe(CAMPAIGN_NAME);
+        });
+
+        it('returns moonlightStepFallback modal using highest available spell slot level', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'moonlightStepUses') return 0;
+                if (key === 'spell_slots_level_2') return 0;
+                if (key === 'spell_slots_level_3') return 1;
+                return null;
+            });
+            const stats = makePlayerStats({
+                spellAbilities: {
+                    spell_slots_level_2: 3,
+                    spell_slots_level_3: 2,
+                },
+            });
+            const action = makeAction({
+                automation: { effect: 'moonlight_step_teleport' },
+            });
+            const result = await handle(action, stats, CAMPAIGN_NAME, 'test-map');
+
+            expect(result.modalName).toBe('moonlightStepFallback');
+            expect(result.payload.slotLevel).toBe(3);
+        });
+
+        it('returns modal when moonlight_step_teleport has uses remaining', async () => {
             getRuntimeValue.mockReturnValue(1);
-            let result = await handle(action, makePlayerStats(), 'test-campaign', 'test-map');
-            expect(result.type).toBe('modal');
+            const action = makeAction({
+                automation: { effect: 'moonlight_step_teleport' },
+            });
+            const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'test-map');
 
-            getRuntimeValue.mockReturnValue(null);
-            result = await handle(action, makePlayerStats(), 'test-campaign', 'test-map');
             expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('teleport');
+        });
+
+        it('returns modal when moonlight_step_teleport uses value is null', async () => {
+            getRuntimeValue.mockReturnValue(null);
+            const action = makeAction({
+                automation: { effect: 'moonlight_step_teleport' },
+            });
+            const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'test-map');
+
+            expect(result.type).toBe('modal');
+            expect(result.modalName).toBe('teleport');
         });
     });
 
     describe('confirmTeleport', () => {
         it('returns popup with distance from automation for basic teleport', async () => {
             const action = makeAction();
-            const result = await confirmTeleport(action, makePlayerStats(), 'campaign', false);
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
@@ -127,65 +219,181 @@ describe('tempTeleportHandler', () => {
             const action = makeAction({
                 automation: { extendedDistance: '150 ft' },
             });
-            const result = await confirmTeleport(action, makePlayerStats(), 'campaign', true);
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, true);
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('150 ft');
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero',
+                PLAYER_NAME,
                 '_teleportExtendedUsed',
                 true,
-                'campaign'
+                CAMPAIGN_NAME,
             );
+        });
+
+        it('uses default 150 ft extended distance when extendedDistance is not specified', async () => {
+            const action = makeAction({
+                automation: {},
+            });
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, true);
+
+            expect(result.payload.description).toContain('150 ft');
         });
 
         it('describes swap with illusion', async () => {
             const action = makeAction({
                 automation: { effect: 'teleport_swap_with_illusion' },
             });
-            const result = await confirmTeleport(action, makePlayerStats(), 'campaign', false);
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
 
             expect(result.payload.description).toContain('Swapped places with your illusion');
         });
 
-        it('adds next_attack_advantage effect for shadow_step and moonlight_step teleports', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'targetEffects') return [];
-                return null;
+        it('describes swap with illusion even when useExtended is true', async () => {
+            const action = makeAction({
+                automation: { effect: 'teleport_swap_with_illusion' },
             });
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, true);
+
+            expect(result.payload.description).toContain('Swapped places with your illusion');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                PLAYER_NAME,
+                '_teleportExtendedUsed',
+                true,
+                CAMPAIGN_NAME,
+            );
+        });
+
+        it('adds next_attack_advantage effect for shadow_step teleport', async () => {
+            setupMoonlightStepMocks(0);
 
             const shadowAction = makeAction({ automation: { effect: 'shadow_step_teleport' } });
-            await confirmTeleport(shadowAction, makePlayerStats(), 'campaign', false);
+            await confirmTeleport(shadowAction, makePlayerStats(), CAMPAIGN_NAME, false);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'campaign',
                 'targetEffects',
-                expect.any(Array),
-                'campaign'
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        effect: 'next_attack_advantage',
+                        target: PLAYER_NAME,
+                    }),
+                ]),
+                CAMPAIGN_NAME,
             );
+        });
 
-            vi.clearAllMocks();
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'targetEffects') return [];
-                return null;
-            });
+        it('adds next_attack_advantage effect for moonlight_step teleport', async () => {
+            setupMoonlightStepMocks(0);
 
             const moonlightAction = makeAction({ automation: { effect: 'moonlight_step_teleport' } });
-            await confirmTeleport(moonlightAction, makePlayerStats(), 'campaign', false);
+            await confirmTeleport(moonlightAction, makePlayerStats(), CAMPAIGN_NAME, false);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'campaign',
                 'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        effect: 'next_attack_advantage',
+                        target: PLAYER_NAME,
+                    }),
+                ]),
+                CAMPAIGN_NAME,
+            );
+        });
+
+        it('adds Improved Shadow Step effects when passive exists', async () => {
+            setupMoonlightStepMocks(0);
+            const stats = makePlayerStats({
+                automation: { passives: [{ name: 'Improved Shadow Step' }] },
+            });
+            const action = makeAction({
+                automation: { effect: 'shadow_step_teleport' },
+            });
+            const result = await confirmTeleport(action, stats, CAMPAIGN_NAME, false);
+
+            expect(result.payload.description).toContain('Improved Shadow Step');
+            expect(result.payload.description).toContain('disadvantage');
+            expect(result.payload.description).toContain('Blinded');
+            expect(resolveTarget).toHaveBeenCalledWith(CAMPAIGN_NAME, PLAYER_NAME);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
                 expect.any(Array),
-                'campaign'
+                CAMPAIGN_NAME,
+            );
+        });
+
+        it('adds Shared Moonlight effect when Lunar Form passive exists', async () => {
+            setupMoonlightStepMocks(0);
+            const stats = makePlayerStats({
+                automation: { passives: [{ name: 'Lunar Form' }] },
+            });
+            const action = makeAction({
+                automation: { effect: 'moonlight_step_teleport' },
+            });
+            const result = await confirmTeleport(action, stats, CAMPAIGN_NAME, false);
+
+            expect(result.payload.description).toContain('Shared Moonlight');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        effect: 'next_attack_advantage',
+                        source: 'Shared Moonlight',
+                    }),
+                ]),
+                CAMPAIGN_NAME,
+            );
+        });
+
+        it('does not add Shared Moonlight when resolveTarget returns no target', async () => {
+            setupMoonlightStepMocks(0);
+            resolveTarget.mockResolvedValue({ target: null });
+            const stats = makePlayerStats({
+                automation: { passives: [{ name: 'Lunar Form' }] },
+            });
+            const action = makeAction({
+                automation: { effect: 'moonlight_step_teleport' },
+            });
+            const result = await confirmTeleport(action, stats, CAMPAIGN_NAME, false);
+
+            expect(result.payload.description).not.toContain('Shared Moonlight');
+        });
+
+        it('decrements moonlight step uses when above zero', async () => {
+            setupMoonlightStepMocks(3);
+            const action = makeAction({
+                automation: { effect: 'moonlight_step_teleport' },
+            });
+            await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                PLAYER_NAME,
+                'moonlightStepUses',
+                2,
+                CAMPAIGN_NAME,
+            );
+        });
+
+        it('does not decrement moonlight step uses when at zero', async () => {
+            setupMoonlightStepMocks(0);
+            const action = makeAction({
+                automation: { effect: 'moonlight_step_teleport' },
+            });
+            await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                PLAYER_NAME,
+                'moonlightStepUses',
+                expect.any(Number),
+                CAMPAIGN_NAME,
             );
         });
 
         it('brings allies when useExtended with allyCount', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'targetEffects') return [];
-                return null;
-            });
+            setupMoonlightStepMocks(0);
             const action = makeAction({
                 automation: {
                     extendedDistance: '150 ft',
@@ -194,110 +402,160 @@ describe('tempTeleportHandler', () => {
                     teleportRange: '10 ft',
                 },
             });
-            const result = await confirmTeleport(action, makePlayerStats(), 'campaign', true);
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, true);
 
             expect(result.payload.description).toContain('150 ft');
             expect(result.payload.description).toContain('3 willing creatures');
             expect(result.payload.description).toContain('10 ft');
         });
 
-        it('omits ally text when bringAllies is false or allyCount is zero', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-
-            const noBringAction = makeAction({
+        it('omits ally text when bringAllies is false', async () => {
+            setupMoonlightStepMocks(0);
+            const action = makeAction({
                 automation: {
                     extendedDistance: '150 ft',
                     bringAllies: false,
                     allyCount: 3,
                 },
             });
-            let result = await confirmTeleport(noBringAction, makePlayerStats(), 'campaign', true);
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, true);
             expect(result.payload.description).not.toContain('willing creatures');
+        });
 
-            vi.clearAllMocks();
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-
-            const zeroCountAction = makeAction({
+        it('omits ally text when allyCount is zero', async () => {
+            setupMoonlightStepMocks(0);
+            const action = makeAction({
                 automation: {
                     extendedDistance: '150 ft',
                     bringAllies: true,
                     allyCount: 0,
                 },
             });
-            result = await confirmTeleport(zeroCountAction, makePlayerStats(), 'campaign', true);
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, true);
             expect(result.payload.description).not.toContain('willing creatures');
         });
 
-        it('adds Shared Moonlight effect when Lunar Form passive exists', async () => {
+        it('omits ally text when bringAllies is true but allyCount is zero', async () => {
+            setupMoonlightStepMocks(0);
+            const action = makeAction({
+                automation: {
+                    extendedDistance: '150 ft',
+                    bringAllies: true,
+                    allyCount: 0,
+                },
+            });
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, true);
+            expect(result.payload.description).not.toContain('willing creatures');
+        });
+
+        it('consumes a spell slot when consumedSlotLevel is provided and slots are available', async () => {
+            setupMoonlightStepMocks(0);
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'targetEffects') return [];
+                if (key === 'spell_slots_level_3') return 2;
                 return null;
             });
             const stats = makePlayerStats({
-                automation: { passives: [{ name: 'Lunar Form' }] },
+                spellAbilities: { spell_slots_level_3: 3 },
             });
-            const action = makeAction({
-                automation: { effect: 'moonlight_step_teleport' },
-            });
-            const result = await confirmTeleport(action, stats, 'campaign', false);
-
-            expect(result.payload.description).toContain('Shared Moonlight');
-        });
-
-        it('adds Improved Shadow Step effects when passive exists', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-            const stats = makePlayerStats({
-                automation: { passives: [{ name: 'Improved Shadow Step' }] },
-            });
-            const action = makeAction({
-                automation: { effect: 'shadow_step_teleport' },
-            });
-            const result = await confirmTeleport(action, stats, 'campaign', false);
-
-            expect(result.payload.description).toContain('Improved Shadow Step');
-            expect(result.payload.description).toContain('disadvantage');
-            expect(result.payload.description).toContain('Blinded');
-            expect(resolveTarget).toHaveBeenCalledWith('campaign', 'TestHero');
-        });
-
-        it('decrements moonlight step uses when above zero', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'targetEffects') return [];
-                if (key === 'moonlightStepUses') return 3;
-                return null;
-            });
-            const action = makeAction({
-                automation: { effect: 'moonlight_step_teleport' },
-            });
-            await confirmTeleport(action, makePlayerStats(), 'campaign', false);
+            const action = makeAction();
+            await confirmTeleport(action, stats, CAMPAIGN_NAME, false, 3);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero',
-                'moonlightStepUses',
-                2,
-                'campaign'
+                PLAYER_NAME,
+                'spell_slots_level_3',
+                1,
+                CAMPAIGN_NAME,
             );
+        });
+
+        it('does not consume a spell slot when consumedSlotLevel is provided but no slots are available', async () => {
+            setupMoonlightStepMocks(0);
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'targetEffects') return [];
+                if (key === 'spell_slots_level_3') return 0;
+                return null;
+            });
+            const stats = makePlayerStats({
+                spellAbilities: { spell_slots_level_3: 3 },
+            });
+            const action = makeAction();
+            await confirmTeleport(action, stats, CAMPAIGN_NAME, false, 3);
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                PLAYER_NAME,
+                'spell_slots_level_3',
+                expect.any(Number),
+                CAMPAIGN_NAME,
+            );
+        });
+
+        it('does not consume a spell slot when consumedSlotLevel is not provided', async () => {
+            setupMoonlightStepMocks(0);
+            const stats = makePlayerStats({
+                spellAbilities: { spell_slots_level_3: 3 },
+            });
+            const action = makeAction();
+            await confirmTeleport(action, stats, CAMPAIGN_NAME, false);
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                PLAYER_NAME,
+                'spell_slots_level_3',
+                expect.any(Number),
+                CAMPAIGN_NAME,
+            );
+        });
+
+        it('logs ability_use for shadow_step teleport with advantage description', async () => {
+            setupMoonlightStepMocks(0);
+            const action = makeAction({ automation: { effect: 'shadow_step_teleport' } });
+            await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            expect(addEntry).toHaveBeenCalledWith(
+                CAMPAIGN_NAME,
+                expect.objectContaining({
+                    type: 'ability_use',
+                    characterName: PLAYER_NAME,
+                    abilityName: 'Shadow of Moil',
+                    description: expect.stringContaining('Gains Advantage on next attack roll'),
+                }),
+            );
+        });
+
+        it('logs ability_use for bonus_teleport effect', async () => {
+            const action = makeAction({ automation: { effect: 'bonus_teleport' } });
+            await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            expect(addEntry).toHaveBeenCalledWith(
+                CAMPAIGN_NAME,
+                expect.objectContaining({
+                    type: 'ability_use',
+                    characterName: PLAYER_NAME,
+                    abilityName: 'Shadow of Moil',
+                }),
+            );
+        });
+
+        it('returns popup with correct metadata fields', async () => {
+            const action = makeAction();
+            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.name).toBe('Shadow of Moil');
+            expect(result.payload.automationType).toBe('teleport');
         });
     });
 
     describe('clearExtendedFlag', () => {
         it('sets extended used flag to false', async () => {
-            await clearExtendedFlag('TestHero', 'campaign');
+            await clearExtendedFlag(PLAYER_NAME, CAMPAIGN_NAME);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero',
+                PLAYER_NAME,
                 '_teleportExtendedUsed',
                 false,
-                'campaign'
+                CAMPAIGN_NAME,
             );
         });
     });
@@ -305,12 +563,27 @@ describe('tempTeleportHandler', () => {
     describe('isExtendedAvailable', () => {
         it('returns false when flag is true', () => {
             getRuntimeValue.mockReturnValue(true);
-            expect(isExtendedAvailable('TestHero', 'campaign')).toBe(false);
+            expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(false);
         });
 
-        it('returns true when flag is falsy', () => {
+        it('returns true when flag is false', () => {
             getRuntimeValue.mockReturnValue(false);
-            expect(isExtendedAvailable('TestHero', 'campaign')).toBe(true);
+            expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
+        });
+
+        it('returns true when flag is null', () => {
+            getRuntimeValue.mockReturnValue(null);
+            expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
+        });
+
+        it('returns true when flag is undefined', () => {
+            getRuntimeValue.mockReturnValue(undefined);
+            expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
+        });
+
+        it('returns true when flag is zero', () => {
+            getRuntimeValue.mockReturnValue(0);
+            expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
         });
     });
 });

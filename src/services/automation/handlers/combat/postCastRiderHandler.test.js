@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handle } from './postCastRiderHandler.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { resolveTarget } from '../../common/targetResolver.js';
@@ -32,11 +33,11 @@ describe('postCastRiderHandler.handle', () => {
     let action;
     let playerStats;
     let campaignName;
+    let consoleErrorSpy;
 
     beforeEach(() => {
-        vi.clearAllMocks();
-
         campaignName = 'test-campaign';
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         action = {
             name: 'Control Spell',
@@ -63,9 +64,11 @@ describe('postCastRiderHandler.handle', () => {
         createSaveListener.mockReturnValue({ promptId: 'test-prompt-id' });
     });
 
-    function usesKeyFor(name) {
-        return `postCastRider_${name.replace(/\s+/g, '_')}`;
-    }
+    afterEach(() => {
+        consoleErrorSpy.mockRestore();
+        // Clean up any event listeners added during tests
+        vi.clearAllMocks();
+    });
 
     function dispatchSaveResult(promptId, success) {
         window.dispatchEvent(new CustomEvent('save-result', {
@@ -116,7 +119,7 @@ describe('postCastRiderHandler.handle', () => {
         });
     });
 
-    it('uses "Unknown" as targetName when resolveTarget returns null or missing target', async () => {
+    it('uses "Unknown" as targetName when resolveTarget returns null', async () => {
         resolveTarget.mockResolvedValue(null);
 
         const result = await handle(action, playerStats, campaignName);
@@ -125,13 +128,14 @@ describe('postCastRiderHandler.handle', () => {
         expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
             targetName: 'Unknown',
         }));
+    });
 
-        vi.clearAllMocks();
+    it('uses "Unknown" as targetName when resolveTarget returns object without target.name', async () => {
         resolveTarget.mockResolvedValue({});
 
-        const result2 = await handle(action, playerStats, campaignName);
+        const result = await handle(action, playerStats, campaignName);
 
-        expect(result2.payload.targetName).toBe('Unknown');
+        expect(result.payload.targetName).toBe('Unknown');
         expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
             targetName: 'Unknown',
         }));
@@ -142,10 +146,11 @@ describe('postCastRiderHandler.handle', () => {
 
         dispatchSaveResult('test-prompt-id', true);
 
-        const usesKey = usesKeyFor(action.name);
+        await Promise.resolve();
+
         expect(setRuntimeValue).toHaveBeenCalledWith(
             playerStats.name,
-            usesKey,
+            'postCastRider_Control_Spell',
             0,
             campaignName,
         );
@@ -161,7 +166,7 @@ describe('postCastRiderHandler.handle', () => {
 
     it('handles failed save: shows condition choice modal and applies chosen condition', async () => {
         getRuntimeValue.mockImplementation((_char, key) => {
-            if (key === usesKeyFor(action.name)) return 1;
+            if (key === 'postCastRider_Control_Spell') return 1;
             if (key === 'activeConditions' && _char === 'Enemy') return ['blinded'];
             return [];
         });
@@ -183,12 +188,11 @@ describe('postCastRiderHandler.handle', () => {
             detail: { promptId: choiceDetail.promptId, condition: 'frightened' },
         }));
 
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await Promise.resolve();
 
-        const usesKey = usesKeyFor(action.name);
         expect(setRuntimeValue).toHaveBeenCalledWith(
             playerStats.name,
-            usesKey,
+            'postCastRider_Control_Spell',
             0,
             campaignName,
         );
@@ -225,6 +229,8 @@ describe('postCastRiderHandler.handle', () => {
 
         dispatchSaveResult('test-prompt-id', false);
 
+        await Promise.resolve();
+
         expect(choiceShowSpy).not.toHaveBeenCalled();
         window.removeEventListener('condition-choice-show', choiceShowSpy);
 
@@ -246,6 +252,8 @@ describe('postCastRiderHandler.handle', () => {
 
         dispatchSaveResult('wrong-id', true);
 
+        await Promise.resolve();
+
         expect(setRuntimeValue).not.toHaveBeenCalled();
         expect(addExpiration).not.toHaveBeenCalled();
     });
@@ -262,37 +270,10 @@ describe('postCastRiderHandler.handle', () => {
 
         dispatchSaveResult('test-prompt-id', true);
 
+        await Promise.resolve();
+
         expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
             type: 'save_result',
-            saveType: 'WIS',
-        }));
-
-        vi.clearAllMocks();
-        getRuntimeValue.mockImplementation((_char, key) => {
-            if (key === usesKeyFor(action.name)) return 1;
-            return [];
-        });
-        buildSaveDc.mockReturnValue(15);
-        resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
-        createSaveListener.mockReturnValue({ promptId: 'test-prompt-id' });
-
-        await handle(action, playerStats, campaignName);
-
-        const choiceShowPromise = new Promise(resolve => {
-            window.addEventListener('condition-choice-show', resolve, { once: true });
-        });
-
-        dispatchSaveResult('test-prompt-id', false);
-
-        const choiceEvent = await choiceShowPromise;
-        window.dispatchEvent(new CustomEvent('condition-choice-selected', {
-            detail: { promptId: choiceEvent.detail.promptId, condition: 'charmed' },
-        }));
-
-        await new Promise(resolve => setTimeout(resolve, 0));
-
-        expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-            success: false,
             saveType: 'WIS',
         }));
     });
@@ -301,15 +282,17 @@ describe('postCastRiderHandler.handle', () => {
         await handle(action, playerStats, campaignName);
 
         dispatchSaveResult('test-prompt-id', true);
+        await Promise.resolve();
         expect(setRuntimeValue).toHaveBeenCalledTimes(1);
 
         dispatchSaveResult('test-prompt-id', true);
+        await Promise.resolve();
         expect(setRuntimeValue).toHaveBeenCalledTimes(1);
     });
 
     it('handles failed save with condition choice skipped: removes listener and applies no condition', async () => {
         getRuntimeValue.mockImplementation((_char, key) => {
-            if (key === usesKeyFor(action.name)) return 1;
+            if (key === 'postCastRider_Control_Spell') return 1;
             if (key === 'activeConditions' && _char === 'Enemy') return ['blinded'];
             return [];
         });
@@ -331,12 +314,11 @@ describe('postCastRiderHandler.handle', () => {
             detail: { promptId: choiceDetail.promptId },
         }));
 
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await Promise.resolve();
 
-        const usesKey = usesKeyFor(action.name);
         expect(setRuntimeValue).not.toHaveBeenCalledWith(
             playerStats.name,
-            usesKey,
+            'postCastRider_Control_Spell',
             expect.anything(),
             campaignName,
         );
@@ -369,6 +351,11 @@ describe('postCastRiderHandler.handle', () => {
                 targetName: 'Enemy',
             }),
         });
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            '[postCastRider] Error:',
+            expect.any(Error),
+        );
     });
 
     it('handles addEntry rejection in successful save log without throwing', async () => {
@@ -378,17 +365,24 @@ describe('postCastRiderHandler.handle', () => {
 
         dispatchSaveResult('test-prompt-id', true);
 
+        await Promise.resolve();
+
         expect(setRuntimeValue).toHaveBeenCalledWith(
             playerStats.name,
-            usesKeyFor(action.name),
+            'postCastRider_Control_Spell',
             0,
             campaignName,
+        );
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            '[postCastRider] Error:',
+            expect.any(Error),
         );
     });
 
     it('handles addEntry rejection in failed save log without throwing', async () => {
         getRuntimeValue.mockImplementation((_char, key) => {
-            if (key === usesKeyFor(action.name)) return 1;
+            if (key === 'postCastRider_Control_Spell') return 1;
             if (key === 'activeConditions' && _char === 'Enemy') return ['blinded'];
             return [];
         });
@@ -409,19 +403,25 @@ describe('postCastRiderHandler.handle', () => {
             detail: { promptId: choiceEvent.detail.promptId, condition: 'charmed' },
         }));
 
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await Promise.resolve();
+        await Promise.resolve();
 
         expect(setRuntimeValue).toHaveBeenCalledWith(
             playerStats.name,
-            usesKeyFor(action.name),
+            'postCastRider_Control_Spell',
             0,
             campaignName,
+        );
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            '[postCastRider] addEntry Error:',
+            expect.any(Error),
         );
     });
 
     it('handles non-array activeConditions by falling back to empty array', async () => {
         getRuntimeValue.mockImplementation((_char, key) => {
-            if (key === usesKeyFor(action.name)) return 1;
+            if (key === 'postCastRider_Control_Spell') return 1;
             if (key === 'activeConditions' && _char === 'Enemy') return 'not-an-array';
             return [];
         });
@@ -440,7 +440,7 @@ describe('postCastRiderHandler.handle', () => {
             detail: { promptId: choiceEvent.detail.promptId, condition: 'charmed' },
         }));
 
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await Promise.resolve();
 
         expect(setRuntimeValue).toHaveBeenCalledWith(
             'Enemy',
@@ -450,4 +450,44 @@ describe('postCastRiderHandler.handle', () => {
         );
     });
 
+    it('uses automation.type in save_result log rollType', async () => {
+        await handle(action, playerStats, campaignName);
+
+        dispatchSaveResult('test-prompt-id', true);
+
+        await Promise.resolve();
+
+        expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+            rollType: 'save-spell',
+        }));
+    });
+
+    it('uses automation.type in failed save_result log rollType', async () => {
+        getRuntimeValue.mockImplementation((_char, key) => {
+            if (key === 'postCastRider_Control_Spell') return 1;
+            if (key === 'activeConditions' && _char === 'Enemy') return ['blinded'];
+            return [];
+        });
+
+        await handle(action, playerStats, campaignName);
+
+        const choiceShowPromise = new Promise(resolve => {
+            window.addEventListener('condition-choice-show', resolve, { once: true });
+        });
+
+        dispatchSaveResult('test-prompt-id', false);
+
+        const choiceEvent = await choiceShowPromise;
+
+        window.dispatchEvent(new CustomEvent('condition-choice-selected', {
+            detail: { promptId: choiceEvent.detail.promptId, condition: 'charmed' },
+        }));
+
+        await Promise.resolve();
+
+        expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+            rollType: 'save-spell',
+            success: false,
+        }));
+    });
 });

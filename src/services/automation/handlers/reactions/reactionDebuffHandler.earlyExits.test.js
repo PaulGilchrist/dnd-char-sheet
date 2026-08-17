@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './reactionDebuffHandler.js';
 
@@ -155,9 +156,7 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
     rangeCheck.isWithinRange.mockReset().mockResolvedValue(true);
   });
 
-  // ── Early exit: requires shield ─────────────────────────────
-
-  describe('early exits: requires shield', () => {
+  describe('early exit: requiresShield', () => {
     it('returns popup when requiresShield and no shield equipped', async () => {
       const ps = makePlayerStats({ inventory: { equipped: [] } });
       const action = makeAction({ requiresShield: true });
@@ -165,11 +164,12 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
       const result = await handle(action, ps, campaignName, mapName);
 
       expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('holding a Shield');
-      expect(targetResolver.resolveTarget).not.toHaveBeenCalled();
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
 
-    it('allows use when shield is equipped (plain or magic + prefix)', async () => {
+    it('proceeds to default path when shield is equipped (plain or magic + prefix)', async () => {
       const ps = makePlayerStats({
         inventory: { equipped: ['+1 Shield'] },
         equipment: [{ name: 'Shield', armor_category: 'Shield' }],
@@ -190,10 +190,11 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
 
       const result = await handle(action, ps, campaignName, mapName);
 
+      expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('Attack roll');
     });
 
-    it('does not allow use when equipped item is not a shield', async () => {
+    it('returns popup when requiresShield and equipped item is not a shield', async () => {
       const ps = makePlayerStats({
         inventory: { equipped: ['Longsword'] },
         equipment: [{ name: 'Longsword', weapon_category: 'martial_melee' }],
@@ -202,13 +203,14 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
 
       const result = await handle(action, ps, campaignName, mapName);
 
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('holding a Shield');
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
   });
 
-  // ── Early exit: uses exhausted ──────────────────────────────
-
-  describe('early exits: uses exhausted', () => {
+  describe('early exit: uses exhausted', () => {
     function setupExhausted(usesExpression = 3, recharge = 'long_rest') {
       const ps = makePlayerStats({});
       const action = makeAction({ uses_expression: usesExpression, recharge });
@@ -225,7 +227,7 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('no uses remaining');
       expect(result.payload.description).toContain('Long Rest');
-      expect(targetResolver.resolveTarget).not.toHaveBeenCalled();
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
 
     it('returns popup when usesUsed equals effectiveUsesMax (string expression)', async () => {
@@ -234,14 +236,18 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
       const result = await handle(action, ps, campaignName, mapName);
 
       expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('no uses remaining');
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
 
     it('mentions Short Rest when recharge is short_rest', async () => {
       const { ps, action } = setupExhausted(3, 'short_rest');
       const result = await handle(action, ps, campaignName, mapName);
 
+      expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('Short or Long Rest');
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
 
     it('proceeds when usesUsed is less than effectiveUsesMax', async () => {
@@ -282,9 +288,7 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
     });
   });
 
-  // ── Early exit: target / range / combat ─────────────────────
-
-  describe('early exits: target, range, combat', () => {
+  describe('early exit: target, range, combat', () => {
     it('returns popup when no target resolved', async () => {
       const ps = makePlayerStats({});
       const action = makeAction({});
@@ -293,6 +297,7 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
       const result = await handle(action, ps, campaignName, mapName);
 
       expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('requires a target');
     });
 
@@ -314,6 +319,7 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
       const result = await handle(action, ps, campaignName, mapName);
 
       expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('out of range');
     });
 
@@ -372,6 +378,7 @@ describe('reactionDebuffHandler — early exits: shield, uses, target/range/comb
       const result = await handle(action, ps, campaignName, mapName);
 
       expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('No combat context found');
     });
   });
