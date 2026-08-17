@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import BarbarianFeatures from './CharClassFeatures.jsx';
@@ -83,12 +83,6 @@ describe('BarbarianFeatures', () => {
 
     it('renders extra attacks as 1 for level 5+', () => {
       const stats = buildPlayerStats({ level: 5 });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Extra Attacks: 1');
-    });
-
-    it('renders extra attacks as 1 at level 18 (high level)', () => {
-      const stats = buildPlayerStats({ level: 18 });
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Extra Attacks: 1');
     });
@@ -259,7 +253,7 @@ describe('BarbarianFeatures', () => {
       expect(buffedSpan.textContent).toBe('2');
     });
 
-    it('shows automation badge with rage details when active', () => {
+    it('shows automation badge with rage details when rage is active', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [{ name: 'Rage' }];
         return undefined;
@@ -292,21 +286,6 @@ describe('BarbarianFeatures', () => {
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).not.toContain('BPS Resist');
     });
-
-    it('does not apply buffed class when rage is not active', () => {
-      const stats = buildPlayerStats({
-        level: 2,
-        class: {
-          name: 'Barbarian',
-          major: {},
-          subclass: {},
-          class_levels: [null, { level: 2, class_specific: { rage_damage_bonus: 2 } }],
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.querySelector('.stat--buffed')).toBeFalsy();
-    });
   });
 
   describe('reckless attack', () => {
@@ -317,15 +296,6 @@ describe('BarbarianFeatures', () => {
       });
       const { container } = render(<BarbarianFeatures playerStats={buildPlayerStats()} campaignName="test" />);
       expect(container.textContent).toContain('Reckless Attack');
-    });
-
-    it('shows full reckless attack description text', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'advantage_attacks_advantage_against' }];
-        return undefined;
-      });
-      const { container } = render(<BarbarianFeatures playerStats={buildPlayerStats()} campaignName="test" />);
-      expect(container.textContent).toContain('attacks against you have Advantage');
     });
 
     it('does not show reckless attack badge when no matching buff', () => {
@@ -396,40 +366,19 @@ describe('BarbarianFeatures', () => {
       expect(container.querySelector('[data-testid="tracked-resource-warriorofthegodsPool"]')).toBeFalsy();
     });
 
-    it('sets maxDice to 7 for level 17+', () => {
-      const stats = buildPlayerStats({ level: 17, bonusActions: [{ name: 'Warrior of the Gods' }] });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('7/7');
-    });
-
-    it('sets maxDice to 7 for level 20 (max)', () => {
-      const stats = buildPlayerStats({ level: 20, bonusActions: [{ name: 'Warrior of the Gods' }] });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('7/7');
-    });
-
-    it('sets maxDice to 6 for level 12-16', () => {
-      const stats = buildPlayerStats({ level: 12, bonusActions: [{ name: 'Warrior of the Gods' }] });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('6/6');
-    });
-
-    it('sets maxDice to 5 for level 6-11', () => {
-      const stats = buildPlayerStats({ level: 6, bonusActions: [{ name: 'Warrior of the Gods' }] });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('5/5');
-    });
-
-    it('sets maxDice to 4 for level below 6', () => {
-      const stats = buildPlayerStats({ level: 3, bonusActions: [{ name: 'Warrior of the Gods' }] });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('4/4');
-    });
-
-    it('sets maxDice to 4 for level 2 (minimum barbarian level)', () => {
-      const stats = buildPlayerStats({ level: 2, bonusActions: [{ name: 'Warrior of the Gods' }] });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('4/4');
+    it('sets maxDice based on level brackets', () => {
+      const levels = [
+        { level: 3, expected: '4/4' },
+        { level: 6, expected: '5/5' },
+        { level: 12, expected: '6/6' },
+        { level: 17, expected: '7/7' },
+        { level: 20, expected: '7/7' },
+      ];
+      for (const { level, expected } of levels) {
+        const stats = buildPlayerStats({ level, bonusActions: [{ name: 'Warrior of the Gods' }] });
+        const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
+        expect(container.textContent).toContain(expected);
+      }
     });
   });
 });

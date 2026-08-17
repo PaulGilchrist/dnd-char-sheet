@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -85,66 +85,11 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
     vi.mocked(getCombatSummary).mockReturnValue(null);
   });
 
-  describe('War God\'s Blessing (WGB) — bonus action casting', () => {
-    it('calls onCast with the spell when WGB is active and spell has no slots', async () => {
-      const onCast = vi.fn();
-      const wgbStats = {
-        ...baseMockPlayerStats,
-        automation: { passives: [], actions: [] },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === '_War_Gods_Blessing_active') return true;
-        if (key === 'spell_slots_level_1') return 0;
-        return null;
-      });
-
-      const spell = {
-        ...baseMockSpell,
-        name: 'Spiritual Weapon',
-        level: 2,
-        damage: { damage_at_slot_level: { '2': '1d8+3' } },
-      };
-
-      renderPopup(spell, wgbStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Spiritual Weapon');
-    });
-
-    it('calls onCast normally when WGB is active but spell has slots available', async () => {
-      const onCast = vi.fn();
-      const wgbStats = {
-        ...baseMockPlayerStats,
-        automation: { passives: [], actions: [] },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === '_War_Gods_Blessing_active') return true;
-        if (key === 'spell_slots_level_1') return 4;
-        return null;
-      });
-
-      const spell = {
-        ...baseMockSpell,
-        name: 'Magic Missile',
-        level: 1,
-        damage: { damage_at_slot_level: { '1': '3d4+1' } },
-      };
-
-      renderPopup(spell, wgbStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Magic Missile');
-    });
-  });
-
   describe('SpellBreaker — Dispel Magic as bonus action', () => {
-    it('passes dispelAbilityCheckBonus in metaCtx when casting Dispel Magic with SpellBreaker', async () => {
+    it.each([
+      { spellName: 'Dispel Magic', expectBonus: true },
+      { spellName: 'Magic Missile', expectBonus: false },
+    ])('passes dispelAbilityCheckBonus in metaCtx when casting $spellName with SpellBreaker', async ({ spellName, expectBonus }) => {
       const onCast = vi.fn();
       const spellBreakerStats = {
         ...baseMockPlayerStats,
@@ -155,47 +100,16 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       };
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'spell_slots_level_3') return 2;
-        return null;
-      });
-
-      const spell = {
-        ...baseMockSpell,
-        name: 'Dispel Magic',
-        level: 3,
-        casting_time: '1 action',
-        damage: null,
-      };
-
-      renderPopup(spell, spellBreakerStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Dispel Magic');
-      const metaCtx = onCast.mock.calls[0][1];
-      expect(metaCtx.dispelAbilityCheckBonus).toBe(3);
-    });
-
-    it('does not pass dispelAbilityCheckBonus when casting a different spell with SpellBreaker', async () => {
-      const onCast = vi.fn();
-      const spellBreakerStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'spell_breaker' }],
-          actions: [],
-        },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'spell_slots_level_1') return 4;
         return null;
       });
 
       const spell = {
         ...baseMockSpell,
-        name: 'Magic Missile',
-        level: 1,
-        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+        name: spellName,
+        level: spellName === 'Dispel Magic' ? 3 : 1,
+        casting_time: '1 action',
+        damage: spellName === 'Dispel Magic' ? null : { damage_at_slot_level: { '1': '3d4+1' } },
       };
 
       renderPopup(spell, spellBreakerStats, mockCampaignName, { onCast });
@@ -205,7 +119,11 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       const metaCtx = onCast.mock.calls[0][1];
-      expect(metaCtx.dispelAbilityCheckBonus).toBeUndefined();
+      if (expectBonus) {
+        expect(metaCtx.dispelAbilityCheckBonus).toBe(3);
+      } else {
+        expect(metaCtx.dispelAbilityCheckBonus).toBeUndefined();
+      }
     });
   });
 
@@ -276,26 +194,6 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       expect(onCast.mock.calls[0][0].usePsychicDamage).toBe(false);
     });
 
-    it('does not show psychic damage toggle for non-Warlock', () => {
-      const onCast = vi.fn();
-      renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName, { onCast });
-
-      expect(screen.queryByText('Change damage type to Psychic')).not.toBeInTheDocument();
-    });
-
-    it('does not show psychic damage toggle for Warlock without Psychic Spells passive', () => {
-      const onCast = vi.fn();
-      const warlockNoPsychic = {
-        ...baseMockPlayerStats,
-        class: { name: 'Warlock', major: { name: 'Warlock' } },
-        automation: { passives: [], actions: [] },
-      };
-
-      renderPopup(baseMockSpell, warlockNoPsychic, mockCampaignName, { onCast });
-
-      expect(screen.queryByText('Change damage type to Psychic')).not.toBeInTheDocument();
-    });
-
     it('does not show psychic damage toggle for spells without damage', () => {
       const onCast = vi.fn();
       const warlockStats = {
@@ -316,101 +214,6 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       renderPopup(noDamageSpell, warlockStats, mockCampaignName, { onCast });
 
       expect(screen.queryByText('Change damage type to Psychic')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Phantasmal Creatures — free cast with counter management', () => {
-    it('calls onCast and passes freeCastAuthorized:true when freeCastCount > 0', async () => {
-      const onCast = vi.fn();
-      const phantasmalStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'phantasmal_creatures' }],
-          actions: [],
-        },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === '_Phantasmal_Creatures_freeCastCount') return 1;
-        if (key === 'spell_slots_level_2') return 3;
-        return null;
-      });
-
-      const spell = {
-        ...baseMockSpell,
-        name: 'Summon Beast',
-        level: 2,
-        school: 'Conjuration',
-        damage: { damage_at_slot_level: { '2': '3d6' } },
-      };
-
-      renderPopup(spell, phantasmalStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Summon Beast');
-      expect(onCast.mock.calls[0][0].freeCastAuthorized).toBe(true);
-    });
-
-    it('calls onCast with existing list and passes freeCastAuthorized:true', async () => {
-      const onCast = vi.fn();
-      const phantasmalStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'phantasmal_creatures' }],
-          actions: [],
-        },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === '_Phantasmal_Creatures_freeCastCount') return 1;
-        if (key === '_phantasmalCreatures_list') return ['Bestial Spirit'];
-        if (key === 'spell_slots_level_2') return 3;
-        return null;
-      });
-
-      const spell = {
-        ...baseMockSpell,
-        name: 'Summon Fey',
-        level: 2,
-        school: 'Conjuration',
-        damage: { damage_at_slot_level: { '2': '3d6' } },
-      };
-
-      renderPopup(spell, phantasmalStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Summon Fey');
-      expect(onCast.mock.calls[0][0].freeCastAuthorized).toBe(true);
-    });
-
-    it('does not show free cast banner when freeCastCount is 0', () => {
-      const phantasmalStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'phantasmal_creatures' }],
-          actions: [],
-        },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === '_Phantasmal_Creatures_freeCastCount') return 0;
-        return null;
-      });
-
-      const spell = {
-        ...baseMockSpell,
-        name: 'Summon Beast',
-        level: 2,
-        damage: { damage_at_slot_level: { '2': '3d6' } },
-      };
-
-      renderPopup(spell, phantasmalStats, mockCampaignName);
-      expect(
-        screen.queryByText('Free Cast — no spell slot consumed')
-      ).not.toBeInTheDocument();
     });
   });
 

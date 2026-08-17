@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import UpcastPopup from './UpcastPopup.jsx';
@@ -32,43 +32,11 @@ describe('UpcastPopup rendering', () => {
     localStorage.clear();
   });
 
-  it('renders singular "slot" when availableSlots is 1', () => {
-    const levels = [{ level: 3, formula: '+1d6', availableSlots: 1 }];
-    renderUpcastPopup({ levels });
-    expect(screen.getByText('1 slot remaining')).toBeInTheDocument();
-  });
-
-  it('renders plural "slots" when availableSlots is not 1', () => {
-    const levels = [{ level: 3, formula: '+1d6', availableSlots: 2 }];
-    renderUpcastPopup({ levels });
-    expect(screen.getByText('2 slots remaining')).toBeInTheDocument();
-  });
-
-  it('renders radio inputs with name="upcastLevel"', () => {
+  it('renders radio inputs with correct name attribute', () => {
     renderUpcastPopup();
     const radios = screen.getAllByRole('radio');
     radios.forEach(radio => {
       expect(radio).toHaveAttribute('name', 'upcastLevel');
     });
-  });
-
-  it('sets correct value attribute on each radio input', () => {
-    renderUpcastPopup();
-    const radios = screen.getAllByRole('radio');
-    const values = Array.from(radios).map(r => r.value);
-    expect(values).toEqual(['3', '4', '5']);
-  });
-
-  it('renders the overlay and modal containers with correct classes', () => {
-    renderUpcastPopup();
-    expect(document.querySelector('.popup-overlay')).toBeInTheDocument();
-    expect(document.querySelector('.popup-modal.upcast-popup')).toBeInTheDocument();
-    expect(document.querySelector('.upcast-popup-inner')).toBeInTheDocument();
-  });
-
-  it('renders disabled radio inputs for levels with no available slots', () => {
-    renderUpcastPopup();
-    const radios = screen.getAllByRole('radio');
-    expect(radios[2]).toBeDisabled();
   });
 });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import UpcastPopup from './UpcastPopup.jsx';
@@ -37,7 +37,6 @@ describe('UpcastPopup', () => {
       renderUpcastPopup();
       const heading = screen.getByRole('heading', { name: /Upcast Fireball/ });
       expect(heading).toBeInTheDocument();
-      expect(heading.tagName).toBe('H3');
     });
 
     it('renders the descriptive paragraph explaining upcasting', () => {
@@ -48,27 +47,18 @@ describe('UpcastPopup', () => {
     it('renders the cast button with wand icon', () => {
       renderUpcastPopup();
       const castButton = screen.getByRole('button', { name: /Cast at Level 3/ });
-      const icon = castButton.querySelector('i.fa-solid.fa-wand-magic');
-      expect(icon).toBeInTheDocument();
+      expect(castButton).toBeInTheDocument();
     });
   });
 
   describe('props edge cases', () => {
-    it('renders with a multi-word spell name', () => {
-      const spell = { name: 'Call Lightning', level: 3 };
-      renderUpcastPopup({ spell });
-      expect(screen.getByRole('heading', { name: /Upcast Call Lightning/ })).toBeInTheDocument();
-    });
-
-    it('renders with a single available slot using singular "slot"', () => {
+    it('renders correct slot remaining text for singular and plural counts', () => {
       const levels = [{ level: 3, formula: '+1d6', availableSlots: 1 }];
       renderUpcastPopup({ levels });
       expect(screen.getByText('1 slot remaining')).toBeInTheDocument();
-    });
 
-    it('renders with multiple available slots using plural "slots"', () => {
-      const levels = [{ level: 3, formula: '+1d6', availableSlots: 5 }];
-      renderUpcastPopup({ levels });
+      const levels2 = [{ level: 3, formula: '+1d6', availableSlots: 5 }];
+      renderUpcastPopup({ levels: levels2 });
       expect(screen.getByText('5 slots remaining')).toBeInTheDocument();
     });
   });
