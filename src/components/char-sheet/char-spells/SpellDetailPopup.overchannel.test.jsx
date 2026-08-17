@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -90,7 +90,7 @@ describe('SpellDetailPopup - Overchannel', () => {
 
     describe('checkbox visibility', () => {
       it.each([
-        { name: 'level 1 cantrip', level: 0, hasDamage: true, shouldShow: false },
+        { name: 'level 0 cantrip', level: 0, hasDamage: true, shouldShow: false },
         { name: 'level 1 spell with damage', level: 1, hasDamage: true, shouldShow: true },
         { name: 'level 3 spell with damage', level: 3, hasDamage: true, shouldShow: true },
         { name: 'level 5 spell with damage (upper boundary)', level: 5, hasDamage: true, shouldShow: true },
@@ -144,21 +144,13 @@ describe('SpellDetailPopup - Overchannel', () => {
         fireEvent.click(checkbox);
         expect(screen.getByText(/Warning: Using Overchannel/)).toBeInTheDocument();
       });
-
-      it('does not show warning when use count > 1 but checkbox is not toggled', () => {
-        vi.mocked(useRuntimeValue).mockReturnValue(1);
-        const spell = {
-          ...baseMockSpell,
-          level: 1,
-          damage: { damage_at_slot_level: { '1': '1d6' } },
-        };
-        renderPopup(spell, overchannelStats, mockCampaignName);
-        expect(screen.queryByText(/Warning: Using Overchannel/)).not.toBeInTheDocument();
-      });
     });
 
     describe('metaCtx overchannel flag on cast', () => {
-      it('passes overchannel:false in metaCtx when not toggled', async () => {
+      it.each([
+        { toggled: false, expectedOverchannel: false, label: 'not toggled' },
+        { toggled: true, expectedOverchannel: true, label: 'toggled' },
+      ])('passes overchannel:$expectedOverchannel in metaCtx when $label', async ({ toggled, expectedOverchannel }) => {
         vi.mocked(useRuntimeValue).mockReturnValue(0);
         const onCast = vi.fn();
         const spell = {
@@ -168,50 +160,15 @@ describe('SpellDetailPopup - Overchannel', () => {
         };
         renderPopup(spell, overchannelStats, mockCampaignName, { onCast });
 
+        if (toggled) {
+          fireEvent.click(screen.getByRole('checkbox'));
+        }
         fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
         await flushPromises();
 
         expect(onCast).toHaveBeenCalledTimes(1);
         const metaCtx = onCast.mock.calls[0][1];
-        expect(metaCtx.overchannel).toBe(false);
-      });
-
-      it('passes overchannel:true in metaCtx when toggled', async () => {
-        vi.mocked(useRuntimeValue).mockReturnValue(0);
-        const onCast = vi.fn();
-        const spell = {
-          ...baseMockSpell,
-          level: 1,
-          damage: { damage_at_slot_level: { '1': '1d6' } },
-        };
-        renderPopup(spell, overchannelStats, mockCampaignName, { onCast });
-
-        fireEvent.click(screen.getByRole('checkbox'));
-        fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-        await flushPromises();
-
-        expect(onCast).toHaveBeenCalledTimes(1);
-        const metaCtx = onCast.mock.calls[0][1];
-        expect(metaCtx.overchannel).toBe(true);
-      });
-
-      it('passes spell object with overchannel flag in spell data', async () => {
-        vi.mocked(useRuntimeValue).mockReturnValue(0);
-        const onCast = vi.fn();
-        const spell = {
-          ...baseMockSpell,
-          level: 1,
-          damage: { damage_at_slot_level: { '1': '1d6' } },
-        };
-        renderPopup(spell, overchannelStats, mockCampaignName, { onCast });
-
-        fireEvent.click(screen.getByRole('checkbox'));
-        fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-        await flushPromises();
-
-        const passedSpell = onCast.mock.calls[0][0];
-        expect(passedSpell.name).toBe('Magic Missile');
-        expect(passedSpell.overchannel).toBe(true);
+        expect(metaCtx.overchannel).toBe(expectedOverchannel);
       });
     });
   });

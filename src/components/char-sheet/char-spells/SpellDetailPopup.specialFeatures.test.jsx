@@ -2,7 +2,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
-import { getRuntimeValue, useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
 
@@ -414,36 +414,4 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
     });
   });
 
-  describe('Overchannel — metaCtx flag', () => {
-    it('passes overchannel:false in metaCtx when not toggled', async () => {
-      const onCast = vi.fn();
-      const overchannelStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'overchannel' }],
-          actions: [],
-        },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'spell_slots_level_1') return 4;
-        return null;
-      });
-      vi.mocked(useRuntimeValue).mockReturnValue(0);
-
-      const spell = {
-        ...baseMockSpell,
-        level: 1,
-        damage: { damage_at_slot_level: { '1': '1d6' } },
-      };
-
-      renderPopup(spell, overchannelStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      const metaCtx = onCast.mock.calls[0][1];
-      expect(metaCtx.overchannel).toBe(false);
-    });
-  });
 });

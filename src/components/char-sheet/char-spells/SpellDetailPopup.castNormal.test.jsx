@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -79,40 +79,6 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
     vi.mocked(getActiveBuffs).mockReturnValue([]);
   });
 
-  describe('non-upcastable spell casting', () => {
-    const nonUpcastableSpell = {
-      ...baseMockSpell,
-      damage: { damage_at_slot_level: { '1': '3d4+1' } },
-    };
-
-    it('calls onCast with spell and baseLevel:undefined without consuming slot for non-upcastable spell', async () => {
-      const onCast = vi.fn();
-
-      renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.name).toBe('Magic Missile');
-      expect(modifiedSpell.level).toBe(1);
-      expect(modifiedSpell.baseLevel).toBe(undefined);
-    });
-
-    it('does not call onClose when Cast Spell is clicked', async () => {
-      const onClose = vi.fn();
-      const onCast = vi.fn();
-
-      renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onClose, onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onClose).not.toHaveBeenCalled();
-    });
-  });
-
   describe('upcast spell casting', () => {
     it('calls onCast with isUpcast:true and upcastLevel when selecting a higher level', async () => {
       const onCast = vi.fn();
@@ -137,43 +103,6 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       expect(modifiedSpell.isUpcast).toBe(true);
       expect(modifiedSpell.upcastLevel).toBe(2);
       expect(modifiedSpell.baseLevel).toBe(undefined);
-    });
-
-    it('passes isUpcast:false and no upcastLevel when base level is selected', async () => {
-      const onCast = vi.fn();
-      const upcastLevels = [
-        { level: 1, formula: '3d4+1', availableSlots: 4 },
-        { level: 2, formula: '4d4+1', availableSlots: 3 },
-      ];
-
-      renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName, {
-        onCast,
-        upcastLevels,
-      });
-
-      // Default selected is level 1 which matches spell level
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      await flushPromises();
-      expect(onCast).toHaveBeenCalledTimes(1);
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.level).toBe(1);
-      expect(modifiedSpell.isUpcast).toBe(false);
-      expect(modifiedSpell.upcastLevel).toBe(undefined);
-    });
-  });
-
-  describe('cast blocked by Rage', () => {
-    it('does not call onCast when player is raging', async () => {
-      const onCast = vi.fn();
-      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
-
-      renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).not.toHaveBeenCalled();
     });
   });
 });

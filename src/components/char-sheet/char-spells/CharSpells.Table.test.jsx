@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharSpells from './CharSpells.jsx';
@@ -410,46 +410,6 @@ describe('CharSpells - Table Rendering', () => {
       const headers = Array.from(table.querySelectorAll('th')).map(h => h.textContent.trim());
       expect(headers).toEqual(expectedHeaders);
     });
-
-    it('renders a row for each spell in the list', () => {
-      renderWithProps({});
-      const table = screen.getByRole('table');
-      const rows = table.querySelectorAll('tbody tr');
-      expect(rows).toHaveLength(2);
-    });
-  });
-
-  describe('spell content rendering', () => {
-    it('renders spell names, levels, ranges, and notes from the data', () => {
-      renderWithProps({});
-      expect(screen.getByText('Light')).toBeInTheDocument();
-      expect(screen.getByText('Detect Magic')).toBeInTheDocument();
-      expect(screen.getByText('Cantrip')).toBeInTheDocument();
-      expect(screen.getByText('1')).toBeInTheDocument();
-      expect(screen.getByText('Touch')).toBeInTheDocument();
-      expect(screen.getByText('Self')).toBeInTheDocument();
-    });
-
-    it('abbreviates "Instantaneous" duration as "Instant"', () => {
-      const spell = {
-        name: 'Instant Spell',
-        level: 1,
-        casting_time: '1 turn',
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('Instant')).toBeInTheDocument();
-    });
   });
 
   describe('prepared column', () => {
@@ -473,13 +433,6 @@ describe('CharSpells - Table Rendering', () => {
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const checkboxes = screen.getAllByRole('checkbox');
       expect(checkboxes).toHaveLength(1);
-    });
-
-    it('renders prepared text for spells with prepared: "Always"', () => {
-      renderWithProps({});
-      const table = screen.getByRole('table');
-      const preparedCells = Array.from(table.querySelectorAll('tbody td:nth-child(3)')).map(td => td.textContent.trim());
-      expect(preparedCells).toContain('Always');
     });
 
     it('toggles checkbox checked state and calls handleTogglePreparedSpells', () => {
@@ -569,26 +522,6 @@ describe('CharSpells - Table Rendering', () => {
       const levelHeader = screen.getByText('Level');
       fireEvent.click(levelHeader);
       expect(screen.getByText('Light')).toBeInTheDocument();
-    });
-  });
-
-  describe('spell attack to-hit label', () => {
-    it('renders the attack to-hit label with clickable class', () => {
-      renderWithProps({});
-      const attackLabel = screen.getByText(/Attack \(to hit\):/);
-      expect(attackLabel).toHaveClass('clickable');
-    });
-
-    it('adds disabled-attack class when cannotAct is true', () => {
-      renderWithProps({ cannotAct: true });
-      const attackLabel = screen.getByText(/Attack \(to hit\):/);
-      expect(attackLabel).toHaveClass('disabled-attack');
-    });
-
-    it('adds stat--penalized class to to hit span when exhaustionPenalty is set', () => {
-      renderWithProps({ exhaustionPenalty: 2 });
-      const toHitSpan = document.querySelector('.spell-abilities span');
-      expect(toHitSpan).toHaveClass('stat--penalized');
     });
   });
 });

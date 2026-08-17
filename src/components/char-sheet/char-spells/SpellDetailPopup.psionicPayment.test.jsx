@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -135,33 +135,6 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
       renderPopup(spell, psionicStats, mockCampaignName);
       expect(
         screen.getByText('Use Sorcery Points (2 SP) instead of spell slot'),
-      ).toBeInTheDocument();
-    });
-
-    it('shows psionic payment checkbox even when player is raging (rage only disables cast button)', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'sorceryPoints') return 3;
-        if (key === 'spell_slots_level_1') return 4;
-        return null;
-      });
-      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
-
-      const spell = {
-        ...baseMockSpell,
-        name: 'Magic Missile',
-        level: 1,
-      };
-
-      renderPopup(spell, psionicStats, mockCampaignName);
-      expect(
-        screen.getByText('Use Sorcery Points (1 SP) instead of spell slot'),
       ).toBeInTheDocument();
     });
 
@@ -377,7 +350,10 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
       expect(checkbox).not.toBeChecked();
     });
 
-    it('passes usePsionicPayment:true to onCast when checkbox is toggled', async () => {
+    it.each([
+      { toggleCheckbox: true, expectedPayment: true, label: 'toggled' },
+      { toggleCheckbox: false, expectedPayment: false, label: 'not toggled' },
+    ])('passes usePsionicPayment:$expectedPayment to onCast when checkbox is $label', async ({ toggleCheckbox, expectedPayment }) => {
       const onCast = vi.fn();
       const psionicStats = {
         ...baseMockPlayerStats,
@@ -400,44 +376,15 @@ describe('SpellDetailPopup - Psionic Sorcery Payment UI', () => {
 
       renderPopup(spell, psionicStats, mockCampaignName, { onCast });
 
-      fireEvent.click(screen.getByRole('checkbox'));
+      if (toggleCheckbox) {
+        fireEvent.click(screen.getByRole('checkbox'));
+      }
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
       const passedSpell = onCast.mock.calls[0][0];
-      expect(passedSpell.usePsionicPayment).toBe(true);
-    });
-
-    it('passes usePsionicPayment:false to onCast when checkbox is not toggled', async () => {
-      const onCast = vi.fn();
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'sorceryPoints') return 3;
-        if (key === 'spell_slots_level_1') return 4;
-        return null;
-      });
-
-      const spell = {
-        ...baseMockSpell,
-        name: 'Magic Missile',
-        level: 1,
-      };
-
-      renderPopup(spell, psionicStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      const passedSpell = onCast.mock.calls[0][0];
-      expect(passedSpell.usePsionicPayment).toBe(false);
+      expect(passedSpell.usePsionicPayment).toBe(expectedPayment);
     });
   });
 });

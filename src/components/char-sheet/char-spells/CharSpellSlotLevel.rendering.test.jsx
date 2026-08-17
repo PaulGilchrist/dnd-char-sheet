@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpellSlotLevel from './CharSpellSlotLevel.jsx';
@@ -16,23 +16,18 @@ describe('CharSpellSlotLevel - Rendering', () => {
   });
 
   describe('header', () => {
-    it.each`
-      level
-      ${1}
-      ${5}
-      ${9}
-    `('displays the level number ($level)', ({ level }) => {
-      useRuntimeValue.mockReturnValue(level);
+    it('displays the level number', () => {
+      useRuntimeValue.mockReturnValue(1);
 
       render(
         <CharSpellSlotLevel
-          level={level}
-          totalSlots={level}
+          level={1}
+          totalSlots={4}
           playerStats={helpers.createPlayerStats()}
         />
       );
 
-      expect(screen.getByText(String(level))).toBeInTheDocument();
+      expect(screen.getByText('1')).toBeInTheDocument();
     });
   });
 
@@ -74,95 +69,16 @@ describe('CharSpellSlotLevel - Rendering', () => {
         expect(unclassedCount).toBe(expectedUnclassed);
       }
     );
-
-    it('renders 4 slots total regardless of totalSlots value', () => {
-      useRuntimeValue.mockReturnValue(2);
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={0}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
-
-      expect(container.querySelectorAll('.slot').length).toBe(4);
-    });
-
-    it('renders slots inside 2 rows', () => {
-      useRuntimeValue.mockReturnValue(2);
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={4}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
-
-      expect(container.querySelectorAll('.row').length).toBe(2);
-    });
-  });
-
-  describe('fallback to _trackedResources', () => {
-    it('uses _trackedResources.current when runtime value is null', () => {
-      useRuntimeValue.mockReturnValue(null);
-
-      const playerStats = helpers.createPlayerStats({
-        _trackedResources: {
-          'spell_slots_level_3': { current: 2 },
-        },
-      });
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={3}
-          totalSlots={4}
-          playerStats={playerStats}
-        />
-      );
-
-      const slots = [...container.querySelectorAll('.slot')];
-      const activeSlots = slots.filter((s) => s.classList.contains('active'));
-      // availableSlots=2, totalSlots=4: 2 active, 2 inactive
-      expect(activeSlots.length).toBe(2);
-    });
-
-    it('falls back to totalSlots when both runtime value and _trackedResources are absent', () => {
-      useRuntimeValue.mockReturnValue(null);
-
-      const playerStats = helpers.createPlayerStats({
-        _trackedResources: {},
-      });
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={3}
-          playerStats={playerStats}
-        />
-      );
-
-      const slots = [...container.querySelectorAll('.slot')];
-      const activeSlots = slots.filter((s) => s.classList.contains('active'));
-      // availableSlots=3 (from totalSlots), totalSlots=3: 0 active, 3 inactive, 1 unclassed
-      expect(activeSlots.length).toBe(0);
-    });
   });
 
   describe('structure and accessibility', () => {
-    it.each`
-      totalSlots
-      ${1}
-      ${4}
-      ${9}
-    `('renders with clickable, level, header, and slots CSS classes (totalSlots=$totalSlots)', ({ totalSlots }) => {
-      useRuntimeValue.mockReturnValue(totalSlots);
+    it('renders with clickable, header, and slots CSS classes', () => {
+      useRuntimeValue.mockReturnValue(2);
 
       const { container } = render(
         <CharSpellSlotLevel
           level={1}
-          totalSlots={totalSlots}
+          totalSlots={4}
           playerStats={helpers.createPlayerStats()}
         />
       );

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -129,18 +129,6 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
       expect(modifiedSpell.baseLevel).toBe(0);
     });
 
-    it('calls onCast with base level when playerLevel exactly matches a threshold', async () => {
-      const onCast = vi.fn();
-      renderPopup(fireBoltSpell, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.level).toBe(5);
-      expect(modifiedSpell.baseLevel).toBe(0);
-    });
   });
 
   describe('cantripAutoLevel with damage_at_slot_level fallback', () => {
@@ -224,27 +212,6 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
       expect(modifiedSpell.baseLevel).toBe(0);
     });
 
-    it('calls onCast with empty damage object when cantrip damage exists but is empty', async () => {
-      const onCast = vi.fn();
-      const cantrip = {
-        name: 'Minor Illusion',
-        level: 0,
-        description: 'A sound or image.',
-        casting_time: '1 action',
-        range: '30 feet',
-        duration: '1 minute',
-        damage: {},
-      };
-      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.level).toBe(0);
-      expect(modifiedSpell.baseLevel).toBe(0);
-    });
   });
 
   describe('cantrip casting without auto-level', () => {

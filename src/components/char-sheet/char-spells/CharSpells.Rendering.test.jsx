@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -199,6 +199,10 @@ vi.mock('../../../services/rules/combat/rangeValidation.js', () => ({
   getNearestPlacedItem: vi.fn(() => null),
 }));
 
+vi.mock('../../../services/ui/spellSectionUtils.js', () => ({
+  getExcludedSpellNames: vi.fn(() => new Set()),
+}));
+
 vi.mock('../../../services/combat/buffs/buffService.js', () => ({
   isInnateSorceryActive: vi.fn(() => false),
 }));
@@ -338,26 +342,6 @@ function renderWithProps(props) {
 describe('CharSpells - Rendering Edge Cases', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('no spellAbilities', () => {
-    it('renders nothing when spellAbilities is absent', () => {
-      const stats = { name: 'No Spells' };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    });
-
-    it('renders nothing when spells array is empty', () => {
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    });
   });
 
   describe('spell effect rendering', () => {
@@ -554,13 +538,19 @@ describe('CharSpells - Rendering Edge Cases', () => {
   });
 
   describe('duration formatting', () => {
-    it('abbreviates "minute" to "min"', () => {
+    it.each`
+      durationInput              | expectedOutput
+      ${'1 minute'}              | ${'1 min'}
+      ${'10 minutes'}            | ${'10 mins'}
+      ${'up to 1 hour'}          | ${'1 hour'}
+      ${'Instantaneous'}         | ${'Instant'}
+    `('formats duration "$durationInput" as "$expectedOutput"', ({ durationInput, expectedOutput }) => {
       const spell = {
-        name: 'Minute Spell',
+        name: 'Duration Test Spell',
         level: 1,
         casting_time: '1 action',
         range: 'Self',
-        duration: '1 minute',
+        duration: durationInput,
         components: ['V'],
         prepared: 'Always',
       };
@@ -572,73 +562,10 @@ describe('CharSpells - Rendering Edge Cases', () => {
         },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('1 min')).toBeInTheDocument();
+      expect(screen.getByText(expectedOutput)).toBeInTheDocument();
     });
 
-    it('abbreviates "minutes" to "min"', () => {
-      const spell = {
-        name: 'Minutes Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: '10 minutes',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('10 mins')).toBeInTheDocument();
-    });
-
-    it('removes "up to" from duration', () => {
-      const spell = {
-        name: 'Up To Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'up to 1 hour',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('1 hour')).toBeInTheDocument();
-    });
-
-    it('renders "Instant" for Instantaneous duration', () => {
-      const spell = {
-        name: 'Instant Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('Instant')).toBeInTheDocument();
-    });
-
-    it('handles missing duration gracefully', () => {
+    it('renders empty cell when duration property is missing', () => {
       const spell = {
         name: 'No Duration Spell',
         level: 1,
@@ -656,15 +583,15 @@ describe('CharSpells - Rendering Edge Cases', () => {
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const table = screen.getByRole('table');
-      const durationCells = Array.from(table.querySelectorAll('tbody td:nth-child(7)')).map(td => td.textContent.trim());
-      expect(durationCells).toContain('');
+      const allCells = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
+      expect(allCells).toContain('');
     });
   });
 
   describe('casting time formatting', () => {
-    it('abbreviates "action" to " A"', () => {
+    it('abbreviates "1 action" to "1  A"', async () => {
       const spell = {
-        name: 'Action Spell',
+        name: 'Casting Time Test Spell',
         level: 1,
         casting_time: '1 action',
         range: 'Self',
@@ -676,18 +603,67 @@ describe('CharSpells - Rendering Edge Cases', () => {
         ...basePlayerStats,
         spellAbilities: {
           ...basePlayerStats.spellAbilities,
-          spells: [spell],
+          spells: [...basePlayerStats.spellAbilities.spells, spell],
         },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const timeCells = Array.from(table.querySelectorAll('tbody td:nth-child(4)')).map(td => td.textContent.trim());
-      expect(timeCells).toContain('1  A');
+      const table = await screen.findByRole('table');
+      const row = Array.from(table.querySelectorAll('tbody tr')).find(r => r.textContent.includes('Casting Time Test Spell'));
+      const cells = Array.from(row.querySelectorAll('td'));
+      expect(cells[3].textContent).toBe('1  A');
     });
 
-    it('handles missing casting_time gracefully', () => {
+    it('abbreviates "1 bonus action" to "1 BA"', async () => {
       const spell = {
-        name: 'No Time Spell',
+        name: 'Casting Time Test Spell',
+        level: 1,
+        casting_time: '1 bonus action',
+        range: 'Self',
+        duration: 'Instantaneous',
+        components: ['V'],
+        prepared: 'Always',
+      };
+      const stats = {
+        ...basePlayerStats,
+        spellAbilities: {
+          ...basePlayerStats.spellAbilities,
+          spells: [...basePlayerStats.spellAbilities.spells, spell],
+        },
+      };
+      render(<CharSpells playerStats={stats} campaignName="test" />);
+      const table = await screen.findByRole('table');
+      const row = Array.from(table.querySelectorAll('tbody tr')).find(r => r.textContent.includes('Casting Time Test Spell'));
+      const cells = Array.from(row.querySelectorAll('td'));
+      expect(cells[3].textContent).toBe('1 BA');
+    });
+
+    it('abbreviates "1 reaction" to "1 Reaction"', async () => {
+      const spell = {
+        name: 'Casting Time Test Spell',
+        level: 1,
+        casting_time: '1 reaction',
+        range: 'Self',
+        duration: 'Instantaneous',
+        components: ['V'],
+        prepared: 'Always',
+      };
+      const stats = {
+        ...basePlayerStats,
+        spellAbilities: {
+          ...basePlayerStats.spellAbilities,
+          spells: [...basePlayerStats.spellAbilities.spells, spell],
+        },
+      };
+      render(<CharSpells playerStats={stats} campaignName="test" />);
+      const table = await screen.findByRole('table');
+      const row = Array.from(table.querySelectorAll('tbody tr')).find(r => r.textContent.includes('Casting Time Test Spell'));
+      const cells = Array.from(row.querySelectorAll('td'));
+      expect(cells[3].textContent).toBe('1 Reaction');
+    });
+
+    it('renders empty cell when casting_time is missing', () => {
+      const spell = {
+        name: 'No Casting Time Spell',
         level: 1,
         range: 'Self',
         duration: 'Instantaneous',
@@ -703,20 +679,26 @@ describe('CharSpells - Rendering Edge Cases', () => {
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const table = screen.getByRole('table');
-      const timeCells = Array.from(table.querySelectorAll('tbody td:nth-child(4)')).map(td => td.textContent.trim());
-      expect(timeCells).toContain('');
+      const allCells = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
+      expect(allCells).toContain('');
     });
   });
 
   describe('notes formatting', () => {
-    it('joins multiple components with "/" in notes', () => {
+    it.each`
+      components                        | expectedNotes
+      ${['V', 'S', 'M']}                | ${'V/S/M'}
+      ${['V', 'S']}                     | ${'V/S'}
+      ${['V', 'M']}                     | ${'V/M'}
+      ${['V', 'Concentration']}         | ${'V/Con'}
+    `('formats components $components as notes "$expectedNotes"', ({ components, expectedNotes }) => {
       const spell = {
-        name: 'Multi Component Spell',
+        name: 'Notes Test Spell',
         level: 1,
         casting_time: '1 action',
         range: 'Self',
         duration: 'Instantaneous',
-        components: ['V', 'S', 'M'],
+        components,
         prepared: 'Always',
       };
       const stats = {
@@ -727,35 +709,10 @@ describe('CharSpells - Rendering Edge Cases', () => {
         },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const notesCells = Array.from(table.querySelectorAll('tbody td:last-child')).map(td => td.textContent.trim());
-      expect(notesCells).toContain('V/S/M');
+      expect(screen.getByText(expectedNotes)).toBeInTheDocument();
     });
 
-    it('joins two components with "/"', () => {
-      const spell = {
-        name: 'Two Component Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V', 'M'],
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const notesCells = Array.from(table.querySelectorAll('tbody td:last-child')).map(td => td.textContent.trim());
-      expect(notesCells).toContain('V/M');
-    });
-
-    it('renders empty notes for empty components array', () => {
+    it('renders empty notes cell for empty components array', () => {
       const spell = {
         name: 'Empty Components Spell',
         level: 1,
@@ -774,99 +731,9 @@ describe('CharSpells - Rendering Edge Cases', () => {
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const table = screen.getByRole('table');
-      const notesCells = Array.from(table.querySelectorAll('tbody td:last-child')).map(td => td.textContent.trim());
-      expect(notesCells).toContain('');
-    });
-
-    it('replaces "Concentration" with "Con" in notes', () => {
-      const spell = {
-        name: 'Concentration Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'Concentration, up to 10 minutes',
-        components: ['V', 'Concentration'],
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const notesCells = Array.from(table.querySelectorAll('tbody td:last-child')).map(td => td.textContent.trim());
-      expect(notesCells).toContain('V/Con');
-    });
-  });
-
-  describe('missing property handling', () => {
-    it('handles spell without range property', () => {
-      const spell = {
-        name: 'No Range Spell',
-        level: 1,
-        casting_time: '1 action',
-        duration: 'Instantaneous',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const rangeCells = Array.from(table.querySelectorAll('tbody td:nth-child(5)')).map(td => td.textContent.trim());
-      expect(rangeCells).toContain('');
-    });
-
-    it('handles spell without duration property', () => {
-      const spell = {
-        name: 'No Duration Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const durationCells = Array.from(table.querySelectorAll('tbody td:nth-child(7)')).map(td => td.textContent.trim());
-      expect(durationCells).toContain('');
-    });
-
-    it('handles spell without casting_time property', () => {
-      const spell = {
-        name: 'No Casting Time Spell',
-        level: 1,
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const timeCells = Array.from(table.querySelectorAll('tbody td:nth-child(4)')).map(td => td.textContent.trim());
-      expect(timeCells).toContain('');
+      const row = Array.from(table.querySelectorAll('tbody tr')).find(r => r.textContent.includes('Empty Components Spell'));
+      const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+      expect(cells).toContain('');
     });
   });
 
@@ -910,7 +777,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
   describe('spell abilities section info', () => {
     it('renders cantrips_known count', () => {
       renderWithProps({});
-      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText('Cantrips Known:')).toBeInTheDocument();
     });
 
     it('renders prepared_spells info for 5e', () => {

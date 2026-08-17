@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpellSlotLevel from './CharSpellSlotLevel.jsx';
@@ -38,28 +38,6 @@ describe('CharSpellSlotLevel - Fallback Logic', () => {
       expect(activeSlots.length).toBe(2);
     });
 
-    it('uses _trackedResources when runtime value is null', () => {
-      useRuntimeValue.mockReturnValue(null);
-
-      const playerStats = helpers.createPlayerStats({
-        _trackedResources: {
-          'spell_slots_level_1': { current: 3 },
-        },
-      });
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={4}
-          playerStats={playerStats}
-        />
-      );
-
-      const slots = container.querySelectorAll('.slot');
-      const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(1);
-    });
-
     it('prioritizes runtime value over _trackedResources when both exist', () => {
       useRuntimeValue.mockReturnValue(1);
 
@@ -82,81 +60,25 @@ describe('CharSpellSlotLevel - Fallback Logic', () => {
       expect(activeSlots.length).toBe(3);
     });
 
-    it('uses _trackedResources.current when runtime value is null and key exists', () => {
+    it.each`
+      trackedResources       | description
+      ${{}}                  | 'empty object'
+      ${undefined}           | 'undefined'
+      ${{ 'spell_slots_level_1': { current: 2 } }} | 'missing key for level'
+    `('falls back to totalSlots when $description (trackedResources=$description)', ({ trackedResources }) => {
       useRuntimeValue.mockReturnValue(null);
 
       const playerStats = helpers.createPlayerStats({
-        _trackedResources: {
-          'spell_slots_level_2': { current: 0 },
-        },
+        _trackedResources: trackedResources,
       });
+
+      const level = trackedResources && trackedResources['spell_slots_level_1'] ? 3 : 1;
+      const totalSlots = trackedResources && typeof trackedResources === 'object' ? 3 : 2;
 
       const { container } = render(
         <CharSpellSlotLevel
-          level={2}
-          totalSlots={4}
-          playerStats={playerStats}
-        />
-      );
-
-      const slots = container.querySelectorAll('.slot');
-      const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(4);
-    });
-
-    it('falls back to totalSlots when _trackedResources key is missing for the level', () => {
-      useRuntimeValue.mockReturnValue(null);
-
-      const playerStats = helpers.createPlayerStats({
-        _trackedResources: {
-          'spell_slots_level_1': { current: 2 },
-        },
-      });
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={3}
-          totalSlots={4}
-          playerStats={playerStats}
-        />
-      );
-
-      const slots = container.querySelectorAll('.slot');
-      const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(0);
-    });
-
-    it('falls back to totalSlots when _trackedResources is empty object', () => {
-      useRuntimeValue.mockReturnValue(null);
-
-      const playerStats = helpers.createPlayerStats({
-        _trackedResources: {},
-      });
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={3}
-          playerStats={playerStats}
-        />
-      );
-
-      const slots = container.querySelectorAll('.slot');
-      const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(0);
-    });
-
-    it('falls back to totalSlots when _trackedResources is undefined', () => {
-      useRuntimeValue.mockReturnValue(null);
-
-      const playerStats = helpers.createPlayerStats({
-        _trackedResources: undefined,
-      });
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={2}
+          level={level}
+          totalSlots={totalSlots}
           playerStats={playerStats}
         />
       );

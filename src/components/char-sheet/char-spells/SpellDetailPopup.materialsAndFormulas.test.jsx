@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -78,44 +78,24 @@ describe('SpellDetailPopup - Material components display', () => {
   });
 
   describe('Consumed material display', () => {
-    it('shows material requirement for Animate Dead', () => {
+    it.each([
+      { name: 'Animate Dead', level: 3, dmg: { '3': '3d6' }, itemName: 'Drop of Blood.*Piece of Flesh.*Pinch of Bone Dust', required: 'a drop of blood, a piece of flesh, and a pinch of bone dust' },
+      { name: 'Create Undead', level: 6, dmg: { '6': '4d6' }, itemName: 'Black Onyx.*150 gp', required: null },
+      { name: 'Revivify', level: 3, dmg: null, itemName: 'Diamond.*300 gp', required: null },
+    ])('shows material requirement for $name', ({ name, level, dmg, itemName, required }) => {
       const spell = {
         ...baseMockSpell,
-        name: 'Animate Dead',
-        level: 3,
-        damage: { damage_at_slot_level: { '3': '3d6' } },
+        name,
+        level,
+        damage: dmg,
       };
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName);
       expect(screen.getByText(/Material:/)).toBeInTheDocument();
-      expect(screen.getByText(/Drop of Blood.*Piece of Flesh.*Pinch of Bone Dust/)).toBeInTheDocument();
-      expect(screen.getByText(/a drop of blood, a piece of flesh, and a pinch of bone dust/)).toBeInTheDocument();
-    });
-
-    it('shows material requirement for Create Undead with gp cost', () => {
-      const spell = {
-        ...baseMockSpell,
-        name: 'Create Undead',
-        level: 6,
-        damage: { damage_at_slot_level: { '6': '4d6' } },
-      };
-
-      renderPopup(spell, baseMockPlayerStats, mockCampaignName);
-      expect(screen.getByText(/Material:/)).toBeInTheDocument();
-      expect(screen.getByText(/Black Onyx.*150 gp/)).toBeInTheDocument();
-    });
-
-    it('shows material requirement for Revivify with null damage', () => {
-      const spell = {
-        ...baseMockSpell,
-        name: 'Revivify',
-        level: 3,
-        damage: null,
-      };
-
-      renderPopup(spell, baseMockPlayerStats, mockCampaignName);
-      expect(screen.getByText(/Material:/)).toBeInTheDocument();
-      expect(screen.getByText(/Diamond.*300 gp/)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(itemName))).toBeInTheDocument();
+      if (required) {
+        expect(screen.getByText(new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBeInTheDocument();
+      }
     });
   });
 
@@ -175,17 +155,15 @@ describe('SpellDetailPopup - Material components display', () => {
   });
 
   describe('No material display for spells without consumed materials', () => {
-    it('does not show material section for Magic Missile', () => {
-      renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName);
-      expect(screen.queryByText(/Material:/)).not.toBeInTheDocument();
-    });
-
-    it('does not show material section for Fireball', () => {
+    it.each([
+      { name: 'Magic Missile', level: 1 },
+      { name: 'Fireball', level: 3, dmg: { '3': '8d6' } },
+    ])('does not show material section for $name', ({ name, level, dmg }) => {
       const spell = {
         ...baseMockSpell,
-        name: 'Fireball',
-        level: 3,
-        damage: { damage_at_slot_level: { '3': '8d6' } },
+        name,
+        level,
+        damage: dmg || baseMockSpell.damage,
       };
 
       renderPopup(spell, baseMockPlayerStats, mockCampaignName);
@@ -202,85 +180,37 @@ describe('SpellDetailPopup - Upcast formula resolution', () => {
     vi.mocked(getActiveBuffs).mockReturnValue([]);
   });
 
-  it('replaces MOD with player spell ability modifier in upcast formula', () => {
-    const stats = {
-      ...baseMockPlayerStats,
-      spellAbilities: {
-        ...baseMockPlayerStats.spellAbilities,
-        modifier: 3,
-      },
-    };
-    const spell = {
-      ...baseMockSpell,
-      damage: {
-        damage_at_slot_level: {
-          '1': '1d8+MOD',
-          '2': '2d8+MOD',
+  describe('MOD substitution', () => {
+    it.each([
+      { modifier: 3, expected: ['1d8\\+3', '2d8\\+3'], label: 'positive modifier' },
+      { modifier: undefined, expected: ['1d8\\+0', '2d8\\+0'], label: 'undefined (defaults to 0)' },
+      { modifier: -1, expected: ['1d8\\+-1', '2d8\\+-1'], label: 'negative modifier' },
+    ])('replaces MOD with $label ($modifier)', ({ modifier, expected }) => {
+      const stats = {
+        ...baseMockPlayerStats,
+        spellAbilities: {
+          ...baseMockPlayerStats.spellAbilities,
+          modifier,
         },
-      },
-    };
-    const upcastLevels = [
-      { level: 1, formula: '1d8+MOD', availableSlots: 4 },
-      { level: 2, formula: '2d8+MOD', availableSlots: 3 },
-    ];
-
-    renderPopup(spell, stats, mockCampaignName, { upcastLevels });
-    expect(screen.getByText(/1d8\+3/)).toBeInTheDocument();
-    expect(screen.getByText(/2d8\+3/)).toBeInTheDocument();
-  });
-
-  it('uses 0 for MOD when player has no spellAbilities modifier', () => {
-    const stats = {
-      ...baseMockPlayerStats,
-      spellAbilities: {
-        ...baseMockPlayerStats.spellAbilities,
-        modifier: undefined,
-      },
-    };
-    const spell = {
-      ...baseMockSpell,
-      damage: {
-        damage_at_slot_level: {
-          '1': '1d8+MOD',
-          '2': '2d8+MOD',
+      };
+      const spell = {
+        ...baseMockSpell,
+        damage: {
+          damage_at_slot_level: {
+            '1': '1d8+MOD',
+            '2': '2d8+MOD',
+          },
         },
-      },
-    };
-    const upcastLevels = [
-      { level: 1, formula: '1d8+MOD', availableSlots: 4 },
-      { level: 2, formula: '2d8+MOD', availableSlots: 3 },
-    ];
+      };
+      const upcastLevels = [
+        { level: 1, formula: '1d8+MOD', availableSlots: 4 },
+        { level: 2, formula: '2d8+MOD', availableSlots: 3 },
+      ];
 
-    renderPopup(spell, stats, mockCampaignName, { upcastLevels });
-    expect(screen.getByText(/1d8\+0/)).toBeInTheDocument();
-    expect(screen.getByText(/2d8\+0/)).toBeInTheDocument();
-  });
-
-  it('handles negative MOD values in formula', () => {
-    const stats = {
-      ...baseMockPlayerStats,
-      spellAbilities: {
-        ...baseMockPlayerStats.spellAbilities,
-        modifier: -1,
-      },
-    };
-    const spell = {
-      ...baseMockSpell,
-      damage: {
-        damage_at_slot_level: {
-          '1': '1d8+MOD',
-          '2': '2d8+MOD',
-        },
-      },
-    };
-    const upcastLevels = [
-      { level: 1, formula: '1d8+MOD', availableSlots: 4 },
-      { level: 2, formula: '2d8+MOD', availableSlots: 3 },
-    ];
-
-    renderPopup(spell, stats, mockCampaignName, { upcastLevels });
-    expect(screen.getByText(/1d8\+-1/)).toBeInTheDocument();
-    expect(screen.getByText(/2d8\+-1/)).toBeInTheDocument();
+      renderPopup(spell, stats, mockCampaignName, { upcastLevels });
+      expect(screen.getByText(new RegExp(expected[0]))).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(expected[1]))).toBeInTheDocument();
+    });
   });
 
   it('handles MOD appearing multiple times in the same formula', () => {
