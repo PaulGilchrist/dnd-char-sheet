@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConstellationSelectionModal from './ConstellationSelectionModal.jsx';
@@ -46,7 +46,7 @@ describe('ConstellationSelectionModal', () => {
   });
 
   describe('initial render', () => {
-    it('renders the overlay, modal structure, and all UI elements', () => {
+    it('renders the overlay, modal structure, all UI elements, and no result-specific elements', () => {
       render(<ConstellationSelectionModal {...makeProps()} />);
       expect(screen.getByText('Starry Form')).toBeInTheDocument();
       expect(screen.getByText('Choose a constellation:')).toBeInTheDocument();
@@ -54,12 +54,7 @@ describe('ConstellationSelectionModal', () => {
       expect(screen.getByRole('button', { name: /Chalice/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Dragon/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-      const chooseBtn = screen.getByRole('button', { name: 'Choose' });
-      expect(chooseBtn).toBeDisabled();
-    });
-
-    it('does not show result-specific elements on initial render', () => {
-      render(<ConstellationSelectionModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: 'Choose' })).toBeDisabled();
       expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     });
   });
@@ -84,13 +79,6 @@ describe('ConstellationSelectionModal', () => {
     it('enables Choose button after selecting a constellation', () => {
       render(<ConstellationSelectionModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
-      expect(screen.getByRole('button', { name: 'Choose' })).toBeEnabled();
-    });
-
-    it('allows switching selection between options', () => {
-      render(<ConstellationSelectionModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
-      fireEvent.click(screen.getByRole('button', { name: /Dragon/ }));
       expect(screen.getByRole('button', { name: 'Choose' })).toBeEnabled();
     });
   });
@@ -137,7 +125,7 @@ describe('ConstellationSelectionModal', () => {
   });
 
   describe('result state', () => {
-    it('replaces constellation options with result description and Done button', async () => {
+    it('replaces constellation options with result description, Done button, and hides Cancel/Choose buttons', async () => {
       render(<ConstellationSelectionModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
       await act(async () => {
@@ -148,24 +136,14 @@ describe('ConstellationSelectionModal', () => {
       });
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Choose' })).not.toBeInTheDocument();
       });
       await waitFor(() => {
         expect(screen.getByText('Starry Form')).toBeInTheDocument();
       });
       await waitFor(() => {
         expect(document.querySelector('.sp-body').textContent).toContain('Archer constellation chosen');
-      });
-    });
-
-    it('hides Cancel and Choose buttons in the result state', async () => {
-      render(<ConstellationSelectionModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      });
-      await waitFor(() => {
-        expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Choose' })).not.toBeInTheDocument();
       });
     });
 

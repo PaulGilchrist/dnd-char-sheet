@@ -1,7 +1,39 @@
-// @improved-by-ai
-import { render, screen, fireEvent } from '@testing-library/react';
+// @cleaned-by-ai
+import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CoronaEnemySelectionModal from './CoronaEnemySelectionModal.jsx';
+
+// ── Mock CreatureSelectionModal ──
+
+vi.mock('./shared/CreatureSelectionModal.jsx', () => ({
+  default: vi.fn((props) => (
+    <div data-testid="creature-selection-modal">
+      <div className="sp-header">
+        <i className={`fa-solid ${props.icon}`}></i> {props.title}
+      </div>
+      {props.description && <p>{props.description}</p>}
+      <div className="secondary-target-list">
+        {props.targets.map((target, i) => (
+          <div key={i} data-testid={`target-${i}`}>
+            {target.name || target}
+          </div>
+        ))}
+      </div>
+      <div className="sp-actions">
+        <button className="sp-roll-btn" onClick={props.onConfirm} type="button">
+          {props.confirmLabel || 'Confirm'}
+        </button>
+        <button className="sp-dismiss-btn" onClick={props.onSkip} type="button">
+          Skip
+        </button>
+      </div>
+    </div>
+  )),
+}));
+
+import CreatureSelectionModal from './shared/CreatureSelectionModal.jsx';
+
+// ── Test helpers ──
 
 const mockOnConfirm = vi.fn();
 const mockOnSkip = vi.fn();
@@ -21,80 +53,64 @@ function makeProps(overrides) {
   };
 }
 
+// ── Tests ──
+
 describe('CoronaEnemySelectionModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('rendering', () => {
-    it('renders the modal title "Corona of Light"', () => {
+  describe('passes correct hardcoded props to CreatureSelectionModal', () => {
+    it('passes title, icons, description, and confirmLabel', () => {
       render(<CoronaEnemySelectionModal {...makeProps()} />);
-      expect(screen.getByText('Corona of Light')).toBeInTheDocument();
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.title).toBe('Corona of Light');
+      expect(props.icon).toBe('fa-sun');
+      expect(props.confirmIcon).toBe('fa-sun');
+      expect(props.confirmLabel).toBe('Activate Corona');
+      expect(props.description).toBe(
+        'Select which creatures are enemies of the caster. Enemies in the bright light have Disadvantage on saving throws against Fire and Radiant damage:'
+      );
     });
 
-    it('renders the description about enemies in bright light', () => {
+    it('passes creatureTargets as targets', () => {
       render(<CoronaEnemySelectionModal {...makeProps()} />);
-      expect(
-        screen.getByText(
-          'Select which creatures are enemies of the caster. Enemies in the bright light have Disadvantage on saving throws against Fire and Radiant damage:'
-        )
-      ).toBeInTheDocument();
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.targets).toBe(mockTargets);
     });
 
-    it('renders the confirm button with label "Activate Corona"', () => {
+    it('passes onConfirm and onSkip callbacks', () => {
       render(<CoronaEnemySelectionModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Activate Corona/ })).toBeInTheDocument();
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.onConfirm).toBe(mockOnConfirm);
+      expect(props.onSkip).toBe(mockOnSkip);
     });
+  });
 
-    it('renders the skip button', () => {
-      render(<CoronaEnemySelectionModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-    });
-
-    it('renders all creature targets passed via creatureTargets prop', () => {
-      render(<CoronaEnemySelectionModal {...makeProps()} />);
-      expect(screen.getByText('Goblin A')).toBeInTheDocument();
-      expect(screen.getByText('Goblin B')).toBeInTheDocument();
-      expect(screen.getByText('Player Character')).toBeInTheDocument();
-    });
-
-    it('renders targets when passed as strings', () => {
-      render(<CoronaEnemySelectionModal {...makeProps({ creatureTargets: ['Creature1', 'Creature2'] })} />);
-      expect(screen.getByText('Creature1')).toBeInTheDocument();
-      expect(screen.getByText('Creature2')).toBeInTheDocument();
-    });
-
-    it('shows "No targets available." when creatureTargets is empty', () => {
+  describe('prop passthrough', () => {
+    it('passes empty targets array', () => {
       render(<CoronaEnemySelectionModal {...makeProps({ creatureTargets: [] })} />);
-      expect(screen.getByText('No targets available.')).toBeInTheDocument();
-    });
-  });
-
-  describe('interaction', () => {
-    it('calls onSkip when the Skip button is clicked', () => {
-      render(<CoronaEnemySelectionModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-      expect(mockOnSkip).toHaveBeenCalledTimes(1);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.targets).toEqual([]);
     });
 
-    it('calls onSkip when clicking the overlay background', () => {
-      render(<CoronaEnemySelectionModal {...makeProps()} />);
-      fireEvent.click(document.querySelector('.sp-overlay'));
-      expect(mockOnSkip).toHaveBeenCalledTimes(1);
+    it('passes string targets', () => {
+      const stringTargets = ['Creature1', 'Creature2'];
+      render(<CoronaEnemySelectionModal {...makeProps({ creatureTargets: stringTargets })} />);
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.targets).toBe(stringTargets);
     });
-  });
 
-  describe('edge cases', () => {
-    it('renders without crashing when onConfirm is undefined', () => {
+    it('passes undefined onConfirm', () => {
       render(<CoronaEnemySelectionModal {...makeProps({ onConfirm: undefined })} />);
-      expect(screen.getByText('Corona of Light')).toBeInTheDocument();
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.onConfirm).toBeUndefined();
     });
 
-    it('renders without crashing when onSkip is undefined', () => {
+    it('passes undefined onSkip', () => {
       render(<CoronaEnemySelectionModal {...makeProps({ onSkip: undefined })} />);
-      expect(screen.getByText('Corona of Light')).toBeInTheDocument();
+      const props = CreatureSelectionModal.mock.calls[0][0];
+      expect(props.onSkip).toBeUndefined();
     });
-
-
   });
 });

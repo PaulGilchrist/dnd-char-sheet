@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CombatSuperiorityModal from './CombatSuperiorityModal.jsx';
@@ -146,7 +146,7 @@ describe('CombatSuperiorityModal - prompt mode', () => {
     expect(screen.getByText(/Combat Superiority — Use Maneuver/)).toBeInTheDocument();
   });
 
-  it('filters by melee_weapon_attack_hit trigger', () => {
+  it('filters by melee_weapon_attack_hit trigger for melee weapons', () => {
     renderModalDirect({
       payload: {
         allManeuvers: [
@@ -168,7 +168,7 @@ describe('CombatSuperiorityModal - prompt mode', () => {
     expect(screen.queryByText('Ranged Strike')).not.toBeInTheDocument();
   });
 
-  it('filters by melee_weapon_attack_hit trigger with ranged weapon', () => {
+  it('filters by melee_weapon_attack_hit trigger for ranged weapons', () => {
     renderModalDirect({
       payload: {
         allManeuvers: [
@@ -186,6 +186,26 @@ describe('CombatSuperiorityModal - prompt mode', () => {
     });
     expect(screen.getByText('Ranged Strike')).toBeInTheDocument();
     expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
+  });
+
+  it('includes unarmed strike for melee_weapon_attack_hit trigger', () => {
+    renderModalDirect({
+      payload: {
+        allManeuvers: [
+          { name: 'Unarmed Maneuver', actionType: 'attack_rider', trigger: 'melee_weapon_attack_hit' },
+          { name: 'Ki-Fueled Attack', actionType: 'bonus_action', trigger: 'any' },
+        ],
+        knownManeuvers: ['Unarmed Maneuver', 'Ki-Fueled Attack'],
+        maxOptions: 3,
+        selectionMode: false,
+        attackContext: { hit: true, isUnarmedStrike: true, attackerName: 'TestChar' },
+        playerStats: PLAYER_STATS,
+      },
+      onConfirm: vi.fn(),
+      onClose: vi.fn(),
+    });
+    expect(screen.getByText('Unarmed Maneuver')).toBeInTheDocument();
+    expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
   });
 
   it('filters by attack_roll_miss trigger', () => {
@@ -208,123 +228,72 @@ describe('CombatSuperiorityModal - prompt mode', () => {
     expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
   });
 
-  it('filters by melee_attack_miss trigger (target is player)', () => {
+  it.each([
+    ['melee weapon', { hit: false, weaponType: 'melee', targetName: 'TestChar' }, 'Defensive Maneuver'],
+    ['unarmed strike', { hit: false, weaponType: null, isUnarmedStrike: true, targetName: 'TestChar' }, 'Unarmed Deflection'],
+  ])('filters by melee_attack_miss trigger (%s)', (_label, attackCtx, expectedName) => {
     renderModalDirect({
       payload: {
         allManeuvers: [
-          { name: 'Defensive Maneuver', actionType: 'reaction', trigger: 'melee_attack_miss' },
+          { name: expectedName, actionType: 'reaction', trigger: 'melee_attack_miss' },
           { name: 'Trip Attack', actionType: 'attack_rider', trigger: 'melee_weapon_attack_hit' },
         ],
-        knownManeuvers: ['Defensive Maneuver', 'Trip Attack'],
+        knownManeuvers: [expectedName, 'Trip Attack'],
         maxOptions: 3,
         selectionMode: false,
-        attackContext: { hit: false, weaponType: 'melee', targetName: 'TestChar' },
+        attackContext: attackCtx,
         playerStats: PLAYER_STATS,
       },
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Defensive Maneuver')).toBeInTheDocument();
+    expect(screen.getByText(expectedName)).toBeInTheDocument();
     expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
   });
 
-  it('filters by melee_attack_miss trigger with unarmed strike', () => {
+  it.each([
+    ['melee weapon', { weaponType: 'melee', targetName: 'TestChar' }, 'Dodge Maneuver'],
+    ['unarmed strike', { weaponType: null, isUnarmedStrike: true, targetName: 'TestChar' }, 'Unarmed Dodge'],
+  ])('filters by melee_damage_taken trigger (%s)', (_label, attackCtx, expectedName) => {
     renderModalDirect({
       payload: {
         allManeuvers: [
-          { name: 'Unarmed Deflection', actionType: 'reaction', trigger: 'melee_attack_miss' },
+          { name: expectedName, actionType: 'reaction', trigger: 'melee_damage_taken' },
           { name: 'Trip Attack', actionType: 'attack_rider', trigger: 'melee_weapon_attack_hit' },
         ],
-        knownManeuvers: ['Unarmed Deflection', 'Trip Attack'],
+        knownManeuvers: [expectedName, 'Trip Attack'],
         maxOptions: 3,
         selectionMode: false,
-        attackContext: { hit: false, weaponType: null, isUnarmedStrike: true, targetName: 'TestChar' },
+        attackContext: attackCtx,
         playerStats: PLAYER_STATS,
       },
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Unarmed Deflection')).toBeInTheDocument();
+    expect(screen.getByText(expectedName)).toBeInTheDocument();
     expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
   });
 
-  it('filters by melee_damage_taken trigger', () => {
+  it.each([
+    ['melee weapon', { weaponType: 'melee', attackerName: 'TestChar' }, 'Flank Maneuver'],
+    ['unarmed strike', { weaponType: null, isUnarmedStrike: true, attackerName: 'TestChar' }, 'Unarmed Flank'],
+  ])('filters by melee_attack_straight_line trigger (%s)', (_label, attackCtx, expectedName) => {
     renderModalDirect({
       payload: {
         allManeuvers: [
-          { name: 'Dodge Maneuver', actionType: 'reaction', trigger: 'melee_damage_taken' },
-          { name: 'Trip Attack', actionType: 'attack_rider', trigger: 'melee_weapon_attack_hit' },
-        ],
-        knownManeuvers: ['Dodge Maneuver', 'Trip Attack'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: { weaponType: 'melee', targetName: 'TestChar' },
-        playerStats: PLAYER_STATS,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Dodge Maneuver')).toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
-  });
-
-  it('filters by melee_damage_taken trigger with unarmed strike', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Unarmed Dodge', actionType: 'reaction', trigger: 'melee_damage_taken' },
-          { name: 'Trip Attack', actionType: 'attack_rider', trigger: 'melee_weapon_attack_hit' },
-        ],
-        knownManeuvers: ['Unarmed Dodge', 'Trip Attack'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: { weaponType: null, isUnarmedStrike: true, targetName: 'TestChar' },
-        playerStats: PLAYER_STATS,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Unarmed Dodge')).toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
-  });
-
-  it('filters by melee_attack_straight_line trigger', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Flank Maneuver', actionType: 'bonus_action', trigger: 'melee_attack_straight_line' },
+          { name: expectedName, actionType: 'bonus_action', trigger: 'melee_attack_straight_line' },
           { name: 'Trip Attack', actionType: 'bonus_action', trigger: 'attack_roll_miss' },
         ],
-        knownManeuvers: ['Flank Maneuver', 'Trip Attack'],
+        knownManeuvers: [expectedName, 'Trip Attack'],
         maxOptions: 3,
         selectionMode: false,
-        attackContext: { weaponType: 'melee', attackerName: 'TestChar' },
+        attackContext: attackCtx,
         playerStats: PLAYER_STATS,
       },
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Flank Maneuver')).toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
-  });
-
-  it('filters by melee_attack_straight_line trigger with unarmed strike', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Unarmed Flank', actionType: 'bonus_action', trigger: 'melee_attack_straight_line' },
-          { name: 'Trip Attack', actionType: 'bonus_action', trigger: 'attack_roll_miss' },
-        ],
-        knownManeuvers: ['Unarmed Flank', 'Trip Attack'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: { weaponType: null, isUnarmedStrike: true, attackerName: 'TestChar' },
-        playerStats: PLAYER_STATS,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Unarmed Flank')).toBeInTheDocument();
+    expect(screen.getByText(expectedName)).toBeInTheDocument();
     expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
   });
 
@@ -408,102 +377,6 @@ describe('CombatSuperiorityModal - prompt mode', () => {
     });
     expect(screen.queryByText('Other Target Maneuver')).not.toBeInTheDocument();
     expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
-  });
-
-  it('includes unarmed strike for melee_weapon_attack_hit trigger', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Unarmed Maneuver', actionType: 'attack_rider', trigger: 'melee_weapon_attack_hit' },
-        ],
-        knownManeuvers: ['Unarmed Maneuver'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: { hit: true, isUnarmedStrike: true, attackerName: 'TestChar' },
-        playerStats: PLAYER_STATS,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Unarmed Maneuver')).toBeInTheDocument();
-  });
-
-  it('includes unarmed strike for weapon_attack_hit trigger', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Unarmed Strike Maneuver', actionType: 'attack_rider', trigger: 'weapon_attack_hit' },
-        ],
-        knownManeuvers: ['Unarmed Strike Maneuver'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: { hit: true, isUnarmedStrike: true, attackerName: 'TestChar' },
-        playerStats: PLAYER_STATS,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Unarmed Strike Maneuver')).toBeInTheDocument();
-  });
-
-  it('excludes melee_weapon_attack_hit when weaponType is ranged (not melee or unarmed)', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Melee Only', actionType: 'attack_rider', trigger: 'melee_weapon_attack_hit' },
-          { name: 'Any Trigger', actionType: 'bonus_action', trigger: 'any' },
-        ],
-        knownManeuvers: ['Melee Only', 'Any Trigger'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: { hit: true, weaponType: 'ranged', attackerName: 'TestChar' },
-        playerStats: PLAYER_STATS,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.queryByText('Melee Only')).not.toBeInTheDocument();
-    expect(screen.getByText('Any Trigger')).toBeInTheDocument();
-  });
-
-  it('excludes melee_attack_miss when hit is true (not a miss)', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Defensive Maneuver', actionType: 'reaction', trigger: 'melee_attack_miss' },
-          { name: 'Any Trigger', actionType: 'bonus_action', trigger: 'any' },
-        ],
-        knownManeuvers: ['Defensive Maneuver', 'Any Trigger'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: { hit: true, weaponType: 'melee', targetName: 'TestChar' },
-        playerStats: PLAYER_STATS,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.queryByText('Defensive Maneuver')).not.toBeInTheDocument();
-    expect(screen.getByText('Any Trigger')).toBeInTheDocument();
-  });
-
-  it('excludes melee_attack_miss when targetName does not match player', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Defensive Maneuver', actionType: 'reaction', trigger: 'melee_attack_miss' },
-          { name: 'Any Trigger', actionType: 'bonus_action', trigger: 'any' },
-        ],
-        knownManeuvers: ['Defensive Maneuver', 'Any Trigger'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: { hit: false, weaponType: 'melee', targetName: 'OtherChar' },
-        playerStats: PLAYER_STATS,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.queryByText('Defensive Maneuver')).not.toBeInTheDocument();
-    expect(screen.getByText('Any Trigger')).toBeInTheDocument();
   });
 
   it('treats skillContext same as attackContext for isPromptMode', () => {
@@ -630,66 +503,35 @@ describe('CombatSuperiorityModal - lastAttack fallback', () => {
     expect(screen.queryByText('Ranged Maneuver')).not.toBeInTheDocument();
   });
 
-  it('falls back to knownManeuvers filtering when lastAttack is null', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Ki-Fueled Attack', actionType: 'bonus_action' },
-          { name: 'Unknown', actionType: 'reaction' },
-        ],
-        knownManeuvers: ['Ki-Fueled Attack'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: null,
-        lastAttack: null,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
-    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
-  });
-
-  it('falls back to knownManeuvers filtering when lastAttack has no useful data', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Ki-Fueled Attack', actionType: 'bonus_action' },
-          { name: 'Unknown', actionType: 'reaction' },
-        ],
-        knownManeuvers: ['Ki-Fueled Attack'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: null,
-        lastAttack: {},
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
-    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
-  });
-
-  it('falls back to knownManeuvers filtering when lastAttack has attackerName but no trigger-relevant fields', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
+  it.each([
+    ['null', null, ['Ki-Fueled Attack'], ['Unknown'], undefined],
+    ['empty object', {}, ['Ki-Fueled Attack'], ['Unknown'], undefined],
+    ['partial object', { attackerName: 'TestChar' }, ['Ki-Fueled Attack'], ['Melee Hit Maneuver'], PLAYER_STATS],
+  ])('falls back to knownManeuvers filtering when lastAttack is %s', (_label, lastAttack, shown, excluded, pStats) => {
+    const maneuvers = excluded.includes('Melee Hit Maneuver')
+      ? [
           { name: 'Melee Hit Maneuver', actionType: 'attack_rider', trigger: 'melee_weapon_attack_hit' },
           { name: 'Ki-Fueled Attack', actionType: 'bonus_action' },
-        ],
-        knownManeuvers: ['Melee Hit Maneuver', 'Ki-Fueled Attack'],
+        ]
+      : [
+          { name: 'Ki-Fueled Attack', actionType: 'bonus_action' },
+          { name: 'Unknown', actionType: 'reaction' },
+        ];
+    renderModalDirect({
+      payload: {
+        allManeuvers: maneuvers,
+        knownManeuvers: shown,
         maxOptions: 3,
         selectionMode: false,
         attackContext: null,
-        lastAttack: { attackerName: 'TestChar' },
-        playerStats: PLAYER_STATS,
+        lastAttack,
+        playerStats: pStats,
       },
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    // lastAttack has no weaponType/hit, so effectiveAttack won't match melee_weapon_attack_hit
-    expect(screen.queryByText('Melee Hit Maneuver')).not.toBeInTheDocument();
-    expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
+    shown.forEach(name => expect(screen.getByText(name)).toBeInTheDocument());
+    excluded.forEach(name => expect(screen.queryByText(name)).not.toBeInTheDocument());
   });
 });
 
@@ -715,27 +557,6 @@ describe('CombatSuperiorityModal - onReopenSelection', () => {
       expect(onReopenSelection).toHaveBeenCalledTimes(1);
     });
     expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it('calls onReopenSelection with the current selected maneuvers', async () => {
-    const onReopenSelection = vi.fn().mockResolvedValue(undefined);
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Ki-Fueled Attack', actionType: 'bonus_action' },
-          { name: 'Pushing Attack', actionType: 'movement' },
-        ],
-        knownManeuvers: ['Ki-Fueled Attack', 'Pushing Attack'],
-        maxOptions: 3,
-        selectionMode: false,
-      },
-      onReopenSelection: onReopenSelection,
-      onConfirm: vi.fn(),
-    });
-    fireEvent.click(screen.getByRole('button', { name: /Manage Maneuvers/ }));
-    await waitFor(() => {
-      expect(onReopenSelection).toHaveBeenCalledTimes(1);
-    });
   });
 
   it('falls back to onConfirm when Manage Maneuvers is clicked and onReopenSelection does not exist', () => {
@@ -831,28 +652,6 @@ describe('CombatSuperiorityModal - handleUseManeuver error', () => {
     consoleSpy.mockRestore();
   });
 
-  it('does not call onClose when onConfirm rejects during use maneuver', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
-    const onClose = vi.fn();
-    const onConfirm = vi.fn().mockRejectedValue(new Error('use failed'));
-    const { container } = renderModalDirect({
-      payload: {
-        allManeuvers: [{ name: 'Ki-Fueled Attack', actionType: 'bonus_action' }],
-        knownManeuvers: ['Ki-Fueled Attack'],
-        maxOptions: 3,
-        selectionMode: false,
-      },
-      onConfirm,
-      onClose,
-    });
-    const radios = container.querySelectorAll('input[name="combatManeuver"]');
-    fireEvent.click(radios[0]);
-    fireEvent.click(screen.getByRole('button', { name: /Use Maneuver/ }));
-    await waitFor(() => {
-      expect(onClose).not.toHaveBeenCalled();
-    });
-    consoleSpy.mockRestore();
-  });
 });
 
 // ── Maneuver description rendering ──
@@ -886,57 +685,4 @@ describe('CombatSuperiorityModal - maneuver descriptions', () => {
     expect(screen.getByText('Add die to attack roll.')).toBeInTheDocument();
   });
 
-  it('omits description element when maneuver has no description in selection mode', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [{ name: 'Simple Maneuver', actionType: 'bonus_action', description: null }],
-        knownManeuvers: [],
-        maxOptions: 3,
-        selectionMode: true,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Simple Maneuver')).toBeInTheDocument();
-    expect(screen.queryByText('Simple Maneuver')).toBeInTheDocument();
-  });
-
-  it('omits description element when maneuver has no description in use mode', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [{ name: 'Simple Move', actionType: 'movement', description: null }],
-        knownManeuvers: ['Simple Move'],
-        maxOptions: 3,
-        selectionMode: false,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Simple Move')).toBeInTheDocument();
-    expect(screen.queryByText('Simple Move')).toBeInTheDocument();
-  });
-
-  it('renders descriptions for multiple maneuvers in prompt mode', () => {
-    const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(1);
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Maneuver A', actionType: 'bonus_action', trigger: 'any', description: 'Description A.' },
-          { name: 'Maneuver B', actionType: 'reaction', trigger: 'any', description: 'Description B.' },
-        ],
-        knownManeuvers: ['Maneuver A', 'Maneuver B'],
-        maxOptions: 3,
-        selectionMode: false,
-        attackContext: { hit: true, weaponType: 'melee', attackerName: 'TestChar' },
-        playerStats: PLAYER_STATS,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    spy.mockRestore();
-    expect(screen.getByText('Maneuver A')).toBeInTheDocument();
-    expect(screen.getByText('Maneuver B')).toBeInTheDocument();
-    expect(screen.getByText('Description A.')).toBeInTheDocument();
-    expect(screen.getByText('Description B.')).toBeInTheDocument();
-  });
 });

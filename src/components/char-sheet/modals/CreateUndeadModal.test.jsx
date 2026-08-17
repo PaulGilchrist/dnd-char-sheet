@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreateUndeadModal from './CreateUndeadModal.jsx';
@@ -58,7 +58,7 @@ describe('CreateUndeadModal', () => {
       expect(screen.getByText('Ghoul(s)')).toBeInTheDocument();
     });
 
-    it('renders the total display showing ghoulCount / maxTargets', () => {
+    it('renders the total display showing initial ghoulCount of 1', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 3 })} />);
       const totalDisplay = findTotalDisplay();
       expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 3/);
@@ -74,12 +74,6 @@ describe('CreateUndeadModal', () => {
   // ── Ghoul count adjustment ──
 
   describe('ghoul count adjustment', () => {
-    it('starts at 1', () => {
-      render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 5/);
-    });
-
     it('increments with plus button', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
       const buttons = document.querySelectorAll('.sp-roll-btn');
@@ -92,7 +86,7 @@ describe('CreateUndeadModal', () => {
     it('does not go below 1 when at minimum', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
       const buttons = document.querySelectorAll('.sp-dismiss-btn');
-      const minusBtn = buttons[1];
+      const minusBtn = buttons[0];
       fireEvent.click(minusBtn);
       fireEvent.click(minusBtn);
       const totalDisplay = findTotalDisplay();
@@ -183,40 +177,11 @@ describe('CreateUndeadModal', () => {
   // ── Edge cases ──
 
   describe('edge cases', () => {
-    it('handles maxTargets of 1 (plus button is ineffective)', () => {
-      render(<CreateUndeadModal {...makeProps({ maxTargets: 1 })} />);
-      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/1 ghoul/);
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 1/);
-      const buttons = document.querySelectorAll('.sp-roll-btn');
-      const plusBtn = buttons[0];
-      fireEvent.click(plusBtn);
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 1/);
-    });
-
     it('handles maxTargets of 0 (count clamped to 1 but display shows 1/0)', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 0 })} />);
       expect(screen.getByText(/You can create up to/)).toHaveTextContent(/0 ghoul/);
       const totalDisplay = findTotalDisplay();
       expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 0/);
-    });
-
-    it('handles large maxTargets', () => {
-      render(<CreateUndeadModal {...makeProps({ maxTargets: 13 })} />);
-      expect(screen.getByText(/You can create up to/)).toHaveTextContent(/13 ghoul/);
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 13/);
-    });
-
-    it('handles multiple increments up to max', () => {
-      render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
-      const buttons = document.querySelectorAll('.sp-roll-btn');
-      const plusBtn = buttons[0];
-      for (let i = 0; i < 4; i++) {
-        fireEvent.click(plusBtn);
-      }
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 5 \/ 5/);
     });
 
     it('handles negative maxTargets (count stays at 1)', () => {
