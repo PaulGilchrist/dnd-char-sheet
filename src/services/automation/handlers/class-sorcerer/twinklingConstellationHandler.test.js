@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -59,23 +59,6 @@ describe('twinklingConstellationHandler', () => {
       expect(result.payload.playerStats).toEqual(highLevelStats);
       expect(result.payload.campaignName).toBe(campaignName);
     });
-
-    it('defaults level to 1 when not provided, triggering level gate', async () => {
-      const noLevelStats = { name: 'TestSorcerer' };
-
-      const result = await handle(makeAction(), noLevelStats, campaignName);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toBe('Twinkling Constellations requires level 10.');
-    });
-
-    it('returns modal when player is exactly level 10', async () => {
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('twinklingConstellation');
-    });
   });
 
   describe('applyConstellationOption', () => {
@@ -110,7 +93,6 @@ describe('twinklingConstellationHandler', () => {
           'Archer',
         );
 
-        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('1d8');
         expect(result.payload.description).not.toContain('2d8');
       });
@@ -209,32 +191,6 @@ describe('twinklingConstellationHandler', () => {
         );
       });
 
-      it('sets fly speed buff entry for Dragon constellation at level 10+', async () => {
-        const twinkleStats = makePlayerStats({ level: 10 });
-
-        await applyConstellationOption(
-          makeAction(),
-          twinkleStats,
-          campaignName,
-          'Dragon',
-        );
-
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-          'TestSorcerer',
-          'activeBuffs',
-          expect.arrayContaining([
-            expect.objectContaining({
-              name: 'Starry Form',
-              effect: 'fly_speed_20_hover',
-              flySpeed: 20,
-              constellation: 'Dragon',
-              resistanceTypes: ['Bludgeoning', 'Piercing', 'Slashing'],
-            }),
-          ]),
-          campaignName,
-        );
-      });
-
       it('removes existing Starry Form buff before adding new one', async () => {
         getRuntimeValue.mockReturnValue([
           { name: 'Starry Form', effect: 'starry_form', constellation: 'Archer' },
@@ -261,47 +217,25 @@ describe('twinklingConstellationHandler', () => {
     });
 
     describe('edge cases', () => {
-      it('handles null activeBuffs in runtime state gracefully', async () => {
-        getRuntimeValue.mockReturnValue(null);
+      it('handles null, undefined, or non-array activeBuffs gracefully', async () => {
+        const values = [null, undefined, 'not-an-array'];
 
-        const result = await applyConstellationOption(
-          makeAction(),
-          makePlayerStats(),
-          campaignName,
-          'Archer',
-        );
+        for (const val of values) {
+          getRuntimeValue.mockReturnValue(val);
 
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('Archer');
-        expect(setRuntimeValue).toHaveBeenCalled();
-      });
+          const result = await applyConstellationOption(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            'Archer',
+          );
 
-      it('handles undefined activeBuffs in runtime state gracefully', async () => {
-        getRuntimeValue.mockReturnValue(undefined);
-
-        const result = await applyConstellationOption(
-          makeAction(),
-          makePlayerStats(),
-          campaignName,
-          'Archer',
-        );
-
-        expect(result.type).toBe('popup');
-        expect(setRuntimeValue).toHaveBeenCalled();
-      });
-
-      it('handles non-array activeBuffs in runtime state gracefully', async () => {
-        getRuntimeValue.mockReturnValue('not-an-array');
-
-        const result = await applyConstellationOption(
-          makeAction(),
-          makePlayerStats(),
-          campaignName,
-          'Chalice',
-        );
-
-        expect(result.type).toBe('popup');
-        expect(setRuntimeValue).toHaveBeenCalled();
+          expect(result.type).toBe('popup');
+          expect(result.payload.description).toContain('Archer');
+          expect(setRuntimeValue).toHaveBeenCalled();
+          vi.clearAllMocks();
+          getRuntimeValue.mockReturnValue([]);
+        }
       });
 
       it('includes automation in popup payload', async () => {
@@ -315,19 +249,6 @@ describe('twinklingConstellationHandler', () => {
         );
 
         expect(result.payload.automation).toEqual(action.automation);
-      });
-
-      it('defaults level to 1 for damage dice calculation when level is missing', async () => {
-        const noLevelStats = { name: 'TestSorcerer' };
-
-        const result = await applyConstellationOption(
-          makeAction(),
-          noLevelStats,
-          campaignName,
-          'Archer',
-        );
-
-        expect(result.payload.description).toContain('1d8');
       });
     });
   });

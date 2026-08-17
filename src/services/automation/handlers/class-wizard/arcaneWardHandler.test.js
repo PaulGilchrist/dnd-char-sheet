@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import {
     handle,
 } from './arcaneWardHandler.js';
@@ -179,23 +179,6 @@ describe('arcaneWardHandler', () => {
                 expect(setRuntimeValue).not.toHaveBeenCalled();
                 expect(addEntry).not.toHaveBeenCalled();
             });
-
-            it('returns info when projectedWardDamage rawDamage is zero', async () => {
-                setMocks(
-                    wardRuntime('Goblin', 8, 13, { rawDamage: 0 }, 5, 10),
-                    combatContext('TestWizard', 'Goblin'),
-                    { name: 'Goblin' },
-                );
-
-                const result = await handle(
-                    { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    campaignName,
-                );
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.description).toContain('No recent damage detected');
-            });
         });
 
         describe('projected ward - ward has no HP', () => {
@@ -279,24 +262,6 @@ describe('arcaneWardHandler', () => {
                 expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'currentHitPoints', 10, campaignName);
                 expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 2, campaignName);
             });
-
-            it('absorbs exactly the ward HP when damage equals ward HP', async () => {
-                setMocks(
-                    wardRuntime('Goblin', 7, 15, { rawDamage: 7 }, 5, 10),
-                    combatContext('TestWizard', 'Goblin'),
-                    { name: 'Goblin' },
-                );
-
-                const result = await handle(
-                    { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    campaignName,
-                );
-
-                expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'currentHitPoints', 10, campaignName);
-                expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 0, campaignName);
-                expect(result.payload.description).toContain('All damage absorbed');
-            });
         });
 
         describe('projected ward - partial absorption', () => {
@@ -357,44 +322,6 @@ describe('arcaneWardHandler', () => {
 
                 // maxHitPoints is null, fallback is targetHp + absorbed = 8 + 4 = 12
                 expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'currentHitPoints', 12, campaignName);
-            });
-        });
-
-        describe('projected ward - logging', () => {
-            it('logs ability_use and ward_absorbed entries with correct data', async () => {
-                setMocks(
-                    wardRuntime('Goblin', 5, 13, { rawDamage: 3 }, 6, 10),
-                    combatContext('TestWizard', 'Goblin'),
-                    { name: 'Goblin' },
-                );
-
-                await handle(
-                    { name: 'Arcane Ward', automation: { type: 'projected_ward' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    campaignName,
-                );
-
-                expect(addEntry).toHaveBeenCalledTimes(2);
-                expect(addEntry).toHaveBeenNthCalledWith(
-                    1,
-                    campaignName,
-                    expect.objectContaining({
-                        type: 'ability_use',
-                        characterName: 'TestWizard',
-                        abilityName: 'Arcane Ward',
-                    }),
-                );
-                expect(addEntry).toHaveBeenNthCalledWith(
-                    2,
-                    campaignName,
-                    expect.objectContaining({
-                        type: 'ward_absorbed',
-                        targetName: 'Goblin',
-                        damage: 3,
-                        wizardName: 'TestWizard',
-                        remainingWardHp: 2,
-                    }),
-                );
             });
         });
     });

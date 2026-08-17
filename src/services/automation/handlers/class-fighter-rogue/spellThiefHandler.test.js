@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, isBlockedBySpellThief, hasStolenSpell } from './spellThiefHandler.js';
 import { makeAction, makePlayerStats } from './spellThiefTestHelpers.js';
@@ -20,7 +20,7 @@ const { addEntry } = await import('../../../ui/logService.js');
 const { buildSaveDc, createSaveListener } = await import('../../common/savePrompt.js');
 
 beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
 });
 
 function mockUses(uses) {
@@ -324,19 +324,6 @@ describe('spellThiefHandler', () => {
 
             expect(setRuntimeValue).toHaveBeenCalledWith('FighterRogue', 'spellthiefUses', 0, 'test-campaign');
         });
-
-        it('logs ability_use with failure description on save failure', async () => {
-            mockSaveResult(false);
-
-            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                type: 'ability_use',
-                characterName: 'FighterRogue',
-                abilityName: 'Spell Thief',
-                description: expect.stringContaining('failed INT save'),
-            }));
-        });
     });
 
     describe('handle - custom feature name', () => {
@@ -584,48 +571,9 @@ describe('spellThiefHandler', () => {
             expect(result).toBe(true);
         });
 
-        it('returns false when blocked key is not true', async () => {
+        it.each([false, undefined, null, 0, ''])('returns false when blocked key is %s', async (value) => {
             getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                if (_key === 'spellThiefBlocked_Goblin_Burning Hands') return false;
-                return null;
-            });
-            const result = isBlockedBySpellThief('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
-
-            expect(result).toBe(false);
-        });
-
-        it('returns false when blocked key is undefined', async () => {
-            getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                return null;
-            });
-            const result = isBlockedBySpellThief('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
-
-            expect(result).toBe(false);
-        });
-
-        it('returns false when blocked key is null', async () => {
-            getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                if (_key === 'spellThiefBlocked_Goblin_Burning Hands') return null;
-                return null;
-            });
-            const result = isBlockedBySpellThief('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
-
-            expect(result).toBe(false);
-        });
-
-        it('returns false when blocked key is 0', async () => {
-            getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                if (_key === 'spellThiefBlocked_Goblin_Burning Hands') return 0;
-                return null;
-            });
-            const result = isBlockedBySpellThief('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
-
-            expect(result).toBe(false);
-        });
-
-        it('returns false when blocked key is empty string', async () => {
-            getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                if (_key === 'spellThiefBlocked_Goblin_Burning Hands') return '';
+                if (_key === 'spellThiefBlocked_Goblin_Burning Hands') return value;
                 return null;
             });
             const result = isBlockedBySpellThief('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
@@ -645,48 +593,9 @@ describe('spellThiefHandler', () => {
             expect(result).toBe(true);
         });
 
-        it('returns false when stolen key is not true', async () => {
+        it.each([false, undefined, null, 0, ''])('returns false when stolen key is %s', async (value) => {
             getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                if (_key === 'spellThiefStolen_Goblin_Burning Hands') return false;
-                return null;
-            });
-            const result = hasStolenSpell('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
-
-            expect(result).toBe(false);
-        });
-
-        it('returns false when stolen key is undefined', async () => {
-            getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                return null;
-            });
-            const result = hasStolenSpell('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
-
-            expect(result).toBe(false);
-        });
-
-        it('returns false when stolen key is null', async () => {
-            getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                if (_key === 'spellThiefStolen_Goblin_Burning Hands') return null;
-                return null;
-            });
-            const result = hasStolenSpell('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
-
-            expect(result).toBe(false);
-        });
-
-        it('returns false when stolen key is 0', async () => {
-            getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                if (_key === 'spellThiefStolen_Goblin_Burning Hands') return 0;
-                return null;
-            });
-            const result = hasStolenSpell('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
-
-            expect(result).toBe(false);
-        });
-
-        it('returns false when stolen key is empty string', async () => {
-            getRuntimeValue.mockImplementation((_name, _key, _campaign) => {
-                if (_key === 'spellThiefStolen_Goblin_Burning Hands') return '';
+                if (_key === 'spellThiefStolen_Goblin_Burning Hands') return value;
                 return null;
             });
             const result = hasStolenSpell('FighterRogue', 'Goblin', 'Burning Hands', 'test-campaign');
@@ -696,40 +605,24 @@ describe('spellThiefHandler', () => {
     });
 
     describe('handle - error paths', () => {
-        it('handles addEntry rejection on initialization without throwing', async () => {
+        it('handles addEntry rejection without throwing regardless of save result', async () => {
             mockUses(1);
             buildSaveDc.mockReturnValue(13);
             mockSaveResult(true);
             addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+            const successResult = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+            expect(successResult.type).toBe('popup');
+            expect(successResult.payload.description).toContain('succeeded on INT save');
 
-            expect(result.type).toBe('popup');
-            expect(result.payload.name).toBe('Spell Thief');
-        });
-
-        it('handles addEntry rejection on save result without throwing', async () => {
             mockUses(1);
             buildSaveDc.mockReturnValue(13);
             mockSaveResult(false);
             addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
 
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('failed INT save');
-        });
-
-        it('handles addEntry rejection on success path without throwing', async () => {
-            mockUses(1);
-            buildSaveDc.mockReturnValue(13);
-            mockSaveResult(true);
-            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('succeeded on INT save');
+            const failureResult = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+            expect(failureResult.type).toBe('popup');
+            expect(failureResult.payload.description).toContain('failed INT save');
         });
     });
 

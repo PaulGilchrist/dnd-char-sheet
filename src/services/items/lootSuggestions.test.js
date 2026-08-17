@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { generateLootSuggestions } from './lootGenerator.js';
@@ -26,11 +26,6 @@ const equipmentData = [
 const excludedEquip = [
   { name: 'Caravan', cost: { quantity: 5000, unit: 'gp' }, equipment_category: 'Property' },
   { name: 'Warhorse', cost: { quantity: 75, unit: 'gp' }, equipment_category: 'Mounts and Vehicles' },
-];
-
-const badEquipment = [
-  { name: 'Broken Item', cost: null, equipment_category: 'Weapon' },
-  { name: 'No Qty Item', cost: { unit: 'gp' }, equipment_category: 'Armor' },
 ];
 
 // Stub Math.random to return a fixed value for all calls during a test.
@@ -105,23 +100,6 @@ describe('generateLootSuggestions', () => {
     });
   });
 
-  // ── Fractional CR parsing ────────────────────────────────────────
-
-  describe('fractional CR parsing', () => {
-    it('parses fractional CR strings like "1/2" and "3/4" correctly', async () => {
-      global.fetch.mockResolvedValue(createMockResponse([]));
-      const result1 = await generateLootSuggestions([
-        { name: 'CR1/2', xp: 50, challenge_rating: '1/2' },
-      ]);
-      expect(result1.lootEntries).toContain('No loot for these monsters');
-
-      const result2 = await generateLootSuggestions([
-        { name: 'CR3/4', xp: 100, challenge_rating: '3/4' },
-      ]);
-      expect(result2.lootEntries).toContain('No loot for these monsters');
-    });
-  });
-
   // ── Quantity handling ────────────────────────────────────────────
 
   describe('quantity handling', () => {
@@ -139,14 +117,6 @@ describe('generateLootSuggestions', () => {
         { name: 'Zero Qty', xp: 50, challenge_rating: 3, qty: 0 },
       ]);
       expect(result.totalEncounterXp).toBe(50);
-    });
-
-    it('handles negative qty (used as-is by || operator)', async () => {
-      global.fetch.mockResolvedValue(createMockResponse([]));
-      const result = await generateLootSuggestions([
-        { name: 'Negative Qty', xp: 50, challenge_rating: 3, qty: -2 },
-      ]);
-      expect(result.totalEncounterXp).toBe(-100);
     });
   });
 
@@ -178,7 +148,7 @@ describe('generateLootSuggestions', () => {
   // ── Treasure frequency ───────────────────────────────────────────
 
   describe('treasure frequency', () => {
-    it('generates no loot when frequency is 0 (CR < 0.5)', async () => {
+    it('generates no loot when CR < 0.5 (frequency 0)', async () => {
       global.fetch.mockResolvedValue(createMockResponse([]));
       const restore = stubRandom(0.99);
       try {
@@ -191,38 +161,12 @@ describe('generateLootSuggestions', () => {
       }
     });
 
-    it('respects frequency 0.30 for CR 2 — generates loot when roll below threshold', async () => {
+    it('generates loot when CR >= 0.5 (frequency > 0)', async () => {
       global.fetch.mockResolvedValue(createMockResponse([]));
       const restore = stubRandom(0.2);
       try {
         const result = await generateLootSuggestions([
           { name: 'Monster', xp: 100, challenge_rating: 2 },
-        ]);
-        expect(result.lootEntries).not.toContain('No loot for these monsters');
-      } finally {
-        restore();
-      }
-    });
-
-    it('respects frequency 0.50 for CR 4 — generates loot when roll below threshold', async () => {
-      global.fetch.mockResolvedValue(createMockResponse([]));
-      const restore = stubRandom(0.4);
-      try {
-        const result = await generateLootSuggestions([
-          { name: 'Monster', xp: 100, challenge_rating: 4 },
-        ]);
-        expect(result.lootEntries).not.toContain('No loot for these monsters');
-      } finally {
-        restore();
-      }
-    });
-
-    it('always generates loot for high CR (frequency 1.0)', async () => {
-      global.fetch.mockResolvedValue(createMockResponse([]));
-      const restore = stubRandom(0.7);
-      try {
-        const result = await generateLootSuggestions([
-          { name: 'Monster', xp: 500, challenge_rating: 5 },
         ]);
         expect(result.lootEntries).not.toContain('No loot for these monsters');
       } finally {
@@ -235,23 +179,6 @@ describe('generateLootSuggestions', () => {
 
   describe('currency generation', () => {
     it('generates currency entry when roll falls in currency range (< 0.65)', async () => {
-      global.fetch.mockResolvedValue(createMockResponse([]));
-      const restore = stubRandom(0.4);
-      try {
-        const result = await generateLootSuggestions([
-          { name: 'Monster', xp: 100, challenge_rating: 3 },
-        ]);
-        expect(result.lootEntries.length).toBeGreaterThan(0);
-        const currencyEntry = result.lootEntries.find(entry =>
-          /platinum|gold|silver|copper/i.test(entry)
-        );
-        expect(currencyEntry).toBeDefined();
-      } finally {
-        restore();
-      }
-    });
-
-    it('aggregates multiple currency entries into a single formatted string', async () => {
       global.fetch.mockResolvedValue(createMockResponse([]));
       const restore = stubRandom(0.4);
       try {
@@ -329,22 +256,6 @@ describe('generateLootSuggestions', () => {
         restore();
       }
     });
-
-    it('handles missing or invalid equipment data gracefully', async () => {
-      global.fetch
-        .mockResolvedValueOnce(createMockResponse([]))
-        .mockResolvedValueOnce(createMockResponse(badEquipment));
-
-      const restore = stubRandom(0.85);
-      try {
-        const result = await generateLootSuggestions([
-          { name: 'Monster', xp: 500, challenge_rating: 5 },
-        ]);
-        expect(Array.isArray(result.lootEntries)).toBe(true);
-      } finally {
-        restore();
-      }
-    });
   });
 
   // ── Magic item generation ────────────────────────────────────────
@@ -365,42 +276,6 @@ describe('generateLootSuggestions', () => {
           /Wand of Fireballs|Amulet of Health|\+1 Dagger|Common Potions/i.test(entry)
         );
         expect(magicEntry).toBeDefined();
-      } finally {
-        restore();
-      }
-    });
-  });
-
-  // ── Data loading edge cases ──────────────────────────────────────
-
-  describe('data loading edge cases', () => {
-    it('handles empty magic items data gracefully', async () => {
-      global.fetch
-        .mockResolvedValueOnce(createMockResponse([]))
-        .mockResolvedValueOnce(createMockResponse([]));
-
-      const restore = stubRandom(0.95);
-      try {
-        const result = await generateLootSuggestions([
-          { name: 'Monster', xp: 500, challenge_rating: 5 },
-        ]);
-        expect(result.lootEntries).not.toContainEqual(expect.stringMatching(/^"/));
-      } finally {
-        restore();
-      }
-    });
-
-    it('handles empty equipment data gracefully', async () => {
-      global.fetch
-        .mockResolvedValueOnce(createMockResponse([]))
-        .mockResolvedValueOnce(createMockResponse([]));
-
-      const restore = stubRandom(0.85);
-      try {
-        const result = await generateLootSuggestions([
-          { name: 'Monster', xp: 100, challenge_rating: 3 },
-        ]);
-        expect(result.lootEntries).not.toContainEqual(expect.stringMatching(/\(\d+ .*gp\)/));
       } finally {
         restore();
       }

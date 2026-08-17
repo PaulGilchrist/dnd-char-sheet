@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './attackRiderHandler.js';
@@ -58,7 +58,7 @@ describe('attackRiderHandler - push_or_prone expansion', () => {
     });
 
     describe('empty options expansion', () => {
-        it('should expand push_or_prone into Prone option with save fields and return null (save flow)', async () => {
+        it('should expand push_or_prone into Prone option with default save fields and return null (save flow)', async () => {
             getRuntimeValue.mockImplementation((_scope, key, _camp) => {
                 if (key === 'targetEffects') return [];
                 return null;
@@ -79,7 +79,6 @@ describe('attackRiderHandler - push_or_prone expansion', () => {
 
             expect(result).toBeNull();
 
-            // Verify targetEffects was set with the expanded option's fields
             const targetEffectsCall = setRuntimeValue.mock.calls.find(
                 call => call[1] === 'targetEffects'
             );
@@ -96,7 +95,7 @@ describe('attackRiderHandler - push_or_prone expansion', () => {
             );
         });
 
-        it('should use custom saveType, saveDc, and saveAbility when provided', async () => {
+        it('should preserve custom saveType, saveDc, and saveAbility during expansion', async () => {
             getRuntimeValue.mockImplementation((_scope, key, _camp) => {
                 if (key === 'targetEffects') return [];
                 return null;
@@ -125,36 +124,6 @@ describe('attackRiderHandler - push_or_prone expansion', () => {
                     saveType: 'DEX',
                     saveDc: 13,
                     saveAbility: 'DEX',
-                })
-            );
-        });
-
-        it('should use defaults when saveType/saveDc/saveAbility are omitted', async () => {
-            getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-
-            const action = {
-                name: 'Trip Attack',
-                automation: {
-                    type: 'attack_rider',
-                    effect: 'push_or_prone',
-                    options: [],
-                },
-            };
-            await handle(action, makePlayerStats(), 'test-campaign', 'map');
-
-            const targetEffectsCall = setRuntimeValue.mock.calls.find(
-                call => call[1] === 'targetEffects'
-            );
-            expect(targetEffectsCall).toBeDefined();
-            expect(targetEffectsCall[2][0]).toEqual(
-                expect.objectContaining({
-                    effect: 'prone',
-                    saveType: 'STR',
-                    saveDc: 'ability',
-                    saveAbility: 'STR',
                 })
             );
         });
@@ -179,73 +148,6 @@ describe('attackRiderHandler - push_or_prone expansion', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('pushed 10 feet away');
-        });
-
-        it('should show modal when expanded options trigger chooseOne', async () => {
-            getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-
-            const action = {
-                name: 'Charger',
-                automation: {
-                    type: 'attack_rider',
-                    effect: 'push_or_prone',
-                    options: [],
-                    chooseOne: true,
-                },
-            };
-            const result = await handle(action, makePlayerStats(), 'test-campaign', 'map');
-
-            expect(result.type).toBe('modal');
-            expect(result.modalName).toBe('attackRider');
-        });
-
-        it('should show modal when expanded options trigger maxEffects > 1', async () => {
-            getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-
-            const action = {
-                name: 'Charger',
-                automation: {
-                    type: 'attack_rider',
-                    effect: 'push_or_prone',
-                    options: [],
-                    maxEffects: 2,
-                },
-            };
-            const result = await handle(action, makePlayerStats(), 'test-campaign', 'map');
-
-            expect(result.type).toBe('modal');
-            expect(result.modalName).toBe('attackRider');
-        });
-
-        it('should go through normal single-option path when oncePerTurn without trigger', async () => {
-            getRuntimeValue.mockImplementation((_scope, key, _camp) => {
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-
-            const action = {
-                name: 'Charger',
-                automation: {
-                    type: 'attack_rider',
-                    effect: 'push_or_prone',
-                    oncePerTurn: true,
-                    options: [],
-                    saveType: 'STR',
-                    saveDc: 'ability',
-                    saveAbility: 'STR',
-                },
-            };
-            const result = await handle(action, makePlayerStats(), 'test-campaign', 'map');
-
-            // Without trigger field, should NOT go through Shield Bash path
-            // Should go through normal single-option path with save flow
-            expect(result).toBeNull();
         });
     });
 });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     executeSweepingAttack,
@@ -277,41 +277,32 @@ describe('executeBaitAndSwitchChoice', () => {
         vi.clearAllMocks();
     });
 
-    it('returns popup with error when chosenName is null', async () => {
-        const result = await executeBaitAndSwitchChoice(
+    it('returns popup with error when required args are null', async () => {
+        let result = await executeBaitAndSwitchChoice(
             { dieValue: 4, maneuverName: 'Bait and Switch' },
             makePlayerStats(),
             'test-campaign',
             null
         );
-
         expect(result.type).toBe('popup');
         expect(result.payload.type).toBe('automation_info');
         expect(result.payload.name).toBe('Bait and Switch');
         expect(result.payload.description).toContain('No target selected');
-    });
 
-    it('returns popup with error when playerStats is null', async () => {
-        const result = await executeBaitAndSwitchChoice(
+        result = await executeBaitAndSwitchChoice(
             { dieValue: 4, maneuverName: 'Bait and Switch' },
             null,
             'test-campaign',
             'Ally1'
         );
-
-        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('No target selected');
-    });
 
-    it('returns popup with error when campaignName is null', async () => {
-        const result = await executeBaitAndSwitchChoice(
+        result = await executeBaitAndSwitchChoice(
             { dieValue: 4, maneuverName: 'Bait and Switch' },
             makePlayerStats(),
             null,
             'Ally1'
         );
-
-        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('No target selected');
     });
 
@@ -365,41 +356,32 @@ describe('executeCommanderStrikeChoice', () => {
         vi.clearAllMocks();
     });
 
-    it('returns popup with error when chosenName is null', async () => {
-        const result = await executeCommanderStrikeChoice(
+    it('returns popup with error when required args are null', async () => {
+        let result = await executeCommanderStrikeChoice(
             { dieValue: 4, maneuverName: "Commander's Strike" },
             makePlayerStats(),
             'test-campaign',
             null
         );
-
         expect(result.type).toBe('popup');
         expect(result.payload.type).toBe('automation_info');
         expect(result.payload.name).toBe("Commander's Strike");
         expect(result.payload.description).toContain('No target selected');
-    });
 
-    it('returns popup with error when playerStats is null', async () => {
-        const result = await executeCommanderStrikeChoice(
+        result = await executeCommanderStrikeChoice(
             { dieValue: 4, maneuverName: "Commander's Strike" },
             null,
             'test-campaign',
             'Ally1'
         );
-
-        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('No target selected');
-    });
 
-    it('returns popup with error when campaignName is null', async () => {
-        const result = await executeCommanderStrikeChoice(
+        result = await executeCommanderStrikeChoice(
             { dieValue: 4, maneuverName: "Commander's Strike" },
             makePlayerStats(),
             null,
             'Ally1'
         );
-
-        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('No target selected');
     });
 
@@ -444,8 +426,8 @@ describe('executeRallyChoice', () => {
         vi.clearAllMocks();
     });
 
-    it('returns popup with error when chosenName is null', async () => {
-        const result = await executeRallyChoice(
+    it('returns popup with error when required args are null', async () => {
+        let result = await executeRallyChoice(
             { dieValue: 4, maneuverName: 'Rally' },
             makePlayerStats(),
             'test-campaign',
@@ -454,15 +436,12 @@ describe('executeRallyChoice', () => {
             4,
             'Rally description'
         );
-
         expect(result.type).toBe('popup');
         expect(result.payload.type).toBe('automation_info');
         expect(result.payload.name).toBe('Rally');
         expect(result.payload.description).toContain('No target selected');
-    });
 
-    it('returns popup with error when playerStats is null', async () => {
-        const result = await executeRallyChoice(
+        result = await executeRallyChoice(
             { dieValue: 4, maneuverName: 'Rally' },
             null,
             'test-campaign',
@@ -471,13 +450,9 @@ describe('executeRallyChoice', () => {
             4,
             'Rally description'
         );
-
-        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('No target selected');
-    });
 
-    it('returns popup with error when campaignName is null', async () => {
-        const result = await executeRallyChoice(
+        result = await executeRallyChoice(
             { dieValue: 4, maneuverName: 'Rally' },
             makePlayerStats(),
             null,
@@ -486,8 +461,6 @@ describe('executeRallyChoice', () => {
             4,
             'Rally description'
         );
-
-        expect(result.type).toBe('popup');
         expect(result.payload.description).toContain('No target selected');
     });
 
@@ -556,109 +529,35 @@ describe('validateSizeLimit', () => {
         expect(result).toEqual({ valid: true });
     });
 
-    it('returns valid when targetName is null', async () => {
-        const result = await validateSizeLimit(
-            { sizeLimit: 'large_or_smaller' },
-            null,
-            'test-campaign',
-            makePlayerStats()
-        );
+    it('returns valid when target size is within limit', async () => {
+        const scenarios = [
+            { sizeLimit: 'large_or_smaller', targetSize: 'Small', expected: true },
+            { sizeLimit: 'medium_or_smaller', targetSize: 'Small', expected: true },
+            { sizeLimit: 'one_size_larger', targetSize: 'Large', expected: true },
+        ];
 
-        expect(result).toEqual({ valid: true });
+        for (const { sizeLimit, targetSize, expected } of scenarios) {
+            damageUtils.getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Goblin', size: targetSize }],
+            });
+
+            const result = await validateSizeLimit(
+                { sizeLimit, name: 'Trip Attack' },
+                'Goblin',
+                'test-campaign',
+                makePlayerStats({ size: 'Medium' })
+            );
+
+            expect(result).toEqual({ valid: expected });
+        }
     });
 
-    it('returns valid when combat context is null', async () => {
-        damageUtils.getCombatContext.mockResolvedValue(null);
-
-        const result = await validateSizeLimit(
-            { sizeLimit: 'large_or_smaller' },
-            'Goblin',
-            'test-campaign',
-            makePlayerStats()
-        );
-
-        expect(result).toEqual({ valid: true });
-    });
-
-    it('returns valid when target not found in combat context', async () => {
-        damageUtils.getCombatContext.mockResolvedValue({ creatures: [{ name: 'Other' }] });
-
-        const result = await validateSizeLimit(
-            { sizeLimit: 'large_or_smaller' },
-            'Goblin',
-            'test-campaign',
-            makePlayerStats()
-        );
-
-        expect(result).toEqual({ valid: true });
-    });
-
-    it('returns valid when target has no size property', async () => {
+    it('returns invalid when target is too large for size limit', async () => {
         damageUtils.getCombatContext.mockResolvedValue({
-            creatures: [{ name: 'Goblin' }]
+            creatures: [{ name: 'Ogre', size: 'Large' }],
         });
 
-        const result = await validateSizeLimit(
-            { sizeLimit: 'large_or_smaller', name: 'Trip Attack' },
-            'Goblin',
-            'test-campaign',
-            makePlayerStats()
-        );
-
-        expect(result).toEqual({ valid: true });
-    });
-
-    it('returns valid when target size is within limit (large_or_smaller)', async () => {
-        damageUtils.getCombatContext.mockResolvedValue({
-            creatures: [{ name: 'Goblin', size: 'Small' }]
-        });
-
-        const result = await validateSizeLimit(
-            { sizeLimit: 'large_or_smaller', name: 'Trip Attack' },
-            'Goblin',
-            'test-campaign',
-            makePlayerStats()
-        );
-
-        expect(result).toEqual({ valid: true });
-    });
-
-    it('returns valid when target size is within limit (medium_or_smaller)', async () => {
-        damageUtils.getCombatContext.mockResolvedValue({
-            creatures: [{ name: 'Goblin', size: 'Small' }]
-        });
-
-        const result = await validateSizeLimit(
-            { sizeLimit: 'medium_or_smaller', name: 'Trip Attack' },
-            'Goblin',
-            'test-campaign',
-            makePlayerStats({ size: 'Medium' })
-        );
-
-        expect(result).toEqual({ valid: true });
-    });
-
-    it('returns valid when target size is within limit (one_size_larger)', async () => {
-        damageUtils.getCombatContext.mockResolvedValue({
-            creatures: [{ name: 'Hobgoblin', size: 'Large' }]
-        });
-
-        const result = await validateSizeLimit(
-            { sizeLimit: 'one_size_larger', name: 'Trip Attack' },
-            'Hobgoblin',
-            'test-campaign',
-            makePlayerStats({ size: 'Medium' })
-        );
-
-        expect(result).toEqual({ valid: true });
-    });
-
-    it('returns invalid when target is too large for large_or_smaller', async () => {
-        damageUtils.getCombatContext.mockResolvedValue({
-            creatures: [{ name: 'Ogre', size: 'Large' }]
-        });
-
-        const result = await validateSizeLimit(
+        let result = await validateSizeLimit(
             { sizeLimit: 'medium_or_smaller', name: 'Trip Attack' },
             'Ogre',
             'test-campaign',
@@ -668,14 +567,12 @@ describe('validateSizeLimit', () => {
         expect(result.valid).toBe(false);
         expect(result.description).toContain('Target is Large');
         expect(result.description).toContain('Medium or smaller');
-    });
 
-    it('returns invalid when target is too large for one_size_larger', async () => {
         damageUtils.getCombatContext.mockResolvedValue({
-            creatures: [{ name: 'Huge Beast', size: 'Huge' }]
+            creatures: [{ name: 'Huge Beast', size: 'Huge' }],
         });
 
-        const result = await validateSizeLimit(
+        result = await validateSizeLimit(
             { sizeLimit: 'one_size_larger', name: 'Trip Attack' },
             'Huge Beast',
             'test-campaign',

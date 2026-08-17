@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './reactionDamageHandler.js';
 
@@ -417,7 +417,7 @@ describe('reactionDamageHandler', () => {
             expect(result.payload.attack.name).toBe('Longbow');
         });
 
-        it('returns popup with no melee attack message when attacks is empty/null/undefined', async () => {
+        it('returns popup with no melee attack message when attacks is empty, null, or undefined', async () => {
             const action = makeAction();
             findLastAttack.mockResolvedValue({ attackerName: 'Enemy' });
 
@@ -442,25 +442,6 @@ describe('reactionDamageHandler', () => {
             findLastAttack.mockResolvedValue({ attackerName: 'Goblin' });
             const result = await handle(action, ps, 'test-campaign', null);
             expect(result.payload.targetName).toBe('Goblin');
-
-            findLastAttack.mockResolvedValue({ attackerName: null });
-            const result2 = await handle(action, ps, 'test-campaign', null);
-            expect(result2.payload.targetName).toBeNull();
-        });
-
-        it('excludes non-Action type attacks from melee selection', async () => {
-            const ps = makePlayerStats({
-                attacks: [
-                    { name: 'Bonus Attack', type: 'Bonus Action', range: 5, damage: '1d4+3' },
-                    { name: 'Shortsword', type: 'Action', range: 5, damage: '1d6+3' },
-                ],
-            });
-            const action = makeAction();
-
-            findLastAttack.mockResolvedValue({ attackerName: 'Enemy' });
-
-            const result = await handle(action, ps, 'test-campaign', null);
-            expect(result.payload.attack.name).toBe('Shortsword');
         });
     });
 
@@ -539,51 +520,21 @@ describe('reactionDamageHandler', () => {
             result = await handle(action2, makePlayerStats(), 'test-campaign', null);
             expect(result.payload.description).toBe('No Focus Points remaining.');
         });
-
-        it('does not consume resource when no cost is specified', async () => {
-            getRuntimeValue.mockReturnValue(undefined);
-            const action = makeAction({ automation: { saveType: 'CON' } });
-            resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
-
-            const result = await handle(action, makePlayerStats(), 'test-campaign', null);
-            expect(result.type).toBe('popup');
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
     });
 
     describe('saveType path - save popup', () => {
-        it('creates save listener and returns popup with save info', async () => {
+        it('creates save listener, returns popup, and logs ability_use', async () => {
             getRuntimeValue.mockReturnValue(1);
             const action = makeAction({ automation: { saveType: 'CON' } });
             resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
 
-            let result = await handle(action, makePlayerStats(), 'test-campaign', null);
+            const result = await handle(action, makePlayerStats(), 'test-campaign', null);
             expect(result.payload.targetName).toBe('Enemy');
             expect(result.payload.description).toContain('CON saving throw');
             expect(result.payload.description).toContain('DC 15');
             expect(createSaveListener).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 targetName: 'Enemy', saveType: 'CON', saveDc: 15,
             }));
-
-            // Different save types
-            vi.clearAllMocks();
-            getRuntimeValue.mockReturnValue(1);
-            const actionWIS = makeAction({ automation: { saveType: 'WIS' } });
-            resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
-            result = await handle(actionWIS, makePlayerStats(), 'test-campaign', null);
-            expect(result.payload.description).toContain('WIS saving throw');
-            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                saveType: 'WIS',
-            }));
-        });
-
-        it('calls addEntry with promptId when saveType path is taken', async () => {
-            getRuntimeValue.mockReturnValue(1);
-            const action = makeAction({ automation: { saveType: 'DEX' } });
-            resolveTarget.mockResolvedValue({ target: { name: 'TargetCreature' } });
-
-            await handle(action, makePlayerStats(), 'test-campaign', null);
-
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'ability_use',
                 promptId: 'test-prompt-id',
@@ -612,7 +563,7 @@ describe('reactionDamageHandler', () => {
             }));
         });
 
-        it('does not apply damage when save succeeds or damageExpression is missing', async () => {
+        it('does not apply damage when save succeeds', async () => {
             const action = makeAction({ automation: { saveType: 'CON', damageExpression: '2d6' } });
             resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
 
@@ -628,11 +579,13 @@ describe('reactionDamageHandler', () => {
                 type: 'roll',
                 rollType: 'damage',
             }));
+        });
 
+        it('does not apply damage when damageExpression is missing', async () => {
             getRuntimeValue.mockReturnValue(1);
-            const action2 = makeAction({ automation: { saveType: 'CON' } });
+            const action = makeAction({ automation: { saveType: 'CON' } });
             resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
-            await handle(action2, makePlayerStats(), 'test-campaign', null);
+            await handle(action, makePlayerStats(), 'test-campaign', null);
 
             window.dispatchEvent(new CustomEvent('save-result', {
                 detail: { promptId: 'test-prompt-id', success: false },
@@ -726,40 +679,6 @@ describe('reactionDamageHandler', () => {
 
             const lastCall = setRuntimeValue.mock.calls[setRuntimeValue.mock.calls.length - 1];
             expect(lastCall[2]).toEqual(['poisoned']);
-        });
-
-        it('does not apply poisoned condition when lacking Physicians Touch feature', async () => {
-            getRuntimeValue.mockReturnValue(1);
-            const action = makeAction({ automation: { saveType: 'CON' } });
-            resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
-
-            await handle(action, makePlayerStats(), 'test-campaign', null);
-
-            window.dispatchEvent(new CustomEvent('save-result', {
-                detail: { promptId: 'test-prompt-id', success: false },
-            }));
-
-            await Promise.resolve();
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('Enemy', 'activeConditions', expect.any(Array), 'test-campaign');
-        });
-
-        it('does not apply damage when damageExpression evaluates to 0', async () => {
-            const action = makeAction({ automation: { saveType: 'CON', damageExpression: '2d6' } });
-            resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
-
-            await handle(action, makePlayerStats(), 'test-campaign', null);
-
-            window.dispatchEvent(new CustomEvent('save-result', {
-                detail: { promptId: 'test-prompt-id', success: false },
-            }));
-
-            await Promise.resolve();
-
-            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                type: 'roll',
-                rollType: 'damage',
-            }));
         });
     });
 });

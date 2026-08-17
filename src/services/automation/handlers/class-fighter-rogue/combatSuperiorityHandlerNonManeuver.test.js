@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     handleCombatSuperioritySkillCheck,
@@ -75,9 +75,13 @@ describe('handleCombatSuperioritySkillCheck', () => {
         vi.clearAllMocks();
     });
 
-    it('returns popup with error when action.automation.maneuverName is missing', async () => {
+    it.each([
+        [{ name: 'Test' }, 'missing automation object'],
+        [{ name: 'Test', automation: null }, 'automation is null'],
+        [{ name: 'Test', automation: { maneuverName: '' } }, 'maneuverName is empty string'],
+    ])('returns popup with error when maneuverName is invalid (%s)', async (action, _description) => {
         const result = await handleCombatSuperioritySkillCheck(
-            { name: 'Test' },
+            action,
             makePlayerStats(),
             'test-campaign',
             null
@@ -85,30 +89,6 @@ describe('handleCombatSuperioritySkillCheck', () => {
 
         expect(result.type).toBe('popup');
         expect(result.payload.type).toBe('automation_info');
-        expect(result.payload.description).toBe('No maneuver specified.');
-    });
-
-    it('returns popup with error when action.automation is null', async () => {
-        const result = await handleCombatSuperioritySkillCheck(
-            { name: 'Test', automation: null },
-            makePlayerStats(),
-            'test-campaign',
-            null
-        );
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toBe('No maneuver specified.');
-    });
-
-    it('returns popup with error when maneuverName is empty string', async () => {
-        const result = await handleCombatSuperioritySkillCheck(
-            { name: 'Test', automation: { maneuverName: '' } },
-            makePlayerStats(),
-            'test-campaign',
-            null
-        );
-
-        expect(result.type).toBe('popup');
         expect(result.payload.description).toBe('No maneuver specified.');
     });
 
@@ -143,9 +123,13 @@ describe('handleCombatSuperiorityCommandingPresenceReaction', () => {
         vi.clearAllMocks();
     });
 
-    it('returns popup with error when action.automation.maneuverName is missing', async () => {
+    it.each([
+        [{ name: 'Test' }, 'missing automation object'],
+        [{ name: 'Test', automation: null }, 'automation is null'],
+        [{ name: 'Test', automation: { maneuverName: '' } }, 'maneuverName is empty string'],
+    ])('returns popup with error when maneuverName is invalid (%s)', async (action, _description) => {
         const result = await handleCombatSuperiorityCommandingPresenceReaction(
-            { name: 'Test' },
+            action,
             makePlayerStats(),
             'test-campaign',
             null
@@ -153,30 +137,6 @@ describe('handleCombatSuperiorityCommandingPresenceReaction', () => {
 
         expect(result.type).toBe('popup');
         expect(result.payload.type).toBe('automation_info');
-        expect(result.payload.description).toBe('No maneuver specified.');
-    });
-
-    it('returns popup with error when action.automation is null', async () => {
-        const result = await handleCombatSuperiorityCommandingPresenceReaction(
-            { name: 'Test', automation: null },
-            makePlayerStats(),
-            'test-campaign',
-            null
-        );
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toBe('No maneuver specified.');
-    });
-
-    it('returns popup with error when maneuverName is empty string', async () => {
-        const result = await handleCombatSuperiorityCommandingPresenceReaction(
-            { name: 'Test', automation: { maneuverName: '' } },
-            makePlayerStats(),
-            'test-campaign',
-            null
-        );
-
-        expect(result.type).toBe('popup');
         expect(result.payload.description).toBe('No maneuver specified.');
     });
 
@@ -231,21 +191,6 @@ describe('onCombatSuperioritySelected', () => {
                 [],
                 'test-campaign'
             );
-        });
-
-        it('does not execute any maneuver when empty array is passed', async () => {
-            dataLoader.loadManeuvers.mockResolvedValue([
-                { name: 'Trip Attack', effect: 'prone' },
-            ]);
-
-            await onCombatSuperioritySelected(
-                { name: 'Test', automation: { type: 'combat_superiority' } },
-                makePlayerStats(),
-                'test-campaign',
-                []
-            );
-
-            expect(dataLoader.loadManeuvers).not.toHaveBeenCalled();
         });
     });
 
@@ -313,29 +258,19 @@ describe('onCombatSuperioritySelected', () => {
             );
         });
 
-        it('loads maneuvers using playerStats.rules for validation', async () => {
+        it.each([
+            [null, '2024'],
+            [undefined, '2024'],
+            ['5e', '5e'],
+        ])('uses %s ruleset when playerStats.rules is %s', async (rulesValue, expectedRules) => {
             await onCombatSuperioritySelected(
                 { name: 'Test', automation: { type: 'combat_superiority' } },
-                makePlayerStats({ rules: '5e' }),
+                makePlayerStats({ rules: rulesValue }),
                 'test-campaign',
                 ['Trip Attack']
             );
 
-            expect(dataLoader.loadManeuvers).toHaveBeenCalledWith('5e');
-        });
-
-        it('defaults to 2024 ruleset when playerStats.rules is missing', async () => {
-            const stats = makePlayerStats();
-            delete stats.rules;
-
-            await onCombatSuperioritySelected(
-                { name: 'Test', automation: { type: 'combat_superiority' } },
-                stats,
-                'test-campaign',
-                ['Trip Attack']
-            );
-
-            expect(dataLoader.loadManeuvers).toHaveBeenCalledWith('2024');
+            expect(dataLoader.loadManeuvers).toHaveBeenCalledWith(expectedRules);
         });
     });
 
@@ -454,40 +389,17 @@ describe('onCombatSuperioritySelected', () => {
     // ── No maneuver selected path ─────────────────────────────────────
 
     describe('no maneuver selected path', () => {
-        it('returns error when selectedManeuverNames is null and singleUseManeuverName is null', async () => {
+        it.each([
+            [null, null, 'selectedManeuverNames=null, singleUseManeuverName=null'],
+            [undefined, null, 'selectedManeuverNames=undefined, singleUseManeuverName=null'],
+            [null, undefined, 'selectedManeuverNames=null, singleUseManeuverName=undefined'],
+        ])('returns error when (%s)', async (selectedManeuverNames, singleUseManeuverName, _description) => {
             const result = await onCombatSuperioritySelected(
                 { name: 'Test', automation: { type: 'combat_superiority' } },
                 makePlayerStats(),
                 'test-campaign',
-                null,
-                null
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toBe('No maneuver selected.');
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('returns error when selectedManeuverNames is undefined and singleUseManeuverName is null', async () => {
-            const result = await onCombatSuperioritySelected(
-                { name: 'Test', automation: { type: 'combat_superiority' } },
-                makePlayerStats(),
-                'test-campaign',
-                undefined,
-                null
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toBe('No maneuver selected.');
-        });
-
-        it('returns error when selectedManeuverNames is null and singleUseManeuverName is undefined', async () => {
-            const result = await onCombatSuperioritySelected(
-                { name: 'Test', automation: { type: 'combat_superiority' } },
-                makePlayerStats(),
-                'test-campaign',
-                null,
-                undefined
+                selectedManeuverNames,
+                singleUseManeuverName
             );
 
             expect(result.type).toBe('popup');

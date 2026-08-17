@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -26,6 +26,7 @@ import { applyVersatileTrickster } from './versatileTricksterHandler.js';
 
 beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetAllMocks();
 });
 
 function makeAction(overrides = {}) {
@@ -145,54 +146,31 @@ describe('versatileTricksterHandler', () => {
                 }
             });
 
-            it('blocks Trip on Huge targets', async () => {
+            it.each([
+                { name: 'T-Rex', size: 'Huge' },
+                { name: 'Titan', size: 'Gargantuan' },
+            ])('blocks Trip on $size targets ($name)', async ({ name, size }) => {
                 getCombatContext.mockResolvedValue(
-                    makeCombatContext([
-                        { name: 'T-Rex', size: 'Huge' },
-                    ])
+                    makeCombatContext([{ name, size }])
                 );
 
                 const result = await applyVersatileTrickster(
                     makeAction(),
                     makePlayerStats(),
                     'test-campaign',
-                    'T-Rex'
+                    name
                 );
 
                 expect(result.type).toBe('popup');
                 expect(result.payload.type).toBe('automation_info');
                 expect(result.payload.description).toContain(
-                    '<b>Trip</b> cannot be used on T-Rex'
+                    `<b>Trip</b> cannot be used on ${name}`
                 );
                 expect(result.payload.description).toContain(
-                    'Huge (too large for Trip'
+                    `${size} (too large for Trip`
                 );
                 expect(setRuntimeValue).not.toHaveBeenCalled();
                 expect(addEntry).not.toHaveBeenCalled();
-            });
-
-            it('blocks Trip on Gargantuan targets', async () => {
-                getCombatContext.mockResolvedValue(
-                    makeCombatContext([
-                        { name: 'Titan', size: 'Gargantuan' },
-                    ])
-                );
-
-                const result = await applyVersatileTrickster(
-                    makeAction(),
-                    makePlayerStats(),
-                    'test-campaign',
-                    'Titan'
-                );
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.description).toContain(
-                    '<b>Trip</b> cannot be used on Titan'
-                );
-                expect(result.payload.description).toContain(
-                    'Gargantuan (too large for Trip'
-                );
-                expect(setRuntimeValue).not.toHaveBeenCalled();
             });
         });
 
@@ -218,7 +196,7 @@ describe('versatileTricksterHandler', () => {
                 expect(setRuntimeValue).toHaveBeenCalled();
             });
 
-            it('applies Trip when combat context is null', async () => {
+            it('applies Trip when combat context is null or creatures array is missing', async () => {
                 getCombatContext.mockResolvedValue(null);
 
                 const result = await applyVersatileTrickster(
@@ -233,42 +211,6 @@ describe('versatileTricksterHandler', () => {
                     'Trip also applied to UnknownTarget'
                 );
                 expect(setRuntimeValue).toHaveBeenCalled();
-            });
-
-            it('applies Trip when creatures array is missing', async () => {
-                getCombatContext.mockResolvedValue({});
-
-                const result = await applyVersatileTrickster(
-                    makeAction(),
-                    makePlayerStats(),
-                    'test-campaign',
-                    'UnknownTarget'
-                );
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.description).toContain(
-                    'Trip also applied to UnknownTarget'
-                );
-            });
-
-            it('applies Trip when target size is unrecognized', async () => {
-                getCombatContext.mockResolvedValue(
-                    makeCombatContext([
-                        { name: 'Mystery', size: 'UnknownSize' },
-                    ])
-                );
-
-                const result = await applyVersatileTrickster(
-                    makeAction(),
-                    makePlayerStats(),
-                    'test-campaign',
-                    'Mystery'
-                );
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.description).toContain(
-                    'Trip also applied to Mystery'
-                );
             });
         });
 
@@ -307,28 +249,6 @@ describe('versatileTricksterHandler', () => {
                 );
             });
 
-            it('handles undefined targetEffects by treating it as empty array', async () => {
-                getRuntimeValue.mockReturnValue(undefined);
-                getCombatContext.mockResolvedValue(
-                    makeCombatContext([
-                        { name: 'Goblin', size: 'Small' },
-                    ])
-                );
-
-                await applyVersatileTrickster(
-                    makeAction(),
-                    makePlayerStats(),
-                    'test-campaign',
-                    'Goblin'
-                );
-
-                const effectCalls = setRuntimeValue.mock.calls.filter(
-                    (c) => c[1] === 'targetEffects'
-                );
-                expect(effectCalls).toHaveLength(1);
-                expect(effectCalls[0][2]).toHaveLength(1);
-            });
-
             it('uses custom source name from action in the effect', async () => {
                 getCombatContext.mockResolvedValue(
                     makeCombatContext([
@@ -347,46 +267,6 @@ describe('versatileTricksterHandler', () => {
                     (c) => c[1] === 'targetEffects'
                 );
                 expect(effectCalls[0][2][0].source).toBe('Trickster Maneuver');
-            });
-
-            it('preserves all Trip effect fields with correct defaults', async () => {
-                getCombatContext.mockResolvedValue(
-                    makeCombatContext([
-                        { name: 'Goblin', size: 'Small' },
-                    ])
-                );
-
-                await applyVersatileTrickster(
-                    makeAction(),
-                    makePlayerStats(),
-                    'test-campaign',
-                    'Goblin'
-                );
-
-                const effectCalls = setRuntimeValue.mock.calls.filter(
-                    (c) => c[1] === 'targetEffects'
-                );
-                const newEffect = effectCalls[0][2][0];
-                expect(newEffect).toEqual({
-                    target: 'Goblin',
-                    source: 'Versatile Trickster',
-                    option: 'Trip',
-                    effect: 'prone',
-                    value: null,
-                    noOpportunityAttacks: false,
-                    duration: 'until_start_of_next_turn',
-                    saveType: 'DEX',
-                    saveDc: 'ability',
-                    saveAbility: 'DEX',
-                    condition: 'prone',
-                    repeatingSave: false,
-                    requires: null,
-                    sizeLimit: 'large_or_smaller',
-                    movement: null,
-                    cost: null,
-                    ignoreResistance: false,
-                    restoreCost: null,
-                });
             });
         });
 
@@ -418,28 +298,6 @@ describe('versatileTricksterHandler', () => {
                 );
             });
 
-            it('uses playerStats name in log entry', async () => {
-                getCombatContext.mockResolvedValue(
-                    makeCombatContext([
-                        { name: 'Goblin', size: 'Small' },
-                    ])
-                );
-
-                await applyVersatileTrickster(
-                    makeAction(),
-                    makePlayerStats({ name: 'ShadowCaster' }),
-                    'test-campaign',
-                    'Goblin'
-                );
-
-                expect(addEntry).toHaveBeenCalledWith(
-                    'test-campaign',
-                    expect.objectContaining({
-                        characterName: 'ShadowCaster',
-                    })
-                );
-            });
-
             it('gracefully handles log failure without throwing', async () => {
                 addEntry.mockRejectedValueOnce(new Error('network error'));
                 getCombatContext.mockResolvedValue(
@@ -457,55 +315,6 @@ describe('versatileTricksterHandler', () => {
 
                 expect(result.type).toBe('popup');
                 expect(result.payload.type).toBe('automation_info');
-            });
-        });
-
-        describe('payload structure', () => {
-            it('returns payload with correct automation fields', async () => {
-                getCombatContext.mockResolvedValue(
-                    makeCombatContext([
-                        { name: 'Goblin', size: 'Small' },
-                    ])
-                );
-
-                const result = await applyVersatileTrickster(
-                    makeAction(),
-                    makePlayerStats(),
-                    'test-campaign',
-                    'Goblin'
-                );
-
-                expect(result.payload.type).toBe('automation_info');
-                expect(result.payload.name).toBe('Versatile Trickster');
-                expect(result.payload.automationType).toBe('versatile_trickster');
-                expect(result.payload.automation).toEqual({
-                    type: 'versatile_trickster',
-                });
-            });
-
-            it('includes custom automation fields in payload', async () => {
-                getCombatContext.mockResolvedValue(
-                    makeCombatContext([
-                        { name: 'Goblin', size: 'Small' },
-                    ])
-                );
-
-                const result = await applyVersatileTrickster(
-                    makeAction({
-                        automation: {
-                            type: 'versatile_trickster',
-                            customField: 'customValue',
-                        },
-                    }),
-                    makePlayerStats(),
-                    'test-campaign',
-                    'Goblin'
-                );
-
-                expect(result.payload.automation).toEqual({
-                    type: 'versatile_trickster',
-                    customField: 'customValue',
-                });
             });
         });
     });

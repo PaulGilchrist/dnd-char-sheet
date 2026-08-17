@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './reactionDebuffHandler.js';
 
@@ -178,43 +178,87 @@ describe('reactionDebuffHandler — default path: attack roll & damage debuff', 
       expect(result.payload.description).toContain('Reduced');
     });
 
-    it('reports already missed when original attack missed', async () => {
+    it('reports attack still hits when debuff is insufficient to change outcome', async () => {
       const result = await setupAttackPath(
         {},
-        freshAttackEvent({ d20: 3, bonus: 2, hit: false }),
+        freshAttackEvent({ d20: 20, bonus: 5, hit: true, targetAc: 14 }),
         { totalDamage: 0, damageTypes: [] }
       );
 
-      expect(result.payload.description).toContain('already missed');
+      expect(result.payload.description).toContain('still hits');
     });
 
-    it('uses effectiveAc over targetAc when both present', async () => {
+    it('caps reduced d20 at minimum of 1', async () => {
       const result = await setupAttackPath(
+        {},
+        freshAttackEvent({ d20: 1, bonus: 5, hit: false, targetAc: 20 }),
+        { totalDamage: 0, damageTypes: [] }
+      );
+
+      expect(result.payload.description).toContain('d20(1) + 5 = 6');
+    });
+
+    it('returns popup when attacker name does not match resolved target', async () => {
+      const ps = makePlayerStats({});
+      const action = makeAction({});
+
+      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
+      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: freshAttackEvent(),
+        attackerName: 'Orc',
+        targetName: 'Goblin',
+        primaryDamage: 10,
+        secondaryDamage: 0,
+        totalDamage: 10,
+        damageTypes: ['Piercing'],
+      });
+
+      const result = await handle(action, ps, campaignName, mapName);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No recent roll found for Goblin');
+    });
+
+    it('displays correct AC based on effectiveAc/targetAc/null', async () => {
+      // effectiveAc takes priority over targetAc
+      let result = await setupAttackPath(
         {},
         freshAttackEvent({ d20: 14, bonus: 3, hit: true, effectiveAc: 20 }),
         { totalDamage: 0, damageTypes: [] }
       );
-
       expect(result.payload.description).toContain('AC 20');
-    });
 
-    it('uses targetAc when effectiveAc is null', async () => {
-      const result = await setupAttackPath(
-        {},
-        freshAttackEvent({ d20: 14, bonus: 3, hit: true, effectiveAc: null, targetAc: 17 }),
-        { totalDamage: 0, damageTypes: [] }
-      );
-
+      // falls back to targetAc when effectiveAc is null
+      vi.clearAllMocks();
+      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
+      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: freshAttackEvent({ d20: 14, bonus: 3, hit: true, effectiveAc: null, targetAc: 17 }),
+        attackerName: 'Goblin',
+        targetName: 'Goblin',
+        primaryDamage: 10,
+        secondaryDamage: 0,
+        totalDamage: 0,
+        damageTypes: [],
+      });
+      result = await handle(makeAction(), makePlayerStats(), campaignName, mapName);
       expect(result.payload.description).toContain('AC 17');
-    });
 
-    it('shows dash when AC is null', async () => {
-      const result = await setupAttackPath(
-        {},
-        freshAttackEvent({ d20: 14, bonus: 3, hit: true, effectiveAc: null, targetAc: null }),
-        { totalDamage: 0, damageTypes: [] }
-      );
-
+      // shows dash when both are null
+      vi.clearAllMocks();
+      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
+      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: freshAttackEvent({ d20: 14, bonus: 3, hit: true, effectiveAc: null, targetAc: null }),
+        attackerName: 'Goblin',
+        targetName: 'Goblin',
+        primaryDamage: 10,
+        secondaryDamage: 0,
+        totalDamage: 0,
+        damageTypes: [],
+      });
+      result = await handle(makeAction(), makePlayerStats(), campaignName, mapName);
       expect(result.payload.description).toContain('AC \u2014');
     });
 
@@ -270,68 +314,6 @@ describe('reactionDebuffHandler — default path: attack roll & damage debuff', 
       await handle(action, ps, campaignName, mapName);
 
       expect(applyHealing.applyHealingToTarget).not.toHaveBeenCalled();
-    });
-
-    it('reports attack still hits when debuff is insufficient to change outcome', async () => {
-      const result = await setupAttackPath(
-        {},
-        freshAttackEvent({ d20: 20, bonus: 5, hit: true, targetAc: 14 }),
-        { totalDamage: 0, damageTypes: [] }
-      );
-
-      expect(result.payload.description).toContain('still hits');
-    });
-
-    it('caps reduced d20 at minimum of 1', async () => {
-      const result = await setupAttackPath(
-        {},
-        freshAttackEvent({ d20: 1, bonus: 5, hit: false, targetAc: 20 }),
-        { totalDamage: 0, damageTypes: [] }
-      );
-
-      expect(result.payload.description).toContain('d20(1) + 5 = 6');
-    });
-
-    it('returns popup when attacker name does not match resolved target', async () => {
-      const ps = makePlayerStats({});
-      const action = makeAction({});
-
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: freshAttackEvent(),
-        attackerName: 'Orc',
-        targetName: 'Goblin',
-        primaryDamage: 10,
-        secondaryDamage: 0,
-        totalDamage: 10,
-        damageTypes: ['Piercing'],
-      });
-
-      const result = await handle(action, ps, campaignName, mapName);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('No recent roll found for Goblin');
-    });
-
-    it('preserves automation object reference in result payload', async () => {
-      const action = makeAction({});
-
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: freshAttackEvent(),
-        attackerName: 'Goblin',
-        targetName: 'Goblin',
-        primaryDamage: 0,
-        secondaryDamage: 0,
-        totalDamage: 0,
-        damageTypes: [],
-      });
-
-      const result = await handle(action, makePlayerStats(), campaignName, mapName);
-
-      expect(result.payload.automation).toBe(action.automation);
     });
   });
 

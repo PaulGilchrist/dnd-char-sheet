@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -93,40 +93,20 @@ describe('signatureSpellsHandler.handle', () => {
       expect(result.payload.description).toBe('No level 3 spells available.');
     });
 
-    it('loads spells for the ruleset specified in playerStats', async () => {
+    it.each([
+      ['5e', '5e'],
+      [undefined, '2024'],
+      [null, '2024'],
+    ])('loads spells for ruleset "%s" → expects "%s"', async (rules, expectedRuleset) => {
       const action = makeAction();
-      const ps = makePlayerStats({ rules: '5e' });
+      const ps = makePlayerStats({ rules });
 
       useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
       dataLoader.loadSpells.mockResolvedValue([]);
 
       await handle(action, ps, campaignName, null);
 
-      expect(dataLoader.loadSpells).toHaveBeenCalledWith('5e');
-    });
-
-    it('defaults to 2024 ruleset when not specified', async () => {
-      const action = makeAction();
-      const ps = makePlayerStats({ rules: undefined });
-
-      useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
-      dataLoader.loadSpells.mockResolvedValue([]);
-
-      await handle(action, ps, campaignName, null);
-
-      expect(dataLoader.loadSpells).toHaveBeenCalledWith('2024');
-    });
-
-    it('defaults to 2024 ruleset when rules is null', async () => {
-      const action = makeAction();
-      const ps = makePlayerStats({ rules: null });
-
-      useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
-      dataLoader.loadSpells.mockResolvedValue([]);
-
-      await handle(action, ps, campaignName, null);
-
-      expect(dataLoader.loadSpells).toHaveBeenCalledWith('2024');
+      expect(dataLoader.loadSpells).toHaveBeenCalledWith(expectedRuleset);
     });
 
     it('rejects with popup when loadSpells throws', async () => {
@@ -179,25 +159,14 @@ describe('signatureSpellsHandler.handle', () => {
       expect(result.payload.campaignName).toBe(campaignName);
     });
 
-    it('treats empty array selection the same as no selection', async () => {
+    it.each([
+      [],
+      null,
+    ])('treats %j selection the same as no selection', async (selectionValue) => {
       const action = makeAction();
       const ps = makePlayerStats();
 
-      useRuntimeState.getRuntimeValue.mockReturnValue([]);
-      dataLoader.loadSpells.mockResolvedValue(level3SpellData);
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('signatureSpells');
-      expect(result.payload.selectedSpells).toEqual([]);
-    });
-
-    it('treats null selection the same as no selection', async () => {
-      const action = makeAction();
-      const ps = makePlayerStats();
-
-      useRuntimeState.getRuntimeValue.mockReturnValue(null);
+      useRuntimeState.getRuntimeValue.mockReturnValue(selectionValue);
       dataLoader.loadSpells.mockResolvedValue(level3SpellData);
 
       const result = await handle(action, ps, campaignName, null);
@@ -260,55 +229,17 @@ describe('signatureSpellsHandler.onSignatureSpellsSelected', () => {
     );
   });
 
-  it('rejects when spell1 is missing and spell2 is provided', async () => {
+  it.each([
+    [null, 'Counterspell'],
+    ['Fireball', null],
+    ['Fireball', ''],
+    ['', 'Counterspell'],
+    ['Fireball', 'Fireball'],
+  ])('rejects when spell1="%s" and spell2="%s"', async (spell1, spell2) => {
     const action = makeAction();
     const ps = makePlayerStats();
 
-    const result = await onSignatureSpellsSelected(action, ps, campaignName, null, 'Counterspell');
-
-    expect(result.type).toBe('popup');
-    expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('rejects when spell2 is missing and spell1 is provided', async () => {
-    const action = makeAction();
-    const ps = makePlayerStats();
-
-    const result = await onSignatureSpellsSelected(action, ps, campaignName, 'Fireball', null);
-
-    expect(result.type).toBe('popup');
-    expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('rejects when spell1 is an empty string', async () => {
-    const action = makeAction();
-    const ps = makePlayerStats();
-
-    const result = await onSignatureSpellsSelected(action, ps, campaignName, '', 'Counterspell');
-
-    expect(result.type).toBe('popup');
-    expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('rejects when spell2 is an empty string', async () => {
-    const action = makeAction();
-    const ps = makePlayerStats();
-
-    const result = await onSignatureSpellsSelected(action, ps, campaignName, 'Fireball', '');
-
-    expect(result.type).toBe('popup');
-    expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('rejects when both spells are the same value', async () => {
-    const action = makeAction();
-    const ps = makePlayerStats();
-
-    const result = await onSignatureSpellsSelected(action, ps, campaignName, 'Fireball', 'Fireball');
+    const result = await onSignatureSpellsSelected(action, ps, campaignName, spell1, spell2);
 
     expect(result.type).toBe('popup');
     expect(result.payload.description).toBe('Two different level 3 spells must be selected.');
@@ -382,37 +313,15 @@ describe('signatureSpellsHandler.onSignatureSpellsCast', () => {
     expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
   });
 
-  it('handles non-array selection (string) gracefully', async () => {
+  it.each([
+    ['Fireball'],
+    [null],
+    [[]],
+  ])('rejects when selection is non-array "%s" (normalized to [])', async (selectionValue) => {
     const action = makeAction();
     const ps = makePlayerStats();
 
-    useRuntimeState.getRuntimeValue.mockReturnValueOnce('Fireball');
-
-    const result = await onSignatureSpellsCast(action, ps, campaignName, 'Fireball');
-
-    expect(result.type).toBe('popup');
-    expect(result.payload.description).toBe('Fireball is not a selected signature spell.');
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('handles null selection gracefully', async () => {
-    const action = makeAction();
-    const ps = makePlayerStats();
-
-    useRuntimeState.getRuntimeValue.mockReturnValueOnce(null);
-
-    const result = await onSignatureSpellsCast(action, ps, campaignName, 'Fireball');
-
-    expect(result.type).toBe('popup');
-    expect(result.payload.description).toBe('Fireball is not a selected signature spell.');
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('handles empty selection array gracefully', async () => {
-    const action = makeAction();
-    const ps = makePlayerStats();
-
-    useRuntimeState.getRuntimeValue.mockReturnValueOnce([]);
+    useRuntimeState.getRuntimeValue.mockReturnValueOnce(selectionValue);
 
     const result = await onSignatureSpellsCast(action, ps, campaignName, 'Fireball');
 

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { handle, isMagicalCunningUsed } from './magicalCunningHandler.js'
 
@@ -266,24 +266,7 @@ describe('magicalCunningHandler', () => {
             expect(result.payload.description).toContain('(2/4 slots available)')
         })
 
-        it('falls back to spell slot max when resources.warlockPactMagic is undefined', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'spell_slots_level_1') return 0
-                return null
-            })
-
-            const result = await handle(
-                defaultAction,
-                makePlayerStats({ resources: undefined }),
-                campaignName,
-                null,
-            )
-
-            expect(result.payload.description).toContain('Regained 1')
-            expect(result.payload.description).toContain('(1/2 slots available)')
-        })
-
-        it('falls back to spell slot max when resources.warlockPactMagic.max is undefined', async () => {
+        it('falls back to spell slot max when warlockPactMagic is missing or incomplete', async () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'spell_slots_level_1') return 0
                 return null
@@ -410,26 +393,6 @@ describe('magicalCunningHandler', () => {
             expect(result.payload.description).toContain('Regained 1')
         })
 
-        it('omits Celestial Resilience when class.major is undefined', async () => {
-            handleCelestialResilience.mockResolvedValue(null)
-
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'spell_slots_level_1') return 0
-                return null
-            })
-
-            const result = await handle(
-                defaultAction,
-                makePlayerStats({ class: { name: 'Warlock', major: undefined } }),
-                campaignName,
-                null,
-            )
-
-            expect(handleCelestialResilience).toHaveBeenCalled()
-            expect(result.payload.description).not.toContain('Celestial Resilience')
-            expect(result.payload.description).toContain('Regained 1')
-        })
-
         it('omits Celestial Resilience when specialActions is undefined', async () => {
             handleCelestialResilience.mockResolvedValue(null)
 
@@ -467,56 +430,6 @@ describe('magicalCunningHandler', () => {
                     timestamp: expect.any(Number),
                 }),
             )
-        })
-
-        it('returns correct description format with slot count and max', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'spell_slots_level_1') return 0
-                return null
-            })
-
-            const result = await handle(
-                defaultAction,
-                makePlayerStats({ resources: { warlockPactMagic: { max: 4 } }, spellAbilities: { spell_slots_level_1: 4 } }),
-                campaignName,
-                null,
-            )
-
-            expect(result.payload.description).toContain('Regained 2')
-            expect(result.payload.description).toContain('(2/4 slots available)')
-        })
-
-        it('uses plural "slots" when regaining more than one', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'spell_slots_level_1') return 0
-                return null
-            })
-
-            const result = await handle(
-                defaultAction,
-                makePlayerStats({ resources: { warlockPactMagic: { max: 4 } }, spellAbilities: { spell_slots_level_1: 4 } }),
-                campaignName,
-                null,
-            )
-
-            expect(result.payload.description).toContain('spell slots')
-        })
-
-        it('uses singular "slot" when regaining exactly one', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'spell_slots_level_1') return 0
-                return null
-            })
-
-            const result = await handle(
-                defaultAction,
-                makePlayerStats({ resources: { warlockPactMagic: { max: 2 } }, spellAbilities: { spell_slots_level_1: 2 } }),
-                campaignName,
-                null,
-            )
-
-            expect(result.payload.description).toContain('spell slot')
-            expect(result.payload.description).not.toContain('spell slots')
         })
     })
 

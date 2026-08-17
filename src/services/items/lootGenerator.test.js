@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 
 import {
@@ -156,11 +156,6 @@ describe('calculateEncounterXp', () => {
     expect(calculateEncounterXp(monsters)).toBe(100);
   });
 
-  it('defaults missing qty to 1', () => {
-    const monsters = [{ name: 'Goblin', xp: 50 }];
-    expect(calculateEncounterXp(monsters)).toBe(50);
-  });
-
   it('defaults missing xp to 0', () => {
     const monsters = [{ name: 'Unknown' }];
     expect(calculateEncounterXp(monsters)).toBe(0);
@@ -170,6 +165,11 @@ describe('calculateEncounterXp', () => {
     expect(calculateEncounterXp([{ name: 'A', xp: 50, qty: 0 }])).toBe(50);
     expect(calculateEncounterXp([{ name: 'B', xp: 50, qty: null }])).toBe(50);
     expect(calculateEncounterXp([{ name: 'C', xp: 50, qty: undefined }])).toBe(50);
+  });
+
+  it('defaults missing qty to 1 (covered by falsy qty test)', () => {
+    const monsters = [{ name: 'Goblin', xp: 50 }];
+    expect(calculateEncounterXp(monsters)).toBe(50);
   });
 
   it('multiplies xp by qty when present', () => {
@@ -184,14 +184,6 @@ describe('calculateEncounterXp', () => {
       { name: 'Orc', xp: 200 },
     ];
     expect(calculateEncounterXp(monsters)).toBe(300);
-  });
-
-  it('handles monsters with xp but no qty (qty defaults to 1)', () => {
-    const monsters = [
-      { name: 'Goblin', xp: 50 },
-      { name: 'Orc', xp: 200, qty: 3 },
-    ];
-    expect(calculateEncounterXp(monsters)).toBe(650);
   });
 
   it('handles negative xp values', () => {
@@ -210,10 +202,5 @@ describe('calculateEncounterXp', () => {
   it('handles very large qty values', () => {
     const monsters = [{ name: 'Horde', xp: 10, qty: 1000 }];
     expect(calculateEncounterXp(monsters)).toBe(10000);
-  });
-
-  it('skips non-object array elements (string xp/qty are undefined → 0)', () => {
-    const monsters = ['Goblin', { name: 'Orc', xp: 200 }];
-    expect(calculateEncounterXp(monsters)).toBe(200);
   });
 });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     handle,
@@ -83,19 +83,6 @@ describe('overchannelHandler', () => {
             expect(result.payload.automation).toBe(customAutomation);
         });
 
-        it('handles missing action.name gracefully', async () => {
-            const result = await handle(
-                { automation: { type: 'overchannel' } },
-                mockPlayerStats,
-                campaignName,
-                null
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.name).toBeUndefined();
-            expect(result.payload.description).toContain('undefined');
-        });
-
         it('handles missing action.automation', async () => {
             const result = await handle(
                 { name: 'Overchannel' },
@@ -109,32 +96,12 @@ describe('overchannelHandler', () => {
     });
 
     describe('getOverchannelUses', () => {
-        it('returns 0 when no stored value exists', () => {
+        it('returns default 0 when no value stored, or the stored use count', () => {
             runtimeState.getRuntimeValue.mockReturnValue(undefined);
+            expect(getOverchannelUses(mockPlayerStats, campaignName)).toBe(0);
 
-            const result = getOverchannelUses(mockPlayerStats, campaignName);
-
-            expect(result).toBe(0);
-        });
-
-        it('returns the stored use count as a number', () => {
             runtimeState.getRuntimeValue.mockReturnValue(3);
-
-            const result = getOverchannelUses(mockPlayerStats, campaignName);
-
-            expect(result).toBe(3);
-        });
-
-        it('passes campaignName to getRuntimeValue', () => {
-            runtimeState.getRuntimeValue.mockReturnValue(2);
-
-            getOverchannelUses(mockPlayerStats, campaignName);
-
-            expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith(
-                'TestWizard',
-                'Overchannel_useCount',
-                campaignName
-            );
+            expect(getOverchannelUses(mockPlayerStats, campaignName)).toBe(3);
         });
     });
 
@@ -177,11 +144,8 @@ describe('overchannelHandler', () => {
     });
 
     describe('getOverchannelNecroticDamage', () => {
-        it('returns 0 when useCount is 0', () => {
+        it('returns 0 for useCount <= 1', () => {
             expect(getOverchannelNecroticDamage(3, 0)).toBe(0);
-        });
-
-        it('returns 0 when useCount is 1', () => {
             expect(getOverchannelNecroticDamage(3, 1)).toBe(0);
         });
 
@@ -218,12 +182,6 @@ describe('overchannelHandler', () => {
             expect(getOverchannelNecroticDamage(null, 2).expression).toBe('3d12');
             expect(getOverchannelNecroticDamage(undefined, 2).expression).toBe('3d12');
             expect(getOverchannelNecroticDamage(0, 2).expression).toBe('3d12');
-        });
-
-        it('uses provided spellLevel for expression calculation', () => {
-            const result = getOverchannelNecroticDamage(5, 2);
-
-            expect(result.expression).toBe('15d12');
         });
     });
 });

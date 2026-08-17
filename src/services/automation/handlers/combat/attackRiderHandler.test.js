@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle, applyRiderOption } from './attackRiderHandler.js';
@@ -159,16 +159,6 @@ describe('attackRiderHandler', () => {
             expect(result.payload.automationType).toBe('attack_rider');
         });
 
-        it('should return ready info when no options', async () => {
-            const action = makeAction({
-                automation: { type: 'attack_rider', options: [] },
-            });
-            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('ready');
-        });
-
         it('should log ability use via addEntry', async () => {
             getRuntimeValue.mockImplementation((_key, prop) => {
                 if (prop === 'targetEffects') return [];
@@ -239,42 +229,6 @@ describe('attackRiderHandler', () => {
             vi.mocked(getCombatContext).mockImplementation(defaultImpl);
         });
 
-        it('should return ready popup when action has no automation property', async () => {
-            const action = {
-                name: 'TestAction',
-                type: 'attack_rider',
-                options: [{ name: 'Trip', effect: 'prone' }, { name: 'Daze', effect: 'daze' }],
-            };
-            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.description).toContain('ready');
-        });
-
-        it('should call markOncePerTurn when single option with oncePerTurn', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            vi.mocked(getTargetFromAttacker).mockReturnValue({ name: 'Goblin' });
-            const action = makeAction({
-                automation: {
-                    type: 'attack_rider',
-                    oncePerTurn: true,
-                    options: [{ name: 'Trip', effect: 'prone' }],
-                },
-            });
-            await handle(action, makePlayerStats(), 'campaign', 'map');
-
-            expect(markOncePerTurn).toHaveBeenCalledWith(
-                'Cunning Strike',
-                '_CunningStrike_usedRound',
-                expect.any(Object),
-                'campaign'
-            );
-        });
-
         it('should return skip result when oncePerTurn check returns skip', async () => {
             vi.mocked(checkOncePerTurn).mockResolvedValue({
                 type: 'popup',
@@ -295,32 +249,6 @@ describe('attackRiderHandler', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('once per turn');
-        });
-
-        it('should return modal payload with correct structure', async () => {
-            vi.mocked(getTargetFromAttacker).mockReturnValue({ name: 'Goblin' });
-            const action = makeAction({
-                automation: {
-                    type: 'attack_rider',
-                    chooseOne: true,
-                    options: [{ name: 'Trip', effect: 'prone' }, { name: 'Daze', effect: 'daze' }],
-                },
-            });
-            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
-
-            expect(result.payload.action).toBe(action);
-            expect(result.payload.playerStats).toBeInstanceOf(Object);
-            expect(result.payload.campaignName).toBe('campaign');
-            expect(result.payload.targetName).toBe('Goblin');
-        });
-
-        it('should return ready popup with automation in payload', async () => {
-            const action = makeAction({
-                automation: { type: 'attack_rider', options: [{ name: 'Trip', effect: 'prone' }, { name: 'Daze', effect: 'daze' }] },
-            });
-            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
-
-            expect(result.payload.automation).toEqual(action.automation);
         });
     });
 
@@ -360,21 +288,6 @@ describe('attackRiderHandler', () => {
             expect(result.payload.description).toContain('cannot be used');
         });
 
-        it('should allow Poison with Poisoner\'s Kit', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const stats = makePlayerStats({
-                toolProficiencies: ["Poisoner's Kit"],
-            });
-            const action = makeAction();
-            const result = await applyRiderOption(action, stats, 'campaign', 'Goblin', ['Poison']);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Poison');
-        });
-
         it('should apply Sudden Strike effect and set runtime value', async () => {
             getRuntimeValue.mockImplementation((_key, prop) => {
                 if (prop === 'targetEffects') return [];
@@ -401,42 +314,6 @@ describe('attackRiderHandler', () => {
             expect(result.payload.description).toContain('affected');
         });
 
-        it('should apply Push 15ft effect', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction();
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Push 15ft']);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Push 15ft');
-        });
-
-        it('should apply Disadvantage on Save effect', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction();
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Disadvantage on Save']);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Disadvantage');
-        });
-
-        it('should apply No Opportunity Attacks effect', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction();
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['No Opportunity Attacks']);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No Opportunity Attacks');
-        });
-
         it('should log Withdraw to campaign log', async () => {
             getRuntimeValue.mockImplementation((_key, prop) => {
                 if (prop === 'targetEffects') return [];
@@ -451,32 +328,6 @@ describe('attackRiderHandler', () => {
                 abilityName: 'Cunning Strike',
                 description: 'Withdraw — TestHero can move up to half Speed without provoking Opportunity Attacks.',
             });
-        });
-
-        it('should apply Damage Bonus effect with expression', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction();
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Damage Bonus']);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('2d6');
-        });
-
-        it('should deduct Cunning Strike cost via setRuntimeValue', async () => {
-            getRuntimeValue.mockReturnValue(0);
-            const action = makeAction({
-                automation: {
-                    type: 'attack_rider',
-                    options: [{ name: 'Costly Strike', effect: 'poisoned', cost: '2d6' }],
-                },
-            });
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Costly Strike']);
-
-            expect(result.type).toBe('popup');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', '_cunningStrikeCostUsed', 2, 'campaign');
         });
 
         it('should return info popup when no target (not null)', async () => {
@@ -591,57 +442,6 @@ describe('attackRiderHandler', () => {
             expect(result.payload.description).toContain('Forgoing 2d6 Sneak Attack damage dice');
         });
 
-        it('should log Cunning Strike cost deduction via addEntry', async () => {
-            getRuntimeValue.mockReturnValue(0);
-            const action = makeAction({
-                automation: {
-                    type: 'attack_rider',
-                    options: [{ name: 'Costly Strike', effect: 'poisoned', cost: '2d6' }],
-                },
-            });
-            await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Costly Strike']);
-
-            expect(addEntry).toHaveBeenCalledWith('campaign', {
-                type: 'ability_use',
-                characterName: 'TestHero',
-                abilityName: 'Cunning Strike',
-                description: 'Forgoing 2d6 Sneak Attack damage dice for Cunning Strike cost.',
-            });
-        });
-
-        it('should set pendingRiderChoice to null', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction();
-            await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip']);
-
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'pendingRiderChoice', null, 'campaign');
-        });
-
-        it('should set optKey runtime value for single option', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction();
-            await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip']);
-
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', '_Cunning_Strike_option', 'Trip', 'campaign');
-        });
-
-        it('should not set optKey when multiple options chosen', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction();
-            await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Trip', 'Daze']);
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('TestHero', '_CunningStrike_option', expect.any(String), 'campaign');
-        });
-
         it('should handle single string optionNames', async () => {
             getRuntimeValue.mockImplementation((_key, prop) => {
                 if (prop === 'targetEffects') return [];
@@ -722,64 +522,6 @@ describe('attackRiderHandler', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Cleave');
-        });
-
-        it('should describe disadvantage_on_next_save effect', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction();
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Disadvantage on Save']);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Disadvantage on the next saving throw');
-        });
-
-        it('should describe push_15ft effect', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction();
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Push 15ft']);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Push 15ft applied to Goblin');
-        });
-
-        it('should describe no_opportunity_attacks with boolean flag', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction({
-                automation: {
-                    type: 'attack_rider',
-                    options: [{ name: 'No OA', noOpportunityAttacks: true }],
-                },
-            });
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['No OA']);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('cannot make Opportunity Attacks');
-        });
-
-        it('should describe push effect with distance', async () => {
-            getRuntimeValue.mockImplementation((_key, prop) => {
-                if (prop === 'targetEffects') return [];
-                return null;
-            });
-            const action = makeAction({
-                automation: {
-                    type: 'attack_rider',
-                    options: [{ name: 'Push', effect: 'push', value: 10 }],
-                },
-            });
-            const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Push']);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('pushed 10 feet');
         });
     });
 

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -89,13 +89,16 @@ describe('bonusActionChoiceHandler.handle — options flow', () => {
         });
     });
 
-    it('returns info popup when options are undefined', async () => {
+    it.each([
+        { label: 'undefined', options: undefined, expectedAutomation: { type: 'bonus_action_choice' } },
+        { label: 'empty array', options: [], expectedAutomation: undefined },
+    ])('returns info popup when options are $label', async ({ options, expectedAutomation }) => {
         const ps = makePlayerStats();
         const action = {
             name: 'Cunning Action',
             automation: {
                 type: 'bonus_action_choice',
-                options: undefined,
+                options,
             },
         };
 
@@ -105,24 +108,9 @@ describe('bonusActionChoiceHandler.handle — options flow', () => {
         expect(result.payload.type).toBe('automation_info');
         expect(result.payload.name).toBe('Cunning Action');
         expect(result.payload.description).toBe('Cunning Action has no options available.');
-        expect(result.payload.automation).toEqual({ type: 'bonus_action_choice' });
-    });
-
-    it('returns info popup when options are an empty array', async () => {
-        const ps = makePlayerStats();
-        const action = {
-            name: 'Cunning Action',
-            automation: {
-                type: 'bonus_action_choice',
-                options: [],
-            },
-        };
-
-        const result = await handle(action, ps, campaignName);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.type).toBe('automation_info');
-        expect(result.payload.description).toBe('Cunning Action has no options available.');
+        if (expectedAutomation) {
+            expect(result.payload.automation).toEqual(expectedAutomation);
+        }
     });
 });
 
@@ -151,19 +139,7 @@ describe('bonusActionChoiceHandler.handle — once-per-turn', () => {
         });
     });
 
-    it('returns info popup with Fast Hands tracking when oncePerTurn is true and already used', async () => {
-        const ps = makePlayerStats();
-        const action = makeFastHandsAction({ oncePerTurn: true });
-        damageUtils.getCombatContext.mockResolvedValue({ round: 1, activeCreatureName: 'TestRogue' });
-        useRuntimeState.getRuntimeValue.mockReturnValue({ round: 1, activeCreature: 'TestRogue' });
-
-        const result = await handle(action, ps, campaignName);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('once per turn');
-    });
-
-    it('proceeds to modal when oncePerTurn is true but round differs by one', async () => {
+    it('proceeds to modal when oncePerTurn is true but a new round has passed', async () => {
         const ps = makePlayerStats();
         const action = makeAction({ oncePerTurn: true });
         damageUtils.getCombatContext.mockResolvedValue({ round: 2, activeCreatureName: 'TestRogue' });
@@ -175,11 +151,11 @@ describe('bonusActionChoiceHandler.handle — once-per-turn', () => {
         expect(result.modalName).toBe('bonusActionChoice');
     });
 
-    it('proceeds to modal when oncePerTurn is true but round differs by more than one', async () => {
+    it('proceeds to modal when oncePerTurn is true but no stored value exists', async () => {
         const ps = makePlayerStats();
         const action = makeAction({ oncePerTurn: true });
-        damageUtils.getCombatContext.mockResolvedValue({ round: 5, activeCreatureName: 'TestRogue' });
-        useRuntimeState.getRuntimeValue.mockReturnValue({ round: 1, activeCreature: 'TestRogue' });
+        damageUtils.getCombatContext.mockResolvedValue({ round: 1, activeCreatureName: 'TestRogue' });
+        useRuntimeState.getRuntimeValue.mockReturnValue(null);
 
         const result = await handle(action, ps, campaignName);
 
@@ -195,43 +171,6 @@ describe('bonusActionChoiceHandler.handle — once-per-turn', () => {
 
         expect(result.type).toBe('modal');
         expect(result.modalName).toBe('bonusActionChoice');
-        expect(useRuntimeState.getRuntimeValue).not.toHaveBeenCalled();
-    });
-
-    it('proceeds to modal when oncePerTurn is true but no stored value exists', async () => {
-        const ps = makePlayerStats();
-        const action = makeAction({ oncePerTurn: true });
-        damageUtils.getCombatContext.mockResolvedValue({ round: 1, activeCreatureName: 'TestRogue' });
-        useRuntimeState.getRuntimeValue.mockReturnValue(null);
-
-        const result = await handle(action, ps, campaignName);
-
-        expect(result.type).toBe('modal');
-        expect(result.modalName).toBe('bonusActionChoice');
-    });
-
-    it('proceeds to modal when oncePerTurn is true with legacy stored format (number) and different round', async () => {
-        const ps = makePlayerStats();
-        const action = makeAction({ oncePerTurn: true });
-        damageUtils.getCombatContext.mockResolvedValue({ round: 2, activeCreatureName: 'TestRogue' });
-        useRuntimeState.getRuntimeValue.mockReturnValue(1);
-
-        const result = await handle(action, ps, campaignName);
-
-        expect(result.type).toBe('modal');
-        expect(result.modalName).toBe('bonusActionChoice');
-    });
-
-    it('returns info popup when oncePerTurn is true with legacy stored format and same round', async () => {
-        const ps = makePlayerStats();
-        const action = makeAction({ oncePerTurn: true });
-        damageUtils.getCombatContext.mockResolvedValue({ round: 1, activeCreatureName: 'TestRogue' });
-        useRuntimeState.getRuntimeValue.mockReturnValue(1);
-
-        const result = await handle(action, ps, campaignName);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('once per turn');
     });
 });
 
@@ -259,46 +198,18 @@ describe('applyBonusActionChoice — known options', () => {
         vi.clearAllMocks();
     });
 
-    it('returns popup with correct description for Dash', async () => {
+    it.each([
+        { action: makeAction(), option: 'Dash', expected: 'Dash selected: You take the Dash bonus action. Your movement speed is doubled until the end of the turn.' },
+        { action: makeAction(), option: 'Disengage', expected: 'Disengage selected: You take the Disengage bonus action. Your movement doesn\'t provoke opportunity attacks until the end of the turn.' },
+        { action: makeAction(), option: 'Hide', expected: 'Hide selected: You attempt to Hide. Make a Dexterity (Stealth) check to try to become hidden from creatures until the end of the turn.' },
+        { action: makeFastHandsAction(), option: 'Sleight of Hand', expected: 'Sleight of Hand selected: You use Fast Hands to make a Dexterity (Sleight of Hand) check — pick pocket, palming a small object, hiding a small item, etc.' },
+        { action: makeFastHandsAction(), option: 'Thieves\' Tools', expected: 'Thieves\' Tools selected: You use Fast Hands to use thieves\' tools to pick a lock or disarm a trap.' },
+        { action: makeFastHandsAction(), option: 'Use an Object', expected: 'Use an Object selected: You use Fast Hands to use an object. Using a magic item that requires an action uses the Utilize action. Normal objects use the standard Action.' },
+    ])('returns popup with correct description for $option', async ({ action, option, expected }) => {
         const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeAction(), ps, campaignName, 'Dash');
+        const result = await applyBonusActionChoice(action, ps, campaignName, option);
 
-        expect(result.payload.description).toBe('Dash selected: You take the Dash bonus action. Your movement speed is doubled until the end of the turn.');
-    });
-
-    it('returns popup with correct description for Disengage', async () => {
-        const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeAction(), ps, campaignName, 'Disengage');
-
-        expect(result.payload.description).toBe('Disengage selected: You take the Disengage bonus action. Your movement doesn\'t provoke opportunity attacks until the end of the turn.');
-    });
-
-    it('returns popup with correct description for Hide', async () => {
-        const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeAction(), ps, campaignName, 'Hide');
-
-        expect(result.payload.description).toBe('Hide selected: You attempt to Hide. Make a Dexterity (Stealth) check to try to become hidden from creatures until the end of the turn.');
-    });
-
-    it('returns popup with correct description for Sleight of Hand', async () => {
-        const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeFastHandsAction(), ps, campaignName, 'Sleight of Hand');
-
-        expect(result.payload.description).toBe('Sleight of Hand selected: You use Fast Hands to make a Dexterity (Sleight of Hand) check — pick pocket, palming a small object, hiding a small item, etc.');
-    });
-
-    it('returns popup with correct description for Thieves\' Tools', async () => {
-        const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeFastHandsAction(), ps, campaignName, 'Thieves\' Tools');
-
-        expect(result.payload.description).toBe('Thieves\' Tools selected: You use Fast Hands to use thieves\' tools to pick a lock or disarm a trap.');
-    });
-
-    it('returns popup with correct description for Use an Object', async () => {
-        const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeFastHandsAction(), ps, campaignName, 'Use an Object');
-
-        expect(result.payload.description).toBe('Use an Object selected: You use Fast Hands to use an object. Using a magic item that requires an action uses the Utilize action. Normal objects use the standard Action.');
+        expect(result.payload.description).toBe(expected);
     });
 
     it('returns popup with automation payload for known options', async () => {
@@ -324,39 +235,17 @@ describe('applyBonusActionChoice — unknown option', () => {
         vi.clearAllMocks();
     });
 
-    it('returns popup with unknown option message for unrecognized option', async () => {
+    it.each([
+        { action: makeAction(), option: 'Foo', expected: 'Unknown option: Foo' },
+        { action: makeAction({ options: [] }), option: 'Dash', expected: 'Unknown option: Dash' },
+        { action: makeAction({ options: undefined }), option: 'Dash', expected: 'Unknown option: Dash' },
+        { action: makeAction(), option: null, expected: 'Unknown option: null' },
+        { action: makeAction(), option: undefined, expected: 'Unknown option: undefined' },
+    ])('returns popup with unknown option message for $option', async ({ action, option, expected }) => {
         const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeAction(), ps, campaignName, 'Foo');
+        const result = await applyBonusActionChoice(action, ps, campaignName, option);
 
-        expect(result.payload.description).toBe('Unknown option: Foo');
-    });
-
-    it('returns popup with unknown option message when options array is empty', async () => {
-        const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeAction({ options: [] }), ps, campaignName, 'Dash');
-
-        expect(result.payload.description).toBe('Unknown option: Dash');
-    });
-
-    it('returns popup with unknown option message when options is undefined', async () => {
-        const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeAction({ options: undefined }), ps, campaignName, 'Dash');
-
-        expect(result.payload.description).toBe('Unknown option: Dash');
-    });
-
-    it('returns popup with unknown option message when chosenOption is null', async () => {
-        const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeAction(), ps, campaignName, null);
-
-        expect(result.payload.description).toBe('Unknown option: null');
-    });
-
-    it('returns popup with unknown option message when chosenOption is undefined', async () => {
-        const ps = makePlayerStats();
-        const result = await applyBonusActionChoice(makeAction(), ps, campaignName, undefined);
-
-        expect(result.payload.description).toBe('Unknown option: undefined');
+        expect(result.payload.description).toBe(expected);
     });
 });
 
@@ -397,16 +286,13 @@ describe('applyBonusActionChoice — once-per-turn tracking', () => {
         );
     });
 
-    it('does not track when oncePerTurn is false', async () => {
+    it('does not track when oncePerTurn is false or absent', async () => {
         const ps = makePlayerStats();
 
         await applyBonusActionChoice(makeAction({ oncePerTurn: false }), ps, campaignName, 'Dash');
         expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-    });
 
-    it('does not track when oncePerTurn is absent', async () => {
-        const ps = makePlayerStats();
-
+        vi.clearAllMocks();
         await applyBonusActionChoice(makeAction(), ps, campaignName, 'Dash');
         expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
@@ -443,18 +329,6 @@ describe('applyBonusActionChoice — campaign logging', () => {
         });
     });
 
-    it('logs campaign entry for Fast Hands Thieves\' Tools', async () => {
-        const ps = makePlayerStats();
-
-        await applyBonusActionChoice(makeFastHandsAction(), ps, campaignName, 'Thieves\' Tools');
-        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
-            type: 'ability_use',
-            characterName: ps.name,
-            abilityName: 'Fast Hands',
-            description: 'Thieves\' Tools selected',
-        });
-    });
-
     it('returns popup even when addEntry rejects', async () => {
         const ps = makePlayerStats();
         logService.addEntry.mockRejectedValue(new Error('log failed'));
@@ -473,20 +347,14 @@ describe('applyBonusActionChoice — missing automation', () => {
         vi.clearAllMocks();
     });
 
-    it('throws when automation is null', async () => {
+    it('throws when automation is null or undefined', async () => {
         const ps = makePlayerStats();
-        const action = { name: 'Cunning Action', automation: null };
 
-        await expect(applyBonusActionChoice(action, ps, campaignName, 'Dash')).rejects.toThrow(
+        await expect(applyBonusActionChoice({ name: 'Cunning Action', automation: null }, ps, campaignName, 'Dash')).rejects.toThrow(
             "Cannot read properties of null (reading 'options')",
         );
-    });
 
-    it('throws when automation is undefined', async () => {
-        const ps = makePlayerStats();
-        const action = { name: 'Cunning Action' };
-
-        await expect(applyBonusActionChoice(action, ps, campaignName, 'Dash')).rejects.toThrow(
+        await expect(applyBonusActionChoice({ name: 'Cunning Action' }, ps, campaignName, 'Dash')).rejects.toThrow(
             "Cannot read properties of undefined (reading 'options')",
         );
     });

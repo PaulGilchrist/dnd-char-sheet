@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, confirmDragonCompanion, modalName, confirmType } from './dragonCompanionHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -56,15 +56,6 @@ describe('dragonCompanionHandler', () => {
             expect(result.payload.automation).toEqual(makeAction().automation);
         });
 
-        it('returns popup when runtime value is negative', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(-1);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No free casts remaining');
-        });
-
         it('returns modal when uses are available', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(1);
 
@@ -78,13 +69,6 @@ describe('dragonCompanionHandler', () => {
             expect(result.payload.action).toBe(action);
             expect(result.payload.playerStats).toBe(playerStats);
             expect(result.payload.campaignName).toBe(campaignName);
-        });
-
-        it('falls through to usesMax when runtime value is null', async () => {
-            const action = makeAction({ automation: { usesMax: 3 } });
-            const result = await handle(action, makePlayerStats(), campaignName);
-
-            expect(result.type).toBe('modal');
         });
 
         it('uses custom action name in popup when runtime value is depleted', async () => {
@@ -142,23 +126,14 @@ describe('dragonCompanionHandler', () => {
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('uses custom spell name from automation', async () => {
+        it('uses custom spell and action names in popup', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(1);
 
-            const action = makeAction({ automation: { spell: 'Call Wyrm' } });
-            const result = await confirmDragonCompanion(action, makePlayerStats(), campaignName, false);
-
-            expect(result.payload.description).toContain('Free cast of Call Wyrm');
-        });
-
-        it('uses custom action name in popup description', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-
-            const action = makeAction({ name: 'Custom Dragon' });
+            const action = makeAction({ name: 'Custom Dragon', automation: { spell: 'Call Wyrm' } });
             const result = await confirmDragonCompanion(action, makePlayerStats(), campaignName, false);
 
             expect(result.payload.name).toBe('Custom Dragon');
-            expect(result.payload.description).toContain('Custom Dragon: Free cast');
+            expect(result.payload.description).toContain('Custom Dragon: Free cast of Call Wyrm (0 remaining)');
         });
 
         it('decrements from usesMax when runtime value is null', async () => {

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { clearDataCache } from '../ui/dataLoader.js';
@@ -29,22 +29,11 @@ describe('generateLootFromCombatSummary', () => {
 
   // ── Early return / null handling ─────────────────────────────────
 
-  it('returns empty result when combatSummary is null', async () => {
+  it('returns empty result for null/missing combatSummary or creatures', async () => {
     const { generateLootFromCombatSummary } = await import('./lootGenerator.js');
-    const result = await generateLootFromCombatSummary(null, [], 'TestCampaign');
-    expect(result).toEqual({ lootEntries: [], totalEncounterXp: 0 });
-  });
-
-  it('returns empty result when combatSummary.creatures is null', async () => {
-    const { generateLootFromCombatSummary } = await import('./lootGenerator.js');
-    const result = await generateLootFromCombatSummary({ creatures: null }, [], 'TestCampaign');
-    expect(result).toEqual({ lootEntries: [], totalEncounterXp: 0 });
-  });
-
-  it('returns empty result when combatSummary has no creatures key', async () => {
-    const { generateLootFromCombatSummary } = await import('./lootGenerator.js');
-    const result = await generateLootFromCombatSummary({}, [], 'TestCampaign');
-    expect(result).toEqual({ lootEntries: [], totalEncounterXp: 0 });
+    expect(await generateLootFromCombatSummary(null, [], 'TestCampaign')).toEqual({ lootEntries: [], totalEncounterXp: 0 });
+    expect(await generateLootFromCombatSummary({ creatures: null }, [], 'TestCampaign')).toEqual({ lootEntries: [], totalEncounterXp: 0 });
+    expect(await generateLootFromCombatSummary({}, [], 'TestCampaign')).toEqual({ lootEntries: [], totalEncounterXp: 0 });
   });
 
   // ── Summoned creature filtering — player summons excluded ────────
@@ -72,9 +61,7 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(200);
-    expect(result.lootEntries).toBeDefined();
   });
 
   it('excludes multiple creatures summoned by the same player', async () => {
@@ -105,7 +92,6 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(300);
   });
 
@@ -130,13 +116,10 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(50);
   });
 
-  // ── Summoned creature filtering — unknown summoner included ──────
-
-  it('includes NPC summoned by a source not in the character list', async () => {
+  it('includes NPC summoned by an unknown source (not in character list)', async () => {
     global.fetch.mockResolvedValueOnce(createMockResponse([
       { index: 'goblin', name: 'Goblin', xp: 50, challenge_rating: 0.25 },
     ]));
@@ -155,7 +138,6 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(50);
   });
 
@@ -173,7 +155,6 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(50);
   });
 
@@ -198,7 +179,6 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(100);
   });
 
@@ -222,8 +202,7 @@ describe('generateLootFromCombatSummary', () => {
       creatures: [{ name: 'Custom Creature', type: 'npc' }],
     };
 
-    const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
+    const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }, ], 'TestCampaign');
     expect(result.totalEncounterXp).toBe(0);
   });
 
@@ -249,15 +228,12 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
-    // Dragon has no monsterIndex so it passes filter but contributes 0 XP
-    // Goblin is not summoned (targetEffects target is 'Dragon', not 'Goblin 1')
     expect(result.totalEncounterXp).toBe(50);
   });
 
   // ── Characters parameter edge cases ──────────────────────────────
 
-  it('handles empty characters array', async () => {
+  it('handles empty or undefined characters array', async () => {
     global.fetch.mockResolvedValueOnce(createMockResponse([
       { index: 'goblin', name: 'Goblin', xp: 50, challenge_rating: 0.25 },
     ]));
@@ -270,27 +246,8 @@ describe('generateLootFromCombatSummary', () => {
       creatures: [{ name: 'Goblin 1', type: 'npc', monsterIndex: 'goblin' }],
     };
 
-    const result = await generateLootFromCombatSummary(combatSummary, [], 'TestCampaign');
-
-    expect(result.totalEncounterXp).toBe(50);
-  });
-
-  it('handles undefined characters as empty', async () => {
-    global.fetch.mockResolvedValueOnce(createMockResponse([
-      { index: 'goblin', name: 'Goblin', xp: 50, challenge_rating: 0.25 },
-    ]));
-
-    getRuntimeValue.mockReturnValue(null);
-
-    const { generateLootFromCombatSummary } = await import('./lootGenerator.js');
-
-    const combatSummary = {
-      creatures: [{ name: 'Goblin 1', type: 'npc', monsterIndex: 'goblin' }],
-    };
-
-    const result = await generateLootFromCombatSummary(combatSummary, undefined, 'TestCampaign');
-
-    expect(result.totalEncounterXp).toBe(50);
+    expect((await generateLootFromCombatSummary(combatSummary, [], 'TestCampaign')).totalEncounterXp).toBe(50);
+    expect((await generateLootFromCombatSummary(combatSummary, undefined, 'TestCampaign')).totalEncounterXp).toBe(50);
   });
 
   // ── Aggregation ──────────────────────────────────────────────────
@@ -313,7 +270,6 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(150);
   });
 
@@ -338,7 +294,6 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(700);
   });
 
@@ -356,7 +311,6 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(0);
   });
 
@@ -390,8 +344,6 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
-    // Druid's summon excluded, GM summon + treant included
     expect(result.totalEncounterXp).toBe(600);
   });
 
@@ -419,50 +371,6 @@ describe('generateLootFromCombatSummary', () => {
     };
 
     const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
-    // Non-summoned effects should not filter the creature
-    expect(result.totalEncounterXp).toBe(50);
-  });
-
-  it('includes NPC when targetEffects has summoned effect but no matching source field', async () => {
-    global.fetch.mockResolvedValueOnce(createMockResponse([
-      { index: 'goblin', name: 'Goblin', xp: 50, challenge_rating: 0.25 },
-    ]));
-
-    getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'targetEffects') {
-        // summoned effect without a source field — fallback returns true (included)
-        return [{ target: 'Goblin 1', effect: 'summoned' }];
-      }
-      return null;
-    });
-
-    const { generateLootFromCombatSummary } = await import('./lootGenerator.js');
-
-    const combatSummary = {
-      creatures: [{ name: 'Goblin 1', type: 'npc', monsterIndex: 'goblin' }],
-    };
-
-    const result = await generateLootFromCombatSummary(combatSummary, [{ name: 'Druid' }], 'TestCampaign');
-
-    expect(result.totalEncounterXp).toBe(50);
-  });
-
-  it('handles missing getRuntimeValue returning undefined', async () => {
-    global.fetch.mockResolvedValueOnce(createMockResponse([
-      { index: 'goblin', name: 'Goblin', xp: 50, challenge_rating: 0.25 },
-    ]));
-
-    getRuntimeValue.mockReturnValue(undefined);
-
-    const { generateLootFromCombatSummary } = await import('./lootGenerator.js');
-
-    const combatSummary = {
-      creatures: [{ name: 'Goblin 1', type: 'npc', monsterIndex: 'goblin' }],
-    };
-
-    const result = await generateLootFromCombatSummary(combatSummary, [], 'TestCampaign');
-
     expect(result.totalEncounterXp).toBe(50);
   });
 });

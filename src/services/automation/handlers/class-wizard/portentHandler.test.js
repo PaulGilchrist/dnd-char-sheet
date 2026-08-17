@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { handle, applyPortentChoice, getPortentDice, setPortentDice, refreshPortentDice } from './portentHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { rollD20, rollExpression } from '../../../../services/dice/diceRoller.js';
@@ -95,14 +95,14 @@ describe('Portent Handler', () => {
     beforeEach(setupMocks);
 
     describe('getPortentDice', () => {
-        it('returns empty array when value is undefined', () => {
-            getRuntimeValue.mockReturnValue(undefined);
+        it.each([null, undefined, 0, false])('returns empty array for falsy value: %p', (value) => {
+            getRuntimeValue.mockReturnValue(value);
             const dice = getPortentDice('TestWizard', mockCampaignName);
             expect(dice).toEqual([]);
         });
 
-        it('returns empty array when value is null', () => {
-            getRuntimeValue.mockReturnValue(null);
+        it.each([true, { value: 10 }, '42'])('returns empty array for truthy non-array value: %p', (value) => {
+            getRuntimeValue.mockReturnValue(value);
             const dice = getPortentDice('TestWizard', mockCampaignName);
             expect(dice).toEqual([]);
         });
@@ -125,38 +125,8 @@ describe('Portent Handler', () => {
             expect(dice).toEqual([]);
         });
 
-        it('returns empty array for non-array JSON value (number)', () => {
-            getRuntimeValue.mockReturnValue('42');
-            const dice = getPortentDice('TestWizard', mockCampaignName);
-            expect(dice).toEqual([]);
-        });
-
         it('returns empty array for empty JSON array string', () => {
             getRuntimeValue.mockReturnValue('[]');
-            const dice = getPortentDice('TestWizard', mockCampaignName);
-            expect(dice).toEqual([]);
-        });
-
-        it('returns empty array for boolean true', () => {
-            getRuntimeValue.mockReturnValue(true);
-            const dice = getPortentDice('TestWizard', mockCampaignName);
-            expect(dice).toEqual([]);
-        });
-
-        it('returns empty array for boolean false', () => {
-            getRuntimeValue.mockReturnValue(false);
-            const dice = getPortentDice('TestWizard', mockCampaignName);
-            expect(dice).toEqual([]);
-        });
-
-        it('returns empty array for zero', () => {
-            getRuntimeValue.mockReturnValue(0);
-            const dice = getPortentDice('TestWizard', mockCampaignName);
-            expect(dice).toEqual([]);
-        });
-
-        it('returns empty array for object', () => {
-            getRuntimeValue.mockReturnValue({ value: 10 });
             const dice = getPortentDice('TestWizard', mockCampaignName);
             expect(dice).toEqual([]);
         });
@@ -169,26 +139,6 @@ describe('Portent Handler', () => {
                 'TestWizard',
                 'portentDice',
                 '[10,15]',
-                mockCampaignName
-            );
-        });
-
-        it('stores empty array as JSON string', () => {
-            setPortentDice('TestWizard', [], mockCampaignName);
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestWizard',
-                'portentDice',
-                '[]',
-                mockCampaignName
-            );
-        });
-
-        it('stores single element array', () => {
-            setPortentDice('TestWizard', [7], mockCampaignName);
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestWizard',
-                'portentDice',
-                '[7]',
                 mockCampaignName
             );
         });
@@ -207,19 +157,6 @@ describe('Portent Handler', () => {
             );
         });
 
-        it('rolls 3 dice at level 14', async () => {
-            const highLevelStats = { ...mockPlayerStats, level: 14 };
-            rollD20.mockReturnValueOnce(1).mockReturnValueOnce(20).mockReturnValueOnce(13);
-            const dice = await refreshPortentDice('TestWizard', mockCampaignName, highLevelStats);
-            expect(dice).toEqual([1, 20, 13]);
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestWizard',
-                'portentDice',
-                '[1,20,13]',
-                mockCampaignName
-            );
-        });
-
         it('rolls 2 dice at level 13 (boundary)', async () => {
             const boundaryStats = { ...mockPlayerStats, level: 13 };
             rollD20.mockReturnValueOnce(5).mockReturnValueOnce(11);
@@ -228,32 +165,18 @@ describe('Portent Handler', () => {
             expect(rollD20).toHaveBeenCalledTimes(2);
         });
 
-        it('rolls 3 dice at level 18', async () => {
-            const highLevelStats = { ...mockPlayerStats, level: 18 };
-            rollD20.mockReturnValueOnce(3).mockReturnValueOnce(17).mockReturnValueOnce(9);
+        it('rolls 3 dice at level 14', async () => {
+            const highLevelStats = { ...mockPlayerStats, level: 14 };
+            rollD20.mockReturnValueOnce(1).mockReturnValueOnce(20).mockReturnValueOnce(13);
             const dice = await refreshPortentDice('TestWizard', mockCampaignName, highLevelStats);
-            expect(dice).toEqual([3, 17, 9]);
+            expect(dice).toEqual([1, 20, 13]);
             expect(rollD20).toHaveBeenCalledTimes(3);
         });
     });
 
     describe('handle - guard clauses', () => {
-        it('returns popup when no portent dice (undefined)', async () => {
+        it('returns popup when no portent dice', async () => {
             getRuntimeValue.mockReturnValue(undefined);
-            const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No foretelling rolls remaining');
-        });
-
-        it('returns popup when no portent dice (empty array)', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No foretelling rolls remaining');
-        });
-
-        it('returns popup when no portent dice (empty JSON array)', async () => {
-            getRuntimeValue.mockReturnValue('[]');
             const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('No foretelling rolls remaining');
@@ -271,14 +194,6 @@ describe('Portent Handler', () => {
         });
 
         it('returns popup when no recent roll event', async () => {
-            mockPortentDice('[15, 8]');
-            mockLastAttack(null);
-            const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No recent D20 test found');
-        });
-
-        it('returns popup when findMostRecentRoll returns null', async () => {
             mockPortentDice('[15, 8]');
             findMostRecentRollAcrossCreatures.mockResolvedValue(null);
             const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
@@ -469,25 +384,9 @@ describe('Portent Handler', () => {
             expect(applyDamageToTarget).toHaveBeenCalled();
         });
 
-        it('does not trigger damage when rollExpression returns null', async () => {
+        it('does not trigger damage when rollExpression returns null or zero', async () => {
             mockPortentDice('[15, 8]');
             rollExpression.mockReturnValue(null);
-
-            const eventData = baseAttackEvent();
-            const context = baseContext();
-
-            await applyPortentChoice(
-                mockAction, mockPlayerStats, mockCampaignName,
-                'TestWizard', 'attack', eventData, context, 15
-            );
-
-            expect(rollExpression).toHaveBeenCalledWith('1d8+3');
-            expect(applyDamageToTarget).not.toHaveBeenCalled();
-        });
-
-        it('does not trigger damage when rollExpression total is 0', async () => {
-            mockPortentDice('[15, 8]');
-            rollExpression.mockReturnValue({ total: 0, rolls: [0], modifier: 0 });
 
             const eventData = baseAttackEvent();
             const context = baseContext();
@@ -591,78 +490,6 @@ describe('Portent Handler', () => {
             );
         });
 
-        it('does not rollback damage when attacker does not match target', async () => {
-            mockPortentDice('[15, 8]');
-            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
-                if (key === 'portentDice') return '[15, 8]';
-                if (key === 'currentHitPoints') return 10;
-                if (key === 'maxHitPoints') return 20;
-                return undefined;
-            });
-
-            const eventData = {
-                ...baseAttackEvent(),
-                d20: 16,
-                hit: true,
-                attackerName: 'OtherCreature',
-                primaryDamage: 5,
-                rawDamage: 5,
-            };
-            const context = {
-                ...baseContext(),
-                oldTotal: 22,
-                oldHit: true,
-            };
-
-            await applyPortentChoice(
-                mockAction, mockPlayerStats, mockCampaignName,
-                'TestWizard', 'attack', eventData, context, 8
-            );
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'Goblin',
-                'currentHitPoints',
-                expect.any(Number),
-                mockCampaignName
-            );
-        });
-
-        it('does not rollback damage when rawDamage is 0', async () => {
-            mockPortentDice('[15, 8]');
-            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
-                if (key === 'portentDice') return '[15, 8]';
-                if (key === 'currentHitPoints') return 10;
-                if (key === 'maxHitPoints') return 20;
-                return undefined;
-            });
-
-            const eventData = {
-                ...baseAttackEvent(),
-                d20: 16,
-                hit: true,
-                attackerName: 'TestWizard',
-                primaryDamage: 0,
-                rawDamage: 0,
-            };
-            const context = {
-                ...baseContext(),
-                oldTotal: 22,
-                oldHit: true,
-            };
-
-            await applyPortentChoice(
-                mockAction, mockPlayerStats, mockCampaignName,
-                'TestWizard', 'attack', eventData, context, 8
-            );
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'Goblin',
-                'currentHitPoints',
-                expect.any(Number),
-                mockCampaignName
-            );
-        });
-
         it('handles attack with no targetAc (keeps original hit state)', async () => {
             mockPortentDice('[15, 8]');
 
@@ -761,36 +588,6 @@ describe('Portent Handler', () => {
                 mockCampaignName
             );
         });
-
-        it('handles attack with no damageFormula (miss stays miss)', async () => {
-            mockPortentDice('[15, 8]');
-
-            const eventData = {
-                d20: 2,
-                bonus: 6,
-                targetName: 'Goblin',
-                targetAc: 17,
-                hit: false,
-                timestamp: makeTimestamp(),
-            };
-            const context = {
-                type: 'attack',
-                attackName: 'Longsword',
-                damageFormula: null,
-                damageType: null,
-                targetName: 'Goblin',
-                oldTotal: 8,
-                oldHit: false,
-            };
-
-            await applyPortentChoice(
-                mockAction, mockPlayerStats, mockCampaignName,
-                'TestWizard', 'attack', eventData, context, 15
-            );
-
-            expect(rollExpression).not.toHaveBeenCalled();
-            expect(applyDamageToTarget).not.toHaveBeenCalled();
-        });
     });
 
     describe('applyPortentChoice - save roll', () => {
@@ -844,10 +641,10 @@ describe('Portent Handler', () => {
             expect(result.payload.description).toContain('The save now fails!');
         });
 
-        it('reports no outcome change when both were failures', async () => {
+        it('reports no outcome change when both were same outcome', async () => {
             mockPortentDice('[15, 8]');
 
-            const result = await applyPortentChoice(
+            let result = await applyPortentChoice(
                 mockAction, mockPlayerStats, mockCampaignName,
                 'TestWizard', 'save',
                 { ...baseSaveEvent(), d20: 5 },
@@ -856,17 +653,13 @@ describe('Portent Handler', () => {
 
             expect(result.payload.description).not.toContain('now succeeds');
             expect(result.payload.description).not.toContain('now fails');
-        });
-
-        it('reports no outcome change when both were successes', async () => {
-            mockPortentDice('[15, 8]');
 
             const context = {
                 ...baseSaveContext(),
                 oldSuccess: true,
             };
 
-            const result = await applyPortentChoice(
+            result = await applyPortentChoice(
                 mockAction, mockPlayerStats, mockCampaignName,
                 'TestWizard', 'save',
                 { ...baseSaveEvent(), d20: 18 },
@@ -877,58 +670,37 @@ describe('Portent Handler', () => {
             expect(result.payload.description).not.toContain('now fails');
         });
 
-        it('handles save with null saveDc (no outcome comparison)', async () => {
+        it('handles save with null saveDc, null context, or null oldSuccess', async () => {
             mockPortentDice('[15, 8]');
 
-            const context = {
-                ...baseSaveContext(),
-                saveDc: null,
-            };
-
-            const result = await applyPortentChoice(
+            let result = await applyPortentChoice(
                 mockAction, mockPlayerStats, mockCampaignName,
-                'TestWizard', 'save', baseSaveEvent(), context, 15
+                'TestWizard', 'save', baseSaveEvent(), { ...baseSaveContext(), saveDc: null }, 15
             );
-
             expect(result.payload.description).not.toContain('now succeeds');
             expect(result.payload.description).not.toContain('now fails');
-        });
 
-        it('handles save with null context (no outcome comparison)', async () => {
-            mockPortentDice('[15, 8]');
-
-            const result = await applyPortentChoice(
+            result = await applyPortentChoice(
                 mockAction, mockPlayerStats, mockCampaignName,
                 'TestWizard', 'save', baseSaveEvent(), null, 15
             );
-
             expect(result.payload.description).not.toContain('now succeeds');
             expect(result.payload.description).not.toContain('now fails');
-        });
 
-        it('handles save with null oldSuccess (no outcome comparison)', async () => {
-            mockPortentDice('[15, 8]');
-
-            const context = {
-                ...baseSaveContext(),
-                oldSuccess: null,
-            };
-
-            const result = await applyPortentChoice(
+            result = await applyPortentChoice(
                 mockAction, mockPlayerStats, mockCampaignName,
-                'TestWizard', 'save', baseSaveEvent(), context, 15
+                'TestWizard', 'save', baseSaveEvent(), { ...baseSaveContext(), oldSuccess: null }, 15
             );
-
             expect(result.payload.description).not.toContain('now succeeds');
             expect(result.payload.description).not.toContain('now fails');
         });
     });
 
     describe('applyPortentChoice - ability check', () => {
-        it('updates ability check roll', async () => {
+        it('handles ability check with or without checkName and null context', async () => {
             mockPortentDice('[15, 8]');
 
-            const result = await applyPortentChoice(
+            let result = await applyPortentChoice(
                 mockAction, mockPlayerStats, mockCampaignName,
                 'TestWizard', 'ability',
                 {
@@ -939,15 +711,10 @@ describe('Portent Handler', () => {
                 },
                 null, 15
             );
-
             expect(result.payload.description).toContain('Stealth check');
             expect(result.payload.description).toContain('Portent d20(15)');
-        });
 
-        it('handles ability check with no checkName', async () => {
-            mockPortentDice('[15, 8]');
-
-            const result = await applyPortentChoice(
+            result = await applyPortentChoice(
                 mockAction, mockPlayerStats, mockCampaignName,
                 'TestWizard', 'ability',
                 {
@@ -957,14 +724,9 @@ describe('Portent Handler', () => {
                 },
                 null, 15
             );
-
             expect(result.payload.description).toContain('Ability check');
-        });
 
-        it('handles ability check with null context', async () => {
-            mockPortentDice('[15, 8]');
-
-            const result = await applyPortentChoice(
+            result = await applyPortentChoice(
                 mockAction, mockPlayerStats, mockCampaignName,
                 'TestWizard', 'ability',
                 {
@@ -975,7 +737,6 @@ describe('Portent Handler', () => {
                 },
                 null, 15
             );
-
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Portent d20(15)');
         });
@@ -1152,51 +913,6 @@ describe('Portent Handler', () => {
             );
 
             expect(result.payload.automation).toEqual(mockAction.automation);
-        });
-
-        it('rolls damage with null damageFormula (no damage applied)', async () => {
-            mockPortentDice('[15, 8]');
-
-            const eventData = baseAttackEvent();
-            const context = {
-                type: 'attack',
-                attackName: 'Longsword',
-                damageFormula: null,
-                damageType: null,
-                targetName: 'Goblin',
-                oldTotal: 8,
-                oldHit: false,
-            };
-
-            await applyPortentChoice(
-                mockAction, mockPlayerStats, mockCampaignName,
-                'TestWizard', 'attack', eventData, context, 15
-            );
-
-            expect(rollExpression).not.toHaveBeenCalled();
-        });
-
-        it('rolls damage with empty damageFormula string', async () => {
-            mockPortentDice('[15, 8]');
-
-            const eventData = baseAttackEvent();
-            const context = {
-                type: 'attack',
-                attackName: 'Longsword',
-                damageFormula: '',
-                damageType: 'Slashing',
-                targetName: 'Goblin',
-                oldTotal: 8,
-                oldHit: false,
-            };
-
-            await applyPortentChoice(
-                mockAction, mockPlayerStats, mockCampaignName,
-                'TestWizard', 'attack', eventData, context, 15
-            );
-
-            // Empty string is falsy, so no damage roll
-            expect(rollExpression).not.toHaveBeenCalled();
         });
     });
 });

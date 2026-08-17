@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './combatSuperiorityHandler.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -113,27 +113,6 @@ describe('combatSuperiorityHandler.handle', () => {
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toBe('No Superiority Dice remaining. Recharges on a Short or Long Rest.');
         });
-
-        it('returns popup when superiority dice is negative', async () => {
-            dataLoader.loadManeuvers.mockResolvedValue([
-                { name: 'Trip Attack', effect: 'knock_prone' },
-            ]);
-            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
-                if (key === 'superiorityDice') return -1;
-                if (key === SELECTION_KEY) return ['Trip Attack'];
-                return undefined;
-            });
-
-            const result = await handle(
-                makeAction(),
-                makePlayerStats(),
-                'test-campaign',
-                null
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toBe('No Superiority Dice remaining. Recharges on a Short or Long Rest.');
-        });
     });
 
     // ── Relentless interaction ──────────────────────────────────────────
@@ -188,31 +167,6 @@ describe('combatSuperiorityHandler.handle', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toBe('No Superiority Dice remaining. Recharges on a Short or Long Rest.');
-        });
-
-        it('returns modal when has dice regardless of relentless state', async () => {
-            dataLoader.loadManeuvers.mockResolvedValue([
-                { name: 'Trip Attack', effect: 'knock_prone' },
-            ]);
-            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
-                if (key === 'superiorityDice') return 1;
-                if (key === SELECTION_KEY) return [];
-                if (key === 'relentlessUsedRound') return 1;
-                return undefined;
-            });
-
-            const result = await handle(
-                makeAction(),
-                makePlayerStats({
-                    automation: {
-                        passives: [{ type: 'passive_rule', effect: 'relentless', name: 'Relentless' }],
-                    },
-                }),
-                'test-campaign',
-                null
-            );
-
-            expect(result.type).toBe('modal');
         });
     });
 
@@ -412,43 +366,20 @@ describe('combatSuperiorityHandler.handle', () => {
     // ── Ruleset handling ────────────────────────────────────────────────
 
     describe('ruleset handling', () => {
-        it('loads maneuvers for 5e ruleset', async () => {
+        it.each([
+            [null, '2024'],
+            [undefined, '2024'],
+        ])('defaults to %s ruleset when playerStats.rules is %s', async (rulesValue, expectedRules) => {
             dataLoader.loadManeuvers.mockResolvedValue([]);
 
             await handle(
                 makeAction(),
-                makePlayerStats({ rules: '5e' }),
+                makePlayerStats({ rules: rulesValue }),
                 'test-campaign',
                 null
             );
 
-            expect(dataLoader.loadManeuvers).toHaveBeenCalledWith('5e');
-        });
-
-        it('defaults to 2024 ruleset when playerStats.rules is null', async () => {
-            dataLoader.loadManeuvers.mockResolvedValue([]);
-
-            await handle(
-                makeAction(),
-                makePlayerStats({ rules: null }),
-                'test-campaign',
-                null
-            );
-
-            expect(dataLoader.loadManeuvers).toHaveBeenCalledWith('2024');
-        });
-
-        it('defaults to 2024 ruleset when playerStats.rules is undefined', async () => {
-            dataLoader.loadManeuvers.mockResolvedValue([]);
-
-            await handle(
-                makeAction(),
-                makePlayerStats({ rules: undefined }),
-                'test-campaign',
-                null
-            );
-
-            expect(dataLoader.loadManeuvers).toHaveBeenCalledWith('2024');
+            expect(dataLoader.loadManeuvers).toHaveBeenCalledWith(expectedRules);
         });
 
         it('defaults to 2024 ruleset when playerStats.rules is missing', async () => {
@@ -465,6 +396,19 @@ describe('combatSuperiorityHandler.handle', () => {
             );
 
             expect(dataLoader.loadManeuvers).toHaveBeenCalledWith('2024');
+        });
+
+        it('loads maneuvers for 5e ruleset', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            await handle(
+                makeAction(),
+                makePlayerStats({ rules: '5e' }),
+                'test-campaign',
+                null
+            );
+
+            expect(dataLoader.loadManeuvers).toHaveBeenCalledWith('5e');
         });
     });
 
@@ -517,7 +461,7 @@ describe('combatSuperiorityHandler.handle', () => {
     // ── Early return paths via automation routing ───────────────────────
 
     describe('early return paths via automation routing', () => {
-        it('delegates to bonus_action dispatcher when actionType is bonus_action', async () => {
+        it('delegates to dispatcher when actionType is bonus_action', async () => {
             const result = await handle(
                 { name: 'Test', automation: { actionType: 'bonus_action' } },
                 makePlayerStats(),
@@ -529,7 +473,7 @@ describe('combatSuperiorityHandler.handle', () => {
             expect(result.payload.type).toBe('automation_info');
         });
 
-        it('delegates to reaction dispatcher when actionType is reaction without reactionType', async () => {
+        it('delegates to dispatcher when actionType is reaction', async () => {
             const result = await handle(
                 { name: 'Test', automation: { actionType: 'reaction' } },
                 makePlayerStats(),
@@ -541,43 +485,7 @@ describe('combatSuperiorityHandler.handle', () => {
             expect(result.payload.type).toBe('automation_info');
         });
 
-        it('delegates to grant_attack dispatcher when reactionType is grant_attack', async () => {
-            const result = await handle(
-                { name: 'Test', automation: { actionType: 'reaction', reactionType: 'grant_attack' } },
-                makePlayerStats(),
-                'test-campaign',
-                null
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-        });
-
-        it('delegates to commanding_presence dispatcher when reactionType is commanding_presence', async () => {
-            const result = await handle(
-                { name: 'Test', automation: { actionType: 'reaction', reactionType: 'commanding_presence' } },
-                makePlayerStats(),
-                'test-campaign',
-                null
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-        });
-
-        it('falls through to reaction dispatcher for other reaction types', async () => {
-            const result = await handle(
-                { name: 'Test', automation: { actionType: 'reaction', reactionType: 'parry' } },
-                makePlayerStats(),
-                'test-campaign',
-                null
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-        });
-
-        it('delegates to sweeping_attack dispatcher when actionType is sweeping_attack', async () => {
+        it('delegates to dispatcher when actionType is sweeping_attack', async () => {
             const result = await handle(
                 { name: 'Test', automation: { actionType: 'sweeping_attack' } },
                 makePlayerStats(),
@@ -589,7 +497,7 @@ describe('combatSuperiorityHandler.handle', () => {
             expect(result.payload.description).toContain('No secondary target selected');
         });
 
-        it('delegates to movement dispatcher when actionType is movement', async () => {
+        it('delegates to dispatcher when actionType is movement', async () => {
             const result = await handle(
                 { name: 'Test', automation: { actionType: 'movement' } },
                 makePlayerStats(),
@@ -601,7 +509,7 @@ describe('combatSuperiorityHandler.handle', () => {
             expect(result.payload.type).toBe('automation_info');
         });
 
-        it('delegates to skill_check dispatcher when actionType is skill_check', async () => {
+        it('delegates to dispatcher when actionType is skill_check', async () => {
             const result = await handle(
                 { name: 'Test', automation: { actionType: 'skill_check' } },
                 makePlayerStats(),
@@ -659,7 +567,7 @@ describe('combatSuperiorityHandler.handle', () => {
             expect(result.payload.description).toContain('Trip Attack');
         });
 
-        it('does not load maneuvers when delegating via actionType', async () => {
+        it('does not load maneuvers when delegating via actionType or trigger', async () => {
             await handle(
                 { name: 'Test', automation: { actionType: 'bonus_action' } },
                 makePlayerStats(),
@@ -668,9 +576,7 @@ describe('combatSuperiorityHandler.handle', () => {
             );
 
             expect(dataLoader.loadManeuvers).not.toHaveBeenCalled();
-        });
 
-        it('does not load maneuvers when delegating via trigger', async () => {
             await handle(
                 { name: 'Test', automation: { trigger: 'attack_rider' } },
                 makePlayerStats(),

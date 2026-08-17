@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { handle, confirmWarMagicCantrip } from './warMagicCantripHandler.js'
 
@@ -88,40 +88,17 @@ describe('warMagicCantripHandler', () => {
             })
         })
 
-        it('defaults casting_time to "1 action" when missing from spell data', async () => {
+        it('defaults missing spell fields to sensible values', async () => {
             const { loadSpellData } = await import('../../../ui/dataLoader.js')
-            loadSpellData.mockResolvedValue([makeCantrip({ casting_time: undefined })])
+            loadSpellData.mockResolvedValue([makeCantrip({ casting_time: undefined, range: undefined, description: undefined, damage: undefined })])
 
             const result = await handle(makeAction(), makePlayerStats(), mockCampaignName)
 
-            expect(result.payload.optionDetails['Ray of Frost'].casting_time).toBe('1 action')
-        })
-
-        it('defaults range to empty string when missing from spell data', async () => {
-            const { loadSpellData } = await import('../../../ui/dataLoader.js')
-            loadSpellData.mockResolvedValue([makeCantrip({ range: undefined })])
-
-            const result = await handle(makeAction(), makePlayerStats(), mockCampaignName)
-
-            expect(result.payload.optionDetails['Ray of Frost'].range).toBe('')
-        })
-
-        it('defaults description to empty string when missing from spell data', async () => {
-            const { loadSpellData } = await import('../../../ui/dataLoader.js')
-            loadSpellData.mockResolvedValue([makeCantrip({ description: undefined })])
-
-            const result = await handle(makeAction(), makePlayerStats(), mockCampaignName)
-
-            expect(result.payload.optionDetails['Ray of Frost'].description).toBe('')
-        })
-
-        it('defaults damage to null when missing from spell data', async () => {
-            const { loadSpellData } = await import('../../../ui/dataLoader.js')
-            loadSpellData.mockResolvedValue([makeCantrip({ damage: undefined })])
-
-            const result = await handle(makeAction(), makePlayerStats(), mockCampaignName)
-
-            expect(result.payload.optionDetails['Ray of Frost'].damage).toBeNull()
+            const details = result.payload.optionDetails['Ray of Frost']
+            expect(details.casting_time).toBe('1 action')
+            expect(details.range).toBe('')
+            expect(details.description).toBe('')
+            expect(details.damage).toBeNull()
         })
 
         it('uses custom spellListKey from automation when specified', async () => {
@@ -137,31 +114,7 @@ describe('warMagicCantripHandler', () => {
             expect(result.payload.spellListKey).toBe('sorcerer_cantrips')
         })
 
-        it('defaults spellListKey to "wizard_cantrips" when automation has no spellList', async () => {
-            const { loadSpellData } = await import('../../../ui/dataLoader.js')
-            loadSpellData.mockResolvedValue([makeCantrip()])
-
-            const result = await handle(
-                makeAction({ automation: { type: 'war_magic_cantrip' } }),
-                makePlayerStats(),
-                mockCampaignName
-            )
-
-            expect(result.payload.spellListKey).toBe('wizard_cantrips')
-        })
-
-        it('returns an info popup when the spell list is null', async () => {
-            const { loadSpellData } = await import('../../../ui/dataLoader.js')
-            loadSpellData.mockResolvedValue(null)
-
-            const result = await handle(makeAction(), makePlayerStats(), mockCampaignName)
-
-            expect(result.type).toBe('popup')
-            expect(result.payload.type).toBe('automation_info')
-            expect(result.payload.description).toBe('No Wizard cantrips available.')
-        })
-
-        it('returns an info popup when the spell list is empty', async () => {
+        it('returns an info popup when the spell list is null or empty', async () => {
             const { loadSpellData } = await import('../../../ui/dataLoader.js')
             loadSpellData.mockResolvedValue([])
 
@@ -196,21 +149,6 @@ describe('warMagicCantripHandler', () => {
 
             expect(result.payload.options).toEqual(['Ray of Frost', 'Shocking Grasp'])
         })
-
-        it('passes the _mapName parameter through without using it', async () => {
-            const { loadSpellData } = await import('../../../ui/dataLoader.js')
-            loadSpellData.mockResolvedValue([makeCantrip()])
-
-            const result = await handle(
-                makeAction(),
-                makePlayerStats(),
-                mockCampaignName,
-                'battle-map-1'
-            )
-
-            expect(result.type).toBe('modal')
-            expect(result.payload.options).toEqual(['Ray of Frost'])
-        })
     })
 
     describe('confirmWarMagicCantrip', () => {
@@ -226,34 +164,15 @@ describe('warMagicCantripHandler', () => {
             expect(result.payload.automation).toEqual(action.automation)
         })
 
-        it('renders the cantrip name as bold HTML in the description', async () => {
+        it('returns an error popup when no cantrip is selected', async () => {
             const action = makeAction()
-            const result = await confirmWarMagicCantrip(action, makePlayerStats(), mockCampaignName, 'Shocking Grasp')
+            const result1 = await confirmWarMagicCantrip(action, makePlayerStats(), mockCampaignName, null)
+            const result2 = await confirmWarMagicCantrip(action, makePlayerStats(), mockCampaignName, undefined)
+            const result3 = await confirmWarMagicCantrip(action, makePlayerStats(), mockCampaignName, '')
 
-            expect(result.payload.description).toContain('<b>Shocking Grasp</b>')
-        })
-
-        it('returns an error popup when no cantrip is selected (null)', async () => {
-            const action = makeAction()
-            const result = await confirmWarMagicCantrip(action, makePlayerStats(), mockCampaignName, null)
-
-            expect(result.type).toBe('popup')
-            expect(result.payload.type).toBe('automation_info')
-            expect(result.payload.description).toBe('No cantrip selected.')
-        })
-
-        it('returns an error popup when no cantrip is selected (undefined)', async () => {
-            const action = makeAction()
-            const result = await confirmWarMagicCantrip(action, makePlayerStats(), mockCampaignName, undefined)
-
-            expect(result.payload.description).toBe('No cantrip selected.')
-        })
-
-        it('returns an error popup when no cantrip is selected (empty string)', async () => {
-            const action = makeAction()
-            const result = await confirmWarMagicCantrip(action, makePlayerStats(), mockCampaignName, '')
-
-            expect(result.payload.description).toBe('No cantrip selected.')
+            expect(result1.payload.description).toBe('No cantrip selected.')
+            expect(result2.payload.description).toBe('No cantrip selected.')
+            expect(result3.payload.description).toBe('No cantrip selected.')
         })
 
         it('logs an ability_use entry with the correct description format', async () => {

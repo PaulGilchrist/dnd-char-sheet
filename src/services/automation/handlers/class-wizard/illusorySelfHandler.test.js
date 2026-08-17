@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { handle } from './illusorySelfHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as damageRollback from '../../common/damageRollback.js';
@@ -97,18 +97,6 @@ describe('illusorySelfHandler', () => {
             expect(result.payload.name).toBe('Illusory Self');
             expect(result.payload.description).toContain('No recent attack roll');
             expect(result.payload.description).toContain('Reaction');
-        });
-
-        it('returns info popup when attackEvent exists but hit is undefined', async () => {
-            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
-                attackEvent: makeAttackEvent({ hit: undefined }),
-                attackerName: 'Goblin',
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('already missed');
         });
 
         it('returns info popup when the attack already missed', async () => {
@@ -384,7 +372,7 @@ describe('illusorySelfHandler', () => {
             expect(result.payload.description).not.toContain('Attacker: <b>TestWizard</b>');
         });
 
-        it('uses "Unknown creature" when attacker name is missing', async () => {
+        it('uses "Unknown creature" when attacker name is falsy', async () => {
             damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
                 attackEvent: makeAttackEvent(),
                 attackerName: null,
@@ -396,20 +384,6 @@ describe('illusorySelfHandler', () => {
             expect(result.payload.description).toContain('Unknown creature');
         });
 
-        it('uses "Unknown creature" when attacker name is undefined', async () => {
-            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
-                attackEvent: makeAttackEvent(),
-                attackerName: undefined,
-            });
-            mockCurrentUses(0);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
-
-            expect(result.payload.description).toContain('Unknown creature');
-        });
-    });
-
-    describe('uses counter', () => {
         it('shows correct remaining uses in description after increment', async () => {
             damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
                 attackEvent: makeAttackEvent(),

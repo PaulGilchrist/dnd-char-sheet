@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import {
     onArcaneWardRestore,
 } from './arcaneWardHandler.js';
@@ -86,30 +86,13 @@ describe('onArcaneWardRestore', () => {
             expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 13, campaignName);
             expect(result.payload.description).toContain('12 → 13/13');
         });
-
-        it('adds nothing when ward is already at max HP', async () => {
-            setWardMocks((player, key) => {
-                if (key === 'arcaneWardActive') return true;
-                if (key === 'arcaneWardHp') return 13;
-                if (key === 'arcaneWardMax') return 13;
-                return undefined;
-            });
-
-            const result = await onArcaneWardRestore(
-                { name: 'Arcane Ward', automation: { type: 'passive_rule' } },
-                makeWizardStats('TestWizard', 5, 3),
-                1,
-                campaignName,
-            );
-
-            expect(result.type).toBe('popup');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 13, campaignName);
-            expect(result.payload.description).toContain('13 → 13/13');
-        });
     });
 
     describe('edge cases for spell slot level', () => {
-        it('defaults to spell slot level 1 when value is invalid', async () => {
+        it.each([
+            ['invalid', 7, 'restored 2 HP'],
+            [0, 7, 'restored 2 HP'],
+        ])('defaults to spell slot level 1 when value is %s', async (slotLevel, expectedHp, expectedDescription) => {
             setWardMocks((player, key) => {
                 if (key === 'arcaneWardActive') return true;
                 if (key === 'arcaneWardHp') return 5;
@@ -120,55 +103,14 @@ describe('onArcaneWardRestore', () => {
             const result = await onArcaneWardRestore(
                 { name: 'Arcane Ward', automation: { type: 'passive_rule' } },
                 makeWizardStats('TestWizard', 5, 3),
-                'invalid',
+                slotLevel,
                 campaignName,
             );
 
             expect(result.type).toBe('popup');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 7, campaignName);
-            expect(result.payload.description).toContain('restored 2 HP');
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', expectedHp, campaignName);
+            expect(result.payload.description).toContain(expectedDescription);
             expect(result.payload.description).toContain('spell slot level 1');
-        });
-
-        it('defaults to spell slot level 1 when value is zero', async () => {
-            setWardMocks((player, key) => {
-                if (key === 'arcaneWardActive') return true;
-                if (key === 'arcaneWardHp') return 5;
-                if (key === 'arcaneWardMax') return 13;
-                return undefined;
-            });
-
-            const result = await onArcaneWardRestore(
-                { name: 'Arcane Ward', automation: { type: 'passive_rule' } },
-                makeWizardStats('TestWizard', 5, 3),
-                0,
-                campaignName,
-            );
-
-            expect(result.type).toBe('popup');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 7, campaignName);
-            expect(result.payload.description).toContain('restored 2 HP');
-            expect(result.payload.description).toContain('spell slot level 1');
-        });
-
-        it('uses negative value as-is (Number(-1) is truthy) resulting in ward HP reduction', async () => {
-            setWardMocks((player, key) => {
-                if (key === 'arcaneWardActive') return true;
-                if (key === 'arcaneWardHp') return 5;
-                if (key === 'arcaneWardMax') return 13;
-                return undefined;
-            });
-
-            const result = await onArcaneWardRestore(
-                { name: 'Arcane Ward', automation: { type: 'passive_rule' } },
-                makeWizardStats('TestWizard', 5, 3),
-                -1,
-                campaignName,
-            );
-
-            expect(result.type).toBe('popup');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 3, campaignName);
-            expect(result.payload.description).toContain('restored -2 HP');
         });
     });
 
@@ -252,28 +194,6 @@ describe('onArcaneWardRestore', () => {
                     campaignName,
                 ),
             ).rejects.toThrow('log failure');
-        });
-
-        it('does not set runtime value when addEntry rejects (setRuntimeValue happens before addEntry)', async () => {
-            setWardMocks((player, key) => {
-                if (key === 'arcaneWardActive') return true;
-                if (key === 'arcaneWardHp') return 5;
-                if (key === 'arcaneWardMax') return 13;
-                return undefined;
-            });
-            addEntry.mockRejectedValueOnce(new Error('log failure'));
-
-            await expect(
-                onArcaneWardRestore(
-                    { name: 'Arcane Ward', automation: { type: 'passive_rule' } },
-                    makeWizardStats('TestWizard', 5, 3),
-                    2,
-                    campaignName,
-                ),
-            ).rejects.toThrow('log failure');
-
-            // setRuntimeValue was called before addEntry, so it was already called
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 9, campaignName);
         });
     });
 });

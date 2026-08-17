@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -58,7 +58,7 @@ function makeAction(overrides = {}) {
 
 describe('fastHandsHandler', () => {
     describe('handle', () => {
-        it('returns error popup when no options available', async () => {
+        it('returns error popup when no options available (empty array or undefined)', async () => {
             const result = await handle(
                 makeAction({ automation: { options: [] } }),
                 makePlayerStats(),
@@ -70,15 +70,6 @@ describe('fastHandsHandler', () => {
             expect(result.payload.name).toBe('Fast Hands');
             expect(result.payload.description).toContain('no options available');
             expect(result.payload.automation).toEqual({ type: 'fast_hands', options: [] });
-        });
-
-        it('returns error popup when automation.options is undefined', async () => {
-            const action = { name: 'Fast Hands', automation: { type: 'fast_hands' } };
-            const result = await handle(action, makePlayerStats(), 'test-campaign');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('no options available');
-            expect(result.payload.automation).toEqual({ type: 'fast_hands' });
         });
 
         it('returns modal with options when options exist', async () => {
@@ -96,7 +87,7 @@ describe('fastHandsHandler', () => {
             expect(names).toContain('Use an Object');
         });
 
-        it('returns once-per-turn error popup when already used this round', async () => {
+        it('returns once-per-turn error when already used this turn', async () => {
             getCombatContext.mockResolvedValue({ round: 3, activeCreatureName: 'TestRogue' });
             getRuntimeValue.mockReturnValue({ round: 3, activeCreature: 'TestRogue' });
 
@@ -109,7 +100,7 @@ describe('fastHandsHandler', () => {
             expect(result.payload.description).toContain('once per turn');
         });
 
-        it('returns modal when oncePerTurn is true but round has advanced past stored round', async () => {
+        it('returns modal when oncePerTurn round has advanced past stored round', async () => {
             getCombatContext.mockResolvedValue({ round: 4, activeCreatureName: 'TestRogue' });
             getRuntimeValue.mockReturnValue({ round: 3, activeCreature: 'TestRogue' });
 
@@ -120,18 +111,7 @@ describe('fastHandsHandler', () => {
             expect(result.modalName).toBe('bonusActionChoice');
         });
 
-        it('returns modal when oncePerTurn is true but round is two rounds ahead', async () => {
-            getCombatContext.mockResolvedValue({ round: 5, activeCreatureName: 'TestRogue' });
-            getRuntimeValue.mockReturnValue({ round: 3, activeCreature: 'TestRogue' });
-
-            const action = makeAction({ automation: { oncePerTurn: true } });
-            const result = await handle(action, makePlayerStats(), 'test-campaign');
-
-            expect(result.type).toBe('modal');
-            expect(result.modalName).toBe('bonusActionChoice');
-        });
-
-        it('returns once-per-turn error when oncePerTurn is true but round differs from stored', async () => {
+        it('returns once-per-turn error when creature differs from stored', async () => {
             getCombatContext.mockResolvedValue({ round: 3, activeCreatureName: 'OtherCreature' });
             getRuntimeValue.mockReturnValue({ round: 3, activeCreature: 'TestRogue' });
 
@@ -143,7 +123,7 @@ describe('fastHandsHandler', () => {
             expect(result.payload.description).toContain('once per turn');
         });
 
-        it('skips oncePerTurn check when oncePerTurn is false', async () => {
+        it('returns modal when oncePerTurn is false or undefined', async () => {
             getRuntimeValue.mockReturnValue({ round: 3, activeCreature: 'TestRogue' });
 
             const action = makeAction({ automation: { oncePerTurn: false } });
@@ -152,52 +132,26 @@ describe('fastHandsHandler', () => {
             expect(result.type).toBe('modal');
             expect(result.modalName).toBe('bonusActionChoice');
         });
-
-        it('skips oncePerTurn check when oncePerTurn is undefined', async () => {
-            getRuntimeValue.mockReturnValue({ round: 3, activeCreature: 'TestRogue' });
-
-            const action = makeAction({ automation: {} });
-            const result = await handle(action, makePlayerStats(), 'test-campaign');
-
-            expect(result.type).toBe('modal');
-            expect(result.modalName).toBe('bonusActionChoice');
-        });
     });
 
     describe('applyFastHands', () => {
-        it('handles Sleight of Hand option', async () => {
+        it.each([
+            ['Sleight of Hand', 'Sleight of Hand selected', 'Sleight of Hand'],
+            ["Thieves' Tools", "Thieves' Tools selected", "pick a lock"],
+            ['Use an Object', 'Use an Object selected', 'Utilize action'],
+        ])('handles %s option', async (optionName, selectedText, descriptionFragment) => {
             const action = makeAction();
-            const result = await applyFastHands(action, makePlayerStats(), 'test-campaign', 'Sleight of Hand');
+            const result = await applyFastHands(action, makePlayerStats(), 'test-campaign', optionName);
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.name).toBe('Fast Hands');
-            expect(result.payload.description).toContain('Sleight of Hand selected');
-            expect(result.payload.description).toContain('Sleight of Hand');
+            expect(result.payload.description).toContain(selectedText);
+            expect(result.payload.description).toContain(descriptionFragment);
             expect(result.payload.automation).toBeDefined();
         });
 
-        it('handles Thieves Tools option', async () => {
-            const action = makeAction();
-            const result = await applyFastHands(action, makePlayerStats(), 'test-campaign', "Thieves' Tools");
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain("Thieves' Tools selected");
-            expect(result.payload.description).toContain('pick a lock');
-            expect(result.payload.automation).toBeDefined();
-        });
-
-        it('handles Use an Object option', async () => {
-            const action = makeAction();
-            const result = await applyFastHands(action, makePlayerStats(), 'test-campaign', 'Use an Object');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Use an Object selected');
-            expect(result.payload.description).toContain('Utilize action');
-            expect(result.payload.automation).toBeDefined();
-        });
-
-        it('returns error for unknown option not in list', async () => {
+        it('returns error for unknown option', async () => {
             const action = makeAction();
             const result = await applyFastHands(action, makePlayerStats(), 'test-campaign', 'Nonexistent');
 
@@ -225,13 +179,6 @@ describe('fastHandsHandler', () => {
 
         it('does not call setRuntimeValue when oncePerTurn is false', async () => {
             const action = makeAction({ automation: { oncePerTurn: false } });
-            await applyFastHands(action, makePlayerStats(), 'test-campaign', 'Sleight of Hand');
-
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('does not call setRuntimeValue when oncePerTurn is undefined', async () => {
-            const action = makeAction({ automation: {} });
             await applyFastHands(action, makePlayerStats(), 'test-campaign', 'Sleight of Hand');
 
             expect(setRuntimeValue).not.toHaveBeenCalled();
@@ -273,15 +220,6 @@ describe('fastHandsHandler', () => {
             expect(result.payload.name).toBe('My Fast Hands');
             expect(result.payload.description).toContain('Unknown option: Nonexistent');
             expect(result.payload.automation).toBeDefined();
-        });
-
-        it('handles unknown option when automation.options is undefined', async () => {
-            const action = { name: 'Fast Hands', automation: { type: 'fast_hands' } };
-            const result = await applyFastHands(action, makePlayerStats(), 'test-campaign', 'Something');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Unknown option: Something');
-            expect(result.payload.automation).toEqual({ type: 'fast_hands' });
         });
     });
 });

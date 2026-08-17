@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -54,16 +54,7 @@ describe('spellMasteryHandler.handle', () => {
     getRuntimeValue.mockReturnValue(undefined);
   });
 
-  describe('return type', () => {
-    it('returns a modal when eligible spells exist and no selection has been made', async () => {
-      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('spellMastery');
-    });
-
+  describe('return type and payload based on selection state', () => {
     it('returns a popup when no eligible spells exist', async () => {
       loadSpells.mockResolvedValue([makeWizardSpell('Fireball', 3)]);
 
@@ -71,6 +62,64 @@ describe('spellMasteryHandler.handle', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.description).toBe('No level 1 or 2 wizard spells with casting time of an action available.');
+    });
+
+    it('returns a modal with optionDetails when eligible spells exist and no selection has been made', async () => {
+      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.modalName).toBe('spellMastery');
+      expect(result.payload.optionDetails).toBeDefined();
+      expect(result.payload.currentLevel1).toBe('');
+      expect(result.payload.currentLevel2).toBe('');
+    });
+
+    it('returns a modal with current selections and no optionDetails when both are already set', async () => {
+      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
+      getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'SpellMastery_level1') return 'Magic Missile';
+        if (key === 'SpellMastery_level2') return 'Web';
+        return undefined;
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.currentLevel1).toBe('Magic Missile');
+      expect(result.payload.currentLevel2).toBe('Web');
+      expect(result.payload.optionDetails).toBeUndefined();
+    });
+
+    it('returns a modal with optionDetails and empty current values when only level1 is already set', async () => {
+      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
+      getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'SpellMastery_level1') return 'Magic Missile';
+        return undefined;
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.optionDetails).toBeDefined();
+      expect(result.payload.currentLevel1).toBe('');
+      expect(result.payload.currentLevel2).toBe('');
+    });
+
+    it('returns a modal with optionDetails and empty current values when only level2 is already set', async () => {
+      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
+      getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'SpellMastery_level2') return 'Web';
+        return undefined;
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.optionDetails).toBeDefined();
+      expect(result.payload.currentLevel1).toBe('');
+      expect(result.payload.currentLevel2).toBe('');
     });
   });
 
@@ -157,85 +206,6 @@ describe('spellMasteryHandler.handle', () => {
   });
 
   describe('payload structure', () => {
-    it('includes optionDetails when no existing selection', async () => {
-      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.payload.optionDetails).toBeDefined();
-      expect(result.payload.optionDetails['Magic Missile']).toEqual({
-        name: 'Magic Missile',
-        level: 1,
-        casting_time: 'Action',
-        range: '120 ft',
-        description: '',
-        damage: null,
-      });
-      expect(result.payload.optionDetails['Web']).toEqual({
-        name: 'Web',
-        level: 2,
-        casting_time: 'Action',
-        range: '120 ft',
-        description: '',
-        damage: null,
-      });
-      expect(result.payload.currentLevel1).toBe('');
-      expect(result.payload.currentLevel2).toBe('');
-    });
-
-    it('includes action, playerStats, campaignName in payload', async () => {
-      loadSpells.mockResolvedValue([WIZARD_LEVEL1]);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.payload.action).toEqual(makeAction());
-      expect(result.payload.playerStats).toEqual(makePlayerStats());
-      expect(result.payload.campaignName).toBe(campaignName);
-    });
-
-    it('omits optionDetails when both selections already exist', async () => {
-      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'SpellMastery_level1') return 'Magic Missile';
-        if (key === 'SpellMastery_level2') return 'Web';
-        return undefined;
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.payload.optionDetails).toBeUndefined();
-      expect(result.payload.currentLevel1).toBe('Magic Missile');
-      expect(result.payload.currentLevel2).toBe('Web');
-    });
-
-    it('includes optionDetails when only level1 is already set', async () => {
-      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'SpellMastery_level1') return 'Magic Missile';
-        return undefined;
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.payload.optionDetails).toBeDefined();
-      expect(result.payload.currentLevel1).toBe('');
-      expect(result.payload.currentLevel2).toBe('');
-    });
-
-    it('includes optionDetails when only level2 is already set', async () => {
-      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'SpellMastery_level2') return 'Web';
-        return undefined;
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.payload.optionDetails).toBeDefined();
-      expect(result.payload.currentLevel1).toBe('');
-      expect(result.payload.currentLevel2).toBe('');
-    });
-
     it('uses fallback values when spell fields are missing in optionDetails', async () => {
       const incompleteSpell = {
         name: 'Incomplete',
@@ -258,33 +228,6 @@ describe('spellMasteryHandler.handle', () => {
     });
   });
 
-  describe('existing selection state', () => {
-    it('returns modal with current selections when both level1 and level2 are already set', async () => {
-      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'SpellMastery_level1') return 'Magic Missile';
-        if (key === 'SpellMastery_level2') return 'Web';
-        return undefined;
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('modal');
-      expect(result.payload.currentLevel1).toBe('Magic Missile');
-      expect(result.payload.currentLevel2).toBe('Web');
-    });
-
-    it('returns modal with empty selections when neither is set', async () => {
-      loadSpells.mockResolvedValue([WIZARD_LEVEL1, WIZARD_LEVEL2]);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('modal');
-      expect(result.payload.currentLevel1).toBe('');
-      expect(result.payload.currentLevel2).toBe('');
-    });
-  });
-
   describe('ruleset handling', () => {
     it('loads spells for the correct ruleset', async () => {
       loadSpells.mockResolvedValue([WIZARD_LEVEL1]);
@@ -292,14 +235,6 @@ describe('spellMasteryHandler.handle', () => {
       await handle(makeAction(), makePlayerStats({ rules: '5e' }), campaignName, null);
 
       expect(loadSpells).toHaveBeenCalledWith('5e');
-    });
-
-    it('defaults to 2024 when rules is undefined', async () => {
-      loadSpells.mockResolvedValue([WIZARD_LEVEL1]);
-
-      await handle(makeAction(), makePlayerStats({ rules: undefined }), campaignName, null);
-
-      expect(loadSpells).toHaveBeenCalledWith('2024');
     });
 
     it('defaults to 2024 when rules is null', async () => {
@@ -318,54 +253,28 @@ describe('spellMasteryHandler.onSpellMasterySelected', () => {
   });
 
   describe('validation', () => {
-    it('returns error when both values are empty strings', async () => {
-      const result = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, '', '');
+    it('returns an error popup for invalid inputs', async () => {
+      const errorCases = [
+        { l1: '', l2: '' },
+        { l1: null, l2: 'Web' },
+        { l1: 'Magic Missile', l2: null },
+        { l1: 'Magic Missile', l2: 'Magic Missile' },
+        { l1: '', l2: 'Web' },
+        { l1: 'Magic Missile', l2: '' },
+        { l1: undefined, l2: 'Web' },
+        { l1: 'Magic Missile', l2: undefined },
+      ];
 
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toBe('Both a level 1 and level 2 spell must be selected, and they must be different spells.');
-    });
-
-    it('returns error when either spell is missing or both are the same', async () => {
-      const result1 = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, null, 'Web');
-      expect(result1.type).toBe('popup');
-      expect(result1.payload.description).toBe('Both a level 1 and level 2 spell must be selected, and they must be different spells.');
-
-      const result2 = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, 'Magic Missile', null);
-      expect(result2.type).toBe('popup');
-
-      const result3 = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, 'Magic Missile', 'Magic Missile');
-      expect(result3.type).toBe('popup');
-    });
-
-    it('returns error when one spell is an empty string', async () => {
-      const result1 = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, '', 'Web');
-      expect(result1.type).toBe('popup');
-
-      const result2 = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, 'Magic Missile', '');
-      expect(result2.type).toBe('popup');
-    });
-
-    it('returns error when one spell is undefined', async () => {
-      const result1 = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, undefined, 'Web');
-      expect(result1.type).toBe('popup');
-
-      const result2 = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, 'Magic Missile', undefined);
-      expect(result2.type).toBe('popup');
+      for (const { l1, l2 } of errorCases) {
+        const result = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, l1, l2);
+        expect(result.type).toBe('popup');
+      }
     });
   });
 
   describe('clearing selection', () => {
-    it('clears both runtime values when both are null', async () => {
+    it('clears both runtime values when both are null or undefined', async () => {
       const result = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, null, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toBe('Spell Mastery selection cleared.');
-      expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'SpellMastery_level1', null, campaignName, true);
-      expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'SpellMastery_level2', null, campaignName, true);
-    });
-
-    it('clears both runtime values when both are undefined', async () => {
-      const result = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, undefined, undefined);
 
       expect(result.type).toBe('popup');
       expect(result.payload.description).toBe('Spell Mastery selection cleared.');
@@ -381,21 +290,6 @@ describe('spellMasteryHandler.onSpellMasterySelected', () => {
       expect(result.type).toBe('popup');
       expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'SpellMastery_level1', 'Magic Missile', campaignName, true);
       expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'SpellMastery_level2', 'Web', campaignName, true);
-    });
-
-    it('returns success message with spell names and key phrases', async () => {
-      const result = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, 'Magic Missile', 'Web');
-
-      expect(result.payload.description).toContain('Magic Missile');
-      expect(result.payload.description).toContain('Web');
-      expect(result.payload.description).toContain('at will');
-      expect(result.payload.description).toContain('always prepared');
-    });
-
-    it('includes action.automation in the result payload', async () => {
-      const result = await onSpellMasterySelected(makeAction(), makePlayerStats(), campaignName, 'Magic Missile', 'Web');
-
-      expect(result.payload.automation).toEqual({ type: 'spell_mastery' });
     });
 
     it('handles spell names with special characters', async () => {

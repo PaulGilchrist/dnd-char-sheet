@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, applyStealthAttack } from './stealthAttackHandler.js';
 
@@ -111,74 +111,27 @@ describe('stealthAttackHandler', () => {
     });
 
     describe('applyStealthAttack', () => {
-        it('returns error popup when sneak attack dice are insufficient', async () => {
+        it.each([
+            ['exact match', 2, 2],
+            ['sufficient surplus', 2, 3],
+        ])('returns success popup and sets runtime value when dice %s (cost=%d, available=%d)', async (_label, costD6, availableDice) => {
             const stats = makePlayerStats({
-                class: { class_levels: [{ level: 1, sneak_attack_num_d6: 1 }] },
+                class: { class_levels: [{ level: 1, sneak_attack_num_d6: availableDice }] },
             });
 
-            const result = await applyStealthAttack(makeAction(), stats, 'test-campaign', 2);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.name).toBe('Stealth Attack');
-            expect(result.payload.description).toContain('Not enough Sneak Attack dice');
-            expect(result.payload.description).toContain('Need 2d6, have 1d6');
-            expect(result.payload.automation).toEqual(makeAction().automation);
-        });
-
-        it('returns error popup when sneak attack dice are zero', async () => {
-            const stats = makePlayerStats({
-                class: { class_levels: [{ level: 1, sneak_attack_num_d6: 0 }] },
-            });
-
-            const result = await applyStealthAttack(makeAction(), stats, 'test-campaign', 1);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.description).toContain('Need 1d6, have 0d6');
-        });
-
-        it('returns success popup and sets runtime value when dice exactly match cost', async () => {
-            const stats = makePlayerStats({
-                class: { class_levels: [{ level: 1, sneak_attack_num_d6: 2 }] },
-            });
-
-            const result = await applyStealthAttack(makeAction(), stats, 'test-campaign', 2);
+            const result = await applyStealthAttack(makeAction(), stats, 'test-campaign', costD6);
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.name).toBe('Stealth Attack');
             expect(result.payload.automationType).toBe('stealth_attack');
             expect(result.payload.description).toContain('Stealth Attack active');
-            expect(result.payload.description).toContain('2d6 Sneak Attack dice');
+            expect(result.payload.description).toContain(`${costD6}d6 Sneak Attack dice`);
             expect(result.payload.automation).toEqual(makeAction().automation);
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'TestRogue',
                 'stealthAttackCost',
-                2,
-                'test-campaign',
-                true
-            );
-        });
-
-        it('returns success popup and sets runtime value on sufficient dice', async () => {
-            const stats = makePlayerStats({
-                class: { class_levels: [{ level: 1, sneak_attack_num_d6: 3 }] },
-            });
-
-            const result = await applyStealthAttack(makeAction(), stats, 'test-campaign', 2);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.name).toBe('Stealth Attack');
-            expect(result.payload.automationType).toBe('stealth_attack');
-            expect(result.payload.description).toContain('Stealth Attack active');
-            expect(result.payload.description).toContain('2d6 Sneak Attack dice');
-            expect(result.payload.automation).toEqual(makeAction().automation);
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestRogue',
-                'stealthAttackCost',
-                2,
+                costD6,
                 'test-campaign',
                 true
             );

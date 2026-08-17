@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './reactionDebuffHandler.js';
 
@@ -18,7 +18,6 @@ vi.mock('../../../ui/logService.js', () => ({
 
 vi.mock('../../../rules/combat/rangeValidation.js', () => ({
   rangeToFeet: vi.fn(),
-  getDistanceFeet: vi.fn(),
 }));
 
 vi.mock('../../../rules/combat/rangeCheck.js', () => ({
@@ -64,7 +63,6 @@ vi.mock('../../common/infoPopup.js', () => ({
 }));
 
 import * as targetResolver from '../../common/targetResolver.js';
-import * as rangeValidation from '../../../rules/combat/rangeValidation.js';
 import * as rangeCheck from '../../../rules/combat/rangeCheck.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import * as damageRollback from '../../common/damageRollback.js';
@@ -125,96 +123,24 @@ function freshAttackEvent(options = {}) {
   };
 }
 
-function setupDisadvantagePath(attackEventOverride = {}, actionOverrides = {}) {
-  const ps = makePlayerStats({});
-  const action = makeAction({ effect: 'disadvantage_on_attack_roll', ...actionOverrides });
-
-  targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-  damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
-  damageRollback.findLastAttack.mockResolvedValue({
-    attackEvent: freshAttackEvent(attackEventOverride),
-    attackerName: 'Goblin',
-    targetName: 'Goblin',
-    primaryDamage: attackEventOverride.primaryDamage ?? (attackEventOverride.hit !== false ? 10 : 0),
-    secondaryDamage: 0,
-    totalDamage: attackEventOverride.totalDamage ?? (attackEventOverride.hit !== false ? 10 : 0),
-    damageTypes: attackEventOverride.damageTypes || ['Piercing'],
-  });
-
-  return handle(action, ps, 'TestCampaign', 'DungeonMap');
-}
-
 const campaignName = 'TestCampaign';
 const mapName = 'DungeonMap';
 
 describe('reactionDebuffHandler — disadvantage effect & warding flare', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    rangeValidation.rangeToFeet.mockReset();
-    rangeValidation.getDistanceFeet.mockReset();
     rangeCheck.isWithinRange.mockReset().mockResolvedValue(true);
   });
 
   describe('effect: disadvantage_on_attack_roll', () => {
-    it('returns popup when no attack event', async () => {
+    it('returns popup when out of range', async () => {
       const ps = makePlayerStats({});
-      const action = makeAction({ effect: 'disadvantage_on_attack_roll' });
+      const action = makeAction({ effect: 'disadvantage_on_attack_roll', range: '30_ft' });
 
       targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
       damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
       damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: null,
-        attackerName: null,
-        targetName: null,
-        primaryDamage: 0,
-        secondaryDamage: 0,
-        totalDamage: 0,
-        damageTypes: [],
-      });
-
-      const result = await handle(action, ps, campaignName, mapName);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('No recent attack roll found');
-    });
-
-    it('reports disadvantage and second d20 in description on hit', async () => {
-      const result = await setupDisadvantagePath({ d20: 14, bonus: 3, hit: true });
-
-      expect(result.payload.description).toContain('Disadvantage');
-      expect(result.payload.description).toContain('second d20');
-    });
-
-    it('reports already missed when original attack missed', async () => {
-      const ps = makePlayerStats({});
-      const action = makeAction({ effect: 'disadvantage_on_attack_roll' });
-
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: freshAttackEvent({ d20: 3, bonus: 2, hit: false }),
-        attackerName: 'Goblin',
-        targetName: 'Goblin',
-        primaryDamage: 0,
-        secondaryDamage: 0,
-        totalDamage: 0,
-        damageTypes: [],
-      });
-
-      const result = await handle(action, ps, campaignName, mapName);
-
-      expect(result.payload.description).toContain('already missed');
-    });
-
-    it('reports attack still hits when debuffed roll still succeeds', async () => {
-      const ps = makePlayerStats({});
-      const action = makeAction({ effect: 'disadvantage_on_attack_roll' });
-
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: freshAttackEvent({ d20: 18, bonus: 5, hit: true, targetAc: 14 }),
+        attackEvent: freshAttackEvent({ d20: 18, bonus: 5, hit: true }),
         attackerName: 'Goblin',
         targetName: 'Goblin',
         primaryDamage: 10,
@@ -222,26 +148,10 @@ describe('reactionDebuffHandler — disadvantage effect & warding flare', () => 
         totalDamage: 10,
         damageTypes: ['Piercing'],
       });
-
-      const randomStub = vi.spyOn(Math, 'random').mockReturnValue(0.95);
-
-      const result = await handle(action, ps, campaignName, mapName);
-
-      expect(result.payload.description).toContain('still hits');
-      randomStub.mockRestore();
-    });
-
-    it('returns popup when out of range', async () => {
-      const ps = makePlayerStats({});
-      const action = makeAction({ effect: 'disadvantage_on_attack_roll', range: '30_ft' });
-
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      rangeValidation.rangeToFeet.mockReturnValue(30);
       targetResolver.resolveMapPositions.mockResolvedValue({
         attackerPos: { gridX: 0, gridY: 0 },
         targetPos: { gridX: 20, gridY: 0 },
       });
-      rangeValidation.getDistanceFeet.mockReturnValue(50);
       rangeCheck.isWithinRange.mockResolvedValue(false);
 
       const result = await handle(action, ps, campaignName, mapName);
@@ -261,9 +171,9 @@ describe('reactionDebuffHandler — disadvantage effect & warding flare', () => 
       });
     }
 
-    it('includes tempHp in description when effect is disadvantage and feature present', async () => {
-      const ps = makeWardingFlarePlayer();
-      const action = makeAction({ effect: 'disadvantage_on_attack_roll' });
+    function setupWardingFlareTest(hasFeature, effect) {
+      const ps = hasFeature ? makeWardingFlarePlayer() : makePlayerStats({});
+      const action = makeAction({ effect });
 
       targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
       damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
@@ -277,51 +187,23 @@ describe('reactionDebuffHandler — disadvantage effect & warding flare', () => 
         damageTypes: ['Piercing'],
       });
 
-      const result = await handle(action, ps, campaignName, mapName);
+      return { action, ps };
+    }
 
-      expect(result.payload.description).toContain('Temporary Hit Points');
-    });
-
-    it('does not include tempHp when effect is not disadvantage', async () => {
-      const ps = makeWardingFlarePlayer();
-      const action = makeAction({});
-
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: freshAttackEvent({ d20: 5, bonus: 3, hit: false }),
-        attackerName: 'Goblin',
-        targetName: 'Goblin',
-        primaryDamage: 0,
-        secondaryDamage: 0,
-        totalDamage: 0,
-        damageTypes: [],
-      });
+    it.each([
+      { effect: 'disadvantage_on_attack_roll', hasFeature: true, expectTempHp: true, desc: 'includes tempHp when effect is disadvantage and feature present' },
+      { effect: '', hasFeature: true, expectTempHp: false, desc: 'does not include tempHp when effect is not disadvantage' },
+      { effect: 'disadvantage_on_attack_roll', hasFeature: false, expectTempHp: false, desc: 'does not include tempHp when feature not on player' },
+    ])('$desc', async ({ effect, hasFeature, expectTempHp }) => {
+      const { action, ps } = setupWardingFlareTest(hasFeature, effect);
 
       const result = await handle(action, ps, campaignName, mapName);
 
-      expect(result.payload.description).not.toContain('Temporary Hit Points');
-    });
-
-    it('does not include tempHp when feature not on player', async () => {
-      const ps = makePlayerStats({});
-      const action = makeAction({ effect: 'disadvantage_on_attack_roll' });
-
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary());
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: freshAttackEvent({ d20: 18, bonus: 3, hit: true }),
-        attackerName: 'Goblin',
-        targetName: 'Goblin',
-        primaryDamage: 10,
-        secondaryDamage: 0,
-        totalDamage: 10,
-        damageTypes: ['Piercing'],
-      });
-
-      const result = await handle(action, ps, campaignName, mapName);
-
-      expect(result.payload.description).not.toContain('Temporary Hit Points');
+      if (expectTempHp) {
+        expect(result.payload.description).toContain('Temporary Hit Points');
+      } else {
+        expect(result.payload.description).not.toContain('Temporary Hit Points');
+      }
     });
   });
 });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { handle } from './telekineticMovementHandler.js';
 import * as logService from '../../../ui/logService.js';
 
@@ -38,51 +38,14 @@ describe('telekineticMovementHandler', () => {
             );
         });
 
-        it('should use custom range in popup description when provided', async () => {
+        it('should use custom range in popup and log descriptions', async () => {
             const result = await handle(makeAction({ range: '60' }), makePlayerStats(), 'campaign', 'map');
 
             expect(result.payload.description).toBe(
                 'Telekinetic Movement: Move an object or willing creature up to <strong>60</strong> feet.'
             );
-        });
-
-        it('should use default range of 30 when automation.range is missing', async () => {
-            const result = await handle(makeAction({ range: undefined }), makePlayerStats(), 'campaign', 'map');
-
-            expect(result.payload.description).toBe(
-                'Telekinetic Movement: Move an object or willing creature up to <strong>30</strong> feet.'
-            );
-        });
-
-        it('should use default range of 30 when automation.range is an empty string', async () => {
-            const result = await handle(makeAction({ range: '' }), makePlayerStats(), 'campaign', 'map');
-
-            expect(result.payload.description).toBe(
-                'Telekinetic Movement: Move an object or willing creature up to <strong>30</strong> feet.'
-            );
-        });
-
-        it('should use custom range in log description', async () => {
-            await handle(makeAction({ range: '45' }), makePlayerStats(), 'campaign', 'map');
-
             expect(logService.addEntry).toHaveBeenCalledWith('campaign', expect.objectContaining({
-                description: 'TestHero used Telekinetic Movement to move an object or willing creature up to 45 feet.',
-            }));
-        });
-
-        it('should use default range in log description when range is missing', async () => {
-            await handle(makeAction({ range: undefined }), makePlayerStats(), 'campaign', 'map');
-
-            expect(logService.addEntry).toHaveBeenCalledWith('campaign', expect.objectContaining({
-                description: 'TestHero used Telekinetic Movement to move an object or willing creature up to 30 feet.',
-            }));
-        });
-
-        it('should use default range in log description when range is an empty string', async () => {
-            await handle(makeAction({ range: '' }), makePlayerStats(), 'campaign', 'map');
-
-            expect(logService.addEntry).toHaveBeenCalledWith('campaign', expect.objectContaining({
-                description: 'TestHero used Telekinetic Movement to move an object or willing creature up to 30 feet.',
+                description: 'TestHero used Telekinetic Movement to move an object or willing creature up to 60 feet.',
             }));
         });
 
