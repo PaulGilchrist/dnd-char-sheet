@@ -20,8 +20,6 @@ public/campaigns/*/data/campaign-log.json
 # Campaign snapshots (admin backups)
 public/campaigns/.snapshots/
 
-.opencode/plans
-
 # Logs
 logs
 *.log
