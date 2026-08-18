@@ -1,7 +1,8 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as dataLoader from '../services/ui/dataLoader.js';
 import * as utils from './utils.js';
+import { REQUIRED_FIELDS } from './constants.js';
 
 const DEFAULT_POINT_BUY_COSTS = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 
@@ -20,6 +21,15 @@ const MOCK_VALIDATION_RULES = {
 
 const BASE_ABILITY = { baseScore: 10, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 };
 
+const COMPLETE_FORM_DATA = {
+  name: 'Test Character',
+  level: 1,
+  alignment: 'Lawful Good',
+  race: { name: 'Human' },
+  class: { name: 'Wizard' },
+  expertSkills: []
+};
+
 describe('character-creation/utils', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -35,17 +45,25 @@ describe('character-creation/utils', () => {
       expect(costs).toEqual(MOCK_VALIDATION_RULES.point_buy.costs);
     });
 
-    it('falls back to default costs when rules have no point_buy section or no costs', async () => {
+    it('returns the costs for the 2024 ruleset', async () => {
+      const costs = await utils.getPointBuyCosts('2024');
+      expect(costs).toEqual(MOCK_VALIDATION_RULES.point_buy.costs);
+    });
+
+    it('falls back to default costs when rules are empty or lack point_buy.costs', async () => {
       dataLoader.loadValidationRules.mockResolvedValue({});
       await expect(utils.getPointBuyCosts('5e')).resolves.toEqual(DEFAULT_POINT_BUY_COSTS);
 
       dataLoader.loadValidationRules.mockResolvedValue({ point_buy: {} });
       await expect(utils.getPointBuyCosts('5e')).resolves.toEqual(DEFAULT_POINT_BUY_COSTS);
+
+      dataLoader.loadValidationRules.mockResolvedValue({ point_buy: { costs: null } });
+      await expect(utils.getPointBuyCosts('5e')).resolves.toEqual(DEFAULT_POINT_BUY_COSTS);
     });
   });
 
   describe('getPointBuyCostsSync', () => {
-    it('returns default costs when the cache is empty', () => {
+    it('returns default costs when the cache is empty (null or undefined)', () => {
       vi.spyOn(dataLoader, 'getCachedPointBuyCosts').mockReturnValue(null);
       expect(utils.getPointBuyCostsSync('5e')).toEqual(DEFAULT_POINT_BUY_COSTS);
 
@@ -58,35 +76,36 @@ describe('character-creation/utils', () => {
       vi.spyOn(dataLoader, 'getCachedPointBuyCosts').mockReturnValue(cachedCosts);
       expect(utils.getPointBuyCostsSync('5e')).toEqual(cachedCosts);
     });
+
+    it('returns default costs when getCachedPointBuyCosts returns 0 (falsy but not null/undefined)', () => {
+      vi.spyOn(dataLoader, 'getCachedPointBuyCosts').mockReturnValue(0);
+      expect(utils.getPointBuyCostsSync('5e')).toEqual(DEFAULT_POINT_BUY_COSTS);
+    });
   });
 
   describe('validateFinalFormData', () => {
-    const completeFormData = {
-      name: 'Test Character',
-      level: 1,
-      alignment: 'Lawful Good',
-      race: { name: 'Human' },
-      class: { name: 'Wizard' },
-      expertSkills: []
-    };
-
     it('returns no errors when all required fields are present', () => {
-      expect(utils.validateFinalFormData(completeFormData)).toEqual({});
+      expect(utils.validateFinalFormData(COMPLETE_FORM_DATA)).toEqual({});
     });
 
     it('returns an error when name is absent or whitespace-only', () => {
-      expect(utils.validateFinalFormData({ ...completeFormData, name: undefined })).toHaveProperty('name');
-      expect(utils.validateFinalFormData({ ...completeFormData, name: '   ' })).toHaveProperty('name');
+      expect(utils.validateFinalFormData({ ...COMPLETE_FORM_DATA, name: undefined })).toHaveProperty('name');
+      expect(utils.validateFinalFormData({ ...COMPLETE_FORM_DATA, name: null })).toHaveProperty('name');
+      expect(utils.validateFinalFormData({ ...COMPLETE_FORM_DATA, name: '   ' })).toHaveProperty('name');
+      expect(utils.validateFinalFormData({ ...COMPLETE_FORM_DATA, name: '' })).toHaveProperty('name');
     });
 
-    it('returns an error for every required field when none are present', () => {
+    it('returns an error for every non-excluded required field when all are missing', () => {
       const errors = utils.validateFinalFormData({});
-      ['name', 'level', 'alignment', 'race', 'class', 'expertSkills'].forEach(field => {
+      // REQUIRED_FIELDS includes abilities, inventory, skillProficiencies which are explicitly skipped
+      const excludedFields = ['abilities', 'inventory', 'skillProficiencies'];
+      const expectedErrorFields = REQUIRED_FIELDS.filter(f => !excludedFields.includes(f));
+      for (const field of expectedErrorFields) {
         expect(errors).toHaveProperty(field);
-      });
+      }
     });
 
-    it('rejects falsy values for required fields', () => {
+    it('rejects falsy values for every non-excluded required field', () => {
       const errors = utils.validateFinalFormData({
         name: undefined,
         level: null,
@@ -101,6 +120,26 @@ describe('character-creation/utils', () => {
       expect(errors).toHaveProperty('race');
       expect(errors).toHaveProperty('class');
       expect(errors).toHaveProperty('expertSkills');
+    });
+
+    it('skips abilities, inventory, and skillProficiencies even when absent', () => {
+      const errors = utils.validateFinalFormData({
+        name: 'Test',
+        level: 1,
+        alignment: 'Good',
+        race: { name: 'Human' },
+        class: { name: 'Wizard' },
+        expertSkills: []
+        // abilities, inventory, skillProficiencies intentionally omitted
+      });
+      expect(errors).not.toHaveProperty('abilities');
+      expect(errors).not.toHaveProperty('inventory');
+      expect(errors).not.toHaveProperty('skillProficiencies');
+    });
+
+    it('returns an empty errors object when formData is null or undefined', () => {
+      expect(utils.validateFinalFormData(null)).toEqual({});
+      expect(utils.validateFinalFormData(undefined)).toEqual({});
     });
   });
 
@@ -122,15 +161,24 @@ describe('character-creation/utils', () => {
     });
 
     it('rejects falsy or non-numeric level values', async () => {
-      for (const level of [null, undefined, '', NaN, false]) {
-        expect((await utils.validateLevel(level, '5e')).level).toBeDefined();
+      const falsyValues = [null, undefined, '', NaN, false, 0];
+      for (const level of falsyValues) {
+        const errors = await utils.validateLevel(level, '5e');
+        expect(errors).toHaveProperty('level');
       }
+    });
+
+    it('rejects string level values that parse to numbers outside range', async () => {
+      expect((await utils.validateLevel('0', '5e')).level).toBeDefined();
+      expect((await utils.validateLevel('25', '5e')).level).toBeDefined();
     });
 
     it('respects a custom min/max from the validation rules', async () => {
       dataLoader.loadValidationRules.mockResolvedValue({ level_range: { min: 1, max: 10 } });
       expect((await utils.validateLevel(11, '5e')).level).toBeDefined();
       expect(await utils.validateLevel(10, '5e')).toEqual({});
+      expect(await utils.validateLevel(1, '5e')).toEqual({});
+      expect((await utils.validateLevel(0, '5e')).level).toBeDefined();
     });
 
     it('falls back to a 1-20 range when level_range is missing', async () => {
@@ -138,6 +186,13 @@ describe('character-creation/utils', () => {
       expect(await utils.validateLevel(1, '5e')).toEqual({});
       expect(await utils.validateLevel(20, '5e')).toEqual({});
       expect((await utils.validateLevel(21, '5e')).level).toBeDefined();
+      expect((await utils.validateLevel(0, '5e')).level).toBeDefined();
+    });
+
+    it('falls back to 1-20 when level_range is null', async () => {
+      dataLoader.loadValidationRules.mockResolvedValue({ level_range: null });
+      expect(await utils.validateLevel(1, '5e')).toEqual({});
+      expect((await utils.validateLevel(0, '5e')).level).toBeDefined();
     });
   });
 
@@ -164,13 +219,15 @@ describe('character-creation/utils', () => {
     });
 
     it('rejects a total score above the level 1 cap', async () => {
-      const expectTotalError = async (increases) => {
+      const cases = [
+        { baseScore: 15, featIncrease: 6 },
+        { baseScore: 15, backgroundIncrease: 6 },
+        { baseScore: 15, miscIncrease: 6 }
+      ];
+      for (const increases of cases) {
         const errors = await utils.validateAbility({ ...BASE_ABILITY, ...increases }, 0, '5e', 1);
         expect(errors).toHaveProperty('totalScore');
-      };
-      await expectTotalError({ baseScore: 15, featIncrease: 6 });
-      await expectTotalError({ baseScore: 15, backgroundIncrease: 6 });
-      await expectTotalError({ baseScore: 15, miscIncrease: 6 });
+      }
     });
 
     it('applies the higher total cap only at level 20', async () => {
@@ -179,13 +236,19 @@ describe('character-creation/utils', () => {
       expect((await utils.validateAbility({ ...BASE_ABILITY, baseScore: 15, featIncrease: 10 }, 0, '5e', 20))).toHaveProperty('totalScore');
     });
 
-    it('rejects a negative miscIncrease', async () => {
+    it('rejects a negative miscIncrease (numeric and string)', async () => {
       expect((await utils.validateAbility({ ...BASE_ABILITY, miscIncrease: -1 }, 0, '5e', 1))).toHaveProperty('miscIncrease');
       expect((await utils.validateAbility({ ...BASE_ABILITY, miscIncrease: '-2' }, 0, '5e', 1))).toHaveProperty('miscIncrease');
     });
 
+    it('accepts a zero miscIncrease', async () => {
+      expect(await utils.validateAbility({ ...BASE_ABILITY, miscIncrease: 0 }, 0, '5e', 1)).toEqual({});
+      expect(await utils.validateAbility({ ...BASE_ABILITY, miscIncrease: '0' }, 0, '5e', 1)).toEqual({});
+    });
+
     it('coerces string base scores via parseInt', async () => {
-      expect(await utils.validateAbility({ ...BASE_ABILITY, baseScore: '10' }, 0, '5e', 1)).toEqual({});
+      const errors = await utils.validateAbility({ ...BASE_ABILITY, baseScore: '10' }, 0, '5e', 1);
+      expect(errors).toEqual({});
     });
 
     it('treats unparseable values as defaults (baseScore 8, increases 0)', async () => {
@@ -216,6 +279,12 @@ describe('character-creation/utils', () => {
       expect((await utils.validateAbility({ ...BASE_ABILITY, baseScore: 15, miscIncrease: 5 }, 0, '5e', 1))).toEqual({});
       expect((await utils.validateAbility({ ...BASE_ABILITY, baseScore: 15, miscIncrease: 6 }, 0, '5e', 1))).toHaveProperty('totalScore');
     });
+
+    it('works with the 2024 ruleset using the same defaults', async () => {
+      expect(await utils.validateAbility(BASE_ABILITY, 0, '2024', 1)).toEqual({});
+      expect((await utils.validateAbility({ ...BASE_ABILITY, baseScore: 7 }, 0, '2024', 1)).baseScore).toBeDefined();
+      expect((await utils.validateAbility({ ...BASE_ABILITY, baseScore: 16 }, 0, '2024', 1)).baseScore).toBeDefined();
+    });
   });
 
   describe('validateStep', () => {
@@ -233,6 +302,12 @@ describe('character-creation/utils', () => {
       it('bubbles up invalid level values through the shared level validator', async () => {
         expect(await utils.validateStep(2, { ...validFormData, level: 0 }, {}, [], [], '5e')).toHaveProperty('level');
         expect(await utils.validateStep(2, { ...validFormData, level: 21 }, {}, [], [], '5e')).toHaveProperty('level');
+      });
+
+      it('rejects missing or whitespace-only name and missing alignment', async () => {
+        const errors = await utils.validateStep(2, { level: 1 }, {}, [], [], '5e');
+        expect(errors).toHaveProperty('name');
+        expect(errors).toHaveProperty('alignment');
       });
     });
 
@@ -276,6 +351,10 @@ describe('character-creation/utils', () => {
         expect(await utils.validateStep(5, validFormData, {}, [], [], '2024')).toHaveProperty('background');
         expect(await utils.validateStep(5, validFormData, {}, [], [], '5e')).not.toHaveProperty('background');
         expect(await utils.validateStep(5, { ...validFormData, background: 'Fighter' }, {}, [], [], '2024')).not.toHaveProperty('background');
+      });
+
+      it('does not require a background for 5e even when one is provided', async () => {
+        expect(await utils.validateStep(5, { ...validFormData, background: 'Soldier' }, {}, [], [], '5e')).not.toHaveProperty('background');
       });
     });
 

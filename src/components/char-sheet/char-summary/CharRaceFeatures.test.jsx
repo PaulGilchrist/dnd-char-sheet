@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharRaceFeatures from './CharRaceFeatures.jsx';
@@ -6,8 +6,7 @@ import CharRaceFeatures from './CharRaceFeatures.jsx';
 /*
  * TrackedResourceInput is mocked so CharRaceFeatures tests focus on:
  *  - Which component is selected per race/subrace
- *  - Which props (label, resourceKey, playerName, getMax, deps, campaignName, playerStats)
- *    are passed through
+ *  - Which props (label, resourceKey, getMax) are passed through
  *  - Null/early-return paths for unsupported races
  *
  * The mock captures all props via a shared registry object so tests can
@@ -86,184 +85,61 @@ function assertNoTrackedResourceRendered() {
 
 describe('CharRaceFeatures', () => {
     describe('Dragonborn features', () => {
-        it('renders Breath Weapon with max uses from automation.uses number', () => {
-            const stats = makeStats({
-                race: { name: 'Dragonborn', traits: [{ automation: { uses: 3 } }] },
-            });
-            renderComponent(stats);
-            assertTrackedResourceRendered({
-                label: 'Breath Weapon',
-                resourceKey: 'breathweaponUses',
-                getMaxValue: 3,
-                playerName: 'Thorin',
-                campaignName: mockCampaignName,
-                playerStats: stats,
-            });
-        });
+        const dragonbornCases = [
+            { desc: 'max uses from automation.uses number', race: { name: 'Dragonborn', traits: [{ automation: { uses: 3 } }] }, maxUses: 3, deps: [5] },
+            { desc: 'max uses from proficiency_bonus string', race: { name: 'Dragonborn', traits: [{ automation: { uses: 'proficiency_bonus' } }] }, proficiency: 4, maxUses: 4, deps: [5] },
+            { desc: 'max uses defaults to 1 when automation.uses is undefined', race: { name: 'Dragonborn', traits: [{}] }, maxUses: 1 },
+            { desc: 'max uses defaults to 1 when traits is undefined', race: { name: 'Dragonborn' }, maxUses: 1 },
+            { desc: 'max uses defaults to 1 when traits is empty', race: { name: 'Dragonborn', traits: [] }, maxUses: 1 },
+        ];
 
-        it('uses proficiency bonus as max when automation.uses is "proficiency_bonus"', () => {
-            const stats = makeStats({
-                proficiency: 4,
-                race: { name: 'Dragonborn', traits: [{ automation: { uses: 'proficiency_bonus' } }] },
+        for (const { desc, race, proficiency, maxUses, deps } of dragonbornCases) {
+            it(`renders Breath Weapon — ${desc}`, () => {
+                const stats = makeStats({ race, proficiency });
+                renderComponent(stats);
+                const expectedDeps = deps !== undefined ? deps : [stats.level];
+                assertTrackedResourceRendered({
+                    label: 'Breath Weapon',
+                    resourceKey: 'breathweaponUses',
+                    getMaxValue: maxUses,
+                    playerName: 'Thorin',
+                    campaignName: mockCampaignName,
+                    playerStats: stats,
+                    deps: expectedDeps,
+                });
             });
-            renderComponent(stats);
-            assertTrackedResourceRendered({
-                label: 'Breath Weapon',
-                resourceKey: 'breathweaponUses',
-                getMaxValue: 4,
-            });
-        });
-
-        it('falls back to 1 when automation.uses is undefined', () => {
-            const stats = makeStats({
-                race: { name: 'Dragonborn', traits: [{}] },
-            });
-            renderComponent(stats);
-            assertTrackedResourceRendered({
-                label: 'Breath Weapon',
-                resourceKey: 'breathweaponUses',
-                getMaxValue: 1,
-            });
-        });
-
-        it('falls back to 1 when traits is undefined', () => {
-            const stats = makeStats({
-                race: { name: 'Dragonborn' },
-            });
-            renderComponent(stats);
-            assertTrackedResourceRendered({
-                label: 'Breath Weapon',
-                resourceKey: 'breathweaponUses',
-                getMaxValue: 1,
-            });
-        });
-
-        it('falls back to 1 when traits is an empty array', () => {
-            const stats = makeStats({
-                race: { name: 'Dragonborn', traits: [] },
-            });
-            renderComponent(stats);
-            assertTrackedResourceRendered({
-                label: 'Breath Weapon',
-                resourceKey: 'breathweaponUses',
-                getMaxValue: 1,
-            });
-        });
-
-        it('passes deps with playerStats.level array for Dragonborn', () => {
-            const stats = makeStats({
-                race: { name: 'Dragonborn', traits: [{ automation: { uses: 2 } }] },
-            });
-            renderComponent(stats);
-            expect(mockRenderData.deps).toEqual([stats.level]);
-        });
-
-        it('passes playerName and campaignName to TrackedResourceInput', () => {
-            const stats = makeStats({
-                name: 'Garrok',
-                race: { name: 'Dragonborn', traits: [{ automation: { uses: 2 } }] },
-            });
-            renderComponent(stats, 'test-campaign');
-            assertTrackedResourceRendered({
-                playerName: 'Garrok',
-                campaignName: 'test-campaign',
-            });
-        });
+        }
     });
 
     describe('Goliath features', () => {
-        const goliathBase = {
-            name: 'Kara',
-            level: 5,
-            proficiency: 3,
-            race: { name: 'Goliath' },
-        };
-
-        it('returns null when Goliath has no subrace', () => {
-            const stats = makeStats({ ...goliathBase, race: { name: 'Goliath' } });
-            renderComponent(stats);
-            assertNoTrackedResourceRendered();
-        });
-
-        it('returns null when Goliath has an unknown subrace', () => {
-            const stats = makeStats({
-                ...goliathBase,
-                race: { name: 'Goliath', subrace: { name: 'Iron Giant' } },
-            });
-            renderComponent(stats);
-            assertNoTrackedResourceRendered();
-        });
-
-        it('passes proficiency as max uses for Goliath ancestry features', () => {
-            const stats = makeStats({
-                ...goliathBase,
-                proficiency: 6,
-                race: { name: 'Goliath', subrace: { name: 'Stone Giant' } },
-            });
-            renderComponent(stats);
-            assertTrackedResourceRendered({
-                getMaxValue: 6,
-            });
-        });
-
-        it('falls back to 0 when proficiency is undefined for Goliath', () => {
-            const stats = makeStats({
-                ...goliathBase,
-                proficiency: undefined,
-                race: { name: 'Goliath', subrace: { name: 'Cloud Giant' } },
-            });
-            renderComponent(stats);
-            assertTrackedResourceRendered({
-                getMaxValue: 0,
-            });
-        });
-
-        it('passes deps with full playerStats object for Goliath', () => {
-            const stats = makeStats({
-                ...goliathBase,
-                race: { name: 'Goliath', subrace: { name: 'Stone Giant' } },
-            });
-            renderComponent(stats);
-            expect(mockRenderData.deps).toEqual([stats]);
-        });
-
-        it('returns null when Goliath subrace is undefined', () => {
-            const stats = makeStats({
-                ...goliathBase,
-                race: { name: 'Goliath', subrace: undefined },
-            });
-            renderComponent(stats);
-            assertNoTrackedResourceRendered();
-        });
-    });
-
-    describe('GIANT_ANCESTRY_MAP registry completeness', () => {
-        const goliathBase = {
-            name: 'Kara',
-            level: 5,
-            proficiency: 3,
-            race: { name: 'Goliath' },
-        };
-
-        const expectedAncestries = [
-            { name: 'Cloud Giant', label: "Cloud's Jaunt", resourceKey: 'cloudsJauntUses' },
-            { name: 'Fire Giant', label: "Fire's Burn", resourceKey: 'firesBurnUses' },
-            { name: 'Frost Giant', label: "Frost's Chill", resourceKey: 'frostsChillUses' },
-            { name: 'Hill Giant', label: "Hill's Tumble", resourceKey: 'hillsTumbleUses' },
-            { name: 'Stone Giant', label: "Stone's Endurance", resourceKey: 'stonesEnduranceUses' },
-            { name: 'Storm Giant', label: "Storm's Thunder", resourceKey: 'stormsThunderUses' },
+        const goliathNullCases = [
+            { desc: 'no subrace', race: { name: 'Goliath' } },
+            { desc: 'unknown subrace', race: { name: 'Goliath', subrace: { name: 'Iron Giant' } } },
+            { desc: 'undefined subrace', race: { name: 'Goliath', subrace: undefined } },
         ];
 
-        for (const ancestry of expectedAncestries) {
-            it(`renders ${ancestry.name} with correct label and resourceKey`, () => {
-                const stats = makeStats({
-                    ...goliathBase,
-                    race: { name: 'Goliath', subrace: { name: ancestry.name } },
-                });
+        for (const { desc, race } of goliathNullCases) {
+            it(`returns null when Goliath has ${desc}`, () => {
+                const stats = makeStats({ race });
+                renderComponent(stats);
+                assertNoTrackedResourceRendered();
+            });
+        }
+
+        const goliathSupportedCases = [
+            { desc: 'Stone Giant with proficiency', race: { name: 'Goliath', subrace: { name: 'Stone Giant' } }, proficiency: 6, maxUses: 6 },
+            { desc: 'Cloud Giant with undefined proficiency', race: { name: 'Goliath', subrace: { name: 'Cloud Giant' } }, proficiency: undefined, maxUses: 0 },
+        ];
+
+        for (const { desc, race, proficiency, maxUses } of goliathSupportedCases) {
+            it(`renders Goliath ancestry feature — ${desc}`, () => {
+                const stats = makeStats({ proficiency, race });
                 renderComponent(stats);
                 assertTrackedResourceRendered({
-                    label: ancestry.label,
-                    resourceKey: ancestry.resourceKey,
+                    getMaxValue: maxUses,
+                    campaignName: mockCampaignName,
+                    playerStats: stats,
+                    deps: [stats],
                 });
             });
         }

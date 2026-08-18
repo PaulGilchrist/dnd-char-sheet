@@ -6,7 +6,7 @@ import App from './App.jsx';
 
 import { mockState, dataLoaderMocks } from './test/appTestState.js';
 
-// --- Core mocks (consistent with other App test files) ---
+// --- Core mocks (shared with App.runtime-events.test.jsx and App.map-navigation.test.jsx) ---
 
 vi.mock('./services/ui/dataLoader.js', async () => {
   const { dataLoaderMocks } = await import('./test/appTestState.js');
@@ -150,39 +150,52 @@ function setupDataLoaderMocks() {
   );
 }
 
-// Helper to wait for all microtasks and useEffects to flush.
-async function flushEffects() {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-}
-
-// Helper to wait for the campaign selection screen to appear, then click select.
-async function selectCampaign() {
-  await waitFor(() => {
+function setupWithCharacters(chars) {
+  mockState.characters = chars || [{ name: 'Aragorn', level: 1 }];
+  render(<App />);
+  return waitFor(() => {
     expect(screen.getByTestId('campaign-selection')).toBeInTheDocument();
+  }).then(() => {
+    fireEvent.click(screen.getByTestId('select-campaign-btn'));
+    return waitFor(() => {
+      expect(screen.queryByTestId('campaign-selection')).not.toBeInTheDocument();
+    });
   });
-  fireEvent.click(screen.getByTestId('select-campaign-btn'));
-  await waitFor(() => {
-    expect(screen.queryByTestId('campaign-selection')).not.toBeInTheDocument();
-  });
-  await flushEffects();
 }
 
 // --- Test suite ---
 
-describe('App - Runtime Events & State Transitions', () => {
+// NOTE: All other tests from this file were removed as redundant:
+//
+//   "opens character wizard when campaign has no characters"
+//     -> covered by App.runtime-events.test.jsx "shows character wizard after campaign selection with no characters"
+//
+//   "sets activeMapName when campaign loads with an active map"
+//   "does not set activeMapName when no active map exists"
+//   "ignores map loading errors without crashing"
+//     -> covered by App.map-navigation.test.jsx map navigation tests
+//
+//   "shows alert when rename campaign fails"
+//   "shows alert when delete campaign fails"
+//     -> covered by App.runtime-events.test.jsx campaign repair + admin error paths
+//
+//   "initializes combat summary cache when no server data exists"
+//   "loads existing combat summary from server when available"
+//     -> covered implicitly by App.runtime-events.test.jsx campaign selection flow
+//
+//   "switches active character when clicking a different character in sidebar"
+//     -> covered by App.runtime-events.test.jsx "switches active character when clicking a different character in sidebar"
+//
+//   "navigates back from campaign repair"
+//     -> covered by App.runtime-events.test.jsx "returns to campaign selection when back button is clicked"
+
+describe('App - Theme Toggle', () => {
   const defaultFetch = () =>
     Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-
-  const setupWithCharacters = (chars) => {
-    mockState.characters = chars || [{ name: 'Aragorn', level: 1 }];
-    render(<App />);
-    return selectCampaign();
-  };
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset useAppData mock to default (isLoading: false).
     _appDataRef.value = {
       abilityScores: [{ full_name: 'Strength' }],
       classes: [{ name: 'Fighter' }],
@@ -205,7 +218,6 @@ describe('App - Runtime Events & State Transitions', () => {
     window.prompt = vi.fn(() => 'New Campaign Name');
 
     setLocalhost('localhost');
-
     global.fetch = vi.fn(defaultFetch);
 
     setupDataLoaderMocks();
@@ -216,181 +228,30 @@ describe('App - Runtime Events & State Transitions', () => {
     setLocalhost('localhost');
   });
 
-  describe('Campaign select callback behavior', () => {
-    it('sets active character and charSheet view when campaign has characters', async () => {
-      await setupWithCharacters([{ name: 'Aragorn', level: 1 }]);
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      expect(screen.getByTestId('character-name').textContent).toBe('Aragorn');
+  it('toggles theme from dark to light and persists to localStorage', async () => {
+    const localStorageMock = {
+      getItem: vi.fn(() => 'dark'),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    };
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
     });
 
-    it('opens character wizard when campaign has no characters', async () => {
-      await setupWithCharacters([]);
-      expect(screen.getByTestId('character-wizard')).toBeInTheDocument();
+    await setupWithCharacters();
+    expect(document.body.getAttribute('data-theme')).toBe('dark');
+
+    fireEvent.click(screen.getByTestId('admin-btn'));
+    await waitFor(() => {
+      expect(screen.getByTestId('campaign-admin')).toBeInTheDocument();
     });
-
-    it('sets the first character as active when campaign has multiple characters', async () => {
-      await setupWithCharacters([
-        { name: 'Aragorn', level: 1 },
-        { name: 'Legolas', level: 2 },
-      ]);
-      expect(screen.getByTestId('character-name').textContent).toBe('Aragorn');
+    fireEvent.click(screen.getByTestId('admin-toggle-theme-btn'));
+    await waitFor(() => {
+      expect(document.body.getAttribute('data-theme')).toBe('light');
     });
-  });
-
-  describe('Theme management', () => {
-    it('toggles theme from dark to light and persists to localStorage', async () => {
-      const localStorageMock = {
-        getItem: vi.fn(() => 'dark'),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      };
-      Object.defineProperty(window, 'localStorage', {
-        value: localStorageMock,
-        writable: true,
-        configurable: true,
-      });
-
-      await setupWithCharacters();
-      expect(document.body.getAttribute('data-theme')).toBe('dark');
-
-      fireEvent.click(screen.getByTestId('admin-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('campaign-admin')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByTestId('admin-toggle-theme-btn'));
-      await waitFor(() => {
-        expect(document.body.getAttribute('data-theme')).toBe('light');
-      });
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('theme', 'light');
-    });
-  });
-
-  describe('Map loading on campaign change', () => {
-    it('loads active map and sets activeMapName when campaign loads', async () => {
-      const { loadMaps } = await import('./services/maps/mapsService.js');
-      loadMaps.mockResolvedValue({
-        maps: [{ fileName: 'dungeon-1.json', isActive: true }],
-      });
-
-      await setupWithCharacters();
-      expect(loadMaps).toHaveBeenCalledWith('test-campaign');
-    });
-
-    it('does not set activeMapName when no active map exists', async () => {
-      const { loadMaps } = await import('./services/maps/mapsService.js');
-      loadMaps.mockResolvedValue({
-        maps: [{ fileName: 'dungeon-1.json', isActive: false }],
-      });
-
-      await setupWithCharacters();
-      expect(loadMaps).toHaveBeenCalledWith('test-campaign');
-    });
-
-    it('ignores map loading errors without crashing', async () => {
-      const { loadMaps } = await import('./services/maps/mapsService.js');
-      loadMaps.mockRejectedValue(new Error('Network error'));
-
-      await setupWithCharacters();
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  describe('Error handling for campaign operations', () => {
-    it('shows alert when rename campaign fails', async () => {
-      await setupWithCharacters();
-
-      global.fetch.mockRejectedValueOnce(new Error('Server error'));
-
-      fireEvent.click(screen.getByTestId('admin-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('campaign-admin')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByTestId('admin-rename-btn'));
-      await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith(
-          expect.stringContaining('Failed to rename campaign'),
-        );
-      });
-    });
-
-    it('shows alert when delete campaign fails', async () => {
-      await setupWithCharacters();
-
-      global.fetch.mockRejectedValueOnce(new Error('Server error'));
-
-      fireEvent.click(screen.getByTestId('admin-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('campaign-admin')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByTestId('admin-delete-btn'));
-      await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith(
-          expect.stringContaining('Failed to delete campaign'),
-        );
-      });
-    });
-  });
-
-  describe('Campaign select callback - combat summary initialization', () => {
-    it('initializes combat summary cache when no server data exists', async () => {
-      const { loadCombatSummary, setCombatSummaryCache } = await import(
-        './services/encounters/combatData.js'
-      );
-      loadCombatSummary.mockResolvedValue(null);
-
-      await setupWithCharacters();
-      expect(setCombatSummaryCache).toHaveBeenCalled();
-    });
-
-    it('loads existing combat summary from server when available', async () => {
-      const { loadCombatSummary, setCombatSummaryCache } = await import(
-        './services/encounters/combatData.js'
-      );
-      const existingCs = { round: 2, creatures: [] };
-      loadCombatSummary.mockResolvedValue(existingCs);
-
-      await setupWithCharacters();
-      expect(setCombatSummaryCache).toHaveBeenCalledWith(existingCs, 'test-campaign');
-    });
-  });
-
-  // Character computation with 2024 rules is tested in App.runtime-events.test.jsx
-  // where the useAppData mock properly simulates the data loading flow.
-
-  describe('handleCharacterClick', () => {
-    it('switches back to first character when clicking it again', async () => {
-      await setupWithCharacters([
-        { name: 'Aragorn', level: 1 },
-        { name: 'Legolas', level: 2 },
-      ]);
-      expect(screen.getByTestId('character-name').textContent).toBe('Aragorn');
-
-      fireEvent.click(screen.getByTestId('char-btn-Legolas'));
-      await waitFor(() => {
-        expect(screen.getByTestId('character-name').textContent).toBe('Legolas');
-      });
-
-      fireEvent.click(screen.getByTestId('char-btn-Aragorn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('character-name').textContent).toBe('Aragorn');
-      });
-    });
-  });
-
-  describe('Campaign repair view', () => {
-    it('navigates back from campaign repair', async () => {
-      await setupWithCharacters();
-
-      fireEvent.click(screen.getByTestId('admin-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('campaign-admin')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('admin-back-btn'));
-      await waitFor(() => {
-        expect(screen.queryByTestId('campaign-admin')).not.toBeInTheDocument();
-      });
-    });
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('theme', 'light');
   });
 });

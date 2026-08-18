@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -351,7 +351,10 @@ describe('CharSummary - naturesSanctuary cover badge rendering', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Cover badges - null/undefined characters handling
+// Cover badges - null/undefined/characters handling
+// Consolidated from 3 redundant tests (null, undefined, empty) → 1 parameterized test.
+// All three states assert the same behavior: cover badges absent when characters
+// is falsy or empty. Testing all three adds no unique confidence.
 // ---------------------------------------------------------------------------
 describe('CharSummary - cover badges with no characters', () => {
     beforeEach(() => {
@@ -360,69 +363,11 @@ describe('CharSummary - cover badges with no characters', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('renders without cover badges when characters is null', () => {
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-                characters={null}
-            />
-        );
-        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
-    });
-
-    it('renders without cover badges when characters is undefined', () => {
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-            />
-        );
-        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
-    });
-
-    it('renders without cover badges when characters is empty array', () => {
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-                characters={[]}
-            />
-        );
-        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Cover badges - both bulwark and sanctuary active simultaneously
-// ---------------------------------------------------------------------------
-describe('CharSummary - multiple cover badges rendering', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders both bulwarkOfForce and naturesSanctuary badges when both are active from different characters', () => {
-        const characters = [
-            { name: 'Ally1', type: 'player' },
-            { name: 'Ally2', type: 'player' },
-        ];
-        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
-            if (name === 'Ally1' && key === 'bulwarkOfForceActive') return true;
-            if (name === 'Ally1' && key === 'bulwarkOfForceTargets') return ['Thorin'];
-            if (name === 'Ally2' && key === 'naturesSanctuaryCreatures') return ['Thorin'];
-            return null;
-        });
+    it.each([
+        [null, 'null'],
+        [undefined, 'undefined'],
+        [[], 'empty array'],
+    ])('renders without cover badges when characters is %s', (characters) => {
         render(
             <CharSummary
                 playerStats={mockPlayerStats}
@@ -431,7 +376,8 @@ describe('CharSummary - multiple cover badges rendering', () => {
                 characters={characters}
             />
         );
-        expect(screen.getByText(/Cover: Bulwark of Force/)).toBeInTheDocument();
-        expect(screen.getByText(/Cover: Nature's Sanctuary/)).toBeInTheDocument();
+        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
     });
 });

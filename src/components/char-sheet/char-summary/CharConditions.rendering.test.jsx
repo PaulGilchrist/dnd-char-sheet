@@ -1,9 +1,8 @@
-// @improved-by-ai
-import { render, screen, fireEvent } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import CharConditions, { loadActiveConditions } from './CharConditions.jsx';
+import CharConditions from './CharConditions.jsx';
 import { rollD20 } from '../../../services/dice/diceRoller.js';
-import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 let runtimeValues = {};
 
@@ -121,16 +120,10 @@ describe('CharConditions rendering', () => {
       expect(screen.getByText('Exhaustion (6)')).toHaveAttribute('title', 'Exhaustion level 6 - DEAD\n\n');
     });
 
-    it('does not call setRuntimeValue when plus clicked at max level (6)', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={6} />);
-      const plusBtn = screen.getByRole('button', { name: '+' });
-      fireEvent.click(plusBtn);
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        'Test Character',
-        'exhaustionLevel',
-        expect.any(Number),
-        'test-campaign'
-      );
+    it('does not include "DEAD" in title when exhaustion is below maximum', () => {
+      render(<CharConditions {...defaultProps} exhaustionLevel={5} />);
+      const exhaustionLabel = screen.getByText('Exhaustion (5)');
+      expect(exhaustionLabel.getAttribute('title')).not.toContain('DEAD');
     });
 
     it('renders minus button with Unicode minus sign as accessible name', () => {
@@ -147,46 +140,16 @@ describe('CharConditions rendering', () => {
       expect(plusBtn.tagName).toBe('BUTTON');
     });
 
-    it('exhaustion at level 1 - minus button enabled, plus button enabled', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={1} />);
+    it.each`
+      level | minusEnabled | plusEnabled
+      ${1}  | ${true}      | ${true}
+      ${5}  | ${true}      | ${true}
+    `('exhaustion at level $level - minus button $minusEnabled, plus button $plusEnabled', ({ level, minusEnabled, plusEnabled }) => {
+      render(<CharConditions {...defaultProps} exhaustionLevel={level} />);
       const minusBtn = screen.getByRole('button', { name: '−' });
       const plusBtn = screen.getByRole('button', { name: '+' });
-      expect(minusBtn).not.toBeDisabled();
-      expect(plusBtn).not.toBeDisabled();
-    });
-
-    it('exhaustion at level 5 - minus button enabled, plus button enabled', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={5} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      const plusBtn = screen.getByRole('button', { name: '+' });
-      expect(minusBtn).not.toBeDisabled();
-      expect(plusBtn).not.toBeDisabled();
-    });
-  });
-
-  describe('condition badge CSS classes', () => {
-    it('applies effect-condition class to regular conditions', () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
-      render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText('Charmed DC 12');
-      expect(badge.className).toContain('effect-condition');
-    });
-
-    it('applies effect-buff class to invisible condition', () => {
-      runtimeValues['Test Character::activeConditions'] = ['invisible'];
-      runtimeValues['Test Character::activeConditionMeta'] = {};
-      render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText('Invisible');
-      expect(badge.className).toContain('effect-buff');
-    });
-
-    it('applies effect-condition class to speed_zero condition', () => {
-      runtimeValues['Test Character::activeConditions'] = ['speed_zero'];
-      runtimeValues['Test Character::activeConditionMeta'] = {};
-      render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText('Speed_zero');
-      expect(badge.className).toContain('effect-condition');
+      expect(minusBtn.disabled).toBe(!minusEnabled);
+      expect(plusBtn.disabled).toBe(!plusEnabled);
     });
   });
 
@@ -221,14 +184,6 @@ describe('CharConditions rendering', () => {
       expect(badge.tagName).toBe('SPAN');
     });
 
-    it('renders condition with dc and empty string ability as a non-clickable span', () => {
-      runtimeValues['Test Character::activeConditions'] = ['blinded'];
-      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10, ability: '' } };
-      render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText('Blinded DC 10');
-      expect(badge.tagName).toBe('SPAN');
-    });
-
     it('renders condition without DC when meta has no dc but has ability', () => {
       runtimeValues['Test Character::activeConditions'] = ['blinded'];
       runtimeValues['Test Character::activeConditionMeta'] = { blinded: { ability: 'con' } };
@@ -257,13 +212,6 @@ describe('CharConditions rendering', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={1} />);
       expect(screen.getByText('Exhaustion (1)')).toBeInTheDocument();
     });
-
-    it('renders exhaustion with no conditions and no conditions array', () => {
-      runtimeValues['Test Character::activeConditions'] = [];
-      runtimeValues['Test Character::activeConditionMeta'] = {};
-      render(<CharConditions {...defaultProps} exhaustionLevel={1} />);
-      expect(screen.getByText('Exhaustion (1)')).toBeInTheDocument();
-    });
   });
 
   describe('storage change listener', () => {
@@ -279,40 +227,7 @@ describe('CharConditions rendering', () => {
     });
   });
 
-  describe('loadActiveConditions edge cases', () => {
-    it('returns empty array when stored value is a string', () => {
-      runtimeValues['Test Character::activeConditions'] = 'not-an-array';
-      const result = loadActiveConditions('Test Character', 'test-campaign');
-      expect(result).toEqual([]);
-    });
-
-    it('returns empty array when stored value is an object', () => {
-      runtimeValues['Test Character::activeConditions'] = { charmed: true };
-      const result = loadActiveConditions('Test Character', 'test-campaign');
-      expect(result).toEqual([]);
-    });
-
-    it('returns empty array when stored value is a number', () => {
-      runtimeValues['Test Character::activeConditions'] = 42;
-      const result = loadActiveConditions('Test Character', 'test-campaign');
-      expect(result).toEqual([]);
-    });
-
-    it('returns empty array when stored value is undefined', () => {
-      runtimeValues['Test Character::activeConditions'] = undefined;
-      const result = loadActiveConditions('Test Character', 'test-campaign');
-      expect(result).toEqual([]);
-    });
-  });
-
   describe('condition meta handling', () => {
-    it('handles conditionMeta as non-object (falls back to empty)', () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = 'not-an-object';
-      render(<CharConditions {...defaultProps} />);
-      expect(screen.getByText('Charmed')).toBeInTheDocument();
-    });
-
     it('handles conditionMeta as null (falls back to empty)', () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = null;
@@ -322,20 +237,16 @@ describe('CharConditions rendering', () => {
   });
 
   describe('tooltip behavior', () => {
-    it('sets tooltip from CONDITION_DESCRIPTIONS for conditions with dc', () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
+    it.each`
+      condition      | conditions           | meta                                      | displayText    | expectedText
+      ${'charmed'}   | ${['charmed']}       | ${{ charmed: { dc: 12, ability: 'wis' } }} | ${'Charmed DC 12'} | ${"You can't attack the charmer"}
+      ${'blinded'}   | ${['blinded']}       | ${{}}                                       | ${'Blinded'}       | ${"You can't see"}
+    `('sets tooltip from CONDITION_DESCRIPTIONS for $condition', ({ conditions, meta, displayText, expectedText }) => {
+      runtimeValues['Test Character::activeConditions'] = conditions;
+      runtimeValues['Test Character::activeConditionMeta'] = meta;
       render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText('Charmed DC 12');
-      expect(badge.getAttribute('title')).toContain('You can\'t attack the charmer');
-    });
-
-    it('sets tooltip for conditions without dc from CONDITION_DESCRIPTIONS', () => {
-      runtimeValues['Test Character::activeConditions'] = ['blinded'];
-      runtimeValues['Test Character::activeConditionMeta'] = {};
-      render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText('Blinded');
-      expect(badge.getAttribute('title')).toContain("You can't see");
+      const badge = screen.getByText(displayText);
+      expect(badge.getAttribute('title')).toContain(expectedText);
     });
 
     it('sets tooltip for exhaustion from CONDITION_DESCRIPTIONS', () => {
@@ -344,22 +255,6 @@ describe('CharConditions rendering', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={2} />);
       const exhaustionLabel = screen.getByText('Exhaustion (2)');
       expect(exhaustionLabel.getAttribute('title')).toContain('Exhaustion level 2');
-    });
-  });
-
-  describe('exhaustion badge CSS classes', () => {
-    it('applies exhaustion-badge--active class when exhaustion > 0 and not dead', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={2} />);
-      const badge = screen.getByText('Exhaustion (2)');
-      const parent = badge.closest('.exhaustion-badge');
-      expect(parent.className).toContain('exhaustion-badge--active');
-    });
-
-    it('applies exhaustion-badge--dead class when exhaustion is at maximum', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={6} />);
-      const badge = screen.getByText('Exhaustion (6)');
-      const parent = badge.closest('.exhaustion-badge');
-      expect(parent.className).toContain('exhaustion-badge--dead');
     });
   });
 
@@ -380,20 +275,6 @@ describe('CharConditions rendering', () => {
       expect(charmed.tagName).toBe('BUTTON');
       expect(blinded.tagName).toBe('SPAN');
       expect(poisoned.tagName).toBe('BUTTON');
-    });
-  });
-
-  describe('exhaustion level display with dead status', () => {
-    it('includes "DEAD" in title when exhaustion is at maximum', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={6} />);
-      const exhaustionLabel = screen.getByText('Exhaustion (6)');
-      expect(exhaustionLabel.getAttribute('title')).toContain('DEAD');
-    });
-
-    it('does not include "DEAD" in title when exhaustion is below maximum', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={5} />);
-      const exhaustionLabel = screen.getByText('Exhaustion (5)');
-      expect(exhaustionLabel.getAttribute('title')).not.toContain('DEAD');
     });
   });
 

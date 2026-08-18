@@ -1,4 +1,16 @@
-// @improved-by-ai
+// @cleaned-by-ai
+//
+// Cleanup: Removed 24 redundant tests (83%) already covered in:
+//   - CharSummary-SpeedCalculations.test.jsx (fly speed, hover, swim, ice walk,
+//     speed bonus, large form, tremorsense, no-buffs baseline, multiple buffs)
+//   - CharSummary-Remaining.test.jsx (Hunters Mark badge)
+//
+// Only the unique AC bonus buff indicator tests remain — these assert observable
+// AC display text that no other test file verifies.
+//
+// Original: 29 tests / 409 lines
+// After: 5 tests / ~130 lines
+
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -103,7 +115,7 @@ const mockPlayerStats = {
 const mockCampaignName = 'test-campaign';
 
 // ---------------------------------------------------------------------------
-// AC bonus indicators from buffs
+// AC bonus indicators from buffs — unique tests not covered elsewhere
 // ---------------------------------------------------------------------------
 describe('CharSummary - AC Bonus Buff Indicators', () => {
     beforeEach(() => {
@@ -145,265 +157,5 @@ describe('CharSummary - AC Bonus Buff Indicators', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'barkskin' }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/AC 17 from Barkskin/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Fly speed variations from different buff effects
-// ---------------------------------------------------------------------------
-describe('CharSummary - Fly Speed Buff Effects', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('sets fly speed from dragon_wings buff with custom speed', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'dragon_wings', flySpeed: 30 }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/fly 30 ft/)).toBeInTheDocument();
-    });
-
-    it('sets fly speed from avenging_angel_flight buff with custom speed', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'avenging_angel_flight', flySpeed: 40 }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/fly 40 ft/)).toBeInTheDocument();
-    });
-
-    it('sets fly speed from telekinetic_leap buff with custom speed', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'telekinetic_leap', flySpeed: 25 }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/fly 25 ft/)).toBeInTheDocument();
-    });
-
-    it('uses default fly speed 60 for dragon_wings when flySpeed not provided', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'dragon_wings' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/fly 60 ft/)).toBeInTheDocument();
-    });
-
-    it('uses default fly speed 60 for avenging_angel_flight when flySpeed not provided', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'avenging_angel_flight' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/fly 60 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Hover indicator for specific fly buffs
-// ---------------------------------------------------------------------------
-describe('CharSummary - Fly Hover Indicator', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows hover indicator for dragon_wings buff', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'dragon_wings', flySpeed: 30 }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/hover/)).toBeInTheDocument();
-    });
-
-    it('shows hover indicator for glistening_flight buff', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'glistening_flight' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/hover/)).toBeInTheDocument();
-    });
-
-    it('does not show hover for fly_speed_equals_walk_speed buff', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'fly_speed_equals_walk_speed' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/hover/)).not.toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Swim speed from aquatic_adaptation buff
-// ---------------------------------------------------------------------------
-describe('CharSummary - Swim Speed Buff', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('sets swim speed from aquatic_adaptation buff', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'aquatic_adaptation' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 50 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Ice walk indicator
-// ---------------------------------------------------------------------------
-describe('CharSummary - Ice Walk Indicator', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows ice walk indicator when ice_walk buff is active', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'ice_walk' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/ice walk/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Fly speed equals walk speed with name badge
-// ---------------------------------------------------------------------------
-describe('CharSummary - Fly Speed Buff Name Badge', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows buff name badge when fly_speed_equals_walk_speed buff has a name', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'fly_speed_equals_walk_speed', name: 'Fly Speed Buff' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Fly Speed Buff Active/)).toBeInTheDocument();
-    });
-
-    it('shows badge with empty name when fly_speed_equals_walk_speed buff has no name', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'fly_speed_equals_walk_speed' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Active/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Speed bonus from speed_boost and large_form buffs
-// ---------------------------------------------------------------------------
-describe('CharSummary - Speed Bonus Buffs', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('applies speed bonus from speed_boost buff', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'speed_boost', speedBonus: 15 }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toMatch(/40 ft/);
-    });
-
-    it('applies speed bonus from large_form buff', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'large_form' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toMatch(/35 ft/);
-    });
-
-    it('shows Large Form badge when large_form buff is active', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'large_form' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Large Form/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// No active buffs — verify baseline rendering
-// ---------------------------------------------------------------------------
-describe('CharSummary - No Active Buffs', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders base speed without any buff modifications', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('25 ft');
-    });
-
-    it('does not show any fly speed when no fly buffs are active', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/fly/)).not.toBeInTheDocument();
-    });
-
-    it('does not show any swim speed when no swim buffs are active', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/swim/)).not.toBeInTheDocument();
-    });
-
-    it('does not show hover text when no hover buffs are active', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/hover/)).not.toBeInTheDocument();
-    });
-
-    it('does not show ice walk when no ice_walk buff is active', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/ice walk/)).not.toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Multiple buffs active simultaneously
-// ---------------------------------------------------------------------------
-describe('CharSummary - Multiple Buffs Active', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows both fly speed and ice walk when both buffs are active', () => {
-        getActiveBuffs.mockReturnValue([
-            { effect: 'dragon_wings', flySpeed: 30 },
-            { effect: 'ice_walk' },
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/fly 30 ft/)).toBeInTheDocument();
-        expect(screen.getByText(/ice walk/)).toBeInTheDocument();
-    });
-
-    it('shows both swim and climb speeds from different buffs', () => {
-        getActiveBuffs.mockReturnValue([
-            { effect: 'aquatic_adaptation' },
-            { name: 'Aspect of the Wilds', effect: 'climb_speed_aspect', optionName: 'Panther' },
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 50 ft/)).toBeInTheDocument();
-        expect(screen.getByText(/climb 25 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Tremorsense buff
-// ---------------------------------------------------------------------------
-describe('CharSummary - Tremorsense Buff', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows tremorsense badge when tremorsense_60ft buff is active', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'tremorsense_60ft' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Tremorsense 60 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Hunters Mark buff
-// ---------------------------------------------------------------------------
-describe('CharSummary - Hunters Mark Buff', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows Hunters Mark badge when active', () => {
-        getActiveBuffs.mockReturnValue([{ name: "Hunter's Mark" }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Hunter's Mark Active/)).toBeInTheDocument();
     });
 });

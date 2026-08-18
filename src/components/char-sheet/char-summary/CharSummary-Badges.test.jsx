@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getCombatSummary } from '../../../services/encounters/combatData.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -164,5 +165,34 @@ describe('CharSummary - Starry Form Constellation Badge', () => {
         });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Sanctuary info badge from creatures loop (sanctuaryInfoChar useMemo)
+// Consolidated from CharSummary-ExtraCoverage.test.jsx — the only remaining
+// unique test after removing 5 redundant/brittle tests.
+// ---------------------------------------------------------------------------
+describe('CharSummary - Sanctuary Info Badge from Creatures Loop', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+    });
+
+    it('renders Sanctuary badge when another player druid has sanctuary on the player', () => {
+        vi.mocked(getCombatSummary).mockReturnValue({
+            creatures: [
+                { name: 'Druid1', type: 'player' },
+                { name: 'Thorin', type: 'player' },
+            ],
+        });
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (name === 'Druid1' && key === 'naturesSanctuaryActive') return true;
+            if (name === 'Druid1' && key === 'naturesSanctuaryCreatures') return ['Thorin'];
+            if (name === 'Druid1' && key === 'naturesSanctuaryResistance') return 'Cold';
+            return null;
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Sanctuary/)).toBeInTheDocument();
     });
 });

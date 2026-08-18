@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -19,12 +19,15 @@ import {
   MockFactions,
   MockCampaignAdmin,
 } from './mockComponents';
+import { mockState } from './appTestState.js';
 
 describe('mockComponents', () => {
   describe('MockCharSheet', () => {
     it('renders character name from playerSummary', () => {
-      render(<MockCharSheet playerSummary={{ name: 'TestChar' }} />);
+      const onDelete = vi.fn();
+      render(<MockCharSheet playerSummary={{ name: 'TestChar' }} onDeleteCharacter={onDelete} />);
       expect(screen.getByTestId('character-name')).toHaveTextContent('TestChar');
+      expect(onDelete).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -57,21 +60,24 @@ describe('mockComponents', () => {
     it('invokes onUploadClick when upload button is clicked', () => {
       const onUploadClick = vi.fn();
       render(<MockCharSheet onUploadClick={onUploadClick} />);
-      fireEvent.click(screen.getByText('Upload'));
+      const buttons = screen.getAllByRole('button');
+      fireEvent.click(buttons[1]);
       expect(onUploadClick).toHaveBeenCalledTimes(1);
     });
 
     it('invokes onSaveClick when download button is clicked', () => {
       const onSaveClick = vi.fn();
       render(<MockCharSheet onSaveClick={onSaveClick} />);
-      fireEvent.click(screen.getByText('Download'));
+      const buttons = screen.getAllByRole('button');
+      fireEvent.click(buttons[2]);
       expect(onSaveClick).toHaveBeenCalledTimes(1);
     });
 
     it('invokes onEditCharacter when edit button is clicked', () => {
       const onEditCharacter = vi.fn();
       render(<MockCharSheet onEditCharacter={onEditCharacter} />);
-      fireEvent.click(screen.getByText('Edit'));
+      const buttons = screen.getAllByRole('button');
+      fireEvent.click(buttons[3]);
       expect(onEditCharacter).toHaveBeenCalledTimes(1);
     });
   });
@@ -98,11 +104,22 @@ describe('mockComponents', () => {
 
   describe('MockCampaignSelection', () => {
     it('calls onCampaignSelect with the mock campaign name and characters array', () => {
+      mockState.campaignName = 'test-campaign';
+      mockState.characters = ['char1', 'char2'];
       const onSelect = vi.fn();
       render(<MockCampaignSelection onCampaignSelect={onSelect} />);
       fireEvent.click(screen.getByTestId('select-campaign-btn'));
       expect(onSelect).toHaveBeenCalledTimes(1);
-      expect(onSelect).toHaveBeenCalledWith('test-campaign', []);
+      expect(onSelect).toHaveBeenCalledWith('test-campaign', ['char1', 'char2']);
+    });
+
+    it('passes empty characters array when none are set', () => {
+      mockState.campaignName = 'empty-campaign';
+      mockState.characters = [];
+      const onSelect = vi.fn();
+      render(<MockCampaignSelection onCampaignSelect={onSelect} />);
+      fireEvent.click(screen.getByTestId('select-campaign-btn'));
+      expect(onSelect).toHaveBeenCalledWith('empty-campaign', []);
     });
   });
 
@@ -144,6 +161,19 @@ describe('mockComponents', () => {
       render(<MockWizard isEditing={false} />);
       expect(screen.queryByTestId('editing-mode')).toBeNull();
     });
+
+    it('renders both editing character and mode when both props are provided', () => {
+      render(<MockWizard characterData={{ name: 'EditMe' }} isEditing={true} />);
+      expect(screen.getByTestId('editing-character')).toHaveTextContent('EditMe');
+      expect(screen.getByTestId('editing-mode')).toHaveTextContent('Editing Mode');
+    });
+
+    it('calls onComplete with default data even when editing an existing character', () => {
+      const onComplete = vi.fn();
+      render(<MockWizard onComplete={onComplete} characterData={{ name: 'EditMe' }} />);
+      fireEvent.click(screen.getByTestId('wizard-complete-btn'));
+      expect(onComplete).toHaveBeenCalledWith({ name: 'New Character', level: 1 });
+    });
   });
 
   describe('MockSidebar', () => {
@@ -155,7 +185,7 @@ describe('mockComponents', () => {
     it.each([
       ['true', true],
       ['false', false],
-    ])('renders the isLocalhost prop value when it is %s', (expected, isLocalhost) => {
+    ])('renders the isLocalhost prop value as string when it is %s', (expected, isLocalhost) => {
       render(<MockSidebar campaignName="test" isLocalhost={isLocalhost} />);
       expect(screen.getByTestId('sidebar-localhost')).toHaveTextContent(expected);
     });
@@ -354,7 +384,7 @@ describe('mockComponents', () => {
     it.each([
       ['true', true],
       ['false', false],
-    ])('renders the isLocalhost prop value when it is %s', (expected, isLocalhost) => {
+    ])('renders the isLocalhost prop value as string when it is %s', (expected, isLocalhost) => {
       render(<MockMap mapName="m" campaignName="t" isLocalhost={isLocalhost} onBack={vi.fn()} />);
       expect(screen.getByTestId('map-localhost')).toHaveTextContent(expected);
     });
@@ -392,7 +422,7 @@ describe('mockComponents', () => {
     it.each([
       ['true', true],
       ['false', false],
-    ])('renders the isLocalhost prop value when it is %s', (expected, isLocalhost) => {
+    ])('renders the isLocalhost prop value as string when it is %s', (expected, isLocalhost) => {
       render(<MockNotes campaignName="test" isLocalhost={isLocalhost} onBack={vi.fn()} />);
       expect(screen.getByTestId('notes-localhost')).toHaveTextContent(expected);
     });
@@ -414,7 +444,7 @@ describe('mockComponents', () => {
     it.each([
       ['true', true],
       ['false', false],
-    ])('renders the isLocalhost prop value when it is %s', (expected, isLocalhost) => {
+    ])('renders the isLocalhost prop value as string when it is %s', (expected, isLocalhost) => {
       render(<MockQuests campaignName="test" isLocalhost={isLocalhost} onBack={vi.fn()} />);
       expect(screen.getByTestId('quests-localhost')).toHaveTextContent(expected);
     });
@@ -489,7 +519,7 @@ describe('mockComponents', () => {
     it.each([
       ['true', true],
       ['false', false],
-    ])('renders the isLocalhost prop value when it is %s', (expected, isLocalhost) => {
+    ])('renders the isLocalhost prop value as string when it is %s', (expected, isLocalhost) => {
       render(<MockFactions campaignName="test" isLocalhost={isLocalhost} onBack={vi.fn()} />);
       expect(screen.getByTestId('factions-localhost')).toHaveTextContent(expected);
     });

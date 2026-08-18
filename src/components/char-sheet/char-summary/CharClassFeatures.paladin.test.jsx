@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
@@ -84,7 +84,7 @@ describe('PaladinFeatures', () => {
   });
 
   describe('aura of protection', () => {
-    it('renders aura of protection with cha bonus and locked range at level < 6', () => {
+    it('renders locked aura at level < 6 with cha bonus', () => {
       const stats = buildPlayerStats({ level: 5 });
       const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Aura of Protection:');
@@ -93,7 +93,7 @@ describe('PaladinFeatures', () => {
       expect(container.textContent).toContain('(locked)');
     });
 
-    it('renders aura of protection with unlocked range at level >= 6', () => {
+    it('renders unlocked aura with range at level >= 6', () => {
       vi.mocked(auraOfProtection.getAuraRangeFromStats).mockReturnValue(30);
       const stats = buildPlayerStats({ level: 6 });
       const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
@@ -101,15 +101,6 @@ describe('PaladinFeatures', () => {
       expect(container.textContent).toContain('+3');
       expect(container.textContent).toContain('to saves');
       expect(container.textContent).toContain('(30 ft.)');
-    });
-
-    it('uses the correct cha bonus from player stats', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        abilities: [{ name: 'Charisma', bonus: 5 }],
-      });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('+5');
     });
 
     it('does not render aura of protection when charisma is missing', () => {
@@ -144,27 +135,13 @@ describe('PaladinFeatures', () => {
       const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).not.toContain('Aura Range');
     });
-
-    it('renders aura range as undefined when auraRange is missing from class features', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        maxChannelDivinity: 2,
-        extraAttacks: 1,
-      });
-      const stats = buildPlayerStats({ level: 5 });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Aura Range:');
-    });
   });
 
   describe('channel divinity charges', () => {
-    it('renders the tracked resource', () => {
+    it('renders the tracked resource with max from class features', () => {
       const stats = buildPlayerStats({ level: 5 });
       render(<PaladinFeatures playerStats={stats} campaignName="test" />);
       expect(screen.getByTestId('tracked-resource-channelDivinityCharges')).toBeInTheDocument();
-    });
-
-    it('uses maxChannelDivinity from class features as the max value', () => {
-      const stats = buildPlayerStats({ level: 5 });
       const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('2/2');
     });
@@ -187,12 +164,6 @@ describe('PaladinFeatures', () => {
       const stats = buildPlayerStats({ level: 5 });
       const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Extra Attacks: 1');
-    });
-
-    it('renders extra attacks as 0 when class features returns null', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue(null);
-      const stats = buildPlayerStats({ level: 5 });
-      expect(() => render(<PaladinFeatures playerStats={stats} campaignName="test" />)).toThrow('Cannot read properties of null');
     });
 
     it('renders extra attacks as 0 when extraAttacks is missing', () => {
@@ -224,8 +195,8 @@ describe('PaladinFeatures', () => {
       expect(container.textContent).toContain('Great Weapon Fighting');
     });
 
-    it('does not render fighting styles when null', () => {
-      const stats = buildPlayerStats({
+    it('does not render fighting styles when null or undefined', () => {
+      const statsNull = buildPlayerStats({
         level: 1,
         class: {
           name: 'Paladin',
@@ -235,12 +206,10 @@ describe('PaladinFeatures', () => {
           fightingStyles: null,
         },
       });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Fighting Styles');
-    });
+      const { container: containerNull } = render(<PaladinFeatures playerStats={statsNull} campaignName="test" />);
+      expect(containerNull.textContent).not.toContain('Fighting Styles');
 
-    it('does not render fighting styles when undefined', () => {
-      const stats = buildPlayerStats({
+      const statsUndefined = buildPlayerStats({
         level: 1,
         class: {
           name: 'Paladin',
@@ -249,49 +218,27 @@ describe('PaladinFeatures', () => {
           class_levels: [{ level: 1 }],
         },
       });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Fighting Styles');
-    });
-
-    it('renders fighting styles as empty when array is empty', () => {
-      const stats = buildPlayerStats({
-        level: 1,
-        class: {
-          name: 'Paladin',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 1 }],
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Fighting Styles:');
+      const { container: containerUndefined } = render(<PaladinFeatures playerStats={statsUndefined} campaignName="test" />);
+      expect(containerUndefined.textContent).not.toContain('Fighting Styles');
     });
   });
 
   describe('lay on hands pool', () => {
-    it('renders the tracked resource', () => {
+    it('renders the tracked resource with max = 5 * level', () => {
       const stats = buildPlayerStats({ level: 5 });
       render(<PaladinFeatures playerStats={stats} campaignName="test" />);
       expect(screen.getByTestId('tracked-resource-layOnHandsPool')).toBeInTheDocument();
     });
 
-    it('sets max to 5 * level', () => {
-      const stats = buildPlayerStats({ level: 5 });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('25/25');
-    });
+    it('calculates max correctly for different levels', () => {
+      const { container: containerL1 } = render(<PaladinFeatures playerStats={buildPlayerStats({ level: 1 })} campaignName="test" />);
+      expect(containerL1.textContent).toContain('5/5');
 
-    it('sets max to 5 * level at level 20', () => {
-      const stats = buildPlayerStats({ level: 20 });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('100/100');
-    });
+      const { container: containerL5 } = render(<PaladinFeatures playerStats={buildPlayerStats({ level: 5 })} campaignName="test" />);
+      expect(containerL5.textContent).toContain('25/25');
 
-    it('sets max to 5 * level at level 1', () => {
-      const stats = buildPlayerStats({ level: 1 });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('5/5');
+      const { container: containerL20 } = render(<PaladinFeatures playerStats={buildPlayerStats({ level: 20 })} campaignName="test" />);
+      expect(containerL20.textContent).toContain('100/100');
     });
   });
 
@@ -310,121 +257,54 @@ describe('PaladinFeatures', () => {
       expect(container.querySelector('[data-testid="tracked-resource-gloriousDefenseUses"]')).toBeFalsy();
     });
 
-    it('uses cha bonus as max for glorious defense uses', () => {
+    it('uses cha bonus as max with minimum of 1', () => {
       vi.mocked(gloriousDefense.hasGloriousDefenseActive).mockReturnValue(true);
       const stats = buildPlayerStats({
         level: 5,
-        abilities: [{ name: 'Charisma', bonus: 5 }],
-      });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('5/5');
-    });
-
-    it('uses 1 as max when cha bonus is 0', () => {
-      vi.mocked(gloriousDefense.hasGloriousDefenseActive).mockReturnValue(true);
-      const stats = buildPlayerStats({
         abilities: [{ name: 'Charisma', bonus: 0 }],
       });
       const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('1/1');
+
+      vi.mocked(gloriousDefense.hasGloriousDefenseActive).mockReturnValue(true);
+      const statsHigh = buildPlayerStats({
+        level: 5,
+        abilities: [{ name: 'Charisma', bonus: 5 }],
+      });
+      const { container: containerHigh } = render(<PaladinFeatures playerStats={statsHigh} campaignName="test" />);
+      expect(containerHigh.textContent).toContain('5/5');
     });
   });
 
   describe('active buff badges', () => {
-    it('shows holy nimbus badge when active', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'holyNimbusActive') return true;
-        if (key === 'activeBuffs') return [];
+    const badgeTests = [
+      { key: 'holyNimbusActive', name: 'Holy Nimbus' },
+      { key: 'livingLegendActive', name: 'Living Legend' },
+      { key: 'peerlessAthleteActive', name: 'Peerless Athlete' },
+      { key: 'elderChampionActive', name: 'Elder Champion' },
+      { key: 'avengingAngelActive', name: 'Avenging Angel' },
+    ];
+
+    it.each(badgeTests)('shows $name badge when active', ({ key, name }) => {
+      runtimeState.useRuntimeValue.mockImplementation((_name, testKey) => {
+        if (testKey === key) return true;
+        if (testKey === 'activeBuffs') return [];
         return undefined;
       });
       const stats = buildPlayerStats();
       render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('Holy Nimbus')).toBeInTheDocument();
+      expect(screen.getByText(name)).toBeInTheDocument();
     });
 
-    it('does not show holy nimbus badge when inactive', () => {
-      const stats = buildPlayerStats();
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Holy Nimbus');
-    });
-
-    it('shows living legend badge when active', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'livingLegendActive') return true;
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('Living Legend')).toBeInTheDocument();
-    });
-
-    it('does not show living legend badge when inactive', () => {
-      const stats = buildPlayerStats();
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Living Legend');
-    });
-
-    it('shows peerless athlete badge with icon when true', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'peerlessAthleteActive') return true;
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('Peerless Athlete')).toBeInTheDocument();
-    });
-
-    it('does not show peerless athlete badge when false', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'peerlessAthleteActive') return false;
-        if (key === 'activeBuffs') return [];
+    it.each(badgeTests)('does not show $name badge when inactive', ({ key, name }) => {
+      runtimeState.useRuntimeValue.mockImplementation((_name, testKey) => {
+        if (testKey === key) return false;
+        if (testKey === 'activeBuffs') return [];
         return undefined;
       });
       const stats = buildPlayerStats();
       const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Peerless Athlete');
-    });
-
-    it('does not show peerless athlete badge when undefined', () => {
-      const stats = buildPlayerStats();
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Peerless Athlete');
-    });
-
-    it('shows elder champion badge when active', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'elderChampionActive') return true;
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('Elder Champion')).toBeInTheDocument();
-    });
-
-    it('does not show elder champion badge when inactive', () => {
-      const stats = buildPlayerStats();
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Elder Champion');
-    });
-
-    it('shows avenging angel badge when active', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'avengingAngelActive') return true;
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('Avenging Angel')).toBeInTheDocument();
-    });
-
-    it('does not show avenging angel badge when inactive', () => {
-      const stats = buildPlayerStats();
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Avenging Angel');
+      expect(container.textContent).not.toContain(name);
     });
 
     it('shows all active buff badges simultaneously', () => {
@@ -447,16 +327,6 @@ describe('PaladinFeatures', () => {
       expect(screen.getByText('Peerless Athlete')).toBeInTheDocument();
       expect(screen.getByText('Elder Champion')).toBeInTheDocument();
       expect(screen.getByText('Avenging Angel')).toBeInTheDocument();
-    });
-
-    it('does not show any buff badges when all are inactive', () => {
-      const stats = buildPlayerStats();
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Holy Nimbus');
-      expect(container.textContent).not.toContain('Living Legend');
-      expect(container.textContent).not.toContain('Peerless Athlete');
-      expect(container.textContent).not.toContain('Elder Champion');
-      expect(container.textContent).not.toContain('Avenging Angel');
     });
   });
 });

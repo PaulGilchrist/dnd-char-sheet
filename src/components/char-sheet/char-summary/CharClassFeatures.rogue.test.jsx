@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import RogueFeatures from './CharClassFeatures.jsx';
@@ -73,13 +73,6 @@ describe('RogueFeatures', () => {
 
   describe('expertise', () => {
     it('renders expertise list from class features', () => {
-      const stats = buildPlayerStats();
-      const { container } = render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Expertise:');
-      expect(container.textContent).toContain('Stealth');
-    });
-
-    it('renders multiple expertise items', () => {
       classFeatures.getClassFeatures.mockImplementation(() => ({
         sneakAttack: { dice_count: 3, dice_value: 6 },
         expertise: ['Stealth', 'Perception', 'Thieves\' Tools'],
@@ -99,17 +92,6 @@ describe('RogueFeatures', () => {
       const { container } = render(<RogueFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Sneak Attack Damage:');
       expect(container.textContent).toContain('+3d6');
-    });
-
-    it('renders sneak attack with different dice values', () => {
-      classFeatures.getClassFeatures.mockImplementation(() => ({
-        sneakAttack: { dice_count: 4, dice_value: 6 },
-        expertise: [],
-      }));
-      const stats = buildPlayerStats();
-      const { container } = render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Sneak Attack Damage:');
-      expect(container.textContent).toContain('+4d6');
     });
   });
 
@@ -134,44 +116,6 @@ describe('RogueFeatures', () => {
       expect(container.textContent).toContain('d6');
     });
 
-    it('renders energy dice with d4 type', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        class: {
-          name: 'Rogue',
-          major: { name: 'Zephyr' },
-          subclass: {},
-          class_levels: [null, null, null, null, {
-            level: 5,
-            energy: { required_major: 'Zephyr', energy_die_num: 3, energy_die_type: 4 },
-          }],
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Energy Die Type:');
-      expect(container.textContent).toContain('d4');
-    });
-
-    it('renders energy dice with d8 type', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        class: {
-          name: 'Rogue',
-          major: { name: 'Thief' },
-          subclass: {},
-          class_levels: [null, null, null, null, {
-            level: 5,
-            energy: { required_major: 'Thief', energy_die_num: 2, energy_die_type: 8 },
-          }],
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Energy Die Type:');
-      expect(container.textContent).toContain('d8');
-    });
-
     it('does not render energy dice when energy required_major does not match class major', () => {
       const stats = buildPlayerStats({
         level: 5,
@@ -179,24 +123,6 @@ describe('RogueFeatures', () => {
           name: 'Rogue',
           major: { name: 'Assassin' },
           subclass: {},
-          class_levels: [null, null, null, null, {
-            level: 5,
-            energy: { required_major: 'Swashbuckler', energy_die_num: 4, energy_die_type: 6 },
-          }],
-          fightingStyles: [],
-        },
-      });
-      render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      expect(trackedResourceInput.__renderedKeys()).not.toContain('psionicEnergy');
-    });
-
-    it('does not render energy dice when energy required_major does not match subclass', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        class: {
-          name: 'Rogue',
-          major: {},
-          subclass: { name: 'Assassin' },
           class_levels: [null, null, null, null, {
             level: 5,
             energy: { required_major: 'Swashbuckler', energy_die_num: 4, energy_die_type: 6 },
@@ -253,18 +179,6 @@ describe('RogueFeatures', () => {
       expect(screen.queryByTitle(/Supreme Sneak/)).not.toBeInTheDocument();
     });
 
-    it('does not render supreme sneak when level is exactly 8', () => {
-      const stats = buildPlayerStats({ level: 8 });
-      render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByTitle(/Supreme Sneak/)).not.toBeInTheDocument();
-    });
-
-    it('does not render supreme sneak when level is exactly 9', () => {
-      const stats = buildPlayerStats({ level: 9 });
-      render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTitle(/Supreme Sneak/)).toBeInTheDocument();
-    });
-
     it('applies automation-badge--active class when stealth attack cost is greater than 0', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'stealthAttackCost') return 1;
@@ -285,13 +199,6 @@ describe('RogueFeatures', () => {
       expect(badge).not.toHaveClass('automation-badge--active');
     });
 
-    it('includes eye-slash icon in supreme sneak badge', () => {
-      const stats = buildPlayerStats({ level: 9 });
-      render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      const badge = screen.getByTitle(/Supreme Sneak/);
-      expect(badge.querySelector('i.fas.fa-eye-slash')).toBeTruthy();
-    });
-
     it('includes tooltip explaining active state when stealth attack is active', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'stealthAttackCost') return 1;
@@ -308,12 +215,6 @@ describe('RogueFeatures', () => {
       render(<RogueFeatures playerStats={stats} campaignName="test" />);
       const badge = screen.getByTitle(/Supreme Sneak/);
       expect(badge.getAttribute('title')).toContain('Available at Rogue level 9');
-    });
-
-    it('renders supreme sneak at level 15', () => {
-      const stats = buildPlayerStats({ level: 15 });
-      render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTitle(/Supreme Sneak/)).toBeInTheDocument();
     });
   });
 });

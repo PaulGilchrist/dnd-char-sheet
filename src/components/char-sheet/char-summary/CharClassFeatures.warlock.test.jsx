@@ -1,6 +1,6 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import CharClassFeatures from './CharClassFeatures.jsx';
 import * as classFeatures from '../../../services/character/classFeatures.js';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
@@ -73,6 +73,8 @@ describe('WarlockFeatures', () => {
     });
   });
 
+  afterEach(cleanup);
+
   describe('invocations display', () => {
     it('renders eldritch invocations count label when invocationsKnown > 0', () => {
       const stats = buildPlayerStats({ level: 5 });
@@ -80,34 +82,16 @@ describe('WarlockFeatures', () => {
       expect(screen.getByText(/Eldritch Invocations:/)).toBeInTheDocument();
     });
 
-    it('uses "Invocations Known" label when invocationsKnown is 0', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        ...defaultWarlockFeatures,
-        invocationsKnown: 0,
+    it('uses Invocations Known label when invocationsKnown is 0, null, or undefined', () => {
+      [0, null, undefined].forEach((value) => {
+        vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
+          ...defaultWarlockFeatures,
+          invocationsKnown: value,
+        });
+        renderComponent(buildPlayerStats());
+        expect(screen.getByText(/Invocations Known:/)).toBeInTheDocument();
+        cleanup();
       });
-      const stats = buildPlayerStats();
-      renderComponent(stats);
-      expect(screen.getByText(/Invocations Known:/)).toBeInTheDocument();
-    });
-
-    it('uses "Invocations Known" label when invocationsKnown is null', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        ...defaultWarlockFeatures,
-        invocationsKnown: null,
-      });
-      const stats = buildPlayerStats();
-      renderComponent(stats);
-      expect(screen.getByText(/Invocations Known:/)).toBeInTheDocument();
-    });
-
-    it('uses "Invocations Known" label when invocationsKnown is undefined', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        ...defaultWarlockFeatures,
-        invocationsKnown: undefined,
-      });
-      const stats = buildPlayerStats();
-      renderComponent(stats);
-      expect(screen.getByText(/Invocations Known:/)).toBeInTheDocument();
     });
 
     it('renders invocations list sorted alphabetically', () => {
@@ -120,26 +104,16 @@ describe('WarlockFeatures', () => {
       expect(screen.getByText(/Agonizing Blast, Mighty Invocation, Zephyr Invocation/)).toBeInTheDocument();
     });
 
-    it('does not render invocations list when invocations is null', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        ...defaultWarlockFeatures,
-        invocations: null,
+    it('does not render invocations list when invocations is null or undefined', () => {
+      [null, undefined].forEach((value) => {
+        vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
+          ...defaultWarlockFeatures,
+          invocations: value,
+        });
+        renderComponent(buildPlayerStats());
+        expect(screen.queryByText('Agonizing Blast')).not.toBeInTheDocument();
+        cleanup();
       });
-      const stats = buildPlayerStats();
-      const { container } = renderComponent(stats);
-      expect(container.querySelector('[data-testid="tracked-resource"]')).toBeFalsy();
-      expect(container.textContent).not.toContain('Agonizing Blast');
-    });
-
-    it('does not render invocations list when invocations is undefined', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        ...defaultWarlockFeatures,
-        invocations: undefined,
-      });
-      const stats = buildPlayerStats();
-      const { container } = renderComponent(stats);
-      expect(container.querySelector('[data-testid="tracked-resource"]')).toBeFalsy();
-      expect(container.textContent).not.toContain('Agonizing Blast');
     });
 
     it('renders invocations count matching invocationsKnown value', () => {
@@ -163,22 +137,16 @@ describe('WarlockFeatures', () => {
       expect(screen.getByRole('button', { name: /Pact of the Blade/ })).toBeInTheDocument();
     });
 
-    it('does not render pact boon text or button when pactBoon is null', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        ...defaultWarlockFeatures,
-        pactBoon: null,
+    it('does not render pact boon text or button when pactBoon is null or undefined', () => {
+      [null, undefined].forEach((value) => {
+        vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
+          ...defaultWarlockFeatures,
+          pactBoon: value,
+        });
+        const { container } = renderComponent(buildPlayerStats());
+        expect(container.textContent).not.toContain('Pact Boon');
+        cleanup();
       });
-      const { container } = renderComponent(buildPlayerStats());
-      expect(container.textContent).not.toContain('Pact Boon');
-    });
-
-    it('does not render pact boon text or button when pactBoon is undefined', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        ...defaultWarlockFeatures,
-        pactBoon: undefined,
-      });
-      const { container } = renderComponent(buildPlayerStats());
-      expect(container.textContent).not.toContain('Pact Boon');
     });
 
     it('renders pact boon button with correct title attribute', () => {
@@ -363,7 +331,6 @@ describe('WarlockFeatures', () => {
     it('renders dark one\'s own luck max as max(1, chaMod)', () => {
       const stats = fiendStats();
       const { container } = renderComponent(stats);
-      // Charisma bonus is 3, so max should be 3
       expect(container.textContent).toContain('3/3');
     });
   });
@@ -392,24 +359,16 @@ describe('WarlockFeatures', () => {
       expect(screen.getByText(/Awakened Mind: A goblin/)).toBeInTheDocument();
     });
 
-    it('does not show awakened mind badge when target is null', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'awakenedMindTarget') return null;
-        return undefined;
+    it('does not show awakened mind badge when target is null or empty string', () => {
+      [null, ''].forEach((value) => {
+        runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+          if (key === 'awakenedMindTarget') return value;
+          return undefined;
+        });
+        renderComponent(goeStats());
+        expect(screen.queryByText(/Awakened Mind/)).not.toBeInTheDocument();
+        cleanup();
       });
-      const stats = goeStats();
-      renderComponent(stats);
-      expect(screen.queryByText(/Awakened Mind/)).not.toBeInTheDocument();
-    });
-
-    it('does not show awakened mind badge when target is empty string', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'awakenedMindTarget') return '';
-        return undefined;
-      });
-      const stats = goeStats();
-      renderComponent(stats);
-      expect(screen.queryByText(/Awakened Mind/)).not.toBeInTheDocument();
     });
 
     it('does not show awakened mind badge for non-great old one patron', () => {
@@ -440,16 +399,13 @@ describe('WarlockFeatures', () => {
       expect(screen.getByTestId('tracked-resource-_Steps_of_the_Fey_freeCastCount')).toBeInTheDocument();
     });
 
-    it('does not render steps of the fey when bonusActions is empty', () => {
-      const stats = buildPlayerStats({ automation: { bonusActions: [] } });
-      renderComponent(stats);
-      expect(screen.queryByTestId('tracked-resource-_Steps_of_the_Fey_freeCastCount')).not.toBeInTheDocument();
-    });
-
-    it('does not render steps of the fey when bonusActions is undefined', () => {
-      const stats = buildPlayerStats({ automation: {} });
-      renderComponent(stats);
-      expect(screen.queryByTestId('tracked-resource-_Steps_of_the_Fey_freeCastCount')).not.toBeInTheDocument();
+    it('does not render steps of the fey when bonusActions is empty or missing', () => {
+      [{ bonusActions: [] }, { bonusActions: undefined }].forEach(({ bonusActions }) => {
+        const stats = buildPlayerStats({ automation: { bonusActions } });
+        renderComponent(stats);
+        expect(screen.queryByTestId('tracked-resource-_Steps_of_the_Fey_freeCastCount')).not.toBeInTheDocument();
+        cleanup();
+      });
     });
 
     it('renders steps of the fey max as max(chaMod, 1)', () => {
@@ -461,30 +417,19 @@ describe('WarlockFeatures', () => {
       expect(container.textContent).toContain('3/3');
     });
 
-    it('renders steps of the fey max as 1 when chaMod is 0', () => {
-      const stats = buildPlayerStats({
-        abilities: [{ name: 'Charisma', bonus: 0 }],
-        automation: { bonusActions: [{ type: 'steps_of_the_fey' }] },
+    it('renders steps of the fey max as 1 when chaMod is 0 or charisma ability is missing', () => {
+      [
+        { abilities: [{ name: 'Charisma', bonus: 0 }] },
+        { abilities: [{ name: 'Strength', bonus: 4 }] },
+      ].forEach(({ abilities }) => {
+        const stats = buildPlayerStats({
+          abilities,
+          automation: { bonusActions: [{ type: 'steps_of_the_fey' }] },
+        });
+        const { container } = renderComponent(stats);
+        expect(container.textContent).toContain('1/1');
+        cleanup();
       });
-      const { container } = renderComponent(stats);
-      expect(container.textContent).toContain('1/1');
-    });
-
-    it('renders steps of the fey max as 1 when charisma ability is missing', () => {
-      const stats = buildPlayerStats({
-        abilities: [{ name: 'Strength', bonus: 4 }],
-        automation: { bonusActions: [{ type: 'steps_of_the_fey' }] },
-      });
-      const { container } = renderComponent(stats);
-      expect(container.textContent).toContain('1/1');
-    });
-  });
-
-  describe('data-testid wrapper', () => {
-    it('renders char-class-warlock testid wrapper', () => {
-      const stats = buildPlayerStats();
-      const { container } = renderComponent(stats);
-      expect(container.querySelector('[data-testid="char-class-warlock"]')).toBeTruthy();
     });
   });
 });

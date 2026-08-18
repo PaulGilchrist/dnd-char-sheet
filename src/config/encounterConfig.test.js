@@ -1,46 +1,43 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 import { ENCOUNTER_CONFIG } from './encounterConfig.js';
 
+const EXPECTED_KEYS = [
+  'xpThresholds',
+  'defaultDifficulty',
+  'difficultyMultipliers',
+  'crRange',
+  'budgetTolerance',
+  'deadlyMultiplier',
+  'difficultyRatios',
+  'defaultSuggestionCount',
+  'suggestionOvergenerate',
+];
+
 describe('encounterConfig', () => {
-  describe('ENCOUNTER_CONFIG structure', () => {
-    it('should export an object with every expected configuration key', () => {
-      const expectedKeys = [
-        'xpThresholds',
-        'defaultDifficulty',
-        'difficultyMultipliers',
-        'crRange',
-        'budgetTolerance',
-        'deadlyMultiplier',
-        'difficultyRatios',
-        'defaultSuggestionCount',
-        'suggestionOvergenerate',
-      ];
-      for (const key of expectedKeys) {
-        expect(ENCOUNTER_CONFIG).toHaveProperty(key);
-      }
-    });
+  it('exports exactly the expected configuration keys and no extras', () => {
+    const keys = Object.keys(ENCOUNTER_CONFIG);
+    expect(keys).toHaveLength(9);
+    expect(new Set(keys)).toEqual(new Set(EXPECTED_KEYS));
   });
 
   describe('xpThresholds', () => {
-    it('should be a 2D array with 21 rows (levels 0-20) and 4 difficulty columns per row', () => {
-      expect(Array.isArray(ENCOUNTER_CONFIG.xpThresholds)).toBe(true);
+    it('is a 21×4 array (levels 0–20, easy/medium/hard/deadly)', () => {
       expect(ENCOUNTER_CONFIG.xpThresholds).toHaveLength(21);
       for (const level of ENCOUNTER_CONFIG.xpThresholds) {
         expect(level).toHaveLength(4);
       }
     });
 
-    it('should contain only non-negative integers', () => {
+    it('contains only non-negative integers', () => {
       for (const level of ENCOUNTER_CONFIG.xpThresholds) {
         for (const val of level) {
-          expect(Number.isInteger(val)).toBe(true);
-          expect(val).toBeGreaterThanOrEqual(0);
+          expect(Number.isInteger(val) && val >= 0).toBe(true);
         }
       }
     });
 
-    it('should increase across difficulties within each level', () => {
+    it('increases across difficulties within every level', () => {
       for (const level of ENCOUNTER_CONFIG.xpThresholds) {
         for (let i = 1; i < level.length; i++) {
           expect(level[i]).toBeGreaterThan(level[i - 1]);
@@ -48,33 +45,55 @@ describe('encounterConfig', () => {
       }
     });
 
-    it('should increase across levels within each difficulty', () => {
-      for (let diff = 0; diff < 4; diff++) {
-        for (let level = 1; level < ENCOUNTER_CONFIG.xpThresholds.length; level++) {
-          expect(ENCOUNTER_CONFIG.xpThresholds[level][diff]).toBeGreaterThan(
-            ENCOUNTER_CONFIG.xpThresholds[level - 1][diff],
+    it('increases across levels within every difficulty tier', () => {
+      for (let d = 0; d < 4; d++) {
+        for (let l = 1; l < ENCOUNTER_CONFIG.xpThresholds.length; l++) {
+          expect(ENCOUNTER_CONFIG.xpThresholds[l][d]).toBeGreaterThan(
+            ENCOUNTER_CONFIG.xpThresholds[l - 1][d],
           );
         }
       }
     });
 
-    it('should match the official D&D 5e thresholds for level 1', () => {
+    it('matches config-defined thresholds at level 0', () => {
+      expect(ENCOUNTER_CONFIG.xpThresholds[0]).toEqual([15, 25, 40, 50]);
+    });
+
+    it('matches official D&D 5e thresholds at level 1', () => {
       expect(ENCOUNTER_CONFIG.xpThresholds[1]).toEqual([25, 50, 75, 100]);
     });
 
-    it('should match the official D&D 5e thresholds for level 20', () => {
+    it('matches official D&D 5e thresholds at level 20', () => {
       expect(ENCOUNTER_CONFIG.xpThresholds[20]).toEqual([2800, 5700, 8500, 12700]);
     });
   });
 
   describe('defaultDifficulty', () => {
-    it('should default to Medium (1)', () => {
+    it('is 1 (Medium)', () => {
       expect(ENCOUNTER_CONFIG.defaultDifficulty).toBe(1);
     });
   });
 
   describe('difficultyMultipliers', () => {
-    it('should define the full 6-tier ratio table from few monsters to swarm', () => {
+    it('has exactly 6 entries mapping ratioMax to multiplier', () => {
+      expect(ENCOUNTER_CONFIG.difficultyMultipliers).toHaveLength(6);
+    });
+
+    it('has strictly increasing ratioMax boundaries', () => {
+      const ratios = ENCOUNTER_CONFIG.difficultyMultipliers.map((m) => m.ratioMax);
+      for (let i = 1; i < ratios.length; i++) {
+        expect(ratios[i]).toBeGreaterThan(ratios[i - 1]);
+      }
+    });
+
+    it('has strictly increasing multipliers', () => {
+      const mults = ENCOUNTER_CONFIG.difficultyMultipliers.map((m) => m.multiplier);
+      for (let i = 1; i < mults.length; i++) {
+        expect(mults[i]).toBeGreaterThan(mults[i - 1]);
+      }
+    });
+
+    it('uses the correct ratioMax/multiplier pairs', () => {
       expect(ENCOUNTER_CONFIG.difficultyMultipliers).toEqual([
         { ratioMax: 0.5, multiplier: 1 },
         { ratioMax: 1, multiplier: 1.5 },
@@ -87,26 +106,28 @@ describe('encounterConfig', () => {
   });
 
   describe('crRange', () => {
-    it('should default to a minimum CR of 1/8 the average level with a 0.25 floor', () => {
-      expect(ENCOUNTER_CONFIG.crRange.minMultiplier).toBe(0.125);
-      expect(ENCOUNTER_CONFIG.crRange.minGap).toBe(0.25);
+    it('uses 0.125 minMultiplier and 0.25 minGap', () => {
+      expect(ENCOUNTER_CONFIG.crRange).toEqual({
+        minMultiplier: 0.125,
+        minGap: 0.25,
+      });
     });
   });
 
   describe('budgetTolerance', () => {
-    it('should allow up to 10% over the XP budget', () => {
+    it('is 1.1 (10% over budget allowed)', () => {
       expect(ENCOUNTER_CONFIG.budgetTolerance).toBe(1.1);
     });
   });
 
   describe('deadlyMultiplier', () => {
-    it('should cap suggestions at 1.5x the deadly threshold', () => {
+    it('is 1.5 (caps at 1.5× deadly threshold)', () => {
       expect(ENCOUNTER_CONFIG.deadlyMultiplier).toBe(1.5);
     });
   });
 
   describe('difficultyRatios', () => {
-    it('should use strictly increasing boundary ratios from Easy to Deadly', () => {
+    it('has easyMax=0.5, mediumMax=1, hardMax=1.5 in strictly increasing order', () => {
       const { easyMax, mediumMax, hardMax } = ENCOUNTER_CONFIG.difficultyRatios;
       expect(easyMax).toBe(0.5);
       expect(mediumMax).toBe(1);
@@ -117,8 +138,11 @@ describe('encounterConfig', () => {
   });
 
   describe('suggestion settings', () => {
-    it('should default to 3 suggestions with an overgenerate factor of 2', () => {
+    it('defaultSuggestionCount is 3', () => {
       expect(ENCOUNTER_CONFIG.defaultSuggestionCount).toBe(3);
+    });
+
+    it('suggestionOvergenerate is 2', () => {
       expect(ENCOUNTER_CONFIG.suggestionOvergenerate).toBe(2);
     });
   });

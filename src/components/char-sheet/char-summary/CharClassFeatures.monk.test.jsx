@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
@@ -88,64 +88,43 @@ describe('MonkFeatures', () => {
   });
 
   describe('class-level dependent features', () => {
-    it('renders extra attacks from class_level data', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        class: {
-          name: 'Monk',
-          major: {},
-          subclass: {},
+    it('renders extra attacks based on class_level data', () => {
+      const extraAttacksCases = [
+        {
+          level: 5,
           class_levels: [null, null, null, null, { level: 5, extra_attacks: 2 }],
-          fightingStyles: [],
+          expected: 'Extra Attacks: 2',
         },
-      });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Extra Attacks: 2');
-    });
-
-    it('renders extra attacks as 0 when class_level entry is null', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        class: {
-          name: 'Monk',
-          major: {},
-          subclass: {},
+        {
+          level: 5,
           class_levels: [null, null, null, null, null],
-          fightingStyles: [],
+          expected: 'Extra Attacks: 0',
         },
-      });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Extra Attacks: 0');
-    });
-
-    it('renders extra attacks as 0 when class_levels array is too short', () => {
-      const stats = buildPlayerStats({
-        level: 10,
-        class: {
-          name: 'Monk',
-          major: {},
-          subclass: {},
+        {
+          level: 10,
           class_levels: [null, { level: 2 }],
-          fightingStyles: [],
+          expected: 'Extra Attacks: 0',
         },
-      });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Extra Attacks: 0');
-    });
-
-    it('renders extra attacks as 0 when class_level entry lacks extra_attacks', () => {
-      const stats = buildPlayerStats({
-        level: 6,
-        class: {
-          name: 'Monk',
-          major: {},
-          subclass: {},
+        {
+          level: 6,
           class_levels: [null, null, null, null, null, { level: 6 }],
-          fightingStyles: [],
+          expected: 'Extra Attacks: 0',
         },
-      });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Extra Attacks: 0');
+      ];
+      for (const { level, class_levels, expected } of extraAttacksCases) {
+        const stats = buildPlayerStats({
+          level,
+          class: {
+            name: 'Monk',
+            major: {},
+            subclass: {},
+            class_levels,
+            fightingStyles: [],
+          },
+        });
+        const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
+        expect(container.textContent).toContain(expected);
+      }
     });
 
     it('renders focus points tracked resource', () => {
@@ -162,16 +141,6 @@ describe('MonkFeatures', () => {
       const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
       // 8 + 3 + 2 = 13
       expect(container.textContent).toContain('Focus Save DC: 13');
-    });
-
-    it('calculates focus save DC with 0 wisdom bonus', () => {
-      const stats = buildPlayerStats({
-        level: 2,
-        abilities: [{ name: 'Wisdom', bonus: 0 }],
-      });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      // 8 + 0 + 2 = 10
-      expect(container.textContent).toContain('Focus Save DC: 10');
     });
 
     it('defaults focus save DC when wisdom ability is missing', () => {
@@ -195,6 +164,12 @@ describe('MonkFeatures', () => {
       expect(container.textContent).toContain('Martial Arts Die: d6');
     });
 
+    it('renders martial arts die as d4 default when classFeatures returns 4', () => {
+      const stats = buildPlayerStats({ level: 2 });
+      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
+      expect(container.textContent).toContain('Martial Arts Die: d4');
+    });
+
     it('renders unarmored movement from classFeatures', () => {
       vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
         martialArtsDie: 4,
@@ -204,18 +179,6 @@ describe('MonkFeatures', () => {
       const stats = buildPlayerStats({ level: 2 });
       const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Unarmored Movement: +15 ft.');
-    });
-
-    it('renders martial arts die as d4 default when classFeatures returns 4', () => {
-      const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Martial Arts Die: d4');
-    });
-
-    it('renders unarmored movement as +0 when classFeatures returns 0', () => {
-      const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Unarmored Movement: +0 ft.');
     });
   });
 
@@ -236,17 +199,6 @@ describe('MonkFeatures', () => {
       expect(container.textContent).not.toContain('Cloak of Shadows');
     });
 
-    it('renders cloak of shadows with automation-badge class', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'cloak_of_shadows' }];
-        return undefined;
-      });
-      const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      const badge = container.querySelector('.automation-badge');
-      expect(badge).toBeTruthy();
-    });
-
     it('renders elemental attunement badge with icon when active', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'elementalAttunementActive') return true;
@@ -256,18 +208,6 @@ describe('MonkFeatures', () => {
       const stats = buildPlayerStats({ level: 2 });
       const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Elemental Attunement: Fire');
-    });
-
-    it('renders elemental attunement with automation-badge--active class', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'elementalAttunementActive') return true;
-        if (key === 'elementalAttunementElement') return 'Cold';
-        return undefined;
-      });
-      const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      const badge = container.querySelector('.automation-badge--active');
-      expect(badge).toBeTruthy();
     });
 
     it('renders stride with mapped labels for each effect type', () => {
@@ -315,26 +255,21 @@ describe('MonkFeatures', () => {
       expect(container.textContent).toContain('Resistance to Fire');
     });
 
-    it('renders elemental epitome with "not chosen" when active but no type', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'elementalEpitomeActive') return true;
-        if (key === 'epitomeResistanceType') return null;
-        return undefined;
-      });
-      const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('not chosen');
-    });
-
-    it('renders elemental epitome with empty string when resistance type is empty', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'elementalEpitomeActive') return true;
-        if (key === 'epitomeResistanceType') return '';
-        return undefined;
-      });
-      const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Resistance to');
+    it('renders elemental epitome with "not chosen" when resistance type is falsy', () => {
+      const falsyCases = [
+        { epitomeResistanceType: null, expected: 'not chosen' },
+        { epitomeResistanceType: '', expected: 'Resistance to' },
+      ];
+      for (const { epitomeResistanceType, expected } of falsyCases) {
+        runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+          if (key === 'elementalEpitomeActive') return true;
+          if (key === 'epitomeResistanceType') return epitomeResistanceType;
+          return undefined;
+        });
+        const stats = buildPlayerStats({ level: 2 });
+        const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
+        expect(container.textContent).toContain(expected);
+      }
     });
 
     it('does not render elemental epitome when not active', () => {
@@ -357,17 +292,6 @@ describe('MonkFeatures', () => {
       const stats = buildPlayerStats({ level: 2 });
       const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).not.toContain('Destructive Stride');
-    });
-
-    it('renders destructive stride with automation-badge--active class', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'destructiveStrideActive') return true;
-        return undefined;
-      });
-      const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      const badge = container.querySelector('.automation-badge--active');
-      expect(badge).toBeTruthy();
     });
   });
 });

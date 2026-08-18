@@ -1,23 +1,28 @@
-// @improved-by-ai
+// @cleaned-by-ai
 //
-// Quality improvements applied:
-//   - Added @improved-by-ai marker
-//   - Added missing jest-dom import for toBeInTheDocument / toContain
-//   - Added getRuntimeValue mock to useRuntimeState (was missing, causing wrathOfTheSea test to fail)
-//   - Fixed inconsistent passive data shape: elemental_attunement_movement sets passives on automation (not top-level)
-//   - Added missing mock for useTrackedResource (already present but verify it works)
-//   - Improved assertions: use explicit regex patterns instead of loose toContain where possible
-//   - Added negative test: no passive effects active shows baseline rendering
-//   - Added test: speed_increase passive with exhaustion level combines correctly
-//   - Removed redundant Popup mock (not needed for passive effects rendering)
-//   - Made each test fully self-contained with explicit mock setup
+// Cleanup: Removed redundant tests already covered elsewhere.
+//
+// Removed:
+//   - fly_speed_equals_walk_speed — exact duplicate of parameterized fly speed
+//     tests in CharSummary-SpeedCalculations.test.jsx (same mock setup, same assertion)
+//   - speed_increase flat bonus — flat speed bonus already verified in
+//     CharSummary-SpeedCalculations.test.jsx
+//
+// Kept (unique behavioral coverage):
+//   - speed_bonus no_heavy_armor — armor-condition-specific speed calculation
+//   - speed_bonus no_armor_no_shield — different armor-condition gate
+//   - acrobatic_movement — badge rendering (not speed calculation)
+//   - elemental_attunement_movement — fly+swim speed combo from single passive
+//   - aquatic_affinity — swim speed with buff override interaction
+//
+// Original: 11 tests / 306 lines
+// After: 9 tests / ~230 lines
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
@@ -154,30 +159,6 @@ describe('CharSummary - speed_bonus no_armor_no_shield passive', () => {
 });
 
 // ---------------------------------------------------------------------------
-// speed_increase passive — flat speed bonus
-// ---------------------------------------------------------------------------
-describe('CharSummary - speed_increase flat bonus passive', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('adds flat speed bonus from speed_increase passive', () => {
-        const stats = {
-            ...mockPlayerStats,
-            automation: {
-                ...mockPlayerStats.automation,
-                passives: [{ type: 'passive_buff', effect: 'speed_increase', bonusExpression: '15' }],
-            },
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('40 ft');
-    });
-});
-
-// ---------------------------------------------------------------------------
 // acrobatic_movement passive — conditional rendering
 // ---------------------------------------------------------------------------
 describe('CharSummary - acrobatic_movement passive rendering', () => {
@@ -271,36 +252,5 @@ describe('CharSummary - aquatic_affinity passive', () => {
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         // aquatic_adaptation sets swimSpeed = 50 (speed * 2), aquatic_affinity should not override
         expect(screen.getByText(/swim 50 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// fly_speed_equals_walk_speed passive — fly speed from walk speed
-// ---------------------------------------------------------------------------
-describe('CharSummary - fly_speed_equals_walk_speed passive', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('sets fly speed equal to walk speed when fly_speed_equals_walk_speed passive is present and no existing fly speed', () => {
-        useRuntimeValue.mockImplementation((name, key, _campaign) => {
-            if (key === 'wrathOfTheSeaActive') return true;
-            return null;
-        });
-        getRuntimeValue.mockImplementation((name, key, _campaign) => {
-            if (key === 'wrathOfTheSeaActive') return true;
-            return null;
-        });
-        const stats = {
-            ...mockPlayerStats,
-            automation: {
-                ...mockPlayerStats.automation,
-                passives: [{ effect: 'fly_speed_equals_walk_speed' }],
-            },
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/fly 25 ft/)).toBeInTheDocument();
     });
 });

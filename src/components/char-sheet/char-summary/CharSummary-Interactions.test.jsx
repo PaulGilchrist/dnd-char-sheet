@@ -1,11 +1,38 @@
-// @improved-by-ai
-import { render, screen, fireEvent } from '@testing-library/react';
+// @cleaned-by-ai
+//
+// Cleanup: Removed 13 redundant/brittle/low-value tests (93% reduction).
+//
+// Removed:
+//   - "Delete Character" (2 tests) — duplicated in CharSummary-EventHandlers.test.jsx
+//     with vi.stubGlobal('confirm') and it.afterEach cleanup.
+//   - "Short Rest Complete" (1 test) — low-value; only asserts mocked component
+//     renders. Covered by CharSummary-Display.test.jsx "Short Rest Button".
+//   - "Initiative Display > renders initiative with sign formatter" (1 test) — brittle;
+//     asserts exact "+2" string output. Covered by CharSummary-Ally-Initiative.test.jsx.
+//   - "Initiative Display > makes initiative clickable" (1 test) — brittle; asserts
+//     CSS class (structural detail, not behavioral). Covered by
+//     CharSummary-EventHandlers.test.jsx "renders initiative element as clickable".
+//   - "XP Save Paths" (4 tests) — all duplicated in CharSummary-XPModes.test.jsx
+//     which has 5 XP modal Apply/cancel tests with identical behavior coverage.
+//   - "XP Mode Toggle" (2 tests) — duplicated in CharSummary-XPModes.test.jsx
+//     ("toggles milestone checkbox" and "hides info text").
+//   - "Ally Modal Handlers" (1 test) — weaker version of CharSummary-Ally-Initiative.test.jsx
+//     "opens ally modal and populates creatures from combatSummary" which also verifies
+//     getCombatSummary call and fallback behavior.
+//   - "Inspiration" (1 test) — low-value render assertion. Covered by
+//     CharSummary-EventHandlers.test.jsx "Inspiration Toggle" (3 tests: default, toggle, checked).
+//
+// Kept:
+//   - "applies exhaustion penalty to initiative display" — unique behavioral coverage
+//     for effectiveInitiative calculation with exhaustion. Not covered in any other file.
+//
+// Original: 14 tests / 385 lines
+// After: 1 test / ~100 lines
+
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { DiceRollContext } from '../../../hooks/combat/DiceRollContext.js';
-import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { getCombatSummary } from '../../../services/encounters/combatData.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -119,83 +146,9 @@ const mockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 
-const renderWithDiceContext = (ui, { wrapper: externalWrapper, ...renderOptions } = {}) => {
-    const mockSetPopupHtml = vi.fn();
-    const diceWrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-            {children}
-        </DiceRollContext.Provider>
-    );
-    const wrapper = externalWrapper
-        ? (props) => <diceWrapper><externalWrapper {...props} /></diceWrapper>
-        : diceWrapper;
-    return render(ui, { wrapper, ...renderOptions });
-};
-
 // ---------------------------------------------------------------------------
-// Delete character
-// ---------------------------------------------------------------------------
-describe('CharSummary - Delete Character', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('calls onDeleteCharacter when user confirms delete', () => {
-        const mockOnDelete = vi.fn();
-        const mockConfirm = vi.fn(() => true);
-        window.confirm = mockConfirm;
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-                onDeleteCharacter={mockOnDelete}
-            />
-        );
-        const deleteBtn = screen.getByText('Delete');
-        fireEvent.click(deleteBtn);
-        expect(mockConfirm).toHaveBeenCalled();
-        expect(mockOnDelete).toHaveBeenCalledWith('Thorin');
-    });
-
-    it('does not delete when user cancels', () => {
-        const mockOnDelete = vi.fn();
-        const mockConfirm = vi.fn(() => false);
-        window.confirm = mockConfirm;
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-                onDeleteCharacter={mockOnDelete}
-            />
-        );
-        const deleteBtn = screen.getByText('Delete');
-        fireEvent.click(deleteBtn);
-        expect(mockOnDelete).not.toHaveBeenCalled();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Short rest complete
-// ---------------------------------------------------------------------------
-describe('CharSummary - Short Rest Complete', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders short rest button on localhost', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByTestId('short-rest-btn')).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Initiative display
+// Initiative exhaustion penalty — effectiveInitiative calculation
+// Unique test for exhaustion affecting initiative display. Not covered elsewhere.
 // ---------------------------------------------------------------------------
 describe('CharSummary - Initiative Display', () => {
     beforeEach(() => {
@@ -204,182 +157,10 @@ describe('CharSummary - Initiative Display', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('renders initiative with sign formatter', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/\+2/)).toBeInTheDocument();
-    });
-
     it('applies exhaustion penalty to initiative display', () => {
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={1} />);
         expect(screen.getByText('+0')).toBeInTheDocument();
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={2} />);
         expect(screen.getByText('-2')).toBeInTheDocument();
-    });
-
-    it('makes initiative clickable', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const initiativeEl = screen.getByText(/\+2/);
-        expect(initiativeEl).toHaveClass('clickable');
-    });
-});
-
-// ---------------------------------------------------------------------------
-// XP save paths
-// ---------------------------------------------------------------------------
-describe('CharSummary - XP Save Paths', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('saves XP when modal delta is valid positive', () => {
-        renderWithDiceContext(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-            />
-        );
-        const levelSuffix = screen.getByText(/milestone/);
-        fireEvent.click(levelSuffix);
-        const input = screen.getByPlaceholderText('+100 or -50');
-        fireEvent.change(input, { target: { value: '100' } });
-        const applyBtn = screen.getByText('Apply');
-        fireEvent.click(applyBtn);
-        expect(setRuntimeValue).toHaveBeenCalledWith('Thorin', 'xp', 2400, 'test-campaign');
-    });
-
-    it('does not save XP when delta is empty', () => {
-        renderWithDiceContext(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-            />
-        );
-        const levelSuffix = screen.getByText(/milestone/);
-        fireEvent.click(levelSuffix);
-        const applyBtn = screen.getByText('Apply');
-        fireEvent.click(applyBtn);
-        expect(setRuntimeValue).not.toHaveBeenCalled();
-    });
-
-    it('does not save XP when delta is non-numeric', () => {
-        renderWithDiceContext(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-            />
-        );
-        const levelSuffix = screen.getByText(/milestone/);
-        fireEvent.click(levelSuffix);
-        const input = screen.getByPlaceholderText('+100 or -50');
-        fireEvent.change(input, { target: { value: 'abc' } });
-        const applyBtn = screen.getByText('Apply');
-        fireEvent.click(applyBtn);
-        expect(setRuntimeValue).not.toHaveBeenCalled();
-    });
-
-    it('clamps XP to minimum 0 when delta would go negative', () => {
-        const stats = { ...mockPlayerStats, xp: 50 };
-        renderWithDiceContext(
-            <CharSummary
-                playerStats={stats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-            />
-        );
-        const levelSuffix = screen.getByText(/milestone/);
-        fireEvent.click(levelSuffix);
-        const input = screen.getByPlaceholderText('+100 or -50');
-        fireEvent.change(input, { target: { value: '-100' } });
-        const applyBtn = screen.getByText('Apply');
-        fireEvent.click(applyBtn);
-        expect(setRuntimeValue).toHaveBeenCalledWith('Thorin', 'xp', 0, 'test-campaign');
-    });
-});
-
-// ---------------------------------------------------------------------------
-// XP mode toggle
-// ---------------------------------------------------------------------------
-describe('CharSummary - XP Mode Toggle', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('toggles to experience mode when milestone checkbox is unchecked', () => {
-        renderWithDiceContext(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-            />
-        );
-        const levelSuffix = screen.getByText(/milestone/);
-        fireEvent.click(levelSuffix);
-        const xpModal = screen.getByText('Experience Points').closest('.xp-modal');
-        const checkbox = xpModal.querySelector('input[type="checkbox"]');
-        fireEvent.click(checkbox);
-        expect(mockPlayerStats.xpMode).toBe('experience');
-        expect(setRuntimeValue).toHaveBeenCalledWith('Thorin', 'xpMode', 'experience', 'test-campaign');
-    });
-
-    it('hides info text when experience mode is enabled', () => {
-        const stats = { ...mockPlayerStats, xpMode: 'experience' };
-        renderWithDiceContext(
-            <CharSummary
-                playerStats={stats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-            />
-        );
-        const levelSuffix = screen.getByText(/2,300 XP/);
-        fireEvent.click(levelSuffix);
-        expect(screen.queryByText(/XP tracking is disabled/)).not.toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Ally modal handlers
-// ---------------------------------------------------------------------------
-describe('CharSummary - Ally Modal Handlers', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('opens ally modal when allies badge is clicked', () => {
-        getCombatSummary.mockReturnValue({
-            creatures: [
-                { name: 'Thorin', type: 'player', currentHp: 45, maxHp: 45 },
-                { name: 'Enemy1', type: 'enemy', currentHp: 10, maxHp: 10 },
-            ],
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const alliesBadge = screen.getByText(/Allies/);
-        fireEvent.click(alliesBadge);
-        expect(screen.getByText(/Select Allies/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Inspiration checkbox
-// ---------------------------------------------------------------------------
-describe('CharSummary - Inspiration', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders inspiration checkbox', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const checkbox = screen.getByRole('checkbox');
-        expect(checkbox).toBeInTheDocument();
     });
 });

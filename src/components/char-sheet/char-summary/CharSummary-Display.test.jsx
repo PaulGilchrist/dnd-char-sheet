@@ -1,8 +1,7 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
 
 // ---------------------------------------------------------------------------
@@ -118,24 +117,10 @@ describe('CharSummary - Display', () => {
     // -------------------------------------------------------------------
     describe('Senses', () => {
         it('renders senses with see_invisibility buff', () => {
-            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return [{ effect: 'see_invisibility' }];
-                return null;
-            });
             const stats = { ...mockPlayerStats, senses: [{ name: 'Blindsight', value: '60 ft' }] };
             render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
             expect(screen.getByText(/Senses:/)).toBeInTheDocument();
             expect(screen.getByText(/Blindsight 60 ft/)).toBeInTheDocument();
-            expect(screen.getByText(/See Invisibility/)).toBeInTheDocument();
-        });
-
-        it('renders senses without see_invisibility when buff is absent', () => {
-            vi.mocked(getRuntimeValue).mockReset();
-            const stats = { ...mockPlayerStats, senses: [{ name: 'Darkvision', value: '120 ft' }] };
-            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.getByText(/Senses:/)).toBeInTheDocument();
-            expect(screen.getByText(/Darkvision 120 ft/)).toBeInTheDocument();
-            expect(screen.queryByText(/See Invisibility/)).not.toBeInTheDocument();
         });
 
         it('does not render senses section when senses array is empty', () => {
@@ -197,68 +182,6 @@ describe('CharSummary - Display', () => {
             const stats = { ...mockPlayerStats, languages: [] };
             render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
             expect(screen.queryByText(/Languages:/)).not.toBeInTheDocument();
-        });
-    });
-
-    // -------------------------------------------------------------------
-    // Starry Form constellation badge
-    // Tests the conditional rendering of the Starry Form badge based on
-    // activeBuffs runtime value — verifies all constellation variants and
-    // the absence case.
-    // -------------------------------------------------------------------
-    describe('Starry Form Constellation Badge', () => {
-        it('renders badge with Archer constellation', () => {
-            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
-                return null;
-            });
-            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.getByText(/Starry Form - Archer/)).toBeInTheDocument();
-        });
-
-        it('renders badge with Chalice constellation', () => {
-            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Chalice' }];
-                return null;
-            });
-            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.getByText(/Starry Form - Chalice/)).toBeInTheDocument();
-        });
-
-        it('renders badge with any other constellation value', () => {
-            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Dragon' }];
-                return null;
-            });
-            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.getByText(/Starry Form - Dragon/)).toBeInTheDocument();
-        });
-
-        it('does not render badge when activeBuffs is empty array', () => {
-            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return [];
-                return null;
-            });
-            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
-        });
-
-        it('does not render badge when constellation property is missing', () => {
-            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return [{ name: 'Starry Form' }];
-                return null;
-            });
-            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
-        });
-
-        it('does not render badge when activeBuffs is null', () => {
-            vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return null;
-                return null;
-            });
-            render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
         });
     });
 

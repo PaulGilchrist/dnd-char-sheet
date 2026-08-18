@@ -167,6 +167,7 @@ export async function validateStep(step, formData, errors, racesData = [], class
  */
 export const validateFinalFormData = (formData) => {
   const finalErrors = {};
+  if (!formData) return finalErrors;
   REQUIRED_FIELDS.forEach(field => {
     if (field === 'abilities' || field === 'inventory' || field === 'skillProficiencies') {
       return;

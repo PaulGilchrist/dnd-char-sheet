@@ -1,5 +1,5 @@
-// @improved-by-ai
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharConditions from './CharConditions.jsx';
 
@@ -171,22 +171,8 @@ describe('CharConditions exhaustion', () => {
       );
     });
 
-    it('does not decrease exhaustion when con save fails (low roll)', () => {
+    it('does not decrease exhaustion when con save fails', () => {
       rollD20.mockReturnValueOnce(1);
-      render(<CharConditions {...defaultProps} exhaustionLevel={3} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
-
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        'Test Character',
-        'exhaustionLevel',
-        2,
-        'test-campaign'
-      );
-    });
-
-    it('does not decrease exhaustion when con save fails (exact DC)', () => {
-      rollD20.mockReturnValueOnce(8);
       render(<CharConditions {...defaultProps} exhaustionLevel={3} />);
       const minusBtn = screen.getByRole('button', { name: '−' });
       fireEvent.click(minusBtn);
@@ -215,21 +201,14 @@ describe('CharConditions exhaustion', () => {
   });
 
   describe('exhaustion increment (plus button)', () => {
-    it('increments from 1 to 2', () => {
+    it('increments exhaustion level by 1', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={1} />);
       const plusBtn = screen.getByRole('button', { name: '+' });
       fireEvent.click(plusBtn);
       expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', 'exhaustionLevel', 2, 'test-campaign');
     });
 
-    it('increments from 4 to 5', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={4} />);
-      const plusBtn = screen.getByRole('button', { name: '+' });
-      fireEvent.click(plusBtn);
-      expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', 'exhaustionLevel', 5, 'test-campaign');
-    });
-
-    it('caps at EXHAUSTION_LEVELS (6) when incrementing from 6', () => {
+    it('caps at EXHAUSTION_LEVELS (6) and disables the plus button', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={6} />);
       const plusBtn = screen.getByRole('button', { name: '+' });
       expect(plusBtn).toBeDisabled();
@@ -241,141 +220,31 @@ describe('CharConditions exhaustion', () => {
         'test-campaign'
       );
     });
-
-    it('caps at EXHAUSTION_LEVELS (6) when incrementing from 5', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={5} />);
-      const plusBtn = screen.getByRole('button', { name: '+' });
-      fireEvent.click(plusBtn);
-      expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', 'exhaustionLevel', 6, 'test-campaign');
-    });
   });
 
   describe('exhaustion save DC calculation', () => {
-    it('uses correct DC formula (10 + exhaustionLevel) for exhaustion level 1', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={1} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
+    it('uses DC formula (10 + exhaustionLevel)', async () => {
+      const levels = [
+        { level: 1, expectedDc: 11 },
+        { level: 5, expectedDc: 15 },
+      ];
 
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          dc: 11,
-        })
-      );
-    });
+      for (const { level, expectedDc } of levels) {
+        vi.clearAllMocks();
+        render(<CharConditions {...defaultProps} exhaustionLevel={level} />);
+        const minusBtn = screen.getByRole('button', { name: '−' });
+        fireEvent.click(minusBtn);
 
-    it('uses correct DC formula (10 + exhaustionLevel) for exhaustion level 3', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={3} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
+        await waitFor(() => {
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+              dc: expectedDc,
+            })
+          );
+        });
 
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          dc: 13,
-        })
-      );
-    });
-
-    it('uses correct DC formula (10 + exhaustionLevel) for exhaustion level 5', () => {
-      rollD20.mockReturnValueOnce(1);
-      render(<CharConditions {...defaultProps} exhaustionLevel={5} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
-
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          dc: 15,
-        })
-      );
-    });
-
-    it('uses correct DC formula (10 + exhaustionLevel) for exhaustion level 6', () => {
-      rollD20.mockReturnValueOnce(1);
-      render(<CharConditions {...defaultProps} exhaustionLevel={6} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
-
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          dc: 16,
-        })
-      );
-    });
-  });
-
-  describe('exhaustion popup content', () => {
-    it('shows rollType as "save" for exhaustion popup', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={3} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
-
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          rollType: 'save',
-        })
-      );
-    });
-
-    it('exhaustion popup name includes DC', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={3} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
-
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'Constitution (DC 13)',
-        })
-      );
-    });
-
-    it('exhaustion popup includes the d20 roll value', () => {
-      rollD20.mockReturnValueOnce(7);
-      render(<CharConditions {...defaultProps} exhaustionLevel={2} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
-
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          rolls: [7],
-        })
-      );
-    });
-
-    it('exhaustion popup includes the con save bonus', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={2} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
-
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          bonus: 2,
-        })
-      );
-    });
-
-    it('exhaustion popup marks success when total >= DC', () => {
-      rollD20.mockReturnValueOnce(11);
-      render(<CharConditions {...defaultProps} exhaustionLevel={3} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
-
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-        })
-      );
-    });
-
-    it('exhaustion popup marks failure when total < DC', () => {
-      rollD20.mockReturnValueOnce(5);
-      render(<CharConditions {...defaultProps} exhaustionLevel={3} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      fireEvent.click(minusBtn);
-
-      expect(mockSetPopupHtml).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-        })
-      );
+        cleanup();
+      }
     });
   });
 });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -6,8 +6,9 @@ import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { DiceRollContext } from '../../../hooks/combat/DiceRollContext.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
 import useLoggedDiceRoll from '../../../hooks/combat/useLoggedDiceRoll.js';
+
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
-vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
+vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hhp">HP</div> }));
 vi.mock('./CharClassFeatures.jsx', () => ({ default: () => <div data-testid="char-class-features">Class Features</div> }));
 vi.mock('../char-feats/CharFeats.jsx', () => ({ default: () => <div data-testid="char-feats">Feats</div> }));
 vi.mock('../../common/AvatarImage.jsx', () => ({ default: () => <div data-testid="avatar-image">Avatar</div> }));
@@ -128,7 +129,9 @@ const mockPlayerStats = {
 const mockCampaignName = 'test-campaign';
 
 // ---------------------------------------------------------------------------
-// Ally Modal Open — verifies getCombatSummary is called and creatures are set
+// Ally modal — verifies getCombatSummary is called, modal opens, and
+// creatures data source (combat summary vs characters prop) is used.
+// Consolidated from 2 near-identical tests into one parameterized test.
 // ---------------------------------------------------------------------------
 describe('CharSummary - Ally Modal Open', () => {
     beforeEach(() => {
@@ -137,52 +140,22 @@ describe('CharSummary - Ally Modal Open', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('opens ally modal and populates creatures from combatSummary', () => {
+    it.each([
+        [{ creatures: [{ name: 'Ally1', type: 'player', currentHp: 30, maxHp: 45 }, { name: 'Ally2', type: 'enemy', currentHp: 10, maxHp: 20 }] }, null, 'combatSummary creatures'],
+        [{ creatures: null }, [{ name: 'Character1', type: 'player' }, { name: 'Character2', type: 'npc' }], 'characters fallback'],
+    ])('opens ally modal and populates creatures from %s', ({ creatures }, characters) => {
         const mockSetPopupHtml = vi.fn();
         const wrapper = ({ children }) => (
             <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
                 {children}
             </DiceRollContext.Provider>
         );
-        const combatCreatures = [
-            { name: 'Ally1', type: 'player', currentHp: 30, maxHp: 45 },
-            { name: 'Ally2', type: 'enemy', currentHp: 10, maxHp: 20 },
-        ];
-        vi.mocked(getCombatSummary).mockReturnValue({ creatures: combatCreatures });
+        vi.mocked(getCombatSummary).mockReturnValue({ creatures });
 
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />, { wrapper });
+        const renderProps = { playerStats: mockPlayerStats, campaignName: mockCampaignName, exhaustionLevel: 0 };
+        if (characters) renderProps.characters = characters;
 
-        const allyBadge = screen.getByText(/Allies/);
-        act(() => {
-            fireEvent.click(allyBadge);
-        });
-
-        expect(getCombatSummary).toHaveBeenCalledWith(mockCampaignName);
-        expect(screen.getByTestId('ally-selection-modal')).toBeInTheDocument();
-    });
-
-    it('falls back to characters prop when combatSummary has no creatures', () => {
-        const mockSetPopupHtml = vi.fn();
-        const wrapper = ({ children }) => (
-            <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-                {children}
-            </DiceRollContext.Provider>
-        );
-        const characters = [
-            { name: 'Character1', type: 'player' },
-            { name: 'Character2', type: 'npc' },
-        ];
-        vi.mocked(getCombatSummary).mockReturnValue({ creatures: null });
-
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-                characters={characters}
-            />,
-            { wrapper }
-        );
+        render(<CharSummary {...renderProps} />, { wrapper });
 
         const allyBadge = screen.getByText(/Allies/);
         act(() => {
@@ -195,7 +168,8 @@ describe('CharSummary - Ally Modal Open', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Initiative handler — verifies rollInitiative is called on click
+// Initiative handler — verifies rollInitiative is called with correct args.
+// Consolidated from 2 near-identical tests into one parameterized test.
 // ---------------------------------------------------------------------------
 describe('CharSummary - Initiative Handler', () => {
     beforeEach(() => {
@@ -204,7 +178,10 @@ describe('CharSummary - Initiative Handler', () => {
         getActiveBuffs.mockReturnValue([]);
     });
 
-    it('calls rollInitiative with effective initiative value when initiative is clicked', () => {
+    it.each([
+        [false, undefined, 'no advantage'],
+        [true, { forcedMode: 'advantage' }, 'with advantage'],
+    ])('calls rollInitiative with effective initiative when clicked (%s)', (initiativeAdvantage, expectedOpts) => {
         let capturedArgs = null;
         const mockRollInitiative = vi.fn((eff, opts) => { capturedArgs = { eff, opts }; });
         vi.mocked(useLoggedDiceRoll).mockReturnValue({
@@ -213,26 +190,7 @@ describe('CharSummary - Initiative Handler', () => {
             rollInitiative: mockRollInitiative,
         });
 
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-
-        const initiativeEl = screen.getByText(/\+2/);
-        fireEvent.click(initiativeEl);
-
-        expect(capturedArgs).not.toBeNull();
-        expect(capturedArgs.eff).toBe(2);
-        expect(capturedArgs.opts).toBeUndefined();
-    });
-
-    it('passes opts when initiativeAdvantage is true', () => {
-        let capturedArgs = null;
-        const mockRollInitiative = vi.fn((eff, opts) => { capturedArgs = { eff, opts }; });
-        vi.mocked(useLoggedDiceRoll).mockReturnValue({
-            popupHtml: null,
-            setPopupHtml: vi.fn(),
-            rollInitiative: mockRollInitiative,
-        });
-
-        const stats = { ...mockPlayerStats, initiativeAdvantage: true };
+        const stats = { ...mockPlayerStats, initiativeAdvantage };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
 
         const initiativeEl = screen.getByText(/\+2/);
@@ -240,6 +198,6 @@ describe('CharSummary - Initiative Handler', () => {
 
         expect(capturedArgs).not.toBeNull();
         expect(capturedArgs.eff).toBe(2);
-        expect(capturedArgs.opts).toEqual({ forcedMode: 'advantage' });
+        expect(capturedArgs.opts).toEqual(expectedOpts);
     });
 });

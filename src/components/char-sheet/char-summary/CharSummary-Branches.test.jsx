@@ -1,9 +1,36 @@
-// @improved-by-ai
+// @cleaned-by-ai
+//
+// Cleanup: Removed 10 redundant/brittle/low-value tests (83% reduction).
+//
+// Removed:
+//   - "TargetEffects target property types" (2 tests) — asserted "Conditions"
+//     renders which is always true. Did not verify any specific filtering
+//     behavior. Covered implicitly by CharConditions tests.
+//   - "ConditionMetadata extraction" (3 tests) — asserted "Conditions" renders
+//     regardless of dc/ability metadata content. Did not verify the actual
+//     dc/ability values in output. Brittle to structural changes. Covered
+//     implicitly by CharConditions condition-saves tests.
+//   - "Speed boost buff" — already covered by
+//     CharSummary-SpeedCalculations.test.jsx "Aura speed bonus" test.
+//   - "Aspect of the Wilds Salmon" (2 tests) — already covered by
+//     CharSummary-AdditionalCoverage.test.jsx swim speed tests and
+//     CharSummary-SpeedCalculations.test.jsx aquatic adaptation tests.
+//   - "XP Mode Label" (2 tests) — already covered by
+//     CharSummary-XPModes.test.jsx which has 20+ XP modal interaction tests.
+//
+// Kept:
+//   - Defensive Duelist AC bonus — unique behavioral coverage for AC line
+//     display text. Not covered in any other test file.
+//   - Tremorsense badge — only remaining tremorsense CreatureBadge render
+//     test in the suite.
+//
+// Original: 12 tests / 330 lines
+// After: 2 tests / ~90 lines
+
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -86,11 +113,6 @@ vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () =>
     handle: vi.fn(),
 }));
 
-vi.mock('../../../services/automation/handlers/buffs/stoneSkinHandler.js', () => ({
-    getStoneSkinDamageTypes: vi.fn(() => []),
-    handle: vi.fn(),
-}));
-
 const mockPlayerStats = {
     name: 'Thorin',
     xp: 2300,
@@ -123,107 +145,6 @@ const mockPlayerStats = {
 const mockCampaignName = 'test-campaign';
 
 // ---------------------------------------------------------------------------
-// Target effects: te.target as string vs array (line 138)
-// The useMemo that builds myTargetEffects handles both te.target as a
-// string and te.target as an array. These tests verify the component
-// renders correctly in both cases by checking the conditions section
-// renders (which depends on conditionObjects being built).
-// ---------------------------------------------------------------------------
-describe('CharSummary - TargetEffects target property types', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders conditions when targetEffects use string targets', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') {
-                return [
-                    { target: 'Thorin', effect: 'reckless_attack' },
-                    { target: 'Other', effect: 'some_effect' },
-                ];
-            }
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
-            return null;
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Conditions')).toBeInTheDocument();
-    });
-
-    it('renders conditions when targetEffects use array targets', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') {
-                return [
-                    { target: ['Thorin'], effect: 'some_array_target' },
-                    { target: ['Other'], effect: 'other_effect' },
-                ];
-            }
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
-            return null;
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Conditions')).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Condition metadata: dc and ability extraction (lines 145-159)
-// Verifies that conditionObjects useMemo correctly reads dc and ability
-// from activeConditionMeta, and falls back gracefully when metadata
-// is empty or missing.
-// ---------------------------------------------------------------------------
-describe('CharSummary - ConditionMetadata extraction', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders conditions when conditionMeta has dc and ability', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return ['Exhaustion', 'Blinded'];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') {
-                return {
-                    exhaustion: { dc: 12, ability: 'con' },
-                    blinded: { dc: 15, ability: 'dex' },
-                };
-            }
-            return null;
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Conditions')).toBeInTheDocument();
-    });
-
-    it('renders conditions when conditionMeta has empty metadata object', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return ['Exhaustion'];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') {
-                return { exhaustion: {} };
-            }
-            return null;
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Conditions')).toBeInTheDocument();
-    });
-
-    it('renders conditions when conditionMeta has no entry for a condition', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return ['Exhaustion'];
-            // No 'exhaustion' key in conditionMeta, so {} fallback is used
-            return null;
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText('Conditions')).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
 // Defensive Duelist AC bonus display (line 268)
 // Unique test for the defensiveDuelistBonus rendering in the AC line.
 // ---------------------------------------------------------------------------
@@ -242,25 +163,6 @@ describe('CharSummary - Defensive Duelist AC Bonus', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Speed boost buff display (line 270)
-// Verifies speedBonus is added to totalSpeed and displayed.
-// ---------------------------------------------------------------------------
-describe('CharSummary - Speed Boost Buff', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('displays speed boost in speed line', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'speed_boost', speedBonus: 10 }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('35 ft');
-    });
-});
-
-// ---------------------------------------------------------------------------
 // Tremorsense buff badge (line 320)
 // Verifies the CreatureBadge for tremorsense renders.
 // ---------------------------------------------------------------------------
@@ -275,56 +177,5 @@ describe('CharSummary - Tremorsense Badge', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'tremorsense_60ft' }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Tremorsense 60 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Aspect of the Wilds: Salmon swim speed (lines 394-395)
-// When optionName is 'Salmon' and swimSpeed is null, swimSpeed = totalSpeed.
-// ---------------------------------------------------------------------------
-describe('CharSummary - Aspect of the Wilds Salmon', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('applies salmon swim speed when no aquatic_adaptation buff exists', () => {
-        getActiveBuffs.mockReturnValue([{ name: 'Aspect of the Wilds', optionName: 'Salmon' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 25 ft/)).toBeInTheDocument();
-    });
-
-    it('uses existing swim speed when aquatic_adaptation is also active', () => {
-        getActiveBuffs.mockReturnValue([
-            { effect: 'aquatic_adaptation' },
-            { name: 'Aspect of the Wilds', optionName: 'Salmon' },
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 50 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// XP mode label rendering (lines 237-239)
-// Verifies the levelSuffix renders differently for milestone vs experience.
-// ---------------------------------------------------------------------------
-describe('CharSummary - XP Mode Label', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('displays milestone suffix when xpMode is milestone', () => {
-        const stats = { ...mockPlayerStats, xpMode: 'milestone' };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/milestone/)).toBeInTheDocument();
-    });
-
-    it('displays XP number suffix when xpMode is experience', () => {
-        const stats = { ...mockPlayerStats, xpMode: 'experience' };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/\(2,300 XP\)/)).toBeInTheDocument();
     });
 });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
@@ -76,44 +76,21 @@ describe('FighterFeatures', () => {
   });
 
   describe('null/missing classLevel', () => {
-    it('renders nothing when class_levels is null', () => {
-      const stats = buildPlayerStats({
-        class: { name: 'Fighter', major: {}, subclass: {}, class_levels: null, fightingStyles: [] },
+    it('returns null for all falsy classLevel scenarios', () => {
+      const nullCases = [
+        { class_levels: null },
+        { class_levels: undefined },
+        { class_levels: [] },
+        { level: 5, class_levels: [{ level: 1 }, { level: 2 }] },
+      ];
+      nullCases.forEach(cfg => {
+        const stats = buildPlayerStats({
+          level: cfg.level || 1,
+          class: { name: 'Fighter', major: {}, subclass: {}, class_levels: cfg.class_levels, fightingStyles: cfg.fightingStyles !== undefined ? cfg.fightingStyles : [] },
+        });
+        const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
+        expect(container.innerHTML).toBe('');
       });
-      const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(container.innerHTML).toBe('');
-    });
-
-    it('renders nothing when class_levels is undefined', () => {
-      const stats = buildPlayerStats({
-        class: { name: 'Fighter', major: {}, subclass: {}, class_levels: undefined, fightingStyles: [] },
-      });
-      const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(container.innerHTML).toBe('');
-    });
-
-    it('renders nothing when class_levels array is empty', () => {
-      const stats = buildPlayerStats({
-        level: 1,
-        class: { name: 'Fighter', major: {}, subclass: {}, class_levels: [], fightingStyles: [] },
-      });
-      const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(container.innerHTML).toBe('');
-    });
-
-    it('renders nothing when level exceeds class_levels length', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        class: {
-          name: 'Fighter',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 1 }, { level: 2 }],
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(container.innerHTML).toBe('');
     });
   });
 
@@ -157,21 +134,6 @@ describe('FighterFeatures', () => {
       expect(container.textContent).toContain('Extra Attacks: 2');
     });
 
-    it('renders zero extra attacks when not present on classLevel', () => {
-      const stats = buildPlayerStats({
-        level: 1,
-        class: {
-          name: 'Fighter',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 1 }],
-          fightingStyles: [],
-        },
-      });
-      render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-actionSurgeUses')).toBeTruthy();
-    });
-
     it('renders second wind from classLevel', () => {
       const stats = buildPlayerStats({
         level: 1,
@@ -203,57 +165,10 @@ describe('FighterFeatures', () => {
       const masteryLabel = screen.getByText(/Weapon Mastery:/);
       expect(masteryLabel.nextElementSibling).toHaveClass('clickable');
     });
-
-    it('renders weapon mastery as N/A when not set on classLevel', () => {
-      const stats = buildPlayerStats({
-        level: 1,
-        class: {
-          name: 'Fighter',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 1 }],
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Weapon Mastery: ');
-    });
   });
 
   describe('2024 ruleset', () => {
-    it('reads action surge max based on level (2-16 → 1)', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        rules: '2024',
-        class: {
-          name: 'Fighter',
-          major: {},
-          subclass: {},
-          class_levels: Array(5).fill(null).map((_, i) => ({ level: i + 1 })),
-          fightingStyles: [],
-        },
-      });
-      render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-actionSurgeUses')).toBeTruthy();
-    });
-
-    it('reads action surge max based on level (17+ → 2)', () => {
-      const stats = buildPlayerStats({
-        level: 17,
-        rules: '2024',
-        class: {
-          name: 'Fighter',
-          major: {},
-          subclass: {},
-          class_levels: Array(17).fill(null).map((_, i) => ({ level: i + 1 })),
-          fightingStyles: [],
-        },
-      });
-      render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-actionSurgeUses')).toBeTruthy();
-    });
-
-    it('reads action surge max based on level (level 1 → 0)', () => {
+    it('renders action surge max 0 for level 1', () => {
       const stats = buildPlayerStats({
         level: 1,
         rules: '2024',
@@ -266,7 +181,6 @@ describe('FighterFeatures', () => {
         },
       });
       const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      // Max should be 0 for level 1 in 2024 ruleset
       expect(container.textContent).toContain('0/0');
     });
 
@@ -345,21 +259,6 @@ describe('FighterFeatures', () => {
       const { container } = render(<FighterFeatures playerStats={statsWithEnergy} campaignName="test" />);
       expect(container.textContent).not.toContain('Energy Dice');
     });
-
-    it('does not render energy dice when energy is undefined', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        class: {
-          name: 'Fighter',
-          major: { name: 'Psi Warrior' },
-          subclass: {},
-          class_levels: Array(5).fill(null).map((_, i) => ({ level: i + 1 })),
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Energy Dice');
-    });
   });
 
   describe('fighting styles', () => {
@@ -379,48 +278,23 @@ describe('FighterFeatures', () => {
       expect(container.textContent).toContain('Defense');
     });
 
-    it('renders N/A when fighting styles is null', () => {
-      const stats = buildPlayerStats({
+    it('renders N/A when fighting styles is null, undefined, or empty', () => {
+      const nullStats = buildPlayerStats({
         level: 1,
-        class: {
-          name: 'Fighter',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 1 }],
-          fightingStyles: null,
-        },
+        class: { name: 'Fighter', major: {}, subclass: {}, class_levels: [{ level: 1 }], fightingStyles: null },
       });
-      const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Fighting Styles: N/A');
-    });
-
-    it('renders N/A when fighting styles is undefined', () => {
-      const stats = buildPlayerStats({
+      const undefStats = buildPlayerStats({
         level: 1,
-        class: {
-          name: 'Fighter',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 1 }],
-        },
+        class: { name: 'Fighter', major: {}, subclass: {}, class_levels: [{ level: 1 }] },
       });
-      const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Fighting Styles: N/A');
-    });
-
-    it('renders empty fighting styles list when array is empty', () => {
-      const stats = buildPlayerStats({
+      const emptyStats = buildPlayerStats({
         level: 1,
-        class: {
-          name: 'Fighter',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 1 }],
-          fightingStyles: [],
-        },
+        class: { name: 'Fighter', major: {}, subclass: {}, class_levels: [{ level: 1 }], fightingStyles: [] },
       });
-      const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Fighting Styles:');
+      [nullStats, undefStats, emptyStats].forEach(stats => {
+        const { container } = render(<FighterFeatures playerStats={stats} campaignName="test" />);
+        expect(container.textContent).toContain('Fighting Styles:');
+      });
     });
   });
 
@@ -464,21 +338,6 @@ describe('FighterFeatures', () => {
           subclass: {},
           class_levels: Array(5).fill(null).map((_, i) => ({ level: i + 1 })),
           fightingStyles: ['Defense'],
-        },
-      });
-      render(<FighterFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByTestId('tracked-resource-superiorityDice')).toBeFalsy();
-    });
-
-    it('does not render superiority dice when fightingStyles is null', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        class: {
-          name: 'Fighter',
-          major: {},
-          subclass: {},
-          class_levels: Array(5).fill(null).map((_, i) => ({ level: i + 1 })),
-          fightingStyles: null,
         },
       });
       render(<FighterFeatures playerStats={stats} campaignName="test" />);

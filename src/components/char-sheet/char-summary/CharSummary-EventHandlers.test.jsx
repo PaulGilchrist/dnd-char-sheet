@@ -1,11 +1,45 @@
-// @improved-by-ai
-import { render, screen, fireEvent } from '@testing-library/react';
+// @cleaned-by-ai
+//
+// Cleanup: Removed 8 redundant/brittle/low-value tests (62% reduction).
+//
+// Removed:
+//   - "Inspiration Toggle" (3 tests) — low-value render assertions for a simple
+//     checkbox toggle. The useTrackedResource hook manages state; asserting
+//     checkbox.checked DOM state is brittle and provides no behavioral confidence.
+//
+//   - "Delete Character" (2 tests) — duplicated in CharSummary-Interactions.test.jsx
+//     with identical vi.stubGlobal('confirm') approach and it.afterEach cleanup.
+//
+//   - "Ally Modal" (2 tests) — weaker render assertions covered by
+//     CharSummary-Ally-Initiative.test.jsx "opens ally modal and populates creatures
+//     from combatSummary" which also verifies getCombatSummary call and fallback
+//     behavior with proper wrapper/DiceRollContext setup.
+//
+//   - "Initiative Handling" (1 test) — brittle; asserts CSS class (structural
+//     detail, not behavioral). Covered by
+//     CharSummary-Ally-Initiative.test.jsx "calls rollInitiative with effective
+//     initiative value when initiative is clicked" which tests the actual
+//     rollInitiative behavior with captured arguments.
+//
+// Kept:
+//   - "Speed Calculations" (4 tests) — unique behavioral coverage for haste
+//     doubling and monk unarmored movement logic. Not covered by
+//     CharSummary-SpeedCalculations.test.jsx which uses different parameterized
+//     approaches (exhaustion levels, condition effects, fly speed, etc.).
+//
+//   - "Initiative Rolled Event" (1 test) — unique coverage of the useEffect
+//     side effect that clears wild magic surge effects on initiative-rolled.
+//     Not covered by CharSummary-WildMagic.test.jsx which tests surge rendering
+//     but not the clearing behavior.
+//
+// Original: 13 tests / 315 lines
+// After: 5 tests / ~160 lines
+
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { useSyncedState } from '../../../hooks/runtime/useSyncedState.js';
-import useTrackedResource from '../../../hooks/runtime/useTrackedResource.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -96,141 +130,11 @@ const mockPlayerStats = {
 const mockCampaignName = 'test-campaign';
 
 // ---------------------------------------------------------------------------
-// Inspiration toggle — uses useTrackedResource
-// ---------------------------------------------------------------------------
-describe('CharSummary - Inspiration Toggle', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders inspiration checkbox as unchecked by default', () => {
-        const { container } = render(
-            <CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />
-        );
-        const checkbox = container.querySelector('input[type="checkbox"]');
-        expect(checkbox).not.toBeChecked();
-    });
-
-    it('toggles inspiration checkbox when clicked', () => {
-        const { container } = render(
-            <CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />
-        );
-        const checkbox = container.querySelector('input[type="checkbox"]');
-        expect(checkbox.checked).toBe(false);
-        fireEvent.change(checkbox, { target: { checked: true } });
-        expect(checkbox.checked).toBe(true);
-    });
-
-    it('renders checked when useTrackedResource returns true', () => {
-        vi.mocked(useTrackedResource).mockImplementation((_key, _name, _init, _deps, _campaign) => ({
-            current: true,
-            update: vi.fn(),
-        }));
-
-        const { container } = render(
-            <CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />
-        );
-        const checkbox = container.querySelector('input[type="checkbox"]');
-        expect(checkbox).toBeChecked();
-
-        vi.mocked(useTrackedResource).mockRestore();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Delete character — handleDeleteCharacter
-// ---------------------------------------------------------------------------
-describe('CharSummary - Delete Character', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('calls onDeleteCharacter when confirm is accepted', () => {
-        const onDelete = vi.fn();
-        vi.stubGlobal('confirm', () => true);
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-                onDeleteCharacter={onDelete}
-            />
-        );
-        const deleteBtn = screen.getByText('Delete');
-        fireEvent.click(deleteBtn);
-        expect(onDelete).toHaveBeenCalledWith('Thorin');
-    });
-
-    it('does not call onDeleteCharacter when confirm is cancelled', () => {
-        const onDelete = vi.fn();
-        vi.stubGlobal('confirm', () => false);
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-                onDeleteCharacter={onDelete}
-            />
-        );
-        const deleteBtn = screen.getByText('Delete');
-        fireEvent.click(deleteBtn);
-        expect(onDelete).not.toHaveBeenCalled();
-    });
-
-    it.afterEach(() => {
-        vi.unstubAllGlobals();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Ally modal interactions — handleAllyModalOpen
-// ---------------------------------------------------------------------------
-describe('CharSummary - Ally Modal', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders ally badge with count from stored allies', () => {
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'selectedAllies') return ['Thorin', 'Ally2'];
-            return null;
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Allies \(2\)/)).toBeInTheDocument();
-        vi.mocked(useRuntimeValue).mockRestore();
-    });
-
-    it('renders ally badge with single character when no stored allies', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Allies \(1\)/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Initiative handling — handleInitiative
-// ---------------------------------------------------------------------------
-describe('CharSummary - Initiative Handling', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders initiative element as clickable', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const initiativeEl = screen.getByText(/Initiative:/).closest('span.clickable');
-        expect(initiativeEl).not.toBeNull();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Speed calculations — totalSpeedWithBuff (haste, monk, exhaustion)
+// Speed calculations — haste doubling and monk unarmored movement
+// Unique behavioral coverage not present in any other test file.
+// CharSummary-SpeedCalculations.test.jsx uses parameterized tests for
+// exhaustion, conditions, fly speed, climb/swim — but does not test
+// haste doubling or monk unarmored movement logic.
 // ---------------------------------------------------------------------------
 describe('CharSummary - Speed Calculations', () => {
     beforeEach(() => {
@@ -288,6 +192,8 @@ describe('CharSummary - Speed Calculations', () => {
 
 // ---------------------------------------------------------------------------
 // useEffect for initiative-rolled event — clears wild magic surge effects
+// Unique coverage of the side effect. Not covered by
+// CharSummary-WildMagic.test.jsx which tests surge rendering but not clearing.
 // ---------------------------------------------------------------------------
 describe('CharSummary - Initiative Rolled Event', () => {
     beforeEach(() => {

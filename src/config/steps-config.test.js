@@ -1,12 +1,6 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 import { WIZARD_STEPS, getTotalSteps, getStepConfig } from './steps-config.js';
-
-const isRenderableComponent = (value) =>
-  typeof value === 'function' ||
-  (typeof value === 'object' &&
-    value !== null &&
-    (typeof value.type === 'function' || typeof value.render === 'function'));
 
 const expectedTitles = {
   1: 'Ruleset',
@@ -30,7 +24,8 @@ const expectedTitles = {
 
 describe('steps-config', () => {
   describe('WIZARD_STEPS integrity', () => {
-    it('numbers steps contiguously from 1 with no gaps or duplicates', () => {
+    it('has 17 numbered steps contiguously from 1 with no gaps or duplicates', () => {
+      expect(WIZARD_STEPS).toHaveLength(17);
       const stepNumbers = WIZARD_STEPS.map((step) => step.step);
       expect(stepNumbers).toEqual(
         Array.from({ length: stepNumbers.length }, (_, i) => i + 1)
@@ -42,12 +37,14 @@ describe('steps-config', () => {
       expect(new Set(components).size).toBe(components.length);
     });
 
-    it('declares step, title, component, and getProps on every step', () => {
+    it('defines step (number), title (non-empty string), component (renderable), and getProps (function) on every step', () => {
       for (const step of WIZARD_STEPS) {
         expect(step.step).toBeTypeOf('number');
         expect(step.title).toBeTypeOf('string');
         expect(step.title.length).toBeGreaterThan(0);
-        expect(isRenderableComponent(step.component)).toBe(true);
+        const isRenderable = typeof step.component === 'function' ||
+          (typeof step.component === 'object' && step.component !== null && typeof step.component.type === 'function');
+        expect(isRenderable).toBe(true);
         expect(step.getProps).toBeTypeOf('function');
       }
     });
@@ -56,13 +53,19 @@ describe('steps-config', () => {
   describe('step titles', () => {
     it('assigns the expected title to every step', () => {
       for (const step of WIZARD_STEPS) {
-        expect(step.title).toBe(expectedTitles[step.step]);
+        expect(`${step.step}: ${step.title}`).toBe(`${step.step}: ${expectedTitles[step.step]}`);
       }
     });
   });
 
+  describe('getTotalSteps', () => {
+    it('returns the number of steps in WIZARD_STEPS', () => {
+      expect(getTotalSteps()).toBe(WIZARD_STEPS.length);
+    });
+  });
+
   describe('getStepConfig', () => {
-    it('returns the matching config for any valid step number', () => {
+    it('returns the matching config by reference for every valid step number', () => {
       for (const step of WIZARD_STEPS) {
         expect(getStepConfig(step.step)).toBe(step);
       }
@@ -75,8 +78,8 @@ describe('steps-config', () => {
       expect(getStepConfig(100)).toBeUndefined();
     });
 
-    it('returns undefined for non-numeric input', () => {
-      for (const input of [null, undefined, '', '1', 1.5, NaN, true, false, {}]) {
+    it('returns undefined for non-numeric and string inputs', () => {
+      for (const input of [null, undefined, '', '1', 'abc', 1.5, NaN, true, false, {}]) {
         expect(getStepConfig(input)).toBeUndefined();
       }
     });
@@ -85,137 +88,22 @@ describe('steps-config', () => {
   describe('getProps contracts', () => {
     const stepInputs = {
       1: { ruleset: '5e', errors: {}, onRulesetChange: () => {} },
-      2: {
-        formData: { name: 'Test' },
-        errors: {},
-        backgrounds: [{ name: 'Acolyte' }],
-        ruleset: '5e',
-        campaignName: 'test-campaign',
-        onInputChange: () => {},
-      },
-      3: {
-        formData: { race: { name: 'Human' } },
-        errors: {},
-        allRacesData: [{ name: 'Human' }],
-        racesData: [{ name: 'Human' }],
-        ruleset: '5e',
-        onInputChange: () => {},
-      },
-      4: {
-        formData: { race: { name: 'Dragonborn', subrace: { name: 'Red' } } },
-        errors: {},
-        allRacesData: [{ name: 'Dragonborn' }],
-        racesData: [{ name: 'Dragonborn' }],
-        ruleset: '5e',
-        onInputChange: () => {},
-      },
-      5: {
-        formData: { background: 'Acolyte' },
-        errors: {},
-        backgrounds: [{ name: 'Acolyte' }],
-        ruleset: '2024',
-        onInputChange: () => {},
-      },
-      6: {
-        formData: { class: { name: 'Fighter' } },
-        errors: {},
-        allClassesData: [{ name: 'Fighter' }],
-        classSubtypes: [{ className: 'Fighter', subtypes: [{ name: 'Battle Master' }] }],
-        ruleset: '5e',
-        onInputChange: () => {},
-      },
-      7: {
-        formData: { class: { name: 'Fighter', subclass: { name: 'Battle Master' } } },
-        errors: {},
-        classSubtypes: [{ className: 'Fighter', subtypes: [{ name: 'Battle Master' }] }],
-        ruleset: '5e',
-        onInputChange: () => {},
-        allClassesData: [{ name: 'Fighter' }],
-      },
-      8: {
-        formData: {},
-        allFeats: [{ name: 'Great Weapon Master' }],
-        onArrayFieldChange: () => {},
-        preSelectedFeats: [],
-        computedBuffs: { str: { value: 1 } },
-      },
-      9: {
-        formData: {},
-        errors: {},
-        onAbilityBaseScoreChange: () => {},
-        onAbilityMiscIncreaseChange: () => {},
-        updateBackgroundIncrease: () => {},
-        backgroundAbilityNames: ['Strength'],
-        backgroundAbilityAssignments: {},
-        backgroundValidationWarnings: {},
-        allFeats: [],
-        featAbilityChoices: {},
-        featAbilityAssignments: {},
-        handleFeatAbilityChoice: () => {},
-        onFeatAbilityModeChange: () => {},
-        racesData: [{ name: 'Human' }],
-      },
-      10: {
-        formData: {},
-        errors: {},
-        onSkillToggle: () => {},
-        onSkillExpertiseToggle: () => {},
-        skillLimits: {},
-        expertiseLimits: {},
-        warnings: [],
-        preSelectedSkills: [],
-      },
-      11: {
-        formData: {},
-        errors: {},
-        onToolToggle: () => {},
-        toolLimits: {},
-        toolWarnings: [],
-        preSelectedTools: [],
-        skillLimits: {},
-      },
-      12: {
-        formData: {},
-        errors: {},
-        onLanguageToggle: () => {},
-        onFightingStyleToggle: () => {},
-        languageLimits: {},
-        fightingStyleLimits: {},
-        languageWarnings: [],
-        preSelectedLanguages: [],
-        preSelectedFightingStyles: [],
-      },
-      13: {
-        formData: {},
-        onResistanceToggle: () => {},
-        onImmunityToggle: () => {},
-        resistanceWarnings: [],
-        preSelectedResistances: [],
-        preSelectedImmunities: [],
-      },
-      14: {
-        formData: {},
-        allSpells: [{ name: 'Fireball' }],
-        onArrayFieldChange: () => {},
-        preSelectedSpells: [],
-      },
-      15: {
-        formData: {},
-        allMagicItems: [{ name: 'Ring of Protection' }],
-        ruleset: '5e',
-        classSubtypes: [],
-        onArrayFieldChange: () => {},
-      },
-      16: {
-        formData: {},
-        tempInventory: [],
-        onInventoryChange: () => {},
-        onTempInventoryChange: () => {},
-      },
-      17: {
-        formData: {},
-        onArrayFieldChange: () => {},
-      },
+      2: { formData: { name: 'Test' }, errors: {}, backgrounds: [], ruleset: '5e', campaignName: 'test', onInputChange: () => {} },
+      3: { formData: {}, errors: {}, allRacesData: [], racesData: [], ruleset: '5e', onInputChange: () => {} },
+      4: { formData: {}, errors: {}, allRacesData: [], racesData: [], ruleset: '5e', onInputChange: () => {} },
+      5: { formData: {}, errors: {}, backgrounds: [], ruleset: '5e', onInputChange: () => {} },
+      6: { formData: {}, errors: {}, allClassesData: [], classSubtypes: [], ruleset: '5e', onInputChange: () => {} },
+      7: { formData: {}, errors: {}, classSubtypes: [], ruleset: '5e', onInputChange: () => {}, allClassesData: [] },
+      8: { formData: {}, allFeats: [], onArrayFieldChange: () => {}, preSelectedFeats: [], computedBuffs: {} },
+      9: { formData: {}, errors: {}, onAbilityBaseScoreChange: () => {}, onAbilityMiscIncreaseChange: () => {}, updateBackgroundIncrease: () => {}, backgroundAbilityNames: [], backgroundAbilityAssignments: {}, backgroundValidationWarnings: {}, allFeats: [], featAbilityChoices: {}, featAbilityAssignments: {}, handleFeatAbilityChoice: () => {}, onFeatAbilityModeChange: () => {}, racesData: [] },
+      10: { formData: {}, errors: {}, onSkillToggle: () => {}, onSkillExpertiseToggle: () => {}, skillLimits: {}, expertiseLimits: {}, warnings: [], preSelectedSkills: [] },
+      11: { formData: {}, errors: {}, onToolToggle: () => {}, toolLimits: {}, toolWarnings: [], preSelectedTools: [], skillLimits: {} },
+      12: { formData: {}, errors: {}, onLanguageToggle: () => {}, onFightingStyleToggle: () => {}, languageLimits: {}, fightingStyleLimits: {}, languageWarnings: [], preSelectedLanguages: [], preSelectedFightingStyles: [] },
+      13: { formData: {}, onResistanceToggle: () => {}, onImmunityToggle: () => {}, resistanceWarnings: [], preSelectedResistances: [], preSelectedImmunities: [] },
+      14: { formData: {}, allSpells: [], onArrayFieldChange: () => {}, preSelectedSpells: [] },
+      15: { formData: {}, allMagicItems: [], ruleset: '5e', classSubtypes: [], onArrayFieldChange: () => {} },
+      16: { formData: {}, tempInventory: [], onInventoryChange: () => {}, onTempInventoryChange: () => {} },
+      17: { formData: {}, onArrayFieldChange: () => {} },
     };
 
     const stepRenames = {
@@ -229,8 +117,8 @@ describe('steps-config', () => {
     };
 
     for (const [stepNumber, input] of Object.entries(stepInputs)) {
-      it(`step ${stepNumber} maps wizard inputs to ${expectedTitles[Number(stepNumber)]} props`, () => {
-        const renames = stepRenames[stepNumber] ?? {};
+      it(`step ${stepNumber} getProps maps input keys to output keys correctly`, () => {
+        const renames = stepRenames[Number(stepNumber)] ?? {};
         const outputToInput = Object.fromEntries(
           Object.entries(renames).map(([from, to]) => [to, from])
         );

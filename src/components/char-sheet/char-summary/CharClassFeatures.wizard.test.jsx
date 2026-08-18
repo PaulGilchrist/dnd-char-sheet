@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import WizardFeatures from './CharClassFeatures.jsx';
@@ -69,19 +69,13 @@ describe('WizardFeatures', () => {
   });
 
   describe('arcane ward', () => {
-    it('renders arcane ward when arcane_ward passive exists', () => {
+    it.each([
+      [{ type: 'arcane_ward' }, 'arcane_ward passive'],
+      [{ type: 'passive_rule', effect: 'arcane_ward' }, 'passive_rule with effect'],
+    ])('renders arcane ward tracked resource when passive exists (%s)', (_, label) => {
       const stats = buildPlayerStats({
         level: 5,
-        automation: { passives: [{ type: 'arcane_ward' }] },
-      });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.querySelector('[data-testid="tracked-resource-arcaneWardHp"]')).toBeTruthy();
-    });
-
-    it('renders arcane ward when passive_rule with effect exists', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        automation: { passives: [{ type: 'passive_rule', effect: 'arcane_ward' }] },
+        automation: { passives: [label === 'arcane_ward passive' ? { type: 'arcane_ward' } : { type: 'passive_rule', effect: 'arcane_ward' }] },
       });
       const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
       expect(container.querySelector('[data-testid="tracked-resource-arcaneWardHp"]')).toBeTruthy();
@@ -96,40 +90,32 @@ describe('WizardFeatures', () => {
       expect(container.querySelector('[data-testid="tracked-resource-arcaneWardHp"]')).toBeFalsy();
     });
 
-    it('calculates ward max as 2 * level + int bonus', () => {
+    it.each([
+      [{ level: 5, intBonus: 3 }, 13, 'with int bonus'],
+      [{ level: 5, intBonus: 0 }, 10, 'without int bonus'],
+    ])('calculates ward max as 2 * level + int bonus (%s)', (opts, expected) => {
+      const abilities = opts.intBonus !== undefined ? [{ name: 'Intelligence', bonus: opts.intBonus }] : [];
       render(<WizardFeatures playerStats={buildPlayerStats({
-        level: 5,
-        abilities: [{ name: 'Intelligence', bonus: 3 }],
+        level: opts.level,
+        abilities,
         automation: { passives: [{ type: 'arcane_ward' }] },
       })} campaignName="test" />);
-      // 2 * 5 + 3 = 13
-      expect(screen.getByText('13/13')).toBeTruthy();
-    });
-
-    it('calculates ward max with zero int bonus when ability missing', () => {
-      render(<WizardFeatures playerStats={buildPlayerStats({
-        level: 5,
-        abilities: [],
-        automation: { passives: [{ type: 'arcane_ward' }] },
-      })} campaignName="test" />);
-      // 2 * 5 + 0 = 10
-      expect(screen.getByText('10/10')).toBeTruthy();
+      expect(screen.getByText(`${expected}/${expected}`)).toBeTruthy();
     });
   });
 
   describe('portent', () => {
-    it('renders portent dice section when feature exists', () => {
-      const stats = buildPlayerStats({
-        specialActions: [{ automation: { type: 'portent' } }],
-      });
+    it.each([
+      [{ specialActions: [{ automation: { type: 'portent' } }], expectVisible: true }, 'feature exists'],
+      [{ specialActions: [], expectVisible: false }, 'feature missing'],
+    ])('renders portent dice section (%s)', (opts) => {
+      const stats = buildPlayerStats(opts);
       const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Portent Dice:');
-    });
-
-    it('does not render portent section when feature missing', () => {
-      const stats = buildPlayerStats({ specialActions: [] });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Portent Dice');
+      if (opts.expectVisible) {
+        expect(container.textContent).toContain('Portent Dice:');
+      } else {
+        expect(container.textContent).not.toContain('Portent Dice');
+      }
     });
 
     it('renders parsed portent dice values', () => {
@@ -196,36 +182,24 @@ describe('WizardFeatures', () => {
   });
 
   describe('projected ward', () => {
-    it('renders projected ward badge when reaction exists with type', () => {
+    it.each([
+      [{ type: 'projected_ward', range: 30 }, 'default range'],
+      [{ type: 'projected_ward', range: 60 }, 'custom range 60'],
+      [{ name: 'Projected Ward' }, 'name match'],
+    ])('renders projected ward badge (%s)', (reaction) => {
       const stats = buildPlayerStats({
-        automation: { reactions: [{ type: 'projected_ward', range: 30 }] },
+        automation: { reactions: [reaction] },
       });
       const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Projected Ward');
     });
 
-    it('renders projected ward with default range 30', () => {
-      const stats = buildPlayerStats({
-        automation: { reactions: [{ type: 'projected_ward' }] },
-      });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('30 ft.');
-    });
-
-    it('renders projected ward with custom range', () => {
+    it('shows the correct range in projected ward badge', () => {
       const stats = buildPlayerStats({
         automation: { reactions: [{ type: 'projected_ward', range: 60 }] },
       });
       const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('60 ft.');
-    });
-
-    it('renders projected ward when reaction name matches', () => {
-      const stats = buildPlayerStats({
-        automation: { reactions: [{ name: 'Projected Ward' }] },
-      });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Projected Ward');
     });
 
     it('does not render projected ward when reaction missing', () => {
@@ -236,34 +210,18 @@ describe('WizardFeatures', () => {
   });
 
   describe('the third eye', () => {
-    it('renders third eye badge with darkvision effect', () => {
+    it.each([
+      [{ effect: 'darkvision_120', expected: 'Darkvision 120 ft.' }, 'darkvision'],
+      [{ effect: 'greater_comprehension', expected: 'Greater Comprehension' }, 'greater comprehension'],
+      [{ effect: 'see_invisibility', expected: 'See Invisibility' }, 'see invisibility'],
+    ])('renders third eye badge with %s effect', (opts) => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: 'darkvision_120' }];
+        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: opts.effect }];
         return undefined;
       });
       const stats = buildPlayerStats();
       const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Darkvision 120 ft.');
-    });
-
-    it('renders greater comprehension label', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: 'greater_comprehension' }];
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Greater Comprehension');
-    });
-
-    it('renders see invisibility label', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: 'see_invisibility' }];
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('See Invisibility');
+      expect(container.textContent).toContain(opts.expected);
     });
 
     it('shows Active for unknown effect', () => {
@@ -284,24 +242,21 @@ describe('WizardFeatures', () => {
   });
 
   describe('show wizard features toggle', () => {
-    it('returns null when showWizardFeatures is false', () => {
+    it.each([
+      [{ showWizardFeatures: false }, 'false'],
+      [{ showWizardFeatures: true }, 'true'],
+    ])('returns null when showWizardFeatures is %s', (opts) => {
       vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
         arcaneRecoveryLevels: 1,
-        showWizardFeatures: false,
+        showWizardFeatures: opts.showWizardFeatures,
       });
       const stats = buildPlayerStats();
       const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toBe('');
-    });
-
-    it('renders normally when showWizardFeatures is true', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        arcaneRecoveryLevels: 1,
-        showWizardFeatures: true,
-      });
-      const stats = buildPlayerStats();
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toBe('');
+      if (opts.showWizardFeatures === false) {
+        expect(container.textContent).toBe('');
+      } else {
+        expect(container.textContent).not.toBe('');
+      }
     });
 
     it('renders normally when showWizardFeatures is undefined', () => {

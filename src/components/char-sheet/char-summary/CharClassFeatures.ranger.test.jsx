@@ -1,3 +1,4 @@
+// @cleaned-by-ai
 // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -81,42 +82,18 @@ describe('RangerFeatures', () => {
     });
   });
 
-  describe('level-gated features', () => {
-    it('renders Dread Ambush tracked resource when level >= 3', () => {
+  describe('level-gated tracked resources', () => {
+    it('renders Dread Ambush with Wisdom-based max when level >= 3', () => {
       const stats = buildPlayerStats({ level: 3 });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByText(/Dread Ambush/)).toBeInTheDocument();
       expect(screen.getByTestId('tracked-resource-dreadambushUses')).toBeInTheDocument();
-    });
-
-    it('renders Dread Ambush with Wisdom-based max value', () => {
-      const stats = buildPlayerStats({ level: 3 });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      const maxSpan = screen.getByTestId('tracked-resource-dreadambushUses').querySelector('span');
-      // Wisdom bonus is 3, so max should be 3
-      expect(maxSpan?.textContent).toBe('3/3');
+      expect(screen.getByTestId('tracked-resource-dreadambushUses').querySelector('span')?.textContent).toBe('3/3');
     });
 
     it('does not render Dread Ambush when level < 3', () => {
       const stats = buildPlayerStats({ level: 2 });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
       expect(screen.queryByTestId('tracked-resource-dreadambushUses')).not.toBeInTheDocument();
-    });
-
-    it('renders Favored Enemy tracked resource when level >= 2', () => {
-      const stats = buildPlayerStats({
-        level: 2,
-        class: {
-          name: 'Ranger',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 2, favored_enemy: 2 }],
-          fightingStyles: [],
-        },
-      });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByText(/Favored Enemy/)).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-favoredEnemyUses')).toBeInTheDocument();
     });
 
     it('renders Favored Enemy with class_level favored_enemy value as max', () => {
@@ -131,8 +108,8 @@ describe('RangerFeatures', () => {
         },
       });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      const maxSpan = screen.getByTestId('tracked-resource-favoredEnemyUses').querySelector('span');
-      expect(maxSpan?.textContent).toBe('4/4');
+      expect(screen.getByTestId('tracked-resource-favoredEnemyUses')).toBeInTheDocument();
+      expect(screen.getByTestId('tracked-resource-favoredEnemyUses').querySelector('span')?.textContent).toBe('4/4');
     });
 
     it('renders Favored Enemy with min value 1 when class_level has no favored_enemy', () => {
@@ -147,8 +124,7 @@ describe('RangerFeatures', () => {
         },
       });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      const maxSpan = screen.getByTestId('tracked-resource-favoredEnemyUses').querySelector('span');
-      expect(maxSpan?.textContent).toBe('1/1');
+      expect(screen.getByTestId('tracked-resource-favoredEnemyUses').querySelector('span')?.textContent).toBe('1/1');
     });
 
     it('does not render Favored Enemy when level < 2', () => {
@@ -157,18 +133,11 @@ describe('RangerFeatures', () => {
       expect(screen.queryByTestId('tracked-resource-favoredEnemyUses')).not.toBeInTheDocument();
     });
 
-    it('renders Nature\'s Veil tracked resource when level >= 14', () => {
+    it('renders Nature\'s Veil with Wisdom-based max when level >= 14', () => {
       const stats = buildPlayerStats({ level: 14 });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByText(/Nature's Veil/)).toBeInTheDocument();
       expect(screen.getByTestId('tracked-resource-naturesVeilUses')).toBeInTheDocument();
-    });
-
-    it('renders Nature\'s Veil with Wisdom-based max value', () => {
-      const stats = buildPlayerStats({ level: 14 });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      const maxSpan = screen.getByTestId('tracked-resource-naturesVeilUses').querySelector('span');
-      expect(maxSpan?.textContent).toBe('3/3');
+      expect(screen.getByTestId('tracked-resource-naturesVeilUses').querySelector('span')?.textContent).toBe('3/3');
     });
 
     it('does not render Nature\'s Veil when level < 14', () => {
@@ -177,18 +146,11 @@ describe('RangerFeatures', () => {
       expect(screen.queryByTestId('tracked-resource-naturesVeilUses')).not.toBeInTheDocument();
     });
 
-    it('renders Tireless tracked resource when level >= 10', () => {
+    it('renders Tireless with Wisdom-based max when level >= 10', () => {
       const stats = buildPlayerStats({ level: 10 });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByText(/Tireless/)).toBeInTheDocument();
       expect(screen.getByTestId('tracked-resource-tirelessUses')).toBeInTheDocument();
-    });
-
-    it('renders Tireless with Wisdom-based max value', () => {
-      const stats = buildPlayerStats({ level: 10 });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      const maxSpan = screen.getByTestId('tracked-resource-tirelessUses').querySelector('span');
-      expect(maxSpan?.textContent).toBe('3/3');
+      expect(screen.getByTestId('tracked-resource-tirelessUses').querySelector('span')?.textContent).toBe('3/3');
     });
 
     it('does not render Tireless when level < 10', () => {
@@ -206,22 +168,17 @@ describe('RangerFeatures', () => {
       expect(screen.getByText('Stealth, Survival')).toBeInTheDocument();
     });
 
-    it('does not render expertise when level <= 2', () => {
-      const stats = buildPlayerStats({ level: 2, expertise: ['Stealth'] });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByText(/Expertise:/)).not.toBeInTheDocument();
-    });
-
-    it('does not render expertise when array is empty', () => {
-      const stats = buildPlayerStats({ level: 5, expertise: [] });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByText(/Expertise:/)).not.toBeInTheDocument();
-    });
-
-    it('does not render expertise when expertise is undefined', () => {
-      const stats = buildPlayerStats({ level: 5 });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByText(/Expertise:/)).not.toBeInTheDocument();
+    it('does not render expertise when level <= 2, array is empty, or expertise is undefined', () => {
+      const negativeCases = [
+        { level: 2, expertise: ['Stealth'] },
+        { level: 5, expertise: [] },
+        { level: 5 },
+      ];
+      for (const caseStats of negativeCases) {
+        const stats = buildPlayerStats(caseStats);
+        render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+        expect(screen.queryByText(/Expertise:/)).not.toBeInTheDocument();
+      }
     });
   });
 
@@ -242,59 +199,22 @@ describe('RangerFeatures', () => {
       expect(screen.getByText('Defense')).toBeInTheDocument();
     });
 
-    it('does not render fighting styles when level <= 1', () => {
-      const stats = buildPlayerStats({
-        level: 1,
-        class: {
-          name: 'Ranger',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 1 }],
-          fightingStyles: ['Defense'],
-        },
-      });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByText(/Fighting Styles:/)).not.toBeInTheDocument();
-    });
-
-    it('does not render fighting styles when fightingStyles is null', () => {
-      const stats = buildPlayerStats({
-        level: 2,
-        class: {
-          name: 'Ranger',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 2 }],
-          fightingStyles: null,
-        },
-      });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByText(/Fighting Styles:/)).not.toBeInTheDocument();
-    });
-
-    it('does not render fighting styles when fightingStyles is undefined', () => {
-      const stats = buildPlayerStats({
-        level: 2,
-        class: {
-          name: 'Ranger',
-          major: {},
-          subclass: {},
-          class_levels: [{ level: 2 }],
-        },
-      });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByText(/Fighting Styles:/)).not.toBeInTheDocument();
+    it('does not render fighting styles when level <= 1, fightingStyles is null, or fightingStyles is undefined', () => {
+      const negativeCases = [
+        { level: 1, class: { name: 'Ranger', major: {}, subclass: {}, class_levels: [{ level: 1 }], fightingStyles: ['Defense'] } },
+        { level: 2, class: { name: 'Ranger', major: {}, subclass: {}, class_levels: [{ level: 2 }], fightingStyles: null } },
+        { level: 2, class: { name: 'Ranger', major: {}, subclass: {}, class_levels: [{ level: 2 }] } },
+      ];
+      for (const caseStats of negativeCases) {
+        const stats = buildPlayerStats(caseStats);
+        render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+        expect(screen.queryByText(/Fighting Styles:/)).not.toBeInTheDocument();
+      }
     });
   });
 
   describe('extra attacks', () => {
     it('renders extra attacks value from getClassFeatures', () => {
-      const stats = buildPlayerStats({ level: 5 });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByText(/Extra Attacks:/)).toBeInTheDocument();
-    });
-
-    it('renders 0 extra attacks when getClassFeatures returns 0', () => {
       vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
         extraAttacks: 0,
         favoredEnemies: 0,
@@ -318,20 +238,17 @@ describe('RangerFeatures', () => {
       expect(shieldIcon).toBeTruthy();
     });
 
-    it('does not render defensive tactics badge when choice is null', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === '_Defensive_Tactics_choice') return null;
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByText(/Evasion/)).not.toBeInTheDocument();
-    });
-
-    it('does not render defensive tactics badge when choice is undefined', () => {
-      const stats = buildPlayerStats();
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByText(/Evasion/)).not.toBeInTheDocument();
+    it('does not render defensive tactics badge when choice is null or undefined', () => {
+      const values = [null, undefined];
+      for (const choiceValue of values) {
+        runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+          if (key === '_Defensive_Tactics_choice') return choiceValue;
+          return undefined;
+        });
+        const stats = buildPlayerStats();
+        render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+        expect(screen.queryByText(/Evasion/)).not.toBeInTheDocument();
+      }
     });
   });
 
@@ -356,14 +273,6 @@ describe('RangerFeatures', () => {
       const stats = buildPlayerStats();
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
       expect(screen.queryByText(/Marked Target/)).not.toBeInTheDocument();
-    });
-  });
-
-  describe('data-testid container', () => {
-    it('renders the char-class-ranger container', () => {
-      const stats = buildPlayerStats({ level: 5 });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByTestId('char-class-ranger')).toBeTruthy();
     });
   });
 });

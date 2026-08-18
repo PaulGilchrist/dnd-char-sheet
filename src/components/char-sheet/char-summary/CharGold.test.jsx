@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -68,33 +68,22 @@ describe('CharGold', () => {
   });
 
   describe('value display priority', () => {
-    it('displays runtime gold value when available', () => {
-      useRuntimeValue.mockReturnValue(250);
+    const scenarios = [
+      { name: 'runtime value when available', runtime: 250, inventory: { gold: 500 }, expected: '250' },
+      { name: 'fallback to inventory.gold when runtime is null', runtime: null, inventory: { gold: 500 }, expected: '500' },
+      { name: 'fallback to 0 when both are missing', runtime: null, inventory: {}, expected: '0' },
+      { name: 'runtime prioritized over inventory.gold', runtime: 100, inventory: { gold: 500 }, expected: '100' },
+    ];
 
-      render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
+    for (const { name, runtime, inventory, expected } of scenarios) {
+      it(`displays ${expected} - ${name}`, () => {
+        useRuntimeValue.mockReturnValue(runtime);
 
-      expect(screen.getByTestId('gold-value')).toHaveTextContent('250');
-    });
+        render(<CharGold playerStats={createPlayerStats({ inventory })} campaignName={campaignName} />);
 
-    it('falls back to inventory.gold when runtime value is null', () => {
-      render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
-
-      expect(screen.getByTestId('gold-value')).toHaveTextContent('500');
-    });
-
-    it('falls back to 0 when both runtime and inventory.gold are missing', () => {
-      render(<CharGold playerStats={createPlayerStats({ inventory: {} })} campaignName={campaignName} />);
-
-      expect(screen.getByTestId('gold-value')).toHaveTextContent('0');
-    });
-
-    it('prioritizes runtime over inventory.gold', () => {
-      useRuntimeValue.mockReturnValue(100);
-
-      render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
-
-      expect(screen.getByTestId('gold-value')).toHaveTextContent('100');
-    });
+        expect(screen.getByTestId('gold-value')).toHaveTextContent(expected);
+      });
+    }
   });
 
   describe('input toggling', () => {
@@ -107,67 +96,38 @@ describe('CharGold', () => {
       expect(screen.getByTestId('gold-input')).toBeInTheDocument();
       expect(screen.queryByTestId('gold-value')).not.toBeInTheDocument();
     });
-
-    it('hides the input and restores the value display on blur', () => {
-      render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
-
-      const clickable = screen.getByText(/Gold:/).parentElement;
-      fireEvent.click(clickable);
-      expect(screen.getByTestId('gold-input')).toBeInTheDocument();
-
-      const input = screen.getByTestId('gold-input');
-      fireEvent.blur(input);
-
-      expect(screen.getByTestId('gold-value')).toBeInTheDocument();
-      expect(screen.queryByTestId('gold-input')).not.toBeInTheDocument();
-    });
-
-    it('toggles input open via Enter key on the container', () => {
-      render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
-
-      const clickable = screen.getByText(/Gold:/).parentElement;
-      fireEvent.keyDown(clickable, { key: 'Enter' });
-
-      expect(screen.getByTestId('gold-input')).toBeInTheDocument();
-    });
   });
 
   describe('value persistence', () => {
-    it('saves the new value to runtime store on blur', () => {
-      render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
+    const saveScenarios = [
+      { name: 'on blur', trigger: 'blur' },
+      { name: 'on Enter', trigger: 'enter' },
+    ];
 
-      const clickable = screen.getByText(/Gold:/).parentElement;
-      fireEvent.click(clickable);
+    for (const { name, trigger } of saveScenarios) {
+      it(`saves the new value to runtime store ${name}`, () => {
+        render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
 
-      const input = screen.getByTestId('gold-input');
-      fireEvent.change(input, { target: { value: '750' } });
-      fireEvent.blur(input);
+        const clickable = screen.getByText(/Gold:/).parentElement;
+        fireEvent.click(clickable);
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Test Character',
-        'gold',
-        750,
-        'test-campaign',
-      );
-    });
+        const input = screen.getByTestId('gold-input');
+        fireEvent.change(input, { target: { value: '750' } });
 
-    it('saves the new value to runtime store on Enter', () => {
-      render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
+        if (trigger === 'blur') {
+          fireEvent.blur(input);
+        } else {
+          fireEvent.keyDown(input, { key: 'Enter' });
+        }
 
-      const clickable = screen.getByText(/Gold:/).parentElement;
-      fireEvent.click(clickable);
-
-      const input = screen.getByTestId('gold-input');
-      fireEvent.change(input, { target: { value: '300' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Test Character',
-        'gold',
-        300,
-        'test-campaign',
-      );
-    });
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'Test Character',
+          'gold',
+          750,
+          'test-campaign',
+        );
+      });
+    }
 
     it('clamps negative input values to 0', () => {
       render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
@@ -184,26 +144,6 @@ describe('CharGold', () => {
         'gold',
         0,
         'test-campaign',
-      );
-    });
-
-    it('uses the character name and campaign name from props', () => {
-      const customStats = createPlayerStats({ name: 'Custom Char' });
-
-      render(<CharGold playerStats={customStats} campaignName="my-campaign" />);
-
-      const clickable = screen.getByText(/Gold:/).parentElement;
-      fireEvent.click(clickable);
-
-      const input = screen.getByTestId('gold-input');
-      fireEvent.change(input, { target: { value: '10' } });
-      fireEvent.blur(input);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Custom Char',
-        'gold',
-        10,
-        'my-campaign',
       );
     });
   });
