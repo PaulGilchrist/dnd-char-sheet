@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
 // Quality improvements applied:
 //   - Added @improved-by-ai marker
@@ -11,9 +12,19 @@
 //   - Added jest-dom import for toBeInTheDocument consistency
 //   - Added getRuntimeValue mock to useRuntimeState for sanctuary info computation
 //   - Removed unused Popup mock (not needed by movement-related rendering)
+//
+// Cleanup (2026-08-18):
+//   - Removed 2 "Missing class_specific Graceful Handling" tests — charSummaryCalc.js:59 has
+//     `|| 0` default so these test a defensive fallback that can never fail (low value).
+//   - Consolidated 4 Circle Forms AC Override tests into 1 parameterized test — all test the
+//     same circleFormsACOverride computation with different inputs.
+//   - Replaced brittle nextElementSibling assertions with text-based regex — tests now assert
+//     observable rendered behavior, not DOM structure (survives markup changes).
+//   - Reduced file from 246 lines / 9 tests to 193 lines / 5 tests.
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
@@ -118,11 +129,10 @@ describe('CharSummary - Barbarian Unarmored Movement', () => {
             equipment: [],
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('35 ft');
+        expect(screen.getByText(/35 ft/)).toBeInTheDocument();
     });
 
-    it('reduces speed when heavy armor is equipped despite unarmored movement', () => {
+    it('does not add unarmored movement when armor is equipped', () => {
         const stats = {
             ...mockPlayerStats,
             level: 1,
@@ -131,8 +141,7 @@ describe('CharSummary - Barbarian Unarmored Movement', () => {
             equipment: [{ name: 'Scale Mail', equipment_category: 'Armor' }],
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('25 ft');
+        expect(screen.getByText(/25 ft/)).toBeInTheDocument();
     });
 
     it('does not add unarmored movement for non-Barbarian classes', () => {
@@ -144,103 +153,58 @@ describe('CharSummary - Barbarian Unarmored Movement', () => {
             equipment: [],
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('25 ft');
+        expect(screen.getByText(/25 ft/)).toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Graceful handling of missing class_specific data
-// ---------------------------------------------------------------------------
-describe('CharSummary - Missing class_specific Graceful Handling', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders base speed when class_levels exist but class_specific is missing', () => {
-        const stats = {
-            ...mockPlayerStats,
-            level: 1,
-            class: { name: 'Barbarian', major: { name: 'Barbarian' }, class_levels: [{}] },
-            inventory: { equipped: [] },
-            equipment: [],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('25 ft');
-    });
-
-    it('renders base speed when class_levels array is empty', () => {
-        const stats = {
-            ...mockPlayerStats,
-            level: 1,
-            class: { name: 'Barbarian', major: { name: 'Barbarian' }, class_levels: [] },
-            inventory: { equipped: [] },
-            equipment: [],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('25 ft');
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Circle Forms AC Override — Moon Druid shape shift
+// Circle Forms AC Override — Moon Druid shape shift AC calculation
 // ---------------------------------------------------------------------------
 describe('CharSummary - Circle Forms AC Override', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
     });
 
-    it('overrides AC for Moon Druid with shape shift buff', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'shape_shift' }]);
-        const stats = {
-            ...mockPlayerStats,
+    it.each([
+        {
+            name: 'Moon Druid with shape_shift and WIS +3',
             class: { name: 'Druid', subclass: { name: 'Moon' }, major: { name: 'Moon' } },
             abilities: [{ name: 'Wisdom', bonus: 3 }],
-            inventory: { equipped: [] },
-            equipment: [],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText((content, element) => element?.tagName === 'DIV' && element.className?.includes('clickable') && content.includes('16'))).toBeInTheDocument();
-    });
-
-    it('does not override AC for non-Moon Druid when shape shift buff is active', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'shape_shift' }]);
-        const stats = {
-            ...mockPlayerStats,
-            class: { name: 'Druid', subclass: { name: 'Land' }, major: { name: 'Druid' } },
-            abilities: [{ name: 'Wisdom', bonus: 3 }],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText((content, element) => element?.tagName === 'DIV' && element.className?.includes('clickable') && content.includes('18'))).toBeInTheDocument();
-    });
-
-    it('does not override AC when shape shift buff is not active', () => {
-        getActiveBuffs.mockReturnValue([]);
-        const stats = {
-            ...mockPlayerStats,
-            class: { name: 'Druid', subclass: { name: 'Moon' }, major: { name: 'Moon' } },
-            abilities: [{ name: 'Wisdom', bonus: 3 }],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText((content, element) => element?.tagName === 'DIV' && element.className?.includes('clickable') && content.includes('18'))).toBeInTheDocument();
-    });
-
-    it('handles missing wisdom ability gracefully during shape shift AC calculation', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'shape_shift' }]);
-        const stats = {
-            ...mockPlayerStats,
+            buffs: [{ effect: 'shape_shift' }],
+            expectedAC: '16',
+        },
+        {
+            name: 'Moon Druid with shape_shift and no WIS ability',
             class: { name: 'Druid', subclass: { name: 'Moon' }, major: { name: 'Moon' } },
             abilities: [],
+            buffs: [{ effect: 'shape_shift' }],
+            expectedAC: '13',
+        },
+        {
+            name: 'non-Moon Druid with shape_shift (no override)',
+            class: { name: 'Druid', subclass: { name: 'Land' }, major: { name: 'Druid' } },
+            abilities: [{ name: 'Wisdom', bonus: 3 }],
+            buffs: [{ effect: 'shape_shift' }],
+            expectedAC: '18',
+        },
+        {
+            name: 'Moon Druid without shape_shift (no override)',
+            class: { name: 'Druid', subclass: { name: 'Moon' }, major: { name: 'Moon' } },
+            abilities: [{ name: 'Wisdom', bonus: 3 }],
+            buffs: [],
+            expectedAC: '18',
+        },
+    ])('renders correct AC for $name', ({ class: classInfo, abilities, buffs, expectedAC }) => {
+        getActiveBuffs.mockReturnValue(buffs);
+        const stats = {
+            ...mockPlayerStats,
+            class: classInfo,
+            abilities,
             inventory: { equipped: [] },
             equipment: [],
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText((content, element) => element?.tagName === 'DIV' && element.className?.includes('clickable') && content.includes('13'))).toBeInTheDocument();
+        expect(screen.getByText(new RegExp(`\\b${expectedAC}\\b`))).toBeInTheDocument();
     });
 });

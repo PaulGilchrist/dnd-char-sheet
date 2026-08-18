@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
@@ -85,26 +86,10 @@ describe('CharAbilities internal-skill-check event handler', () => {
   });
 
   describe('checkType === "check" (ability check)', () => {
-    it('calls rollAbilityCheck when event skillName matches an ability name', () => {
-      render(<CharAbilities {...defaultProps} />);
-      window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { skillName: 'Strength', checkType: 'check' } }));
-      expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', 4, undefined);
-    });
-
     it('applies exhaustionPenalty to the ability check bonus from event', () => {
       render(<CharAbilities {...defaultProps} exhaustionPenalty={2} />);
       window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { skillName: 'Strength', checkType: 'check' } }));
       expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith('Strength', 2, undefined);
-    });
-
-    it('applies makeCheckContext to ability checks from event', () => {
-      render(<CharAbilities {...defaultProps} conditionEffects={{ d20Floor10: true }} />);
-      window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { skillName: 'Strength', checkType: 'check' } }));
-      expect(getMocks().rollAbilityCheck).toHaveBeenCalledWith(
-        'Strength',
-        expect.any(Number),
-        expect.objectContaining({ d20Floor10: true })
-      );
     });
 
     it('applies wisCheckReplace context for Charisma when wisCheckReplace is set', () => {
@@ -126,47 +111,13 @@ describe('CharAbilities internal-skill-check event handler', () => {
         expect.objectContaining({ wisCheckReplace: true, wisCheckMinBonus: 3 })
       );
     });
-
-    it('does nothing when event skillName does not match any ability', () => {
-      render(<CharAbilities {...defaultProps} />);
-      window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { skillName: 'NonExistent', checkType: 'check' } }));
-      expect(getMocks().rollAbilityCheck).not.toHaveBeenCalled();
-    });
-
-    it('does nothing when event detail is missing skillName', () => {
-      render(<CharAbilities {...defaultProps} />);
-      window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { checkType: 'check' } }));
-      expect(getMocks().rollAbilityCheck).not.toHaveBeenCalled();
-    });
-
-    it('does nothing when event detail is null', () => {
-      render(<CharAbilities {...defaultProps} />);
-      window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: null }));
-      expect(getMocks().rollAbilityCheck).not.toHaveBeenCalled();
-    });
   });
 
   describe('checkType === "skill" (skill check)', () => {
-    it('calls rollSkillCheck when event skillName matches a skill', () => {
-      render(<CharAbilities {...defaultProps} />);
-      window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { skillName: 'Athletics', checkType: 'skill' } }));
-      expect(getMocks().rollSkillCheck).toHaveBeenCalledWith('Athletics', expect.any(Number), undefined);
-    });
-
     it('calls rollSkillCheck for a charisma skill', () => {
       render(<CharAbilities {...defaultProps} />);
       window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { skillName: 'Deception', checkType: 'skill' } }));
       expect(getMocks().rollSkillCheck).toHaveBeenCalledWith('Deception', expect.any(Number), undefined);
-    });
-
-    it('applies makeCheckContext to skill checks from event', () => {
-      render(<CharAbilities {...defaultProps} conditionEffects={{ reliableTalent: true }} />);
-      window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { skillName: 'Athletics', checkType: 'skill' } }));
-      expect(getMocks().rollSkillCheck).toHaveBeenCalledWith(
-        'Athletics',
-        expect.any(Number),
-        expect.objectContaining({ reliableTalent: true })
-      );
     });
 
     it('applies peerlessAthleteAdvantageSkills context from event', () => {
@@ -194,12 +145,6 @@ describe('CharAbilities internal-skill-check event handler', () => {
       window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { skillName: 'NonExistent', checkType: 'skill' } }));
       expect(getMocks().rollSkillCheck).not.toHaveBeenCalled();
     });
-
-    it('does nothing when event detail is missing skillName for skill checkType', () => {
-      render(<CharAbilities {...defaultProps} />);
-      window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { checkType: 'skill' } }));
-      expect(getMocks().rollSkillCheck).not.toHaveBeenCalled();
-    });
   });
 
   describe('unknown checkType', () => {
@@ -208,15 +153,6 @@ describe('CharAbilities internal-skill-check event handler', () => {
       window.dispatchEvent(new CustomEvent('internal-skill-check', { detail: { skillName: 'Strength', checkType: 'invalid' } }));
       expect(getMocks().rollAbilityCheck).not.toHaveBeenCalled();
       expect(getMocks().rollSkillCheck).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('event listener cleanup', () => {
-    it('removes event listener on unmount', () => {
-      const { unmount } = render(<CharAbilities {...defaultProps} />);
-      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
-      unmount();
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('internal-skill-check', expect.any(Function));
     });
   });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
 // Quality improvements:
 //   - Removed window.location.hostname assignment (unnecessary — isLocalhost
@@ -7,12 +8,19 @@
 //     (tests rendered output, not DOM structure)
 //   - Added @testing-library/jest-dom import (required for toBeInTheDocument)
 //   - Reduced excessive cleanup meta-commentary
+//
+// Cleanup (2026-08-18):
+//   - Removed 4 redundant speed calculation tests (haste doubling, monk unarmored
+//     movement +/− armor/shield). All covered by CharSummary-SpeedCalculations.test.jsx
+//     and CharSummary-BuffEffects.test.jsx with parameterized it.each coverage.
+//   - Kept initiative-rolled event test — unique behavioral coverage not present
+//     in any other test file.
+//   - Reduced file from 185 lines / 5 tests to 134 lines / 1 test.
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import CharSummary from './CharSummary.jsx';
-import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { useSyncedState } from '../../../hooks/runtime/useSyncedState.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
@@ -51,10 +59,6 @@ vi.mock('../../../hooks/combat/useLoggedDiceRoll.js', () => ({
         setPopupHtml: vi.fn(),
         rollInitiative: vi.fn(),
     })),
-}));
-
-vi.mock('../../../services/combat/buffs/buffService.js', () => ({
-    getActiveBuffs: vi.fn(() => []),
 }));
 
 vi.mock('../../../services/rules/rulesFactory.js', () => ({
@@ -104,66 +108,11 @@ const mockPlayerStats = {
 const mockCampaignName = 'test-campaign';
 
 // ---------------------------------------------------------------------------
-// Speed calculations — haste doubling and monk unarmored movement
-// Uses screen.getByText assertions to verify rendered output directly,
-// avoiding brittle nextElementSibling DOM traversal.
-// ---------------------------------------------------------------------------
-describe('CharSummary - Speed Calculations', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('doubles speed when haste buff is active', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'haste' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/50 ft/)).toBeInTheDocument();
-    });
-
-    it('adds monk unarmored movement when no armor or shield', () => {
-        const stats = {
-            ...mockPlayerStats,
-            level: 5,
-            class: { name: 'Monk', major: { name: 'Monk' } },
-            inventory: { equipped: [] },
-            equipment: [],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/35 ft/)).toBeInTheDocument();
-    });
-
-    it('does not add monk unarmored movement when wearing armor', () => {
-        const stats = {
-            ...mockPlayerStats,
-            level: 5,
-            class: { name: 'Monk', major: { name: 'Monk' } },
-            inventory: { equipped: ['Scale Mail'] },
-            equipment: [{ name: 'Scale Mail', equipment_category: 'Armor' }],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/25 ft/)).toBeInTheDocument();
-    });
-
-    it('does not add monk unarmored movement when wielding shield', () => {
-        const stats = {
-            ...mockPlayerStats,
-            level: 5,
-            class: { name: 'Monk', major: { name: 'Monk' } },
-            inventory: { equipped: ['Shield'] },
-            equipment: [{ name: 'Shield', type: 'Shield' }],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/25 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
 // useEffect for initiative-rolled event — clears wild magic surge effects
 // ---------------------------------------------------------------------------
 describe('CharSummary - Initiative Rolled Event', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        getActiveBuffs.mockReturnValue([]);
     });
 
     it('clears surge effects when initiative-rolled event fires', () => {

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
@@ -62,28 +63,8 @@ describe('CharFeatFeatures', () => {
   });
 
   describe('null rendering when no features are active', () => {
-    it('returns null when automation is null', () => {
-      const stats = { ...basePlayerStats, automation: null };
-      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(container.querySelector('div')).toBeNull();
-    });
-
     it('returns null when automation is undefined', () => {
       const stats = { ...basePlayerStats, automation: undefined };
-      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(container.querySelector('div')).toBeNull();
-    });
-
-    it('returns null when automation is missing', () => {
-      const stats = { ...basePlayerStats, automation: undefined };
-      delete stats.automation;
-      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(container.querySelector('div')).toBeNull();
-    });
-
-    it('returns null when feats array is missing', () => {
-      const stats = { ...basePlayerStats };
-      delete stats.feats;
       const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
       expect(container.querySelector('div')).toBeNull();
     });
@@ -98,13 +79,6 @@ describe('CharFeatFeatures', () => {
 
   describe('lucky feat — rendering', () => {
     it('renders Luck Points input when luckyPoints value is 0 (lpMax drives visibility, not the value)', () => {
-      const stats = { ...basePlayerStats, feats: ['Lucky'] };
-      setStore('luckyPoints', 0);
-      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(screen.getByText('Luck Points: 3')).toBeInTheDocument();
-    });
-
-    it('passes correct props to TrackedResourceInput for luckyPoints', () => {
       const stats = { ...basePlayerStats, feats: ['Lucky'] };
       setStore('luckyPoints', 0);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);

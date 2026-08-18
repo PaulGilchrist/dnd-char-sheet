@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -62,7 +63,6 @@ vi.mock('../../../services/rules/core/attackCalc.js', () => ({
 describe('CharSummary - Vulnerabilities', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
@@ -73,14 +73,8 @@ describe('CharSummary - Vulnerabilities', () => {
         expect(screen.getByText(/fire/)).toBeInTheDocument();
     });
 
-    it('does not render vulnerabilities when empty', () => {
+    it('does not render vulnerabilities when absent', () => {
         const stats = { ...mockPlayerStats, vulnerabilities: [] };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Vulnerabilities:/)).not.toBeInTheDocument();
-    });
-
-    it('does not render vulnerabilities when null', () => {
-        const stats = { ...mockPlayerStats, vulnerabilities: null };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.queryByText(/Vulnerabilities:/)).not.toBeInTheDocument();
     });

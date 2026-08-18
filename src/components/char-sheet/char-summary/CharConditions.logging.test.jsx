@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharConditions from './CharConditions.jsx';
@@ -225,53 +226,9 @@ describe('CharConditions logging', () => {
   });
 
   describe('no conditions or exhaustion', () => {
-    it('returns null when there are no conditions and no exhaustion', () => {
+    it('renders nothing when there are no conditions and no exhaustion', () => {
       const { container } = render(<CharConditions {...defaultProps} />);
-      expect(container.innerHTML).toBe('');
-    });
-  });
-
-  describe('condition without save data', () => {
-    it('renders the condition button but does not log anything or remove condition when clicked without dc/ability', async () => {
-      runtimeValues['activeConditions'] = ['blinded'];
-      runtimeValues['activeConditionMeta'] = { blinded: {} };
-      render(<CharConditions {...defaultProps} />);
-
-      const blindedBtn = screen.getByText('Blinded');
-      await fireEvent.click(blindedBtn);
-
-      expect(addEntry).not.toHaveBeenCalled();
-      expect(logConditionSave).not.toHaveBeenCalled();
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        'Test Character',
-        'activeConditions',
-        [],
-        'test-campaign'
-      );
-    });
-  });
-
-  describe('save with advantage', () => {
-    it('rolls 2 d20s and logs mode as advantage when saveAdvantage includes the condition', async () => {
-      runtimeValues['activeConditions'] = ['charmed'];
-      runtimeValues['activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
-      render(
-        <CharConditions
-          {...defaultProps}
-          conditionEffects={{ saveAdvantage: ['charmed'] }}
-        />
-      );
-
-      const charmedBtn = screen.getByText('Charmed DC 12');
-      await fireEvent.click(charmedBtn);
-
-      expect(addEntry).toHaveBeenCalledWith(
-        'test-campaign',
-        expect.objectContaining({
-          mode: 'advantage',
-          rolls: [15, 15],
-        })
-      );
+      expect(container.firstChild).toBeNull();
     });
   });
 });

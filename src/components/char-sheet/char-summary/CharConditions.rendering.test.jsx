@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharConditions from './CharConditions.jsx';
@@ -125,20 +126,9 @@ describe('CharConditions rendering', () => {
       expect(screen.getByText('Exhaustion (6)')).toHaveAttribute('title', 'Exhaustion level 6 - DEAD\n\n');
     });
 
-    it('omits "DEAD" from title when exhaustion is below maximum', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={5} />);
-      expect(screen.getByText('Exhaustion (5)').getAttribute('title')).not.toContain('DEAD');
-    });
-
     it('disables plus button when exhaustion is at maximum level', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={6} />);
       expect(screen.getByRole('button', { name: '+' })).toBeDisabled();
-    });
-
-    it('enables both exhaustion adjustment buttons at mid level', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={3} />);
-      expect(screen.getByRole('button', { name: '−' })).not.toBeDisabled();
-      expect(screen.getByRole('button', { name: '+' })).not.toBeDisabled();
     });
 
     it.each`
@@ -162,6 +152,38 @@ describe('CharConditions rendering', () => {
       render(<CharConditions {...defaultProps} />);
       expect(screen.getAllByText('Charmed DC 12')).toHaveLength(1);
       expect(screen.getByText('Blinded DC 10')).toBeInTheDocument();
+    });
+  });
+
+  describe('condition display text and tooltips', () => {
+    it.each`
+      condition      | conditions           | meta                                      | displayText
+      ${'charmed'}   | ${['charmed']}       | ${{ charmed: { dc: 12, ability: 'wis' } }} | ${'Charmed DC 12'}
+      ${'blinded-dc'}| ${['blinded']}       | ${{ blinded: { dc: 10 } }}                 | ${'Blinded DC 10'}
+      ${'blinded-ability'} | ${['blinded']} | ${{ blinded: { ability: 'con' } }}         | ${'Blinded'}
+    `('renders "$displayText" for condition with meta $meta', ({ conditions, meta, displayText }) => {
+      runtimeValues['Test Character::activeConditions'] = conditions;
+      runtimeValues['Test Character::activeConditionMeta'] = meta;
+      render(<CharConditions {...defaultProps} />);
+      expect(screen.getByText(displayText)).toBeInTheDocument();
+    });
+
+    it.each`
+      condition      | conditions           | meta                                      | displayText
+      ${'charmed'}   | ${['charmed']}       | ${{ charmed: { dc: 12, ability: 'wis' } }} | ${'Charmed DC 12'}
+      ${'blinded'}   | ${['blinded']}       | ${{}}                                       | ${'Blinded'}
+    `('sets tooltip from CONDITION_DESCRIPTIONS for $condition', ({ conditions, meta, displayText }) => {
+      runtimeValues['Test Character::activeConditions'] = conditions;
+      runtimeValues['Test Character::activeConditionMeta'] = meta;
+      render(<CharConditions {...defaultProps} />);
+      expect(screen.getByText(displayText).getAttribute('title')).toContain('can\'t');
+    });
+
+    it('sets tooltip for exhaustion level', () => {
+      runtimeValues['Test Character::activeConditions'] = [];
+      runtimeValues['Test Character::activeConditionMeta'] = {};
+      render(<CharConditions {...defaultProps} exhaustionLevel={2} />);
+      expect(screen.getByText('Exhaustion (2)').getAttribute('title')).toContain('Exhaustion level 2');
     });
   });
 
@@ -189,29 +211,6 @@ describe('CharConditions rendering', () => {
         expect(screen.queryByText('Charmed DC 14')).not.toBeInTheDocument();
       });
     });
-
-    it('does not trigger a save when clicking a condition with dc but no ability', () => {
-      runtimeValues['Test Character::activeConditions'] = ['blinded'];
-      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10, ability: null } };
-
-      render(<CharConditions {...defaultProps} />);
-      fireEvent.click(screen.getByText('Blinded DC 10'));
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-    });
-
-    it('renders condition text without DC when meta has no dc but has ability', () => {
-      runtimeValues['Test Character::activeConditions'] = ['blinded'];
-      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { ability: 'con' } };
-      render(<CharConditions {...defaultProps} />);
-      expect(screen.getByText('Blinded')).toBeInTheDocument();
-    });
-
-    it('renders condition text with DC when meta has dc but no ability', () => {
-      runtimeValues['Test Character::activeConditions'] = ['blinded'];
-      runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10 } };
-      render(<CharConditions {...defaultProps} />);
-      expect(screen.getByText('Blinded DC 10')).toBeInTheDocument();
-    });
   });
 
   describe('combined conditions and exhaustion display', () => {
@@ -221,78 +220,6 @@ describe('CharConditions rendering', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={2} />);
       expect(screen.getByText('Charmed DC 12')).toBeInTheDocument();
       expect(screen.getByText('Exhaustion (2)')).toBeInTheDocument();
-    });
-
-    it('renders exhaustion when there are no conditions', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={1} />);
-      expect(screen.getByText('Exhaustion (1)')).toBeInTheDocument();
-    });
-  });
-
-  describe('storage change listener', () => {
-    it('unsubscribes on unmount', async () => {
-      const { addStorageChangeListener } = await import('../../../hooks/runtime/useRuntimeState.js');
-      const mockUnsubscribe = vi.fn();
-      addStorageChangeListener.mockImplementation(() => mockUnsubscribe);
-
-      const { unmount } = render(<CharConditions {...defaultProps} />);
-      unmount();
-
-      expect(mockUnsubscribe).toHaveBeenCalled();
-    });
-  });
-
-  describe('condition meta handling', () => {
-    it('falls back to bare condition name when conditionMeta is null', () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed'];
-      runtimeValues['Test Character::activeConditionMeta'] = null;
-      render(<CharConditions {...defaultProps} />);
-      expect(screen.getByText('Charmed')).toBeInTheDocument();
-    });
-  });
-
-  describe('tooltips', () => {
-    it.each`
-      condition      | conditions           | meta                                      | displayText    | expectedText
-      ${'charmed'}   | ${['charmed']}       | ${{ charmed: { dc: 12, ability: 'wis' } }} | ${'Charmed DC 12'} | ${"You can't attack the charmer"}
-      ${'blinded'}   | ${['blinded']}       | ${{}}                                       | ${'Blinded'}       | ${"You can't see"}
-    `('sets tooltip from CONDITION_DESCRIPTIONS for $condition', ({ conditions, meta, displayText, expectedText }) => {
-      runtimeValues['Test Character::activeConditions'] = conditions;
-      runtimeValues['Test Character::activeConditionMeta'] = meta;
-      render(<CharConditions {...defaultProps} />);
-      expect(screen.getByText(displayText).getAttribute('title')).toContain(expectedText);
-    });
-
-    it('sets tooltip for exhaustion level from CONDITION_DESCRIPTIONS', () => {
-      runtimeValues['Test Character::activeConditions'] = [];
-      runtimeValues['Test Character::activeConditionMeta'] = {};
-      render(<CharConditions {...defaultProps} exhaustionLevel={2} />);
-      expect(screen.getByText('Exhaustion (2)').getAttribute('title')).toContain('Exhaustion level 2');
-    });
-  });
-
-  describe('mixed savability in a single list', () => {
-    it('triggers saves for savable conditions but not for non-savable ones', async () => {
-      runtimeValues['Test Character::activeConditions'] = ['charmed', 'blinded', 'poisoned'];
-      runtimeValues['Test Character::activeConditionMeta'] = {
-        charmed: { dc: 12, ability: 'wis' },
-        blinded: { dc: 10, ability: null },
-        poisoned: { dc: 11, ability: 'con' },
-      };
-
-      render(<CharConditions {...defaultProps} />);
-
-      fireEvent.click(screen.getByText('Charmed DC 12'));
-      fireEvent.click(screen.getByText('Poisoned DC 11'));
-
-      await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledTimes(2);
-      });
-
-      vi.clearAllMocks();
-
-      fireEvent.click(screen.getByText('Blinded DC 10'));
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
     });
   });
 

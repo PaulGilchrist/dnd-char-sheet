@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
 // Shared mock data for CharSummary component tests.
 // All test files should import from this module rather than duplicating
@@ -12,6 +13,15 @@
 //   - rules (ruleset selection tests)
 //   - automationConditionalImmunities (rage/feign death tests)
 //   - wrathOfTheSeaActive (wrath of the sea badge tests)
+//
+// Cleanup (2026-08-18):
+//   - No tests in this file — it is a mock data module only.
+//   - Added @cleaned-by-ai marker.
+//   - Note: ~20 test files still duplicate mock setup (vi.mock calls) instead of
+//     importing from this module. The module exports mockPlayerStats/mockCampaignName;
+//     mock setup (vi.mock) cannot be shared because each test file needs different
+//     mock configurations. This is inherent to Vitest's per-file mock isolation.
+//   - CharSummary-Features.test.jsx (dead file, 0 tests) was removed separately.
 
 const mockPlayerStats = {
     name: 'Thorin',

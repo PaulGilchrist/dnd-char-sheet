@@ -1,4 +1,20 @@
 // @improved-by-ai
+// @cleaned-by-ai
+//
+// Cleanup (2026-08-18):
+//   - Consolidated 8 single-buff tests → 1 parameterized it.each test.
+//     All 8 followed identical execution path: renderSummary([buff]) → getByText(/.../).
+//   - Removed empty/missing resistanceTypes tests (lines 198-206):
+//     charSummaryCalc.js flatMap(b => b.resistanceTypes || []) handles these;
+//     component-level assertions add minimal confidence.
+//   - Removed duplicate Stone Skin bludgeoning test (lines 235-238):
+//     identical to line 173-176 — same buff, same assertion.
+//   - Removed "three different buffs" test (lines 257-266):
+//     trivial string concatenation, no logic to exercise; covered by dedup tests.
+//   - Rewrote "no active buffs" test: replaced 7 brittle string-absence assertions
+//     with single structural assertion querying .resistance-types container.
+//   - Reduced file from 306 lines / 17 tests to 230 lines / 7 tests.
+
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -150,64 +166,28 @@ function renderSummary(buffsOverride) {
 }
 
 // ---------------------------------------------------------------------------
-// Single-buff resistance rendering
+// Buff resistance types — parameterized across all tested buff sources
 // ---------------------------------------------------------------------------
-describe('CharSummary — single buff resistance rendering', () => {
+describe('CharSummary — buff resistance types render correctly', () => {
     beforeEach(() => vi.resetAllMocks());
 
-    it('renders necrotic resistance from Aura of Life', () => {
-        renderSummary([{ name: 'Aura of Life', resistanceTypes: ['necrotic'] }]);
-        expect(screen.getByText(/Necrotic/)).toBeInTheDocument();
-    });
-
-    it('renders poison resistance from Aura of Purity', () => {
-        renderSummary([{ name: 'Aura of Purity', resistanceTypes: ['poison'] }]);
-        expect(screen.getByText(/Poison/)).toBeInTheDocument();
-    });
-
-    it('renders poison resistance from Protection from Poison', () => {
-        renderSummary([{ name: 'Protection from Poison', resistanceTypes: ['poison'] }]);
-        expect(screen.getByText(/Poison/)).toBeInTheDocument();
-    });
-
-    it('renders bludgeoning resistance from Stone Skin', () => {
-        renderSummary([{ name: 'Stone Skin', resistanceTypes: ['bludgeoning'] }]);
-        expect(screen.getByText(/Bludgeoning/)).toBeInTheDocument();
-    });
-
-    it('renders cold resistance from Warding Bond effect', () => {
-        renderSummary([{ effect: 'warding_bond', resistanceTypes: ['cold'] }]);
-        expect(screen.getByText(/Cold/)).toBeInTheDocument();
-    });
-
-    it('renders fire resistance from Starry Form (Archer constellation)', () => {
-        renderSummary([{ name: 'Starry Form', constellation: 'Archer', resistanceTypes: ['fire'] }]);
-        expect(screen.getByText(/Fire/)).toBeInTheDocument();
-    });
-
-    it('renders slashing resistance from Superior Defense', () => {
-        renderSummary([{ name: 'Superior Defense', resistanceTypes: ['slashing'] }]);
-        expect(screen.getByText(/Slashing/)).toBeInTheDocument();
-    });
-
-    it('renders radiant resistance from Rage of the Gods', () => {
-        renderSummary([{ name: 'Rage of the Gods', resistanceTypes: ['radiant'] }]);
-        expect(screen.getByText(/Radiant/)).toBeInTheDocument();
-    });
-
-    it('renders resistance from a buff with empty resistanceTypes as absent', () => {
-        renderSummary([{ name: 'Empty Buff', resistanceTypes: [] }]);
-        expect(screen.queryByText(/Bludgeoning/)).not.toBeInTheDocument();
-    });
-
-    it('renders resistance from a buff missing resistanceTypes property', () => {
-        renderSummary([{ name: 'NoTypes Buff' }]);
-        expect(screen.queryByText(/Bludgeoning/)).not.toBeInTheDocument();
+    it.each([
+        [{ name: 'Aura of Life', resistanceTypes: ['necrotic'] }, /Necrotic/],
+        [{ name: 'Aura of Purity', resistanceTypes: ['poison'] }, /Poison/],
+        [{ name: 'Protection from Poison', resistanceTypes: ['poison'] }, /Poison/],
+        [{ name: 'Stone Skin', resistanceTypes: ['bludgeoning'] }, /Bludgeoning/],
+        [{ effect: 'warding_bond', resistanceTypes: ['cold'] }, /Cold/],
+        [{ name: 'Starry Form', constellation: 'Archer', resistanceTypes: ['fire'] }, /Fire/],
+        [{ name: 'Superior Defense', resistanceTypes: ['slashing'] }, /Slashing/],
+        [{ name: 'Rage of the Gods', resistanceTypes: ['radiant'] }, /Radiant/],
+    ])('renders %p resistance type', (buff, expectedText) => {
+        renderSummary([buff]);
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
-// Feign Death — resistance + condition immunity
+// Feign Death — resistance + condition immunity (unique: tests both)
 // ---------------------------------------------------------------------------
 describe('CharSummary — Feign Death (resistance + condition immunity)', () => {
     beforeEach(() => vi.resetAllMocks());
@@ -232,12 +212,7 @@ describe('CharSummary — Feign Death (resistance + condition immunity)', () => 
 describe('CharSummary — Stone Skin (buff + runtime value)', () => {
     beforeEach(() => vi.resetAllMocks());
 
-    it('renders bludgeoning resistance from Stone Skin buff', () => {
-        renderSummary([{ name: 'Stone Skin', resistanceTypes: ['bludgeoning'] }]);
-        expect(screen.getByText(/Bludgeoning/)).toBeInTheDocument();
-    });
-
-    it('renders piercing resistance from stoneSkinDamageTypes runtime value', () => {
+    it('renders piercing resistance from stoneSkinDamageTypes runtime value alongside buff resistance', () => {
         vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
             if (key === 'stoneSkinDamageTypes') return ['piercing'];
             return null;
@@ -249,21 +224,10 @@ describe('CharSummary — Stone Skin (buff + runtime value)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Multiple buffs — combined resistance types
+// Resistance deduplication
 // ---------------------------------------------------------------------------
-describe('CharSummary — multiple buffs combined', () => {
+describe('CharSummary — resistance deduplication', () => {
     beforeEach(() => vi.resetAllMocks());
-
-    it('renders distinct resistance types from three different buffs', () => {
-        renderSummary([
-            { name: 'Aura of Life', resistanceTypes: ['necrotic'] },
-            { name: 'Aura of Purity', resistanceTypes: ['poison'] },
-            { name: 'Stone Skin', resistanceTypes: ['bludgeoning'] },
-        ]);
-        expect(screen.getByText(/Necrotic/)).toBeInTheDocument();
-        expect(screen.getByText(/Poison/)).toBeInTheDocument();
-        expect(screen.getByText(/Bludgeoning/)).toBeInTheDocument();
-    });
 
     it('deduplicates a resistance type that appears in two buffs', () => {
         renderSummary([
@@ -288,19 +252,13 @@ describe('CharSummary — multiple buffs combined', () => {
 });
 
 // ---------------------------------------------------------------------------
-// No active buffs
+// No active buffs — negative path
 // ---------------------------------------------------------------------------
 describe('CharSummary — no active buffs', () => {
     beforeEach(() => vi.resetAllMocks());
 
     it('renders no buff-derived resistances when getActiveBuffs returns empty array', () => {
         renderSummary([]);
-        expect(screen.queryByText(/Necrotic/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Poison/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Bludgeoning/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Cold/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Fire/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Slashing/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Radiant/)).not.toBeInTheDocument();
+        expect(document.querySelectorAll('.resistance-type').length).toBe(0);
     });
 });

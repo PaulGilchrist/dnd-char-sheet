@@ -1,12 +1,18 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
-// Improvements:
-//   - Replaced giant inline useSyncedState mock overrides with a small helper function
-//   - Added missing mocks that CharSummary.jsx depends on (DiceRollContext, getCombatSummary,
-//     isBuffActive, isUnbreakableMajesty, buffToggle, handlers, logService, etc.)
-//   - Added edge-case tests: empty array, single item, surge without duration
-//   - Strengthened assertions to verify component behavior, not just presence
-//   - Removed redundant pattern duplication across tests
+// Cleanup:
+//   - Removed "renders single surge effect without duration" — redundant with multi-item test
+//   - Removed "renders duration tooltip on hourglass icon" — already covered by multi-item test
+//   - Removed "does not render surge effects section when surgeEffects is empty array" —
+//     redundant with null test (source checks surgeEffects && Array.isArray && length > 0)
+//
+// Remaining tests (4):
+//   1. Multi-item surge effects list rendering + duration tooltip (covers rendering, #roll format, tooltips)
+//   2. Tamed roll special case (unique behavior: displays "Tamed" instead of "#roll")
+//   3. Null surgeEffects (covers no-render path)
+//
+// CharSummary-EventHandlers.test.jsx retains: initiative-rolled event clears surge effects (different behavior)
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -151,7 +157,7 @@ describe('CharSummary - Wild Magic Surge Effects', () => {
         vi.mocked(getRuntimeValue).mockReturnValue(null);
     });
 
-    it('renders surge effects list when surgeEffects array has entries', () => {
+    it('renders surge effects list with duration tooltips when surgeEffects array has entries', () => {
         vi.mocked(useSyncedState).mockImplementation(
             createUseSyncedStateMock({
                 surgeEffects: [
@@ -164,15 +170,6 @@ describe('CharSummary - Wild Magic Surge Effects', () => {
         expect(screen.getByText(/Surge Effects:/)).toBeInTheDocument();
         expect(screen.getByText(/#5 — Fireball/)).toBeInTheDocument();
         expect(screen.getByText(/#12 — Healing/)).toBeInTheDocument();
-    });
-
-    it('renders duration tooltip on hourglass icon when surge has duration', () => {
-        vi.mocked(useSyncedState).mockImplementation(
-            createUseSyncedStateMock({
-                surgeEffects: [{ timestamp: 1000, roll: 5, effect: 'Fireball', duration: '1 round' }],
-            })
-        );
-        renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByTitle('1 round')).toBeInTheDocument();
     });
 
@@ -193,26 +190,5 @@ describe('CharSummary - Wild Magic Surge Effects', () => {
         );
         renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.queryByText(/Surge Effects:/)).not.toBeInTheDocument();
-    });
-
-    it('does not render surge effects section when surgeEffects is empty array', () => {
-        vi.mocked(useSyncedState).mockImplementation(
-            createUseSyncedStateMock({ surgeEffects: [] })
-        );
-        renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Surge Effects:/)).not.toBeInTheDocument();
-    });
-
-    it('renders single surge effect without duration', () => {
-        vi.mocked(useSyncedState).mockImplementation(
-            createUseSyncedStateMock({
-                surgeEffects: [{ timestamp: 4000, roll: 7, effect: 'Teleport' }],
-            })
-        );
-        renderWithDiceContext(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Surge Effects:/)).toBeInTheDocument();
-        expect(screen.getByText(/#7 — Teleport/)).toBeInTheDocument();
-        const surgeLi = screen.getByText(/#7 — Teleport/).parentElement;
-        expect(surgeLi.querySelector('i.fa-solid.fa-hourglass-end')).not.toBeInTheDocument();
     });
 });

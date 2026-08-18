@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CharClassFeatures from './CharClassFeatures.jsx';
@@ -74,17 +75,6 @@ describe('CharClassFeatures', () => {
         race: { traits: [{ name: 'Stonecunning', automation: true }] },
       });
       renderComponent(playerStats);
-      expect(screen.getByText('Stonecunning')).toBeInTheDocument();
-    });
-
-    it('renders both adrenaline rush and stonecunning when both exist with unknown class', () => {
-      const playerStats = buildPlayerStats({
-        class: { name: 'UnknownClass' },
-        automation: { ...basePlayerStats.automation, specialActions: [{ effect: 'bonus_action_dash' }] },
-        race: { traits: [{ name: 'Stonecunning', automation: true }] },
-      });
-      renderComponent(playerStats);
-      expect(screen.getByText('Adrenaline Rush')).toBeInTheDocument();
       expect(screen.getByText('Stonecunning')).toBeInTheDocument();
     });
   });

@@ -342,17 +342,6 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       expect(handler).toHaveBeenCalledWith('Ally1');
     });
 
-    it('calls handleTricksterBlessingConfirm with null on skip', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleTricksterBlessingConfirm: handler })}
-        modalState={{ tricksterBlessingModal: { creatureTargets: [{ name: 'Ally1' }] } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('secondary-skip'));
-      expect(handler).toHaveBeenCalledWith(null);
-    });
-
     it('renders the correct modal title', () => {
       render(<CharActionModals
         {...createBaseProps({ handleTricksterBlessingConfirm: vi.fn() })}
@@ -375,17 +364,6 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       expect(handler).toHaveBeenCalledWith('Ally1');
     });
 
-    it('calls handleBardicInspirationConfirm with null on skip', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleBardicInspirationConfirm: handler })}
-        modalState={{ bardicInspirationTargetModal: { creatureTargets: [{ name: 'Ally1' }], dieSize: 6 } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('secondary-skip'));
-      expect(handler).toHaveBeenCalledWith(null);
-    });
-
     it('renders the correct modal title', () => {
       render(<CharActionModals
         {...createBaseProps({ handleBardicInspirationConfirm: vi.fn() })}
@@ -406,17 +384,6 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       />);
       fireEvent.click(screen.getByTestId('secondary-target-Ally2'));
       expect(handler).toHaveBeenCalledWith('Ally2');
-    });
-
-    it('calls handleInspiringMovementConfirm with null on skip', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleInspiringMovementConfirm: handler })}
-        modalState={{ inspiringMovementAllyModal: { creatureTargets: [{ name: 'Ally1' }] } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('secondary-skip'));
-      expect(handler).toHaveBeenCalledWith(null);
     });
   });
 

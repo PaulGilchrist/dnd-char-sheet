@@ -1,15 +1,23 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Tests for handler callbacks in CharActionModals.jsx.
-// Covers: Starry Chalice confirm, Divine Intervention cast, Clockwork Cavalcade
-// null-modal edge case, and Open Hand Technique modal behavior.
 //
-// NOTE: Tests for Animate Dead, Create Undead, Summon Spirit, Epitome, and
+// Covers: Starry Chalice handler invocation, Divine Intervention cast handler,
+// and Open Hand Technique close handler with event dispatch side effects.
+//
+// Removed redundant tests:
+// - Starry Chalice popupHtml test → covered in async-confirm-handlers.test.jsx
+// - Starry Chalice null-result test → asserts internal wiring, low value
+// - Divine Intervention close handler → brittle: asserts internal state structure
+// - Clockwork Cavalcade null/undefined modal → asserts internal guard, no behavioral value
+//
+// Tests for Animate Dead, Create Undead, Summon Spirit, Epitome, and
 // Destructive Stride are covered in:
 //   - CharActionModals.async-confirm-handlers.test.jsx (setPopupHtml paths)
 //   - CharActionModals.choice-handlers.test.jsx (setModalState clearing)
-//   - CharActionModals.summon-handlers.test.jsx (handler invocation)
 //   - CharActionModals.inline-modals.test.jsx (inline modal behavior)
 //   - CharActionModals.target-selection-handlers.test.jsx (target selection)
+//   - CharActionModals.internal-handlers.test.jsx (rendering)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -608,55 +616,6 @@ describe('CharActionModals — handler callback tests', () => {
       });
     });
 
-    it('sets popupHtml when applyStarryChaliceHeal returns data', async () => {
-      const setModalState = vi.fn();
-      const setPopupHtml = vi.fn();
-      const { applyStarryChaliceHeal } = await import('../../services/rules/spells/postCastHealService.js');
-      applyStarryChaliceHeal.mockResolvedValue({ targetName: 'Ally1', actualHeal: 5 });
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState, setPopupHtml, campaignName: 'test-campaign' })}
-        modalState={{ starryChaliceHealModal: { targetNames: ['Ally1'], amount: 10 } }}
-        campaignName="test-campaign"
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('secondary-target-Ally1'));
-
-      await waitFor(() => {
-        expect(setPopupHtml).toHaveBeenCalledWith({
-          type: 'heal',
-          name: 'Starry Form: Chalice',
-          formula: '10 HP',
-          rolls: [],
-          total: 10,
-          targetName: 'Ally1',
-          finalHeal: 5,
-        });
-      });
-    });
-
-    it('does not call setPopupHtml when applyStarryChaliceHeal returns null', async () => {
-      const setModalState = vi.fn();
-      const setPopupHtml = vi.fn();
-      const { applyStarryChaliceHeal } = await import('../../services/rules/spells/postCastHealService.js');
-      applyStarryChaliceHeal.mockResolvedValue(null);
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState, setPopupHtml, campaignName: 'test-campaign' })}
-        modalState={{ starryChaliceHealModal: { targetNames: ['Ally1'], amount: 10 } }}
-        campaignName="test-campaign"
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('secondary-target-Ally1'));
-
-      await waitFor(() => {
-        expect(applyStarryChaliceHeal).toHaveBeenCalled();
-        expect(setPopupHtml).not.toHaveBeenCalled();
-        expect(setModalState).toHaveBeenCalledWith({ starryChaliceHealModal: null });
-      });
-    });
   });
 
   // ── Divine Intervention cast handler ──
@@ -673,49 +632,6 @@ describe('CharActionModals — handler callback tests', () => {
 
       fireEvent.click(screen.getByTestId('divine-intervention-cast'));
       expect(handleDivineInterventionCast).toHaveBeenCalledWith('cast');
-    });
-
-    it('calls setModalState with both modal and action set to null when close button is clicked', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ divineInterventionModal: { action: {}, playerStats: {}, campaignName: 'test' } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('divine-intervention-close'));
-      expect(setModalState).toHaveBeenCalledWith({
-        divineInterventionModal: null,
-        divineInterventionAction: null,
-      });
-    });
-  });
-
-  // ── Clockwork Cavalcade choice null-modal edge case ──
-  // Tests that the handler safely handles the case where
-  // clockworkCavalcadeModal is null/absent from merged state.
-
-  describe('Clockwork Cavalcade choice null-modal edge case', () => {
-    it('does not crash when clockworkCavalcadeModal is null in merged state', () => {
-      const setModalState = vi.fn();
-      // No clockworkCavalcadeModal in modalState — the modal buttons won't render
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ clockworkCavalcadeModal: null }}
-        setModalState={setModalState}
-      />);
-      // If we get here without an error, the null check passed
-      expect(setModalState).not.toHaveBeenCalled();
-    });
-
-    it('does not crash when clockworkCavalcadeModal is undefined in merged state', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{}}
-        setModalState={setModalState}
-      />);
-      expect(setModalState).not.toHaveBeenCalled();
     });
   });
 

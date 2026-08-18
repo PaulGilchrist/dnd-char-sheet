@@ -1,20 +1,26 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Tests for helper modals in CharActionModals (target selection, confirm modals).
 //
 // Scope:
 // - HealingIllusionModal → SecondaryTargetModal rendering + skip
 // - InvokeDuplicityModal → CreatureSelectionModal rendering + skip
-// - FlurryOfBlowsModal → FlurryOfBlowsTargetPopup rendering, confirm, skip
+// - FlurryOfBlowsModal → FlurryOfBlowsTargetPopup rendering + skip
 // - StarryChaliceHealModal → SecondaryTargetModal rendering + skip
-// - ElementalEpitomeModal → rendering + close
-// - DestructiveStrideModal → rendering + close
+// - ElementalEpitomeModal → rendering
+// - DestructiveStrideModal → rendering
 // - DestructiveStrideTargetModal → SecondaryTargetModal rendering
-// - RecklessAttackModal → mode prop forwarding
+// - RecklessAttackModal → mode prop forwarding (default only)
 //
 // Handler integration (runtime state, logging, SSE) is covered in:
 // - CharActionModals.handlers2.test.jsx (invokeDuplicity + healingIllusion full flow)
 // - CharActionModals.secondary-targets.test.jsx (secondary target confirmations)
 // - CharActionModals.mass-healing-skips.test.jsx (mass healing skips)
+//
+// Cleaned: removed 6 redundant tests — confirm/close/skip handlers already
+// tested in target-selection-handlers.test.jsx, handler-callbacks.test.jsx,
+// inline-modals.test.jsx, and rendering.test.jsx. Remaining 11 tests verify
+// unique rendering + target-list-building behavior not covered elsewhere.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -571,17 +577,6 @@ describe('CharActionModals — helper modals', () => {
       expect(screen.getByTestId('flurry-of-blows-popup')).toBeInTheDocument();
     });
 
-    it('calls handleFlurryOfBlowsConfirm on confirm', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleFlurryOfBlowsConfirm: handler })}
-        modalState={{ flurryOfBlowsModal: { numAttacks: 3, creatureTargets: ['Goblin'], currentTargetName: 'Goblin' } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('flurry-confirm'));
-      expect(handler).toHaveBeenCalledWith('target');
-    });
-
     it('dismisses modal on skip', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
@@ -625,17 +620,6 @@ describe('CharActionModals — helper modals', () => {
       />);
       expect(screen.getByTestId('elemental-epitome-modal')).toBeInTheDocument();
     });
-
-    it('dismisses modal on close', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleEpitomeConfirm: vi.fn() })}
-        modalState={{ epitomeModal: { action: {}, playerStats: {}, campaignName: 'test-campaign', currentResistance: 'cold' } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('epitome-close'));
-      expect(setModalState).toHaveBeenCalledWith({ epitomeModal: null });
-    });
   });
 
   describe('Destructive Stride modal', () => {
@@ -646,17 +630,6 @@ describe('CharActionModals — helper modals', () => {
         setModalState={vi.fn()}
       />);
       expect(screen.getByTestId('destructive-stride-modal')).toBeInTheDocument();
-    });
-
-    it('dismisses modal on close', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleDestructiveStrideConfirm: vi.fn() })}
-        modalState={{ destructiveStrideModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('stride-close'));
-      expect(setModalState).toHaveBeenCalledWith({ destructiveStrideModal: null });
     });
   });
 
@@ -680,15 +653,6 @@ describe('CharActionModals — helper modals', () => {
         setModalState={vi.fn()}
       />);
       expect(screen.getByTestId('reckless-mode').textContent).toBe('full');
-    });
-
-    it('renders with explicit mode', () => {
-      render(<CharActionModals
-        {...createBaseProps({ handleRecklessAttackConfirm: vi.fn(), handleRecklessAttackCancel: vi.fn(), handleBrutalStrikeConfirm: vi.fn(), handleBrutalStrikeCancel: vi.fn() })}
-        modalState={{ recklessAttackModal: { attack: { name: 'Longsword' }, mode: 'brutalOnly' } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByTestId('reckless-mode').textContent).toBe('brutalOnly');
     });
   });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
 // Quality improvements:
 //   - Added missing mock for useDiceRollPopup (component calls it, was crashing)
@@ -9,8 +10,15 @@
 //   - Replaced expect.any(Function) with captured setPopupHtml reference
 //   - Added assertion verifying rendered background text in positive test
 //
-// Original: 2 tests / 174 lines
-// After: 2 tests / ~150 lines
+// Cleanup (2026-08-18):
+//   - Removed low-value negative test "does not call showBackgroundPopup when background is empty"
+//     — trivial JavaScript truthiness conditional rendering, zero unique behavioral coverage.
+//     Background rendering for empty/null values is covered by CharSummary-Display.test.jsx.
+//   - Removed 5 unused mocks: CreatureBadge, ConditionEffectBadges, AllySelectionModal,
+//     TrackedResourceInput, ShortRestModal — none exercised by background popup tests.
+//   - Removed unused isBuffActive, unbreakableMajesty, auraOfLifeHandler, circleOfPowerHandler,
+//     deathWardHandler mocks — not exercised by the background popup code path.
+//   - Consolidated from 2 tests / 164 lines to 1 test / ~115 lines.
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -27,12 +35,7 @@ vi.mock('../../common/AvatarImage.jsx', () => ({ default: () => <div data-testid
 vi.mock('../../common/AvatarModal.jsx', () => ({ default: () => null }));
 vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-rest-btn">Long Rest</div> }));
 vi.mock('../ShortRestButton.jsx', () => ({ default: () => <div data-testid="short-rest-btn">Short Rest</div> }));
-vi.mock('../ShortRestModal.jsx', () => ({ default: () => <div data-testid="short-rest-modal">Short Rest Modal</div> }));
 vi.mock('./CharConditions.jsx', () => ({ default: () => <div data-testid="char-conditions">Conditions</div> }));
-vi.mock('../../common/AllySelectionModal.jsx', () => ({ default: () => <div data-testid="ally-selection-modal">Ally Selection</div> }));
-vi.mock('./TrackedResourceInput.jsx', () => ({ default: () => <div data-testid="tracked-resource-input">Tracked Resource</div> }));
-vi.mock('../../common/CreatureBadge.jsx', () => ({ default: ({ label }) => <span data-testid="creature-badge">{label}</span> }));
-vi.mock('../../initiative/ConditionEffectBadges.jsx', () => ({ default: () => <div data-testid="condition-effect-badges">Condition Effects</div> }));
 
 vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
     default: vi.fn((key, name, init, _deps, _campaign) => ({ current: init(), update: vi.fn() })),
@@ -69,30 +72,6 @@ vi.mock('../../../services/combat/buffs/buffService.js', () => ({
 
 vi.mock('../../../services/encounters/combatData.js', () => ({
     getCombatSummary: vi.fn(() => ({ creatures: [] })),
-}));
-
-vi.mock('../../../services/automation/common/buffToggle.js', () => ({
-    isBuffActive: vi.fn(() => false),
-}));
-
-vi.mock('../../../services/combat/auras/unbreakableMajesty.js', () => ({
-    isUnbreakableMajestyActive: vi.fn(() => false),
-    getUnbreakableMajestySaveDc: vi.fn(() => 0),
-}));
-
-vi.mock('../../../services/automation/handlers/buffs/auraOfLifeHandler.js', () => ({
-    isAuraOfLifeActive: vi.fn(() => false),
-    handle: vi.fn(),
-}));
-
-vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
-    isCircleOfPowerActive: vi.fn(() => false),
-    handle: vi.fn(),
-}));
-
-vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
-    isDeathWardActive: vi.fn(() => false),
-    handle: vi.fn(),
 }));
 
 const mockPlayerStats = {
@@ -153,12 +132,5 @@ describe('CharSummary - Background Popup', () => {
         expect(bgEl).toBeInTheDocument();
         bgEl.click();
         expect(showBackgroundPopup).toHaveBeenCalledWith('Soldier', setPopupHtml, '5e');
-    });
-
-    it('does not call showBackgroundPopup when background is empty', () => {
-        const stats = { ...mockPlayerStats, background: '' };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Soldier/)).not.toBeInTheDocument();
-        expect(showBackgroundPopup).not.toHaveBeenCalled();
     });
 });

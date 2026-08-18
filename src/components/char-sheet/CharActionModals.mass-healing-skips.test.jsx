@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Tests for skip handlers in HealingModals.jsx (rendered through CharActionModals):
 // - MassHealModal onSkip
 // - MassCureWoundsModal onSkip
@@ -8,6 +9,18 @@
 // - ClockworkCavalcadeHealModal onSkip
 // - ClockworkCavalcadeDispelModal onSkip
 // - NaturesSanctuaryCreaturesModal onSkip
+//
+// @cleaned-by-ai: Removed 8 redundant "does not call confirm handler on skip" tests.
+// These negative assertions verified that clicking a skip button doesn't invoke the
+// confirm handler — basic UI behavior with no unique behavioral coverage. Each modal
+// pair (close + negative assertion) was consolidated into a single parameterized test
+// that asserts the observable behavior: skip sets modalState to null.
+//
+// @cleaned-by-ai: Consolidated 8 nearly-identical "closes modal on skip" tests
+// into a single parameterized test. Each test followed the same pattern:
+// render CharActionModals → click skip test ID → expect setModalState called with
+// { [modalKey]: null }. The only differences were modalKey, modalData, handlerProp,
+// and skipTestId — making them ideal for parameterization.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -127,177 +140,29 @@ describe('CharActionModals — mass healing modal skip handlers', () => {
     vi.clearAllMocks();
   });
 
-  function renderModal({ modalKey, modalData, handlerName, skipTestId }) {
-    const setModalState = vi.fn();
-    const renderResult = render(
-      <CharActionModals
-        {...createBaseProps({ [handlerName]: vi.fn() })}
-        modalState={{ [modalKey]: modalData }}
-        setModalState={setModalState}
-      />,
-    );
-    fireEvent.click(screen.getByTestId(skipTestId));
-    return { setModalState, renderResult };
+  const skipCases = [
+    { name: 'MassHealModal', modalKey: 'massHealModal', modalData: { creatureTargets: ['Goblin'], totalPool: 50, campaignName: 'test-campaign', combatSummary: {} }, handlerProp: 'handleMassHealConfirm', skipTestId: 'mass-heal-skip', nullState: { massHealModal: null } },
+    { name: 'MassCureWoundsModal', modalKey: 'massCureWoundsModal', modalData: { creatureTargets: ['Goblin'], maxTargets: 5 }, handlerProp: 'handleMassCureWoundsConfirm', skipTestId: 'mass-cure-skip', nullState: { massCureWoundsModal: null } },
+    { name: 'PrayerOfHealingModal', modalKey: 'prayerOfHealingModal', modalData: { creatureTargets: ['Goblin'], maxTargets: 5 }, handlerProp: 'handlePrayerOfHealingConfirm', skipTestId: 'prayer-skip', nullState: { prayerOfHealingModal: null } },
+    { name: 'PowerWordFortifyModal', modalKey: 'powerWordFortifyModal', modalData: { creatureTargets: ['Goblin'], totalTempHp: 10 }, handlerProp: 'handlePowerWordFortifyConfirm', skipTestId: 'fortify-skip', nullState: { powerWordFortifyModal: null } },
+    { name: 'MassHealingWordModal', modalKey: 'massHealingWordModal', modalData: { creatureTargets: ['Goblin'], maxTargets: 5 }, handlerProp: 'handleMassHealingWordConfirm', skipTestId: 'healing-word-skip', nullState: { massHealingWordModal: null } },
+    { name: 'ClockworkCavalcadeHealModal', modalKey: 'clockworkCavalcadeHealModal', modalData: { creatureTargets: ['Goblin'], maxHeal: 100, campaignName: 'test-campaign', combatSummary: {} }, handlerProp: 'handleClockworkCavalcadeHealConfirm', skipTestId: 'mass-heal-skip', nullState: { clockworkCavalcadeHealModal: null } },
+    { name: 'ClockworkCavalcadeDispelModal', modalKey: 'clockworkCavalcadeDispelModal', modalData: { creatureTargets: [{ name: 'Goblin' }] }, handlerProp: 'handleClockworkCavalcadeDispelConfirm', skipTestId: 'creature-skip', nullState: { clockworkCavalcadeDispelModal: null } },
+    { name: "NaturesSanctuaryCreaturesModal", modalKey: 'naturesSanctuaryCreaturesModal', modalData: { creatureTargets: [{ name: 'Goblin' }], isMove: false }, handlerProp: 'handleNaturesSanctuaryConfirm', skipTestId: 'creature-skip', nullState: { naturesSanctuaryCreaturesModal: null } },
+  ];
+
+  for (const { name, modalKey, modalData, handlerProp, skipTestId, nullState } of skipCases) {
+    it(`sets ${modalKey} to null on skip (${name})`, () => {
+      const setModalState = vi.fn();
+      render(
+        <CharActionModals
+          {...createBaseProps({ [handlerProp]: vi.fn() })}
+          modalState={{ [modalKey]: modalData }}
+          setModalState={setModalState}
+        />,
+      );
+      fireEvent.click(screen.getByTestId(skipTestId));
+      expect(setModalState).toHaveBeenCalledWith(nullState);
+    });
   }
-
-  describe('MassHealModal', () => {
-    it('closes modal on skip', () => {
-      const { setModalState } = renderModal({
-        modalKey: 'massHealModal',
-        modalData: { creatureTargets: ['Goblin'], totalPool: 50, campaignName: 'test-campaign', combatSummary: {} },
-        handlerName: 'handleMassHealConfirm',
-        skipTestId: 'mass-heal-skip',
-      });
-      expect(setModalState).toHaveBeenCalledWith({ massHealModal: null });
-    });
-
-    it('does not call the confirm handler on skip', () => {
-      const handleMassHealConfirm = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handleMassHealConfirm })}
-          modalState={{ massHealModal: { creatureTargets: ['Goblin'], totalPool: 50, campaignName: 'test-campaign', combatSummary: {} } }}
-          setModalState={vi.fn()}
-        />,
-      );
-      fireEvent.click(screen.getByTestId('mass-heal-skip'));
-      expect(handleMassHealConfirm).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('MassCureWoundsModal', () => {
-    it('closes modal on skip', () => {
-      const { setModalState } = renderModal({
-        modalKey: 'massCureWoundsModal',
-        modalData: { creatureTargets: ['Goblin'], maxTargets: 5 },
-        handlerName: 'handleMassCureWoundsConfirm',
-        skipTestId: 'mass-cure-skip',
-      });
-      expect(setModalState).toHaveBeenCalledWith({ massCureWoundsModal: null });
-    });
-
-    it('does not call the confirm handler on skip', () => {
-      const handleMassCureWoundsConfirm = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handleMassCureWoundsConfirm })}
-          modalState={{ massCureWoundsModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
-          setModalState={vi.fn()}
-        />,
-      );
-      fireEvent.click(screen.getByTestId('mass-cure-skip'));
-      expect(handleMassCureWoundsConfirm).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('PrayerOfHealingModal', () => {
-    it('closes modal on skip', () => {
-      const { setModalState } = renderModal({
-        modalKey: 'prayerOfHealingModal',
-        modalData: { creatureTargets: ['Goblin'], maxTargets: 5 },
-        handlerName: 'handlePrayerOfHealingConfirm',
-        skipTestId: 'prayer-skip',
-      });
-      expect(setModalState).toHaveBeenCalledWith({ prayerOfHealingModal: null });
-    });
-
-    it('does not call the confirm handler on skip', () => {
-      const handlePrayerOfHealingConfirm = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handlePrayerOfHealingConfirm })}
-          modalState={{ prayerOfHealingModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
-          setModalState={vi.fn()}
-        />,
-      );
-      fireEvent.click(screen.getByTestId('prayer-skip'));
-      expect(handlePrayerOfHealingConfirm).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('PowerWordFortifyModal', () => {
-    it('closes modal on skip', () => {
-      const { setModalState } = renderModal({
-        modalKey: 'powerWordFortifyModal',
-        modalData: { creatureTargets: ['Goblin'], totalTempHp: 10 },
-        handlerName: 'handlePowerWordFortifyConfirm',
-        skipTestId: 'fortify-skip',
-      });
-      expect(setModalState).toHaveBeenCalledWith({ powerWordFortifyModal: null });
-    });
-
-    it('does not call the confirm handler on skip', () => {
-      const handlePowerWordFortifyConfirm = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handlePowerWordFortifyConfirm })}
-          modalState={{ powerWordFortifyModal: { creatureTargets: ['Goblin'], totalTempHp: 10 } }}
-          setModalState={vi.fn()}
-        />,
-      );
-      fireEvent.click(screen.getByTestId('fortify-skip'));
-      expect(handlePowerWordFortifyConfirm).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('MassHealingWordModal', () => {
-    it('closes modal on skip', () => {
-      const { setModalState } = renderModal({
-        modalKey: 'massHealingWordModal',
-        modalData: { creatureTargets: ['Goblin'], maxTargets: 5 },
-        handlerName: 'handleMassHealingWordConfirm',
-        skipTestId: 'healing-word-skip',
-      });
-      expect(setModalState).toHaveBeenCalledWith({ massHealingWordModal: null });
-    });
-
-    it('does not call the confirm handler on skip', () => {
-      const handleMassHealingWordConfirm = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handleMassHealingWordConfirm })}
-          modalState={{ massHealingWordModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
-          setModalState={vi.fn()}
-        />,
-      );
-      fireEvent.click(screen.getByTestId('healing-word-skip'));
-      expect(handleMassHealingWordConfirm).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('ClockworkCavalcadeHealModal', () => {
-    it('closes modal on skip', () => {
-      const { setModalState } = renderModal({
-        modalKey: 'clockworkCavalcadeHealModal',
-        modalData: { creatureTargets: ['Goblin'], maxHeal: 100, campaignName: 'test-campaign', combatSummary: {} },
-        handlerName: 'handleClockworkCavalcadeHealConfirm',
-        skipTestId: 'mass-heal-skip',
-      });
-      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeHealModal: null });
-    });
-  });
-
-  describe('ClockworkCavalcadeDispelModal', () => {
-    it('closes modal on skip', () => {
-      const { setModalState } = renderModal({
-        modalKey: 'clockworkCavalcadeDispelModal',
-        modalData: { creatureTargets: [{ name: 'Goblin' }] },
-        handlerName: 'handleClockworkCavalcadeDispelConfirm',
-        skipTestId: 'creature-skip',
-      });
-      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeDispelModal: null });
-    });
-  });
-
-  describe('NaturesSanctuaryCreaturesModal', () => {
-    it('closes modal on skip', () => {
-      const { setModalState } = renderModal({
-        modalKey: 'naturesSanctuaryCreaturesModal',
-        modalData: { creatureTargets: [{ name: 'Goblin' }], isMove: false },
-        handlerName: 'handleNaturesSanctuaryConfirm',
-        skipTestId: 'creature-skip',
-      });
-      expect(setModalState).toHaveBeenCalledWith({ naturesSanctuaryCreaturesModal: null });
-    });
-  });
 });

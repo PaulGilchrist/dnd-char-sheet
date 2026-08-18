@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
@@ -101,16 +102,20 @@ describe('CharAbilities rendering', () => {
       render(<CharAbilities {...defaultProps} />);
       const abilityNames = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
       abilityNames.forEach((name) => {
-        expect(screen.getByText(name)).toBeInTheDocument();
+        const el = screen.getByText(name);
+        expect(el).toBeInTheDocument();
+        expect(el.classList.contains('clickable')).toBe(true);
       });
     });
 
     it('renders ability scores in the score column', () => {
       render(<CharAbilities {...defaultProps} />);
-      const abilityRow = document.querySelector('.abilities');
-      expect(abilityRow).toBeTruthy();
-      const rows = document.querySelectorAll('.abilities');
-      expect(rows).toHaveLength(6);
+      expect(screen.getByText('14')).toBeInTheDocument();
+      expect(screen.getByText('12')).toBeInTheDocument();
+      expect(screen.getByText('11')).toBeInTheDocument();
+      expect(screen.getByText('9')).toBeInTheDocument();
+      const scores = screen.getAllByText('10');
+      expect(scores).toHaveLength(2);
     });
 
     it('renders skill bonuses next to skill names', () => {
@@ -126,12 +131,6 @@ describe('CharAbilities rendering', () => {
       render(<CharAbilities {...defaultProps} playerStats={stats} />);
       expect(screen.getByText('Abilities')).toBeInTheDocument();
       expect(screen.queryByText('Strength')).not.toBeInTheDocument();
-    });
-
-    it('renders ability names as clickable elements', () => {
-      render(<CharAbilities {...defaultProps} />);
-      const strengthLink = screen.getByText('Strength');
-      expect(strengthLink.classList.contains('clickable')).toBe(true);
     });
   });
 });

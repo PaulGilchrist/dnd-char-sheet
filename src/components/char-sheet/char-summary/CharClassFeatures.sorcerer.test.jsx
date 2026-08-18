@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// @cleaned-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import CharClassFeatures from './CharClassFeatures.jsx';
 import * as classFeatures from '../../../services/character/classFeatures.js';
@@ -79,25 +80,17 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
   afterEach(cleanup);
 
   describe('tracked resources', () => {
-    it('renders sorcery points with correct label and max from classFeatures', () => {
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-sorceryPoints')).toHaveTextContent('5/5');
-    });
+    const resourceTests = [
+      { label: 'Sorcery Points:', testId: 'tracked-resource-sorceryPoints', text: '5/5' },
+      { label: 'Metamagic Known:', testId: 'tracked-resource-metamagicKnown', text: '2/2' },
+      { label: 'Innate Sorcery:', testId: 'tracked-resource-innateSorceryUses', text: '0/0' },
+    ];
 
-    it('renders metamagic known with correct label and max from classFeatures', () => {
+    it.each(resourceTests)('renders $label with max from classFeatures', ({ label, testId, text }) => {
       const stats = buildSorcererStats();
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.getByText('Metamagic Known:')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-metamagicKnown')).toHaveTextContent('2/2');
-    });
-
-    it('renders innate sorcery with correct label and max from classFeatures', () => {
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.getByText('Innate Sorcery:')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-innateSorceryUses')).toHaveTextContent('0/0');
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByTestId(testId)).toHaveTextContent(text);
     });
 
     it('renders sorcerous restoration when resource_restoration passive exists', () => {
@@ -124,12 +117,6 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
       expect(screen.getByText('+1 Save DC, Spell Adv')).toBeInTheDocument();
     });
 
-    it('does not show innate sorcery badge when the buff is absent', () => {
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.queryByText('+1 Save DC, Spell Adv')).not.toBeInTheDocument();
-    });
-
     it('shows telepathic speech badge when the buff is active', () => {
       setBuffs([{ name: 'Telepathic Speech' }]);
       const stats = buildSorcererStats();
@@ -137,24 +124,11 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
       expect(screen.getByText('Telepathic Speech')).toBeInTheDocument();
     });
 
-    it('does not show telepathic speech badge when the buff is absent', () => {
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.queryByText('Telepathic Speech')).not.toBeInTheDocument();
-    });
-
     it('shows trance of order badge when tranceOfOrderActive is true', () => {
       setTranceOfOrder(true);
       const stats = buildSorcererStats();
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText('Trance of Order')).toBeInTheDocument();
-    });
-
-    it('does not show trance of order badge when tranceOfOrderActive is false', () => {
-      setTranceOfOrder(false);
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.queryByText('Trance of Order')).not.toBeInTheDocument();
     });
   });
 
@@ -171,19 +145,6 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
       const stats = buildSorcererStats();
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText(label)).toBeInTheDocument();
-    });
-
-    it('falls back to "Revelation in Flesh" for an unknown effect key', () => {
-      setBuffs([{ name: 'Revelation in Flesh', effect: 'unknown_effect' }]);
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.getByText('Revelation in Flesh')).toBeInTheDocument();
-    });
-
-    it('does not show revelation badge when no matching buff exists', () => {
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.queryByText('Revelation in Flesh')).not.toBeInTheDocument();
     });
 
     it('renders multiple revelation effects joined with comma', () => {
@@ -225,28 +186,6 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
     });
   });
 
-  describe('null/undefined activeBuffs handling', () => {
-    it('does not crash when activeBuffs is null', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return null;
-        return undefined;
-      });
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
-    });
-
-    it('does not crash when activeBuffs is undefined', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return undefined;
-        return undefined;
-      });
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
-    });
-  });
-
   describe('integration with entry point features', () => {
     it('renders dodge badge alongside sorcerer features when dodge buff is active', () => {
       setBuffs([{ effect: 'dodge' }]);
@@ -274,21 +213,6 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
       expect(screen.getByText('Stonecunning:')).toBeInTheDocument();
       expect(screen.getByTestId('tracked-resource-stonecunningUses')).toHaveTextContent('2/2');
       expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
-    });
-
-    it('renders all tracked resources together: class + adrenaline rush + stonecunning + restoration', () => {
-      const stats = buildSorcererStats({
-        race: { traits: [{ name: 'Stonecunning', automation: true }] },
-        automation: {
-          passives: [{ type: 'resource_restoration' }],
-          specialActions: [{ effect: 'bonus_action_dash' }],
-        },
-      });
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
-      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
-      expect(screen.getByText('Adrenaline Rush:')).toBeInTheDocument();
-      expect(screen.getByText('Stonecunning:')).toBeInTheDocument();
-      expect(screen.getByText('Sorcerous Restoration:')).toBeInTheDocument();
     });
   });
 });

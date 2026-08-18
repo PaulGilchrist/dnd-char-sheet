@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
 // Improved: parameterized AC buff tests, removed redundant imports,
 // added negative-path and multi-buff coverage, uses shared mock data.
@@ -12,6 +13,18 @@
 //   - Added negative-path test (no buff indicators when no buffs active)
 //   - Added multi-buff test (multiple AC buffs active simultaneously)
 //   - Added Defensive Duelist test (bonus not previously tested)
+//
+// Cleanup (2026-08-18):
+//   - Absorbed all coverage from deleted CharSummary-Branches.test.jsx (4 redundant tests).
+//     Defensive duelist (+acBonus) and tremorsense badge positive/negative paths all covered
+//     by this file's parameterized it.each + comprehensive negative test.
+//
+// Cleanup (2026-08-18b):
+//   - Replaced brittle negative-path test (5 specific string absence assertions) with single
+//     structural assertion: query all `.aura-source` elements. Robust against text format changes.
+//   - Removed redundant multi-buff test (haste + shield_of_faith). Both buffs individually
+//     covered by it.each; rendering is trivial string concatenation — no logic to exercise.
+//   - Reduced file from 147 lines / 8 tests (9 iterations) to 130 lines / 7 tests (8 iterations).
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -119,23 +132,6 @@ describe('CharSummary - AC Bonus Buff Indicators', () => {
     it('does not show any AC buff indicators when no buffs are active', () => {
         getActiveBuffs.mockReturnValue([]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/\+2 from Haste/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/\+5 from Shield/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/\+2 from Shield of Faith/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/AC 17 from Barkskin/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/\+3 from Defensive Duelist/)).not.toBeInTheDocument();
-    });
-
-    // ---------------------------------------------------------------------------
-    // Multi-buff — multiple AC buffs rendered simultaneously
-    // ---------------------------------------------------------------------------
-    it('renders multiple AC buff indicators when multiple buffs are active', () => {
-        getActiveBuffs.mockReturnValue([
-            { effect: 'haste' },
-            { effect: 'shield_of_faith' },
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/\+2 from Haste/)).toBeInTheDocument();
-        expect(screen.getByText(/\+2 from Shield of Faith/)).toBeInTheDocument();
+        expect(document.querySelectorAll('.aura-source').length).toBe(0);
     });
 });

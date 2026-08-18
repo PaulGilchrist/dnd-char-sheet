@@ -1,9 +1,14 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Tests for modal close handlers in CharActionModals.jsx:
-// - openHandFromFlurry modal (close/dispatch events, confirm/dispatch events)
 // - shieldBashModal close handler (close/dispatch events)
 // - quiveringPalmModal close handler (close/dispatch events)
 // - CelestialResilienceModal onSkip handler
+//
+// openHandFromFlurry tests removed — redundant with modal-closes.test.jsx
+// (same OpenHandTechniqueModal component, same inline onClose/onConfirm handlers
+//  that set modalState to null and dispatch target-effects-updated +
+//  combat-summary-updated events).
 //
 // This file focuses on the behavior that close handlers set modalState to null
 // AND dispatch target-effects-updated and combat-summary-updated events.

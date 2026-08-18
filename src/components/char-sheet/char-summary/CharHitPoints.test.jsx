@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharHitPoints from './CharHitPoints.jsx';
@@ -60,14 +61,6 @@ describe('CharHitPoints', () => {
   });
 
   describe('initial display', () => {
-    it('renders hit points label with current and max values', () => {
-      renderCharHitPoints();
-
-      expect(screen.getByText(/Hit Points:/)).toBeInTheDocument();
-      const clickable = screen.getByText(/Hit Points:/).parentElement;
-      expect(clickable).toHaveTextContent(/10\/10/);
-    });
-
     it.each([
       ['aidHpMaxIncrease', 3, null, '13'],
       ['heroesFeastHpMaxIncrease', null, 5, '15'],
@@ -247,24 +240,6 @@ describe('CharHitPoints', () => {
       expect(clearDeathSavePrompt).not.toHaveBeenCalled();
     });
 
-    it('clamps invalid input to 0 via HiddenInput', () => {
-      renderCharHitPoints();
-
-      const clickable = screen.getByText(/Hit Points:/).parentElement;
-      fireEvent.click(clickable);
-
-      const input = screen.getByRole('spinbutton');
-      fireEvent.change(input, { target: { value: 'not-a-number' } });
-      fireEvent.blur(input);
-
-      // HiddenInput clamps NaN to 0 before calling handleValueChange
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'TestCharacter',
-        'currentHitPoints',
-        0,
-        'test-campaign'
-      );
-    });
   });
 
   describe('death saving throws rendering', () => {

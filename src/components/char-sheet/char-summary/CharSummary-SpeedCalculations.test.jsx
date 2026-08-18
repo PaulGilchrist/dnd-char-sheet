@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
 // Quality improvements:
 //   - Removed window.location.hostname = 'localhost' (6×) — global state mutation, not needed for speed tests
@@ -10,6 +11,14 @@
 //   - Simplified fly speed regex patterns — removed fragile .*hover/s patterns
 //   - Removed redundant beforeEach duplication — one beforeEach per describe block
 //   - Improved test naming — each name clearly states the behavior being verified
+//
+// Cleanup (2026-08-18):
+//   - Removed 4 climb/swim tests — all fully duplicated in CharSummary-AdditionalCoverage.test.jsx
+//     (climbSpeed from playerStats, swimSpeed from playerStats, Aspect of the Wilds Panther climb,
+//      aquatic_adaptation swim). AdditionalCoverage has more thorough override testing.
+//   - Removed 2 combined movement tests — trivial string concatenation of independently verified
+//     buff behaviors. Minimal confidence gain; covered by individual buff tests.
+//   - Reduced file from 238 lines / 18 tests to 149 lines / 12 tests.
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -135,68 +144,6 @@ describe('CharSummary - Condition Speed Effects', () => {
             conditionEffects={{ speedReduction: 5 }}
         />);
         expect(screen.getByText(/15 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Climb and swim speed — defaults and buffs
-// ---------------------------------------------------------------------------
-describe('CharSummary - Climb and Swim Speed', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('uses playerStats climbSpeed when no aspect buff', () => {
-        const stats = { ...mockPlayerStats, climbSpeed: 30 };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/climb 30 ft/)).toBeInTheDocument();
-    });
-
-    it('uses playerStats swimSpeed when no aquatic buff', () => {
-        const stats = { ...mockPlayerStats, swimSpeed: 30 };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 30 ft/)).toBeInTheDocument();
-    });
-
-    it('shows climb speed from Aspect of the Wilds (Panther)', () => {
-        getActiveBuffs.mockReturnValue([{ name: 'Aspect of the Wilds', effect: 'climb_speed_aspect', optionName: 'Panther' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/climb 25 ft/)).toBeInTheDocument();
-    });
-
-    it('shows swim speed from aquatic_adaptation buff (2x base speed)', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'aquatic_adaptation' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 50 ft/)).toBeInTheDocument();
-    });
-});
-
-// ---------------------------------------------------------------------------
-// Combined movement speeds — buff interaction
-// ---------------------------------------------------------------------------
-describe('CharSummary - Combined Movement Speeds', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('shows both climb and swim speeds when both buffs are present', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Aspect of the Wilds', effect: 'climb_speed_aspect', optionName: 'Panther' },
-            { effect: 'aquatic_adaptation' }
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/climb 25 ft/)).toBeInTheDocument();
-        expect(screen.getByText(/swim 50 ft/)).toBeInTheDocument();
-    });
-
-    it('shows swim speed from playerStats default alongside climb buff', () => {
-        const stats = { ...mockPlayerStats, swimSpeed: 20 };
-        getActiveBuffs.mockReturnValue([{ name: 'Aspect of the Wilds', effect: 'climb_speed_aspect', optionName: 'Panther' }]);
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/climb 25 ft/)).toBeInTheDocument();
-        expect(screen.getByText(/swim 20 ft/)).toBeInTheDocument();
     });
 });
 

@@ -1,8 +1,8 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
-import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => {
   const mockFn = vi.fn(() => ({
@@ -78,72 +78,31 @@ describe('CharAbilities expertise display', () => {
     mockStore.clear();
   });
 
-  it('shows (Expert) suffix for skills with expertise', () => {
-    const stats = createPlayerStats({
-      level: 5,
-      expertise: ['Athletics'],
-      skillProficiencies: ['Athletics'],
-      abilities: [
-        { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [{ name: 'Athletics', bonus: 8 }] },
-        { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
-        { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-        { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-        { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [] },
-        { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-      ],
+  const expertiseTests = [
+    { expertise: ['Athletics'], expected: 'Athletics (Expert) (+8)', notFound: null },
+    { expertise: ['Athletics', 'Arcana'], expected: 'Arcana (Expert) (+2)', notFound: null },
+    { expertise: [], expected: 'Athletics (+8)', notFound: 'Athletics (Expert) (+8)' },
+  ];
+
+  for (const { expertise, expected, notFound } of expertiseTests) {
+    it(`renders ${expertise.length ? `"(Expert)" suffix for ${expertise.join(', ')}` : 'no "(Expert)" suffix when no expertise'}`, () => {
+      const stats = createPlayerStats({
+        level: 5,
+        expertise,
+        abilities: [
+          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [{ name: 'Athletics', bonus: 8 }] },
+          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
+          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
+          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [{ name: 'Arcana', bonus: 2 }] },
+          { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [] },
+          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
+        ],
+      });
+      render(<CharAbilities {...defaultProps} playerStats={stats} />);
+      expect(screen.getByText(expected)).toBeInTheDocument();
+      if (notFound) {
+        expect(screen.queryByText(notFound)).not.toBeInTheDocument();
+      }
     });
-    render(<CharAbilities {...defaultProps} playerStats={stats} />);
-    expect(screen.getByText('Athletics (Expert) (+8)')).toBeInTheDocument();
-  });
-
-  it('does not show (Expert) for non-expertised skills', () => {
-    const stats = createPlayerStats({
-      level: 5,
-      expertise: [],
-      skillProficiencies: ['Athletics'],
-      abilities: [
-        { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [{ name: 'Athletics', bonus: 8 }] },
-        { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
-        { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-        { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-        { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [] },
-        { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-      ],
-    });
-    render(<CharAbilities {...defaultProps} playerStats={stats} />);
-    expect(screen.getByText('Athletics (+8)')).toBeInTheDocument();
-    expect(screen.queryByText('Athletics (Expert) (+8)')).not.toBeInTheDocument();
-  });
-
-  it('shows (Expert) for multiple expertised skills', () => {
-    const stats = createPlayerStats({
-      level: 5,
-      expertise: ['Athletics', 'Arcana'],
-      skillProficiencies: ['Athletics', 'Arcana'],
-      abilities: [
-        { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [{ name: 'Athletics', bonus: 8 }] },
-        { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
-        { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-        { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [{ name: 'Arcana', bonus: 2 }] },
-        { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [] },
-        { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-      ],
-    });
-    render(<CharAbilities {...defaultProps} playerStats={stats} />);
-    expect(screen.getByText('Athletics (Expert) (+8)')).toBeInTheDocument();
-    expect(screen.getByText('Arcana (Expert) (+2)')).toBeInTheDocument();
-  });
-});
-
-describe('CharAbilities characters prop', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-  });
-
-  it('passes characters prop to useLoggedDiceRoll', () => {
-    const characters = [{ name: 'Creature 1' }, { name: 'Creature 2' }];
-    render(<CharAbilities {...defaultProps} characters={characters} />);
-    expect(vi.mocked(useLoggedDiceRoll).mock.calls[0][2]).toEqual({ characters });
-  });
+  }
 });

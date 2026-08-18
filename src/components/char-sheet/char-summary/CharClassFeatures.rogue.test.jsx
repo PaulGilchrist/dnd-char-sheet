@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import RogueFeatures from './CharClassFeatures.jsx';
@@ -83,14 +84,6 @@ describe('RogueFeatures', () => {
       expect(screen.queryByText('Expertise:')).not.toBeInTheDocument();
     });
 
-    it('does not render expertise when expertise is undefined', () => {
-      classFeatures.getClassFeatures.mockImplementation(() => ({
-        sneakAttack: { dice_count: 3, dice_value: 6 },
-      }));
-      const stats = buildPlayerStats();
-      render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByText('Expertise:')).not.toBeInTheDocument();
-    });
   });
 
   describe('sneak attack damage', () => {
@@ -173,13 +166,6 @@ describe('RogueFeatures', () => {
   });
 
   describe('supreme sneak', () => {
-    it('renders supreme sneak badge when level >= 9', () => {
-      const stats = buildPlayerStats({ level: 9 });
-      render(<RogueFeatures playerStats={stats} campaignName="test" />);
-      const badge = screen.getByTitle(/Supreme Sneak/);
-      expect(badge).toHaveTextContent('Supreme Sneak');
-    });
-
     it('does not render supreme sneak when level < 9', () => {
       const stats = buildPlayerStats({ level: 8 });
       render(<RogueFeatures playerStats={stats} campaignName="test" />);

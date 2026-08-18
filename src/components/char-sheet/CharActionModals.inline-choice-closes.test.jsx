@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Tests for inline choice modals in CharActionModals.jsx:
 // - divineFuryChoice inline modal
 // - damageTypeChoice inline modal (generic + enhancedUnarmed dispatching)
@@ -6,6 +7,10 @@
 //
 // Modal close handlers for CombatStanceModal, RevelationInFleshModal, TeleportModal,
 // and wildMagicSurgeModal are covered in CharActionModals.modal-closes-*.test.jsx.
+//
+// Cleaned: Removed redundant negative test for generic handlers (covered by
+// enhancedUnarmed positive test). Consolidated featureChoice selection+skip
+// into a single test.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -113,56 +118,25 @@ describe('CharActionModals — inline choice modals', () => {
       expect(handleEnhancedUnarmedSkip).toHaveBeenCalled();
     });
 
-    it('does not dispatch generic handlers when enhancedUnarmed is active', () => {
-      const handleGenericDamageTypeChoice = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({
-            handleGenericDamageTypeChoice,
-            handleEnhancedUnarmedChoice: vi.fn(),
-            handleEnhancedUnarmedSkip: vi.fn(),
-            handleGenericDamageTypeSkip: vi.fn(),
-            handleDamageTypeModifierChoice: vi.fn(),
-            handleDamageTypeModifierSkip: vi.fn(),
-            pendingDamage: { _attackRider: true },
-          })}
-          modalState={{ damageTypeChoice: { title: 'Test', types: ['Fire'] } }}
-          setModalState={vi.fn()}
-        />
-      );
-
-      fireEvent.click(screen.getByText('Fire'));
-      expect(handleGenericDamageTypeChoice).not.toHaveBeenCalled();
-    });
   });
 
   describe('featureChoice inline modal', () => {
-    it('dispatches feature selection to handleFeatureChoiceConfirm', () => {
-      const handler = vi.fn();
+    it('dispatches feature selection and skip handlers', () => {
+      const handleFeatureChoiceConfirm = vi.fn();
+      const handleFeatureChoiceSkip = vi.fn();
       render(
         <CharActionModals
-          {...createBaseProps({ handleFeatureChoiceConfirm: handler, handleFeatureChoiceSkip: vi.fn() })}
+          {...createBaseProps({ handleFeatureChoiceConfirm, handleFeatureChoiceSkip })}
           modalState={{ featureChoice: { action: { name: 'Test Feature', description: 'Test desc' }, options: ['Option A', 'Option B'] } }}
           setModalState={vi.fn()}
         />
       );
 
       fireEvent.click(screen.getByText('Option A'));
-      expect(handler).toHaveBeenCalledWith('Option A');
-    });
-
-    it('dispatches skip to handleFeatureChoiceSkip on cancel', () => {
-      const handler = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: handler })}
-          modalState={{ featureChoice: { action: { name: 'Test' }, options: ['Opt'] } }}
-          setModalState={vi.fn()}
-        />
-      );
+      expect(handleFeatureChoiceConfirm).toHaveBeenCalledWith('Option A');
 
       fireEvent.click(screen.getByText('Cancel'));
-      expect(handler).toHaveBeenCalled();
+      expect(handleFeatureChoiceSkip).toHaveBeenCalled();
     });
 
     it('renders the feature name in the modal heading', () => {

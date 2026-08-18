@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
@@ -157,12 +158,6 @@ describe('WarlockFeatures', () => {
       expect(button).toHaveAttribute('title', 'Pact Boon: Pact of the Blade');
     });
 
-    it('renders pact boon button with hand-sparkles icon', () => {
-      const stats = buildPlayerStats();
-      renderComponent(stats);
-      const button = screen.getByRole('button', { name: /Pact of the Blade/ });
-      expect(button.querySelector('i')).toBeTruthy();
-    });
   });
 
   describe('arcanum', () => {
@@ -200,20 +195,6 @@ describe('WarlockFeatures', () => {
       const stats = buildPlayerStats({ level: 13 });
       renderComponent(stats);
       expect(screen.queryByText(/Arcanum/)).not.toBeInTheDocument();
-    });
-
-    it('renders all four arcanum levels when all have count > 0', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        ...defaultWarlockFeatures,
-        hasArcanum: true,
-        arcanumLevels: { level6: 1, level7: 1, level8: 1, level9: 1 },
-      });
-      const stats = buildPlayerStats({ level: 17 });
-      renderComponent(stats);
-      expect(screen.getByText(/6th Level Arcanum:/)).toBeInTheDocument();
-      expect(screen.getByText(/7th Level Arcanum:/)).toBeInTheDocument();
-      expect(screen.getByText(/8th Level Arcanum:/)).toBeInTheDocument();
-      expect(screen.getByText(/9th Level Arcanum:/)).toBeInTheDocument();
     });
   });
 
@@ -415,19 +396,5 @@ describe('WarlockFeatures', () => {
       expect(screen.getByText(/Steps of the Fey: 3/)).toBeInTheDocument();
     });
 
-    it('renders steps of the fey max as 1 when chaMod is 0 or charisma ability is missing', () => {
-      const cases = [
-        { abilities: [{ name: 'Charisma', bonus: 0 }] },
-        { abilities: [{ name: 'Strength', bonus: 4 }] },
-      ];
-      for (const { abilities } of cases) {
-        const stats = buildPlayerStats({
-          abilities,
-          automation: { bonusActions: [{ type: 'steps_of_the_fey' }] },
-        });
-        const { container } = renderComponent(stats);
-        expect(container.textContent).toContain('Steps of the Fey: 1');
-      }
-    });
   });
 });

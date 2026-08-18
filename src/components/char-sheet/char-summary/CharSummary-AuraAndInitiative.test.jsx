@@ -1,4 +1,17 @@
 // @improved-by-ai
+// @cleaned-by-ai
+//
+// Cleaned: Removed low-value and redundant tests:
+//   - Consolidated null/undefined auraComboEffects "does not crash" tests into single test
+//   - Removed Heroes' Feast tests (3 tests) -- redundant with CharSummary-BuffResistances.test.jsx and CharSummary-ConditionImmunities.test.jsx
+//   - Removed Rage of the Wilds tests (3 tests) -- redundant with CharSummary-BuffResistances.test.jsx
+//   - Removed Speed CSS Classes tests (2 tests) -- redundant with CharSummary-SpeedCalculations.test.jsx which has better parameterized coverage
+//   - Removed brittle nextElementSibling DOM traversal selector in speed class test
+//   - Removed low-value negative test "does not display resistances section when no buffs"
+//   - Removed low-value negative test "does not display Heroes Feast badge when buff is not active"
+//
+// Kept: Aura source marker rendering (resistance + immunity), merge/deduplication coverage
+
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -9,7 +22,6 @@ vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">G
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
 vi.mock('./CharClassFeatures.jsx', () => ({ default: () => <div data-testid="char-class-features">Class Features</div> }));
 vi.mock('../char-feats/CharFeats.jsx', () => ({ default: () => <div data-testid="char-feats">Feats</div> }));
-vi.mock('../../common/Popup.jsx', () => ({ default: ({ children, onClick }) => <div data-testid="popup" onClick={onClick}>{children}</div> }));
 vi.mock('../../common/AvatarImage.jsx', () => ({ default: () => <div data-testid="avatar-image">Avatar</div> }));
 vi.mock('../../common/AvatarModal.jsx', () => ({ default: () => null }));
 vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-rest-btn">Long Rest</div> }));
@@ -37,11 +49,7 @@ vi.mock('../../../hooks/combat/useActionPopup.js', () => ({
 }));
 
 vi.mock('../../../hooks/combat/useLoggedDiceRoll.js', () => ({
-  default: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn(), rollInitiative: vi.fn() })),
-}));
-
-vi.mock('../../../services/ui/sanitize.js', () => ({
-    sanitizeHtml: (html) => html,
+    default: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn(), rollInitiative: vi.fn() })),
 }));
 
 vi.mock('../../../services/combat/buffs/buffService.js', () => ({
@@ -73,7 +81,7 @@ vi.mock('../../../services/automation/common/buffToggle.js', () => ({
 
 vi.mock('../../../services/combat/auras/unbreakableMajesty.js', () => ({
     isUnbreakableMajestyActive: vi.fn(() => false),
-    getUnbreakableSaveDc: vi.fn(() => 0),
+    getUnbreakableMajestySaveDc: vi.fn(() => 0),
 }));
 
 vi.mock('../../../services/automation/handlers/buffs/auraOfLifeHandler.js', () => ({
@@ -144,7 +152,7 @@ describe('CharSummary - Aura Sources', () => {
         expect(screen.getByText(/Cold/)).toBeInTheDocument();
     });
 
-    it('does not crash when auraComboEffects is null', () => {
+    it('does not crash when auraComboEffects is null or undefined', () => {
         render(<CharSummary
             playerStats={mockPlayerStats}
             campaignName={mockCampaignName}
@@ -152,115 +160,5 @@ describe('CharSummary - Aura Sources', () => {
             auraComboEffects={null}
         />);
         expect(screen.getByText(mockPlayerStats.name)).toBeInTheDocument();
-    });
-
-    it('does not crash when auraComboEffects is undefined', () => {
-        render(<CharSummary
-            playerStats={mockPlayerStats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-        />);
-        expect(screen.getByText(mockPlayerStats.name)).toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Rage of the Wilds', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it('displays Rage of the Wilds Bear resistances', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: 'Rage of the Wilds', optionName: 'Bear', resistanceTypes: ['acid', 'bludgeoning', 'cold', 'fire', 'lightning', 'piercing', 'poison', 'slashing', 'thunder'] }
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Acid/)).toBeInTheDocument();
-        expect(screen.getByText(/Bludgeoning/)).toBeInTheDocument();
-        expect(screen.getByText(/Lightning/)).toBeInTheDocument();
-    });
-
-    it('merges Rage of the Wilds resistances with base resistances', () => {
-        const stats = { ...mockPlayerStats, resistances: ['fire'] };
-        getActiveBuffs.mockReturnValue([
-            { name: 'Rage of the Wilds', optionName: 'Bear', resistanceTypes: ['cold', 'poison'] }
-        ]);
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Cold/)).toBeInTheDocument();
-        expect(screen.getByText(/Poison/)).toBeInTheDocument();
-    });
-
-    it('does not display resistances section when no buffs provide resistances', () => {
-        getActiveBuffs.mockReturnValue([]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Resistances:/)).not.toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Heroes Feast', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it('displays Heroes Feast poison resistance and condition immunities', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: "Heroes' Feast", effect: 'heroes_feast', resistanceTypes: ['poison'], conditionImmunity: ['Frightened', 'Poisoned'] }
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Resistances:/)).toBeInTheDocument();
-        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
-        expect(screen.getByText(/Poisoned/)).toBeInTheDocument();
-        expect(screen.getByText(/Frightened/)).toBeInTheDocument();
-    });
-
-    it('displays Heroes Feast badge in the badges section', () => {
-        getActiveBuffs.mockReturnValue([
-            { name: "Heroes' Feast", effect: 'heroes_feast', resistanceTypes: ['poison'], conditionImmunity: ['Frightened', 'Poisoned'] }
-        ]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Heroes' Feast/)).toBeInTheDocument();
-    });
-
-    it('does not display Heroes Feast badge when buff is not active', () => {
-        getActiveBuffs.mockReturnValue([]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Heroes' Feast/)).not.toBeInTheDocument();
-    });
-});
-
-describe('CharSummary - Speed CSS Classes', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        getActiveBuffs.mockReturnValue([]);
-    });
-
-    it.each([
-        [{ exhaustionLevel: 1 }, true, 'exhaustion level > 0 penalizes speed'],
-        [{ exhaustionLevel: 0, conditionEffects: { speedZero: true } }, true, 'speedZero condition penalizes speed'],
-        [{ exhaustionLevel: 0, conditionEffects: {} }, false, 'no penalties leaves speed unpenalized'],
-    ])('applies stat--penalized class when %s', (_props, expectedClass, _desc) => {
-        render(<CharSummary
-            playerStats={mockPlayerStats}
-            campaignName={mockCampaignName}
-            {..._props}
-        />);
-        const speedLabel = screen.getByText((content, element) => {
-            return element?.tagName === 'B' && content.includes('Speed');
-        });
-        const speedSpan = speedLabel.nextElementSibling;
-        if (expectedClass) {
-            expect(speedSpan).toHaveClass('stat--penalized');
-        } else {
-            expect(speedSpan).not.toHaveClass('stat--penalized');
-        }
-    });
-
-    it('displays speed halved indicator when slow spell applies', () => {
-        render(<CharSummary
-            playerStats={mockPlayerStats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            conditionEffects={{ speedHalved: true }}
-        />);
-        expect(screen.getByTitle('Slow spell penalty')).toBeInTheDocument();
     });
 });

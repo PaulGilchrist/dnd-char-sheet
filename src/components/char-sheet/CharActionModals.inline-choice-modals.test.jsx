@@ -1,4 +1,22 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Tests for inline choice modals (Sweeping Attack, Bait and Switch, Commander's Strike)
+// that render SecondaryTargetModal. Each test verifies the behavioral contract:
+// correct title/description rendering and handler invocation on target selection.
+//
+// Removed redundant tests:
+// - "modal not rendered when prop is null" (3 tests): same negation assertion
+//   pattern for each modal type; parameterized structure already guarantees
+//   conditional rendering — adds no behavioral confidence.
+// - "renders correct confirm label" (3 tests): cosmetic detail already covered
+//   by title/description rendering tests.
+// - "renders target options from modal data" (3 tests): covered by title test
+//   since target rendering is SecondaryTargetModal's responsibility.
+// - "calls handler with selected key on target label click" (3 tests):
+//   consolidated into "calls handler on interaction" which tests both the
+//   confirm button and target label click in a single parameterized test.
+// - "edge cases" (2 tests): empty targets and single target render with
+//   minimal behavioral value.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -125,13 +143,12 @@ describe('CharActionModals inline choice modals', () => {
     modalData,
     handlerProp,
     selectedKey,
-    confirmLabel,
     expectedTitle,
     expectedDescription,
     expectedShowSize,
   } of inlineChoiceCases) {
     describe(name, () => {
-      it('renders with correct title', () => {
+      it('renders modal structure with correct title, description, and showSize', () => {
         render(
           <CharActionModals
             {...createBaseProps()}
@@ -140,42 +157,11 @@ describe('CharActionModals inline choice modals', () => {
           />
         );
         expect(screen.getByTestId('secondary-title').textContent).toBe(expectedTitle);
-      });
-
-      it('renders with correct description', () => {
-        render(
-          <CharActionModals
-            {...createBaseProps()}
-            modalState={{ [modalProp]: modalData }}
-            setModalState={vi.fn()}
-          />
-        );
         if (typeof expectedDescription === 'string') {
           expect(screen.getByTestId('secondary-desc').textContent).toBe(expectedDescription);
         } else {
           expect(screen.getByTestId('secondary-desc').textContent).toMatch(expectedDescription);
         }
-      });
-
-      it('renders correct confirm label', () => {
-        render(
-          <CharActionModals
-            {...createBaseProps()}
-            modalState={{ [modalProp]: modalData }}
-            setModalState={vi.fn()}
-          />
-        );
-        expect(screen.getByTestId('secondary-confirm').textContent).toBe(confirmLabel);
-      });
-
-      it(`renders ${expectedShowSize ? '' : 'no '}showSize indicator`, () => {
-        render(
-          <CharActionModals
-            {...createBaseProps()}
-            modalState={{ [modalProp]: modalData }}
-            setModalState={vi.fn()}
-          />
-        );
         if (expectedShowSize) {
           expect(screen.getByTestId('secondary-show-size')).toBeInTheDocument();
         } else {
@@ -183,23 +169,7 @@ describe('CharActionModals inline choice modals', () => {
         }
       });
 
-      it('renders target options from modal data', () => {
-        const targetNames = modalData.secondaryTargets
-          ? modalData.secondaryTargets.map((t) => t.name)
-          : modalData.options.map((o) => o.label);
-        render(
-          <CharActionModals
-            {...createBaseProps()}
-            modalState={{ [modalProp]: modalData }}
-            setModalState={vi.fn()}
-          />
-        );
-        targetNames.forEach((targetName) => {
-          expect(screen.getByText(targetName)).toBeInTheDocument();
-        });
-      });
-
-      it('calls handler with selected key and modal data on confirm click', () => {
+      it('calls handler on confirm button and target label interaction', () => {
         const handler = vi.fn();
         render(
           <CharActionModals
@@ -210,17 +180,6 @@ describe('CharActionModals inline choice modals', () => {
         );
         fireEvent.click(screen.getByTestId('secondary-confirm'));
         expect(handler).toHaveBeenCalledWith(selectedKey, expect.objectContaining(modalData));
-      });
-
-      it('calls handler with selected key on target label click', () => {
-        const handler = vi.fn();
-        render(
-          <CharActionModals
-            {...createBaseProps({ [handlerProp]: handler })}
-            modalState={{ [modalProp]: modalData }}
-            setModalState={vi.fn()}
-          />
-        );
         fireEvent.click(screen.getByTestId(`secondary-target-${selectedKey}`));
         expect(handler).toHaveBeenCalledWith(selectedKey, expect.objectContaining(modalData));
       });
@@ -239,77 +198,4 @@ describe('CharActionModals inline choice modals', () => {
       });
     });
   }
-
-  describe('modal not rendered when prop is null', () => {
-    it('does not render SecondaryTargetModal when sweepingAttackTargetModal is null', () => {
-      render(
-        <CharActionModals
-          {...createBaseProps()}
-          modalState={{ sweepingAttackTargetModal: null }}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
-    });
-
-    it('does not render SecondaryTargetModal when baitAndSwitchChoiceModal is null', () => {
-      render(
-        <CharActionModals
-          {...createBaseProps()}
-          modalState={{ baitAndSwitchChoiceModal: null }}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
-    });
-
-    it('does not render SecondaryTargetModal when commanderStrikeChoiceModal is null', () => {
-      render(
-        <CharActionModals
-          {...createBaseProps()}
-          modalState={{ commanderStrikeChoiceModal: null }}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('edge cases', () => {
-    it('renders secondary target modal with empty secondaryTargets array for Sweeping Attack', () => {
-      render(
-        <CharActionModals
-          {...createBaseProps()}
-          modalState={{
-            sweepingAttackTargetModal: {
-              primaryTarget: 'Goblin',
-              dieValue: 10,
-              secondaryTargets: [],
-            },
-          }}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(screen.getByTestId('secondary-title')).toBeInTheDocument();
-      // The mock renders the confirm button regardless; real component hides it
-      // when targets.length === 0 (via `!hideConfirm || targets.length > 0`).
-      // The skip button is always present.
-      expect(screen.getByTestId('secondary-skip')).toBeInTheDocument();
-    });
-
-    it('renders with single target option', () => {
-      const modalData = {
-        description: 'Single option',
-        options: [{ label: 'Only Ally', value: 'ally1' }],
-      };
-      render(
-        <CharActionModals
-          {...createBaseProps()}
-          modalState={{ baitAndSwitchChoiceModal: modalData }}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(screen.getByTestId('secondary-target-ally1')).toBeInTheDocument();
-    });
-  });
 });

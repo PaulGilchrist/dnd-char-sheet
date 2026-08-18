@@ -1,8 +1,17 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Handler callback tests for choice/modals in CharActionModals
 // Tests verify that clicking modal buttons invokes the correct handler
 // callbacks with the expected arguments, and that setModalState clears
 // the appropriate modal state keys.
+//
+// Removed redundant tests:
+// - Elemental Epitome handler → covered in internal-handlers.test.jsx (rendering)
+// - Destructive Stride handlers → covered in internal-handlers.test.jsx (rendering)
+// - Attack Rider Option Select → covered in useAttackDamageResolution.optionSelect.test.js (hook level)
+// - Generic Damage Type Choice → covered in inline-choice-closes.test.jsx (with skip handler)
+// - Enhanced Unarmed Choice → covered in inline-choice-closes.test.jsx (with skip + negative test)
+// - Weapon Mastery Choice → covered in handlers.test.jsx (identical assertion)
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -566,100 +575,6 @@ describe('CharActionModals — choice modal handler callbacks', () => {
       />);
       fireEvent.click(screen.getByTestId('reckless-cancel'));
       expect(handler).toHaveBeenCalledWith(attack);
-    });
-  });
-
-  // ── Elemental Epitome handler ──
-
-  describe('Elemental Epitome handler', () => {
-    it('clears epitomeModal on setModalState when resistance type is confirmed', async () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ epitomeModal: { action: {}, playerStats: { name: 'Caster' }, campaignName: 'test', currentResistance: 'fire' } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('epitome-confirm'));
-      expect(setModalState).toHaveBeenCalledWith({ epitomeModal: null });
-    });
-  });
-
-  // ── Destructive Stride handlers ──
-
-  describe('Destructive Stride handlers', () => {
-    it('clears destructiveStrideModal on setModalState when damage type is confirmed', async () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ destructiveStrideModal: { action: {}, playerStats: { name: 'Monk' }, campaignName: 'test' } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('destructive-stride-confirm'));
-      expect(setModalState).toHaveBeenCalledWith({ destructiveStrideModal: null });
-    });
-  });
-
-  // ── Attack Rider Option Select handler ──
-
-  describe('Attack Rider Option Select handler', () => {
-    it('calls handleAttackRiderOptionSelect with the option name and modalState context', () => {
-      const handler = vi.fn();
-      const riderOptions = [
-        { name: 'Option 1', effect: 'disadvantage_on_next_save' },
-      ];
-      render(<CharActionModals
-        {...createBaseProps({ handleAttackRiderOptionSelect: handler })}
-        modalState={{ attackRiderOptionsModal: { maneuver: { name: 'Test' }, riderOptions } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByText('Option 1'));
-      expect(handler).toHaveBeenCalledWith('Option 1', expect.objectContaining({ riderOptions }));
-    });
-  });
-
-  // ── Generic Damage Type Choice handler ──
-
-  describe('Generic Damage Type Choice handler', () => {
-    it('calls handleGenericDamageTypeChoice when a type button is clicked', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleGenericDamageTypeChoice: handler })}
-        modalState={{ damageTypeChoice: { title: 'Pick', types: ['Fire', 'Cold'] } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByText('Fire'));
-      expect(handler).toHaveBeenCalledWith('Fire');
-    });
-  });
-
-  // ── Enhanced Unarmed Choice handler ──
-
-  describe('Enhanced Unarmed Choice handler', () => {
-    it('calls handleEnhancedUnarmedChoice when _attackRider is set in pendingDamage', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleEnhancedUnarmedChoice: handler })}
-        modalState={{ damageTypeChoice: { title: 'Pick', types: ['Force'] } }}
-        pendingDamage={{ _attackRider: true }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByText('Force'));
-      expect(handler).toHaveBeenCalledWith('Force');
-    });
-  });
-
-  // ── Weapon Mastery Choice handler ──
-
-  describe('Weapon Mastery Choice handler', () => {
-    it('calls handleWeaponMasteryChoice with the confirmed choice value', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleWeaponMasteryChoice: handler })}
-        modalState={{ weaponMasteryChoiceModal: {} }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('weapon-mastery-confirm'));
-      expect(handler).toHaveBeenCalledWith('test-choice');
     });
   });
 });

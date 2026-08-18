@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Handler callback tests for healing-related modals in CharActionModals.
 //
 // Tests verify that when a user interacts with a healing modal's confirm
@@ -6,6 +7,12 @@
 //
 // Skip behavior for these modals is covered in
 // CharActionModals.mass-healing-skips.test.jsx.
+//
+// @cleaned-by-ai: Consolidated 5 nearly-identical tests (one per modal)
+// into a single parameterized test. Each test followed the same pattern:
+// create vi.fn() handler → render CharActionModals → click test ID →
+// expect handler(['Target1']). The only differences were modal key,
+// handler prop name, and test ID — making them ideal for parameterization.
 //
 // NOTE: Only the 5 healing modal types tested here are mocked. All other
 // modals are intentionally omitted — the component's render logic uses
@@ -547,78 +554,31 @@ describe('CharActionModals — healing handler callbacks', () => {
     vi.clearAllMocks();
   });
 
-  // ── Mass Heal handler ──
+  // ── Mass healing modal confirm handlers ──
+  // All five modals follow the same pattern: modal onConfirm → handler prop.
+  // Skip handlers are covered in CharActionModals.mass-healing-skips.test.jsx.
+  // Rendering is covered in CharActionModals.rendering.test.jsx.
 
-  describe('Mass Heal handler', () => {
-    it('calls handleMassHealConfirm with selected targets', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleMassHealConfirm: handler })}
-        modalState={{ massHealModal: { creatureTargets: [{ name: 'Ally1' }], maxTargets: 5, totalPool: 50, campaignName: 'test', combatSummary: {} } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('mass-heal-confirm'));
-      expect(handler).toHaveBeenCalledWith(['Target1']);
-    });
-  });
+  describe('Mass healing modal confirm handlers', () => {
+    const cases = [
+      { name: 'Mass Heal', modalKey: 'massHealModal', handlerProp: 'handleMassHealConfirm', confirmTestId: 'mass-heal-confirm', modalData: { creatureTargets: [{ name: 'Ally1' }], maxTargets: 5, totalPool: 50, campaignName: 'test', combatSummary: {} } },
+      { name: 'Mass Cure Wounds', modalKey: 'massCureWoundsModal', handlerProp: 'handleMassCureWoundsConfirm', confirmTestId: 'mass-cure-confirm', modalData: { creatureTargets: [{ name: 'Ally1' }], maxTargets: 5 } },
+      { name: 'Prayer of Healing', modalKey: 'prayerOfHealingModal', handlerProp: 'handlePrayerOfHealingConfirm', confirmTestId: 'prayer-confirm', modalData: { creatureTargets: [{ name: 'Ally1' }], maxTargets: 5 } },
+      { name: 'Power Word Fortify', modalKey: 'powerWordFortifyModal', handlerProp: 'handlePowerWordFortifyConfirm', confirmTestId: 'fortify-confirm', modalData: { creatureTargets: [{ name: 'Ally1' }], totalTempHp: 10 } },
+      { name: 'Mass Healing Word', modalKey: 'massHealingWordModal', handlerProp: 'handleMassHealingWordConfirm', confirmTestId: 'healing-word-confirm', modalData: { creatureTargets: [{ name: 'Ally1' }], maxTargets: 5 } },
+    ];
 
-  // ── Mass Cure Wounds handler ──
-
-  describe('Mass Cure Wounds handler', () => {
-    it('calls handleMassCureWoundsConfirm with selected targets', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleMassCureWoundsConfirm: handler })}
-        modalState={{ massCureWoundsModal: { creatureTargets: [{ name: 'Ally1' }], maxTargets: 5 } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('mass-cure-confirm'));
-      expect(handler).toHaveBeenCalledWith(['Target1']);
-    });
-  });
-
-  // ── Prayer of Healing handler ──
-
-  describe('Prayer of Healing handler', () => {
-    it('calls handlePrayerOfHealingConfirm with selected targets', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handlePrayerOfHealingConfirm: handler })}
-        modalState={{ prayerOfHealingModal: { creatureTargets: [{ name: 'Ally1' }], maxTargets: 5 } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('prayer-confirm'));
-      expect(handler).toHaveBeenCalledWith(['Target1']);
-    });
-  });
-
-  // ── Power Word Fortify handler ──
-
-  describe('Power Word Fortify handler', () => {
-    it('calls handlePowerWordFortifyConfirm with selected targets', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handlePowerWordFortifyConfirm: handler })}
-        modalState={{ powerWordFortifyModal: { creatureTargets: [{ name: 'Ally1' }], totalTempHp: 10 } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('fortify-confirm'));
-      expect(handler).toHaveBeenCalledWith(['Target1']);
-    });
-  });
-
-  // ── Mass Healing Word handler ──
-
-  describe('Mass Healing Word handler', () => {
-    it('calls handleMassHealingWordConfirm with selected targets', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleMassHealingWordConfirm: handler })}
-        modalState={{ massHealingWordModal: { creatureTargets: [{ name: 'Ally1' }], maxTargets: 5 } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('healing-word-confirm'));
-      expect(handler).toHaveBeenCalledWith(['Target1']);
-    });
+    for (const { name, modalKey, handlerProp, confirmTestId, modalData } of cases) {
+      it(`calls ${handlerProp} with selected targets for ${name}`, () => {
+        const handler = vi.fn();
+        render(<CharActionModals
+          {...createBaseProps({ [handlerProp]: handler })}
+          modalState={{ [modalKey]: modalData }}
+          setModalState={vi.fn()}
+        />);
+        fireEvent.click(screen.getByTestId(confirmTestId));
+        expect(handler).toHaveBeenCalledWith(['Target1']);
+      });
+    }
   });
 });

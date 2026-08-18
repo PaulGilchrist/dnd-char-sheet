@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
@@ -100,18 +101,16 @@ describe('PaladinFeatures', () => {
       expect(container.textContent).toContain('(30 ft.)');
     });
 
-    it('does not render aura of protection when charisma is missing', () => {
-      const stats = buildPlayerStats({
+    it('does not render aura of protection when charisma cannot be found (missing ability, null abilities)', () => {
+      const statsNoCha = buildPlayerStats({
         level: 5,
         abilities: [{ name: 'Strength', bonus: 3 }],
       });
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
+      render(<PaladinFeatures playerStats={statsNoCha} campaignName="test" />);
       expect(screen.queryByText(/Aura of Protection/)).toBeNull();
-    });
 
-    it('does not render aura of protection when abilities array is missing', () => {
-      const stats = buildPlayerStats({ abilities: null });
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
+      const statsNullAbilities = buildPlayerStats({ abilities: null });
+      render(<PaladinFeatures playerStats={statsNullAbilities} campaignName="test" />);
       expect(screen.queryByText(/Aura of Protection/)).toBeNull();
     });
   });
@@ -142,7 +141,7 @@ describe('PaladinFeatures', () => {
   });
 
   describe('channel divinity charges', () => {
-    it('renders the tracked resource with max from class features', () => {
+    it('renders the tracked resource with max from class features (defaults to 0 when missing)', () => {
       const stats = buildPlayerStats({ level: 5 });
       render(<PaladinFeatures playerStats={stats} campaignName="test" />);
       expect(screen.getByText('Channel Divinity Charges:')).toBeInTheDocument();
@@ -170,17 +169,6 @@ describe('PaladinFeatures', () => {
       expect(screen.getByText(/Extra Attacks:/)).toBeInTheDocument();
       expect(container.textContent).toContain('Extra Attacks: 1');
     });
-
-    it('renders extra attacks as 0 when extraAttacks is missing', () => {
-      classFeatures.getClassFeatures.mockReturnValue({
-        maxChannelDivinity: 2,
-        auraRange: null,
-      });
-      const stats = buildPlayerStats({ level: 5 });
-      const { container } = render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText(/Extra Attacks:/)).toBeInTheDocument();
-      expect(container.textContent).toContain('Extra Attacks: 0');
-    });
   });
 
   describe('fighting styles', () => {
@@ -201,8 +189,8 @@ describe('PaladinFeatures', () => {
       expect(screen.getByText('Great Weapon Fighting')).toBeInTheDocument();
     });
 
-    it('does not render fighting styles when null', () => {
-      const stats = buildPlayerStats({
+    it('does not render fighting styles when null or undefined, renders with empty array', () => {
+      const statsNull = buildPlayerStats({
         level: 1,
         class: {
           name: 'Paladin',
@@ -212,12 +200,10 @@ describe('PaladinFeatures', () => {
           fightingStyles: null,
         },
       });
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
+      render(<PaladinFeatures playerStats={statsNull} campaignName="test" />);
       expect(screen.queryByText(/Fighting Styles/)).toBeNull();
-    });
 
-    it('does not render fighting styles when undefined', () => {
-      const stats = buildPlayerStats({
+      const statsUndefined = buildPlayerStats({
         level: 1,
         class: {
           name: 'Paladin',
@@ -226,12 +212,10 @@ describe('PaladinFeatures', () => {
           class_levels: [{ level: 1 }],
         },
       });
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
+      render(<PaladinFeatures playerStats={statsUndefined} campaignName="test" />);
       expect(screen.queryByText(/Fighting Styles/)).toBeNull();
-    });
 
-    it('renders fighting styles section with empty array', () => {
-      const stats = buildPlayerStats({
+      const statsEmpty = buildPlayerStats({
         level: 1,
         class: {
           name: 'Paladin',
@@ -241,20 +225,15 @@ describe('PaladinFeatures', () => {
           fightingStyles: [],
         },
       });
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
+      render(<PaladinFeatures playerStats={statsEmpty} campaignName="test" />);
       expect(screen.getByText(/Fighting Styles:/)).toBeInTheDocument();
     });
   });
 
   describe('lay on hands pool', () => {
     it('renders the tracked resource with max = 5 * level', () => {
-      const stats = buildPlayerStats({ level: 5 });
-      render(<PaladinFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('Lay On Hands Pool:')).toBeInTheDocument();
-    });
-
-    it('calculates max correctly for different levels', () => {
       render(<PaladinFeatures playerStats={buildPlayerStats({ level: 1 })} campaignName="test" />);
+      expect(screen.getByText('Lay On Hands Pool:')).toBeInTheDocument();
       expect(screen.getByText('5/5')).toBeInTheDocument();
 
       render(<PaladinFeatures playerStats={buildPlayerStats({ level: 5 })} campaignName="test" />);

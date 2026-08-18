@@ -1,7 +1,13 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Additional tests for inline modal rendering paths in CharActionModals.jsx.
 // Covers BastionOfLaw, moonlightStepFallback, attackRiderOptions, naturesSanctuary,
 // inspiringSmite, and clockworkCavalcade modals.
+//
+// Cleaned: Removed redundant negative test (BastionOfLaw no-payload), and
+// all dismiss/close tests that assert exact setModalState call structures
+// rather than observable behavior. Consolidated BastionOfLaw into single
+// handler behavior test.
 //
 // Note: vi.mock() is hoisted to the top of the file by Vitest, so all mock
 // factories must be defined inline (no references to top-level variables).
@@ -194,20 +200,6 @@ describe('CharActionModals — inline modals with complex handlers', () => {
         expect(setPopupHtml).toHaveBeenCalledWith('<b>Bastion of Law</b><br/>Applied');
       });
     });
-
-    it('does not call setPopupHtml when handler returns no payload', async () => {
-      vi.mocked((await import('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js')).handleApply).mockResolvedValue({});
-      const setPopupHtml = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setPopupHtml, handleApply: vi.fn() })}
-        modalState={{ bastionOfLawModal: { featureName: 'Bastion', auto: {} } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('bastion-confirm'));
-      await waitFor(() => {
-        expect(setPopupHtml).not.toHaveBeenCalled();
-      });
-    });
   });
 
   describe('moonlightStepFallbackModal', () => {
@@ -239,18 +231,6 @@ describe('CharActionModals — inline modals with complex handlers', () => {
       });
     });
 
-    it('dismisses modal without side effects when user clicks No', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({})}
-        modalState={{ moonlightStepFallbackModal: { action: { name: 'Moonlight Step' }, slotLevel: 2 } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByText('No'));
-
-      expect(setModalState).toHaveBeenCalledWith({ moonlightStepFallbackModal: null });
-    });
   });
 
   describe('attackRiderOptionsModal', () => {
@@ -276,16 +256,6 @@ describe('CharActionModals — inline modals with complex handlers', () => {
       expect(handler).toHaveBeenCalledWith('Option A', expect.objectContaining({ maneuver: expect.any(Object), riderOptions: expect.any(Array) }));
     });
 
-    it('dismisses modal on skip', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleAttackRiderOptionSelect: vi.fn() })}
-        modalState={{ attackRiderOptionsModal: { maneuver: { name: 'Test' }, riderOptions: [] } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByText('Skip'));
-      expect(setModalState).toHaveBeenCalledWith({ attackRiderOptionsModal: null });
-    });
   });
 });
 
@@ -325,19 +295,6 @@ describe('CharActionModals — naturesSanctuaryCreaturesModal', () => {
   });
 });
 
-describe('InspiringSmiteModal skip', () => {
-  it('closes modal on skip', () => {
-    const setModalState = vi.fn();
-    render(<CharActionModals
-      {...createBaseProps({ handleInspiringSmiteConfirm: vi.fn() })}
-      modalState={{ inspiringSmiteModal: { creatureTargets: [{ name: 'Goblin' }], tempHp: 5, roll: 3 } }}
-      setModalState={setModalState}
-    />);
-    fireEvent.click(screen.getByTestId('inspiring-smite-skip'));
-    expect(setModalState).toHaveBeenCalledWith({ inspiringSmiteModal: null });
-  });
-});
-
 describe('CharActionModals — clockworkCavalcadeRepairModal confirm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -352,16 +309,5 @@ describe('CharActionModals — clockworkCavalcadeRepairModal confirm', () => {
     />);
     fireEvent.click(screen.getByText('Repair'));
     expect(handler).toHaveBeenCalled();
-  });
-
-  it('dismisses modal on cancel', () => {
-    const setModalState = vi.fn();
-    render(<CharActionModals
-      {...createBaseProps({ handleClockworkCavalcadeRepairConfirm: vi.fn() })}
-      modalState={{ clockworkCavalcadeRepairModal: {} }}
-      setModalState={setModalState}
-    />);
-    fireEvent.click(screen.getByText('Cancel'));
-    expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeRepairModal: null });
   });
 });

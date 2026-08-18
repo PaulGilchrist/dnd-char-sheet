@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
@@ -195,12 +196,9 @@ describe('CharAbilities tool entries', () => {
         ],
       });
       render(<CharAbilities {...defaultProps} playerStats={stats} />);
-      // Verify tool renders and only appears once (dedup works)
-      await screen.findByText(/Healer's Kit \(\+5\)/);
-      // Use getElementsByTagName to find clickable spans and check for duplicates
-      const clickableSpans = document.querySelectorAll('.clickable');
-      const healerKitSpans = Array.from(clickableSpans).filter(el => el.textContent.includes("Healer's Kit"));
-      expect(healerKitSpans).toHaveLength(1);
+      // Verify tool renders exactly once (dedup works)
+      const healerKitElements = await screen.findAllByText(/Healer's Kit \(\+5\)/);
+      expect(healerKitElements).toHaveLength(1);
     });
 
     it('applies exhaustion penalty to tool bonuses', async () => {
@@ -340,22 +338,5 @@ describe('CharAbilities tool entries', () => {
       expect(screen.queryByText("Healer's Kit")).not.toBeInTheDocument();
     });
 
-    it('renders tools with ability bonus when proficiency is undefined', async () => {
-      const stats = createPlayerStats({
-        level: 5,
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-        abilities: [
-          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
-          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
-          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Wisdom', bonus: 2, save: 4, totalScore: 14, skills: [] },
-          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-        ],
-      });
-      render(<CharAbilities {...defaultProps} playerStats={stats} />);
-      // toolProficiencies defaults to [] from createPlayerStats, so not proficient
-      await screen.findByText("Healer's Kit (+2)");
-    });
   });
 });

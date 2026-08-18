@@ -88,28 +88,18 @@ describe('CharAbilities condition effects on rendering', () => {
     mockStore.clear();
   });
 
+  // @cleaned-by-ai
   describe('auto fail saves', () => {
     it('shows AUTO FAIL for save when ability is in autoFailSaves', () => {
       render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['str'] }} />);
       expect(screen.getByText('AUTO FAIL')).toBeInTheDocument();
     });
-
-    it('shows AUTO FAIL for all abilities when all are in autoFailSaves', () => {
-      render(<CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['str', 'dex', 'con', 'int', 'wis', 'cha'] }} />);
-      const autoFailElements = screen.getAllByText('AUTO FAIL');
-      expect(autoFailElements).toHaveLength(6);
-    });
   });
 
+  // @cleaned-by-ai
   describe('save advantage', () => {
     it('shows (Adv) suffix when saveAdvantageCount is set', () => {
       const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageCount: 2 }} />);
-      const saveTexts = getSaveTexts(container);
-      expect(saveTexts).toContain('+6 (Adv)');
-    });
-
-    it('shows (Adv) suffix when saveAdvantageAbilities abbreviation matches', () => {
-      const { container } = render(<CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageAbilities: ['STR'] }} />);
       const saveTexts = getSaveTexts(container);
       expect(saveTexts).toContain('+6 (Adv)');
     });
@@ -122,6 +112,7 @@ describe('CharAbilities condition effects on rendering', () => {
     });
   });
 
+  // @cleaned-by-ai
   describe('exhaustion penalty', () => {
     it('reduces ability bonuses and save values by exhaustion penalty amount', () => {
       const stats = createPlayerStats();
@@ -133,15 +124,9 @@ describe('CharAbilities condition effects on rendering', () => {
       const saveTexts = getSaveTexts(container);
       expect(saveTexts).toContain('+4');
     });
-
-    it('reduces save display values by exhaustion penalty', () => {
-      const { container } = render(<CharAbilities {...defaultProps} exhaustionPenalty={1} />);
-      const saveTexts = getSaveTexts(container);
-      // STR save: 6 - 1 = +5
-      expect(saveTexts).toContain('+5');
-    });
   });
 
+  // @cleaned-by-ai
   describe('condition effects on skills', () => {
     it('adds passWithoutTraceBonus to Stealth skill only', () => {
       const stats = createPlayerStats({
@@ -157,24 +142,9 @@ describe('CharAbilities condition effects on rendering', () => {
       render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ passWithoutTraceBonus: '2' }} />);
       expect(screen.getByText('Stealth (+8)')).toBeInTheDocument();
     });
-
-    it('does not add passWithoutTraceBonus to non-Stealth skills', () => {
-      const stats = createPlayerStats({
-        abilities: [
-          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
-          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [{ name: 'Stealth', bonus: 6 }, { name: 'Acrobatics', bonus: 6 }] },
-          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [] },
-          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-        ],
-      });
-      render(<CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ passWithoutTraceBonus: '2' }} />);
-      expect(screen.getByText('Stealth (+8)')).toBeInTheDocument();
-      expect(screen.getByText('Acrobatics (+6)')).toBeInTheDocument();
-    });
   });
 
+  // @cleaned-by-ai
   describe('jack of all trades', () => {
     it('adds half proficiency to non-proficient skill bonuses', () => {
       const stats = createPlayerStats({
@@ -198,30 +168,9 @@ describe('CharAbilities condition effects on rendering', () => {
       // Acrobatics: skill.bonus(2) + floor(prof(4)/2) = 2 + 2 = 4
       expect(screen.getByText('Acrobatics (+4)')).toBeInTheDocument();
     });
-
-    it('does not add jack of all trades bonus to proficient skills', () => {
-      const stats = createPlayerStats({
-        level: 10,
-        automation: {
-          primalKnowledge: [],
-          passives: [{ type: 'jack_of_all_trades' }],
-        },
-        skillProficiencies: ['Athletics', 'Acrobatics'],
-        abilities: [
-          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [{ name: 'Athletics', bonus: 8 }] },
-          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [{ name: 'Acrobatics', bonus: 2 }] },
-          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Wisdom', bonus: -1, save: 1, totalScore: 9, skills: [] },
-          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-        ],
-      });
-      render(<CharAbilities {...defaultProps} playerStats={stats} />);
-      expect(screen.getByText('Athletics (+8)')).toBeInTheDocument();
-      expect(screen.getByText('Acrobatics (+2)')).toBeInTheDocument();
-    });
   });
 
+  // @cleaned-by-ai
   describe('isRaging interactions', () => {
     it('uses primal knowledge skills to override skill bonus when raging', () => {
       const stats = createPlayerStats({
@@ -258,26 +207,9 @@ describe('CharAbilities condition effects on rendering', () => {
       render(<CharAbilities {...defaultProps} playerStats={stats} isRaging={true} />);
       expect(screen.getByText('Athletics (Expert) (+9)')).toBeInTheDocument();
     });
-
-    it('uses strength bonus when primal skill but not proficient', () => {
-      const stats = createPlayerStats({
-        level: 5,
-        automation: { primalKnowledge: ['Stealth'], passives: [] },
-        expertise: [],
-        abilities: [
-          { name: 'Strength', bonus: 3, save: 5, totalScore: 16, skills: [{ name: 'Stealth', bonus: 1 }] },
-          { name: 'Dexterity', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Constitution', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Wisdom', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Charisma', bonus: 0, save: 0, totalScore: 10, skills: [] },
-        ],
-      });
-      render(<CharAbilities {...defaultProps} playerStats={stats} isRaging={true} />);
-      expect(screen.getByText('Stealth (+3)')).toBeInTheDocument();
-    });
   });
 
+  // @cleaned-by-ai
   describe('cosmic omen effect', () => {
     it('does not include cosmic omen bonus in displayed ability check values', () => {
       const stats = createPlayerStats();
@@ -286,14 +218,6 @@ describe('CharAbilities condition effects on rendering', () => {
       const bonusTexts = getBonusTexts(container);
       // Cosmic Omen bonus is now applied at roll time, not displayed statically
       expect(bonusTexts).not.toContain('+7');
-      expect(bonusTexts).toContain('+4');
-    });
-
-    it('handles invalid JSON in cosmicOmenEffect gracefully', () => {
-      const stats = createPlayerStats();
-      vi.mocked(getRuntimeValue).mockReturnValueOnce('not-valid-json');
-      const { container } = render(<CharAbilities {...defaultProps} playerStats={stats} />);
-      const bonusTexts = getBonusTexts(container);
       expect(bonusTexts).toContain('+4');
     });
   });

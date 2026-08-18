@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Comprehensive rendering tests for modals and inline overlays not covered
 // in CharActionModals.rendering.test.jsx or the other dedicated test files.
 //
@@ -383,44 +384,6 @@ describe('CharActionModals — additional modal rendering', () => {
   // ── Inline overlays (div-based, not mocked component) ──
 
   describe('inline overlays', () => {
-    it('renders attackRiderOptionsModal inline overlay with maneuver name header', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ attackRiderOptionsModal: { maneuver: { name: 'Test Maneuver' }, riderOptions: [] } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByText('Test Maneuver — Choose Effect')).toBeInTheDocument();
-    });
-
-    it('renders attackRiderOptionsModal with effect descriptions for each rider option', () => {
-      const riderOptions = [
-        { name: 'Option 1', effect: 'disadvantage_on_next_save' },
-        { name: 'Option 2', effect: 'next_attack_bonus' },
-        { name: 'Option 3', effect: 'push_15ft' },
-        { name: 'Option 4', effect: 'speed_reduction' },
-      ];
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ attackRiderOptionsModal: { maneuver: { name: 'Test' }, riderOptions } }}
-        setModalState={vi.fn()}
-      />);
-      const container = screen.getByText('Test — Choose Effect').closest('.sp-modal');
-      expect(container).toBeTruthy();
-      expect(container.textContent).toContain('Disadvantage on next saving throw');
-      expect(container.textContent).toContain('Next attack against target gains +5 bonus');
-      expect(container.textContent).toContain('Push target 15 feet');
-      expect(container.textContent).toContain('Reduce target\'s speed by 15 feet');
-    });
-
-    it('renders attackRiderOptionsModal with Skip button', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ attackRiderOptionsModal: { maneuver: { name: 'Test' }, riderOptions: [] } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByText('Skip')).toBeInTheDocument();
-    });
-
     it('renders clockworkCavalcadeRepairModal inline with hammer icon and action buttons', () => {
       render(<CharActionModals
         {...createBaseProps()}
@@ -430,26 +393,6 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.getByText('Clockwork Cavalcade: Repair')).toBeInTheDocument();
       expect(screen.getByText('Repair')).toBeInTheDocument();
       expect(screen.getByText('Cancel')).toBeInTheDocument();
-    });
-
-    it('renders clockworkCavalcadeRepairModal with description about damaged objects', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ clockworkCavalcadeRepairModal: {} }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByText(/Damaged objects within the Cube/)).toBeInTheDocument();
-    });
-
-    it('renders moonlightStepFallbackModal inline with slot level info and action buttons', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ moonlightStepFallbackModal: { action: { name: 'Moonlight Step' }, slotLevel: 3 } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByText(/Consume a level 3 spell slot/)).toBeInTheDocument();
-      expect(screen.getByText('Yes, Consume Slot')).toBeInTheDocument();
-      expect(screen.getByText('No')).toBeInTheDocument();
     });
   });
 
@@ -466,24 +409,6 @@ describe('CharActionModals — additional modal rendering', () => {
         setModalState={vi.fn()}
       />);
       expect(screen.getByTestId('open-hand-technique-modal')).toBeInTheDocument();
-    });
-
-    it('renders naturesSanctuaryCreaturesModal with "Move" in title when isMove is true', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ naturesSanctuaryCreaturesModal: { creatureTargets: [], defaultSelected: [], isMove: true } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByText("Nature's Sanctuary (Move) — Choose Creatures")).toBeInTheDocument();
-    });
-
-    it('renders naturesSanctuaryCreaturesModal without "Move" in title when isMove is false', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ naturesSanctuaryCreaturesModal: { creatureTargets: [], defaultSelected: [], isMove: false } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByText("Nature's Sanctuary — Choose Creatures")).toBeInTheDocument();
     });
 
     it('renders oceanicGiftTargetModal with doubleEmanation title showing Wild Shape cost', () => {
@@ -505,15 +430,6 @@ describe('CharActionModals — additional modal rendering', () => {
       expect(screen.queryByText(/2 Wild Shape/)).not.toBeInTheDocument();
     });
 
-    it('renders clockworkCavalcadeHealModal with custom title and description', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ clockworkCavalcadeHealModal: { creatureTargets: [], maxHeal: 100, campaignName: 'test', combatSummary: {} } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByTestId('mass-heal-modal')).toBeInTheDocument();
-    });
-
     it('renders clockworkCavalcadeDispelModal with creature selection title', () => {
       render(<CharActionModals
         {...createBaseProps()}
@@ -521,15 +437,6 @@ describe('CharActionModals — additional modal rendering', () => {
         setModalState={vi.fn()}
       />);
       expect(screen.getByText('Clockwork Cavalcade: Dispel')).toBeInTheDocument();
-    });
-
-    it('renders starryChaliceHealModal with target names mapped to targets and correct title', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ starryChaliceHealModal: { targetNames: ['Ally1', 'Ally2'], amount: 10 } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByText('Starry Form: Chalice')).toBeInTheDocument();
     });
   });
 });

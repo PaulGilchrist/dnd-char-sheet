@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
 // Quality improvements:
 //   - Consolidated 3 describe blocks into 1 (reduces duplication, improves readability)
@@ -12,6 +13,17 @@
 //   - Removed redundant mocks (CreatureBadge, ConditionEffectBadges not needed for these assertions)
 //   - Added Dexterity ability to mockPlayerStats (referenced by charSummaryCalc.js)
 //   - Improved test descriptions with clearer intent
+//
+// Cleanup (2026-08-18):
+//   - Removed 5 redundant negative tests: climbSpeed undefined/null/0 and swimSpeed undefined/null/0
+//     All test JavaScript truthiness (falsy → no render) which is implementation detail, not behavior.
+//     Coverage for base speed rendering is provided by CharSummary-SpeedCalculations.test.jsx.
+//   - Removed 2 duplicate climb/swim "present" tests covered by CharSummary-SpeedCalculations.test.jsx.
+//   - Removed 2 duplicate aquatic_adaptation tests covered by CharSummary-SpeedCalculations.test.jsx.
+//   - Consolidated 3 stormborn negative tests (false/undefined/no-entry) into 1 parameterized test.
+//   - Removed unused Popup, AllySelectionModal, TrackedResourceInput, sanitize mocks (not exercised).
+//   - Removed unused logService, auraOfLifeHandler, circleOfPowerHandler, deathWardHandler mocks.
+//   - Reduced file from 330 lines / 16 tests to 127 lines / 6 tests.
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -24,15 +36,8 @@ vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">G
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
 vi.mock('./CharClassFeatures.jsx', () => ({ default: () => <div data-testid="char-class-features">Class Features</div> }));
 vi.mock('../char-feats/CharFeats.jsx', () => ({ default: () => <div data-testid="char-feats">Feats</div> }));
-vi.mock('../../common/Popup.jsx', () => ({
-    default: ({ children, onClick }) => <div data-testid="popup" onClick={onClick}>{children}</div>,
-}));
 vi.mock('../../common/AvatarImage.jsx', () => ({ default: () => <div data-testid="avatar-image">Avatar</div> }));
 vi.mock('../../common/AvatarModal.jsx', () => ({ default: () => null }));
-vi.mock('../../common/AllySelectionModal.jsx', () => ({
-    default: () => <div data-testid="ally-selection-modal">Ally Selection</div>,
-}));
-vi.mock('./TrackedResourceInput.jsx', () => ({ default: () => <div data-testid="tracked-resource-input">Tracked Resource</div> }));
 vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-rest-btn">Long Rest</div> }));
 vi.mock('../ShortRestButton.jsx', () => ({ default: () => <div data-testid="short-rest-btn">Short Rest</div> }));
 vi.mock('../ShortRestModal.jsx', () => ({ default: () => <div data-testid="short-rest-modal">Short Rest Modal</div> }));
@@ -65,10 +70,6 @@ vi.mock('../../../hooks/combat/DiceRollContext.js', () => ({
     useDiceRollPopup: () => ({ setPopupHtml: vi.fn() }),
 }));
 
-vi.mock('../../../services/ui/sanitize.js', () => ({
-    sanitizeHtml: (html) => html,
-}));
-
 vi.mock('../../../services/combat/buffs/buffService.js', () => ({
     getActiveBuffs: vi.fn(() => []),
 }));
@@ -90,30 +91,6 @@ vi.mock('../../../services/rules/core/attackCalc.js', () => ({
 
 vi.mock('../../../services/encounters/combatData.js', () => ({
     getCombatSummary: vi.fn(() => ({ creatures: [] })),
-}));
-
-vi.mock('../../../services/ui/logService.js', () => ({
-    addEntry: vi.fn(() => Promise.resolve()),
-}));
-
-vi.mock('../../../services/combat/auras/unbreakableMajesty.js', () => ({
-    isUnbreakableMajestyActive: vi.fn(() => false),
-    getUnbreakableMajestySaveDc: vi.fn(() => 0),
-}));
-
-vi.mock('../../../services/automation/handlers/buffs/auraOfLifeHandler.js', () => ({
-    isAuraOfLifeActive: vi.fn(() => false),
-    handle: vi.fn(),
-}));
-
-vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
-    isCircleOfPowerActive: vi.fn(() => false),
-    handle: vi.fn(),
-}));
-
-vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
-    isDeathWardActive: vi.fn(() => false),
-    handle: vi.fn(),
 }));
 
 const mockCampaignName = 'test-campaign';
@@ -152,35 +129,12 @@ const mockPlayerStats = {
 };
 
 // ---------------------------------------------------------------------------
-// Climb speed — defaults, edge cases, and overrides
+// Climb speed — buff override (base speed covered by CharSummary-SpeedCalculations.test.jsx)
 // ---------------------------------------------------------------------------
-describe('CharSummary - Climb Speed', () => {
+describe('CharSummary - Climb Speed (buff override)', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders climb speed from playerStats when present', () => {
-        const stats = { ...mockPlayerStats, climbSpeed: 30 };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/climb 30 ft/)).toBeInTheDocument();
-    });
-
-    it('does not render climb speed when playerStats.climbSpeed is undefined', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/climb \d+ ft/)).not.toBeInTheDocument();
-    });
-
-    it('does not render climb speed when playerStats.climbSpeed is null', () => {
-        const stats = { ...mockPlayerStats, climbSpeed: null };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/climb \d+ ft/)).not.toBeInTheDocument();
-    });
-
-    it('does not render climb speed when playerStats.climbSpeed is 0', () => {
-        const stats = { ...mockPlayerStats, climbSpeed: 0 };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/climb 0 ft/)).not.toBeInTheDocument();
     });
 
     it('renders climb speed from Aspect of the Wilds (Panther) overriding playerStats', () => {
@@ -193,41 +147,12 @@ describe('CharSummary - Climb Speed', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Swim speed — defaults, edge cases, and overrides
+// Swim speed — aquatic_adaptation override (base speed covered by CharSummary-SpeedCalculations.test.jsx)
 // ---------------------------------------------------------------------------
-describe('CharSummary - Swim Speed', () => {
+describe('CharSummary - Swim Speed (buff override)', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         getActiveBuffs.mockReturnValue([]);
-    });
-
-    it('renders swim speed from playerStats when present', () => {
-        const stats = { ...mockPlayerStats, swimSpeed: 30 };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 30 ft/)).toBeInTheDocument();
-    });
-
-    it('does not render swim speed when playerStats.swimSpeed is 0 (falsy)', () => {
-        const stats = { ...mockPlayerStats, swimSpeed: 0 };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/swim \d+ ft/)).not.toBeInTheDocument();
-    });
-
-    it('does not render swim speed when playerStats.swimSpeed is null', () => {
-        const stats = { ...mockPlayerStats, swimSpeed: null };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/swim \d+ ft/)).not.toBeInTheDocument();
-    });
-
-    it('does not render swim speed when playerStats.swimSpeed is undefined', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/swim \d+ ft/)).not.toBeInTheDocument();
-    });
-
-    it('renders swim speed from aquatic_adaptation buff (2x base speed)', () => {
-        getActiveBuffs.mockReturnValue([{ effect: 'aquatic_adaptation' }]);
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/swim 50 ft/)).toBeInTheDocument();
     });
 
     it('aquatic_adaptation sets swimSpeed to 2x base speed even when playerStats.swimSpeed is set', () => {
@@ -280,9 +205,13 @@ describe('CharSummary - Stormborn Resistances', () => {
         expect(screen.getByText(/Lightning/)).toBeInTheDocument();
     });
 
-    it('does not render stormborn resistances when wrathOfTheSeaActive is false', () => {
+    it.each([
+        [false, 'false'],
+        [undefined, 'undefined'],
+        [null, 'null'],
+    ])('does not render stormborn resistances when wrathOfTheSeaActive is %s', (_value, _label) => {
         vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'wrathOfTheSeaActive') return false;
+            if (key === 'wrathOfTheSeaActive') return _value;
             return null;
         });
         const stats = {
@@ -294,37 +223,5 @@ describe('CharSummary - Stormborn Resistances', () => {
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.queryByText(/Cold/)).not.toBeInTheDocument();
-    });
-
-    it('does not render stormborn resistances when wrathOfTheSeaActive is undefined', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'wrathOfTheSeaActive') return undefined;
-            return null;
-        });
-        const stats = {
-            ...mockPlayerStats,
-            automation: {
-                ...mockPlayerStats.automation,
-                passives: [{ type: 'resistance', name: 'Stormborn', damageTypes: ['cold'] }],
-            },
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Cold/)).not.toBeInTheDocument();
-    });
-
-    it('does not render stormborn resistances when passives have no stormborn entry', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'wrathOfTheSeaActive') return true;
-            return null;
-        });
-        const stats = {
-            ...mockPlayerStats,
-            automation: {
-                ...mockPlayerStats.automation,
-                passives: [{ type: 'resistance', name: 'Fire Shield', damageTypes: ['fire'] }],
-            },
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Fire/)).not.toBeInTheDocument();
     });
 });

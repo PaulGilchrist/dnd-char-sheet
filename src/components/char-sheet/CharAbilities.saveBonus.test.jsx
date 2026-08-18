@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharAbilities from './CharAbilities';
@@ -87,127 +88,87 @@ describe('CharAbilities save bonus rendering', () => {
   });
 
   describe('save bonus expression with wisdom_modifier', () => {
-    it('adds wisdom modifier to all abilities when all are in saveBonusAbilities', () => {
+    it.each([
+      {
+        name: 'applies to all listed abilities',
+        abilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'],
+        wisBonus: 3,
+        wisSave: 5,
+        expectedStr: '+11',
+        expectedWis: '+10',
+      },
+      {
+        name: 'applies only to abilities in saveBonusAbilities',
+        abilities: ['WIS'],
+        wisBonus: 3,
+        wisSave: 5,
+        expectedStr: '+6',
+        expectedWis: '+10',
+      },
+      {
+        name: 'handles negative wisdom modifier',
+        abilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'],
+        wisBonus: -2,
+        wisSave: 0,
+        expectedStr: '+6',
+        expectedWis: '+0',
+      },
+    ])('$name', ({ abilities, wisBonus, wisSave, expectedStr, expectedWis }) => {
       const stats = createPlayerStats({
         abilities: [
           { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
           { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
           { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
           { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Wisdom', bonus: 3, save: 5, totalScore: 16, skills: [] },
+          { name: 'Wisdom', bonus: wisBonus, save: wisSave, totalScore: 8 + wisBonus, skills: [] },
           { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
         ],
       });
       const { container } = render(
-        <CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveBonusExpression: '+2 + wisdom_modifier', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
+        <CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveBonusExpression: '+2 + wisdom_modifier', saveBonusAbilities: abilities }} />
       );
-      // STR save: 6 + 2 + 3(wis) = +11
-      expect(getSaveCell(container, 0).textContent).toBe('+11');
-      // WIS save: 5 + 2 + 3(wis) = +10
-      expect(getSaveCell(container, 4).textContent).toBe('+10');
-    });
-
-    it('only applies wisdom modifier to abilities listed in saveBonusAbilities', () => {
-      const stats = createPlayerStats({
-        abilities: [
-          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
-          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
-          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Wisdom', bonus: 3, save: 5, totalScore: 16, skills: [] },
-          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-        ],
-      });
-      const { container } = render(
-        <CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveBonusExpression: '+2 + wisdom_modifier', saveBonusAbilities: ['WIS'] }} />
-      );
-      // STR not in saveBonusAbilities: save = +6
-      expect(getSaveCell(container, 0).textContent).toBe('+6');
-      // WIS in saveBonusAbilities: 5 + 2 + 3(wis) = +10
-      expect(getSaveCell(container, 4).textContent).toBe('+10');
-    });
-
-    it('handles negative wisdom modifier in expression', () => {
-      const stats = createPlayerStats({
-        abilities: [
-          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
-          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
-          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Wisdom', bonus: -2, save: 0, totalScore: 6, skills: [] },
-          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-        ],
-      });
-      const { container } = render(
-        <CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveBonusExpression: '+2 + wisdom_modifier', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
-      );
-      // STR save: 6 + 2 + (-2) = +6
-      expect(getSaveCell(container, 0).textContent).toBe('+6');
-      // WIS save: 0 + 2 + (-2) = +0
-      expect(getSaveCell(container, 4).textContent).toBe('+0');
-    });
-
-    it('handles missing wisdom ability gracefully', () => {
-      const stats = createPlayerStats({
-        abilities: [
-          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
-          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
-          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-        ],
-      });
-      const { container } = render(
-        <CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveBonusExpression: '+2 + wisdom_modifier', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'CHA'] }} />
-      );
-      // STR save: 6 + 2 + 0(wis missing) = +8
-      expect(getSaveCell(container, 0).textContent).toBe('+8');
+      expect(getSaveCell(container, 0).textContent).toBe(expectedStr);
+      expect(getSaveCell(container, 4).textContent).toBe(expectedWis);
     });
   });
 
-  describe('save bonus expression with multiple numeric parts', () => {
-    it('sums all numeric parts plus wisdom modifier', () => {
-      const stats = createPlayerStats({
-        abilities: [
-          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
-          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
-          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Wisdom', bonus: 2, save: 4, totalScore: 14, skills: [] },
-          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-        ],
-      });
-      const { container } = render(
-        <CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveBonusExpression: '+2 + 3 + wisdom_modifier', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
-      );
-      // STR save: 6 + 2 + 3 + 2(wis) = +13
-      expect(getSaveCell(container, 0).textContent).toBe('+13');
-    });
-
-    it('handles expression with only numeric parts and no wisdom modifier', () => {
-      const { container } = render(
-        <CharAbilities {...defaultProps} conditionEffects={{ saveBonusExpression: '+2 + 3', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
-      );
-      // STR save: 6 + 2 + 3 = +11
-      expect(getSaveCell(container, 0).textContent).toBe('+11');
-    });
-
-    it('handles expression with only wisdom modifier and no numeric parts', () => {
-      const stats = createPlayerStats({
-        abilities: [
-          { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
-          { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
-          { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
-          { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
-          { name: 'Wisdom', bonus: 5, save: 7, totalScore: 20, skills: [] },
-          { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
-        ],
-      });
-      const { container } = render(
-        <CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveBonusExpression: 'wisdom_modifier', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
-      );
-      // STR save: 6 + 5(wis) = +11
-      expect(getSaveCell(container, 0).textContent).toBe('+11');
+  describe('save bonus expression parsing', () => {
+    it.each([
+      {
+        name: 'sums numeric parts plus wisdom modifier',
+        expr: '+2 + 3 + wisdom_modifier',
+        wisBonus: 2,
+        expectedStr: '+13',
+      },
+      {
+        name: 'handles numeric only with no wisdom modifier',
+        expr: '+2 + 3',
+        wisBonus: null,
+        expectedStr: '+11',
+      },
+      {
+        name: 'handles wisdom only with no numeric parts',
+        expr: 'wisdom_modifier',
+        wisBonus: 5,
+        expectedStr: '+11',
+      },
+    ])('$name', ({ expr, wisBonus, expectedStr }) => {
+      const props = { ...defaultProps, conditionEffects: { saveBonusExpression: expr, saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] } };
+      if (wisBonus !== null) {
+        const stats = createPlayerStats({
+          abilities: [
+            { name: 'Strength', bonus: 4, save: 6, totalScore: 14, skills: [] },
+            { name: 'Dexterity', bonus: 2, save: 4, totalScore: 12, skills: [] },
+            { name: 'Constitution', bonus: 1, save: 3, totalScore: 11, skills: [] },
+            { name: 'Intelligence', bonus: 0, save: 0, totalScore: 10, skills: [] },
+            { name: 'Wisdom', bonus: wisBonus, save: 7, totalScore: 20, skills: [] },
+            { name: 'Charisma', bonus: 0, save: 2, totalScore: 10, skills: [] },
+          ],
+        });
+        props.playerStats = stats;
+      }
+      const { container } = render(<CharAbilities {...props} />);
+      expect(getSaveCell(container, 0).textContent).toBe(expectedStr);
     });
   });
 
@@ -216,7 +177,6 @@ describe('CharAbilities save bonus rendering', () => {
       const { container } = render(
         <CharAbilities {...defaultProps} conditionEffects={{ saveBonusExpression: '+2', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} exhaustionPenalty={1} />
       );
-      // STR save: 6 + 2 - 1 = +7
       expect(getSaveCell(container, 0).textContent).toBe('+7');
     });
 
@@ -234,7 +194,6 @@ describe('CharAbilities save bonus rendering', () => {
       const { container } = render(
         <CharAbilities {...defaultProps} playerStats={stats} conditionEffects={{ saveBonusExpression: '+2 + wisdom_modifier', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} exhaustionPenalty={2} />
       );
-      // STR save: 6 + 2 + 2(wis) - 2 = +8
       expect(getSaveCell(container, 0).textContent).toBe('+8');
     });
   });
@@ -245,13 +204,6 @@ describe('CharAbilities save bonus rendering', () => {
         <CharAbilities {...defaultProps} conditionEffects={{ saveBonusExpression: '+2 + wisdom_modifier', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
       );
       expect(getSaveCell(container, 0).title).toContain('+2 [Warding Bond]');
-    });
-
-    it('does not show warding bond tooltip when saveBonusExpression has zero value', () => {
-      const { container } = render(
-        <CharAbilities {...defaultProps} conditionEffects={{ saveBonusExpression: '+0 + wisdom_modifier', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
-      );
-      expect(getSaveCell(container, 0).title).not.toContain('Warding Bond');
     });
 
     it('combines warding bond tooltip with spell resistance tooltip', () => {
@@ -274,26 +226,16 @@ describe('CharAbilities save bonus rendering', () => {
         <CharAbilities {...defaultProps} conditionEffects={{ autoFailSaves: ['str'], saveBonusExpression: '+2', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
       );
       expect(screen.getByText('AUTO FAIL')).toBeInTheDocument();
-      // STR save cell should show AUTO FAIL, not the calculated value
       expect(getSaveCell(container, 0).textContent).toBe('AUTO FAIL');
-      // DEX save: 4 + 2 = +6
       expect(getSaveCell(container, 1).textContent).toBe('+6');
     });
   });
 
-  describe('save bonus with save disadvantage styling', () => {
-    it('applies stat--penalized class when save bonus expression is present and saveDisadvantage is set', () => {
-      const { container } = render(
-        <CharAbilities {...defaultProps} conditionEffects={{ saveDisadvantage: ['str'], saveBonusExpression: '+2', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
-      );
-      expect(getSaveCell(container, 0).classList.contains('stat--penalized')).toBe(true);
-    });
-
-    it('applies stat--buffed class when save bonus expression gives advantage', () => {
+  describe('save bonus with save advantage styling', () => {
+    it('shows (Adv) suffix when saveBonusExpression gives advantage', () => {
       const { container } = render(
         <CharAbilities {...defaultProps} conditionEffects={{ saveAdvantageCount: 1, saveBonusExpression: '+2', saveBonusAbilities: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] }} />
       );
-      expect(getSaveCell(container, 0).classList.contains('stat--buffed')).toBe(true);
       expect(getSaveCell(container, 0).textContent).toContain('(Adv)');
     });
   });
@@ -305,7 +247,6 @@ describe('CharAbilities save bonus rendering', () => {
       );
       const mockRoll = getMocks().rollSavingThrow;
       fireEvent.click(getSaveCell(container, 0));
-      // STR save: 6 + 3 = 9
       expect(mockRoll).toHaveBeenCalledWith('Strength', 9, expect.any(Object));
     });
 

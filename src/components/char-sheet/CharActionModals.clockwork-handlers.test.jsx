@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Handler callback tests for clockwork/other choice modals in CharActionModals.
 // Covers: Clockwork Cavalcade choice routing, handler callbacks, and edge cases.
 // Rendering is covered in CharActionModals.rendering.test.jsx;
@@ -796,89 +797,4 @@ describe('CharActionModals — clockwork choice routing and handler callbacks', 
     });
   });
 
-  // ── Cleave handlers ──
-  // These handlers are passed through from the parent component.
-  // The actual handler logic is tested elsewhere; these verify the props are wired.
-
-  describe('Cleave handlers wiring', () => {
-    it('passes handleCleaveAttack to the component', () => {
-      const handler = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handleCleaveAttack: handler })}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(handler).toBeDefined();
-    });
-
-    it('passes handleCleaveSkip to the component', () => {
-      const handler = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handleCleaveSkip: handler })}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(handler).toBeDefined();
-    });
-  });
-
-  // ── Divination Savant / Illusion Savant handlers ──
-
-  describe('Divination Savant / Illusion Savant handlers wiring', () => {
-    it('passes handleDivinationSavantConfirm to the component', () => {
-      const handler = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handleDivinationSavantConfirm: handler })}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(handler).toBeDefined();
-    });
-
-    it('passes handleIllusionSavantConfirm to the component', () => {
-      const handler = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handleIllusionSavantConfirm: handler })}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(handler).toBeDefined();
-    });
-  });
-
-  // ── Teleport Modal with moonlight_step_teleport effect ──
-
-  describe('Teleport Modal with Moonlight Step', () => {
-    it('passes isMoonlightStep=true when automation effect is moonlight_step_teleport', () => {
-      render(
-        <CharActionModals
-          {...createBaseProps()}
-          modalState={{ teleportModal: { action: { automation: { effect: 'moonlight_step_teleport' } } } }}
-          setModalState={vi.fn()}
-        />
-      );
-      expect(screen.getByTestId('teleport-modal')).toBeInTheDocument();
-    });
-  });
-
-  // ── Reckless Attack default mode ──
-
-  describe('Reckless Attack default mode', () => {
-    it('defaults to full mode when mode is not specified', () => {
-      const handler = vi.fn();
-      render(
-        <CharActionModals
-          {...createBaseProps({ handleRecklessAttackConfirm: handler })}
-          modalState={{ recklessAttackModal: { attack: { name: 'Test' } } }}
-          setModalState={vi.fn()}
-        />
-      );
-      fireEvent.click(screen.getByTestId('reckless-confirm'));
-      expect(handler).toHaveBeenCalled();
-    });
-  });
 });

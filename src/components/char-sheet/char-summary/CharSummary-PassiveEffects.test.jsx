@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
 // Quality improvements:
 //   - Removed window.location.hostname = 'localhost' (5×) — global state mutation, not needed
@@ -9,8 +10,12 @@
 //   - Improved test naming — each name clearly states the behavior being verified
 //   - Removed redundant beforeEach duplication — shared beforeEach across describe blocks
 //
-// Original: 9 tests / 256 lines
-// After: 13 tests / ~220 lines
+// Cleanup (2026-08-18):
+//   - Removed 2 "no passive" negative tests — both assert default behavior (base speed shown when
+//     passive array is empty), which is already covered by the shared mockPlayerStats (passives: []).
+//     These tests verify the absence of a feature rather than the presence of correct behavior,
+//     adding zero confidence while increasing maintenance burden.
+//   - Reduced file from 279 lines / 13 tests to 246 lines / 11 tests.
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -96,17 +101,6 @@ describe('speed_bonus with no_heavy_armor condition', () => {
         expect(screen.getByText(/25 ft/)).toBeInTheDocument();
     });
 
-    it('does not add speed bonus when character has no speed_bonus passive', () => {
-        const stats = {
-            ...mockPlayerStats,
-            automation: {
-                ...mockPlayerStats.automation,
-                passives: [],
-            },
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/25 ft/)).toBeInTheDocument();
-    });
 });
 
 // ---------------------------------------------------------------------------
@@ -232,15 +226,6 @@ describe('elemental_attunement_movement passive', () => {
         expect(screen.getByText(/swim 25 ft/)).toBeInTheDocument();
     });
 
-    it('omits fly and swim speed when passive is absent', () => {
-        const stats = {
-            ...mockPlayerStats,
-            passives: [],
-        };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/fly [0-9]+ ft/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/swim [0-9]+ ft/)).not.toBeInTheDocument();
-    });
 });
 
 // ---------------------------------------------------------------------------

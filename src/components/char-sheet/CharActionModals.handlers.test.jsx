@@ -1,4 +1,21 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Handler callback tests for CharActionModals — modal button → handler wiring.
+//
+// Scope — unique behaviors tested here:
+// - Constellation Selection modal confirm (parameterized: starryForm + twinkling)
+// - WeaponKindMasteryModal close → dedicated handler invocation
+// - AttackRiderManeuverPrompt skip → dedicated handler invocation
+//
+// Removed redundant tests:
+// - Weapon Mastery Choice confirm → covered in handler-callbacks.test.jsx
+//   (identical assertion: handleWeaponMasteryChoice called with 'test-choice')
+// - Weapon Mastery Choice close → covered in modal-closes.test.jsx
+//   (generic setModalState({ weaponMasteryChoiceModal: null }) pattern)
+//
+// Rendering tests are in CharActionModals.rendering.test.jsx.
+// Close behavior for other modals is in CharActionModals.modal-closes.test.jsx.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -274,32 +291,6 @@ describe('CharActionModals handlers', () => {
         expect(handleConstellationSelect).toHaveBeenCalledWith(modalData, 'test-option');
       });
     }
-  });
-
-  // ── Weapon Mastery Choice modal handlers ──
-
-  describe('Weapon Mastery Choice modal handlers', () => {
-    it(`calls handleWeaponMasteryChoice with the selected choice on confirm`, () => {
-      const handleWeaponMasteryChoice = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleWeaponMasteryChoice })}
-        modalState={{ weaponMasteryChoiceModal: {} }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('weapon-mastery-confirm'));
-      expect(handleWeaponMasteryChoice).toHaveBeenCalledWith('test-choice');
-    });
-
-    it(`calls setModalState with null for weaponMasteryChoiceModal on close`, () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ weaponMasteryChoiceModal: {} }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('weapon-mastery-close'));
-      expect(setModalState).toHaveBeenCalledWith({ weaponMasteryChoiceModal: null });
-    });
   });
 
   // ── WeaponKindMasteryModal close handler ──

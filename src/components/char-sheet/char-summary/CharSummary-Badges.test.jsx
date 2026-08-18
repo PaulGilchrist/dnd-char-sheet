@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -123,43 +124,29 @@ describe('CharSummary - Starry Form Constellation Badge', () => {
         window.location.hostname = 'localhost';
     });
 
-    it('renders Starry Form badge with constellation label', () => {
+    it.each`
+        constellation   | expectedLabel
+        ${'Archer'}     | ${'Starry Form - Archer'}
+        ${'Chalice'}    | ${'Starry Form - Chalice'}
+    `('renders Starry Form badge with $constellation constellation', ({ constellation, expectedLabel }) => {
         vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
             if (key === 'activeBuffs') {
-                return [{ name: 'Starry Form', constellation: 'Archer' }];
+                return [{ name: 'Starry Form', constellation }];
             }
             return null;
         });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Starry Form - Archer/)).toBeInTheDocument();
+        expect(screen.getByText(expectedLabel)).toBeInTheDocument();
     });
 
-    it('renders Starry Form badge with Chalice constellation', () => {
+    it.each`
+        activeBuffs               | description
+        $[{ name: 'Starry Form' }] | 'no constellation on buff'
+        $[]                       | 'no active buffs'
+    `('does not render Starry Form badge when $description', ({ activeBuffs }) => {
         vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
             if (key === 'activeBuffs') {
-                return [{ name: 'Starry Form', constellation: 'Chalice' }];
-            }
-            return null;
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Starry Form - Chalice/)).toBeInTheDocument();
-    });
-
-    it('does not render Starry Form badge when no constellation is set', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-            if (key === 'activeBuffs') {
-                return [{ name: 'Starry Form' }];
-            }
-            return null;
-        });
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
-    });
-
-    it('does not render Starry Form badge when no active buffs exist', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-            if (key === 'activeBuffs') {
-                return [];
+                return activeBuffs;
             }
             return null;
         });

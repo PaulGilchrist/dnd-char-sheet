@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 //
 // Improved: fixed global state mutation, added jest-dom import,
 // uses shared mock data, improved test naming with named parameters,
@@ -11,6 +12,12 @@
 //   - Uses named it.each parameters for clearer failure messages
 //   - Added negative-path tests (undefined, null acPenalty)
 //   - Added logService mock (component calls addEntry in event handlers)
+//
+// Cleanup (2026-08-18):
+//   - Removed 3 redundant negative tests: acPenalty undefined/null/conditionEffects undefined.
+//     All test JavaScript truthiness (falsy → no render) which is implementation detail, not behavior.
+//     The acPenalty: 0 case already covers the "no penalty" observable behavior.
+//   - Reduced file from 148 lines / 5 tests to 115 lines / 4 tests.
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -113,35 +120,6 @@ describe('CharSummary - AC Slow Penalty', () => {
             campaignName={mockCampaignName}
             exhaustionLevel={0}
             conditionEffects={{ acPenalty: 0 }}
-        />);
-        expect(screen.queryByText(/from Slow/)).not.toBeInTheDocument();
-    });
-
-    it('does not render AC slow penalty when acPenalty is undefined', () => {
-        render(<CharSummary
-            playerStats={mockPlayerStats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            conditionEffects={{ acPenalty: undefined }}
-        />);
-        expect(screen.queryByText(/from Slow/)).not.toBeInTheDocument();
-    });
-
-    it('does not render AC slow penalty when acPenalty is null', () => {
-        render(<CharSummary
-            playerStats={mockPlayerStats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
-            conditionEffects={{ acPenalty: null }}
-        />);
-        expect(screen.queryByText(/from Slow/)).not.toBeInTheDocument();
-    });
-
-    it('does not render AC slow penalty when conditionEffects is undefined', () => {
-        render(<CharSummary
-            playerStats={mockPlayerStats}
-            campaignName={mockCampaignName}
-            exhaustionLevel={0}
         />);
         expect(screen.queryByText(/from Slow/)).not.toBeInTheDocument();
     });
