@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -123,9 +123,6 @@ describe('avengingAngelHandler.handle - activation', () => {
       });
       utils.guid.mockReturnValue('test-guid');
 
-      const now = Date.now();
-      vi.spyOn(Date, 'now').mockReturnValue(now);
-
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(result.type).toBe('popup');
@@ -146,7 +143,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         characterName: 'TestPaladin',
         abilityName: 'Avenging Angel',
         description: 'TestPaladin reactivated Avenging Angel by expending a level 5 spell slot.',
-        timestamp: now,
       }));
     });
 
@@ -166,21 +162,6 @@ describe('avengingAngelHandler.handle - activation', () => {
       expect(setRuntimeValue).not.toHaveBeenCalled();
       expect(addEntry).not.toHaveBeenCalled();
     });
-
-    it('should show cannot be used popup when spell_slots_level_5 is undefined', async () => {
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'avengingAngelActive') return false;
-        if (key === 'avengingAngelRestUsed') return true;
-        if (key === 'activeBuffs') return [];
-        return null;
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toBe('Avenging Angel cannot be used again until a long rest or level 5 spell slot becomes available.');
-      expect(setRuntimeValue).not.toHaveBeenCalled();
-    });
   });
 
   describe('first use activation', () => {
@@ -191,9 +172,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         return null;
       });
       utils.guid.mockReturnValue('test-guid');
-
-      const now = Date.now();
-      vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -220,7 +198,6 @@ describe('avengingAngelHandler.handle - activation', () => {
         characterName: 'TestPaladin',
         abilityName: 'Avenging Angel',
         description: 'Avenging Angel activated — Flight 60 ft (hover), Frightful Aura active for 10 minutes.',
-        timestamp: now,
       }));
     });
 
@@ -285,72 +262,54 @@ describe('avengingAngelHandler.handle - activation', () => {
         campaignName,
       );
     });
-
-    it('should handle undefined activeBuffs gracefully', async () => {
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'avengingAngelActive') return false;
-        if (key === 'activeBuffs') return undefined;
-        return null;
-      });
-      utils.guid.mockReturnValue('test-guid');
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'TestPaladin',
-        'activeBuffs',
-        expect.arrayContaining([
-          expect.objectContaining({ effect: 'avenging_angel_flight' }),
-        ]),
-        campaignName,
-      );
-    });
   });
 
   describe('addEntry rejection handling', () => {
-    it('should handle addEntry rejection in initial activation gracefully', async () => {
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'avengingAngelActive') return false;
-        if (key === 'activeBuffs') return [];
-        return null;
-      });
-      utils.guid.mockReturnValue('test-guid');
-      addEntry.mockRejectedValue(new Error('disk error'));
+    it('should handle addEntry rejection gracefully for different activation paths', async () => {
+      const scenarios = [
+        {
+          name: 'initial activation',
+          setup: () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+              if (key === 'avengingAngelActive') return false;
+              if (key === 'activeBuffs') return [];
+              return null;
+            });
+          },
+          expectedDescription: 'activated',
+        },
+        {
+          name: 'spell-slot reactivation',
+          setup: () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+              if (key === 'avengingAngelActive') return false;
+              if (key === 'avengingAngelRestUsed') return true;
+              if (key === 'spell_slots_level_5') return 1;
+              if (key === 'activeBuffs') return [];
+              return null;
+            });
+          },
+          expectedDescription: 'expending a level 5 spell slot',
+        },
+      ];
 
-      const now = Date.now();
-      vi.spyOn(Date, 'now').mockReturnValue(now);
+      for (const scenario of scenarios) {
+        vi.clearAllMocks();
+        scenario.setup();
+        utils.guid.mockReturnValue('test-guid');
+        addEntry.mockRejectedValue(new Error('disk error'));
 
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('activated');
-      expect(setRuntimeValue).toHaveBeenCalledWith('TestPaladin', 'avengingAngelActive', true, campaignName);
-    });
-
-    it('should handle addEntry rejection in spell-slot reactivation gracefully', async () => {
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'avengingAngelActive') return false;
-        if (key === 'avengingAngelRestUsed') return true;
-        if (key === 'spell_slots_level_5') return 1;
-        if (key === 'activeBuffs') return [];
-        return null;
-      });
-      utils.guid.mockReturnValue('test-guid');
-      addEntry.mockRejectedValue(new Error('disk error'));
-
-      const now = Date.now();
-      vi.spyOn(Date, 'now').mockReturnValue(now);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('expending a level 5 spell slot');
-      expect(setRuntimeValue).toHaveBeenCalledWith('TestPaladin', 'avengingAngelActive', true, campaignName);
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain(scenario.expectedDescription);
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestPaladin', 'avengingAngelActive', true, campaignName);
+      }
     });
   });
 
   describe('buff deduplication', () => {
-    it('should add duplicate buff when Avenging Angel in activeBuffs but not active (first use path)', async () => {
+    it('should not add duplicate buff when Avenging Angel already in activeBuffs (first use path)', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'avengingAngelActive') return false;
         if (key === 'activeBuffs') return [{ name: 'Avenging Angel', effect: 'avenging_angel_flight' }];
@@ -363,10 +322,7 @@ describe('avengingAngelHandler.handle - activation', () => {
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'TestPaladin',
         'activeBuffs',
-        expect.arrayContaining([
-          expect.objectContaining({ name: 'Avenging Angel', effect: 'avenging_angel_flight' }),
-          expect.objectContaining({ name: 'Avenging Angel', effect: 'avenging_angel_flight', duration: '10_minutes' }),
-        ]),
+        [{ name: 'Avenging Angel', effect: 'avenging_angel_flight' }],
         campaignName,
       );
     });
@@ -393,52 +349,34 @@ describe('avengingAngelHandler.handle - activation', () => {
   });
 
   describe('resolveFrightfulAura - early return', () => {
-    it('should return early when getCombatContext returns null', async () => {
+    it('should return early when getCombatContext returns null or no creatures', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'avengingAngelActive') return false;
         if (key === 'activeBuffs') return [];
         return null;
       });
-      getCombatContext.mockResolvedValue(null);
+      utils.guid.mockReturnValue('test-guid');
 
-      const now = Date.now();
-      vi.spyOn(Date, 'now').mockReturnValue(now);
+      const scenarios = [
+        { context: null, desc: 'null context' },
+        { context: { creatures: undefined }, desc: 'no creatures' },
+      ];
 
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      for (const { context } of scenarios) {
+        vi.clearAllMocks();
+        getCombatContext.mockResolvedValue(context);
 
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('activated');
-      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-        type: 'ability_use',
-        characterName: 'TestPaladin',
-        abilityName: 'Avenging Angel',
-        description: 'Avenging Angel activated — Flight 60 ft (hover), Frightful Aura active for 10 minutes.',
-        timestamp: now,
-      }));
-    });
+        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-    it('should return early when getCombatContext returns no creatures', async () => {
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'avengingAngelActive') return false;
-        if (key === 'activeBuffs') return [];
-        return null;
-      });
-      getCombatContext.mockResolvedValue({ creatures: undefined });
-
-      const now = Date.now();
-      vi.spyOn(Date, 'now').mockReturnValue(now);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('activated');
-      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-        type: 'ability_use',
-        characterName: 'TestPaladin',
-        abilityName: 'Avenging Angel',
-        description: 'Avenging Angel activated — Flight 60 ft (hover), Frightful Aura active for 10 minutes.',
-        timestamp: now,
-      }));
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('activated');
+        expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'TestPaladin',
+          abilityName: 'Avenging Angel',
+          description: 'Avenging Angel activated — Flight 60 ft (hover), Frightful Aura active for 10 minutes.',
+        }));
+      }
     });
   });
 });

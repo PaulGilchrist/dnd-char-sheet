@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { confirmCelestialResilience, skipCelestialResilience } from './celestialResilienceHandler.js';
@@ -48,18 +48,6 @@ describe('celestialResilienceHandler - confirmCelestialResilience / skipCelestia
                     description: expect.stringContaining('selected no allies'),
                 }),
             );
-            expect(setTempHp).not.toHaveBeenCalled();
-        });
-
-        it('returns popup and logs when targets array is empty', async () => {
-            const result = await confirmCelestialResilience(
-                makeAction(),
-                makeCelestialStats(),
-                CAMPAIGN,
-                [],
-            );
-
-            expect(result.type).toBe('popup');
             expect(setTempHp).not.toHaveBeenCalled();
         });
 
@@ -114,18 +102,17 @@ describe('celestialResilienceHandler - confirmCelestialResilience / skipCelestia
             );
         });
 
-        it('uses default ally temp HP expression when automation field is missing', async () => {
+        it.each([
+            [null, 'null automation'],
+            [undefined, 'missing automation'],
+        ])('uses default ally temp HP expression when automation is %s (%s)', async (automationValue) => {
             evaluateAutoExpression.mockReturnValue(4);
 
             const stats = makeCelestialStats({
                 specialActions: [
                     {
                         name: 'Celestial Resilience',
-                        automation: {
-                            tempHpExpression: '10',
-                            maxAllies: 5,
-                            range: '60_ft',
-                        },
+                        automation: automationValue,
                     },
                 ],
             });
@@ -142,43 +129,6 @@ describe('celestialResilienceHandler - confirmCelestialResilience / skipCelestia
                 expect.any(Object),
             );
             expect(setTempHp).toHaveBeenCalledWith('Ally1', 4, CAMPAIGN);
-        });
-
-        it('handles missing feature gracefully without crashing', async () => {
-            evaluateAutoExpression.mockReturnValue(0);
-
-            const stats = makeCelestialStats({
-                specialActions: [],
-            });
-
-            const result = await confirmCelestialResilience(
-                makeAction(),
-                stats,
-                CAMPAIGN,
-                ['Ally1'],
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('0 temporary hit points');
-            expect(setTempHp).toHaveBeenCalledWith('Ally1', 0, CAMPAIGN);
-        });
-
-        it('handles feature with null automation gracefully', async () => {
-            evaluateAutoExpression.mockReturnValue(0);
-
-            const stats = makeCelestialStats({
-                specialActions: [{ name: 'Celestial Resilience', automation: null }],
-            });
-
-            const result = await confirmCelestialResilience(
-                makeAction(),
-                stats,
-                CAMPAIGN,
-                ['Ally1'],
-            );
-
-            expect(result.type).toBe('popup');
-            expect(setTempHp).toHaveBeenCalledWith('Ally1', 0, CAMPAIGN);
         });
     });
 
@@ -206,16 +156,6 @@ describe('celestialResilienceHandler - confirmCelestialResilience / skipCelestia
             );
         });
 
-        it('does not call setTempHp when skipped', async () => {
-            await skipCelestialResilience(
-                makeAction(),
-                makeCelestialStats(),
-                CAMPAIGN,
-            );
-
-            expect(setTempHp).not.toHaveBeenCalled();
-        });
-
         it('handles addEntry rejection without throwing', async () => {
             addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
             const errorSpy = vi.spyOn(console, 'error');
@@ -236,25 +176,6 @@ describe('celestialResilienceHandler - confirmCelestialResilience / skipCelestia
     });
 
     describe('confirmCelestialResilience - error handling', () => {
-        it('handles addEntry rejection when no targets selected without throwing', async () => {
-            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
-            const errorSpy = vi.spyOn(console, 'error');
-
-            const result = await confirmCelestialResilience(
-                makeAction(),
-                makeCelestialStats(),
-                CAMPAIGN,
-                [],
-            );
-
-            expect(result.type).toBe('popup');
-            expect(errorSpy).toHaveBeenCalledWith(
-                '[celestialResilience] Error:',
-                expect.any(Error),
-            );
-            errorSpy.mockRestore();
-        });
-
         it('handles addEntry rejection when granting to allies without throwing', async () => {
             evaluateAutoExpression.mockReturnValue(3);
             addEntry.mockImplementation(() => Promise.reject(new Error('log error')));

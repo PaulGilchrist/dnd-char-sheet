@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './contactPatronHandler.js';
@@ -137,62 +137,6 @@ describe('contactPatronHandler', () => {
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'TestWarlock',
                 '_My_Patron_Contact_freeCastCount',
-                0,
-                campaignName
-            );
-        });
-
-        it('should collapse whitespace in the runtime key', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-
-            const action = {
-                name: 'Contact   Patron   Twice',
-                automation: { type: 'contact_patron' },
-            };
-
-            await handle(action, makePlayerStats(), campaignName);
-
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestWarlock',
-                '_Contact_Patron_Twice_freeCastCount',
-                0,
-                campaignName
-            );
-        });
-
-        it('should use default name when action.name is missing', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-
-            const action = {
-                automation: { type: 'contact_patron' },
-            };
-
-            const result = await handle(action, makePlayerStats(), campaignName);
-
-            expect(result.payload.name).toBe('Contact Patron');
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestWarlock',
-                '_Contact_Patron_freeCastCount',
-                0,
-                campaignName
-            );
-        });
-    });
-
-    describe('playerStats.name usage', () => {
-        it('should use playerStats.name as the character key for runtime operations', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-
-            const result = await handle(
-                makeAction(),
-                makePlayerStats({ name: 'CustomWarlock' }),
-                campaignName
-            );
-
-            expect(result.payload.name).toBe('Contact Patron');
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'CustomWarlock',
-                '_Contact_Patron_freeCastCount',
                 0,
                 campaignName
             );

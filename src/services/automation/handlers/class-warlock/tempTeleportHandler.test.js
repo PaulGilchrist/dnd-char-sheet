@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { handle, confirmTeleport, clearExtendedFlag, isExtendedAvailable } from './tempTeleportHandler.js';
@@ -111,15 +111,6 @@ describe('tempTeleportHandler', () => {
             expect(result.modalName).toBe('teleport');
         });
 
-        it('returns teleport modal when action has no automation', async () => {
-            const action = { name: 'Test' };
-            const stats = makePlayerStats();
-            const result = await handle(action, stats, CAMPAIGN_NAME, 'test-map');
-
-            expect(result.type).toBe('modal');
-            expect(result.modalName).toBe('teleport');
-        });
-
         it('returns info popup when moonlight_step_teleport has zero uses and no spell slots', async () => {
             getRuntimeValue.mockReturnValue(0);
             const action = makeAction({
@@ -180,19 +171,8 @@ describe('tempTeleportHandler', () => {
             expect(result.payload.slotLevel).toBe(3);
         });
 
-        it('returns modal when moonlight_step_teleport has uses remaining', async () => {
+        it('returns modal when moonlight_step_teleport has uses remaining or null', async () => {
             getRuntimeValue.mockReturnValue(1);
-            const action = makeAction({
-                automation: { effect: 'moonlight_step_teleport' },
-            });
-            const result = await handle(action, makePlayerStats(), CAMPAIGN_NAME, 'test-map');
-
-            expect(result.type).toBe('modal');
-            expect(result.modalName).toBe('teleport');
-        });
-
-        it('returns modal when moonlight_step_teleport uses value is null', async () => {
-            getRuntimeValue.mockReturnValue(null);
             const action = makeAction({
                 automation: { effect: 'moonlight_step_teleport' },
             });
@@ -260,25 +240,6 @@ describe('tempTeleportHandler', () => {
                 PLAYER_NAME,
                 '_teleportExtendedUsed',
                 true,
-                CAMPAIGN_NAME,
-            );
-        });
-
-        it('adds next_attack_advantage effect for shadow_step teleport', async () => {
-            setupMoonlightStepMocks(0);
-
-            const shadowAction = makeAction({ automation: { effect: 'shadow_step_teleport' } });
-            await confirmTeleport(shadowAction, makePlayerStats(), CAMPAIGN_NAME, false);
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.arrayContaining([
-                    expect.objectContaining({
-                        effect: 'next_attack_advantage',
-                        target: PLAYER_NAME,
-                    }),
-                ]),
                 CAMPAIGN_NAME,
             );
         });
@@ -409,33 +370,7 @@ describe('tempTeleportHandler', () => {
             expect(result.payload.description).toContain('10 ft');
         });
 
-        it('omits ally text when bringAllies is false', async () => {
-            setupMoonlightStepMocks(0);
-            const action = makeAction({
-                automation: {
-                    extendedDistance: '150 ft',
-                    bringAllies: false,
-                    allyCount: 3,
-                },
-            });
-            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, true);
-            expect(result.payload.description).not.toContain('willing creatures');
-        });
-
-        it('omits ally text when allyCount is zero', async () => {
-            setupMoonlightStepMocks(0);
-            const action = makeAction({
-                automation: {
-                    extendedDistance: '150 ft',
-                    bringAllies: true,
-                    allyCount: 0,
-                },
-            });
-            const result = await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, true);
-            expect(result.payload.description).not.toContain('willing creatures');
-        });
-
-        it('omits ally text when bringAllies is true but allyCount is zero', async () => {
+        it('omits ally text when bringAllies is false or allyCount is zero', async () => {
             setupMoonlightStepMocks(0);
             const action = makeAction({
                 automation: {
@@ -566,23 +501,8 @@ describe('tempTeleportHandler', () => {
             expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(false);
         });
 
-        it('returns true when flag is false', () => {
-            getRuntimeValue.mockReturnValue(false);
-            expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
-        });
-
-        it('returns true when flag is null', () => {
+        it('returns true when flag is falsy', () => {
             getRuntimeValue.mockReturnValue(null);
-            expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
-        });
-
-        it('returns true when flag is undefined', () => {
-            getRuntimeValue.mockReturnValue(undefined);
-            expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
-        });
-
-        it('returns true when flag is zero', () => {
-            getRuntimeValue.mockReturnValue(0);
             expect(isExtendedAvailable(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
         });
     });

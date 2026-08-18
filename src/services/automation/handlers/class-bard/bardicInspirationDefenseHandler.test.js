@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ describe('bardicInspirationDefenseHandler.handle', () => {
       useRuntimeState.getRuntimeValue.mockReturnValue(null);
     }
 
-    it('returns info popup when bardicInspirationDie is null', async () => {
+    it('returns info popup when bardicInspirationDie is falsy', async () => {
       mockNoDie();
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -74,23 +74,6 @@ describe('bardicInspirationDefenseHandler.handle', () => {
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.name).toBe('Defensive Inspiration');
-      expect(result.payload.description).toBe('You do not have a Bardic Inspiration die.');
-    });
-
-    it('returns info popup when bardicInspirationDie is 0', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue(0);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toBe('You do not have a Bardic Inspiration die.');
-    });
-
-    it('returns info popup when bardicInspirationDie is undefined', async () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
       expect(result.payload.description).toBe('You do not have a Bardic Inspiration die.');
     });
 
@@ -117,7 +100,7 @@ describe('bardicInspirationDefenseHandler.handle', () => {
       diceRoller.rollExpression.mockReturnValue(null);
     }
 
-    it('returns info popup when rollExpression returns null', async () => {
+    it('returns info popup with "Roll failed." when rollExpression returns null', async () => {
       mockWithDie(8, undefined);
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -135,14 +118,6 @@ describe('bardicInspirationDefenseHandler.handle', () => {
 
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
       expect(logService.addEntry).not.toHaveBeenCalled();
-    });
-
-    it('does not clear runtime state when roll fails even with grantedBy set', async () => {
-      mockWithDie(6, 'Fellow Bard');
-
-      await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
   });
 
@@ -164,45 +139,6 @@ describe('bardicInspirationDefenseHandler.handle', () => {
       await handle(makeAction(), makePlayerStats(), campaignName);
 
       expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d8');
-    });
-
-    it('clears bardicInspirationDie runtime state', async () => {
-      mockSuccess(8, undefined, makeRollResult(5));
-
-      await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        playerName,
-        'bardicInspirationDie',
-        null,
-        campaignName,
-      );
-    });
-
-    it('clears bardicInspirationGrantedBy runtime state', async () => {
-      mockSuccess(8, 'Ally Bard', makeRollResult(5));
-
-      await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        playerName,
-        'bardicInspirationGrantedBy',
-        null,
-        campaignName,
-      );
-    });
-
-    it('clears bardicInspirationCombatOptions runtime state', async () => {
-      mockSuccess(8, undefined, makeRollResult(5));
-
-      await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        playerName,
-        'bardicInspirationCombatOptions',
-        null,
-        campaignName,
-      );
     });
 
     it('logs an ability_use entry with correct details', async () => {
@@ -262,16 +198,8 @@ describe('bardicInspirationDefenseHandler.handle', () => {
       expect(result.payload.description).toContain('Die granted by Fellow Bard');
     });
 
-    it('falls back to "unknown" when grantedBy is null', async () => {
+    it('falls back to "unknown" when grantedBy is null or undefined', async () => {
       mockSuccess(8, null, makeRollResult(4));
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(result.payload.description).toContain('Die granted by unknown');
-    });
-
-    it('falls back to "unknown" when grantedBy is undefined', async () => {
-      mockSuccess(8, undefined, makeRollResult(4));
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 

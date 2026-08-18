@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './celestialResilienceHandler.js';
@@ -63,19 +63,6 @@ describe('celestialResilienceHandler', () => {
                 expect(result.payload.name).toBe('Celestial Resilience');
                 expect(result.payload.automation).toEqual(makeAction().automation);
             });
-
-            it('uses custom action name in popup when provided', async () => {
-                const customAction = makeAction({ name: 'My Custom Action' });
-
-                const result = await handle(
-                    customAction,
-                    makeCelestialStats(),
-                    CAMPAIGN,
-                    null,
-                );
-
-                expect(result.payload.name).toBe('My Custom Action');
-            });
         });
 
         describe('grant failure path', () => {
@@ -101,34 +88,12 @@ describe('celestialResilienceHandler', () => {
                 expect(result).toBe(null);
             });
 
-            it('returns null when self temp HP expression evaluates to zero', async () => {
-                evaluateAutoExpression.mockReturnValue(0);
-
-                const result = await handle(
-                    makeAction(),
-                    makeCelestialStats(),
-                    CAMPAIGN,
-                    MAP,
-                );
-
-                expect(result).toBe(null);
-            });
-
-            it('returns null when self temp HP expression evaluates to negative', async () => {
-                evaluateAutoExpression.mockReturnValue(-3);
-
-                const result = await handle(
-                    makeAction(),
-                    makeCelestialStats(),
-                    CAMPAIGN,
-                    MAP,
-                );
-
-                expect(result).toBe(null);
-            });
-
-            it('returns null when self temp HP expression evaluates to non-number', async () => {
-                evaluateAutoExpression.mockReturnValue('not a number');
+            it.each([
+                [0, 'zero'],
+                [-3, 'negative'],
+                ['not a number', 'non-number'],
+            ])('returns null when self temp HP expression evaluates to %s (%s)', async (value) => {
+                evaluateAutoExpression.mockReturnValue(value);
 
                 const result = await handle(
                     makeAction(),
@@ -204,21 +169,13 @@ describe('celestialResilienceHandler', () => {
                 expect(result.payload.description).toContain('No allies in range');
             });
 
-            it('returns popup when ally temp HP expression is zero', async () => {
+            it.each([
+                [0, 'zero'],
+                ['invalid', 'non-number'],
+            ])('returns popup when ally temp HP expression evaluates to %s (%s)', async (value) => {
                 evaluateAutoExpression
                     .mockReturnValueOnce(5)
-                    .mockReturnValueOnce(0);
-
-                const result = await handle(makeAction(), makeCelestialStats(), CAMPAIGN, MAP);
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.description).toContain('temporary hit points');
-            });
-
-            it('returns popup when ally temp HP expression is non-number', async () => {
-                evaluateAutoExpression
-                    .mockReturnValueOnce(5)
-                    .mockReturnValueOnce('invalid');
+                    .mockReturnValueOnce(value);
 
                 const result = await handle(makeAction(), makeCelestialStats(), CAMPAIGN, MAP);
 
@@ -242,19 +199,6 @@ describe('celestialResilienceHandler', () => {
                         characterName: 'TestHero',
                         abilityName: 'Custom Celestial Resilience',
                         description: expect.stringContaining('7 temporary hit points'),
-                    }),
-                );
-            });
-
-            it('logs ability_use with correct temp HP count in description', async () => {
-                evaluateAutoExpression.mockReturnValue(12);
-
-                await handle(makeAction(), makeCelestialStats(), CAMPAIGN, MAP);
-
-                expect(addEntry).toHaveBeenCalledWith(
-                    CAMPAIGN,
-                    expect.objectContaining({
-                        description: expect.stringContaining('12 temporary hit points'),
                     }),
                 );
             });

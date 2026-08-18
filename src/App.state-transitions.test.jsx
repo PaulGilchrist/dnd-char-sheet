@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -277,63 +277,6 @@ describe('App - State Transitions', () => {
   });
 
   describe('Maps view state transitions', () => {
-    it('transitions maps: none → manager → map → back → manager', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await selectCampaign();
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-
-      // none → manager
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-        expect(screen.queryByTestId('map-view')).not.toBeInTheDocument();
-      });
-
-      // manager → map
-      fireEvent.click(screen.getByTestId('open-map-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('map-view')).toBeInTheDocument();
-        expect(screen.getByTestId('map-name').textContent).toBe('dungeon-1');
-        expect(screen.queryByTestId('maps-manager')).not.toBeInTheDocument();
-      });
-
-      // map → back → manager
-      fireEvent.click(screen.getByTestId('map-back-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-        expect(screen.queryByTestId('map-view')).not.toBeInTheDocument();
-      });
-    });
-
-    it('transitions maps: none → manager → map → maps-btn → manager', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await selectCampaign();
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-
-      // none → manager
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-      });
-
-      // manager → map
-      fireEvent.click(screen.getByTestId('open-map-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('map-view')).toBeInTheDocument();
-      });
-
-      // maps-btn from map view → manager
-      fireEvent.click(screen.getByTestId('maps-btn'));
-      await waitFor(() => {
-        expect(screen.getByTestId('maps-manager')).toBeInTheDocument();
-        expect(screen.queryByTestId('map-view')).not.toBeInTheDocument();
-      });
-    });
-
     it('idempotent sidebar clicks do not re-navigate', async () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);

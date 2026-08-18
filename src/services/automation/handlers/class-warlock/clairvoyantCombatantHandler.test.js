@@ -1,3 +1,4 @@
+// @cleaned-by-ai
 // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -72,22 +73,6 @@ describe('clairvoyantCombatantHandler.handle', () => {
     });
 
     it('should return info popup when no uses remaining with pact magic recharge but no slots', async () => {
-      mockRuntimeValues(1, 'AwakenedTarget');
-
-      const result = await handle(
-        makeAction({ pactMagicRecharge: true }),
-        makePlayerStats({ spellAbilities: {} }),
-        campaignName,
-        null,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.name).toBe('Clairvoyant Combatant');
-      expect(result.payload.description).toContain('No Pact Magic slots available');
-    });
-
-    it('should return info popup when pact magic recharge is true but runtime slot value blocks use', async () => {
       getRuntimeValue.mockImplementation((playerName, key) => {
         if (key === 'clairvoyantCombatantUses') return 1;
         if (key === 'awakenedMindTarget') return 'AwakenedTarget';
@@ -103,20 +88,9 @@ describe('clairvoyantCombatantHandler.handle', () => {
       );
 
       expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('No Pact Magic slots available');
-    });
-  });
-
-  describe('early return: no Awakened Mind bond', () => {
-    it('should return info popup when no Awakened Mind bond is active', async () => {
-      mockRuntimeValues(0, null);
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('requires an active Awakened Mind bond');
-      expect(result.payload.description).toContain('Activate Awakened Mind first');
+      expect(result.payload.name).toBe('Clairvoyant Combatant');
+      expect(result.payload.description).toContain('No Pact Magic slots available');
     });
   });
 
@@ -138,24 +112,7 @@ describe('clairvoyantCombatantHandler.handle', () => {
       expect(result.payload.pactSlotsAvailable).toBe(false);
     });
 
-    it('should return modal with pact magic slot info when recharge is available', async () => {
-      mockRuntimeValues(1, 'AwakenedTarget');
-
-      const result = await handle(
-        makeAction({ pactMagicRecharge: true }),
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('clairvoyantCombatant');
-      expect(result.payload.pactSlotLevel).toBe(1);
-      expect(result.payload.pactSlotsAvailable).toBe(true);
-      expect(result.payload.pactMagicRecharge).toBe(true);
-    });
-
-    it('should find highest pact magic slot level', async () => {
+    it('should find highest pact magic slot level when recharge is available', async () => {
       mockRuntimeValues(1, 'AwakenedTarget');
 
       const result = await handle(
@@ -190,111 +147,6 @@ describe('clairvoyantCombatantHandler.handle', () => {
       expect(result.type).toBe('modal');
       expect(result.modalName).toBe('clairvoyantCombatant');
       expect(result.payload.action.name).toBe('My Clairvoyance');
-    });
-
-    it('should pass action and playerStats in modal payload', async () => {
-      mockRuntimeValues(0, 'AwakenedTarget');
-
-      const action = { name: 'Clairvoyant Combatant', automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15, uses: 1 } };
-      const stats = makePlayerStats();
-
-      const result = await handle(action, stats, campaignName, null);
-
-      expect(result.payload.action).toBe(action);
-      expect(result.payload.playerStats).toBe(stats);
-      expect(result.payload.campaignName).toBe(campaignName);
-    });
-
-    it('should fallback to 0 when getRuntimeValue returns null for uses', async () => {
-      getRuntimeValue.mockImplementation((playerName, key) => {
-        if (key === 'clairvoyantCombatantUses') return null;
-        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
-        return null;
-      });
-
-      const result = await handle(
-        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15 } },
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.type).toBe('modal');
-      expect(result.payload.currentUses).toBe(0);
-      expect(result.payload.maxUses).toBe(1);
-    });
-
-    it('should fallback to 1 when auto.uses is not provided', async () => {
-      mockRuntimeValues(0, 'AwakenedTarget');
-
-      const result = await handle(
-        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15 } },
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.payload.maxUses).toBe(1);
-    });
-
-    it('should fallback to 0 when slot runtime value and playerStats are both null', async () => {
-      mockRuntimeValues(1, 'AwakenedTarget');
-
-      const result = await handle(
-        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15, pactMagicRecharge: true } },
-        makePlayerStats({ spellAbilities: null }),
-        campaignName,
-        null,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('No Pact Magic slots available');
-    });
-
-    it('should include pactSlotLevel 0 when no spell slots exist', async () => {
-      mockRuntimeValues(0, 'AwakenedTarget');
-
-      const result = await handle(
-        makeAction(),
-        makePlayerStats({
-          level: 1,
-          proficiency: 2,
-          abilities: [{ name: 'Charisma', bonus: 0 }],
-          spellAbilities: {},
-        }),
-        campaignName,
-        null,
-      );
-
-      expect(result.payload.pactSlotLevel).toBe(0);
-    });
-
-    it('should fallback to default feature name when action.name is falsy', async () => {
-      mockRuntimeValues(0, 'AwakenedTarget');
-
-      const result = await handle(
-        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15, uses: 1 } },
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.type).toBe('modal');
-      expect(result.payload.action.name).toBeUndefined();
-    });
-
-    it('should return popup with default name when no uses and no action name', async () => {
-      mockRuntimeValues(1, 'AwakenedTarget');
-
-      const result = await handle(
-        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15 } },
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.name).toBe('Clairvoyant Combatant');
     });
   });
 

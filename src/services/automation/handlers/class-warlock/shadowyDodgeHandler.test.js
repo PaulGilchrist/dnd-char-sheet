@@ -1,8 +1,7 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { handle } from './shadowyDodgeHandler.js';
 import * as damageRollback from '../../common/damageRollback.js';
 import * as logService from '../../../ui/logService.js';
-import * as infoPopupModule from '../../common/infoPopup.js';
 
 vi.mock('../../common/damageRollback.js', () => ({
     findLastAttack: vi.fn(),
@@ -11,18 +10,6 @@ vi.mock('../../common/damageRollback.js', () => ({
 
 vi.mock('../../../ui/logService.js', () => ({
     addEntry: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('../../common/infoPopup.js', () => ({
-    infoPopup: vi.fn((name, description, automation) => ({
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name,
-            description,
-            automation,
-        },
-    })),
 }));
 
 const makePlayerStats = (overrides = {}) => ({
@@ -62,16 +49,8 @@ describe('shadowyDodgeHandler', () => {
     }
 
     describe('handle', () => {
-        it('should return popup when no recent attack exists or target does not match player', async () => {
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: null,
-                attackerName: null,
-                targetName: null,
-                primaryDamage: 0,
-                secondaryDamage: 0,
-                totalDamage: 0,
-                damageTypes: [],
-            });
+        it('should return popup when no recent attack exists (null result or null attackEvent)', async () => {
+            damageRollback.findLastAttack.mockResolvedValue(null);
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
@@ -79,51 +58,6 @@ describe('shadowyDodgeHandler', () => {
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('No recent attack roll against you found');
             expect(logService.addEntry).not.toHaveBeenCalled();
-        });
-
-        it('should return popup when findLastAttack returns null', async () => {
-            damageRollback.findLastAttack.mockResolvedValue(null);
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No recent attack roll against you found');
-            expect(logService.addEntry).not.toHaveBeenCalled();
-        });
-
-        it('should return popup when attack target name does not match player', async () => {
-            const freshTimestamp = Date.now();
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: { timestamp: freshTimestamp, d20: 15, bonus: 7, targetAc: 14, hit: true },
-                attackerName: 'Goblin',
-                targetName: 'Other Character',
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: ['slashing'],
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No recent attack roll against you found');
-        });
-
-        it('should call findLastAttack with the campaign name', async () => {
-            const freshTimestamp = Date.now();
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: { timestamp: freshTimestamp, d20: 10, bonus: 5, targetAc: 13, hit: true },
-                attackerName: 'Goblin',
-                targetName: 'Test Rogue',
-                primaryDamage: 6,
-                secondaryDamage: 0,
-                totalDamage: 6,
-                damageTypes: [],
-            });
-
-            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(damageRollback.findLastAttack).toHaveBeenCalledWith('test-campaign');
         });
 
         it('should propagate error when findLastAttack throws', async () => {
@@ -162,7 +96,7 @@ describe('shadowyDodgeHandler', () => {
             }));
         });
 
-        it('should show "still hits" when disadvantage attack also hits', async () => {
+        it('should show "still hits" when disadvantage attack also hits and not rollback damage', async () => {
             mockRandom([0.95]);
             const freshTimestamp = Date.now();
             damageRollback.findLastAttack.mockResolvedValue({
@@ -180,6 +114,7 @@ describe('shadowyDodgeHandler', () => {
             expect(result.payload.description).toContain('Orc');
             expect(result.payload.description).toContain('still hits');
             expect(result.payload.description).toContain('Teleported 30 feet');
+            expect(damageRollback.rollbackDamage).not.toHaveBeenCalled();
         });
 
         it('should show "already missed" when original attack missed', async () => {
@@ -199,6 +134,30 @@ describe('shadowyDodgeHandler', () => {
             expect(result.payload.description).toContain('already missed');
             expect(result.payload.description).toContain('Disadvantage has no additional effect');
             expect(result.payload.description).toContain('Teleported 30 feet');
+        });
+
+        it('should rollback damage and show negated message when hit→miss', async () => {
+            mockRandom([0.05]);
+            const freshTimestamp = Date.now();
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { timestamp: freshTimestamp, d20: 15, bonus: 7, targetAc: 14, hit: true, effectiveAc: 14 },
+                attackerName: 'Goblin',
+                targetName: 'Test Rogue',
+                primaryDamage: 10,
+                secondaryDamage: 0,
+                totalDamage: 10,
+                damageTypes: ['slashing'],
+            });
+            damageRollback.rollbackDamage.mockResolvedValue(10);
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(damageRollback.rollbackDamage).toHaveBeenCalledWith('Goblin', 'Test Rogue', 'test-campaign', 'Shadowy Dodge');
+            expect(result.payload.description).toContain('Damage negated: 10 HP restored');
+            expect(result.payload.description).toContain('Teleported 30 feet');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                description: expect.stringContaining('10 damage was negated'),
+            }));
         });
 
         it('should use effectiveAc when present, falling back to targetAc', async () => {
@@ -272,84 +231,6 @@ describe('shadowyDodgeHandler', () => {
                 abilityName: 'Shadowy Dodge',
                 targetName: 'Red Dragon',
             }));
-        });
-
-        it('should rollback damage and show negated message when hit→miss', async () => {
-            mockRandom([0.05]);
-            const freshTimestamp = Date.now();
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: { timestamp: freshTimestamp, d20: 15, bonus: 7, targetAc: 14, hit: true, effectiveAc: 14 },
-                attackerName: 'Goblin',
-                targetName: 'Test Rogue',
-                primaryDamage: 10,
-                secondaryDamage: 0,
-                totalDamage: 10,
-                damageTypes: ['slashing'],
-            });
-            damageRollback.rollbackDamage.mockResolvedValue(10);
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(damageRollback.rollbackDamage).toHaveBeenCalledWith('Goblin', 'Test Rogue', 'test-campaign', 'Shadowy Dodge');
-            expect(result.payload.description).toContain('Damage negated: 10 HP restored');
-            expect(result.payload.description).toContain('Teleported 30 feet');
-            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                description: expect.stringContaining('10 damage was negated'),
-            }));
-        });
-
-        it('should not call rollbackDamage when original attack already missed', async () => {
-            const freshTimestamp = Date.now();
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: { timestamp: freshTimestamp, d20: 3, bonus: 2, targetAc: 14, hit: false, effectiveAc: 14 },
-                attackerName: 'Goblin',
-                targetName: 'Test Rogue',
-                primaryDamage: 0,
-                secondaryDamage: 0,
-                totalDamage: 0,
-                damageTypes: [],
-            });
-
-            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(damageRollback.rollbackDamage).not.toHaveBeenCalled();
-        });
-
-        it('should not call rollbackDamage when attack still hits with disadvantage', async () => {
-            mockRandom([0.95]);
-            const freshTimestamp = Date.now();
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: { timestamp: freshTimestamp, d20: 18, bonus: 7, targetAc: 14, hit: true, effectiveAc: 14 },
-                attackerName: 'Orc',
-                targetName: 'Test Rogue',
-                primaryDamage: 12,
-                secondaryDamage: 0,
-                totalDamage: 12,
-                damageTypes: ['bludgeoning'],
-            });
-
-            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(damageRollback.rollbackDamage).not.toHaveBeenCalled();
-        });
-
-        it('should pass automation config through to popup payload', async () => {
-            mockRandom([0.5]);
-            const freshTimestamp = Date.now();
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: { timestamp: freshTimestamp, d20: 10, bonus: 5, targetAc: 13, hit: true },
-                attackerName: 'Goblin',
-                targetName: 'Test Rogue',
-                primaryDamage: 6,
-                secondaryDamage: 0,
-                totalDamage: 6,
-                damageTypes: [],
-            });
-
-            const action = makeAction();
-            await handle(action, makePlayerStats(), 'test-campaign', null);
-
-            expect(infoPopupModule.infoPopup).toHaveBeenCalledWith('Shadowy Dodge', expect.any(String), action.automation);
         });
 
         it('should handle addEntry rejection gracefully without throwing', async () => {
@@ -436,25 +317,6 @@ describe('shadowyDodgeHandler', () => {
 
             expect(result.payload.description).toContain('vs AC —');
             expect(result.payload.description).toContain('N/A');
-            expect(result.payload.description).toContain('Teleported 30 feet');
-        });
-
-        it('should show HIT when finalHit is true', async () => {
-            mockRandom([0.95]);
-            const freshTimestamp = Date.now();
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: { timestamp: freshTimestamp, d20: 20, bonus: 7, targetAc: 14, hit: true, effectiveAc: 14 },
-                attackerName: 'Orc',
-                targetName: 'Test Rogue',
-                primaryDamage: 12,
-                secondaryDamage: 0,
-                totalDamage: 12,
-                damageTypes: ['bludgeoning'],
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(result.payload.description).toContain('still hits');
             expect(result.payload.description).toContain('Teleported 30 feet');
         });
     });

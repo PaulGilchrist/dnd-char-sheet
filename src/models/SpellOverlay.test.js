@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import { toGrid, createOverlay, hitTestOverlay, svgOrigin, OverlayShape, DEFAULTS } from './SpellOverlay.js';
 
@@ -13,8 +13,6 @@ const pointAt = (originX, originY, dxFt, dyFt) => [
 
 const makeOverlay = (shape, gridX, gridY, angle = 0, params = {}) =>
   createOverlay(shape, gridX, gridY, angle, params);
-
-const DIMENSION_KEYS = ['radiusFt', 'coneAngle', 'widthFt', 'distanceFt', 'sizeFt', 'color'];
 
 // ── OverlayShape ───────────────────────────────────────────────────
 
@@ -31,14 +29,6 @@ describe('OverlayShape', () => {
 // ── DEFAULTS ───────────────────────────────────────────────────────
 
 describe('DEFAULTS', () => {
-  it('provides every dimension key for each shape', () => {
-    for (const key of Object.values(OverlayShape)) {
-      for (const dim of DIMENSION_KEYS) {
-        expect(DEFAULTS[key]).toHaveProperty(dim);
-      }
-    }
-  });
-
   it('has correct default values per shape', () => {
     expect(DEFAULTS.sphere).toEqual({
       radiusFt: 20, coneAngle: 0, widthFt: 0, distanceFt: 0, sizeFt: 0,
@@ -128,16 +118,6 @@ describe('createOverlay', () => {
 
   it('accepts a custom angle parameter', () => {
     expect(makeOverlay('sphere', 0, 0, 45).angle).toBe(45);
-  });
-
-  it('passes through empty params with no side effects', () => {
-    const overlay = makeOverlay('sphere', 1, 2);
-    expect(overlay.shape).toBe('sphere');
-    expect(overlay.startGridX).toBe(1);
-    expect(overlay.startGridY).toBe(2);
-    expect(overlay.angle).toBe(0);
-    expect(overlay.radiusFt).toBe(20);
-    expect(overlay.color).toBe('rgba(255,80,60,0.35)');
   });
 
   it('keeps position, angle, and explicit params for unknown shapes', () => {

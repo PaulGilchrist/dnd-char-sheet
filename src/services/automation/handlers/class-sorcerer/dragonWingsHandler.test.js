@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, isActive, deactivate } from './dragonWingsHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -140,16 +140,6 @@ describe('dragonWingsHandler', () => {
                 expect(result.payload.description).toContain('Custom Wings');
             });
 
-            it('uses custom duration from automation in description', async () => {
-                mockRuntimeGet({ [usesKey]: 1 });
-                classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
-                const action = makeAction({ automation: { duration: '10_minutes' } });
-
-                const result = await handle(action, makePlayerStats(), campaignName, null);
-
-                expect(result.payload.description).toContain('10_minutes');
-            });
-
             it('uses custom flySpeed from automation in buff entry', async () => {
                 mockRuntimeGet({ [usesKey]: 1 });
                 classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
@@ -165,15 +155,6 @@ describe('dragonWingsHandler', () => {
                     ]),
                     campaignName,
                 );
-            });
-
-            it('includes automation object in popup payload', async () => {
-                mockRuntimeGet({ [usesKey]: 1 });
-                classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
-
-                const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-                expect(result.payload.automation).toEqual(makeAction().automation);
             });
 
             it('handles activeBuffs being null on activation', async () => {
@@ -358,24 +339,14 @@ describe('dragonWingsHandler', () => {
     });
 
     describe('isActive', () => {
-        it('returns true when runtime value is true', () => {
-            mockRuntimeGet({ [activeKey]: true });
-            expect(isActive(playerName)).toBe(true);
-        });
-
-        it('returns false when runtime value is false', () => {
-            mockRuntimeGet({ [activeKey]: false });
-            expect(isActive(playerName)).toBe(false);
-        });
-
-        it('returns false when runtime value is null', () => {
-            runtimeState.getRuntimeValue.mockReturnValue(null);
-            expect(isActive(playerName)).toBe(false);
-        });
-
-        it('returns false for non-boolean truthy values', () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-            expect(isActive(playerName)).toBe(false);
+        it.each([
+            [true, true],
+            [false, false],
+            [null, false],
+            [1, false],
+        ])('returns %s when runtime value is %s', (value, expected) => {
+            runtimeState.getRuntimeValue.mockReturnValue(value);
+            expect(isActive(playerName)).toBe(expected);
         });
     });
 

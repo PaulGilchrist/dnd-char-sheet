@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 
 import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
@@ -131,22 +131,17 @@ describe('App.css', () => {
   });
 
   describe('campaign action buttons', () => {
-    it('should define .rename-campaign-btn with body color', () => {
-      const props = extractRule(css, '.rename-campaign-btn');
-      expect(props).not.toBeNull();
-      expect(props).toContain('color: var(--color-body)');
-    });
+    it('should define rename, delete, and back buttons with expected colors', () => {
+      const rename = extractRule(css, '.rename-campaign-btn');
+      const deleteBtn = extractRule(css, '.delete-campaign-btn');
+      const back = extractRule(css, '.back-to-campaigns-btn');
 
-    it('should define .delete-campaign-btn with darkred color', () => {
-      const props = extractRule(css, '.delete-campaign-btn');
-      expect(props).not.toBeNull();
-      expect(props).toContain('color: darkred');
-    });
-
-    it('should define .back-to-campaigns-btn with body color', () => {
-      const props = extractRule(css, '.back-to-campaigns-btn');
-      expect(props).not.toBeNull();
-      expect(props).toContain('color: var(--color-body)');
+      expect(rename).not.toBeNull();
+      expect(rename).toContain('color: var(--color-body)');
+      expect(deleteBtn).not.toBeNull();
+      expect(deleteBtn).toContain('color: darkred');
+      expect(back).not.toBeNull();
+      expect(back).toContain('color: var(--color-body)');
     });
   });
 
@@ -163,22 +158,17 @@ describe('App.css', () => {
   });
 
   describe('utility elements', () => {
-    it('should define .download with darkgreen background', () => {
-      const props = extractRule(css, 'button.download');
-      expect(props).not.toBeNull();
-      expect(props).toContain('background-color: darkgreen');
-    });
+    it('should define download, hidden, and theme-toggle buttons', () => {
+      const download = extractRule(css, 'button.download');
+      const hidden = extractRule(css, 'button.hidden');
+      const themeToggle = extractRule(css, '.theme-toggle-btn');
 
-    it('should define .hidden with display none', () => {
-      const props = extractRule(css, 'button.hidden');
-      expect(props).not.toBeNull();
-      expect(props).toContain('display: none');
-    });
-
-    it('should define .theme-toggle-btn with auto margin', () => {
-      const props = extractRule(css, '.theme-toggle-btn');
-      expect(props).not.toBeNull();
-      expect(props).toContain('margin-left: auto');
+      expect(download).not.toBeNull();
+      expect(download).toContain('background-color: darkgreen');
+      expect(hidden).not.toBeNull();
+      expect(hidden).toContain('display: none');
+      expect(themeToggle).not.toBeNull();
+      expect(themeToggle).toContain('margin-left: auto');
     });
   });
 
@@ -230,20 +220,12 @@ describe('App.css', () => {
       expect(props).toContain('text-align: center');
     });
 
-    it('should define .ct-list with flex column layout', () => {
-      const props = extractRule(css, '.ct-container .ct-list');
-      expect(props).not.toBeNull();
-      expect(props).toContain('display: flex');
-      expect(props).toContain('flex-direction: column');
-    });
+    it('should define .ct-list with flex column layout and list sub-elements', () => {
+      const list = extractRule(css, '.ct-container .ct-list');
+      expect(list).not.toBeNull();
+      expect(list).toContain('display: flex');
+      expect(list).toContain('flex-direction: column');
 
-    it('should define .ct-list-item with hover state', () => {
-      const props = extractRule(css, '.ct-container .ct-list-item');
-      expect(props).not.toBeNull();
-      expect(props).toContain('cursor: pointer');
-    });
-
-    it('should define list sub-elements with expected properties', () => {
       const header = extractRule(css, '.ct-container .ct-list-item-header');
       const name = extractRule(css, '.ct-container .ct-list-name');
       const meta = extractRule(css, '.ct-container .ct-list-meta');
@@ -258,6 +240,12 @@ describe('App.css', () => {
       expect(details).toContain('flex-wrap: wrap');
       expect(preview).not.toBeNull();
       expect(preview).toContain('color: var(--color-text-secondary)');
+    });
+
+    it('should define .ct-list-item with hover state', () => {
+      const props = extractRule(css, '.ct-container .ct-list-item');
+      expect(props).not.toBeNull();
+      expect(props).toContain('cursor: pointer');
     });
   });
 
@@ -303,16 +291,14 @@ describe('App.css', () => {
   });
 
   describe('form fields', () => {
-    it('should define .ct-label and .ct-required with proper text colors', () => {
+    it('should define label, input, textarea, and select with expected properties', () => {
       const label = extractRule(css, '.ct-container .ct-label');
       const required = extractRule(css, '.ct-container .ct-required');
       expect(label).not.toBeNull();
       expect(label).toContain('color: var(--color-text-secondary)');
       expect(required).not.toBeNull();
       expect(required).toContain('color: var(--color-error)');
-    });
 
-    it('should define .ct-input with box-sizing and focus state', () => {
       const input = extractRule(css, '.ct-container .ct-input');
       const inputFocus = extractRule(css, '.ct-container .ct-input:focus');
       expect(input).not.toBeNull();
@@ -320,9 +306,7 @@ describe('App.css', () => {
       expect(inputFocus).not.toBeNull();
       expect(inputFocus).toContain('border-color: var(--color-primary)');
       expect(inputFocus).toContain('box-shadow');
-    });
 
-    it('should define .ct-textarea with resize and focus state', () => {
       const textarea = extractRule(css, '.ct-container .ct-textarea');
       const textareaFocus = extractRule(css, '.ct-container .ct-textarea:focus');
       expect(textarea).not.toBeNull();
@@ -330,9 +314,7 @@ describe('App.css', () => {
       expect(textareaFocus).not.toBeNull();
       expect(textareaFocus).toContain('border-color: var(--color-primary)');
       expect(textareaFocus).toContain('box-shadow');
-    });
 
-    it('should define .ct-select with pointer cursor and focus state', () => {
       const select = extractRule(css, '.ct-container .ct-select');
       const selectFocus = extractRule(css, '.ct-container .ct-select:focus');
       expect(select).not.toBeNull();

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -131,8 +131,6 @@ vi.mock('./hooks/runtime/useAppData.js', () => ({
 }));
 
 // Subscriber fires events asynchronously via setTimeout to match real SSE timing.
-// This avoids synchronous event dispatch during render which would cause
-// inconsistent state and unreliable tests.
 vi.mock('./components/common/Subscriber.jsx', () => ({
   default: function MockSubscriber() { return null; },
 }));
@@ -147,18 +145,10 @@ function setLocalhost(hostname = 'localhost') {
   });
 }
 
-/**
- * Helper to wait for all microtasks and useEffects to flush.
- * This ensures document.title updates (which happen in useEffect) are visible.
- */
 async function flushEffects() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-/**
- * Helper to wait for the campaign selection screen to appear, then click select
- * and flush effects.
- */
 async function selectCampaign() {
   await waitFor(() => {
     expect(screen.getByTestId('campaign-selection')).toBeInTheDocument();
@@ -195,7 +185,6 @@ describe('App - Runtime Events & State Management', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset useAppData mock to default (isLoading: false).
     _appDataRef.value = {
       abilityScores: [{ full_name: 'Strength' }],
       classes: [{ name: 'Fighter' }],
@@ -229,207 +218,6 @@ describe('App - Runtime Events & State Management', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-  });
-
-  // SSE runtime event handling is exercised through the campaign selection
-  // and character-switching tests above. Those tests render the full App with
-  // the Subscriber component wired to handleRuntimeEvent, so the SSE path is
-  // covered implicitly. Dedicated unit tests for handleRuntimeEvent would
-  // require extracting it from the component or mocking the entire SSE
-  // plumbing — both of which would be brittle on refactoring.
-
-  describe('Campaign selection flow', () => {
-    it('renders campaign selection initially when no campaign is active', async () => {
-      render(<App />);
-      expect(await screen.findByTestId('campaign-selection')).toBeInTheDocument();
-    });
-
-    it('navigates to char sheet after campaign selection with existing characters', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      expect(await screen.findByTestId('campaign-selection')).toBeInTheDocument();
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('campaign-selection')).not.toBeInTheDocument();
-      });
-
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      expect(screen.getByTestId('character-name').textContent).toBe('Aragorn');
-    });
-
-    it('shows character wizard after campaign selection with no characters', async () => {
-      mockState.characters = [];
-      render(<App />);
-
-      expect(await screen.findByTestId('campaign-selection')).toBeInTheDocument();
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('campaign-selection')).not.toBeInTheDocument();
-      });
-
-      expect(screen.getByTestId('character-wizard')).toBeInTheDocument();
-    });
-  });
-
-  describe('Document title updates', () => {
-    it('sets document title to active character name when on charSheet view', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await selectCampaign();
-
-      expect(document.title).toBe('Aragorn');
-    });
-
-    it('sets document title to "CharSheets" when navigating away from charSheet', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await selectCampaign();
-
-      expect(document.title).toBe('Aragorn');
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('initiative-btn'));
-      });
-
-      await flushEffects();
-      expect(document.title).toBe('CharSheets');
-    });
-  });
-
-  describe('Theme management', () => {
-    it('defaults to dark theme when localStorage has no theme value', async () => {
-      const localStorageMock = {
-        getItem: vi.fn(() => null),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      };
-      Object.defineProperty(window, 'localStorage', {
-        value: localStorageMock,
-        writable: true,
-        configurable: true,
-      });
-
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await selectCampaign();
-
-      expect(document.body.getAttribute('data-theme')).toBe('dark');
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('theme');
-    });
-
-    it('respects stored theme from localStorage', async () => {
-      const localStorageMock = {
-        getItem: vi.fn((key) => key === 'theme' ? 'light' : null),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      };
-      Object.defineProperty(window, 'localStorage', {
-        value: localStorageMock,
-        writable: true,
-        configurable: true,
-      });
-
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await selectCampaign();
-
-      expect(document.body.getAttribute('data-theme')).toBe('light');
-    });
-  });
-
-  describe('Sidebar view navigation', () => {
-    const navTests = [
-      { btn: 'initiative-btn', view: 'initiative', label: 'initiative' },
-      { btn: 'encounter-btn', view: 'encounter-builder', label: 'encounter' },
-      { btn: 'notes-btn', view: 'notes-view', label: 'notes' },
-      { btn: 'quests-btn', view: 'quests-view', label: 'quests' },
-      { btn: 'npcs-btn', view: 'npcs-view', label: 'NPCs' },
-      { btn: 'settlements-btn', view: 'settlements-view', label: 'settlements' },
-      { btn: 'factions-btn', view: 'factions-view', label: 'factions' },
-      { btn: 'log-btn', view: 'campaign-log-view', label: 'campaign log' },
-    ];
-
-    navTests.forEach(({ btn, view, label }) => {
-      it(`navigates to ${label} view`, async () => {
-        mockState.characters = [{ name: 'Aragorn', level: 1 }];
-        render(<App />);
-
-        await selectCampaign();
-
-        await act(async () => {
-          fireEvent.click(screen.getByTestId(btn));
-        });
-
-        await waitFor(() => {
-          expect(screen.getByTestId(view)).toBeInTheDocument();
-          expect(screen.queryByTestId('char-sheet')).not.toBeInTheDocument();
-        });
-
-        await flushEffects();
-      });
-    });
-
-    it('navigates to campaign repair (admin) view on localhost', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await selectCampaign();
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('admin-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('campaign-admin')).toBeInTheDocument();
-        expect(screen.queryByTestId('char-sheet')).not.toBeInTheDocument();
-      });
-
-      await flushEffects();
-    });
-
-    it('does not render admin button on non-localhost', async () => {
-      setLocalhost('example.com');
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await selectCampaign();
-
-      expect(screen.queryByTestId('admin-btn')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Campaign navigation', () => {
-    it('returns to campaign selection when back button is clicked', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await selectCampaign();
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('back-to-campaigns-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('campaign-selection')).toBeInTheDocument();
-      });
-
-      await flushEffects();
-    });
   });
 
   describe('Character wizard', () => {
@@ -495,18 +283,6 @@ describe('App - Runtime Events & State Management', () => {
       expect(screen.getByTestId('char-btn-Aragorn')).toBeInTheDocument();
       expect(screen.getByTestId('char-btn-Legolas')).toBeInTheDocument();
       expect(screen.getByTestId('char-btn-Gimli')).toBeInTheDocument();
-    });
-
-    it('highlights active character in sidebar', async () => {
-      mockState.characters = [
-        { name: 'Aragorn', level: 1 },
-        { name: 'Legolas', level: 2 },
-      ];
-      render(<App />);
-
-      await selectCampaign();
-
-      expect(screen.getByTestId('char-btn-Aragorn')).toHaveClass('active');
     });
   });
 

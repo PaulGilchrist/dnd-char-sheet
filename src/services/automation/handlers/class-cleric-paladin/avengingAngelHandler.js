@@ -100,13 +100,16 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     // Add flight buff: Fly Speed 60 feet, hover
     const stored = getRuntimeValue(playerName, 'activeBuffs', campaignName);
     const activeBuffs = Array.isArray(stored) ? stored : [];
-    const newBuffs = [...activeBuffs, {
+    const buffEntry = {
         name: action.name,
         effect: 'avenging_angel_flight',
         duration: '10_minutes',
         flySpeed: auto.flySpeed || 60,
         hover: auto.hover || false,
-    }];
+    };
+    const newBuffs = activeBuffs.some(b => b.name === action.name)
+        ? activeBuffs
+        : [...activeBuffs, buffEntry];
     await setRuntimeValue(playerName, 'activeBuffs', newBuffs, campaignName);
 
     // Clear previous aura targets

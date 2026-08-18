@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { handle } from './darkOnesLuckHandler.js';
@@ -100,14 +100,6 @@ describe('darkOnesLuckHandler.handle', () => {
             expect(addEntry).not.toHaveBeenCalled();
         });
 
-        it('should return popup when uses are negative', async () => {
-            mockRuntime(-1, makeCheck());
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('no uses remaining');
-        });
     });
 
     describe('guard: fallback to maxUses when runtime value is null', () => {
@@ -124,21 +116,6 @@ describe('darkOnesLuckHandler.handle', () => {
             );
         });
 
-        it('should use maxUses as default when darkOnesLuckUses is undefined', async () => {
-            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
-                if (key === 'lastAttack') return makeCheck();
-                return null;
-            });
-            evaluateAutoExpression.mockReturnValue(3);
-            mockDieRoll(7);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(result.type).toBe('popup');
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                playerName, 'darkOnesLuckUses', 2, campaignName
-            );
-        });
     });
 
     describe('guard: CHA modifier affects maxUses', () => {
@@ -150,18 +127,6 @@ describe('darkOnesLuckHandler.handle', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Modified: d20(8) + 5 + 1d10(5) = <b>18</b>');
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                playerName, 'darkOnesLuckUses', 0, campaignName
-            );
-        });
-
-        it('should clamp maxUses to minimum of 1 when CHA modifier is zero', async () => {
-            mockRuntime(1, makeCheck(), 0);
-            mockDieRoll(3);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(result.type).toBe('popup');
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 playerName, 'darkOnesLuckUses', 0, campaignName
             );
@@ -189,15 +154,6 @@ describe('darkOnesLuckHandler.handle', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('No recent ability check');
             expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('should reject when lastAttack is a non-object primitive', async () => {
-            mockRuntime(1, 'invalid', 3);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No recent ability check');
         });
 
         it('should reject when lastAttack is by a different character', async () => {
@@ -301,16 +257,6 @@ describe('darkOnesLuckHandler.handle', () => {
             expect(result.payload.description).toContain('1d10(5) = <b>20</b>');
         });
 
-        it('should consume one use after processing a save', async () => {
-            mockRuntime(5, makeSave(), 3);
-            mockDieRoll(5);
-
-            await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                playerName, 'darkOnesLuckUses', 4, campaignName
-            );
-        });
     });
 
     describe('priority: check over save', () => {

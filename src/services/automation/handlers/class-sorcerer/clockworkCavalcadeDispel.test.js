@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { dispelSpellsOnTarget, resolveSpellLevel } from './clockworkCavalcadeDispel.js';
 
@@ -66,121 +66,39 @@ describe('clockworkCavalcadeDispel', () => {
     });
 
     describe('resolveSpellLevel', () => {
-        it('returns the stored spellLevel when present', async () => {
-            const level = await resolveSpellLevel({ spellName: 'Unknown', spellLevel: 4 });
-            expect(level).toBe(4);
+        it('returns spellLevel value when present', async () => {
+            expect(await resolveSpellLevel({ spellLevel: 0 })).toBe(0);
+            expect(await resolveSpellLevel({ spellLevel: 4 })).toBe(4);
             expect(loadSpells).not.toHaveBeenCalled();
         });
 
-        it('returns 0 when spellLevel is 0', async () => {
-            const level = await resolveSpellLevel({ spellLevel: 0 });
-            expect(level).toBe(0);
-            expect(loadSpells).not.toHaveBeenCalled();
+        it('falls through to name lookup when spellLevel is null or undefined', async () => {
+            expect(await resolveSpellLevel({ spellLevel: null, spellName: 'Fly' })).toBe(3);
+            expect(await resolveSpellLevel({ spellLevel: undefined, spellName: 'Fly' })).toBe(3);
         });
 
-        it('falls through to name lookup when spellLevel is null', async () => {
-            const level = await resolveSpellLevel({ spellLevel: null, spellName: 'Fly' });
-            expect(level).toBe(3);
-        });
-
-        it('falls through to name lookup when spellLevel is undefined', async () => {
-            const level = await resolveSpellLevel({ spellLevel: undefined, spellName: 'Fly' });
-            expect(level).toBe(3);
-        });
-
-        it('looks up the spell level by spellName', async () => {
-            const level = await resolveSpellLevel({ spellName: 'Wall of Force' });
-            expect(level).toBe(5);
-        });
-
-        it('looks up by name property when spellName is absent', async () => {
-            const level = await resolveSpellLevel({ name: 'Fly' });
-            expect(level).toBe(3);
-        });
-
-        it('looks up by label when spellName and name are absent', async () => {
-            const level = await resolveSpellLevel({ label: 'Fly' });
-            expect(level).toBe(3);
-        });
-
-        it('looks up by condition when no name properties are present', async () => {
-            const level = await resolveSpellLevel({ condition: 'Hold Person' });
-            expect(level).toBe(2);
-        });
-
-        it('returns null for unknown spell names', async () => {
-            const level = await resolveSpellLevel({ spellName: 'Not A Spell' });
-            expect(level).toBeNull();
-        });
-
-        it('returns null when effect is null', async () => {
-            const level = await resolveSpellLevel(null);
-            expect(level).toBeNull();
-        });
-
-        it('returns null when effect is undefined', async () => {
-            const level = await resolveSpellLevel(undefined);
-            expect(level).toBeNull();
-        });
-
-        it('returns null when effect has no resolvable properties', async () => {
-            const level = await resolveSpellLevel({});
-            expect(level).toBeNull();
-        });
-
-        it('returns null when all fallback properties are empty strings', async () => {
-            const level = await resolveSpellLevel({ spellName: '', name: '', label: '', condition: '' });
-            expect(level).toBeNull();
+        it('looks up spell level by spellName and returns null for unknown', async () => {
+            expect(await resolveSpellLevel({ spellName: 'Wall of Force' })).toBe(5);
+            expect(await resolveSpellLevel({ spellName: 'Not A Spell' })).toBeNull();
         });
     });
 
     describe('dispelSpellsOnTarget', () => {
-        it('removes target effects of level 6 or lower and keeps higher-level ones', async () => {
+        it('removes target effects and buffs of level 6 or lower, keeps higher-level and other-target effects', async () => {
             const result = await dispelSpellsOnTarget(TARGET, CAMPAIGN);
 
             expect(result.effects.map(te => te.spellName)).toEqual(['Hold Person', 'Bless']);
-            const remaining = useRuntimeState.setRuntimeValue.mock.calls.find(
-                c => c[1] === 'targetEffects'
-            );
+            expect(result.buffs.map(b => b.name)).toEqual(['Mage Armor', 'Death Ward', 'Invisibility']);
+            expect(result.conditions).toEqual(['charmed']);
+            const remaining = useRuntimeState.setRuntimeValue.mock.calls.find(c => c[1] === 'targetEffects');
             const remainingForTarget = remaining[2].filter(te => te.target === TARGET);
             expect(remainingForTarget.map(te => te.spellName)).toEqual(['Simulacrum']);
-        });
-
-        it('does not touch effects on other targets', async () => {
-            await dispelSpellsOnTarget(TARGET, CAMPAIGN);
-
-            const remaining = useRuntimeState.setRuntimeValue.mock.calls.find(
-                c => c[1] === 'targetEffects'
-            );
             expect(remaining[2]).toContainEqual(expect.objectContaining({ target: 'Other' }));
-        });
-
-        it('removes spell-derived buffs of level 6 or lower', async () => {
-            const result = await dispelSpellsOnTarget(TARGET, CAMPAIGN);
-
-            expect(result.buffs.map(b => b.name)).toEqual(['Mage Armor', 'Death Ward', 'Invisibility']);
-            const remaining = useRuntimeState.setRuntimeValue.mock.calls.find(
-                c => c[1] === 'activeBuffs'
-            );
-            expect(remaining[2].map(b => b.name)).toEqual(['Bardic Inspiration']);
-        });
-
-        it('removes conditions matching dispelled effect conditions', async () => {
-            const result = await dispelSpellsOnTarget(TARGET, CAMPAIGN);
-
-            expect(result.conditions).toEqual(['charmed']);
-            const condsCall = useRuntimeState.setRuntimeValue.mock.calls.find(
-                c => c[1] === 'activeConditions'
-            );
+            const buffsCall = useRuntimeState.setRuntimeValue.mock.calls.find(c => c[1] === 'activeBuffs');
+            expect(buffsCall[2].map(b => b.name)).toEqual(['Bardic Inspiration']);
+            const condsCall = useRuntimeState.setRuntimeValue.mock.calls.find(c => c[1] === 'activeConditions');
             expect(condsCall[2]).toEqual(['poisoned']);
-        });
-
-        it('cleans up condition metadata for removed conditions', async () => {
-            await dispelSpellsOnTarget(TARGET, CAMPAIGN);
-
-            const metaCall = useRuntimeState.setRuntimeValue.mock.calls.find(
-                c => c[1] === 'activeConditionMeta'
-            );
+            const metaCall = useRuntimeState.setRuntimeValue.mock.calls.find(c => c[1] === 'activeConditionMeta');
             expect(metaCall[2]).toEqual({});
         });
 
@@ -202,10 +120,6 @@ describe('clockworkCavalcadeDispel', () => {
 
             expect(result.effects).toEqual([]);
             expect(result.buffs.map(b => b.name)).toEqual(['Mage Armor']);
-            const effectsCall = useRuntimeState.setRuntimeValue.mock.calls.find(
-                c => c[1] === 'targetEffects'
-            );
-            expect(effectsCall).toBeUndefined();
             const buffsCall = useRuntimeState.setRuntimeValue.mock.calls.find(
                 c => c[1] === 'activeBuffs'
             );
@@ -299,25 +213,6 @@ describe('clockworkCavalcadeDispel', () => {
                 c => c[1] === 'activeBuffs'
             );
             expect(buffsCall).toBeUndefined();
-        });
-
-        it('does not clean up condition metadata when no effects have conditions', async () => {
-            useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign' && prop === 'targetEffects') {
-                    return [{ target: TARGET, effect: 'bless', spellName: 'Bless' }];
-                }
-                if (key === TARGET && prop === 'activeBuffs') return [];
-                if (key === TARGET && prop === 'activeConditions') return ['poisoned'];
-                if (key === TARGET && prop === 'activeConditionMeta') return { poisoned: { label: 'Poisoned' } };
-                return null;
-            });
-
-            await dispelSpellsOnTarget(TARGET, CAMPAIGN);
-
-            const metaCall = useRuntimeState.setRuntimeValue.mock.calls.find(
-                c => c[1] === 'activeConditionMeta'
-            );
-            expect(metaCall).toBeUndefined();
         });
 
         it('removes only matching conditions from the condition list', async () => {

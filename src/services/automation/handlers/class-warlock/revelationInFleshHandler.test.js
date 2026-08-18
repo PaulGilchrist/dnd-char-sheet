@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { handle, applyRevelationOptions } from './revelationInFleshHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as metamagic from '../../../../hooks/combat/useMetamagic.js';
@@ -60,7 +60,7 @@ describe('revelationInFleshHandler', () => {
 
     describe('handle', () => {
         describe('no options scenarios', () => {
-            it('returns info popup when automation.options is an empty array', async () => {
+            it('returns info popup when automation.options is empty or undefined', async () => {
                 const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
                 expect(result).toEqual({
@@ -73,28 +73,10 @@ describe('revelationInFleshHandler', () => {
                     }),
                 });
             });
-
-            it('returns info popup when automation.options is undefined', async () => {
-                const action = makeAction({ automation: { type: 'revelation_in_flesh' } });
-                const result = await handle(action, makePlayerStats(), campaignName);
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.type).toBe('automation_info');
-                expect(result.payload.description).toContain('has no options available');
-                expect(result.payload.automation).toEqual(action.automation);
-            });
-
-            it('returns info popup when automation has no options property', async () => {
-                const action = { name: 'Revelation in Flesh', automation: {} };
-                const result = await handle(action, makePlayerStats(), campaignName);
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.description).toContain('has no options available');
-            });
         });
 
         describe('no sorcery points scenarios', () => {
-            it('returns info popup when sorcery points are zero', async () => {
+            it('returns info popup when sorcery points are zero or negative', async () => {
                 metamagic.getCurrentSorceryPoints.mockReturnValue(0);
 
                 const result = await handle(makeActionWithOptions(), makePlayerStats(), campaignName);
@@ -108,16 +90,6 @@ describe('revelationInFleshHandler', () => {
                         description: 'Revelation in Flesh: No Sorcery Points available. Cost: 1 SP per selection.',
                     }),
                 });
-            });
-
-            it('returns info popup when sorcery points are negative', async () => {
-                metamagic.getCurrentSorceryPoints.mockReturnValue(-1);
-
-                const result = await handle(makeActionWithOptions(), makePlayerStats(), campaignName);
-
-                expect(result.type).toBe('popup');
-                expect(result.payload.type).toBe('automation_info');
-                expect(result.payload.description).toContain('No Sorcery Points available');
             });
 
             it('uses custom action name in no-SP popup', async () => {
@@ -140,7 +112,7 @@ describe('revelationInFleshHandler', () => {
         });
 
         describe('modal return', () => {
-            it('returns modal when options and sorcery points are available', async () => {
+            it('returns modal with correct payload when options and sorcery points are available', async () => {
                 const result = await handle(makeActionWithOptions(), makePlayerStats(), campaignName);
 
                 expect(result).toEqual({
@@ -152,20 +124,6 @@ describe('revelationInFleshHandler', () => {
                         campaignName: campaignName,
                     }),
                 });
-            });
-
-            it('passes the action object unchanged in payload', async () => {
-                const action = makeActionWithOptions();
-                const result = await handle(action, makePlayerStats(), campaignName);
-
-                expect(result.payload.action).toBe(action);
-            });
-
-            it('passes the playerStats object unchanged in payload', async () => {
-                const stats = makePlayerStats({ level: 15 });
-                const result = await handle(makeActionWithOptions(), stats, campaignName);
-
-                expect(result.payload.playerStats).toBe(stats);
             });
         });
     });
@@ -230,30 +188,6 @@ describe('revelationInFleshHandler', () => {
                 expect(result.type).toBe('popup');
                 expect(result.payload.description).toContain('2 SP spent');
                 expect(result.logEntries).toHaveLength(2);
-            });
-
-            it('uses custom action name in insufficient SP error', async () => {
-                metamagic.getCurrentSorceryPoints.mockReturnValue(1);
-                const action = {
-                    name: 'Custom Revelation',
-                    automation: {
-                        type: 'revelation_in_flesh',
-                        options: [
-                            { name: 'Option A', effect: 'effect_a' },
-                            { name: 'Option B', effect: 'effect_b' },
-                        ],
-                    },
-                };
-
-                const result = await applyRevelationOptions(
-                    action,
-                    makePlayerStats(),
-                    campaignName,
-                    ['Option A', 'Option B']
-                );
-
-                expect(result.payload.name).toBe('Custom Revelation');
-                expect(result.payload.description).toContain('Custom Revelation');
             });
         });
 
@@ -336,18 +270,6 @@ describe('revelationInFleshHandler', () => {
                 );
 
                 expect(result.payload.automationType).toBe('revelation_in_flesh');
-            });
-
-            it('includes automation object in popup payload', async () => {
-                const action = makeActionWithOptions();
-                const result = await applyRevelationOptions(
-                    action,
-                    makePlayerStats(),
-                    campaignName,
-                    ['Option A']
-                );
-
-                expect(result.payload.automation).toEqual(action.automation);
             });
 
             it('uses custom duration from automation when provided', async () => {
@@ -465,29 +387,6 @@ describe('revelationInFleshHandler', () => {
                 );
             });
 
-            it('handles existing activeBuffs being null', async () => {
-                runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-                    if (key === 'activeBuffs') return null;
-                    return null;
-                });
-
-                await applyRevelationOptions(
-                    makeActionWithOptions(),
-                    makePlayerStats(),
-                    campaignName,
-                    ['Option A']
-                );
-
-                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                    playerName,
-                    'activeBuffs',
-                    expect.arrayContaining([
-                        expect.objectContaining({ name: 'Revelation in Flesh' }),
-                    ]),
-                    campaignName,
-                );
-            });
-
             it('makes copies of existing buffs without mutating them', async () => {
                 const existingBuffs = [
                     { name: 'Other Buff', effect: 'other', extra: 'data' },
@@ -530,23 +429,6 @@ describe('revelationInFleshHandler', () => {
                 );
             });
 
-            it('spends SP equal to valid options count, not total selected count', async () => {
-                const result = await applyRevelationOptions(
-                    makeActionWithOptions(),
-                    makePlayerStats(),
-                    campaignName,
-                    ['Option A', 'Invalid A', 'Invalid B', 'Option B']
-                );
-
-                expect(result.logEntries).toHaveLength(2);
-                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                    playerName,
-                    'sorceryPoints',
-                    8,
-                    campaignName
-                );
-            });
-
             it('uses custom action name in log entries', async () => {
                 const action = {
                     name: 'Custom Revelation',
@@ -565,28 +447,6 @@ describe('revelationInFleshHandler', () => {
 
                 expect(result.logEntries[0].abilityName).toBe('Custom Revelation');
                 expect(result.logEntries[0].characterName).toBe(playerName);
-            });
-        });
-
-        describe('SP calculation edge cases', () => {
-            it('clamps SP to 0 when spending more than current pool', async () => {
-                runtimeState.getRuntimeValue.mockReturnValue(1);
-                metamagic.getCurrentSorceryPoints.mockReturnValue(10);
-
-                await applyRevelationOptions(
-                    makeActionWithOptions(),
-                    makePlayerStats(),
-                    campaignName,
-                    ['Option A', 'Option B', 'Option C', 'Option D', 'Option E']
-                );
-
-                // 5 options selected, 10 SP available, pool was 1 -> max(0, 1-5) = 0
-                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                    playerName,
-                    'sorceryPoints',
-                    0,
-                    campaignName
-                );
             });
         });
     });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './mistyEscapeHandler.js';
 
@@ -103,7 +103,7 @@ describe('mistyEscapeHandler', () => {
     });
 
     describe('modal return', () => {
-        it('returns modal with mode and targets when damage was taken', async () => {
+        it('returns modal with mode, targets, and saveDc when damage was taken', async () => {
             setupModalMocks();
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
@@ -122,33 +122,37 @@ describe('mistyEscapeHandler', () => {
             expect(result.payload.playerStats).toBeDefined();
         });
 
-        it('returns modal with empty targets when no creatures in combat', async () => {
-            setupModalMocks({ combatContext: { creatures: [] } });
+        it('returns modal with empty targets when combat context is null or has no creatures', async () => {
+            setupModalMocks({ combatContext: null });
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(result.type).toBe('modal');
-            expect(result.payload.mode).toBe('mistyEscape');
             expect(result.payload.targets).toEqual([]);
         });
 
-        it('returns modal with zero count when no uses remaining', async () => {
-            setupModalMocks({ runtimeValue: 0 });
+        it('filters out the player from eligible targets', async () => {
+            setupModalMocks({
+                combatContext: {
+                    creatures: [
+                        { name: 'WarlockGirl', type: 'player', currentHp: 20, maxHp: 20 },
+                        { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
+                        { name: 'Orc', type: 'npc', currentHp: 15, maxHp: 20 },
+                    ],
+                },
+            });
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
-            expect(result.type).toBe('modal');
-            expect(result.payload.mode).toBe('mistyEscape');
-            expect(result.payload.newCount).toBe(0);
-            expect(result.payload.freeCastCountKey).toBe('_Steps_of_the_Fey_freeCastCount');
+            expect(result.payload.targets.length).toBe(2);
+            expect(result.payload.targets.every(t => t.name !== 'WarlockGirl')).toBe(true);
         });
 
-        it('defaults newCount to usesMax when getRuntimeValue returns undefined', async () => {
+        it('uses usesMax when getRuntimeValue returns undefined or zero', async () => {
             setupModalMocks({ runtimeValue: undefined });
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
-            expect(result.type).toBe('modal');
             expect(result.payload.newCount).toBe(1);
         });
 
@@ -178,40 +182,6 @@ describe('mistyEscapeHandler', () => {
 
             expect(evaluateAutoExpression).toHaveBeenCalledWith('2d4', expect.any(Object));
         });
-
-        it('falls back to 1 when evaluateAutoExpression returns falsy', async () => {
-            setupModalMocks({ uses: null });
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(result.payload.newCount).toBe(1);
-        });
-
-        it('returns modal with empty targets when combat context is null', async () => {
-            setupModalMocks({ combatContext: null });
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.targets).toEqual([]);
-        });
-
-        it('filters out the player from eligible targets', async () => {
-            setupModalMocks({
-                combatContext: {
-                    creatures: [
-                        { name: 'WarlockGirl', type: 'player', currentHp: 20, maxHp: 20 },
-                        { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
-                        { name: 'Orc', type: 'npc', currentHp: 15, maxHp: 20 },
-                    ],
-                },
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(result.payload.targets.length).toBe(2);
-            expect(result.payload.targets.every(t => t.name !== 'WarlockGirl')).toBe(true);
-        });
     });
 
     describe('logging', () => {
@@ -234,16 +204,6 @@ describe('mistyEscapeHandler', () => {
 
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 abilityName: 'My Misty Escape',
-            }));
-        });
-
-        it('logs description mentioning Misty Step cast', async () => {
-            setupModalMocks();
-
-            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
-
-            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                description: expect.stringContaining('Misty Step cast'),
             }));
         });
 

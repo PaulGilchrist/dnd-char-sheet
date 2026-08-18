@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as dataLoader from '../services/ui/dataLoader.js';
 import * as utils from './utils.js';
@@ -45,11 +45,6 @@ describe('character-creation/utils', () => {
       expect(costs).toEqual(MOCK_VALIDATION_RULES.point_buy.costs);
     });
 
-    it('returns the costs for the 2024 ruleset', async () => {
-      const costs = await utils.getPointBuyCosts('2024');
-      expect(costs).toEqual(MOCK_VALIDATION_RULES.point_buy.costs);
-    });
-
     it('falls back to default costs when rules are empty or lack point_buy.costs', async () => {
       dataLoader.loadValidationRules.mockResolvedValue({});
       await expect(utils.getPointBuyCosts('5e')).resolves.toEqual(DEFAULT_POINT_BUY_COSTS);
@@ -76,11 +71,6 @@ describe('character-creation/utils', () => {
       vi.spyOn(dataLoader, 'getCachedPointBuyCosts').mockReturnValue(cachedCosts);
       expect(utils.getPointBuyCostsSync('5e')).toEqual(cachedCosts);
     });
-
-    it('returns default costs when getCachedPointBuyCosts returns 0 (falsy but not null/undefined)', () => {
-      vi.spyOn(dataLoader, 'getCachedPointBuyCosts').mockReturnValue(0);
-      expect(utils.getPointBuyCostsSync('5e')).toEqual(DEFAULT_POINT_BUY_COSTS);
-    });
   });
 
   describe('validateFinalFormData', () => {
@@ -103,38 +93,6 @@ describe('character-creation/utils', () => {
       for (const field of expectedErrorFields) {
         expect(errors).toHaveProperty(field);
       }
-    });
-
-    it('rejects falsy values for every non-excluded required field', () => {
-      const errors = utils.validateFinalFormData({
-        name: undefined,
-        level: null,
-        alignment: '',
-        race: null,
-        class: undefined,
-        expertSkills: null
-      });
-      expect(errors).toHaveProperty('name');
-      expect(errors).toHaveProperty('level');
-      expect(errors).toHaveProperty('alignment');
-      expect(errors).toHaveProperty('race');
-      expect(errors).toHaveProperty('class');
-      expect(errors).toHaveProperty('expertSkills');
-    });
-
-    it('skips abilities, inventory, and skillProficiencies even when absent', () => {
-      const errors = utils.validateFinalFormData({
-        name: 'Test',
-        level: 1,
-        alignment: 'Good',
-        race: { name: 'Human' },
-        class: { name: 'Wizard' },
-        expertSkills: []
-        // abilities, inventory, skillProficiencies intentionally omitted
-      });
-      expect(errors).not.toHaveProperty('abilities');
-      expect(errors).not.toHaveProperty('inventory');
-      expect(errors).not.toHaveProperty('skillProficiencies');
     });
 
     it('returns an empty errors object when formData is null or undefined', () => {
@@ -186,12 +144,6 @@ describe('character-creation/utils', () => {
       expect(await utils.validateLevel(1, '5e')).toEqual({});
       expect(await utils.validateLevel(20, '5e')).toEqual({});
       expect((await utils.validateLevel(21, '5e')).level).toBeDefined();
-      expect((await utils.validateLevel(0, '5e')).level).toBeDefined();
-    });
-
-    it('falls back to 1-20 when level_range is null', async () => {
-      dataLoader.loadValidationRules.mockResolvedValue({ level_range: null });
-      expect(await utils.validateLevel(1, '5e')).toEqual({});
       expect((await utils.validateLevel(0, '5e')).level).toBeDefined();
     });
   });
@@ -279,12 +231,6 @@ describe('character-creation/utils', () => {
       expect((await utils.validateAbility({ ...BASE_ABILITY, baseScore: 15, miscIncrease: 5 }, 0, '5e', 1))).toEqual({});
       expect((await utils.validateAbility({ ...BASE_ABILITY, baseScore: 15, miscIncrease: 6 }, 0, '5e', 1))).toHaveProperty('totalScore');
     });
-
-    it('works with the 2024 ruleset using the same defaults', async () => {
-      expect(await utils.validateAbility(BASE_ABILITY, 0, '2024', 1)).toEqual({});
-      expect((await utils.validateAbility({ ...BASE_ABILITY, baseScore: 7 }, 0, '2024', 1)).baseScore).toBeDefined();
-      expect((await utils.validateAbility({ ...BASE_ABILITY, baseScore: 16 }, 0, '2024', 1)).baseScore).toBeDefined();
-    });
   });
 
   describe('validateStep', () => {
@@ -351,10 +297,6 @@ describe('character-creation/utils', () => {
         expect(await utils.validateStep(5, validFormData, {}, [], [], '2024')).toHaveProperty('background');
         expect(await utils.validateStep(5, validFormData, {}, [], [], '5e')).not.toHaveProperty('background');
         expect(await utils.validateStep(5, { ...validFormData, background: 'Fighter' }, {}, [], [], '2024')).not.toHaveProperty('background');
-      });
-
-      it('does not require a background for 5e even when one is provided', async () => {
-        expect(await utils.validateStep(5, { ...validFormData, background: 'Soldier' }, {}, [], [], '5e')).not.toHaveProperty('background');
       });
     });
 

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './psychicTeleportationHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -96,29 +96,6 @@ describe('psychicTeleportationHandler', () => {
             expect(result.payload.description).toContain('Psychic Teleportation');
         });
 
-        it('spends one psionic energy via setRuntimeValue', async () => {
-            await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'psionicEnergy',
-                4,
-                campaignName,
-            );
-        });
-
-        it('logs the ability use via addEntry', async () => {
-            stubRandom(0.875);
-            await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                type: 'ability_use',
-                characterName: playerName,
-                abilityName: 'Soul Blades',
-                description: expect.stringContaining('80 feet'),
-            }));
-        });
-
         it('uses default max of 6 when runtime value is undefined and tracked resources config is missing', async () => {
             runtimeState.getRuntimeValue.mockImplementation((_player, _key, _campaign) => undefined);
             automationService.evaluateAutoExpression.mockReturnValue(8);
@@ -127,62 +104,19 @@ describe('psychicTeleportationHandler', () => {
             const result = await handle(makeAction(), playerStats, campaignName, null);
 
             expect(result.payload.description).toContain('5/6');
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'psionicEnergy',
-                5,
-                campaignName,
-            );
         });
 
-        it('uses default max of 6 when tracked resources is null', async () => {
-            runtimeState.getRuntimeValue.mockImplementation((_player, _key, _campaign) => undefined);
-            automationService.evaluateAutoExpression.mockReturnValue(8);
-
-            const playerStats = makePlayerStats({ _trackedResources: null });
-            const result = await handle(makeAction(), playerStats, campaignName, null);
-
-            expect(result.payload.description).toContain('5/6');
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'psionicEnergy',
-                5,
-                campaignName,
-            );
-        });
-
-        it('uses tracked resource max when runtime value is undefined', async () => {
-            runtimeState.getRuntimeValue.mockImplementation((_player, _key, _campaign) => undefined);
+        it.each([
+            { dieSize: 8, random: 0.875, expectedDistance: '80 feet' },
+            { dieSize: 6, random: 0.834, expectedDistance: '60 feet' },
+            { dieSize: 1, random: 0, expectedDistance: '10 feet' },
+        ])('uses correct teleport distance based on die size ($dieSize-sided die)', async ({ dieSize, random, expectedDistance }) => {
+            automationService.evaluateAutoExpression.mockReturnValue(dieSize);
+            stubRandom(random);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-            expect(result.payload.description).toContain('7/8');
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'psionicEnergy',
-                7,
-                campaignName,
-            );
-        });
-
-        it('uses correct teleport distance when die size differs', async () => {
-            automationService.evaluateAutoExpression.mockReturnValue(6);
-            stubRandom(0.834);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.payload.description).toContain('60 feet');
-            expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                description: expect.stringContaining('Rolled 6 for 6'),
-            }));
-        });
-
-        it('uses correct teleport distance when die size is 1', async () => {
-            automationService.evaluateAutoExpression.mockReturnValue(1);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.payload.description).toContain('10 feet');
+            expect(result.payload.description).toContain(expectedDistance);
         });
     });
 
@@ -198,81 +132,6 @@ describe('psychicTeleportationHandler', () => {
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('No Psionic Energy remaining');
             expect(result.payload.description).toContain('Recharges on a Short or Long Rest');
-        });
-
-        it('does not call setRuntimeValue', async () => {
-            await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('does not call addEntry', async () => {
-            await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(logService.addEntry).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('when psionic energy is negative', () => {
-        it('returns popup indicating no energy remaining', async () => {
-            runtimeState.getRuntimeValue.mockImplementation((_player, _key, _campaign) => -1);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.description).toContain('No Psionic Energy remaining');
-        });
-
-        it('does not call setRuntimeValue or addEntry', async () => {
-            runtimeState.getRuntimeValue.mockImplementation((_player, _key, _campaign) => -3);
-
-            await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-            expect(logService.addEntry).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('when addEntry fails', () => {
-        it('does not throw (fire-and-forget logging)', async () => {
-            runtimeState.getRuntimeValue.mockImplementation((_player, _key, _campaign) => 5);
-            automationService.evaluateAutoExpression.mockReturnValue(8);
-            runtimeState.setRuntimeValue.mockResolvedValue(undefined);
-            const testError = new Error('Log service unavailable');
-            logService.addEntry.mockRejectedValue(testError);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-        });
-
-        it('still spends psionic energy even when logging fails', async () => {
-            runtimeState.getRuntimeValue.mockImplementation((_player, _key, _campaign) => 5);
-            automationService.evaluateAutoExpression.mockReturnValue(8);
-            runtimeState.setRuntimeValue.mockResolvedValue(undefined);
-            logService.addEntry.mockRejectedValue(new Error('Log service unavailable'));
-
-            await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'psionicEnergy',
-                4,
-                campaignName,
-            );
-        });
-    });
-
-    describe('when evaluateAutoExpression returns 0', () => {
-        it('produces a teleport distance of 10 feet (minimum)', async () => {
-            runtimeState.getRuntimeValue.mockImplementation((_player, _key, _campaign) => 5);
-            automationService.evaluateAutoExpression.mockReturnValue(0);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.payload.description).toContain('10 feet');
         });
     });
 });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../ui/dataLoader.js', () => ({
@@ -21,34 +21,28 @@ describe('toolValidation - getToolsByCategory', () => {
     vi.clearAllMocks();
   });
 
-  it('should return empty array for null category', async () => {
-    const result = await getToolsByCategory(null);
-    expect(result).toEqual([]);
+  it('should return empty array for null/undefined/empty category', async () => {
+    expect(await getToolsByCategory(null)).toEqual([]);
+    expect(await getToolsByCategory(undefined)).toEqual([]);
+    expect(await getToolsByCategory('')).toEqual([]);
   });
 
-  it('should return empty array for undefined category', async () => {
-    const result = await getToolsByCategory(undefined);
-    expect(result).toEqual([]);
-  });
-
-  it('should return empty array for empty string category', async () => {
-    const result = await getToolsByCategory('');
-    expect(result).toEqual([]);
-  });
-
-  it('should return tools matching the normalized category', async () => {
+  it('should return tools matching the normalized category and exclude non-tools', async () => {
     vi.mocked(dataLoader.loadEquipment).mockResolvedValue([
       { name: "Alchemist's Supplies", equipment_category: 'Tools', tool_category: "Artisan's Tools" },
       { name: "Brewer's Supplies", equipment_category: 'Tools', tool_category: "Artisan's Tools" },
       { name: 'Flute', equipment_category: 'Tools', tool_category: 'Musical Instrument' },
+      { name: 'Longsword', equipment_category: 'Weapons', tool_category: null },
+      { name: 'Shield', equipment_category: 'Armor', tool_category: null },
     ]);
 
     const result = await getToolsByCategory("Artisan's Tools");
     expect(result).toHaveLength(2);
     expect(result.map(t => t.name)).toContain("Alchemist's Supplies");
+    expect(result.map(t => t.name)).toContain("Brewer's Supplies");
   });
 
-  it('should normalize category before filtering', async () => {
+  it('should normalize category before filtering (Musical Instruments -> Musical Instrument)', async () => {
     vi.mocked(dataLoader.loadEquipment).mockResolvedValue([
       { name: 'Flute', equipment_category: 'Tools', tool_category: 'Musical Instrument' },
       { name: 'Drum', equipment_category: 'Tools', tool_category: 'Musical Instrument' },
@@ -57,53 +51,15 @@ describe('toolValidation - getToolsByCategory', () => {
     const result = await getToolsByCategory('Musical Instruments');
     expect(result).toHaveLength(2);
   });
-
-  it('should exclude non-tools by equipment_category', async () => {
-    vi.mocked(dataLoader.loadEquipment).mockResolvedValue([
-      { name: "Alchemist's Supplies", equipment_category: 'Tools', tool_category: "Artisan's Tools" },
-      { name: 'Longsword', equipment_category: 'Weapons', tool_category: null },
-      { name: 'Shield', equipment_category: 'Armor', tool_category: null },
-    ]);
-
-    const result = await getToolsByCategory("Artisan's Tools");
-    expect(result).toHaveLength(1);
-  });
-
-  it('should exclude items with tool_category not matching normalized value', async () => {
-    vi.mocked(dataLoader.loadEquipment).mockResolvedValue([
-      { name: "Alchemist's Supplies", equipment_category: 'Tools', tool_category: "Artisan's Tools" },
-      { name: 'Flute', equipment_category: 'Tools', tool_category: 'Musical Instrument' },
-    ]);
-
-    const result = await getToolsByCategory("Artisan's Tools");
-    expect(result).toHaveLength(1);
-    expect(result[0].name).toBe("Alchemist's Supplies");
-  });
 });
 
 describe('toolValidation - computeSkilledToolUsage', () => {
-  it('should return 0 for null categoryLimits', () => {
+  it('should return 0 for null/empty categoryLimits or null/undefined/empty selectedTools', () => {
     expect(computeSkilledToolUsage(null, ['Flute'], [], [])).toBe(0);
-  });
-
-  it('should return 0 for empty categoryLimits', () => {
-    const limits = new Map();
-    expect(computeSkilledToolUsage(limits, ['Flute'], [], [])).toBe(0);
-  });
-
-  it('should return 0 for null selectedTools', () => {
-    const limits = new Map([["Artisan's Tools", 2]]);
-    expect(computeSkilledToolUsage(limits, null, [], [])).toBe(0);
-  });
-
-  it('should return 0 for undefined selectedTools', () => {
-    const limits = new Map([["Artisan's Tools", 2]]);
-    expect(computeSkilledToolUsage(limits, undefined, [], [])).toBe(0);
-  });
-
-  it('should return 0 for empty selectedTools', () => {
-    const limits = new Map([["Artisan's Tools", 2]]);
-    expect(computeSkilledToolUsage(limits, [], [], [])).toBe(0);
+    expect(computeSkilledToolUsage(new Map(), ['Flute'], [], [])).toBe(0);
+    expect(computeSkilledToolUsage(new Map([["Artisan's Tools", 2]]), null, [], [])).toBe(0);
+    expect(computeSkilledToolUsage(new Map([["Artisan's Tools", 2]]), undefined, [], [])).toBe(0);
+    expect(computeSkilledToolUsage(new Map([["Artisan's Tools", 2]]), [], [], [])).toBe(0);
   });
 
   it('should count tools allocated from Skilled when category limits are satisfied', () => {

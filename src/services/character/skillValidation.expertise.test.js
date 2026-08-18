@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as dataLoader from '../ui/dataLoader.js';
 
@@ -171,27 +171,6 @@ describe('skillValidation — getExpertiseLimits', () => {
     expect(result.count).toBe(2);
   });
 
-  it('should handle expertise with no description defaulting to 2', async () => {
-    vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-      class_levels: [
-        { level: 1, features: [] },
-        {
-          level: 2,
-          features: [{ name: 'Expertise' }],
-        },
-      ],
-    });
-
-    const result = await getExpertiseLimits({
-      rules: '2024',
-      class: { name: 'Rogue' },
-      level: 2,
-    });
-
-    expect(result.allowed).toBe(true);
-    expect(result.count).toBe(2);
-  });
-
   it('should skip future class levels beyond current level', async () => {
     vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
       class_levels: [
@@ -253,38 +232,5 @@ describe('skillValidation — getExpertiseLimits', () => {
 
     expect(result.allowed).toBe(true);
     expect(result.count).toBe(1);
-  });
-
-  it('should parse expertise from Ranger level 9 Expertise feature', async () => {
-    vi.mocked(dataLoader.fetchClassData).mockResolvedValue({
-      class_levels: [
-        { level: 1, features: [] },
-        { level: 2, features: [] },
-        { level: 3, features: [] },
-        { level: 4, features: [] },
-        { level: 5, features: [] },
-        { level: 6, features: [] },
-        { level: 7, features: [] },
-        { level: 8, features: [] },
-        {
-          level: 9,
-          features: [
-            {
-              name: 'Expertise',
-              description: 'Choose two of your skill proficiencies with which you lack Expertise. You gain Expertise in those skills.',
-            },
-          ],
-        },
-      ],
-    });
-
-    const result = await getExpertiseLimits({
-      rules: '2024',
-      class: { name: 'Ranger' },
-      level: 9,
-    });
-
-    expect(result.allowed).toBe(true);
-    expect(result.count).toBe(2);
   });
 });

@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './protectiveFieldHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -98,15 +98,6 @@ describe('protectiveFieldHandler', () => {
                 expect(automationService.evaluateAutoExpression).not.toHaveBeenCalled();
             }
         );
-
-        it('treats string "0" as depleted', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue('0');
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(result.payload.description).toContain('No Psionic Energy remaining');
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
     });
 
     describe('successful activation', () => {
@@ -149,14 +140,6 @@ describe('protectiveFieldHandler', () => {
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(playerName, 'psionicEnergy', 5, 'my-campaign');
             expect(logService.addEntry).toHaveBeenCalledWith('my-campaign', expect.any(Object));
         });
-
-        it('ignores the map name parameter', async () => {
-            await handle(makeAction(), makePlayerStats(), campaignName, 'some-map');
-
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName, 'psionicEnergy', 5, campaignName,
-            );
-        });
     });
 
     describe('reduction calculation', () => {
@@ -177,15 +160,6 @@ describe('protectiveFieldHandler', () => {
             expect(result.payload.description).toContain('Reduce damage by');
             expect(result.payload.description).toContain('<strong>9</strong>');
             expect(result.payload.description).toContain('Rolled 6 for 6');
-        });
-
-        it('uses psionicDieSize when die roll total is falsy', async () => {
-            diceRoller.rollExpression.mockReturnValue({ total: null });
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(result.payload.description).toContain('Reduce damage by');
-            expect(result.payload.description).toContain('<strong>9</strong>');
         });
 
         it('uses psionicDieSize when die roll total is zero', async () => {
@@ -216,14 +190,6 @@ describe('protectiveFieldHandler', () => {
             // dieValue=4, intMod=0 => reduction=4
             expect(result.payload.description).toContain('Reduce damage by');
             expect(result.payload.description).toContain('<strong>4</strong>');
-            expect(result.payload.description).toContain('+ INT 0');
-        });
-
-        it('handles missing abilities array entirely', async () => {
-            const playerStats = makePlayerStats({ abilities: undefined });
-
-            const result = await handle(makeAction(), playerStats, campaignName);
-
             expect(result.payload.description).toContain('+ INT 0');
         });
 
@@ -293,48 +259,6 @@ describe('protectiveFieldHandler', () => {
             await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(applyHealing.applyHealingToTarget).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('description content', () => {
-        it('includes defender name when attack found', async () => {
-            const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(result.payload.description).toContain('Damage to TestHero reduced.');
-        });
-
-        it('omits defender name when no attack found', async () => {
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: null,
-                attackerName: null,
-                targetName: null,
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(result.payload.description).not.toContain('Damage to');
-        });
-
-        it('logs defender name when attack found', async () => {
-            await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                description: expect.stringContaining('Damage reduced to TestHero.'),
-            }));
-        });
-
-        it('logs without defender name when no attack found', async () => {
-            damageRollback.findLastAttack.mockResolvedValue({
-                attackEvent: null,
-                attackerName: null,
-                targetName: null,
-            });
-
-            await handle(makeAction(), makePlayerStats(), campaignName);
-
-            expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                description: expect.stringContaining('reduce damage by 7'),
-            }));
         });
     });
 

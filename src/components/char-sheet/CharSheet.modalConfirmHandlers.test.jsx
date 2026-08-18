@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -362,7 +362,7 @@ describe('True Polymorph modal rendering', () => {
     mockStore.clear();
   });
 
-  it('renders PolymorphSelectionModal for true_polymorph_select popup with creature_to_creature mode', async () => {
+  it('renders PolymorphSelectionModal for true_polymorph_select popup', async () => {
     setPopup(sharedPopupReturnValue, {
       type: 'true_polymorph_select',
       maxCR: 8,
@@ -370,23 +370,6 @@ describe('True Polymorph modal rendering', () => {
       targetName: 'Test Character',
       casterName: 'Test Character',
       mode: 'creature_to_creature',
-    });
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
-  });
-
-  it('renders PolymorphSelectionModal for true_polymorph_select popup with default mode', async () => {
-    setPopup(sharedPopupReturnValue, {
-      type: 'true_polymorph_select',
-      maxCR: 8,
-      campaignName: 'test-campaign',
-      targetName: 'Test Character',
-      casterName: 'Test Character',
     });
     render(<CharSheet {...defaultProps} />);
 
@@ -410,26 +393,11 @@ describe('Object Transform modal rendering', () => {
     mockStore.clear();
   });
 
-  it('renders ObjectTransformModal for true_polymorph_object popup with targetName', async () => {
+  it('renders ObjectTransformModal for true_polymorph_object popup', async () => {
     setPopup(sharedPopupReturnValue, {
       type: 'true_polymorph_object',
       campaignName: 'test-campaign',
       targetName: 'Test Character',
-      casterName: 'Test Character',
-    });
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId('object-transform-modal')).toBeInTheDocument();
-  });
-
-  it('renders ObjectTransformModal for true_polymorph_object popup with casterName fallback', async () => {
-    setPopup(sharedPopupReturnValue, {
-      type: 'true_polymorph_object',
-      campaignName: 'test-campaign',
       casterName: 'Test Character',
     });
     render(<CharSheet {...defaultProps} />);

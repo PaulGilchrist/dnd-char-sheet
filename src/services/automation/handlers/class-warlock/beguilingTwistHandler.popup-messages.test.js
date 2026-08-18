@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './beguilingTwistHandler.js';
 
@@ -86,41 +86,32 @@ describe('beguilingTwistHandler', () => {
     });
 
     describe('no recent save found popup', () => {
-        it('should return popup with default range when no save found', async () => {
-            const result = await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
-
+        it('should return popup with no save message and correct range', async () => {
+            let result = await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('No recent successful save found');
             expect(result.payload.description).toContain('120 ft');
-        });
 
-        it('should return popup with custom range when no save found', async () => {
-            const result = await handle(makeAction({ target: 'different_creature', range: '60_ft' }), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
+            result = await handle(makeAction({ target: 'different_creature', range: '60_ft' }), makePlayerStats(), campaignName, null);
             expect(result.payload.description).toContain('60_ft');
         });
 
-        it('should include feature name from action in popup description', async () => {
-            const result = await handle(
+        it('should include feature name from action or default to Beguiling Twist', async () => {
+            let result = await handle(
                 { name: 'My Custom Twist', automation: { type: 'reaction_save', target: 'self' } },
                 makePlayerStats(),
                 campaignName,
                 null
             );
-
             expect(result.payload.description).toContain('My Custom Twist');
-        });
 
-        it('should default feature name to Beguiling Twist when not provided', async () => {
-            const result = await handle(
+            result = await handle(
                 { automation: { type: 'reaction_save', target: 'self' } },
                 makePlayerStats(),
                 campaignName,
                 null
             );
-
             expect(result.payload.description).toContain('Beguiling Twist');
         });
     });
@@ -132,47 +123,30 @@ describe('beguilingTwistHandler', () => {
             }));
         });
 
-        it('should return popup with targetName in payload', async () => {
+        it('should return popup with correct payload structure for self-target', async () => {
             const result = await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.targetName).toBe(playerName);
-        });
-
-        it('should include condition name in popup description', async () => {
-            const result = await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
-
             expect(result.payload.description).toContain('Charmed or Frightened');
-        });
-
-        it('should include save DC in popup description', async () => {
-            const result = await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
-
             expect(result.payload.description).toContain('DC 15');
         });
 
-        it('should include custom condition name in popup description', async () => {
+        it('should reflect custom condition in popup description', async () => {
             const result = await handle(makeAction({ target: 'self', condition: 'charmed' }), makePlayerStats(), campaignName, null);
 
             expect(result.payload.description).toContain('Charmed');
             expect(result.payload.description).not.toContain('Frightened');
         });
 
-        it('should register event listener for save-result', async () => {
-            const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
-            await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
-
-            expect(addEventListenerSpy).toHaveBeenCalledWith('save-result', expect.any(Function));
-            addEventListenerSpy.mockRestore();
-        });
-
-        it('should log ability_use entry with feature name', async () => {
+        it('should log ability_use entry with feature name and promptId', async () => {
             await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
 
             expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                 type: 'ability_use',
                 abilityName: 'Beguiling Twist',
+                promptId: 'test-prompt-id',
             }));
         });
 
@@ -188,20 +162,10 @@ describe('beguilingTwistHandler', () => {
                 abilityName: 'Custom Twist',
             }));
         });
-
-        it('should log ability_use entry with promptId', async () => {
-            await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
-
-            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                promptId: 'test-prompt-id',
-            }));
-        });
     });
 
     describe('different-creature popup messages', () => {
         beforeEach(() => {
-            // In different_creature mode, findRecentSuccessfulSave returns the attacker
-            // (the creature that succeeded on save), not the attack target
             findLastAttack.mockResolvedValue(makeAttackResult({
                 attackerName: 'Goblin',
                 targetName: 'Ally1',
@@ -222,21 +186,13 @@ describe('beguilingTwistHandler', () => {
             expect(result.payload.targetName).toBe('Ally1');
         });
 
-        it('should show "cannot determine targets" when combat context is null', async () => {
+        it('should show "cannot determine targets" when combat context is null or has no creatures', async () => {
             getCombatContext.mockResolvedValue(null);
-
-            const result = await handle(makeAction({ target: 'different_creature' }), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
+            let result = await handle(makeAction({ target: 'different_creature' }), makePlayerStats(), campaignName, null);
             expect(result.payload.description).toContain('Cannot determine targets');
-        });
 
-        it('should show "cannot determine targets" when combat context has no creatures', async () => {
             getCombatContext.mockResolvedValue({ creatures: null });
-
-            const result = await handle(makeAction({ target: 'different_creature' }), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
+            result = await handle(makeAction({ target: 'different_creature' }), makePlayerStats(), campaignName, null);
             expect(result.payload.description).toContain('Cannot determine targets');
         });
 
@@ -245,21 +201,8 @@ describe('beguilingTwistHandler', () => {
 
             const result = await handle(makeAction({ target: 'different_creature' }), makePlayerStats(), campaignName, null);
 
-            expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Goblin succeeded on a save');
             expect(result.payload.description).toContain('no other creatures are available to target');
-        });
-
-        it('should show "no other creatures available" when only the player exists in combat', async () => {
-            findLastAttack.mockResolvedValue(makeAttackResult({
-                attackerName: playerName,
-                targetName: 'Ally1',
-            }));
-
-            const result = await handle(makeAction({ target: 'different_creature' }), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No recent successful save found');
         });
     });
 });

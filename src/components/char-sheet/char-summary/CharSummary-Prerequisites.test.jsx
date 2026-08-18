@@ -1,13 +1,4 @@
-// @improved-by-ai
-//
-// Quality improvements:
-//   - Consolidated 3 duplicate beforeEach blocks into 1 shared beforeEach
-//   - Removed 4 instances of window.location.hostname = 'localhost' mutation
-//   - Replaced 10 screen.getByTestId/screen.queryByTestId calls with semantic queries
-//   - Simplified mock components: removed unnecessary default: vi.fn() nesting
-//   - Tests now verify user-visible behavior (modal dismissal on button click)
-//     rather than data-testid presence/absence
-//   - Removed redundant comments explaining test logic already visible in code
+// @cleaned-by-ai
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';

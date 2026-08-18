@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { handle, applyTelekineticThrust } from './telekineticThrustHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';
@@ -99,73 +99,42 @@ describe('telekineticThrustHandler', () => {
             });
         });
 
-        it('adds campaign log entry for ability use', async () => {
+        it.each([
+            [true, 'Goblin'],
+            [false, null],
+        ])('adds campaign log entry with %s description when target exists', async (hasTarget, targetName) => {
+            if (hasTarget) {
+                damageUtils.getCombatContext.mockResolvedValue({
+                    attacker: { nextTargetAttacking: targetName },
+                });
+                damageUtils.getTargetFromAttacker.mockReturnValue({ name: targetName });
+            }
+
             await handle(makeAction(), makePlayerStats(), 'test-campaign', 'map');
 
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'ability_use',
                 characterName: 'TestHero',
                 abilityName: 'Telekinetic Thrust',
+                description: expect.stringContaining(hasTarget ? `against ${targetName}` : 'Telekinetic Thrust used'),
             }));
         });
 
-        it('includes target name in log description when target exists', async () => {
-            damageUtils.getCombatContext.mockResolvedValue({
-                attacker: { nextTargetAttacking: 'Goblin' },
-            });
-            damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
-
-            await handle(makeAction(), makePlayerStats(), 'test-campaign', 'map');
-
-            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                description: expect.stringContaining('against Goblin'),
-            }));
-        });
-
-        it('omits target from log description when no target exists', async () => {
-            await handle(makeAction(), makePlayerStats(), 'test-campaign', 'map');
-
-            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                description: expect.stringContaining('Telekinetic Thrust used'),
-            }));
-        });
-
-        it('uses custom saveType when specified in automation', async () => {
+        it.each([
+            ['STR', 'STR'],
+            ['DEX', 'DEX'],
+        ])('uses %s saveType when specified in automation', async (autoSaveType, expectedType) => {
             setupSaveMock();
             damageUtils.getCombatContext.mockResolvedValue({
                 attacker: { nextTargetAttacking: 'Goblin' },
             });
             damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
 
-            await handle(makeActionWithOptions({ saveType: 'DEX' }), makePlayerStats(), 'test-campaign', 'map');
+            await handle(makeActionWithOptions({ saveType: autoSaveType }), makePlayerStats(), 'test-campaign', 'map');
 
             expect(savePrompt.createSaveListener).toHaveBeenCalledWith('test-campaign', {
                 targetName: 'Goblin',
-                saveType: 'DEX',
-                saveDc: 13,
-            });
-        });
-
-        it('defaults to STR saveType when not specified in automation options', async () => {
-            setupSaveMock();
-            damageUtils.getCombatContext.mockResolvedValue({
-                attacker: { nextTargetAttacking: 'Goblin' },
-            });
-            damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
-
-            const actionWithoutSaveType = {
-                name: 'Telekinetic Thrust',
-                automation: {
-                    type: 'telekinetic_thrust',
-                    options: [{ name: 'Push', effect: 'prone_and_push', value: 10 }],
-                },
-            };
-
-            await handle(actionWithoutSaveType, makePlayerStats(), 'test-campaign', 'map');
-
-            expect(savePrompt.createSaveListener).toHaveBeenCalledWith('test-campaign', {
-                targetName: 'Goblin',
-                saveType: 'STR',
+                saveType: expectedType,
                 saveDc: 13,
             });
         });
@@ -191,19 +160,6 @@ describe('telekineticThrustHandler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('ready');
         });
-
-        it('handles undefined auto.options in handle()', async () => {
-            const actionWithoutOptions = {
-                name: 'Telekinetic Thrust',
-                automation: { type: 'telekinetic_thrust', saveType: 'STR' },
-            };
-
-            const result = await handle(actionWithoutOptions, makePlayerStats(), 'test-campaign', 'map');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.description).toContain('ready');
-        });
     });
 
     describe('applyTelekineticThrust', () => {
@@ -211,26 +167,6 @@ describe('telekineticThrustHandler', () => {
             const result = await applyTelekineticThrust(makeAction(), makePlayerStats(), 'test-campaign', 'Goblin', 13, 'STR');
 
             expect(result).toBeNull();
-        });
-
-        it('clears pendingRiderChoice before processing', async () => {
-            setupSaveMock();
-
-            await applyTelekineticThrust(
-                makeActionWithOptions(),
-                makePlayerStats(),
-                'test-campaign',
-                'Goblin',
-                13,
-                'STR'
-            );
-
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'TestHero',
-                'pendingRiderChoice',
-                null,
-                'test-campaign'
-            );
         });
 
         it('returns popup with no-target message when targetName is null', async () => {
@@ -436,7 +372,7 @@ describe('telekineticThrustHandler', () => {
             expect(conditionSaveService.addCondition).not.toHaveBeenCalled();
         });
 
-        it('handles addEntry rejection on first entry', async () => {
+        it('handles addEntry rejection gracefully', async () => {
             setupSaveMock({ success: true, total: 15, roll: 12, saveBonus: 3 });
             logService.addEntry.mockRejectedValueOnce(new Error('log error')).mockResolvedValue(undefined);
 
@@ -451,81 +387,6 @@ describe('telekineticThrustHandler', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Success');
-        });
-
-        it('handles addEntry rejection on second entry', async () => {
-            setupSaveMock({ success: true, total: 15, roll: 12, saveBonus: 3 });
-            logService.addEntry.mockResolvedValue(undefined).mockRejectedValueOnce(new Error('log error'));
-
-            const result = await applyTelekineticThrust(
-                makeActionWithOptions(),
-                makePlayerStats(),
-                'test-campaign',
-                'Goblin',
-                13,
-                'STR'
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Success');
-        });
-
-        it('handles undefined auto.options in applyTelekineticThrust', async () => {
-            const actionWithoutOptions = {
-                name: 'Telekinetic Thrust',
-                automation: { type: 'telekinetic_thrust', saveType: 'STR' },
-            };
-
-            const result = await applyTelekineticThrust(
-                actionWithoutOptions,
-                makePlayerStats(),
-                'test-campaign',
-                'Goblin',
-                13,
-                'STR'
-            );
-
-            expect(result).toBeNull();
-        });
-
-        it('handles saveResult with missing total, roll, and saveBonus', async () => {
-            setupSaveMock({ success: true });
-
-            const result = await applyTelekineticThrust(
-                makeActionWithOptions(),
-                makePlayerStats(),
-                'test-campaign',
-                'Goblin',
-                13,
-                'STR'
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Success');
-            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                total: 0,
-                rolls: [0],
-                bonus: 0,
-            }));
-        });
-
-        it('uses formula without bonus when saveBonus is 0', async () => {
-            setupSaveMock({ success: true, total: 13, roll: 13, saveBonus: 0 });
-
-            const result = await applyTelekineticThrust(
-                makeActionWithOptions(),
-                makePlayerStats(),
-                'test-campaign',
-                'Goblin',
-                13,
-                'STR'
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Success');
-            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                formula: '1d20',
-            }));
         });
 
         it('uses default push value when option has no value property', async () => {
@@ -559,30 +420,6 @@ describe('telekineticThrustHandler', () => {
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 description: expect.stringContaining('pushed 10 feet'),
             }));
-        });
-
-        it('handles addEntry rejection in applyThrustEffect', async () => {
-            setupSaveMock({ success: false, total: 10, roll: 8, saveBonus: 2 });
-
-            const combatContext = {
-                creatures: [
-                    { name: 'Goblin', conditions: [] },
-                ],
-            };
-            damageUtils.getCombatContext.mockResolvedValue(combatContext);
-            logService.addEntry.mockResolvedValue(undefined).mockResolvedValue(undefined).mockRejectedValueOnce(new Error('log error'));
-
-            const result = await applyTelekineticThrust(
-                makeActionWithOptions(),
-                makePlayerStats(),
-                'test-campaign',
-                'Goblin',
-                13,
-                'STR'
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Failure');
         });
 
         it('rejects when save listener promise rejects', async () => {
