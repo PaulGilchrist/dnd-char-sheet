@@ -1,5 +1,5 @@
-// @cleaned-by-ai
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharHitPoints from './CharHitPoints.jsx';
 
@@ -14,18 +14,16 @@ vi.mock('../../../services/combat/conditions/savePromptService.js', () => ({
 
 vi.mock('./DeathSavingThrows.jsx', () => ({
   default: vi.fn(({ playerStats }) => (
-    <div data-testid="death-saving-throws">
-      Death Saving Throws for {playerStats.name}
-    </div>
+    <div>Death Saving Throws for {playerStats.name}</div>
   )),
 }));
 
+// Simplified HiddenInput mock matching the real component's behavior
 vi.mock('../../common/HiddenInput.jsx', () => {
   const MockHiddenInput = ({ value, showInput, handleValueChange, handleInputToggle }) => {
     if (showInput) {
       return (
         <input
-          data-testid="hp-input"
           type="number"
           value={value}
           onChange={(e) => handleValueChange(e.target.value)}
@@ -33,9 +31,8 @@ vi.mock('../../common/HiddenInput.jsx', () => {
         />
       );
     }
-    return <span data-testid="hp-display">{value}</span>;
+    return <span>{value}</span>;
   };
-  MockHiddenInput.displayName = 'MockHiddenInput';
   return { default: MockHiddenInput };
 });
 
@@ -55,16 +52,10 @@ function renderCharHitPoints(props = {}) {
   );
 }
 
-function setupFetchMock() {
-  const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: vi.fn(() => Promise.resolve({})) }));
-  global.fetch = fetchMock;
-  return fetchMock;
-}
-
 describe('CharHitPoints', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn(() => Promise.resolve({ ok: true, json: vi.fn() }));
+    global.fetch = vi.fn(() => Promise.resolve({ ok: true, json: vi.fn(() => Promise.resolve({})) }));
     useRuntimeValue.mockReturnValue(null);
   });
 
@@ -73,23 +64,25 @@ describe('CharHitPoints', () => {
       renderCharHitPoints();
 
       expect(screen.getByText(/Hit Points:/)).toBeInTheDocument();
-      expect(screen.getByTestId('hp-display')).toHaveTextContent('10');
+      const clickable = screen.getByText(/Hit Points:/).parentElement;
+      expect(clickable).toHaveTextContent(/10\/10/);
     });
 
     it.each([
       ['aidHpMaxIncrease', 3, null, '13'],
       ['heroesFeastHpMaxIncrease', null, 5, '15'],
       ['aid + heroesFeast combined', 3, 5, '18'],
-    ])('displays effective max HP with %s: %s', (_name, _aidVal, _hfVal, expected) => {
+    ])('displays effective max HP with %s: %s', (_name, aidVal, hfVal, expected) => {
       useRuntimeValue.mockImplementation((_, prop) => {
-        if (prop === 'aidHpMaxIncrease') return _aidVal;
-        if (prop === 'heroesFeastHpMaxIncrease') return _hfVal;
+        if (prop === 'aidHpMaxIncrease') return aidVal;
+        if (prop === 'heroesFeastHpMaxIncrease') return hfVal;
         return null;
       });
 
       renderCharHitPoints();
 
-      expect(screen.getByTestId('hp-display')).toHaveTextContent(expected);
+      const clickable = screen.getByText(/Hit Points:/).parentElement;
+      expect(clickable).toHaveTextContent(new RegExp(`${expected}\\/${expected}`));
     });
 
     it('shows stored current HP when available instead of max', () => {
@@ -100,7 +93,8 @@ describe('CharHitPoints', () => {
 
       renderCharHitPoints();
 
-      expect(screen.getByTestId('hp-display')).toHaveTextContent('5');
+      const clickable = screen.getByText(/Hit Points:/).parentElement;
+      expect(clickable).toHaveTextContent(/5\/10/);
     });
   });
 
@@ -138,12 +132,10 @@ describe('CharHitPoints', () => {
       const clickable = screen.getByText(/Hit Points:/).parentElement;
       fireEvent.click(clickable);
 
-      expect(screen.getByTestId('hp-input')).toBeInTheDocument();
-      expect(screen.queryByTestId('hp-display')).not.toBeInTheDocument();
+      expect(screen.getByRole('spinbutton')).toBeInTheDocument();
 
       fireEvent.click(clickable);
-      expect(screen.getByTestId('hp-display')).toBeInTheDocument();
-      expect(screen.queryByTestId('hp-input')).not.toBeInTheDocument();
+      expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
     });
   });
 
@@ -157,7 +149,7 @@ describe('CharHitPoints', () => {
       const clickable = screen.getByText(/Hit Points:/).parentElement;
       fireEvent.click(clickable);
 
-      const input = screen.getByTestId('hp-input');
+      const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: String(newValue) } });
       fireEvent.blur(input);
 
@@ -174,7 +166,8 @@ describe('CharHitPoints', () => {
       ['healing', 5, 10, 5, true, false],
       ['zero HP (unconscious)', 10, 0, -10, false, true],
     ])('logs hp_change event: %s (old=%d, new=%d, delta=%d, isHealing=%s, isUnconscious=%s)', (_label, oldHp, newHp, delta, isHealing, isUnconscious) => {
-      const fetchMock = setupFetchMock();
+      const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: vi.fn(() => Promise.resolve({})) }));
+      global.fetch = fetchMock;
 
       if (oldHp !== 10) {
         useRuntimeValue.mockImplementation((_, prop) => {
@@ -188,22 +181,20 @@ describe('CharHitPoints', () => {
       const clickable = screen.getByText(/Hit Points:/).parentElement;
       fireEvent.click(clickable);
 
-      const input = screen.getByTestId('hp-input');
+      const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: String(newHp) } });
       fireEvent.blur(input);
 
-      waitFor(() => {
-        const loggedData = JSON.parse(fetchMock.mock.calls[0][1].body);
-        expect(loggedData).toEqual(
-          expect.objectContaining({
-            type: 'hp_change',
-            targetName: 'TestCharacter',
-            delta,
-            isHealing,
-            isUnconscious,
-          })
-        );
-      });
+      const loggedData = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(loggedData).toEqual(
+        expect.objectContaining({
+          type: 'hp_change',
+          targetName: 'TestCharacter',
+          delta,
+          isHealing,
+          isUnconscious,
+        })
+      );
     });
 
     it('resets death saves when HP is set above 0', () => {
@@ -212,7 +203,7 @@ describe('CharHitPoints', () => {
       const clickable = screen.getByText(/Hit Points:/).parentElement;
       fireEvent.click(clickable);
 
-      const input = screen.getByTestId('hp-input');
+      const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: '5' } });
       fireEvent.blur(input);
 
@@ -243,7 +234,7 @@ describe('CharHitPoints', () => {
       const clickable = screen.getByText(/Hit Points:/).parentElement;
       fireEvent.click(clickable);
 
-      const input = screen.getByTestId('hp-input');
+      const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: '-2' } });
       fireEvent.blur(input);
 
@@ -254,6 +245,25 @@ describe('CharHitPoints', () => {
         'test-campaign'
       );
       expect(clearDeathSavePrompt).not.toHaveBeenCalled();
+    });
+
+    it('clamps invalid input to 0 via HiddenInput', () => {
+      renderCharHitPoints();
+
+      const clickable = screen.getByText(/Hit Points:/).parentElement;
+      fireEvent.click(clickable);
+
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: 'not-a-number' } });
+      fireEvent.blur(input);
+
+      // HiddenInput clamps NaN to 0 before calling handleValueChange
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'TestCharacter',
+        'currentHitPoints',
+        0,
+        'test-campaign'
+      );
     });
   });
 
@@ -269,7 +279,7 @@ describe('CharHitPoints', () => {
 
       renderCharHitPoints();
 
-      expect(screen.getByTestId('death-saving-throws')).toBeInTheDocument();
+      expect(screen.getByText(/Death Saving Throws/)).toBeInTheDocument();
     });
 
     it('does not render DeathSavingThrows when current HP is above 0', () => {
@@ -280,12 +290,12 @@ describe('CharHitPoints', () => {
 
       renderCharHitPoints();
 
-      expect(screen.queryByTestId('death-saving-throws')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Death Saving Throws/)).not.toBeInTheDocument();
     });
   });
 
   describe('death-save-result event', () => {
-    it('updates current HP when event target matches character name', async () => {
+    it('updates current HP when event target matches character name', () => {
       renderCharHitPoints();
 
       const event = new CustomEvent('death-save-result', {
@@ -293,14 +303,12 @@ describe('CharHitPoints', () => {
       });
       window.dispatchEvent(event);
 
-      await waitFor(() => {
-        expect(setRuntimeValue).toHaveBeenLastCalledWith(
-          'TestCharacter',
-          'currentHitPoints',
-          8,
-          'test-campaign'
-        );
-      });
+      expect(setRuntimeValue).toHaveBeenLastCalledWith(
+        'TestCharacter',
+        'currentHitPoints',
+        8,
+        'test-campaign'
+      );
     });
 
     it.each([

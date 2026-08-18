@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -64,34 +64,41 @@ const renderPopup = (
     />
   );
 
-describe('SpellDetailPopup - handleCast: Concentration management', () => {
+describe('SpellDetailPopup - handleCast: Concentration spell casting', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
   });
 
-  it('calls onCast with the concentration spell name and baseLevel:undefined', () => {
+  it('calls onCast with the concentration spell when the player can cast', () => {
     const onCast = vi.fn();
 
     renderPopup(concentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
-    fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+    const castButton = screen.getByRole('button', { name: /Cast Spell/ });
+    expect(castButton).not.toBeDisabled();
+
+    fireEvent.click(castButton);
 
     expect(onCast).toHaveBeenCalledTimes(1);
     const passedSpell = onCast.mock.calls[0][0];
     expect(passedSpell.name).toBe('Bane');
+    expect(passedSpell.level).toBe(1);
     expect(passedSpell.baseLevel).toBe(undefined);
+    expect(passedSpell.isUpcast).toBe(undefined);
   });
 
-  it('does not call onCast when player is raging', () => {
+  it('disables the cast button when the player is raging', () => {
     const onCast = vi.fn();
     vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
 
     renderPopup(concentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
-    fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+    const castButton = screen.getByRole('button', { name: /Cast Spell/ });
+    expect(castButton).toBeDisabled();
+
+    fireEvent.click(castButton);
 
     expect(onCast).not.toHaveBeenCalled();
   });

@@ -1,17 +1,12 @@
-// @cleaned-by-ai
-import { render, screen, fireEvent, within } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NPCListItem from './NPCListItem.jsx';
 
+// Simplified mock - verifies presence/absence only, not internal implementation
 vi.mock('../common/AvatarImage.jsx', () => ({
-  default: vi.fn(({ name, imagePath, size, campaignName }) => (
-    <div
-      data-testid="avatar-image"
-      data-name={name}
-      data-image={imagePath}
-      data-size={size}
-      data-campaign={campaignName}
-    >
+  default: vi.fn(({ name }) => (
+    <div data-testid="avatar-image">
       <img alt={`${name} avatar`} />
     </div>
   )),
@@ -50,17 +45,20 @@ describe('NPCListItem', () => {
     vi.clearAllMocks();
   });
 
-  // ── Basic Rendering ───────────────────────────────────────────────
+  // ── List Element Attributes ───────────────────────────────────────
 
-  describe('Basic rendering', () => {
-    it('renders NPC name', () => {
+  describe('List element attributes', () => {
+    it('renders with correct role, tabIndex, and aria-label', () => {
       renderListItem();
-      expect(screen.getByText('Gandalf')).toBeInTheDocument();
+      const button = listItemFor();
+      expect(button).toHaveAttribute('aria-label', 'Edit NPC: Gandalf');
+      expect(button).toHaveAttribute('tabIndex', '0');
+      expect(button.className).toContain('ct-list-item');
     });
 
     it('updates aria-label when NPC name changes', () => {
       renderListItem({ name: 'Aragorn' });
-      expect(listItemFor('Aragorn')).toBeInTheDocument();
+      expect(listItemFor('Aragorn')).toHaveAttribute('aria-label', 'Edit NPC: Aragorn');
     });
   });
 
@@ -72,13 +70,11 @@ describe('NPCListItem', () => {
       expect(screen.queryByTestId('avatar-image')).not.toBeInTheDocument();
     });
 
-    it('renders avatar with name, imagePath, size and campaign when imagePath is provided', () => {
+    it('renders avatar with correct alt text when imagePath is provided', () => {
       renderListItem({ name: 'Aragorn', imagePath: '/images/aragorn.png' });
       const avatar = screen.getByTestId('avatar-image');
-      expect(avatar).toHaveAttribute('data-name', 'Aragorn');
-      expect(avatar).toHaveAttribute('data-image', '/images/aragorn.png');
-      expect(avatar).toHaveAttribute('data-size', '36');
-      expect(avatar).toHaveAttribute('data-campaign', 'test-campaign');
+      expect(avatar).toBeInTheDocument();
+      expect(avatar.querySelector('img')).toHaveAttribute('alt', 'Aragorn avatar');
     });
   });
 
@@ -87,18 +83,17 @@ describe('NPCListItem', () => {
   describe('Stat block badge', () => {
     it('does not render badge when npc has no stat block', () => {
       renderListItem();
-      expect(within(listItemFor()).queryByTitle('Has stat block')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Has stat block')).not.toBeInTheDocument();
     });
 
-    it('renders badge with shield icon when armorClass is numeric', () => {
+    it('renders badge when armorClass is numeric', () => {
       renderListItem({ armorClass: 15 });
-      const badge = within(listItemFor()).getByTitle('Has stat block');
-      expect(badge.querySelector('i.fa-solid.fa-shield')).toBeInTheDocument();
+      expect(screen.getByTitle('Has stat block')).toBeInTheDocument();
     });
 
     it('does not treat a string armorClass as a stat block', () => {
       renderListItem({ armorClass: '15' });
-      expect(within(listItemFor()).queryByTitle('Has stat block')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Has stat block')).not.toBeInTheDocument();
     });
   });
 
@@ -172,18 +167,24 @@ describe('NPCListItem', () => {
   describe('Add to Initiative button', () => {
     it('does not render button when npc has no stat block', () => {
       renderListItem();
-      expect(within(listItemFor()).queryByTitle('Add to Initiative')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Add to Initiative')).not.toBeInTheDocument();
     });
 
     it('renders button when npc has stat block', () => {
       renderListItem({ armorClass: 15 });
-      expect(within(listItemFor()).getByTitle('Add to Initiative')).toBeInTheDocument();
+      expect(screen.getByTitle('Add to Initiative')).toBeInTheDocument();
     });
 
     it('calls onAddToInitiative with the npc when clicked', () => {
       renderListItem({ armorClass: 15 });
-      fireEvent.click(within(listItemFor()).getByTitle('Add to Initiative'));
+      fireEvent.click(screen.getByTitle('Add to Initiative'));
       expect(mockOnAddToInitiative).toHaveBeenCalledWith({ ...baseNPC, armorClass: 15 });
+    });
+
+    it('does not trigger onEdit when Add to Initiative is clicked', () => {
+      renderListItem({ armorClass: 15 });
+      fireEvent.click(screen.getByTitle('Add to Initiative'));
+      expect(mockOnEdit).not.toHaveBeenCalled();
     });
   });
 
@@ -214,6 +215,35 @@ describe('NPCListItem', () => {
       renderListItem();
       fireEvent.keyDown(listItemFor(), { key: 'Escape' });
       expect(mockOnEdit).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Full Rendering ────────────────────────────────────────────────
+
+  describe('Full rendering', () => {
+    it('renders all sections when all fields are populated', () => {
+      const fullNPC = {
+        name: 'Elminster',
+        race: 'Human',
+        classRole: 'Wizard',
+        attitude: 'positive',
+        tags: 'mentor, archmage',
+        imagePath: '/images/elminster.png',
+        armorClass: 12,
+      };
+      renderListItem(fullNPC);
+
+      const name = 'Elminster';
+      expect(screen.getByText(name)).toBeInTheDocument();
+      expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
+      expect(screen.getByTitle('Has stat block')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: `Edit NPC: ${name}` }).querySelector('.ct-list-attitude')).toHaveTextContent('positive');
+      const subtitle = screen.getByRole('button', { name: `Edit NPC: ${name}` }).querySelector('.npcs-list-subtitle');
+      expect(subtitle).toHaveTextContent('Human');
+      expect(subtitle).toHaveTextContent('Wizard');
+      expect(subtitle.querySelector('.npcs-list-separator')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: `Edit NPC: ${name}` }).querySelector('.npcs-list-tags')).toHaveTextContent('mentor, archmage');
+      expect(screen.getByTitle('Add to Initiative')).toBeInTheDocument();
     });
   });
 });

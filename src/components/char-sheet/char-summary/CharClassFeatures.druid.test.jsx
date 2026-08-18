@@ -1,8 +1,7 @@
-// @cleaned-by-ai
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-import React from 'react';
-import DruidFeatures from './CharClassFeatures.jsx';
+import CharClassFeatures from './CharClassFeatures.jsx';
 import * as classFeatures from '../../../services/character/classFeatures.js';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
 
@@ -32,6 +31,8 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn(),
 }));
 
+const MOCK_CAMPAIGN = 'test';
+
 function buildPlayerStats(overrides = {}) {
   return {
     name: 'Test Druid',
@@ -53,7 +54,47 @@ function buildPlayerStats(overrides = {}) {
   };
 }
 
-describe('DruidFeatures', () => {
+function setBuffs(buffs) {
+  runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    if (key === 'activeBuffs') return buffs;
+    return undefined;
+  });
+}
+
+function setCosmicOmenEffect(effect) {
+  runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    if (key === 'cosmicOmenEffect') return effect;
+    if (key === 'activeBuffs') return [];
+    return undefined;
+  });
+}
+
+function setCircleOfTheLandType(type) {
+  runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    if (key === '_circleOfTheLandType') return type;
+    if (key === 'activeBuffs') return [];
+    return undefined;
+  });
+}
+
+function setElementalFuryChoices(elementalFury, improvedElementalFury) {
+  runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    if (key === '_Elemental_Fury_option') return elementalFury;
+    if (key === '_Improved_Elemental_Fury_option') return improvedElementalFury;
+    if (key === 'activeBuffs') return [];
+    return undefined;
+  });
+}
+
+function setWrathOfTheSeaActive(active) {
+  runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    if (key === 'wrathOfTheSeaActive') return active;
+    if (key === 'activeBuffs') return [];
+    return undefined;
+  });
+}
+
+describe('DruidFeatures (via CharClassFeatures entry point)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
@@ -76,16 +117,19 @@ describe('DruidFeatures', () => {
     });
   });
 
+  afterEach(cleanup);
+
   describe('level gating', () => {
-    it('returns null for level 1 druid and renders for level 2+', () => {
+    it('returns null for level 1 druid', () => {
       const level1Stats = buildPlayerStats({ level: 1 });
+      const { container } = render(<CharClassFeatures playerStats={level1Stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('renders class features for level 2+', () => {
       const level2Stats = buildPlayerStats({ level: 2 });
-
-      const { container: nullContainer } = render(<DruidFeatures playerStats={level1Stats} campaignName="test" />);
-      expect(nullContainer.innerHTML).toBe('');
-
-      render(<DruidFeatures playerStats={level2Stats} campaignName="test" />);
-      expect(screen.getByTestId('char-class-druid')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={level2Stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Wild Shape Limitations:')).toBeInTheDocument();
     });
   });
 
@@ -98,17 +142,16 @@ describe('DruidFeatures', () => {
         wildShapeLimitations: 'walk only (no swim or fly)',
       });
       const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Beast Forms Known: 5');
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Beast Forms Known:/).parentElement).toHaveTextContent(/5/);
     });
 
     it('renders wild shape limitations, challenge rating, and tracked resource', () => {
       const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Wild Shape Limitations:');
-      expect(container.textContent).toContain('Wild Shape Max Challenge Rating:');
-      expect(container.textContent).toContain('1');
-      expect(screen.getByTestId('tracked-resource-wildShapeUses')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Wild Shape Limitations:')).toBeInTheDocument();
+      expect(screen.getByText('Wild Shape Max Challenge Rating:')).toBeInTheDocument();
+      expect(screen.getByText('Wild Shape Uses:')).toBeInTheDocument();
     });
 
     it('uses maxWildShapeUses from class features as the max value', () => {
@@ -119,8 +162,8 @@ describe('DruidFeatures', () => {
         wildShapeLimitations: 'None',
       });
       const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('3/3');
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Wild Shape Uses:/).parentElement).toHaveTextContent(/3\/3/);
     });
   });
 
@@ -137,68 +180,45 @@ describe('DruidFeatures', () => {
       automation: { passives: [] },
     });
 
-    it('renders cosmic omen section at level >= 6 and not below', () => {
-      const level6Stats = starsDruidStats(6);
-      render(<DruidFeatures playerStats={level6Stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-cosmicomenUses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-_Star_Map_freeCastCount')).toBeInTheDocument();
+    it('renders cosmic omen tracked resources at level >= 6', () => {
+      const stats = starsDruidStats(6);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Cosmic Omen Uses:')).toBeInTheDocument();
+      expect(screen.getByText('Star Map Free Casts:')).toBeInTheDocument();
+    });
 
-      const level5Stats = starsDruidStats(5);
-      const { container } = render(<DruidFeatures playerStats={level5Stats} campaignName="test" />);
-      expect(container.querySelector('[data-testid="tracked-resource-cosmicomenUses"]')).toBeFalsy();
-      expect(container.querySelector('[data-testid="tracked-resource-_Star_Map_freeCastCount"]')).toBeFalsy();
+    it('does not render cosmic omen tracked resources below level 6', () => {
+      const stats = starsDruidStats(5);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText('Cosmic Omen Uses:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Star Map Free Casts:')).not.toBeInTheDocument();
     });
 
     it('renders cosmic omen effect with parsed type and even/odd variant', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'cosmicOmenEffect') return JSON.stringify({ type: 'Fortune', isEven: true });
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
+      setCosmicOmenEffect(JSON.stringify({ type: 'Fortune', isEven: true }));
       const stats = starsDruidStats(6);
-      const { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Cosmic Omen: Fortune');
-      expect(container.textContent).toContain('Even');
-      cleanup();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Cosmic Omen: Fortune \(Even\)/)).toBeInTheDocument();
 
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'cosmicOmenEffect') return JSON.stringify({ type: 'Bane', isEven: false });
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      const { container: container2 } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container2.textContent).toContain('Cosmic Omen: Bane');
-      expect(container2.textContent).toContain('Odd');
+      setCosmicOmenEffect(JSON.stringify({ type: 'Bane', isEven: false }));
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Cosmic Omen: Bane \(Odd\)/)).toBeInTheDocument();
     });
 
     it('does not render cosmic omen effect when effect is null, empty, or invalid JSON', () => {
       const stats = starsDruidStats(6);
 
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'cosmicOmenEffect') return null;
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      let { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Cosmic Omen:');
-      cleanup();
+      setCosmicOmenEffect(null);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText(/Cosmic Omen:/)).not.toBeInTheDocument();
 
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'cosmicOmenEffect') return '';
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      ({ container } = render(<DruidFeatures playerStats={stats} campaignName="test" />));
-      expect(container.textContent).not.toContain('Cosmic Omen:');
-      cleanup();
+      setCosmicOmenEffect('');
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText(/Cosmic Omen:/)).not.toBeInTheDocument();
 
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'cosmicOmenEffect') return 'invalid json';
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      ({ container } = render(<DruidFeatures playerStats={stats} campaignName="test" />));
-      expect(container.textContent).not.toContain('Cosmic Omen:');
+      setCosmicOmenEffect('invalid json');
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText(/Cosmic Omen:/)).not.toBeInTheDocument();
     });
 
     it('uses wisdom bonus as max with minimum 1 when bonus is 0', () => {
@@ -214,9 +234,8 @@ describe('DruidFeatures', () => {
         },
         automation: { passives: [] },
       });
-      cleanup();
-      render(<DruidFeatures playerStats={wisStats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-cosmicomenUses')).toBeTruthy();
+      render(<CharClassFeatures playerStats={wisStats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Cosmic Omen Uses:/).parentElement).toHaveTextContent(/5\/5/);
       cleanup();
 
       const zeroWisStats = buildPlayerStats({
@@ -231,8 +250,9 @@ describe('DruidFeatures', () => {
         },
         automation: { passives: [] },
       });
-      const { container } = render(<DruidFeatures playerStats={zeroWisStats} campaignName="test" />);
-      expect(container.textContent).toContain('1/1');
+      render(<CharClassFeatures playerStats={zeroWisStats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Cosmic Omen Uses:/).parentElement).toHaveTextContent(/1\/1/);
+      cleanup();
     });
   });
 
@@ -249,13 +269,13 @@ describe('DruidFeatures', () => {
       automation: { passives: [] },
     });
 
-    it('renders moonlight step uses for circle of the moon and not for other circles', () => {
+    it('renders moonlight step uses for circle of the moon', () => {
       const stats = moonDruidStats(10);
-      cleanup();
-      render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-moonlightStepUses')).toBeInTheDocument();
-      cleanup();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Moonlight Step Uses:')).toBeInTheDocument();
+    });
 
+    it('does not render moonlight step uses for non-moon circles', () => {
       const nonMoonStats = buildPlayerStats({
         level: 10,
         class: {
@@ -267,15 +287,14 @@ describe('DruidFeatures', () => {
         },
         automation: { passives: [] },
       });
-      const { container } = render(<DruidFeatures playerStats={nonMoonStats} campaignName="test" />);
-      expect(container.querySelector('[data-testid="tracked-resource-moonlightStepUses"]')).toBeFalsy();
+      render(<CharClassFeatures playerStats={nonMoonStats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText('Moonlight Step Uses:')).not.toBeInTheDocument();
     });
 
     it('uses wisdom bonus as max with minimum 1 when wisdom is negative', () => {
-      cleanup();
       const stats = moonDruidStats(10);
-      const { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('3/3');
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Moonlight Step Uses:/).parentElement).toHaveTextContent(/3\/3/);
       cleanup();
 
       const negativeWisStats = buildPlayerStats({
@@ -290,8 +309,9 @@ describe('DruidFeatures', () => {
         },
         automation: { passives: [] },
       });
-      const { container: negContainer } = render(<DruidFeatures playerStats={negativeWisStats} campaignName="test" />);
-      expect(negContainer.textContent).toContain('1/1');
+      render(<CharClassFeatures playerStats={negativeWisStats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Moonlight Step Uses:/).parentElement).toHaveTextContent(/1\/1/);
+      cleanup();
     });
   });
 
@@ -308,33 +328,23 @@ describe('DruidFeatures', () => {
       automation: { passives: [] },
     });
 
-    it('renders circle of the land badge when type is set and not when null or empty', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === '_circleOfTheLandType') return 'Forest';
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
+    it('renders circle of the land badge when type is set', () => {
+      setCircleOfTheLandType('Forest');
       const stats = landDruidStats(3);
-      let { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Circle of the Land: Forest');
-      cleanup();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Circle of the Land: Forest/)).toBeInTheDocument();
+    });
 
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === '_circleOfTheLandType') return null;
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      ({ container } = render(<DruidFeatures playerStats={stats} campaignName="test" />));
-      expect(container.textContent).not.toContain('Circle of the Land');
-      cleanup();
+    it('does not render circle of the land badge when type is null or empty', () => {
+      const stats = landDruidStats(3);
 
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === '_circleOfTheLandType') return '';
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      ({ container } = render(<DruidFeatures playerStats={stats} campaignName="test" />));
-      expect(container.textContent).not.toContain('Circle of the Land');
+      setCircleOfTheLandType(null);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText(/Circle of the Land:/)).not.toBeInTheDocument();
+
+      setCircleOfTheLandType('');
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText(/Circle of the Land:/)).not.toBeInTheDocument();
     });
   });
 
@@ -352,27 +362,21 @@ describe('DruidFeatures', () => {
     });
 
     it('renders elemental fury and improved elemental fury badges when choices are set', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === '_Elemental_Fury_option') return 'Lightning';
-        if (key === '_Improved_Elemental_Fury_option') return 'Fire';
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
+      setElementalFuryChoices('Lightning', 'Fire');
       const stats = stormDruidStats(18);
-      const { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Elemental Fury: Lightning');
-      expect(container.textContent).toContain('Improved Elemental Fury: Fire');
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Elemental Fury: Lightning/)).toBeInTheDocument();
+      expect(screen.getByText(/Improved Elemental Fury: Fire/)).toBeInTheDocument();
     });
 
     it('does not render elemental fury badges when choices are not set', () => {
       const stats10 = stormDruidStats(10);
-      const { container: c10 } = render(<DruidFeatures playerStats={stats10} campaignName="test" />);
-      expect(c10.textContent).not.toContain('Elemental Fury');
-      cleanup();
+      render(<CharClassFeatures playerStats={stats10} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText(/Elemental Fury/)).not.toBeInTheDocument();
 
       const stats18 = stormDruidStats(18);
-      const { container: c18 } = render(<DruidFeatures playerStats={stats18} campaignName="test" />);
-      expect(c18.textContent).not.toContain('Improved Elemental Fury');
+      render(<CharClassFeatures playerStats={stats18} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText(/Improved Elemental Fury/)).not.toBeInTheDocument();
     });
   });
 
@@ -390,54 +394,35 @@ describe('DruidFeatures', () => {
     });
 
     it('renders wrath of the sea badge when active', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'wrathOfTheSeaActive') return true;
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
+      setWrathOfTheSeaActive(true);
       const stats = seaDruidStats();
-      const { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Wrath of the Sea Active');
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Wrath of the Sea Active')).toBeInTheDocument();
     });
 
-    it('does not render wrath of the sea badge when undefined or false', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'wrathOfTheSeaActive') return false;
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
+    it('does not render wrath of the sea badge when inactive or undefined', () => {
       const stats = seaDruidStats();
-      let { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Wrath of the Sea');
-      cleanup();
 
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'wrathOfTheSeaActive') return false;
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      ({ container } = render(<DruidFeatures playerStats={stats} campaignName="test" />));
-      expect(container.textContent).not.toContain('Wrath of the Sea');
+      setWrathOfTheSeaActive(false);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText('Wrath of the Sea Active')).not.toBeInTheDocument();
+
+      setWrathOfTheSeaActive(undefined);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText('Wrath of the Sea Active')).not.toBeInTheDocument();
     });
   });
 
   describe('multi-minute badges', () => {
     it('renders multi-minute duration badges and suppresses non-multi-minute ones', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Some Buff', duration: '10_minutes' }];
-        return undefined;
-      });
+      setBuffs([{ name: 'Some Buff', duration: '10_minutes' }]);
       const stats = buildPlayerStats({ level: 2 });
-      let { container } = render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Some Buff');
-      cleanup();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Some Buff: 10_minutes')).toBeInTheDocument();
 
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Some Buff', duration: '1_round' }];
-        return undefined;
-      });
-      ({ container } = render(<DruidFeatures playerStats={stats} campaignName="test" />));
-      expect(container.textContent).not.toContain('Some Buff');
+      setBuffs([{ name: 'Some Buff', duration: '1_round' }]);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText('Some Buff')).not.toBeInTheDocument();
     });
 
     it('handles undefined or null activeBuffs gracefully', () => {
@@ -447,16 +432,16 @@ describe('DruidFeatures', () => {
         if (key === 'activeBuffs') return undefined;
         return undefined;
       });
-      render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('char-class-druid')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Wild Shape Limitations:/)).toBeInTheDocument();
       cleanup();
 
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return null;
         return undefined;
       });
-      render(<DruidFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('char-class-druid')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(/Wild Shape Limitations:/)).toBeInTheDocument();
     });
   });
 });

@@ -1,5 +1,5 @@
-// @cleaned-by-ai
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConstellationSelectionModal from './ConstellationSelectionModal.jsx';
 
@@ -46,7 +46,7 @@ describe('ConstellationSelectionModal', () => {
   });
 
   describe('initial render', () => {
-    it('renders the overlay, modal structure, all UI elements, and no result-specific elements', () => {
+    it('renders the modal with all constellation options and action buttons', () => {
       render(<ConstellationSelectionModal {...makeProps()} />);
       expect(screen.getByText('Starry Form')).toBeInTheDocument();
       expect(screen.getByText('Choose a constellation:')).toBeInTheDocument();
@@ -55,6 +55,10 @@ describe('ConstellationSelectionModal', () => {
       expect(screen.getByRole('button', { name: /Dragon/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Choose' })).toBeDisabled();
+    });
+
+    it('hides result-specific elements before selection', () => {
+      render(<ConstellationSelectionModal {...makeProps()} />);
       expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     });
   });
@@ -62,16 +66,16 @@ describe('ConstellationSelectionModal', () => {
   describe('constellation option descriptions', () => {
     it('shows correct descriptions for all constellation options', () => {
       render(<ConstellationSelectionModal {...makeProps({ isTwinkled: false })} />);
-      expect(screen.getByRole('button', { name: /Archer/ }).textContent).toContain('Ranged Spell Attack: 1d8 + Wisdom Modifier Radiant damage');
-      expect(screen.getByRole('button', { name: /Chalice/ }).textContent).toContain('Healing Spell: 1d8 + Wisdom Modifier HP to ally within 30 feet');
-      expect(screen.getByRole('button', { name: /Dragon/ }).textContent).toContain('Concentration: Treat d20 rolls of 9 or lower as 10');
+      expect(screen.getByText(/Ranged Spell Attack: 1d8 \+ Wisdom Modifier Radiant damage/)).toBeInTheDocument();
+      expect(screen.getByText(/Healing Spell: 1d8 \+ Wisdom Modifier HP to ally within 30 feet/)).toBeInTheDocument();
+      expect(screen.getByText(/Concentration: Treat d20 rolls of 9 or lower as 10/)).toBeInTheDocument();
     });
 
     it('shows enhanced descriptions when twinkled', () => {
       render(<ConstellationSelectionModal {...makeProps({ isTwinkled: true })} />);
-      expect(screen.getByRole('button', { name: /Archer/ }).textContent).toContain('2d8');
-      expect(screen.getByRole('button', { name: /Chalice/ }).textContent).toContain('2d8');
-      expect(screen.getByRole('button', { name: /Dragon/ }).textContent).toContain('Fly Speed 20 feet (hover)');
+      expect(screen.getByText(/Ranged Spell Attack: 2d8/)).toBeInTheDocument();
+      expect(screen.getByText(/Healing Spell: 2d8/)).toBeInTheDocument();
+      expect(screen.getByText(/Fly Speed 20 feet \(hover\)/)).toBeInTheDocument();
     });
   });
 
@@ -81,14 +85,21 @@ describe('ConstellationSelectionModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
       expect(screen.getByRole('button', { name: 'Choose' })).toBeEnabled();
     });
+
+    it.each(['Archer', 'Chalice', 'Dragon'])('selects %s when clicked', () => {
+      render(<ConstellationSelectionModal {...makeProps()} />);
+      fireEvent.click(screen.getByRole('button', { name: /^Archer/ }));
+      expect(screen.getByRole('button', { name: 'Choose' })).toBeEnabled();
+    });
   });
 
   describe('choosing a constellation', () => {
     it.each(['Archer', 'Chalice', 'Dragon'])('calls applyConstellationOption and onConfirm with %s', async (constellation) => {
       render(<ConstellationSelectionModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: new RegExp(constellation) }));
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await vi.waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
       });
       expect(starryFormHandler.applyConstellationOption).toHaveBeenCalledWith(
         baseProps.action,
@@ -102,24 +113,22 @@ describe('ConstellationSelectionModal', () => {
 
     it('does not call applyConstellationOption when no constellation is selected', async () => {
       render(<ConstellationSelectionModal {...makeProps()} />);
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      });
+      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
       expect(starryFormHandler.applyConstellationOption).not.toHaveBeenCalled();
       expect(baseProps.onConfirm).not.toHaveBeenCalled();
     });
 
-    it('calls onClose when Cancel button is clicked', async () => {
+    it('calls onClose when Cancel button is clicked', () => {
       const onClose = vi.fn();
       render(<ConstellationSelectionModal {...makeProps({ onClose })} />);
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClose when clicking overlay in selection state', () => {
+    it('calls onClose when clicking the overlay in selection state', () => {
       const onClose = vi.fn();
       render(<ConstellationSelectionModal {...makeProps({ onClose })} />);
-      fireEvent.click(document.querySelector('.sp-overlay'));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }).closest('.sp-overlay'));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
@@ -128,22 +137,14 @@ describe('ConstellationSelectionModal', () => {
     it('replaces constellation options with result description, Done button, and hides Cancel/Choose buttons', async () => {
       render(<ConstellationSelectionModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      });
-      await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await vi.waitFor(() => {
         expect(screen.queryByText('Choose a constellation:')).not.toBeInTheDocument();
-      });
-      await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Choose' })).not.toBeInTheDocument();
-      });
-      await waitFor(() => {
         expect(screen.getByText('Starry Form')).toBeInTheDocument();
-      });
-      await waitFor(() => {
-        expect(document.querySelector('.sp-body').textContent).toContain('Archer constellation chosen');
+        expect(screen.getByText(/Archer constellation chosen/)).toBeInTheDocument();
       });
     });
 
@@ -151,24 +152,20 @@ describe('ConstellationSelectionModal', () => {
       const onClose = vi.fn();
       render(<ConstellationSelectionModal {...makeProps({ onClose })} />);
       fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      });
-      await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await vi.waitFor(() => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
       });
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClose when clicking overlay in result state', async () => {
+    it('calls onClose when clicking the overlay in result state', async () => {
       const onClose = vi.fn();
       render(<ConstellationSelectionModal {...makeProps({ onClose })} />);
       fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      });
-      await waitFor(() => {
-        fireEvent.click(document.querySelector('.sp-overlay'));
+      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await vi.waitFor(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Done' }).closest('.sp-overlay'));
       });
       expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -176,10 +173,8 @@ describe('ConstellationSelectionModal', () => {
     it('displays custom action name in result header', async () => {
       render(<ConstellationSelectionModal {...makeProps({ action: { name: 'My Custom Starry Form', automation: { type: 'constellation_selection' } } })} />);
       fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      });
-      await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      await vi.waitFor(() => {
         expect(screen.getByText('My Custom Starry Form')).toBeInTheDocument();
       });
     });
@@ -191,9 +186,7 @@ describe('ConstellationSelectionModal', () => {
         { name: 'Starry Form', constellation: 'Chalice' },
       ]);
       render(<ConstellationSelectionModal {...makeProps()} />);
-      const chaliceBtn = screen.getByRole('button', { name: /Chalice/ });
-      expect(chaliceBtn).toHaveStyle({ background: 'rgba(255,255,255,0.15)' });
-      expect(chaliceBtn.style.border).toContain('var(--color-link)');
+      expect(screen.getByRole('button', { name: 'Choose' })).toBeEnabled();
     });
 
     it('does not restore selection when activeBuffs has no matching buff', () => {

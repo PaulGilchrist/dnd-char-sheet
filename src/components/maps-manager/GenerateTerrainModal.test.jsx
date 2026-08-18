@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import GenerateTerrainModal from './GenerateTerrainModal.jsx';
@@ -16,11 +16,10 @@ const { mapsServiceMocks } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../services/maps/hexTerrainGenerator.js', () => terrainMocks);
-
 vi.mock('../../services/maps/mapsService.js', () => mapsServiceMocks);
 
 // ---------------------------------------------------------------------------
-// Interaction helpers (kept next to the suite that uses them)
+// Interaction helpers
 // ---------------------------------------------------------------------------
 const typeMapName = (name) =>
   fireEvent.change(screen.getByPlaceholderText('e.g. The Wild Frontier'), {
@@ -36,11 +35,14 @@ const setSeed = (value) =>
 const clickGenerate = () =>
   fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
 
-const deferred = () => {
-  let resolve;
-  const promise = new Promise((r) => { resolve = r; });
-  return { promise, resolve };
-};
+const clickCancel = () =>
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+// Robust overlay finder: starts from a known element inside the modal and
+// walks up to the overlay ancestor, avoiding raw document.querySelector.
+const findOverlay = () =>
+  screen.getByRole('heading', { name: 'Generate Terrain Map' })
+    .closest('.maps-manager-modal-overlay');
 
 describe('GenerateTerrainModal', () => {
   let props;
@@ -59,7 +61,7 @@ describe('GenerateTerrainModal', () => {
   // Rendering
   // -------------------------------------------------------------------------
   describe('rendering', () => {
-    it('renders the modal with title, inputs, and helper text', () => {
+    it('renders the modal with title, inputs, grid size, hex count hint, and helper text', () => {
       render(<GenerateTerrainModal {...props} />);
       expect(screen.getByText('Generate Terrain Map')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('e.g. The Wild Frontier')).toBeInTheDocument();
@@ -82,50 +84,34 @@ describe('GenerateTerrainModal', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Generate button state
+  // Generate button disabled state
   // -------------------------------------------------------------------------
   describe('generate button state', () => {
     it('is disabled when the map name is empty', () => {
       render(<GenerateTerrainModal {...props} />);
       expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // During generation
-  // -------------------------------------------------------------------------
-  describe('during generation', () => {
-    it('disables both buttons and shows Generating text while the map is being created', async () => {
-      const pending = deferred();
-      mapsServiceMocks.createMap.mockImplementationOnce(() => pending.promise);
+    it('is enabled when the map name has content', () => {
       render(<GenerateTerrainModal {...props} />);
       typeMapName('Test');
-      clickGenerate();
-
-      const generateButton = await screen.findByRole('button', { name: 'Generating...' });
-      expect(generateButton).toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-
-      pending.resolve({});
-      await waitFor(() => {
-        expect(props.onClose).toHaveBeenCalled();
-      });
+      expect(screen.getByRole('button', { name: 'Generate' })).toBeEnabled();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Cancel
+  // Cancel behavior
   // -------------------------------------------------------------------------
   describe('cancel', () => {
     it('calls onClose when Cancel is clicked', () => {
       render(<GenerateTerrainModal {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      clickCancel();
       expect(props.onClose).toHaveBeenCalled();
     });
 
-    it('calls onClose when the overlay is clicked', () => {
+    it('calls onClose when the overlay background is clicked', () => {
       render(<GenerateTerrainModal {...props} />);
-      fireEvent.click(document.querySelector('.maps-manager-modal-overlay'));
+      fireEvent.click(findOverlay());
       expect(props.onClose).toHaveBeenCalled();
     });
 
@@ -133,6 +119,12 @@ describe('GenerateTerrainModal', () => {
       render(<GenerateTerrainModal {...props} />);
       fireEvent.click(screen.getByText('Generate Terrain Map'));
       expect(props.onClose).not.toHaveBeenCalled();
+    });
+
+    it('does not call onMapCreated when cancelled', () => {
+      render(<GenerateTerrainModal {...props} />);
+      clickCancel();
+      expect(props.onMapCreated).not.toHaveBeenCalled();
     });
   });
 
@@ -145,7 +137,7 @@ describe('GenerateTerrainModal', () => {
       ['uses the typed value when within range', '50', 50],
       ['clamps to the minimum of 30 when below range', '10', 30],
       ['clamps to the maximum of 100 when above range', '150', 100],
-    ])('%s', async (_label, typedValue, expectedGridSize) => {
+    ])('grid size %s', async (_label, typedValue, expectedGridSize) => {
       render(<GenerateTerrainModal {...props} />);
       typeMapName('Test');
       if (typedValue !== null) setGridSize(typedValue);
@@ -175,13 +167,15 @@ describe('GenerateTerrainModal', () => {
       ['passes the typed seed as an integer', '42', 42],
       ['passes undefined when the seed is left empty', '', undefined],
       ['passes undefined when the seed is zero', '0', undefined],
-    ])('%s', (_label, typedSeed, expectedSeed) => {
+    ])('seed %s', async (_label, typedSeed, expectedSeed) => {
       render(<GenerateTerrainModal {...props} />);
       typeMapName('Test');
       setSeed(typedSeed);
       clickGenerate();
-      const callArgs = terrainMocks.generateHexTerrain.mock.calls[0][0];
-      expect(callArgs.seed).toBe(expectedSeed);
+      await waitFor(() => {
+        const callArgs = terrainMocks.generateHexTerrain.mock.calls[0][0];
+        expect(callArgs.seed).toBe(expectedSeed);
+      });
     });
   });
 
@@ -189,7 +183,7 @@ describe('GenerateTerrainModal', () => {
   // Generation flow
   // -------------------------------------------------------------------------
   describe('generation flow', () => {
-    it('creates the map with the typed name and outdoor defaults, then notifies and closes', async () => {
+    it('creates the map with outdoor defaults then notifies and closes', async () => {
       render(<GenerateTerrainModal {...props} />);
       typeMapName('Test Terrain');
       clickGenerate();
@@ -216,6 +210,37 @@ describe('GenerateTerrainModal', () => {
           'Trimmed',
           expect.any(Object),
         );
+      });
+    });
+
+    it('does not allow generation when the map name is only whitespace', () => {
+      render(<GenerateTerrainModal {...props} />);
+      typeMapName('   ');
+      expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
+      expect(mapsServiceMocks.createMap).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // During generation
+  // -------------------------------------------------------------------------
+  describe('during generation', () => {
+    it('disables both buttons and shows Generating text while the map is being created', async () => {
+      const pending = new Promise((resolve) => {
+        terrainMocks.createMapPendingResolve = resolve;
+      });
+      mapsServiceMocks.createMap.mockImplementationOnce(() => pending);
+      render(<GenerateTerrainModal {...props} />);
+      typeMapName('Test');
+      clickGenerate();
+
+      const generateButton = await screen.findByRole('button', { name: 'Generating...' });
+      expect(generateButton).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+
+      terrainMocks.createMapPendingResolve({});
+      await waitFor(() => {
+        expect(props.onClose).toHaveBeenCalled();
       });
     });
   });
@@ -263,7 +288,7 @@ describe('GenerateTerrainModal', () => {
       expect(props.onClose).not.toHaveBeenCalled();
     });
 
-    it('allows a successful retry after an error', async () => {
+    it('allows a successful retry after a terrain generation error', async () => {
       terrainMocks.generateHexTerrain.mockImplementationOnce(() => { throw new Error('First fail'); });
       render(<GenerateTerrainModal {...props} />);
       typeMapName('Retry Test');
@@ -271,6 +296,23 @@ describe('GenerateTerrainModal', () => {
 
       await waitFor(() => {
         expect(screen.getByText('First fail')).toBeInTheDocument();
+      });
+
+      clickGenerate();
+      await waitFor(() => {
+        expect(props.onMapCreated).toHaveBeenCalledTimes(1);
+        expect(props.onClose).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('allows a successful retry after a createMap failure', async () => {
+      mapsServiceMocks.createMap.mockRejectedValueOnce(new Error('Save failed'));
+      render(<GenerateTerrainModal {...props} />);
+      typeMapName('Retry Test');
+      clickGenerate();
+
+      await waitFor(() => {
+        expect(screen.getByText('Save failed')).toBeInTheDocument();
       });
 
       clickGenerate();

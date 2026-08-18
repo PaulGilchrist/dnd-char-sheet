@@ -1,4 +1,5 @@
-// @cleaned-by-ai
+// @improved-by-ai
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -199,7 +200,8 @@ vi.mock('../common/Popup.jsx', () => ({
 }));
 
 const basePlayerStats = helpers.mockPlayerStats;
-const baseProps = { playerStats: basePlayerStats, campaignName: 'test' };
+const mockHandleTogglePreparedSpells = vi.fn();
+const baseProps = { playerStats: basePlayerStats, campaignName: 'test', handleTogglePreparedSpells: mockHandleTogglePreparedSpells };
 
 function renderWithProps(props) {
   return render(<CharSpells {...baseProps} {...props} />);
@@ -253,7 +255,7 @@ describe('CharSpells - Interactions', () => {
       expect(mockRollAttack).toHaveBeenCalledWith(
         'Spell Attack',
         5,
-        expect.objectContaining({ forcedMode: 'disadvantage' })
+        { forcedMode: 'disadvantage' }
       );
     });
 
@@ -265,7 +267,7 @@ describe('CharSpells - Interactions', () => {
       expect(mockRollAttack).toHaveBeenCalledWith(
         'Spell Attack',
         3,
-        expect.objectContaining({ forcedMode: 'disadvantage' })
+        { forcedMode: 'disadvantage' }
       );
     });
   });
@@ -277,6 +279,13 @@ describe('CharSpells - Interactions', () => {
       expect(shieldCell).toHaveClass('not-castable');
       fireEvent.click(shieldCell);
       expect(screen.queryByTestId('spell-detail-popup')).not.toBeInTheDocument();
+    });
+
+    it('opens spell detail popup when a castable spell is clicked', () => {
+      renderWithProps({ playerStats: helpers.mockPlayerStats2024Wizard });
+      const detectMagicCell = screen.getByText('Detect Magic');
+      fireEvent.click(detectMagicCell);
+      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
     });
 
     it('renders checkbox unchecked for spells with empty prepared string', () => {
@@ -296,7 +305,7 @@ describe('CharSpells - Interactions', () => {
           spells: [spell],
         },
       };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={stats} campaignName="test" handleTogglePreparedSpells={mockHandleTogglePreparedSpells} />);
       const checkbox = screen.getByRole('checkbox');
       expect(checkbox).not.toBeChecked();
     });

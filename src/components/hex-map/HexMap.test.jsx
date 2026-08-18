@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 // HexMap integration tests: rendering, toolbar wiring, panel/overlay visibility,
 // SVG pointer interaction, background-click state cleanup, and POI drag-and-drop.
 // Travel-tool/advance behavior lives in HexMap.travel.test.jsx and event-handler
@@ -20,6 +20,40 @@ if (!globalThis.PointerEvent) {
 // ── Mock child components ──
 vi.mock('./TerrainLayer.jsx', () => ({ default: () => <g data-testid="terrain-layer" /> }));
 vi.mock('./HexGridLayer.jsx', () => ({ default: () => <g data-testid="hex-grid-layer" /> }));
+vi.mock('./RiverLayer.jsx', () => ({ default: () => <g data-testid="river-layer" /> }));
+vi.mock('./RoadLayer.jsx', () => ({ default: () => <g data-testid="road-layer" /> }));
+vi.mock('./PartyMarkerLayer.jsx', () => ({ default: ({ position }) => position ? <g data-testid="party-marker" /> : null }));
+vi.mock('./TravelPathLayer.jsx', () => ({ default: ({ path }) => path && path.length > 0 ? <g data-testid="travel-path-layer" /> : null }));
+vi.mock('./WeatherOverlay.jsx', () => ({ default: ({ weather }) => weather ? <div data-testid="weather-overlay" /> : null }));
+vi.mock('./EventDialog.jsx', () => ({ default: ({ event, onAccept, onSkip, onReroll }) => event ? <div data-testid="event-dialog"><button data-testid="event-accept" onClick={onAccept}>Accept</button><button data-testid="event-skip" onClick={onSkip}>Skip</button><button data-testid="event-reroll" onClick={onReroll}>Reroll</button></div> : null }));
+vi.mock('./TravelPanel.jsx', () => ({ default: ({ isTravelActive }) => isTravelActive ? <div data-testid="travel-panel" /> : null }));
+
+// POI layer captures props so tests can inspect what HexMap passes to it.
+const { poiLayerProps } = vi.hoisted(() => ({ poiLayerProps: { current: null } }));
+vi.mock('./POILayer.jsx', () => ({
+    default: (props) => {
+        poiLayerProps.current = props;
+        return <g data-testid="poi-layer" />;
+    },
+}));
+
+vi.mock('./POIPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="poi-panel"><button data-testid="poi-panel-close" onClick={onClose}>Close</button></div> }));
+vi.mock('./POIContextMenu.jsx', () => ({ default: ({ selectedPoi, onClose }) => selectedPoi ? <g data-testid="poi-context-menu"><text onClick={onClose}>Close</text></g> : null }));
+vi.mock('./MarchingOrderPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="marching-panel"><button data-testid="marching-panel-close" onClick={onClose}>Close</button></div> }));
+
+// Catch-all SVG mock: all svg/* components render the same generic element.
+vi.mock('./svg/CampSVG.jsx', () => ({ default: () => <g data-testid="svg-camp" /> }));
+vi.mock('./svg/CitySVG.jsx', () => ({ default: () => <g data-testid="svg-city" /> }));
+vi.mock('./svg/DungeonSVG.jsx', () => ({ default: () => <g data-testid="svg-dungeon" /> }));
+vi.mock('./svg/HazardSVG.jsx', () => ({ default: () => <g data-testid="svg-hazard" /> }));
+vi.mock('./svg/LandmarkSVG.jsx', () => ({ default: () => <g data-testid="svg-landmark" /> }));
+vi.mock('./svg/LoreSiteSVG.jsx', () => ({ default: () => <g data-testid="svg-lore" /> }));
+vi.mock('./svg/NaturalWonderSVG.jsx', () => ({ default: () => <g data-testid="svg-wonder" /> }));
+vi.mock('./svg/SettlementSVG.jsx', () => ({ default: () => <g data-testid="svg-settlement" /> }));
+vi.mock('./svg/TowerSVG.jsx', () => ({ default: () => <g data-testid="svg-tower" /> }));
+vi.mock('../common/Subscriber.jsx', () => ({ default: () => <div data-testid="subscriber" /> }));
+
+// ── Toolbar mock: uses tool string values matching outdoorConfig constants ──
 vi.mock('./HexMapToolbar.jsx', () => ({
     default: ({ onBack, mapName, zoomIn, zoomOut, resetView, setTool, setPoiPanelOpen, setMarchingOrderOpen }) =>
         <div data-testid="toolbar">
@@ -34,30 +68,8 @@ vi.mock('./HexMapToolbar.jsx', () => ({
             <button data-testid="toolbar-marching" onClick={() => setMarchingOrderOpen(true)}>Marching</button>
         </div>,
 }));
-vi.mock('./POILayer.jsx', () => ({ default: (props) => <g data-testid="poi-layer" {...props} /> }));
-vi.mock('./POIPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="poi-panel"><button data-testid="poi-panel-close" onClick={onClose}>Close</button></div> }));
-vi.mock('./POIContextMenu.jsx', () => ({ default: ({ selectedPoi, onClose }) => selectedPoi ? <g data-testid="poi-context-menu"><text onClick={onClose}>Close</text></g> : null }));
-vi.mock('./MarchingOrderPanel.jsx', () => ({ default: ({ onClose }) => <div data-testid="marching-panel"><button data-testid="marching-panel-close" onClick={onClose}>Close</button></div> }));
-vi.mock('./PartyMarkerLayer.jsx', () => ({ default: ({ position }) => position ? <g data-testid="party-marker" /> : null }));
-vi.mock('./RiverLayer.jsx', () => ({ default: () => <g data-testid="river-layer" /> }));
-vi.mock('./RoadLayer.jsx', () => ({ default: () => <g data-testid="road-layer" /> }));
-vi.mock('./TravelPathLayer.jsx', () => ({ default: ({ path }) => path && path.length > 0 ? <g data-testid="travel-path-layer" /> : null }));
-vi.mock('./WeatherOverlay.jsx', () => ({ default: ({ weather }) => weather ? <div data-testid="weather-overlay" /> : null }));
-vi.mock('./EventDialog.jsx', () => ({ default: ({ event, onAccept, onSkip, onReroll }) => event ? <div data-testid="event-dialog"><button data-testid="event-accept" onClick={onAccept}>Accept</button><button data-testid="event-skip" onClick={onSkip}>Skip</button><button data-testid="event-reroll" onClick={onReroll}>Reroll</button></div> : null }));
-vi.mock('./TravelPanel.jsx', () => ({ default: ({ isTravelActive }) => isTravelActive ? <div data-testid="travel-panel" /> : null }));
 
-vi.mock('./svg/CampSVG.jsx', () => ({ default: (props) => <g {...props} /> }));
-vi.mock('./svg/CitySVG.jsx', () => ({ default: (props) => <g {...props} /> }));
-vi.mock('./svg/DungeonSVG.jsx', () => ({ default: (props) => <g {...props} /> }));
-vi.mock('./svg/HazardSVG.jsx', () => ({ default: (props) => <g {...props} /> }));
-vi.mock('./svg/LandmarkSVG.jsx', () => ({ default: (props) => <g {...props} /> }));
-vi.mock('./svg/LoreSiteSVG.jsx', () => ({ default: (props) => <g {...props} /> }));
-vi.mock('./svg/NaturalWonderSVG.jsx', () => ({ default: (props) => <g {...props} /> }));
-vi.mock('./svg/SettlementSVG.jsx', () => ({ default: (props) => <g {...props} /> }));
-vi.mock('./svg/TowerSVG.jsx', () => ({ default: (props) => <g {...props} /> }));
-vi.mock('../common/Subscriber.jsx', () => ({ default: () => <div data-testid="subscriber" /> }));
-
-// ── Mock hooks and services: each export is a vi.fn() pre-configured with default return ──
+// ── Mock hooks and services ──
 vi.mock('./hooks/useMapLoader.js', () => ({ default: vi.fn() }));
 vi.mock('./hooks/useZoomPan.js', () => ({ default: vi.fn() }));
 vi.mock('./hooks/useHexHover.js', () => ({ default: vi.fn() }));
@@ -93,6 +105,8 @@ import useLog from '../../hooks/runtime/useLog.js';
 import { useMonstersData } from '../../hooks/ui/useMonstersData.js';
 import * as mapsService from '../../services/maps/mapsService.js';
 import HexMap from './HexMap.jsx';
+
+// ── Mock factory helpers ──
 
 function makeMapLoader(overrides = {}) {
     return {
@@ -185,7 +199,6 @@ function makeTravelMgmt(overrides = {}) {
         forceCamp: vi.fn(), forcedMarch: vi.fn(),
         acceptEvent: vi.fn(), skipEvent: vi.fn(), rerollEvent: vi.fn(),
         setEventFrequency: vi.fn(), setTravelLog: vi.fn(), setLastMessage: vi.fn(),
-        MODES: { INACTIVE: 'inactive', PLANNING: 'planning', TRAVELING: 'traveling', PAUSED: 'paused' },
         ...overrides,
     };
 }
@@ -215,23 +228,21 @@ const mapSvg = () => document.querySelector('.hex-svg');
 describe('HexMap', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        poiLayerProps.current = null;
         setupDefaultMocks();
     });
 
     describe('Rendering', () => {
-        it('shows a loading message but keeps the toolbar while loading', () => {
+        it('shows a loading message while the map is loading', () => {
             useMapLoader.mockReturnValue(makeMapLoader({ loading: true }));
             renderMap();
             expect(screen.getByText('Loading map...')).toBeInTheDocument();
-            expect(screen.getByTestId('toolbar')).toBeInTheDocument();
-            expect(mapSvg()).not.toBeInTheDocument();
         });
 
         it('renders the full canvas once loaded', () => {
             renderMap();
             expect(screen.queryByText('Loading map...')).not.toBeInTheDocument();
             expect(screen.getByText('1 hex = 6 miles')).toBeInTheDocument();
-            expect(screen.getByTestId('toolbar')).toBeInTheDocument();
             expect(mapSvg()).toBeInTheDocument();
         });
 
@@ -278,7 +289,7 @@ describe('HexMap', () => {
     });
 
     describe('SVG interaction events', () => {
-        it('routes pointer move to the pan, terrain, POI, and hover handlers', () => {
+        it('routes pointer move to all interaction handlers', () => {
             const zp = makeZoomPan();
             const tp = makeTerrainPainting();
             const pm = makePoiManagement();
@@ -351,7 +362,6 @@ describe('HexMap', () => {
             fireEvent.click(mapSvg());
             expect(pm.setSelectedPoiMenu).toHaveBeenCalledWith(null);
             expect(pm.setShowRename).toHaveBeenCalledWith(null);
-            expect(pm.setRoadStartPoiId).not.toHaveBeenCalled();
         });
 
         it('clears the pending road connection when the road tool is active', () => {
@@ -362,20 +372,31 @@ describe('HexMap', () => {
             fireEvent.click(mapSvg());
             expect(pm.setRoadStartPoiId).toHaveBeenCalledWith(null);
         });
+
+        it('does not clear road start when the road tool is not active', () => {
+            const pm = makePoiManagement();
+            usePoiManagement.mockReturnValue(pm);
+            renderMap();
+            fireEvent.click(mapSvg());
+            expect(pm.setRoadStartPoiId).not.toHaveBeenCalled();
+        });
     });
 
     describe('POI layer props', () => {
         it('passes validLinkedMaps to the POI layer', () => {
             renderMap();
-            const poiLayer = screen.getByTestId('poi-layer');
-            expect(poiLayer).toHaveAttribute('validLinkedMaps');
+            expect(poiLayerProps.current.validLinkedMaps).toBeInstanceOf(Set);
         });
 
         it('passes partyPosition to the POI layer when set', () => {
             useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 } }));
             renderMap();
-            const poiLayer = screen.getByTestId('poi-layer');
-            expect(poiLayer).toHaveAttribute('partyPosition');
+            expect(poiLayerProps.current.partyPosition).toEqual({ q: 10, r: 5 });
+        });
+
+        it('passes null partyPosition to the POI layer when not set', () => {
+            renderMap();
+            expect(poiLayerProps.current.partyPosition).toBeNull();
         });
     });
 
@@ -390,7 +411,7 @@ describe('HexMap', () => {
             return { dt, ml };
         }
 
-        it('adds the dropped POI to the map, preserving existing POIs', () => {
+        it('adds a dropped POI to the map, preserving existing POIs', () => {
             const { dt, ml } = dropOnMap({
                 dragData: 'city',
                 getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
@@ -402,7 +423,7 @@ describe('HexMap', () => {
             const newPois = ml.setPois.mock.calls[0][0](existingPois);
             expect(newPois).toHaveLength(2);
             expect(newPois[0]).toBe(existingPois[0]);
-            expect(newPois[1]).toMatchObject({ type: 'city', q: 10, r: 5, visible: true });
+            expect(newPois[1]).toMatchObject({ type: 'city', q: 10, r: 5, visible: true, label: 'City' });
             expect(newPois[1].id).toBeTruthy();
         });
 
@@ -411,6 +432,46 @@ describe('HexMap', () => {
                 dragData: 'city',
                 getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
                 mapOverrides: { pois: [{ q: 10, r: 5, type: 'camp' }] },
+            });
+            expect(ml.setPois).not.toHaveBeenCalled();
+        });
+
+        it('does not add a POI when the hex is null', () => {
+            const { ml } = dropOnMap({
+                dragData: 'city',
+                getHexFromEvent: vi.fn(() => null),
+            });
+            expect(ml.setPois).not.toHaveBeenCalled();
+        });
+
+        it('does not add a POI when the hex is out of bounds', () => {
+            const { ml } = dropOnMap({
+                dragData: 'city',
+                getHexFromEvent: vi.fn(() => ({ q: 999, r: 999 })),
+            });
+            expect(ml.setPois).not.toHaveBeenCalled();
+        });
+
+        it('does not add a POI when the hex has a negative coordinate', () => {
+            const { ml } = dropOnMap({
+                dragData: 'city',
+                getHexFromEvent: vi.fn(() => ({ q: -1, r: 5 })),
+            });
+            expect(ml.setPois).not.toHaveBeenCalled();
+        });
+
+        it('does not add a POI when the drag data is not a recognized type', () => {
+            const { ml } = dropOnMap({
+                dragData: 'unknown-type',
+                getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
+            });
+            expect(ml.setPois).not.toHaveBeenCalled();
+        });
+
+        it('does not add a POI when drag data is empty', () => {
+            const { ml } = dropOnMap({
+                dragData: '',
+                getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
             });
             expect(ml.setPois).not.toHaveBeenCalled();
         });

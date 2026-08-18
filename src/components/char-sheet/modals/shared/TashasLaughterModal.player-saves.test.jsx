@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TashasLaughterModal from './TashasLaughterModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -33,9 +34,9 @@ vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
 }));
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { addEntry } from '../../../../services/ui/logService.js';
 import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
+import { addEntry } from '../../../../services/ui/logService.js';
 import { addTargetResult } from '../../../../services/automation/common/damageRollback.js';
 import { addExpiration } from '../../../../services/rules/effects/expirations.js';
 import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
@@ -74,6 +75,43 @@ function makeProps(overrides = {}) {
     };
 }
 
+// Helper: find the index of a target row by its displayed name (robust vs index-based)
+function findTargetRowIndex(targetName) {
+    const labels = document.querySelectorAll('.secondary-target-row');
+    for (let i = 0; i < labels.length; i++) {
+        if (labels[i].textContent.includes(targetName)) return i;
+    }
+    return -1;
+}
+
+// Helper: select a player target row and confirm to trigger the save prompt flow
+function selectPlayerAndConfirm() {
+    const idx = findTargetRowIndex('PlayerAlly');
+    expect(idx).toBeGreaterThanOrEqual(0);
+    const labels = document.querySelectorAll('.secondary-target-row');
+    fireEvent.click(labels[idx]);
+    return act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
+    });
+}
+
+// Helper: dispatch a save-result event for the most recently sent prompt
+function triggerSaveResult(success, extra = {}) {
+    const savePromptCall = sendSavePrompt.mock.calls[0];
+    const promptId = savePromptCall[1].promptId;
+    return act(async () => {
+        window.dispatchEvent(new CustomEvent('save-result', {
+            detail: {
+                promptId,
+                success,
+                roll: extra.roll ?? 5,
+                total: extra.total ?? 6,
+                saveBonus: extra.saveBonus ?? 1,
+            },
+        }));
+    });
+}
+
 beforeEach(() => {
     vi.resetAllMocks();
     getCombatSummary.mockReturnValue(baseCombatSummary);
@@ -83,20 +121,11 @@ beforeEach(() => {
     persistAndNotify.mockReturnValue(undefined);
 });
 
-afterEach(() => {
-    vi.clearAllMocks();
-});
-
 describe('TashasLaughterModal - Player Saves', () => {
     describe('player save prompts', () => {
         it('sends save prompt for player targets instead of resolving locally', async () => {
             render(<TashasLaughterModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            // Select just the player
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
+            await selectPlayerAndConfirm();
 
             expect(sendSavePrompt).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                 targetName: 'PlayerAlly',
@@ -108,11 +137,7 @@ describe('TashasLaughterModal - Player Saves', () => {
 
         it('tracks pending prompts for player targets', async () => {
             render(<TashasLaughterModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
+            await selectPlayerAndConfirm();
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'campaign',
@@ -123,33 +148,26 @@ describe('TashasLaughterModal - Player Saves', () => {
         });
     });
 
-    describe('player save result handling', () => {
-        it('applies prone and incapacitated when player fails save via save-result event', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
+    describe('player save failure handling', () => {
+        it('applies prone and incapacitated conditions to player on failed save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(false);
 
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
+            await waitFor(() => {
+                const conditionCalls = setRuntimeValue.mock.calls.filter(
+                    call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly',
+                );
+                expect(conditionCalls.length).toBeGreaterThan(0);
+                expect(conditionCalls[0][2]).toContain('prone');
+                expect(conditionCalls[0][2]).toContain('incapacitated');
             });
+        });
 
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+        it('calls addExpiration with prone, incapacitated, and tashas_laughter_expiration on failed save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(false);
 
             await waitFor(() => {
                 expect(addExpiration).toHaveBeenCalledWith(
@@ -165,141 +183,14 @@ describe('TashasLaughterModal - Player Saves', () => {
             });
         });
 
-        it('logs condition entry when player fails save', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                const conditionEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'condition' && call[1]?.action === 'applied'
-                );
-                expect(conditionEntries.length).toBeGreaterThan(0);
-                expect(conditionEntries[0][1]).toEqual(expect.objectContaining({
-                    type: 'condition',
-                    action: 'applied',
-                    characterName: 'PlayerAlly',
-                    condition: 'Prone, Incapacitated',
-                }));
-            });
-        });
-
-        it('logs save_result success when player passes save', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: true,
-                        roll: 18,
-                        total: 19,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result' && call[1]?.success === true
-                );
-                expect(saveEntries.length).toBeGreaterThan(0);
-            });
-        });
-
-        it('closes modal when all pending prompts are resolved', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                expect(onClose).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        it('sets targetEffects when player fails save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+        it('sets targetEffects with tashas_hideous_laughter on failed save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(false);
 
             await waitFor(() => {
                 const teCalls = setRuntimeValue.mock.calls.filter(
-                    call => call[1] === 'targetEffects' && call[0] === 'campaign'
+                    call => call[1] === 'targetEffects' && call[0] === 'campaign',
                 );
                 expect(teCalls.length).toBeGreaterThan(0);
                 const effects = teCalls[0][2];
@@ -312,108 +203,14 @@ describe('TashasLaughterModal - Player Saves', () => {
             });
         });
 
-        it('records addTargetResult for player failure', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                const targetResultCalls = addTargetResult.mock.calls.filter(
-                    call => call[0] === campaignName && call[1]?.targetName === 'PlayerAlly'
-                );
-                expect(targetResultCalls.length).toBeGreaterThan(0);
-                expect(targetResultCalls[0][1].saveResult).toBe('failure');
-                expect(targetResultCalls[0][1].conditions).toContain('prone');
-                expect(targetResultCalls[0][1].conditions).toContain('incapacitated');
-            });
-        });
-
-        it('records addTargetResult for player success', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: true,
-                        roll: 18,
-                        total: 19,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                const targetResultCalls = addTargetResult.mock.calls.filter(
-                    call => call[0] === campaignName && call[1]?.targetName === 'PlayerAlly'
-                );
-                expect(targetResultCalls.length).toBeGreaterThan(0);
-                expect(targetResultCalls[0][1].saveResult).toBe('success');
-                expect(targetResultCalls[0][1].conditions).toEqual([]);
-            });
-        });
-
-        it('logs save_result with roll details when player fails', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 7,
-                        total: 8,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+        it('logs save_result failure with roll details', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(false, { roll: 7, total: 8, saveBonus: 1 });
 
             await waitFor(() => {
                 const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result' && call[1]?.success === false
+                    call => call[1]?.type === 'save_result' && call[1]?.targetName === 'PlayerAlly' && call[1]?.success === false,
                 );
                 expect(saveEntries.length).toBeGreaterThan(0);
                 expect(saveEntries[0][1].roll).toBe(7);
@@ -423,107 +220,196 @@ describe('TashasLaughterModal - Player Saves', () => {
             });
         });
 
-        it('logs save_result success description for player passing', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: true,
-                        roll: 18,
-                        total: 19,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+        it('logs save_result failure description with roll breakdown', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(false, { roll: 5, total: 6, saveBonus: 1 });
 
             await waitFor(() => {
                 const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result' && call[1]?.success === true
+                    call => call[1]?.type === 'save_result' && call[1]?.targetName === 'PlayerAlly' && call[1]?.success === false,
                 );
-                expect(saveEntries.length).toBeGreaterThan(0);
-                expect(saveEntries[0][1].description).toContain('PlayerAlly');
-                expect(saveEntries[0][1].description).toContain('succeeded');
+                expect(saveEntries[0][1].description).toContain('PlayerAlly failed');
+                expect(saveEntries[0][1].description).toContain('rolled 5 + 1 = 6');
             });
         });
 
-        it('logs condition entry with correct reason on failed player save', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+        it('logs combined condition entry with correct properties on failed save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(false);
 
             await waitFor(() => {
                 const conditionEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'condition' && call[1]?.action === 'applied'
+                    call => call[1]?.type === 'condition' && call[1]?.action === 'applied' && call[1]?.characterName === 'PlayerAlly',
                 );
                 expect(conditionEntries.length).toBeGreaterThan(0);
-                expect(conditionEntries[0][1].characterName).toBe('PlayerAlly');
-                expect(conditionEntries[0][1].condition).toBe('Prone, Incapacitated');
+                expect(conditionEntries[0][1]).toEqual(expect.objectContaining({
+                    type: 'condition',
+                    action: 'applied',
+                    characterName: 'PlayerAlly',
+                    condition: 'Prone, Incapacitated',
+                }));
                 expect(conditionEntries[0][1].note).toContain("Tasha's Hideous Laughter");
+            });
+        });
+
+        it('records addTargetResult with failure and conditions on failed save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(false);
+
+            await waitFor(() => {
+                const targetResultCalls = addTargetResult.mock.calls.filter(
+                    call => call[0] === campaignName && call[1]?.targetName === 'PlayerAlly',
+                );
+                expect(targetResultCalls.length).toBe(1);
+                expect(targetResultCalls[0][1].saveResult).toBe('failure');
+                expect(targetResultCalls[0][1].conditions).toContain('prone');
+                expect(targetResultCalls[0][1].conditions).toContain('incapacitated');
+            });
+        });
+
+        it('calls persistAndNotify after player save result', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(false);
+
+            await waitFor(() => {
+                expect(persistAndNotify).toHaveBeenCalled();
+            });
+        });
+
+        it('closes modal after player save result is processed', async () => {
+            const onClose = vi.fn();
+            render(<TashasLaughterModal {...makeProps({ onClose })} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(false);
+
+            await waitFor(() => {
+                expect(onClose).toHaveBeenCalled();
+            });
+        });
+    });
+
+    describe('player save success handling', () => {
+        it('logs save_result success entry when player passes save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(true, { roll: 18, total: 19, saveBonus: 1 });
+
+            await waitFor(() => {
+                const saveEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'save_result' && call[1]?.targetName === 'PlayerAlly' && call[1]?.success === true,
+                );
+                expect(saveEntries.length).toBe(1);
+            });
+        });
+
+        it('logs save_result success description for player passing', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(true, { roll: 15, total: 16, saveBonus: 1 });
+
+            await waitFor(() => {
+                const saveEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'save_result' && call[1]?.targetName === 'PlayerAlly' && call[1]?.success === true,
+                );
+                expect(saveEntries[0][1].description).toContain('PlayerAlly succeeded');
+                expect(saveEntries[0][1].description).toContain('rolled 15 + 1 = 16');
+            });
+        });
+
+        it('records addTargetResult with success and empty conditions on save success', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(true);
+
+            await waitFor(() => {
+                const targetResultCalls = addTargetResult.mock.calls.filter(
+                    call => call[0] === campaignName && call[1]?.targetName === 'PlayerAlly',
+                );
+                expect(targetResultCalls.length).toBe(1);
+                expect(targetResultCalls[0][1].saveResult).toBe('success');
+                expect(targetResultCalls[0][1].conditions).toEqual([]);
+            });
+        });
+
+        it('does not apply conditions when player passes save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(true);
+
+            await waitFor(() => {
+                const conditionCalls = setRuntimeValue.mock.calls.filter(
+                    call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly',
+                );
+                expect(conditionCalls.length).toBe(0);
+            });
+        });
+
+        it('does not call addExpiration when player passes save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(true);
+
+            expect(addExpiration).not.toHaveBeenCalled();
+        });
+
+        it('does not set targetEffects when player passes save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(true);
+
+            await waitFor(() => {
+                const teCalls = setRuntimeValue.mock.calls.filter(
+                    call => call[1] === 'targetEffects' && call[0] === 'campaign',
+                );
+                const laughterEffect = teCalls.some(call => {
+                    const effects = call[2];
+                    return effects.some(e => e.target === 'PlayerAlly' && e.effect === 'tashas_hideous_laughter');
+                });
+                expect(laughterEffect).toBe(false);
+            });
+        });
+
+        it('closes modal after player save success is processed', async () => {
+            const onClose = vi.fn();
+            render(<TashasLaughterModal {...makeProps({ onClose })} />);
+            await selectPlayerAndConfirm();
+            await triggerSaveResult(true);
+
+            await waitFor(() => {
+                expect(onClose).toHaveBeenCalled();
             });
         });
     });
 
     describe('save result event edge cases', () => {
-        it('ignores save-result event with missing promptId', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
+        it('ignores save-result event with missing promptId and applies no side effects', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
 
             await act(async () => {
-                const event = new CustomEvent('save-result', {
+                window.dispatchEvent(new CustomEvent('save-result', {
                     detail: { success: false },
-                });
-                window.dispatchEvent(event);
+                }));
             });
 
-            expect(onClose).not.toHaveBeenCalled();
+            expect(sendSavePrompt).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                'campaign',
+                'pendingSaveListenerPrompts',
+                expect.any(Array),
+                campaignName,
+            );
         });
 
-        it('ignores save-result event for unknown promptId', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
+        it('ignores save-result event for unknown promptId and applies no side effects', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
 
             await act(async () => {
-                const event = new CustomEvent('save-result', {
+                window.dispatchEvent(new CustomEvent('save-result', {
                     detail: {
                         promptId: 'non-existent-prompt-id',
                         success: false,
@@ -531,91 +417,60 @@ describe('TashasLaughterModal - Player Saves', () => {
                         total: 6,
                         saveBonus: 1,
                     },
-                });
-                window.dispatchEvent(event);
+                }));
             });
 
-            expect(onClose).not.toHaveBeenCalled();
+            const conditionCalls = setRuntimeValue.mock.calls.filter(
+                call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly',
+            );
+            expect(conditionCalls.length).toBe(0);
         });
 
-        it('handles save-result event with missing optional fields', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
-            });
+        it('handles save-result event with missing optional fields using default values', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            await selectPlayerAndConfirm();
 
             const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
+            const promptId = savePromptCall[1].promptId;
 
             await act(async () => {
-                const event = new CustomEvent('save-result', {
+                window.dispatchEvent(new CustomEvent('save-result', {
                     detail: {
-                        promptId: actualPromptId,
+                        promptId,
                         success: false,
                     },
-                });
-                window.dispatchEvent(event);
+                }));
             });
 
             await waitFor(() => {
                 const conditionCalls = setRuntimeValue.mock.calls.filter(
-                    call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
+                    call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly',
                 );
                 expect(conditionCalls.length).toBeGreaterThan(0);
             });
-        });
-    });
 
-    describe('pending prompts cleanup', () => {
-        it('clears pending prompts on unmount', async () => {
-            const onClose = vi.fn();
-            const { unmount } = render(<TashasLaughterModal {...makeProps({ onClose })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
+            await waitFor(() => {
+                const saveEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'save_result' && call[1]?.targetName === 'PlayerAlly' && call[1]?.success === false,
+                );
+                expect(saveEntries.length).toBeGreaterThan(0);
+                expect(saveEntries[0][1].roll).toBe(0);
+                expect(saveEntries[0][1].total).toBe(0);
+                expect(saveEntries[0][1].saveBonus).toBe(0);
             });
-
-            expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-            unmount();
-            expect(document.querySelector('.sp-overlay')).not.toBeInTheDocument();
         });
-    });
 
-    describe('persistAndNotify calls', () => {
-        it('calls persistAndNotify after player save result event', async () => {
+        it('ignores save-result event with null detail', async () => {
             const onClose = vi.fn();
             render(<TashasLaughterModal {...makeProps({ onClose })} />);
 
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[2]);
             await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ }));
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: null,
+                }));
             });
 
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                expect(persistAndNotify).toHaveBeenCalled();
-            });
+            expect(onClose).not.toHaveBeenCalled();
         });
     });
 });

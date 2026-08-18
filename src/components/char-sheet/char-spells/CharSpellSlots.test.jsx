@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpellSlots from './CharSpellSlots.jsx';
@@ -10,19 +10,16 @@ vi.mock('../../../services/rules/rules.js', () => ({
   },
 }));
 
-// Mock CharSpellSlotLevel to render a simple marker div so we can verify
-// which levels are rendered without testing implementation details.
-vi.mock('./CharSpellSlotLevel.jsx', () => ({
-  default: function MockCharSpellSlotLevel({ level, totalSlots }) {
-    return (
-      <div data-testid={`spell-slot-level-${level}`} data-total-slots={totalSlots}>
-        level {level}
-      </div>
-    );
-  },
-}));
+// Mock CharSpellSlotLevel to capture props passed from the parent.
+// This avoids testing implementation details (DOM attributes) and instead
+// verifies the data flow between parent and child components.
+vi.mock('./CharSpellSlotLevel.jsx', () => {
+  const mock = vi.fn(() => null);
+  return { default: mock };
+});
 
 import rules from '../../../services/rules/rules.js';
+import CharSpellSlotLevel from './CharSpellSlotLevel.jsx';
 
 const createPlayerStats = (overrides = {}) => ({
   name: 'Test Character',
@@ -65,20 +62,12 @@ describe('CharSpellSlots', () => {
       render(<CharSpellSlots playerStats={createPlayerStats()} />);
 
       expect(screen.getByText('Spell Slots')).toBeInTheDocument();
-      expect(screen.getByTestId('spell-slot-level-1')).toBeInTheDocument();
-      expect(screen.getByTestId('spell-slot-level-2')).toBeInTheDocument();
-      expect(screen.getByTestId('spell-slot-level-3')).toBeInTheDocument();
-      expect(screen.queryByTestId('spell-slot-level-4')).not.toBeInTheDocument();
-    });
+      expect(CharSpellSlotLevel).toHaveBeenCalledTimes(3);
 
-    it('renders only level 1 when maxLevel is 1', () => {
-      rules.getSpellMaxLevel.mockReturnValue(1);
-
-      render(<CharSpellSlots playerStats={createPlayerStats()} />);
-
-      expect(screen.getByText('Spell Slots')).toBeInTheDocument();
-      expect(screen.getByTestId('spell-slot-level-1')).toBeInTheDocument();
-      expect(screen.queryByTestId('spell-slot-level-2')).not.toBeInTheDocument();
+      const calls = CharSpellSlotLevel.mock.calls;
+      expect(calls[0][0].level).toBe(1);
+      expect(calls[1][0].level).toBe(2);
+      expect(calls[2][0].level).toBe(3);
     });
 
     it('renders all 9 levels when maxLevel is 9', () => {
@@ -86,20 +75,19 @@ describe('CharSpellSlots', () => {
 
       render(<CharSpellSlots playerStats={createPlayerStats()} />);
 
-      for (let i = 1; i <= 9; i++) {
-        expect(screen.getByTestId(`spell-slot-level-${i}`)).toBeInTheDocument();
-      }
+      expect(screen.getByText('Spell Slots')).toBeInTheDocument();
+      expect(CharSpellSlotLevel).toHaveBeenCalledTimes(9);
     });
   });
 
   describe('edge cases', () => {
-    it('renders header but no levels when maxLevel is 0', () => {
+    it('renders header but no levels when maxLevel is 0 or falsy', () => {
       rules.getSpellMaxLevel.mockReturnValue(0);
 
       render(<CharSpellSlots playerStats={createPlayerStats()} />);
 
       expect(screen.getByText('Spell Slots')).toBeInTheDocument();
-      expect(screen.queryByTestId('spell-slot-level-1')).not.toBeInTheDocument();
+      expect(CharSpellSlotLevel).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -112,43 +100,66 @@ describe('CharSpellSlots', () => {
       render(<CharSpellSlots playerStats={createPlayerStats()} />);
 
       expect(screen.getByText('Spell Slots')).toBeInTheDocument();
-      expect(screen.queryByTestId('spell-slot-level-1')).not.toBeInTheDocument();
+      expect(CharSpellSlotLevel).not.toHaveBeenCalled();
     });
 
-    it('handles spellAbilities with only level 1 slots', () => {
-      rules.getSpellMaxLevel.mockReturnValue(1);
-
-      const minimalStats = {
-        name: 'Test Character',
-        spellAbilities: {
-          spell_slots_level_1: 2,
-          spells: [],
-        },
-      };
-
-      render(<CharSpellSlots playerStats={minimalStats} />);
+    it('renders header when spellAbilities is an empty object', () => {
+      render(<CharSpellSlots playerStats={{ name: 'Test', spellAbilities: {} }} />);
 
       expect(screen.getByText('Spell Slots')).toBeInTheDocument();
-      expect(screen.getByTestId('spell-slot-level-1')).toBeInTheDocument();
+      expect(CharSpellSlotLevel).not.toHaveBeenCalled();
     });
+
+    it('throws when playerStats is null', () => {
+      expect(() => render(<CharSpellSlots playerStats={null} />)).toThrow();
+    });
+
+    it('throws when playerStats is undefined', () => {
+      expect(() => render(<CharSpellSlots playerStats={undefined} />)).toThrow();
+    });
+
+    it.each([
+      { slots: { spell_slots_level_1: 0 }, name: 'zero' },
+      { slots: { spell_slots_level_1: -1 }, name: 'negative' },
+    ])(
+      'renders level component when slot count is %(name)s',
+      ({ slots }) => {
+        rules.getSpellMaxLevel.mockReturnValue(1);
+
+        const stats = {
+          name: 'Test Character',
+          spellAbilities: { ...slots, spells: [] },
+        };
+
+        render(<CharSpellSlots playerStats={stats} />);
+
+        expect(screen.getByText('Spell Slots')).toBeInTheDocument();
+        expect(CharSpellSlotLevel).toHaveBeenCalledTimes(1);
+      }
+    );
   });
 
   describe('slot counts', () => {
-    it('passes correct totalSlots for each level', () => {
-      rules.getSpellMaxLevel.mockReturnValue(9);
+    it.each`
+      maxLevel | expectedLevels
+      ${1}     | ${1}
+      ${3}     | ${3}
+      ${9}     | ${9}
+    `(
+      'passes correct totalSlots for each level (maxLevel: $maxLevel)',
+      ({ maxLevel, expectedLevels }) => {
+        rules.getSpellMaxLevel.mockReturnValue(maxLevel);
 
-      render(<CharSpellSlots playerStats={createPlayerStats()} />);
+        render(<CharSpellSlots playerStats={createPlayerStats()} />);
 
-      expect(screen.getByTestId('spell-slot-level-1')).toHaveAttribute('data-total-slots', '4');
-      expect(screen.getByTestId('spell-slot-level-2')).toHaveAttribute('data-total-slots', '3');
-      expect(screen.getByTestId('spell-slot-level-3')).toHaveAttribute('data-total-slots', '3');
-      expect(screen.getByTestId('spell-slot-level-4')).toHaveAttribute('data-total-slots', '2');
-      expect(screen.getByTestId('spell-slot-level-5')).toHaveAttribute('data-total-slots', '2');
-      expect(screen.getByTestId('spell-slot-level-6')).toHaveAttribute('data-total-slots', '1');
-      expect(screen.getByTestId('spell-slot-level-7')).toHaveAttribute('data-total-slots', '1');
-      expect(screen.getByTestId('spell-slot-level-8')).toHaveAttribute('data-total-slots', '1');
-      expect(screen.getByTestId('spell-slot-level-9')).toHaveAttribute('data-total-slots', '1');
-    });
+        expect(CharSpellSlotLevel).toHaveBeenCalledTimes(expectedLevels);
+
+        const calls = CharSpellSlotLevel.mock.calls;
+        for (let i = 0; i < expectedLevels; i++) {
+          expect(calls[i][0].level).toBe(i + 1);
+        }
+      }
+    );
 
     it('passes correct totalSlots with custom slot values', () => {
       rules.getSpellMaxLevel.mockReturnValue(3);
@@ -164,9 +175,10 @@ describe('CharSpellSlots', () => {
 
       render(<CharSpellSlots playerStats={customStats} />);
 
-      expect(screen.getByTestId('spell-slot-level-1')).toHaveAttribute('data-total-slots', '6');
-      expect(screen.getByTestId('spell-slot-level-2')).toHaveAttribute('data-total-slots', '4');
-      expect(screen.getByTestId('spell-slot-level-3')).toHaveAttribute('data-total-slots', '2');
+      const calls = CharSpellSlotLevel.mock.calls;
+      expect(calls[0][0]).toEqual(expect.objectContaining({ level: 1, totalSlots: 6 }));
+      expect(calls[1][0]).toEqual(expect.objectContaining({ level: 2, totalSlots: 4 }));
+      expect(calls[2][0]).toEqual(expect.objectContaining({ level: 3, totalSlots: 2 }));
     });
 
     it('passes undefined totalSlots when a slot level property is missing', () => {
@@ -182,8 +194,9 @@ describe('CharSpellSlots', () => {
 
       render(<CharSpellSlots playerStats={partialStats} />);
 
-      expect(screen.getByTestId('spell-slot-level-1')).toHaveAttribute('data-total-slots', '4');
-      expect(screen.getByTestId('spell-slot-level-2')).not.toHaveAttribute('data-total-slots');
+      const calls = CharSpellSlotLevel.mock.calls;
+      expect(calls[0][0]).toEqual(expect.objectContaining({ level: 1, totalSlots: 4 }));
+      expect(calls[1][0]).toEqual(expect.objectContaining({ level: 2, totalSlots: undefined }));
     });
   });
 });

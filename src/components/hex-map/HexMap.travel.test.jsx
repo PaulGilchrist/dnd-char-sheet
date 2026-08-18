@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -167,6 +167,9 @@ function setupDefaultMocks() {
     mapsService.formatMapName.mockReturnValue('Test Map');
 }
 
+/** Returns the map SVG element for interaction tests. */
+const mapSvg = () => screen.getByTestId('hex-svg');
+
 /** Renders HexMap with the travel tool pre-activated. Returns the travel management mock. */
 function renderWithTravelTool({ tmOverrides = {}, hoverOverrides = {}, mapOverrides = {} }) {
     const tm = makeTravelMgmt(tmOverrides);
@@ -214,22 +217,34 @@ describe('HexMap travel', () => {
                 hoverOverrides: { getHexFromEvent: vi.fn(() => ({ q: 20, r: 10 })) },
                 mapOverrides: { partyPosition: { q: 15, r: 8 } },
             });
-            fireEvent.click(document.querySelector('.hex-svg'));
+            fireEvent.click(mapSvg());
             expect(tm.startPlanning).toHaveBeenCalledTimes(1);
             expect(tm.setDestinationAndPath).toHaveBeenCalledWith({ q: 20, r: 10 });
         });
 
+        it('sets the destination without calling startPlanning when travel is already active', () => {
+            const tm = renderWithTravelTool({
+                tmOverrides: { isTravelActive: true },
+                hoverOverrides: { getHexFromEvent: vi.fn(() => ({ q: 20, r: 10 })) },
+                mapOverrides: { partyPosition: { q: 15, r: 8 } },
+            });
+            fireEvent.click(mapSvg());
+            expect(tm.startPlanning).not.toHaveBeenCalled();
+            expect(tm.setDestinationAndPath).toHaveBeenCalledWith({ q: 20, r: 10 });
+        });
+
         it.each([
-            { scenario: 'without a party position', partyPosition: null, getHexResult: { q: 20, r: 10 } },
-            { scenario: 'when clicking the party hex itself', partyPosition: { q: 15, r: 8 }, getHexResult: { q: 15, r: 8 } },
+            { scenario: 'when there is no party position', partyPosition: null, getHexResult: { q: 20, r: 10 } },
+            { scenario: 'when the click resolves to the party hex', partyPosition: { q: 15, r: 8 }, getHexResult: { q: 15, r: 8 } },
             { scenario: 'when the click resolves to no hex', partyPosition: { q: 15, r: 8 }, getHexResult: null },
+            { scenario: 'when the hex is outside the grid bounds', partyPosition: { q: 15, r: 8 }, getHexResult: { q: -1, r: 5 } },
         ])('does nothing $scenario', ({ partyPosition, getHexResult }) => {
             const tm = renderWithTravelTool({
                 tmOverrides: { isTravelActive: false },
                 hoverOverrides: { getHexFromEvent: vi.fn(() => getHexResult) },
                 mapOverrides: { partyPosition },
             });
-            fireEvent.click(document.querySelector('.hex-svg'));
+            fireEvent.click(mapSvg());
             expect(tm.startPlanning).not.toHaveBeenCalled();
             expect(tm.setDestinationAndPath).not.toHaveBeenCalled();
         });
@@ -240,7 +255,7 @@ describe('HexMap travel', () => {
                 hoverOverrides: { getHexFromEvent: vi.fn(() => ({ q: 20, r: 10 })) },
                 mapOverrides: { partyPosition: { q: 15, r: 8 } },
             });
-            fireEvent.click(document.querySelector('.hex-svg'), { button: 2 });
+            fireEvent.click(mapSvg(), { button: 2 });
             expect(tm.startPlanning).not.toHaveBeenCalled();
             expect(tm.setDestinationAndPath).not.toHaveBeenCalled();
         });
@@ -269,36 +284,48 @@ describe('HexMap travel', () => {
         it('logs advance_with_event with the event details when an event triggers', () => {
             const { addEntry } = renderWithActiveTravel({
                 advanceOneHex: vi.fn(() => ({ moved: true, arrived: false, event: { type: 'combat', title: 'Ambush' } })),
+                mapOverrides: {
+                    terrain: { '11,5': 'plains' },
+                    weather: { label: 'Clear', icon: 'sun' },
+                },
             });
             clickAdvance();
-            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                action: 'advance_with_event',
+            expect(addEntry).toHaveBeenCalledWith({
+                type: 'travel', action: 'advance_with_event',
+                hex: { q: 11, r: 5 }, terrain: 'plains',
+                weather: 'Clear', weatherIcon: 'sun',
                 eventType: 'combat', eventTitle: 'Ambush',
-            }));
+            });
         });
 
         it('logs arrived without a target hex when the path ends', () => {
             const { addEntry } = renderWithActiveTravel({
                 pathIndex: 1,
                 advanceOneHex: vi.fn(() => ({ moved: true, arrived: true, event: null })),
+                mapOverrides: { weather: { label: 'Clear', icon: 'sun' } },
             });
             clickAdvance();
-            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                action: 'arrived',
+            expect(addEntry).toHaveBeenCalledWith({
+                type: 'travel', action: 'arrived',
                 hex: null, terrain: null,
-            }));
+                weather: 'Clear', weatherIcon: 'sun',
+                eventType: null, eventTitle: null,
+            });
         });
 
         it('logs day_exhausted when the party cannot move and the day is spent', () => {
             const { addEntry } = renderWithActiveTravel({
                 dayExhausted: true,
                 advanceOneHex: vi.fn(() => ({ moved: false })),
+                mapOverrides: { weather: { label: 'Clear', icon: 'sun' } },
             });
             clickAdvance();
-            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                action: 'day_exhausted',
+            expect(addEntry).toHaveBeenCalledWith({
+                type: 'travel', action: 'day_exhausted',
                 hex: null, terrain: null,
-            }));
+                weather: 'Clear', weatherIcon: 'sun',
+                eventType: null, eventTitle: null,
+            });
         });
 
         it('logs extreme_weather when the party cannot move due to blocking weather', () => {
@@ -309,10 +336,12 @@ describe('HexMap travel', () => {
                 },
             });
             clickAdvance();
-            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                action: 'extreme_weather',
+            expect(addEntry).toHaveBeenCalledWith({
+                type: 'travel', action: 'extreme_weather',
+                hex: null, terrain: null,
                 weather: 'Storm', weatherIcon: 'storm',
-            }));
+                eventType: null, eventTitle: null,
+            });
         });
 
         it('does not log when the party cannot move for an unclassified reason', () => {
@@ -332,20 +361,27 @@ describe('HexMap travel', () => {
                 mapOverrides: { weather: { condition: 'storm', moveCostMod: null } },
             });
             clickAdvance();
-            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                action: 'day_exhausted',
-            }));
+            expect(addEntry).toHaveBeenCalledWith({
+                type: 'travel', action: 'day_exhausted',
+                hex: null, terrain: null,
+                weather: null, weatherIcon: null,
+                eventType: null, eventTitle: null,
+            });
         });
 
         it('logs advance_with_event over arrived when both apply', () => {
             const { addEntry } = renderWithActiveTravel({
                 pathIndex: 1,
                 advanceOneHex: vi.fn(() => ({ moved: true, arrived: true, event: { type: 'combat', title: 'Ambush' } })),
+                mapOverrides: { weather: { label: 'Clear', icon: 'sun' } },
             });
             clickAdvance();
-            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                action: 'advance_with_event',
-            }));
+            expect(addEntry).toHaveBeenCalledWith({
+                type: 'travel', action: 'advance_with_event',
+                hex: null, terrain: null,
+                weather: 'Clear', weatherIcon: 'sun',
+                eventType: 'combat', eventTitle: 'Ambush',
+            });
         });
     });
 });

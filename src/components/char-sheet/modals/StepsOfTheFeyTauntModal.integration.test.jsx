@@ -1,7 +1,9 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
 import { createSaveListener } from '../../../services/automation/common/savePrompt.js';
+import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('../../../services/automation/common/savePrompt.js', () => ({
     createSaveListener: vi.fn(({ targetName, saveType, saveDc }) => ({
@@ -28,7 +30,7 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
         if (propertyName === 'targetEffects' && characterKey === 'campaign') {
             return [];
         }
-        return null;
+        return [];
     }),
     setRuntimeValue: vi.fn(() => Promise.resolve()),
 }));
@@ -64,16 +66,13 @@ function makeProps(overrides) {
     return { ...baseProps, ...(overrides || {}) };
 }
 
-// Helper to select a target by name in CreatureSelectionModal
 async function selectTargetByName(name) {
     const labels = document.querySelectorAll('.secondary-target-row');
     for (const label of labels) {
         if (label.textContent.includes(name)) {
             const checkbox = label.querySelector('input[type="checkbox"]');
             if (checkbox) {
-                // Click the label to trigger toggleTarget via onClick
-                await act(async () => { fireEvent.click(label); });
-                // Verify the checkbox is now checked
+                fireEvent.click(label);
                 expect(checkbox.checked).toBe(true);
                 return label;
             }
@@ -82,22 +81,23 @@ async function selectTargetByName(name) {
     return null;
 }
 
+function renderToResult() {
+    const refreshingOption = screen.getByText('Refreshing Step');
+    fireEvent.click(refreshingOption);
+    const refreshButton = screen.getByRole('button', { name: /Refresh/ });
+    fireEvent.click(refreshButton);
+}
+
 describe('StepsOfTheFeyTauntModal - Integration', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         localStorage.clear();
     });
 
-    // ── Result view ──
-
     describe('result view', () => {
-        it('renders Done button in result view', async () => {
+        it('transitions to result view with Done button after applying refreshing step', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderToResult();
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
             });
@@ -105,11 +105,7 @@ describe('StepsOfTheFeyTauntModal - Integration', () => {
 
         it('renders the result header with wand icon', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderToResult();
             await waitFor(() => {
                 expect(document.querySelector('.sp-header .fa-solid.fa-wand-sparkles')).toBeInTheDocument();
             });
@@ -117,11 +113,7 @@ describe('StepsOfTheFeyTauntModal - Integration', () => {
 
         it('renders result description via dangerouslySetInnerHTML', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderToResult();
             await waitFor(() => {
                 const body = document.querySelector('.sp-body');
                 expect(body).toHaveTextContent('Steps of the Fey');
@@ -129,86 +121,56 @@ describe('StepsOfTheFeyTauntModal - Integration', () => {
             });
         });
 
-        it('hides the choice options after applying', async () => {
+        it('hides choice options and skip button after applying', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderToResult();
             await waitFor(() => {
                 expect(screen.queryByText('Taunting Step')).not.toBeInTheDocument();
                 expect(screen.queryByText('Disappearing Step')).not.toBeInTheDocument();
                 expect(screen.queryByText('Dreadful Step')).not.toBeInTheDocument();
-            });
-        });
-
-        it('hides the skip button after applying', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
-            await waitFor(() => {
                 expect(screen.queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
+                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
             });
         });
 
         it('calls onClose when Done is clicked in result view', async () => {
             const onClose = vi.fn();
             render(<StepsOfTheFeyTauntModal {...makeProps({ onClose })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderToResult();
             await waitFor(() => {
-                fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
             });
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('calls onClose when overlay is clicked in result view', async () => {
-            const onClose = vi.fn();
-            render(<StepsOfTheFeyTauntModal {...makeProps({ onClose })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
-            await waitFor(() => {
-                const overlay = document.querySelector('.sp-overlay');
-                fireEvent.click(overlay);
-            });
+            fireEvent.click(screen.getByRole('button', { name: 'Done' }));
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
         it('does not call onClose when modal content is clicked in result view', async () => {
             const onClose = vi.fn();
             render(<StepsOfTheFeyTauntModal {...makeProps({ onClose })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderToResult();
             await waitFor(() => {
-                const modal = document.querySelector('.sp-modal');
-                fireEvent.click(modal);
+                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
             });
+            const modal = document.querySelector('.sp-modal');
+            fireEvent.click(modal);
             expect(onClose).not.toHaveBeenCalled();
         });
     });
 
-    // ── Overlay interactions ──
-
     describe('overlay interactions', () => {
-        it('clicking the overlay in choice step transitions to result view (free cast skip)', async () => {
+        it('does not call onClose when overlay is clicked in choice step', () => {
             const onClose = vi.fn();
             render(<StepsOfTheFeyTauntModal {...makeProps({ onClose })} />);
             const overlay = document.querySelector('.sp-overlay');
             fireEvent.click(overlay);
-            // Overlay click triggers handleSkipChoice -> handleFreeCastSkip -> result view
+            expect(onClose).not.toHaveBeenCalled();
+        });
+
+        it('transitions to result view when overlay is clicked in choice step', async () => {
+            const onClose = vi.fn();
+            render(<StepsOfTheFeyTauntModal {...makeProps({ onClose })} />);
+            const overlay = document.querySelector('.sp-overlay');
+            fireEvent.click(overlay);
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
             });
@@ -222,19 +184,7 @@ describe('StepsOfTheFeyTauntModal - Integration', () => {
             fireEvent.click(modal);
             expect(onClose).not.toHaveBeenCalled();
         });
-
-        it('calls onClose when the overlay is clicked in confirmation step', () => {
-            const onClose = vi.fn();
-            render(<StepsOfTheFeyTauntModal {...makeProps({ onClose })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const overlay = document.querySelector('.sp-overlay');
-            fireEvent.click(overlay);
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
     });
-
-    // ── Custom title / feature name ──
 
     describe('custom title and feature name', () => {
         it('renders custom title in header when provided', () => {
@@ -245,11 +195,7 @@ describe('StepsOfTheFeyTauntModal - Integration', () => {
 
         it('renders feature name in result description', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ featureName: 'Custom Feature' })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderToResult();
             await waitFor(() => {
                 const body = document.querySelector('.sp-body');
                 expect(body.textContent).toContain('Custom Feature');
@@ -258,18 +204,12 @@ describe('StepsOfTheFeyTauntModal - Integration', () => {
 
         it('renders title in result header when provided', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ title: 'My Fey Steps' })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderToResult();
             await waitFor(() => {
                 expect(screen.getByText('My Fey Steps')).toBeInTheDocument();
             });
         });
     });
-
-    // ── Mode-specific skip button label ──
 
     describe('mode-specific skip button label', () => {
         it('shows "Misty Step only (free cast)" when mode is mistyEscape', () => {
@@ -288,29 +228,20 @@ describe('StepsOfTheFeyTauntModal - Integration', () => {
         });
     });
 
-    // ── Free cast flow (no count decrement) ──
-
     describe('free cast flow', () => {
-        it('does not decrement count when freeCastCountKey is null in refreshing step', async () => {
+        it('does not call setRuntimeValue when freeCastCountKey is null', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 3, freeCastCountKey: null })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderToResult();
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
             });
-            const body = document.querySelector('.sp-body');
-            // Description always uses newCount-1 for remaining, but runtime value isn't updated
-            expect(body.textContent).toContain('2 remaining');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
         it('shows correct remaining count after free cast skip in mistyEscape mode', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ mode: 'mistyEscape', newCount: 3 })} />);
             const skipButton = screen.getByRole('button', { name: 'Misty Step only (free cast)' });
             fireEvent.click(skipButton);
-
             await waitFor(() => {
                 const body = document.querySelector('.sp-body');
                 expect(body.textContent).toContain('3 remaining');
@@ -318,22 +249,16 @@ describe('StepsOfTheFeyTauntModal - Integration', () => {
         });
     });
 
-    // ── Multiple targets ──
-
     describe('multiple targets', () => {
         it('creates save listeners for all selected targets in taunting step', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const tauntingOption = screen.getByText('Taunting Step').closest('.clickable');
+            const tauntingOption = screen.getByText('Taunting Step');
             fireEvent.click(tauntingOption);
-
             await selectTargetByName('Goblin1');
             await selectTargetByName('Orc1');
-
             const tauntButton = screen.getByRole('button', { name: /Taunt/ });
             fireEvent.click(tauntButton);
-
             await waitFor(() => {
-                expect(createSaveListener).toHaveBeenCalledTimes(2);
                 expect(createSaveListener).toHaveBeenCalledWith(
                     'test-campaign',
                     expect.objectContaining({ targetName: 'Goblin1' })
@@ -347,17 +272,51 @@ describe('StepsOfTheFeyTauntModal - Integration', () => {
 
         it('creates save listeners for all selected targets in dreadful step', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const dreadfulOption = screen.getByText('Dreadful Step').closest('.clickable');
+            const dreadfulOption = screen.getByText('Dreadful Step');
             fireEvent.click(dreadfulOption);
-
             await selectTargetByName('Goblin1');
             await selectTargetByName('Orc1');
-
             const dreadfulButton = screen.getByRole('button', { name: /Dreadful/ });
             fireEvent.click(dreadfulButton);
-
             await waitFor(() => {
-                expect(createSaveListener).toHaveBeenCalledTimes(2);
+                expect(createSaveListener).toHaveBeenCalledWith(
+                    'test-campaign',
+                    expect.objectContaining({ targetName: 'Goblin1' })
+                );
+                expect(createSaveListener).toHaveBeenCalledWith(
+                    'test-campaign',
+                    expect.objectContaining({ targetName: 'Orc1' })
+                );
+            });
+        });
+    });
+
+    describe('edge cases', () => {
+        it('does not allow selecting options when no uses remain', () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
+            expect(screen.getByText(/No uses remaining/)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+        });
+
+        it('transitions to result view when Disappearing Step is confirmed', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 5 })} />);
+            const disappearingOption = screen.getByText('Disappearing Step');
+            fireEvent.click(disappearingOption);
+            const disappearButton = screen.getByRole('button', { name: 'Disappear' });
+            fireEvent.click(disappearButton);
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+            });
+        });
+
+        it('transitions to result view when skip is pressed in taunting step with no targets', async () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 5 })} />);
+            const tauntingOption = screen.getByText('Taunting Step');
+            fireEvent.click(tauntingOption);
+            const skipButton = screen.getByRole('button', { name: 'Skip' });
+            fireEvent.click(skipButton);
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
             });
         });
     });

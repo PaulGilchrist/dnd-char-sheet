@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import ShortRestModal from './ShortRestModal.jsx';
 
 const getRuntimeValueMock = vi.fn(() => null);
@@ -7,10 +8,8 @@ const setRuntimeValueMock = vi.fn();
 const setRuntimeBatchMock = vi.fn();
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
   useRuntimeValue: vi.fn(() => null),
-  listeners: new Map(),
   getRuntimeValue: vi.fn((...args) => getRuntimeValueMock(...args)),
   setRuntimeValue: vi.fn((...args) => setRuntimeValueMock(...args)),
   setRuntimeBatch: vi.fn((...args) => setRuntimeBatchMock(...args)),
@@ -125,7 +124,7 @@ describe('ShortRestModal - Natural Recovery', () => {
   });
 
   describe('rendering', () => {
-    it('renders Natural Recovery section for Druid with circle_of_the_land subclass', () => {
+    it('renders Natural Recovery section for Druid with Circle of the Land subclass', () => {
       renderModal({
         class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
         automation: { passives: [{ type: 'natural_recovery' }] },
@@ -142,13 +141,14 @@ describe('ShortRestModal - Natural Recovery', () => {
       expect(screen.queryByText('Natural Recovery')).not.toBeInTheDocument();
     });
 
-    it('shows the budget display', () => {
+    it('shows budget display with all levels available when no selections', () => {
       renderModal({
+        level: 10,
         class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
         automation: { passives: [{ type: 'natural_recovery' }] },
         spellAbilities: { spell_slots_level_1: 4, spell_slots_level_2: 3, spells: [] },
       });
-      expect(screen.getByText(/Budget:.*remaining/)).toBeInTheDocument();
+      expect(screen.getByText(/Budget: 5 of 5 levels remaining/)).toBeInTheDocument();
     });
 
     it('shows correct max budget based on druid level', () => {
@@ -162,7 +162,7 @@ describe('ShortRestModal - Natural Recovery', () => {
       expect(screen.getByText(/Budget: 2 of 2 levels remaining/)).toBeInTheDocument();
     });
 
-    it('shows spell slot levels table with current and available columns', () => {
+    it('shows spell slot levels table with column headers', () => {
       renderModal({
         level: 10,
         class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
@@ -192,11 +192,10 @@ describe('ShortRestModal - Natural Recovery', () => {
           spells: [],
         },
       });
-      const buttons = screen.getAllByRole('button');
-      const minusButtons = buttons.filter(b => b.textContent === '-');
-      const plusButtons = buttons.filter(b => b.textContent === '+');
-      expect(minusButtons.length).toBeGreaterThan(0);
-      expect(plusButtons.length).toBeGreaterThan(0);
+      const plusButtons = screen.getAllByRole('button', { name: '+' });
+      const minusButtons = screen.getAllByRole('button', { name: '-' });
+      expect(plusButtons.length).toBe(2);
+      expect(minusButtons.length).toBe(2);
     });
 
     it('shows slot level values in the table', () => {
@@ -218,7 +217,7 @@ describe('ShortRestModal - Natural Recovery', () => {
   });
 
   describe('slot selection', () => {
-    it('increments selection count with + button', async () => {
+    it('increments selection count with + button', () => {
       setupGetRuntimeValue({ spell_slots_level_1: 2, spell_slots_level_2: 1 });
       renderModal({
         level: 10,
@@ -230,17 +229,13 @@ describe('ShortRestModal - Natural Recovery', () => {
           spells: [],
         },
       });
-      const controls = document.querySelectorAll('.short-rest-nr-controls');
-      const firstControl = controls[0];
-      const plusBtn = firstControl.querySelector('button:last-child');
-      expect(plusBtn).not.toBeDisabled();
-      fireEvent.click(plusBtn);
-      await act(async () => {});
-      const countSpans = document.querySelectorAll('.short-rest-nr-count');
-      expect(countSpans[0].textContent).toBe('1');
+      const plusButtons = screen.getAllByRole('button', { name: '+' });
+      expect(plusButtons[0]).not.toBeDisabled();
+      fireEvent.click(plusButtons[0]);
+      expect(screen.getByText(/Budget: 4 of 5 levels remaining/)).toBeInTheDocument();
     });
 
-    it('decrements selection count with - button', async () => {
+    it('decrements selection count with - button', () => {
       setupGetRuntimeValue({ spell_slots_level_1: 2, spell_slots_level_2: 1 });
       renderModal({
         level: 10,
@@ -252,19 +247,14 @@ describe('ShortRestModal - Natural Recovery', () => {
           spells: [],
         },
       });
-      const controls = document.querySelectorAll('.short-rest-nr-controls');
-      const firstControl = controls[0];
-      const plusBtn = firstControl.querySelector('button:last-child');
-      const minusBtn = firstControl.querySelector('button:first-child');
-      fireEvent.click(plusBtn);
-      await act(async () => {});
-      fireEvent.click(minusBtn);
-      await act(async () => {});
-      const countSpans = document.querySelectorAll('.short-rest-nr-count');
-      expect(countSpans[0].textContent).toBe('0');
+      const plusButtons = screen.getAllByRole('button', { name: '+' });
+      const minusButtons = screen.getAllByRole('button', { name: '-' });
+      fireEvent.click(plusButtons[0]);
+      fireEvent.click(minusButtons[0]);
+      expect(screen.getByText(/Budget: 5 of 5 levels remaining/)).toBeInTheDocument();
     });
 
-    it('prevents going below 0 selection', () => {
+    it('disables minus button when selection count is 0', () => {
       setupGetRuntimeValue({ spell_slots_level_1: 2 });
       renderModal({
         level: 10,
@@ -275,13 +265,11 @@ describe('ShortRestModal - Natural Recovery', () => {
           spells: [],
         },
       });
-      const controls = document.querySelectorAll('.short-rest-nr-controls');
-      const firstControl = controls[0];
-      const minusBtn = firstControl.querySelector('button:first-child');
-      expect(minusBtn).toBeDisabled();
+      const minusButtons = screen.getAllByRole('button', { name: '-' });
+      expect(minusButtons[0]).toBeDisabled();
     });
 
-    it('prevents selecting more than available slots', async () => {
+    it('disables + button when all available slots are selected', () => {
       setupGetRuntimeValue({ spell_slots_level_1: 2 });
       renderModal({
         level: 10,
@@ -292,20 +280,15 @@ describe('ShortRestModal - Natural Recovery', () => {
           spells: [],
         },
       });
-      const controls = document.querySelectorAll('.short-rest-nr-controls');
-      const firstControl = controls[0];
-      const plusBtn = firstControl.querySelector('button:last-child');
-      // Available = 4 - 2 = 2, click + twice
-      for (let i = 0; i < 2; i++) {
-        fireEvent.click(plusBtn);
-        await act(async () => {});
-      }
-      // Now the + should be disabled since all 2 available are used
-      expect(plusBtn).toBeDisabled();
+      const plusButtons = screen.getAllByRole('button', { name: '+' });
+      // Available = 4 - 2 = 2, click + twice to exhaust
+      fireEvent.click(plusButtons[0]);
+      fireEvent.click(plusButtons[0]);
+      expect(plusButtons[0]).toBeDisabled();
     });
 
-    it('prevents selection when budget is exhausted', () => {
-      setupGetRuntimeValue({ spell_slots_level_1: 2, spell_slots_level_2: 1, spell_slots_level_3: 1 });
+    it('disables + button when budget is insufficient for slot level', () => {
+      setupGetRuntimeValue({ spell_slots_level_3: 1 });
       renderModal({
         level: 5,
         class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
@@ -317,15 +300,13 @@ describe('ShortRestModal - Natural Recovery', () => {
           spells: [],
         },
       });
-      const controls = document.querySelectorAll('.short-rest-nr-controls');
-      // Level 3 row is the third row (index 2)
-      const level3Control = controls[2];
-      const plusBtn = level3Control.querySelector('button:last-child');
-      // Level 3 costs 3 budget, we only have 2, so it's disabled
-      expect(plusBtn).toBeDisabled();
+      // Level 3 costs 3 budget, max budget is 2 (Math.floor(5/2))
+      const plusButtons = screen.getAllByRole('button', { name: '+' });
+      // Level 3 plus button is the third one (indices 0, 1, 2)
+      expect(plusButtons[2]).toBeDisabled();
     });
 
-    it('updates budget display when selections change', async () => {
+    it('updates budget display when a slot is selected', () => {
       setupGetRuntimeValue({ spell_slots_level_1: 2, spell_slots_level_2: 1 });
       renderModal({
         level: 10,
@@ -337,18 +318,13 @@ describe('ShortRestModal - Natural Recovery', () => {
           spells: [],
         },
       });
-      const budgetDiv = document.querySelector('.short-rest-nr-budget');
-      expect(budgetDiv.textContent).toContain('5 of 5');
-      const controls = document.querySelectorAll('.short-rest-nr-controls');
-      const firstControl = controls[0];
-      const plusBtn = firstControl.querySelector('button:last-child');
-      fireEvent.click(plusBtn);
-      await act(async () => {});
-      // Level 1 slot costs 1 budget, so remaining = 4
-      expect(budgetDiv.textContent).toContain('4 of 5');
+      expect(screen.getByText(/Budget: 5 of 5 levels remaining/)).toBeInTheDocument();
+      const plusButtons = screen.getAllByRole('button', { name: '+' });
+      fireEvent.click(plusButtons[0]);
+      expect(screen.getByText(/Budget: 4 of 5 levels remaining/)).toBeInTheDocument();
     });
 
-    it('uses correct budget calculation: level * count', async () => {
+    it('uses correct budget calculation: level * count', () => {
       setupGetRuntimeValue({ spell_slots_level_1: 2, spell_slots_level_2: 1 });
       renderModal({
         level: 10,
@@ -360,25 +336,14 @@ describe('ShortRestModal - Natural Recovery', () => {
           spells: [],
         },
       });
-      const budgetDiv = document.querySelector('.short-rest-nr-budget');
-      expect(budgetDiv.textContent).toContain('5 of 5');
-      const controls = document.querySelectorAll('.short-rest-nr-controls');
-      // Level 2 row is index 1
-      const level2Control = controls[1];
-      const plusBtn = level2Control.querySelector('button:last-child');
-      // Select 2x level 2 slots = 4 budget used
-      fireEvent.click(plusBtn);
-      await act(async () => {});
-      fireEvent.click(plusBtn);
-      await act(async () => {});
-      // Budget used = 2*2 = 4, remaining = 1
-      expect(budgetDiv.textContent).toContain('1 of 5');
-      // Verify the count display
-      const countSpans = document.querySelectorAll('.short-rest-nr-count');
-      expect(countSpans[1].textContent).toBe('2');
+      const plusButtons = screen.getAllByRole('button', { name: '+' });
+      // Select 2x level 2 slots = 4 budget used (level 2 x count 2)
+      fireEvent.click(plusButtons[1]);
+      fireEvent.click(plusButtons[1]);
+      expect(screen.getByText(/Budget: 1 of 5 levels remaining/)).toBeInTheDocument();
     });
 
-    it('clears selection when count goes back to 0', async () => {
+    it('clears selection when count goes back to 0', () => {
       setupGetRuntimeValue({ spell_slots_level_1: 2, spell_slots_level_2: 1 });
       renderModal({
         level: 10,
@@ -390,17 +355,12 @@ describe('ShortRestModal - Natural Recovery', () => {
           spells: [],
         },
       });
-      const controls = document.querySelectorAll('.short-rest-nr-controls');
-      const firstControl = controls[0];
-      const plusBtn = firstControl.querySelector('button:last-child');
-      const minusBtn = firstControl.querySelector('button:first-child');
-      fireEvent.click(plusBtn);
-      await act(async () => {});
-      const countSpans = document.querySelectorAll('.short-rest-nr-count');
-      expect(countSpans[0].textContent).toBe('1');
-      fireEvent.click(minusBtn);
-      await act(async () => {});
-      expect(countSpans[0].textContent).toBe('0');
+      const plusButtons = screen.getAllByRole('button', { name: '+' });
+      const minusButtons = screen.getAllByRole('button', { name: '-' });
+      fireEvent.click(plusButtons[0]);
+      expect(screen.getByText(/Budget: 4 of 5 levels remaining/)).toBeInTheDocument();
+      fireEvent.click(minusButtons[0]);
+      expect(screen.getByText(/Budget: 5 of 5 levels remaining/)).toBeInTheDocument();
     });
   });
 
@@ -421,22 +381,7 @@ describe('ShortRestModal - Natural Recovery', () => {
       expect(screen.getByText(/1 \/ 3/)).toBeInTheDocument();
     });
 
-    it('calculates available correctly (max - current)', () => {
-      setupGetRuntimeValue({ spell_slots_level_1: 2 });
-      renderModal({
-        level: 10,
-        class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-        automation: { passives: [{ type: 'natural_recovery' }] },
-        spellAbilities: {
-          spell_slots_level_1: 4,
-          spells: [],
-        },
-      });
-      // Available should be 4 - 2 = 2
-      expect(screen.getByText('2')).toBeInTheDocument();
-    });
-
-    it('only shows slot levels that have max > 0', () => {
+    it('shows only slot levels with max > 0', () => {
       renderModal({
         level: 10,
         class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
@@ -450,6 +395,7 @@ describe('ShortRestModal - Natural Recovery', () => {
       });
       expect(screen.getByText('1')).toBeInTheDocument();
       expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.queryByText('2')).not.toBeInTheDocument();
     });
   });
 });

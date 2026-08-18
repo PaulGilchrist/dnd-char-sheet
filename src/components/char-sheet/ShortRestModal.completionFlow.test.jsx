@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ShortRestModal from './ShortRestModal.jsx';
@@ -55,8 +56,11 @@ vi.mock('../../services/ui/dataLoader.js', () => ({
   loadSpellData: vi.fn(() => Promise.resolve([])),
 }));
 
+// Capture the addEntry mock for test assertions (hoisted so vi.mock can reference it)
+const addEntryMock = vi.hoisted(() => vi.fn(() => Promise.resolve({})));
+
 vi.mock('../../services/ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve({})),
+  addEntry: addEntryMock,
 }));
 
 vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
@@ -117,9 +121,15 @@ function setupUseRuntimeValue(returns) {
   }
 }
 
-async function getLogCall() {
-  const { addEntry } = await import('../../services/ui/logService.js');
-  return addEntry.mock.calls[0][1];
+function firstLogMessage() {
+  expect(addEntryMock.mock.calls.length).toBeGreaterThan(0);
+  const logCall = addEntryMock.mock.calls[0][1];
+  return logCall.message;
+}
+
+function expectLogContains(text) {
+  const message = firstLogMessage();
+  expect(message).toContain(text);
 }
 
 describe('ShortRestModal - Completion Flow', () => {
@@ -130,125 +140,119 @@ describe('ShortRestModal - Completion Flow', () => {
   });
 
   describe('HP tracking', () => {
-    it('sets currentHitPoints on completion after rolling hit dice', async () => {
+    it('updates currentHitPoints on completion after rolling hit dice', async () => {
       renderModal();
-      fireEvent.click(screen.getByText('Roll One'));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Roll One/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
       const hpCalls = setRuntimeValueMock.mock.calls.filter(
         (call) => call[1] === 'currentHitPoints'
       );
-      expect(hpCalls.length).toBeGreaterThan(0);
+      expect(hpCalls.length).toBe(1);
       // HP should be capped at max (45)
       expect(hpCalls[0][2]).toBeLessThanOrEqual(45);
     });
 
-    it('caps HP at maximum hit points', async () => {
+    it('caps HP at maximum hit points when healing would exceed max', async () => {
       setupGetRuntimeValue({ currentHitPoints: 40 });
       renderModal();
-      // Roll multiple hit dice to potentially exceed max
-      const rollAllBtn = Array.from(document.querySelectorAll('button')).find(
-        b => b.textContent.includes('Roll All')
-      );
-      fireEvent.click(rollAllBtn);
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Roll All/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
       const hpCalls = setRuntimeValueMock.mock.calls.filter(
         (call) => call[1] === 'currentHitPoints'
       );
-      expect(hpCalls.length).toBeGreaterThan(0);
-      expect(hpCalls[0][2]).toBe(45); // capped at max
+      expect(hpCalls.length).toBe(1);
+      expect(hpCalls[0][2]).toBe(45);
     });
 
     it('persists remaining hit dice via setRuntimeValue on completion', async () => {
       renderModal();
-      fireEvent.click(screen.getByText('Roll One'));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Roll One/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
       const hdCalls = setRuntimeValueMock.mock.calls.filter(
         (call) => call[1] === 'shortRestHitDice'
       );
-      expect(hdCalls.length).toBeGreaterThan(0);
+      expect(hdCalls.length).toBe(1);
       // Started with 5, rolled 1, so 4 remaining
       expect(hdCalls[0][2]).toBe(4);
     });
 
-    it('persists all hit dice as remaining when rolling all', async () => {
+    it('persists zero hit dice when rolling all', async () => {
       renderModal();
-      const rollAllBtn = Array.from(document.querySelectorAll('button')).find(
-        b => b.textContent.includes('Roll All')
-      );
-      fireEvent.click(rollAllBtn);
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Roll All/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
       const hdCalls = setRuntimeValueMock.mock.calls.filter(
         (call) => call[1] === 'shortRestHitDice'
       );
-      expect(hdCalls.length).toBeGreaterThan(0);
-      // Rolled all 5, so 0 remaining
+      expect(hdCalls.length).toBe(1);
       expect(hdCalls[0][2]).toBe(0);
+    });
+
+    it('calls onComplete after completion', async () => {
+      const { onComplete } = renderModal();
+      fireEvent.click(screen.getByRole('button', { name: /Roll One/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
+
+      expect(onComplete).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('log entries', () => {
     it('calls addEntry with short_rest type on completion', async () => {
-      const { addEntry } = await import('../../services/ui/logService.js');
       renderModal();
-      fireEvent.click(screen.getByText('Roll One'));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Roll One/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      expect(addEntry).toHaveBeenCalled();
-      const logCall = await getLogCall();
-      expect(logCall.type).toBe('short_rest');
+      expect(addEntryMock).toHaveBeenCalled();
+      expect(addEntryMock.mock.calls[0][1].type).toBe('short_rest');
     });
 
     it('includes hit dice details in log when dice were rolled', async () => {
       renderModal();
-      fireEvent.click(screen.getByText('Roll One'));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Roll One/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Hit Dice:');
-      expect(logCall.message).toContain('HP recovered');
+      expectLogContains('Hit Dice:');
+      expectLogContains('HP recovered');
     });
 
     it('includes "Hit Dice: 0 used" in log when no dice rolled', async () => {
       renderModal();
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Hit Dice: 0 used');
+      expectLogContains('Hit Dice: 0 used');
     });
 
     it('includes Song of Rest in log when applied', async () => {
       renderModal();
-      fireEvent.click(screen.getByText('Roll One'));
-      await act(async () => {});
-      fireEvent.click(screen.getByText(/Apply Song of Rest/));
-      await act(async () => {});
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Roll One/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Apply Song of Rest/i }));
+      await act(() => Promise.resolve());
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Song of Rest');
+      expectLogContains('Song of Rest');
     });
 
     it('includes current HP change in log when dice were rolled', async () => {
       setupGetRuntimeValue({ currentHitPoints: 30 });
       renderModal();
-      fireEvent.click(screen.getByText('Roll One'));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Roll One/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Current HP:');
+      expectLogContains('Current HP:');
     });
   });
 
@@ -262,11 +266,10 @@ describe('ShortRestModal - Completion Flow', () => {
           class_levels: [{ level: 5, second_wind: 1 }],
         },
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Second Wind');
+      expectLogContains('Second Wind');
     });
 
     it('does not log Second Wind for Fighter at max', async () => {
@@ -278,11 +281,10 @@ describe('ShortRestModal - Completion Flow', () => {
           class_levels: [{ level: 5, second_wind: 1 }],
         },
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).not.toContain('Second Wind');
+      expect(firstLogMessage()).not.toContain('Second Wind');
     });
 
     it('logs Rage (2024) for Barbarian 2024 when not at max', async () => {
@@ -295,22 +297,20 @@ describe('ShortRestModal - Completion Flow', () => {
           class_levels: [{ level: 5, rages: 2 }],
         },
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Rage (2024)');
+      expectLogContains('Rage (2024)');
     });
 
     it('logs Warding Flare when Improved Warding Flare feature exists', async () => {
       renderModal({
         specialActions: [{ name: 'Improved Warding Flare' }],
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Warding Flare');
+      expectLogContains('Warding Flare');
     });
 
     it('logs Font of Inspiration when feature exists', async () => {
@@ -318,33 +318,30 @@ describe('ShortRestModal - Completion Flow', () => {
         class: { name: 'Bard', major: { name: 'Bard' } },
         automation: { passives: [{ type: 'font_of_inspiration' }] },
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Font of Inspiration');
+      expectLogContains('Font of Inspiration');
     });
 
     it('logs Pact Magic for Warlock', async () => {
       renderModal({
         class: { name: 'Warlock', major: { name: 'Archfey' } },
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Pact Magic');
+      expectLogContains('Pact Magic');
     });
 
     it('logs Bolstering Treats when feature exists', async () => {
       renderModal({
         automation: { passives: [{ type: 'temp_hp_buff', name: 'Bolstering Treats' }] },
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Bolstering Treats');
+      expectLogContains('Bolstering Treats');
     });
 
     it('logs Tireless for Ranger level 10+ with exhaustion', async () => {
@@ -353,11 +350,10 @@ describe('ShortRestModal - Completion Flow', () => {
         class: { name: 'Ranger', major: { name: 'Ranger' } },
         level: 10,
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Tireless');
+      expectLogContains('Tireless');
     });
 
     it('does not log Tireless for Ranger without exhaustion', async () => {
@@ -366,11 +362,10 @@ describe('ShortRestModal - Completion Flow', () => {
         class: { name: 'Ranger', major: { name: 'Ranger' } },
         level: 10,
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).not.toContain('Tireless');
+      expect(firstLogMessage()).not.toContain('Tireless');
     });
 
     it('logs Sorcery Points restoration when Sorcerous Restoration was requested', async () => {
@@ -379,12 +374,11 @@ describe('ShortRestModal - Completion Flow', () => {
         class: { name: 'Sorcerer', major: { name: 'Sorcerer' } },
         automation: { passives: [{ type: 'resource_restoration', resourceKey: 'sorcerousRestorationUses' }] },
       });
-      fireEvent.click(screen.getByText(/Regain.*Sorcery Points/));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Regain.*Sorcery Points/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Sorcery Points');
+      expectLogContains('Sorcery Points');
     });
 
     it('logs Arcane Recovery when requested by Wizard', async () => {
@@ -393,12 +387,11 @@ describe('ShortRestModal - Completion Flow', () => {
         class: { name: 'Wizard', major: { name: 'Wizard' } },
         automation: { passives: [{ type: 'resource_restoration', resourceKey: 'arcaneRecoveryLevels' }] },
       });
-      fireEvent.click(screen.getByText(/Recover Spell Slots/));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Recover Spell Slots/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Arcane Recovery');
+      expectLogContains('Arcane Recovery');
     });
 
     it('logs Replenishing Meal consumed when meal was used', async () => {
@@ -406,12 +399,11 @@ describe('ShortRestModal - Completion Flow', () => {
       renderModal({
         automation: { passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }] },
       });
-      fireEvent.click(screen.getByText('Roll One'));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Roll One/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
-      const logCall = await getLogCall();
-      expect(logCall.message).toContain('Replenishing Meal');
+      expectLogContains('Replenishing Meal');
     });
   });
 
@@ -427,9 +419,9 @@ describe('ShortRestModal - Completion Flow', () => {
           spells: [],
         },
       });
-      fireEvent.click(screen.getByText(/Recover Spell Slots/));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Recover Spell Slots/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
       const slotCalls = setRuntimeValueMock.mock.calls.filter(
         (call) => typeof call[1] === 'string' && call[1].startsWith('spell_slots_level_')
@@ -450,9 +442,9 @@ describe('ShortRestModal - Completion Flow', () => {
         },
         level: 10,
       });
-      fireEvent.click(screen.getByText(/Recover Spell Slots/));
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Recover Spell Slots/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
       const level6Calls = setRuntimeValueMock.mock.calls.filter(
         (call) => call[1] === 'spell_slots_level_6'
@@ -472,13 +464,13 @@ describe('ShortRestModal - Completion Flow', () => {
           spells: [],
         },
       });
-      const controls = document.querySelectorAll('.short-rest-nr-controls');
-      const firstControl = controls[0];
-      const plusBtn = firstControl.querySelector('button:last-child');
-      fireEvent.click(plusBtn);
-      await act(async () => {});
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      // Find the Natural Recovery + button (last + button in the NR section)
+      const plusButtons = screen.getAllByRole('button', { name: '+' });
+      // The last + button is in the Natural Recovery section
+      fireEvent.click(plusButtons[0]);
+      await act(() => Promise.resolve());
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
 
       const slotCalls = setRuntimeValueMock.mock.calls.filter(
         (call) => typeof call[1] === 'string' && call[1].startsWith('spell_slots_level_')
@@ -504,8 +496,8 @@ describe('ShortRestModal - Edge Cases', () => {
           onClose={vi.fn()}
         />
       );
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
       expect(screen.getByText('Short Rest')).toBeInTheDocument();
     });
 
@@ -517,7 +509,7 @@ describe('ShortRestModal - Edge Cases', () => {
           onComplete={vi.fn()}
         />
       );
-      fireEvent.click(screen.getByText('Cancel'));
+      fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
       expect(screen.getByText('Short Rest')).toBeInTheDocument();
     });
   });
@@ -526,16 +518,13 @@ describe('ShortRestModal - Edge Cases', () => {
     it('disables Roll One button when no hit dice remain', () => {
       setupGetRuntimeValue({ shortRestHitDice: 0 });
       renderModal();
-      expect(screen.getByText('Roll One')).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Roll One/i })).toBeDisabled();
     });
 
     it('disables Roll All button when no hit dice remain', () => {
       setupGetRuntimeValue({ shortRestHitDice: 0 });
       renderModal();
-      const rollAllBtn = Array.from(document.querySelectorAll('button')).find(
-        b => b.textContent.includes('Roll All')
-      );
-      expect(rollAllBtn).toBeTruthy();
+      const rollAllBtn = screen.getByRole('button', { name: /Roll All/i });
       expect(rollAllBtn.disabled).toBe(true);
     });
 
@@ -543,7 +532,7 @@ describe('ShortRestModal - Edge Cases', () => {
       setupGetRuntimeValue({ shortRestHitDice: 0 });
       renderModal();
       const { rollDice } = await import('../../services/dice/diceRoller.js');
-      fireEvent.click(screen.getByText('Roll One'));
+      fireEvent.click(screen.getByRole('button', { name: /Roll One/i }));
       expect(rollDice).not.toHaveBeenCalled();
     });
   });
@@ -555,10 +544,7 @@ describe('ShortRestModal - Edge Cases', () => {
         automation: { passives: [] },
       });
       expect(screen.getByText('Short Rest')).toBeInTheDocument();
-      const rollOneBtn = Array.from(document.querySelectorAll('button')).find(
-        b => b.textContent.includes('Roll One')
-      );
-      expect(rollOneBtn).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Roll One/i })).toBeInTheDocument();
     });
 
     it('still allows completing short rest with no features', async () => {
@@ -566,20 +552,19 @@ describe('ShortRestModal - Edge Cases', () => {
         class: { name: 'Rogue', major: { name: 'Rogue' } },
         automation: { passives: [] },
       });
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /Complete Short Rest/i }));
+      await act(() => Promise.resolve());
       expect(screen.getByText('Short Rest')).toBeInTheDocument();
     });
   });
 
-  describe('hit die size', () => {
+  describe('hit die size display', () => {
     it('displays hit die information in the hit dice section', () => {
       renderModal({
         class: { name: 'Fighter', hit_point_die: 'd10', major: { name: 'Fighter' } },
       });
-      const hitDiceParagraph = document.querySelector('.short-rest-section p');
-      expect(hitDiceParagraph).toBeTruthy();
-      expect(hitDiceParagraph.textContent).toContain('remaining');
+      // getHitDieSize is mocked to return 8, so display shows "d8"
+      expect(screen.getByText(/d8.*remaining/i)).toBeInTheDocument();
     });
   });
 
@@ -614,15 +599,14 @@ describe('ShortRestModal - Edge Cases', () => {
     });
   });
 
-  describe(' Bardic Inspiration / Font of Inspiration', () => {
-    it('shows Font of Inspiration when bardic inspiration uses are at max', () => {
+  describe('Bardic Inspiration / Font of Inspiration', () => {
+    it('does not show Font of Inspiration when bardic inspiration uses are at max', () => {
       setupGetRuntimeValue({ bardicInspirationUses: 3 });
       renderModal({
         class: { name: 'Bard', major: { name: 'Bard' } },
         automation: { passives: [{ type: 'font_of_inspiration' }] },
         abilities: [{ name: 'Charisma', bonus: 3 }],
       });
-      // Font of Inspiration should NOT show because uses are at max
       expect(screen.queryByText(/Font of Inspiration applied/)).not.toBeInTheDocument();
     });
 
@@ -684,7 +668,8 @@ describe('ShortRestModal - Edge Cases', () => {
           onComplete={vi.fn()}
         />
       );
-      const overlay = document.querySelector('.short-rest-overlay');
+      // The overlay is the outer div that receives the click
+      const overlay = screen.getByRole('button', { name: /Cancel/i }).closest('[class*="overlay"]');
       fireEvent.click(overlay);
       expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -699,8 +684,9 @@ describe('ShortRestModal - Edge Cases', () => {
           onComplete={vi.fn()}
         />
       );
-      const modal = document.querySelector('.short-rest-modal');
-      fireEvent.click(modal);
+      // The modal content is the inner div; clicking it should not close
+      const modalContent = screen.getByRole('button', { name: /Short Rest/i }).closest('[class*="modal"]');
+      fireEvent.click(modalContent);
       expect(onClose).not.toHaveBeenCalled();
     });
   });

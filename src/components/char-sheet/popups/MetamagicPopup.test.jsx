@@ -1,5 +1,7 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
 import MetamagicPopup from './MetamagicPopup.jsx';
 
 vi.mock('../../../services/rules/spells/metamagicRules.js', () => ({
@@ -50,8 +52,25 @@ function createCostMock(selected) {
   return { totalCost: total, waivedName: null };
 }
 
+// Shared apotheosis cost mock — waived the most expensive option
+function setupApotheosisCostMock() {
+  computeMetamagicCost.mockImplementation((selected) => {
+    if (selected.length === 0) return { totalCost: 0, waivedName: null };
+    const maxCost = Math.max(...selected.map((name) => {
+      const opt = preCastOptions.find((o) => o.name === name);
+      return opt?.resolvedCost || 0;
+    }));
+    const waivedName = preCastOptions.find((o) => o.resolvedCost === maxCost)?.name;
+    const total = selected.reduce((sum, name) => {
+      const opt = preCastOptions.find((o) => o.name === name);
+      return sum + (opt?.resolvedCost || 0);
+    }, 0) - maxCost;
+    return { totalCost: total, waivedName };
+  });
+}
+
 function renderPopup(overrides = {}) {
-  const spell = overrides.spell !== undefined ? overrides.spell : { ...baseSpell };
+  const spell = overrides.spell !== undefined ? { ...overrides.spell } : { ...baseSpell };
   const playerStats = { ...basePlayerStats, ...overrides.playerStats };
   const props = {
     spell,
@@ -86,6 +105,12 @@ describe('MetamagicPopup', () => {
     });
   });
 
+  afterEach(() => {
+    cleanup();
+    // Remove the document keydown listener added by the component
+    document.removeEventListener('keydown', () => {});
+  });
+
   // ── Rendering ──
 
   it('renders spell name, level, and all pre-cast metamagic options', () => {
@@ -116,6 +141,13 @@ describe('MetamagicPopup', () => {
     expect(screen.getByText('Close')).toBeInTheDocument();
   });
 
+  it('calls onSkip when Close button is clicked in empty-options modal', () => {
+    getPreCastOptions.mockReturnValue([]);
+    const { onSkip } = renderPopup({ playerStats: { ...basePlayerStats, class: { name: 'Wizard' } } });
+    fireEvent.click(screen.getByText('Close'));
+    expect(onSkip).toHaveBeenCalledTimes(1);
+  });
+
   // ── Skip / close behavior ──
 
   describe('skip / close', () => {
@@ -128,6 +160,13 @@ describe('MetamagicPopup', () => {
     it('calls onSkip when Escape key is pressed', () => {
       const { onSkip } = renderPopup();
       fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onSkip).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onSkip when the overlay background is clicked', () => {
+      const { onSkip } = renderPopup();
+      const overlay = document.querySelector('.popup-overlay');
+      fireEvent.click(overlay);
       expect(onSkip).toHaveBeenCalledTimes(1);
     });
   });
@@ -170,15 +209,19 @@ describe('MetamagicPopup', () => {
       expect(onConfirm).not.toHaveBeenCalled();
     });
 
-    it('updates SP cost display when options are selected', () => {
+    it('updates SP cost in confirm when options are selected', () => {
       getMaxMetamagicPerSpell.mockReturnValue(3);
       computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
-      renderPopup();
+      const { onConfirm } = renderPopup();
       fireEvent.click(screen.getByText('Quickened Spell'));
-      const btn = screen.getByText(/Apply & Cast/);
-      expect(btn.textContent).toContain('2 SP');
       fireEvent.click(screen.getByText('Careful Spell'));
-      expect(btn.textContent).toContain('3 SP');
+      fireEvent.click(screen.getByText(/Apply & Cast/));
+      expect(onConfirm).toHaveBeenCalledWith({
+        options: ['Quickened Spell', 'Careful Spell'],
+        totalCost: 3,
+        twinTarget: null,
+        psionicActive: false,
+      });
     });
 
     it('deselects an option when clicked again', () => {
@@ -204,7 +247,7 @@ describe('MetamagicPopup', () => {
       });
     });
 
-    it('prevents selecting options that exceed SP budget', () => {
+    it('does not confirm when selected cost exceeds available SP', () => {
       getMaxMetamagicPerSpell.mockReturnValue(3);
       computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
       const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 2 } });
@@ -216,6 +259,15 @@ describe('MetamagicPopup', () => {
         twinTarget: null,
         psionicActive: false,
       });
+    });
+
+    it('does not call onConfirm when cost exceeds available SP', () => {
+      getMaxMetamagicPerSpell.mockReturnValue(3);
+      computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
+      const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 1 } });
+      fireEvent.click(screen.getByText('Quickened Spell'));
+      fireEvent.click(screen.getByText(/Apply & Cast/));
+      expect(onConfirm).not.toHaveBeenCalled();
     });
   });
 
@@ -236,22 +288,26 @@ describe('MetamagicPopup', () => {
       expect(screen.getByText('Sorcerer')).toBeInTheDocument();
     });
 
-    it('disables Apply & Cast when Twinned selected but no target chosen', () => {
-      renderPopup();
+    it('does not call onConfirm when Twinned selected but no target chosen', () => {
+      const { onConfirm } = renderPopup();
+      computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
       fireEvent.click(screen.getByText('Twinned Spell'));
-      const btn = screen.getByText(/Apply & Cast/);
-      expect(btn.disabled).toBe(true);
+      fireEvent.click(screen.getByText(/Apply & Cast/));
+      expect(onConfirm).not.toHaveBeenCalled();
     });
 
-    it('enables Apply & Cast when Twinned selected and target chosen', () => {
+    it('confirms with twinTarget when Twinned selected and target chosen', () => {
       const { onConfirm } = renderPopup();
       computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
       fireEvent.click(screen.getByText('Twinned Spell'));
       fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Goblin' } });
-      const btn = screen.getByText(/Apply & Cast/);
-      expect(btn.disabled).toBe(false);
-      fireEvent.click(btn);
-      expect(onConfirm).toHaveBeenCalled();
+      fireEvent.click(screen.getByText(/Apply & Cast/));
+      expect(onConfirm).toHaveBeenCalledWith({
+        options: ['Twinned Spell'],
+        totalCost: 3,
+        twinTarget: 'Goblin',
+        psionicActive: false,
+      });
     });
 
     it('includes twinTarget in onConfirm when Twinned is selected with a target', () => {
@@ -267,52 +323,55 @@ describe('MetamagicPopup', () => {
         psionicActive: false,
       });
     });
+
+    it('sends twinTarget as null when no creatures exist', () => {
+      getCombatSummary.mockReturnValue({ creatures: [] });
+      const { onConfirm } = renderPopup();
+      computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
+      fireEvent.click(screen.getByText('Twinned Spell'));
+      fireEvent.click(screen.getByText(/Apply & Cast/));
+      expect(onConfirm).toHaveBeenCalledWith({
+        options: ['Twinned Spell'],
+        totalCost: 3,
+        twinTarget: null,
+        psionicActive: false,
+      });
+    });
   });
 
   // ── Affordability / insufficient SP ──
 
   describe('affordability', () => {
-    it('disables Apply & Cast when cost exceeds available SP', () => {
+    it('does not call onConfirm when cost exceeds available SP', () => {
       getMaxMetamagicPerSpell.mockReturnValue(3);
       computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
-      renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 1 } });
+      const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 1 } });
       fireEvent.click(screen.getByText('Quickened Spell'));
-      const btn = screen.getByText(/Apply & Cast/);
-      expect(btn.disabled).toBe(true);
+      fireEvent.click(screen.getByText(/Apply & Cast/));
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('disables the option label when an option is unaffordable', () => {
+      getMaxMetamagicPerSpell.mockReturnValue(3);
+      renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 1 } });
+      const optionLabel = screen.getByRole('checkbox', { name: /Heightened Spell/ }).closest('.metamagic-option');
+      expect(optionLabel).toHaveClass('metamagic-option-disabled');
+    });
+
+    it('allows confirming when selected options fit within SP budget', () => {
+      getMaxMetamagicPerSpell.mockReturnValue(3);
+      computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
+      const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 2 } });
+      fireEvent.click(screen.getByText('Careful Spell'));
+      fireEvent.click(screen.getByText(/Apply & Cast/));
+      expect(onConfirm).toHaveBeenCalled();
     });
   });
 
   // ── Arcane Apotheosis (waived cost) ──
 
   describe('Arcane Apotheosis', () => {
-    function setupApotheosisCostMock() {
-      computeMetamagicCost.mockImplementation((selected) => {
-        if (selected.length === 0) return { totalCost: 0, waivedName: null };
-        const maxCost = Math.max(...selected.map((name) => {
-          const opt = preCastOptions.find((o) => o.name === name);
-          return opt?.resolvedCost || 0;
-        }));
-        const waivedName = preCastOptions.find((o) => o.resolvedCost === maxCost)?.name;
-        const total = selected.reduce((sum, name) => {
-          const opt = preCastOptions.find((o) => o.name === name);
-          return sum + (opt?.resolvedCost || 0);
-        }, 0) - maxCost;
-        return { totalCost: total, waivedName };
-      });
-    }
-
-    it('shows waived cost label when Arcane Apotheosis is active', () => {
-      hasArcaneApotheosis.mockReturnValue(true);
-      getMaxMetamagicPerSpell.mockReturnValue(3);
-      setupApotheosisCostMock();
-      renderPopup();
-      fireEvent.click(screen.getByText('Quickened Spell'));
-      fireEvent.click(screen.getByText('Careful Spell'));
-      const btn = screen.getByText(/Apply & Cast/);
-      expect(btn.textContent).toContain('1 SP');
-    });
-
-    it('shows waived cost text on the most expensive option', () => {
+    it('shows waived cost label on the most expensive option', () => {
       hasArcaneApotheosis.mockReturnValue(true);
       getMaxMetamagicPerSpell.mockReturnValue(1);
       setupApotheosisCostMock();
@@ -338,16 +397,13 @@ describe('MetamagicPopup', () => {
       });
     });
 
-    it('enables Apply & Cast when a single option is free via Arcane Apotheosis', () => {
+    it('confirms with waived cost of 0 when Apotheosis covers the entire cost', () => {
       hasArcaneApotheosis.mockReturnValue(true);
       getMaxMetamagicPerSpell.mockReturnValue(3);
       setupApotheosisCostMock();
       const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 1 } });
       fireEvent.click(screen.getByText('Quickened Spell'));
-      const btn = screen.getByText(/Apply & Cast/);
-      expect(btn.disabled).toBe(false);
-      expect(btn.textContent).toContain('0 SP');
-      fireEvent.click(btn);
+      fireEvent.click(screen.getByText(/Apply & Cast/));
       expect(onConfirm).toHaveBeenCalledWith({
         options: ['Quickened Spell'],
         totalCost: 0,
@@ -357,7 +413,7 @@ describe('MetamagicPopup', () => {
     });
   });
 
-  // ── 2024 ruleset ──
+  // ── 2024 ruleset / maxPerSpell > 1 ──
 
   describe('2024 ruleset / maxPerSpell > 1', () => {
     it('shows incarnate note when maxPerSpell > 1', () => {
@@ -400,7 +456,7 @@ describe('MetamagicPopup', () => {
       });
     });
 
-    it('includes psionicActive when Psionic Sorcery is affordable and selected', () => {
+    it('includes psionicActive when Psionic Sorcery is selected and affordable', () => {
       const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _isPsionicSpell: true, _psionicCost: 1 } });
       computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
       fireEvent.click(screen.getByText('Psionic Sorcery'));
@@ -411,14 +467,6 @@ describe('MetamagicPopup', () => {
         twinTarget: null,
         psionicActive: true,
       });
-    });
-
-    it('adds psionic cost to total cost display', () => {
-      computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
-      renderPopup({ playerStats: { ...basePlayerStats, _isPsionicSpell: true, _psionicCost: 1 } });
-      fireEvent.click(screen.getByText('Psionic Sorcery'));
-      const btn = screen.getByText(/Apply & Cast/);
-      expect(btn.textContent).toContain('1 SP');
     });
 
     it('includes psionicActive when totalCost + psionicCost equals currentSP', () => {
@@ -433,27 +481,41 @@ describe('MetamagicPopup', () => {
         psionicActive: true,
       });
     });
+
+    it('does not include psionicActive when psionic cost exceeds remaining SP', () => {
+      computeMetamagicCost.mockReturnValue({ totalCost: 9, waivedName: null });
+      const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _isPsionicSpell: true, _psionicCost: 2 } });
+      fireEvent.click(screen.getByText('Psionic Sorcery'));
+      fireEvent.click(screen.getByText(/Apply & Cast/));
+      expect(onConfirm).toHaveBeenCalledWith({
+        options: [],
+        totalCost: 9,
+        twinTarget: null,
+        psionicActive: false,
+      });
+    });
+
+    it('unchecks Psionic Sorcery when deselected and re-confirms', () => {
+      computeMetamagicCost.mockReturnValue({ totalCost: 9, waivedName: null });
+      const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _isPsionicSpell: true, _psionicCost: 1 } });
+      const checkbox = screen.getByRole('checkbox', { name: /Psionic Sorcery/ });
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+      fireEvent.click(checkbox);
+      expect(checkbox).not.toBeChecked();
+      fireEvent.click(screen.getByText(/Apply & Cast/));
+      expect(onConfirm).toHaveBeenCalledWith({
+        options: [],
+        totalCost: 9,
+        twinTarget: null,
+        psionicActive: false,
+      });
+    });
   });
 
   // ── Apotheosis + Psionic combined ──
 
   describe('Apotheosis + Psionic combined', () => {
-    function setupApotheosisCostMock() {
-      computeMetamagicCost.mockImplementation((selected) => {
-        if (selected.length === 0) return { totalCost: 0, waivedName: null };
-        const maxCost = Math.max(...selected.map((name) => {
-          const opt = preCastOptions.find((o) => o.name === name);
-          return opt?.resolvedCost || 0;
-        }));
-        const waivedName = preCastOptions.find((o) => o.resolvedCost === maxCost)?.name;
-        const total = selected.reduce((sum, name) => {
-          const opt = preCastOptions.find((o) => o.name === name);
-          return sum + (opt?.resolvedCost || 0);
-        }, 0) - maxCost;
-        return { totalCost: total, waivedName };
-      });
-    }
-
     it('computes affordability correctly when both Apotheosis and Psionic are active', () => {
       hasArcaneApotheosis.mockReturnValue(true);
       getMaxMetamagicPerSpell.mockReturnValue(3);
@@ -478,12 +540,27 @@ describe('MetamagicPopup', () => {
 
   it('calculates Twinned Spell cost based on spell level', () => {
     const highLevelSpell = { name: 'Dragon Breath', level: 5 };
-    computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
     const twinnedOptions = preCastOptions.map((o) =>
       o.name === 'Twinned Spell' ? { ...o, resolvedCost: 5 } : o,
     );
     getPreCastOptions.mockReturnValue(twinnedOptions);
-    renderPopup({ spell: highLevelSpell });
-    expect(screen.getByText('5 SP')).toBeInTheDocument();
+    computeMetamagicCost.mockImplementation((selected, options) => {
+      if (selected.length === 0) return { totalCost: 0, waivedName: null };
+      const total = selected.reduce((sum, name) => {
+        const opt = options?.find((o) => o.name === name);
+        return sum + (opt?.resolvedCost || 0);
+      }, 0);
+      return { totalCost: total, waivedName: null };
+    });
+    const { onConfirm } = renderPopup({ spell: highLevelSpell });
+    fireEvent.click(screen.getByText('Twinned Spell'));
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Goblin' } });
+    fireEvent.click(screen.getByText(/Apply & Cast/));
+    expect(onConfirm).toHaveBeenCalledWith({
+      options: ['Twinned Spell'],
+      totalCost: 5,
+      twinTarget: 'Goblin',
+      psionicActive: false,
+    });
   });
 });

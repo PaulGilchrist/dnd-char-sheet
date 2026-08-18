@@ -1,5 +1,5 @@
-// @cleaned-by-ai
-import { render, fireEvent } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpellSlotLevel from './CharSpellSlotLevel.jsx';
 import * as helpers from './CharSpellSlotLevel.test.helpers.js';
@@ -11,6 +11,20 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 
 import { useRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
+const campaignName = 'Test Campaign';
+
+function renderSpellSlotLevel(props = {}) {
+  return render(
+    <CharSpellSlotLevel
+      level={1}
+      totalSlots={3}
+      campaignName={campaignName}
+      playerStats={helpers.createPlayerStats()}
+      {...props}
+    />
+  );
+}
+
 describe('CharSpellSlotLevel - Interactions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -20,44 +34,64 @@ describe('CharSpellSlotLevel - Interactions', () => {
     it('decrements availableSlots by 1 when available > 0', () => {
       useRuntimeValue.mockReturnValue(3);
 
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={3}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
+      renderSpellSlotLevel();
 
-      const levelDiv = container.querySelector('.level');
-      fireEvent.click(levelDiv);
+      const levelElement = screen.getByText('1');
+      levelElement.click();
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Test Character',
         'spell_slots_level_1',
         2,
-        undefined
+        campaignName
       );
     });
 
     it('resets to totalSlots when availableSlots is 0', () => {
       useRuntimeValue.mockReturnValue(0);
 
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={2}
-          totalSlots={5}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
+      renderSpellSlotLevel({ level: 2, totalSlots: 5 });
 
-      const levelDiv = container.querySelector('.level');
-      fireEvent.click(levelDiv);
+      const levelElement = screen.getByText('2');
+      levelElement.click();
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Test Character',
         'spell_slots_level_2',
         5,
-        undefined
+        campaignName
+      );
+    });
+
+    it('resets to totalSlots when availableSlots is negative', () => {
+      useRuntimeValue.mockReturnValue(-1);
+
+      renderSpellSlotLevel();
+
+      const levelElement = screen.getByText('1');
+      levelElement.click();
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Character',
+        'spell_slots_level_1',
+        3,
+        campaignName
+      );
+    });
+
+    it('resets to totalSlots when totalSlots is 0', () => {
+      useRuntimeValue.mockReturnValue(0);
+
+      renderSpellSlotLevel({ totalSlots: 0 });
+
+      const levelElement = screen.getByText('1');
+      levelElement.click();
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Character',
+        'spell_slots_level_1',
+        0,
+        campaignName
       );
     });
 
@@ -70,22 +104,16 @@ describe('CharSpellSlotLevel - Interactions', () => {
         },
       });
 
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={2}
-          totalSlots={4}
-          playerStats={playerStats}
-        />
-      );
+      renderSpellSlotLevel({ level: 2, totalSlots: 4, playerStats });
 
-      const levelDiv = container.querySelector('.level');
-      fireEvent.click(levelDiv);
+      const levelElement = screen.getByText('2');
+      levelElement.click();
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Test Character',
         'spell_slots_level_2',
         1,
-        undefined
+        campaignName
       );
     });
 
@@ -98,22 +126,16 @@ describe('CharSpellSlotLevel - Interactions', () => {
         },
       });
 
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={4}
-          totalSlots={5}
-          playerStats={playerStats}
-        />
-      );
+      renderSpellSlotLevel({ level: 4, totalSlots: 5, playerStats });
 
-      const levelDiv = container.querySelector('.level');
-      fireEvent.click(levelDiv);
+      const levelElement = screen.getByText('4');
+      levelElement.click();
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Test Character',
         'spell_slots_level_4',
         5,
-        undefined
+        campaignName
       );
     });
 
@@ -124,22 +146,16 @@ describe('CharSpellSlotLevel - Interactions', () => {
         _trackedResources: {},
       });
 
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={3}
-          playerStats={playerStats}
-        />
-      );
+      renderSpellSlotLevel({ playerStats });
 
-      const levelDiv = container.querySelector('.level');
-      fireEvent.click(levelDiv);
+      const levelElement = screen.getByText('1');
+      levelElement.click();
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Test Character',
         'spell_slots_level_1',
         2,
-        undefined
+        campaignName
       );
     });
   });
@@ -148,64 +164,28 @@ describe('CharSpellSlotLevel - Interactions', () => {
     it('decrements on Enter key press', () => {
       useRuntimeValue.mockReturnValue(3);
 
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={3}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
+      renderSpellSlotLevel();
 
-      const levelDiv = container.querySelector('.level');
-      fireEvent.keyDown(levelDiv, { key: 'Enter' });
+      const levelElement = screen.getByText('1');
+      fireEvent.keyDown(levelElement, { key: 'Enter' });
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Test Character',
         'spell_slots_level_1',
         2,
-        undefined
+        campaignName
       );
     });
 
     it('does NOT decrement on Tab key press', () => {
       useRuntimeValue.mockReturnValue(3);
 
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={3}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
+      renderSpellSlotLevel();
 
-      const levelDiv = container.querySelector('.level');
-      fireEvent.keyDown(levelDiv, { key: 'Tab' });
+      const levelElement = screen.getByText('1');
+      fireEvent.keyDown(levelElement, { key: 'Tab' });
 
       expect(setRuntimeValue).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('different spell slot levels', () => {
-    it('calls setRuntimeValue with correct key for non-level-1 slots', () => {
-      useRuntimeValue.mockReturnValue(5);
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={5}
-          totalSlots={6}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
-
-      const levelDiv = container.querySelector('.level');
-      fireEvent.click(levelDiv);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Test Character',
-        'spell_slots_level_5',
-        4,
-        undefined
-      );
     });
   });
 });

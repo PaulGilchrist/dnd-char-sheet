@@ -1,50 +1,19 @@
-// @cleaned-by-ai
 // @improved-by-ai
-// Removed 38 redundant tests (Barbarian/Bard/Cleric sections) — all covered in dedicated class test files.
-// Kept only the unique entry-point test for unknown class handling.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import CharClassFeatures from './CharClassFeatures.jsx';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
-
-vi.mock('./TrackedResourceInput.jsx', () => ({
-  default: function MockTrackedResourceInput({ label, getMax, resourceKey }) {
-    const max = getMax ? getMax() : 0;
-    return (
-      <div data-testid={`tracked-resource-${resourceKey}`}>
-        <b>{label}:</b> <span>{max}/{max}</span>
-      </div>
-    );
-  },
-}));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(() => undefined),
   getRuntimeValue: vi.fn(() => null),
   setRuntimeValue: vi.fn(),
-  useSyncedState: vi.fn(() => [{}, vi.fn()]),
 }));
 
-vi.mock('../../../services/automation/index.js', () => ({
-  executeHandler: vi.fn(),
-}));
-
-vi.mock('../../../services/automation/handlers/class-wizard/portentHandler.js', () => ({
-  applyPortentChoice: vi.fn(),
-}));
-
-vi.mock('../../common/Popup.jsx', () => ({
-  default: function MockPopup({ html, children }) {
-    return (
-      <div data-testid="popup">
-        {html ? <div dangerouslySetInnerHTML={{ __html: html }} /> : children}
-      </div>
-    );
+vi.mock('./TrackedResourceInput.jsx', () => ({
+  default: function MockTrackedResourceInput({ label }) {
+    return <div data-testid={`tracked-resource-${label}`}>{label}</div>;
   },
-}));
-
-vi.mock('../../../services/ui/dataLoader.js', () => ({
-  loadFightingStyles: vi.fn(() => Promise.resolve([])),
 }));
 
 const mockCampaignName = 'test-campaign';
@@ -84,10 +53,39 @@ describe('CharClassFeatures', () => {
     });
   });
 
-  describe('null/unknown class handling', () => {
-    it('returns null for unknown class name', () => {
+  describe('unknown class handling', () => {
+    it('renders nothing when class is unknown and no adrenaline rush', () => {
       const { container } = renderComponent(buildPlayerStats({ class: { name: 'UnknownClass' } }));
-      expect(container.innerHTML).toBe('');
+      expect(container.querySelector('*')).toBeNull();
+    });
+
+    it('renders adrenaline rush tracked resource when class is unknown but adrenaline rush exists', () => {
+      const playerStats = buildPlayerStats({
+        class: { name: 'UnknownClass' },
+        automation: { ...basePlayerStats.automation, specialActions: [{ effect: 'bonus_action_dash' }] },
+      });
+      renderComponent(playerStats);
+      expect(screen.getByText('Adrenaline Rush')).toBeInTheDocument();
+    });
+
+    it('renders stonecunning tracked resource when class is unknown but stonecunning exists', () => {
+      const playerStats = buildPlayerStats({
+        class: { name: 'UnknownClass' },
+        race: { traits: [{ name: 'Stonecunning', automation: true }] },
+      });
+      renderComponent(playerStats);
+      expect(screen.getByText('Stonecunning')).toBeInTheDocument();
+    });
+
+    it('renders both adrenaline rush and stonecunning when both exist with unknown class', () => {
+      const playerStats = buildPlayerStats({
+        class: { name: 'UnknownClass' },
+        automation: { ...basePlayerStats.automation, specialActions: [{ effect: 'bonus_action_dash' }] },
+        race: { traits: [{ name: 'Stonecunning', automation: true }] },
+      });
+      renderComponent(playerStats);
+      expect(screen.getByText('Adrenaline Rush')).toBeInTheDocument();
+      expect(screen.getByText('Stonecunning')).toBeInTheDocument();
     });
   });
 });

@@ -1,42 +1,16 @@
-// @cleaned-by-ai
+// @improved-by-ai
 //
-// Cleanup: Removed 8 redundant/brittle/low-value tests (62% reduction).
-//
-// Removed:
-//   - "Inspiration Toggle" (3 tests) — low-value render assertions for a simple
-//     checkbox toggle. The useTrackedResource hook manages state; asserting
-//     checkbox.checked DOM state is brittle and provides no behavioral confidence.
-//
-//   - "Delete Character" (2 tests) — duplicated in CharSummary-Interactions.test.jsx
-//     with identical vi.stubGlobal('confirm') approach and it.afterEach cleanup.
-//
-//   - "Ally Modal" (2 tests) — weaker render assertions covered by
-//     CharSummary-Ally-Initiative.test.jsx "opens ally modal and populates creatures
-//     from combatSummary" which also verifies getCombatSummary call and fallback
-//     behavior with proper wrapper/DiceRollContext setup.
-//
-//   - "Initiative Handling" (1 test) — brittle; asserts CSS class (structural
-//     detail, not behavioral). Covered by
-//     CharSummary-Ally-Initiative.test.jsx "calls rollInitiative with effective
-//     initiative value when initiative is clicked" which tests the actual
-//     rollInitiative behavior with captured arguments.
-//
-// Kept:
-//   - "Speed Calculations" (4 tests) — unique behavioral coverage for haste
-//     doubling and monk unarmored movement logic. Not covered by
-//     CharSummary-SpeedCalculations.test.jsx which uses different parameterized
-//     approaches (exhaustion levels, condition effects, fly speed, etc.).
-//
-//   - "Initiative Rolled Event" (1 test) — unique coverage of the useEffect
-//     side effect that clears wild magic surge effects on initiative-rolled.
-//     Not covered by CharSummary-WildMagic.test.jsx which tests surge rendering
-//     but not the clearing behavior.
-//
-// Original: 13 tests / 315 lines
-// After: 5 tests / ~160 lines
+// Quality improvements:
+//   - Removed window.location.hostname assignment (unnecessary — isLocalhost
+//     is only used for GM-only UI features, not speed calc or initiative event)
+//   - Replaced nextElementSibling + textContent with screen.getByText assertions
+//     (tests rendered output, not DOM structure)
+//   - Added @testing-library/jest-dom import (required for toBeInTheDocument)
+//   - Reduced excessive cleanup meta-commentary
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { useSyncedState } from '../../../hooks/runtime/useSyncedState.js';
@@ -131,23 +105,19 @@ const mockCampaignName = 'test-campaign';
 
 // ---------------------------------------------------------------------------
 // Speed calculations — haste doubling and monk unarmored movement
-// Unique behavioral coverage not present in any other test file.
-// CharSummary-SpeedCalculations.test.jsx uses parameterized tests for
-// exhaustion, conditions, fly speed, climb/swim — but does not test
-// haste doubling or monk unarmored movement logic.
+// Uses screen.getByText assertions to verify rendered output directly,
+// avoiding brittle nextElementSibling DOM traversal.
 // ---------------------------------------------------------------------------
 describe('CharSummary - Speed Calculations', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 
     it('doubles speed when haste buff is active', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'haste' }]);
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('50 ft');
+        expect(screen.getByText(/50 ft/)).toBeInTheDocument();
     });
 
     it('adds monk unarmored movement when no armor or shield', () => {
@@ -159,8 +129,7 @@ describe('CharSummary - Speed Calculations', () => {
             equipment: [],
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('35 ft');
+        expect(screen.getByText(/35 ft/)).toBeInTheDocument();
     });
 
     it('does not add monk unarmored movement when wearing armor', () => {
@@ -172,8 +141,7 @@ describe('CharSummary - Speed Calculations', () => {
             equipment: [{ name: 'Scale Mail', equipment_category: 'Armor' }],
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('25 ft');
+        expect(screen.getByText(/25 ft/)).toBeInTheDocument();
     });
 
     it('does not add monk unarmored movement when wielding shield', () => {
@@ -185,20 +153,16 @@ describe('CharSummary - Speed Calculations', () => {
             equipment: [{ name: 'Shield', type: 'Shield' }],
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const speedEl = screen.getByText(/Speed:/).nextElementSibling;
-        expect(speedEl.textContent).toContain('25 ft');
+        expect(screen.getByText(/25 ft/)).toBeInTheDocument();
     });
 });
 
 // ---------------------------------------------------------------------------
 // useEffect for initiative-rolled event — clears wild magic surge effects
-// Unique coverage of the side effect. Not covered by
-// CharSummary-WildMagic.test.jsx which tests surge rendering but not clearing.
 // ---------------------------------------------------------------------------
 describe('CharSummary - Initiative Rolled Event', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        window.location.hostname = 'localhost';
         getActiveBuffs.mockReturnValue([]);
     });
 

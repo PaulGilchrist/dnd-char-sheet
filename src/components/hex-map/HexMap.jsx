@@ -349,6 +349,7 @@ function HexMap({ campaignName, mapName, onBack, characters = [], onEncounterCre
                         ref={svgRef}
                         viewBox={`${panX} ${panY} ${svgWidth / zoom} ${svgHeight / zoom}`}
                         className="hex-svg"
+                        data-testid="hex-svg"
                         draggable={false}
                         onDragStart={(e) => e.preventDefault()}
                         onPointerDown={(e) => {

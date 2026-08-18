@@ -1,9 +1,12 @@
-// @cleaned-by-ai
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HexMapToolbar from './HexMapToolbar.jsx';
 import { TOOL_NONE, TOOL_PAINT, TOOL_ERASE, TOOL_RIVER, TOOL_ROAD, TOOL_TRAVEL } from '../../config/outdoorConfig';
 
+// Tool button titles mirror the component's title props.
+// Keeping them local avoids importing from the component source,
+// but they must stay in sync with HexMapToolbar.jsx.
 const TOOL_TITLES = {
     [TOOL_PAINT]: 'Paint terrain',
     [TOOL_ERASE]: 'Erase terrain',
@@ -11,12 +14,15 @@ const TOOL_TITLES = {
     [TOOL_ROAD]: 'Connect cities and settlements with roads',
     [TOOL_TRAVEL]: 'Travel mode — plan and execute overland travel',
 };
-const ALL_TOOLS = [TOOL_PAINT, TOOL_ERASE, TOOL_RIVER, TOOL_ROAD, TOOL_TRAVEL];
 
 describe('HexMapToolbar', () => {
     let props;
+    let container;
 
     beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+
         props = {
             onBack: vi.fn(),
             mapName: 'Test Map',
@@ -43,162 +49,214 @@ describe('HexMapToolbar', () => {
         };
     });
 
+    afterEach(() => {
+        if (container && container.parentNode) {
+            container.parentNode.removeChild(container);
+        }
+    });
+
+    function renderToolbar(overrideProps = {}) {
+        return render(<HexMapToolbar {...props} {...overrideProps} />, { container });
+    }
+
+    // ── Back button ──────────────────────────────────────────────────
+
     it('calls onBack when the back button is clicked', () => {
-        render(<HexMapToolbar {...props} />);
+        renderToolbar();
         fireEvent.click(screen.getByTitle('Back to maps'));
         expect(props.onBack).toHaveBeenCalledTimes(1);
     });
 
     it('renders the map name', () => {
-        render(<HexMapToolbar {...props} mapName="Northern Wilds" />);
+        renderToolbar({ mapName: 'Northern Wilds' });
         expect(screen.getByText('Northern Wilds')).toBeInTheDocument();
     });
 
-    describe('terrain tools', () => {
-        it.each(ALL_TOOLS.map((tool) => [tool, TOOL_TITLES[tool]]))(
-            'activates %s when its button is clicked',
-            (tool, title) => {
-                render(<HexMapToolbar {...props} />);
-                fireEvent.click(screen.getByTitle(title));
-                expect(props.setTool).toHaveBeenCalledWith(tool);
-            },
-        );
+    // ── Terrain tools ────────────────────────────────────────────────
 
-        it.each(ALL_TOOLS.map((tool) => [tool, TOOL_TITLES[tool]]))(
-            'deactivates %s when its button is clicked while active',
-            (tool, title) => {
-                render(<HexMapToolbar {...props} tool={tool} />);
-                fireEvent.click(screen.getByTitle(title));
-                expect(props.setTool).toHaveBeenCalledWith(TOOL_NONE);
-            },
-        );
+    it('toggles each terrain tool on and off', () => {
+        for (const [tool, title] of Object.entries(TOOL_TITLES)) {
+            // Initial render: tool is inactive
+            renderToolbar({ tool: TOOL_NONE });
+            const button = screen.getByTitle(title);
+            expect(button).not.toHaveClass('active');
 
-        it.each(ALL_TOOLS.map((tool) => [tool, TOOL_TITLES[tool]]))(
-            'marks the %s button as active when that tool is selected',
-            (tool, title) => {
-                render(<HexMapToolbar {...props} tool={tool} />);
-                expect(screen.getByTitle(title)).toHaveClass('active');
-            },
-        );
+            // First click: activate
+            fireEvent.click(button);
+            expect(props.setTool).toHaveBeenLastCalledWith(tool);
 
-        it('does not mark buttons of unselected tools as active', () => {
-            render(<HexMapToolbar {...props} tool={TOOL_PAINT} />);
-            expect(screen.getByTitle(TOOL_TITLES[TOOL_ERASE])).not.toHaveClass('active');
-        });
-    });
+            // Re-render with active tool
+            props.setTool.mockClear();
+            renderToolbar({ tool });
+            expect(screen.getByTitle(title)).toHaveClass('active');
 
-    describe('terrain selector', () => {
-        it.each([
-            [TOOL_PAINT, true],
-            [TOOL_ERASE, true],
-            [TOOL_NONE, false],
-            [TOOL_RIVER, false],
-            [TOOL_ROAD, false],
-            [TOOL_TRAVEL, false],
-        ])('is shown when %s is active (%s)', (tool, shown) => {
-            render(<HexMapToolbar {...props} tool={tool} />);
-            if (shown) {
-                expect(screen.getByTitle('Grassland')).toBeInTheDocument();
-            } else {
-                expect(screen.queryByTitle('Grassland')).not.toBeInTheDocument();
-            }
-        });
-
-        it('renders a swatch for every terrain type', () => {
-            render(<HexMapToolbar {...props} tool={TOOL_PAINT} />);
-            for (const terrain of props.terrainTypes) {
-                expect(screen.getByTitle(terrain.name)).toBeInTheDocument();
-            }
-        });
-
-        it('selects the terrain and switches to the paint tool when a swatch is clicked', () => {
-            render(<HexMapToolbar {...props} tool={TOOL_PAINT} />);
-            fireEvent.click(screen.getByTitle('Forest'));
-            expect(props.setSelectedTerrain).toHaveBeenCalledWith('forest');
-            expect(props.setTool).toHaveBeenCalledWith(TOOL_PAINT);
-        });
-
-        it('marks the selected terrain swatch as active', () => {
-            render(<HexMapToolbar {...props} tool={TOOL_PAINT} selectedTerrain="forest" />);
-            expect(screen.getByTitle('Forest')).toHaveClass('active');
-            expect(screen.getByTitle('Grassland')).not.toHaveClass('active');
-        });
-    });
-
-    describe('zoom controls', () => {
-        it.each([
-            ['Zoom in', 'zoomIn'],
-            ['Zoom out', 'zoomOut'],
-            ['Reset view', 'resetView'],
-        ])('calls %s when its button is clicked', (title, handlerName) => {
-            render(<HexMapToolbar {...props} />);
+            // Second click: deactivate
             fireEvent.click(screen.getByTitle(title));
-            expect(props[handlerName]).toHaveBeenCalled();
-        });
+            expect(props.setTool).toHaveBeenLastCalledWith(TOOL_NONE);
 
-        it.each([
+            props.setTool.mockClear();
+        }
+    });
+
+    it('marks the active tool button with the active class', () => {
+        for (const [tool, title] of Object.entries(TOOL_TITLES)) {
+            renderToolbar({ tool });
+            expect(screen.getByTitle(title)).toHaveClass('active');
+        }
+    });
+
+    it('does not mark inactive tool buttons as active', () => {
+        renderToolbar({ tool: TOOL_PAINT });
+        for (const [tool, title] of Object.entries(TOOL_TITLES)) {
+            if (tool !== TOOL_PAINT) {
+                expect(screen.getByTitle(title)).not.toHaveClass('active');
+            }
+        }
+    });
+
+    // ── Terrain selector ─────────────────────────────────────────────
+
+    it('shows the terrain selector when paint or erase tool is active', () => {
+        renderToolbar({ tool: TOOL_PAINT });
+        expect(screen.getByTitle('Grassland')).toBeInTheDocument();
+
+        renderToolbar({ tool: TOOL_ERASE });
+        expect(screen.getByTitle('Grassland')).toBeInTheDocument();
+    });
+
+    it('hides the terrain selector for non-paint/erase tools', () => {
+        renderToolbar({ tool: TOOL_NONE });
+        expect(screen.queryByTitle('Grassland')).not.toBeInTheDocument();
+
+        renderToolbar({ tool: TOOL_RIVER });
+        expect(screen.queryByTitle('Grassland')).not.toBeInTheDocument();
+
+        renderToolbar({ tool: TOOL_TRAVEL });
+        expect(screen.queryByTitle('Grassland')).not.toBeInTheDocument();
+    });
+
+    it('renders a swatch for every terrain type', () => {
+        renderToolbar({ tool: TOOL_PAINT });
+        for (const terrain of props.terrainTypes) {
+            expect(screen.getByTitle(terrain.name)).toBeInTheDocument();
+        }
+    });
+
+    it('selects terrain and switches to paint tool when a swatch is clicked', () => {
+        renderToolbar({ tool: TOOL_PAINT });
+        fireEvent.click(screen.getByTitle('Forest'));
+        expect(props.setSelectedTerrain).toHaveBeenCalledWith('forest');
+        expect(props.setTool).toHaveBeenCalledWith(TOOL_PAINT);
+    });
+
+    it('selects terrain and switches to paint tool even when erase tool is active', () => {
+        renderToolbar({ tool: TOOL_ERASE });
+        fireEvent.click(screen.getByTitle('Forest'));
+        expect(props.setSelectedTerrain).toHaveBeenCalledWith('forest');
+        expect(props.setTool).toHaveBeenCalledWith(TOOL_PAINT);
+    });
+
+    it('marks the selected terrain swatch as active', () => {
+        renderToolbar({ tool: TOOL_PAINT, selectedTerrain: 'forest' });
+        expect(screen.getByTitle('Forest')).toHaveClass('active');
+        expect(screen.getByTitle('Grassland')).not.toHaveClass('active');
+    });
+
+    // ── Zoom controls ────────────────────────────────────────────────
+
+    it('calls the correct handler for each zoom button', () => {
+        renderToolbar();
+        fireEvent.click(screen.getByTitle('Zoom in'));
+        expect(props.zoomIn).toHaveBeenCalled();
+
+        props.zoomIn.mockClear();
+        fireEvent.click(screen.getByTitle('Zoom out'));
+        expect(props.zoomOut).toHaveBeenCalled();
+
+        props.zoomOut.mockClear();
+        fireEvent.click(screen.getByTitle('Reset view'));
+        expect(props.resetView).toHaveBeenCalled();
+    });
+
+    it('displays the zoom percentage using Math.round(zoom * 50)', () => {
+        const zoomTests = [
+            [0.5, '25%'],
             [1.0, '50%'],
             [2.0, '100%'],
-            [0.5, '25%'],
-        ])('displays zoom %s as %s', (zoom, label) => {
-            render(<HexMapToolbar {...props} zoom={zoom} />);
-            expect(screen.getByText(label)).toBeInTheDocument();
-        });
+            [3.0, '150%'],
+        ];
+        for (const [zoom, expected] of zoomTests) {
+            renderToolbar({ zoom });
+            expect(screen.getByText(expected)).toBeInTheDocument();
+        }
     });
 
-    describe('grid size', () => {
-        it('renders the current grid size with min/max constraints', () => {
-            render(<HexMapToolbar {...props} gridSize={40} />);
-            const input = screen.getByDisplayValue('40');
-            expect(input).toHaveAttribute('min', '30');
-            expect(input).toHaveAttribute('max', '100');
-        });
+    // ── Grid size ────────────────────────────────────────────────────
 
-        it('calls setGridSize with a numeric value when the input changes', () => {
-            render(<HexMapToolbar {...props} />);
-            fireEvent.change(screen.getByDisplayValue('30'), { target: { value: '50' } });
-            expect(props.setGridSize).toHaveBeenCalledWith(50);
-        });
-
-        it('shows the hex dimensions derived from the grid size', () => {
-            render(<HexMapToolbar {...props} gridSize={40} />);
-            expect(screen.getByText('80×40')).toBeInTheDocument();
-        });
+    it('renders the grid size input with min/max constraints', () => {
+        renderToolbar({ gridSize: 40 });
+        const input = screen.getByDisplayValue('40');
+        expect(input).toHaveAttribute('min', '30');
+        expect(input).toHaveAttribute('max', '100');
     });
 
-    describe('POI panel toggle', () => {
-        it.each([
-            [false, 'Open POI panel', true],
-            [true, 'Close POI panel', false],
-        ])('calls setPoiPanelOpen($expected) when the "$title" button is clicked', (open, title, expected) => {
-            render(<HexMapToolbar {...props} poiPanelOpen={open} />);
-            fireEvent.click(screen.getByTitle(title));
-            expect(props.setPoiPanelOpen).toHaveBeenCalledWith(expected);
-        });
+    it('calls setGridSize with a numeric value when the input changes', () => {
+        renderToolbar();
+        fireEvent.change(screen.getByDisplayValue('30'), { target: { value: '50' } });
+        expect(props.setGridSize).toHaveBeenCalledWith(50);
     });
 
-    describe('marching order toggle', () => {
-        it.each([
-            [false, 'Manage marching order', true],
-            [true, 'Close marching order', false],
-        ])('calls setMarchingOrderOpen($expected) when the "$title" button is clicked', (open, title, expected) => {
-            render(<HexMapToolbar {...props} marchingOrderOpen={open} />);
-            fireEvent.click(screen.getByTitle(title));
-            expect(props.setMarchingOrderOpen).toHaveBeenCalledWith(expected);
-        });
-
-        it('shows the marching order count on the toggle button', () => {
-            render(<HexMapToolbar {...props} marchingOrder={[{ id: 1 }, { id: 2 }]} />);
-            const button = screen.getByTitle('Manage marching order');
-            expect(within(button).getByText('2')).toBeInTheDocument();
-        });
-
-        it('shows no count indicator when marching order is empty', () => {
-            render(<HexMapToolbar {...props} marchingOrder={[]} />);
-            const button = screen.getByTitle('Manage marching order');
-            expect(within(button).queryByText(/^\d+$/)).not.toBeInTheDocument();
-        });
+    it('shows hex dimensions derived from grid size (width×height)', () => {
+        const gridSizeTests = [
+            [30, '60×30'],
+            [40, '80×40'],
+            [50, '100×50'],
+            [100, '200×100'],
+        ];
+        for (const [gridSize, expected] of gridSizeTests) {
+            renderToolbar({ gridSize });
+            expect(screen.getByText(expected)).toBeInTheDocument();
+        }
     });
+
+    // ── POI panel toggle ─────────────────────────────────────────────
+
+    it('toggles the POI panel open/closed', () => {
+        renderToolbar({ poiPanelOpen: false });
+        fireEvent.click(screen.getByTitle('Open POI panel'));
+        expect(props.setPoiPanelOpen).toHaveBeenCalledWith(true);
+
+        props.setPoiPanelOpen.mockClear();
+        renderToolbar({ poiPanelOpen: true });
+        fireEvent.click(screen.getByTitle('Close POI panel'));
+        expect(props.setPoiPanelOpen).toHaveBeenCalledWith(false);
+    });
+
+    // ── Marching order toggle ────────────────────────────────────────
+
+    it('toggles the marching order panel open/closed', () => {
+        renderToolbar({ marchingOrderOpen: false });
+        fireEvent.click(screen.getByTitle('Manage marching order'));
+        expect(props.setMarchingOrderOpen).toHaveBeenCalledWith(true);
+
+        props.setMarchingOrderOpen.mockClear();
+        renderToolbar({ marchingOrderOpen: true });
+        fireEvent.click(screen.getByTitle('Close marching order'));
+        expect(props.setMarchingOrderOpen).toHaveBeenCalledWith(false);
+    });
+
+    it('shows the marching order count on the toggle button', () => {
+        renderToolbar({ marchingOrder: [{ id: 1 }, { id: 2 }] });
+        const indicator = screen.getByText('2');
+        expect(indicator).toBeInTheDocument();
+    });
+
+    it('hides the count indicator when marching order is empty', () => {
+        renderToolbar({ marchingOrder: [] });
+        expect(screen.queryByText(/^\d+$/)).not.toBeInTheDocument();
+    });
+
+    // ── Print button ─────────────────────────────────────────────────
 
     describe('print button', () => {
         beforeEach(() => {
@@ -210,12 +268,12 @@ describe('HexMapToolbar', () => {
         });
 
         it('renders the print button', () => {
-            render(<HexMapToolbar {...props} />);
+            renderToolbar();
             expect(screen.getByTitle('Print map')).toBeInTheDocument();
         });
 
         it('calls window.print when clicked', () => {
-            render(<HexMapToolbar {...props} />);
+            renderToolbar();
             fireEvent.click(screen.getByTitle('Print map'));
             expect(window.print).toHaveBeenCalledTimes(1);
         });

@@ -1,6 +1,6 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
@@ -118,28 +118,64 @@ const mockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 
+// Mock window.location.hostname at module level so the component's isLocalhost check passes.
+const originalHostname = window.location.hostname;
+window.location.hostname = 'localhost';
+
+beforeEach(() => {
+    vi.clearAllMocks();
+    getActiveBuffs.mockReturnValue([]);
+});
+
+afterAll(() => {
+    window.location.hostname = originalHostname;
+});
+
 // ---------------------------------------------------------------------------
-// Cover source badges - smiteOfProtection DOM rendering
-// Cover badges render inline in the AC line as "(+2 Cover: Smite of Protection)"
+// Base rendering sanity
 // ---------------------------------------------------------------------------
-describe('CharSummary - smiteOfProtection cover badge rendering', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
+describe('CharSummary base rendering', () => {
+    it('renders the player name', () => {
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[]}
+            />
+        );
+        expect(screen.getByText('Thorin')).toBeInTheDocument();
     });
 
-    it('renders smiteOfProtection cover badge when another character has smite active with Aura of Protection', () => {
-        const otherCharacter = {
-            name: 'Ally',
-            type: 'player',
-            computedStats: {
-                automation: {
-                    passives: [{ name: 'Aura of Protection' }],
-                },
+    it('renders no cover badges when characters is absent', () => {
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={null}
+            />
+        );
+        expect(screen.queryByText(/Cover:/)).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// smiteOfProtection cover badge
+// ---------------------------------------------------------------------------
+describe('smiteOfProtection cover badge', () => {
+    const allyWithAura = {
+        name: 'Ally',
+        type: 'player',
+        computedStats: {
+            automation: {
+                passives: [{ name: 'Aura of Protection' }],
             },
-        };
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+        },
+    };
+
+    it('renders when smite is active and ally has Aura of Protection', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
             if (key === 'smiteOfProtectionActive') return true;
             return null;
         });
@@ -148,48 +184,14 @@ describe('CharSummary - smiteOfProtection cover badge rendering', () => {
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-                characters={[otherCharacter]}
+                characters={[allyWithAura]}
             />
         );
         expect(screen.getByText(/Cover: Smite of Protection/)).toBeInTheDocument();
     });
 
-    it('does not render smiteOfProtection cover badge when Aura of Protection is missing', () => {
-        const otherCharacter = {
-            name: 'Ally',
-            type: 'player',
-            computedStats: {
-                automation: {
-                    passives: [],
-                },
-            },
-        };
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-            if (key === 'smiteOfProtectionActive') return true;
-            return null;
-        });
-        render(
-            <CharSummary
-                playerStats={mockPlayerStats}
-                campaignName={mockCampaignName}
-                exhaustionLevel={0}
-                characters={[otherCharacter]}
-            />
-        );
-        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
-    });
-
-    it('does not render smiteOfProtection cover badge when smite is not active', () => {
-        const otherCharacter = {
-            name: 'Ally',
-            type: 'player',
-            computedStats: {
-                automation: {
-                    passives: [{ name: 'Aura of Protection' }],
-                },
-            },
-        };
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+    it('does not render when smite is inactive', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
             if (key === 'smiteOfProtectionActive') return false;
             return null;
         });
@@ -198,7 +200,48 @@ describe('CharSummary - smiteOfProtection cover badge rendering', () => {
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-                characters={[otherCharacter]}
+                characters={[allyWithAura]}
+            />
+        );
+        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
+    });
+
+    it('does not render when ally lacks Aura of Protection passive', () => {
+        const allyNoAura = {
+            name: 'Ally',
+            type: 'player',
+            computedStats: {
+                automation: {
+                    passives: [],
+                },
+            },
+        };
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+            if (key === 'smiteOfProtectionActive') return true;
+            return null;
+        });
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[allyNoAura]}
+            />
+        );
+        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
+    });
+
+    it('does not render when characters array is empty', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+            if (key === 'smiteOfProtectionActive') return true;
+            return null;
+        });
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[]}
             />
         );
         expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
@@ -206,21 +249,13 @@ describe('CharSummary - smiteOfProtection cover badge rendering', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Cover source badges - bulwarkOfForce DOM rendering
+// bulwarkOfForce cover badge
 // ---------------------------------------------------------------------------
-describe('CharSummary - bulwarkOfForce cover badge rendering', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
+describe('bulwarkOfForce cover badge', () => {
+    const ally = { name: 'Ally', type: 'player' };
 
-    it('renders bulwarkOfForce cover badge when target list includes player', () => {
-        const otherCharacter = {
-            name: 'Ally',
-            type: 'player',
-        };
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+    it('renders when bulwark is active and player is in the target list', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
             if (key === 'bulwarkOfForceActive') return true;
             if (key === 'bulwarkOfForceTargets') return ['Thorin'];
             return null;
@@ -230,18 +265,14 @@ describe('CharSummary - bulwarkOfForce cover badge rendering', () => {
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-                characters={[otherCharacter]}
+                characters={[ally]}
             />
         );
         expect(screen.getByText(/Cover: Bulwark of Force/)).toBeInTheDocument();
     });
 
-    it('does not render bulwarkOfForce cover badge when target list does not include player', () => {
-        const otherCharacter = {
-            name: 'Ally',
-            type: 'player',
-        };
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+    it('does not render when player name is not in the target list', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
             if (key === 'bulwarkOfForceActive') return true;
             if (key === 'bulwarkOfForceTargets') return ['Other'];
             return null;
@@ -251,18 +282,14 @@ describe('CharSummary - bulwarkOfForce cover badge rendering', () => {
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-                characters={[otherCharacter]}
+                characters={[ally]}
             />
         );
         expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
     });
 
-    it('does not render bulwarkOfForce cover badge when bulwark is not active', () => {
-        const otherCharacter = {
-            name: 'Ally',
-            type: 'player',
-        };
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+    it('does not render when bulwark is not active', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
             if (key === 'bulwarkOfForceActive') return false;
             if (key === 'bulwarkOfForceTargets') return ['Thorin'];
             return null;
@@ -272,7 +299,7 @@ describe('CharSummary - bulwarkOfForce cover badge rendering', () => {
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-                characters={[otherCharacter]}
+                characters={[ally]}
             />
         );
         expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
@@ -280,20 +307,12 @@ describe('CharSummary - bulwarkOfForce cover badge rendering', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Cover source badges - naturesSanctuary DOM rendering
+// naturesSanctuary cover badge
 // ---------------------------------------------------------------------------
-describe('CharSummary - naturesSanctuary cover badge rendering', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
+describe("naturesSanctuary cover badge", () => {
+    const ally = { name: 'Ally', type: 'player' };
 
-    it('renders naturesSanctuary cover badge when sanctuary creatures list includes player', () => {
-        const otherCharacter = {
-            name: 'Ally',
-            type: 'player',
-        };
+    it('renders when player is in the sanctuary creatures list', () => {
         vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
             if (key === 'naturesSanctuaryCreatures') return ['Thorin'];
             return null;
@@ -303,17 +322,13 @@ describe('CharSummary - naturesSanctuary cover badge rendering', () => {
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-                characters={[otherCharacter]}
+                characters={[ally]}
             />
         );
         expect(screen.getByText(/Cover: Nature's Sanctuary/)).toBeInTheDocument();
     });
 
-    it('does not render naturesSanctuary cover badge when player is not in sanctuary list', () => {
-        const otherCharacter = {
-            name: 'Ally',
-            type: 'player',
-        };
+    it('does not render when player is not in the sanctuary list', () => {
         vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
             if (key === 'naturesSanctuaryCreatures') return ['Other'];
             return null;
@@ -323,17 +338,13 @@ describe('CharSummary - naturesSanctuary cover badge rendering', () => {
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-                characters={[otherCharacter]}
+                characters={[ally]}
             />
         );
         expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
     });
 
-    it('does not render naturesSanctuary cover badge when creatures list is empty', () => {
-        const otherCharacter = {
-            name: 'Ally',
-            type: 'player',
-        };
+    it('does not render when the sanctuary creatures list is empty', () => {
         vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
             if (key === 'naturesSanctuaryCreatures') return [];
             return null;
@@ -343,7 +354,7 @@ describe('CharSummary - naturesSanctuary cover badge rendering', () => {
                 playerStats={mockPlayerStats}
                 campaignName={mockCampaignName}
                 exhaustionLevel={0}
-                characters={[otherCharacter]}
+                characters={[ally]}
             />
         );
         expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
@@ -351,23 +362,50 @@ describe('CharSummary - naturesSanctuary cover badge rendering', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Cover badges - null/undefined/characters handling
-// Consolidated from 3 redundant tests (null, undefined, empty) → 1 parameterized test.
-// All three states assert the same behavior: cover badges absent when characters
-// is falsy or empty. Testing all three adds no unique confidence.
+// Multiple cover badges rendering simultaneously
 // ---------------------------------------------------------------------------
-describe('CharSummary - cover badges with no characters', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.location.hostname = 'localhost';
-        getActiveBuffs.mockReturnValue([]);
-    });
+describe('multiple cover badges', () => {
+    const ally = {
+        name: 'Ally',
+        type: 'player',
+        computedStats: {
+            automation: {
+                passives: [{ name: 'Aura of Protection' }],
+            },
+        },
+    };
 
+    it('renders all three cover badges when all conditions are met', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'smiteOfProtectionActive') return true;
+            if (key === 'bulwarkOfForceActive') return true;
+            if (key === 'bulwarkOfForceTargets') return ['Thorin'];
+            if (key === 'naturesSanctuaryCreatures') return ['Thorin'];
+            return null;
+        });
+        render(
+            <CharSummary
+                playerStats={mockPlayerStats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={[ally]}
+            />
+        );
+        expect(screen.getByText(/Cover: Smite of Protection/)).toBeInTheDocument();
+        expect(screen.getByText(/Cover: Bulwark of Force/)).toBeInTheDocument();
+        expect(screen.getByText(/Cover: Nature's Sanctuary/)).toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Cover badges absent when characters is null/undefined/empty
+// ---------------------------------------------------------------------------
+describe('cover badges absent with no characters', () => {
     it.each([
         [null, 'null'],
         [undefined, 'undefined'],
         [[], 'empty array'],
-    ])('renders without cover badges when characters is %s', (characters) => {
+    ])('renders without any cover badges when characters is %s', (characters) => {
         render(
             <CharSummary
                 playerStats={mockPlayerStats}
@@ -376,8 +414,6 @@ describe('CharSummary - cover badges with no characters', () => {
                 characters={characters}
             />
         );
-        expect(screen.queryByText(/Cover: Smite of Protection/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Cover: Bulwark of Force/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Cover: Nature's Sanctuary/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cover:/)).not.toBeInTheDocument();
     });
 });

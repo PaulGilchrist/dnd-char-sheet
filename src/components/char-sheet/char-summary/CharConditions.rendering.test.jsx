@@ -1,5 +1,5 @@
-// @cleaned-by-ai
-import { render, screen } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharConditions from './CharConditions.jsx';
 import { rollD20 } from '../../../services/dice/diceRoller.js';
@@ -7,25 +7,22 @@ import { rollD20 } from '../../../services/dice/diceRoller.js';
 let runtimeValues = {};
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn((name, key, _campaignName) => {
+  getRuntimeValue: vi.fn((name, key) => {
     const storageKey = `${name}::${key}`;
-    if (key === 'activeConditionMeta') {
-      return runtimeValues[storageKey] ?? runtimeValues[key] ?? null;
-    }
     return runtimeValues[storageKey] ?? runtimeValues[key] ?? null;
   }),
-  setRuntimeValue: vi.fn((name, key, value, _campaignName) => {
+  setRuntimeValue: vi.fn((name, key, value) => {
     runtimeValues[`${name}::${key}`] = value;
   }),
   addStorageChangeListener: vi.fn(() => () => {}),
 }));
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
-  rollD20: vi.fn(() => 15),
+  rollD20: vi.fn(),
 }));
 
 vi.mock('../../../services/combat/conditions/conditionUtils.js', () => ({
-  getAbilityLabel: vi.fn((abbr) => abbr || 'None'),
+  getAbilityLabel: vi.fn((abbr) => abbr?.toUpperCase() || 'None'),
   getAbilitySaveBonus: vi.fn(() => 2),
 }));
 
@@ -77,10 +74,8 @@ vi.mock('../../../services/encounters/combatLoggingService.js', () => ({
   logConcentrationSave: vi.fn(() => Promise.resolve()),
 }));
 
-let mockCombatSummary = null;
-
 vi.mock('../../../services/encounters/combatData.js', () => ({
-  getCombatSummary: vi.fn(() => mockCombatSummary),
+  getCombatSummary: vi.fn(() => null),
 }));
 
 vi.mock('../../../services/automation/handlers/buffs/auraOfPurityHandler.js', () => ({
@@ -88,11 +83,14 @@ vi.mock('../../../services/automation/handlers/buffs/auraOfPurityHandler.js', ()
   getAuraOfPuritySaveAdvantageConditions: vi.fn(() => []),
 }));
 
+vi.mock('../../../services/combat/conditions/conditionEffects.js', () => ({
+  hasSaveAdvantage: vi.fn(() => false),
+}));
+
 describe('CharConditions rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     runtimeValues = {};
-    mockCombatSummary = null;
     rollD20.mockReturnValue(15);
   });
 
@@ -114,30 +112,33 @@ describe('CharConditions rendering', () => {
     conditionEffects: {},
   };
 
+  describe('empty state', () => {
+    it('renders nothing when no conditions and no exhaustion', () => {
+      const { container } = render(<CharConditions {...defaultProps} />);
+      expect(container.firstChild).toBeNull();
+    });
+  });
+
   describe('exhaustion badge rendering', () => {
-    it('shows dead styling when exhaustion is at maximum (level 6)', () => {
+    it('shows dead styling in title when exhaustion is at maximum (level 6)', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={6} />);
       expect(screen.getByText('Exhaustion (6)')).toHaveAttribute('title', 'Exhaustion level 6 - DEAD\n\n');
     });
 
-    it('does not include "DEAD" in title when exhaustion is below maximum', () => {
+    it('omits "DEAD" from title when exhaustion is below maximum', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={5} />);
-      const exhaustionLabel = screen.getByText('Exhaustion (5)');
-      expect(exhaustionLabel.getAttribute('title')).not.toContain('DEAD');
+      expect(screen.getByText('Exhaustion (5)').getAttribute('title')).not.toContain('DEAD');
     });
 
-    it('renders minus button with Unicode minus sign as accessible name', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={1} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      expect(minusBtn).toBeInTheDocument();
-      expect(minusBtn.tagName).toBe('BUTTON');
+    it('disables plus button when exhaustion is at maximum level', () => {
+      render(<CharConditions {...defaultProps} exhaustionLevel={6} />);
+      expect(screen.getByRole('button', { name: '+' })).toBeDisabled();
     });
 
-    it('renders plus button with plus sign as accessible name', () => {
-      render(<CharConditions {...defaultProps} exhaustionLevel={1} />);
-      const plusBtn = screen.getByRole('button', { name: '+' });
-      expect(plusBtn).toBeInTheDocument();
-      expect(plusBtn.tagName).toBe('BUTTON');
+    it('enables both exhaustion adjustment buttons at mid level', () => {
+      render(<CharConditions {...defaultProps} exhaustionLevel={3} />);
+      expect(screen.getByRole('button', { name: '−' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: '+' })).not.toBeDisabled();
     });
 
     it.each`
@@ -146,10 +147,8 @@ describe('CharConditions rendering', () => {
       ${5}  | ${true}      | ${true}
     `('exhaustion at level $level - minus button $minusEnabled, plus button $plusEnabled', ({ level, minusEnabled, plusEnabled }) => {
       render(<CharConditions {...defaultProps} exhaustionLevel={level} />);
-      const minusBtn = screen.getByRole('button', { name: '−' });
-      const plusBtn = screen.getByRole('button', { name: '+' });
-      expect(minusBtn.disabled).toBe(!minusEnabled);
-      expect(plusBtn.disabled).toBe(!plusEnabled);
+      expect(screen.getByRole('button', { name: '−' }).disabled).toBe(!minusEnabled);
+      expect(screen.getByRole('button', { name: '+' }).disabled).toBe(!plusEnabled);
     });
   });
 
@@ -161,37 +160,53 @@ describe('CharConditions rendering', () => {
         blinded: { dc: 10, ability: null },
       };
       render(<CharConditions {...defaultProps} />);
-      const charmedBadges = screen.getAllByText('Charmed DC 12');
-      expect(charmedBadges).toHaveLength(1);
+      expect(screen.getAllByText('Charmed DC 12')).toHaveLength(1);
       expect(screen.getByText('Blinded DC 10')).toBeInTheDocument();
     });
   });
 
-  describe('condition savability rendering', () => {
-    it('renders savable condition (dc + ability) as a clickable button', () => {
+  describe('condition savability behavior', () => {
+    it('triggers a save roll popup when clicking a savable condition', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
+
       render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText('Charmed DC 14');
-      expect(badge.tagName).toBe('BUTTON');
+      fireEvent.click(screen.getByText('Charmed DC 14'));
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalled();
+      });
     });
 
-    it('renders condition with dc but null ability as a non-clickable span', () => {
+    it('removes condition from the list after a successful save', async () => {
+      runtimeValues['Test Character::activeConditions'] = ['charmed'];
+      runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 14, ability: 'wis' } };
+
+      render(<CharConditions {...defaultProps} />);
+      fireEvent.click(screen.getByText('Charmed DC 14'));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Charmed DC 14')).not.toBeInTheDocument();
+      });
+    });
+
+    it('does not trigger a save when clicking a condition with dc but no ability', () => {
       runtimeValues['Test Character::activeConditions'] = ['blinded'];
       runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10, ability: null } };
+
       render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText('Blinded DC 10');
-      expect(badge.tagName).toBe('SPAN');
+      fireEvent.click(screen.getByText('Blinded DC 10'));
+      expect(mockSetPopupHtml).not.toHaveBeenCalled();
     });
 
-    it('renders condition without DC when meta has no dc but has ability', () => {
+    it('renders condition text without DC when meta has no dc but has ability', () => {
       runtimeValues['Test Character::activeConditions'] = ['blinded'];
       runtimeValues['Test Character::activeConditionMeta'] = { blinded: { ability: 'con' } };
       render(<CharConditions {...defaultProps} />);
       expect(screen.getByText('Blinded')).toBeInTheDocument();
     });
 
-    it('renders condition without DC when meta has dc but no ability', () => {
+    it('renders condition text with DC when meta has dc but no ability', () => {
       runtimeValues['Test Character::activeConditions'] = ['blinded'];
       runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10 } };
       render(<CharConditions {...defaultProps} />);
@@ -199,7 +214,7 @@ describe('CharConditions rendering', () => {
     });
   });
 
-  describe('combined conditions + exhaustion display', () => {
+  describe('combined conditions and exhaustion display', () => {
     it('renders both conditions and exhaustion in the same grid', () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
@@ -208,7 +223,7 @@ describe('CharConditions rendering', () => {
       expect(screen.getByText('Exhaustion (2)')).toBeInTheDocument();
     });
 
-    it('renders conditions and exhaustion with no conditions', () => {
+    it('renders exhaustion when there are no conditions', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={1} />);
       expect(screen.getByText('Exhaustion (1)')).toBeInTheDocument();
     });
@@ -228,7 +243,7 @@ describe('CharConditions rendering', () => {
   });
 
   describe('condition meta handling', () => {
-    it('handles conditionMeta as null (falls back to empty)', () => {
+    it('falls back to bare condition name when conditionMeta is null', () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = null;
       render(<CharConditions {...defaultProps} />);
@@ -236,7 +251,7 @@ describe('CharConditions rendering', () => {
     });
   });
 
-  describe('tooltip behavior', () => {
+  describe('tooltips', () => {
     it.each`
       condition      | conditions           | meta                                      | displayText    | expectedText
       ${'charmed'}   | ${['charmed']}       | ${{ charmed: { dc: 12, ability: 'wis' } }} | ${'Charmed DC 12'} | ${"You can't attack the charmer"}
@@ -245,41 +260,44 @@ describe('CharConditions rendering', () => {
       runtimeValues['Test Character::activeConditions'] = conditions;
       runtimeValues['Test Character::activeConditionMeta'] = meta;
       render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText(displayText);
-      expect(badge.getAttribute('title')).toContain(expectedText);
+      expect(screen.getByText(displayText).getAttribute('title')).toContain(expectedText);
     });
 
-    it('sets tooltip for exhaustion from CONDITION_DESCRIPTIONS', () => {
+    it('sets tooltip for exhaustion level from CONDITION_DESCRIPTIONS', () => {
       runtimeValues['Test Character::activeConditions'] = [];
       runtimeValues['Test Character::activeConditionMeta'] = {};
       render(<CharConditions {...defaultProps} exhaustionLevel={2} />);
-      const exhaustionLabel = screen.getByText('Exhaustion (2)');
-      expect(exhaustionLabel.getAttribute('title')).toContain('Exhaustion level 2');
+      expect(screen.getByText('Exhaustion (2)').getAttribute('title')).toContain('Exhaustion level 2');
     });
   });
 
-  describe('multiple conditions with mixed savability', () => {
-    it('renders savable conditions as buttons and non-savable as spans in the same list', () => {
+  describe('mixed savability in a single list', () => {
+    it('triggers saves for savable conditions but not for non-savable ones', async () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed', 'blinded', 'poisoned'];
       runtimeValues['Test Character::activeConditionMeta'] = {
         charmed: { dc: 12, ability: 'wis' },
         blinded: { dc: 10, ability: null },
         poisoned: { dc: 11, ability: 'con' },
       };
+
       render(<CharConditions {...defaultProps} />);
 
-      const charmed = screen.getByText('Charmed DC 12');
-      const blinded = screen.getByText('Blinded DC 10');
-      const poisoned = screen.getByText('Poisoned DC 11');
+      fireEvent.click(screen.getByText('Charmed DC 12'));
+      fireEvent.click(screen.getByText('Poisoned DC 11'));
 
-      expect(charmed.tagName).toBe('BUTTON');
-      expect(blinded.tagName).toBe('SPAN');
-      expect(poisoned.tagName).toBe('BUTTON');
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledTimes(2);
+      });
+
+      vi.clearAllMocks();
+
+      fireEvent.click(screen.getByText('Blinded DC 10'));
+      expect(mockSetPopupHtml).not.toHaveBeenCalled();
     });
   });
 
   describe('character name change re-mount', () => {
-    it('loads conditions from new character name when playerStats.name changes', () => {
+    it('loads conditions from the new character name when playerStats.name changes', () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
       runtimeValues['New Character::activeConditions'] = ['blinded'];

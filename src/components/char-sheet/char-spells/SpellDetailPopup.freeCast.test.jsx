@@ -1,18 +1,13 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
   setRuntimeValue: vi.fn(),
   useRuntimeValue: vi.fn(() => null),
-}));
-
-vi.mock('../../../services/combat/buffs/buffService.js', () => ({
-  getActiveBuffs: vi.fn(() => []),
 }));
 
 vi.mock('../../../services/ui/sanitize.js', () => ({
@@ -69,16 +64,16 @@ const renderPopup = (
     />
   );
 
+const freeCastText = 'Free Cast — no spell slot consumed';
+
 describe('SpellDetailPopup - Free Cast Authorization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
-    vi.mocked(getActiveBuffs).mockReturnValue([]);
   });
 
-  describe('runtime value–based free casts', () => {
-    it('authorizes via Natural Recovery when spell is in the free cast array', () => {
+  describe('Natural Recovery', () => {
+    it('authorizes when spell name is in the free cast array', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'naturalRecoveryFreeCast') return ['Healing Word'];
         return null;
@@ -91,35 +86,44 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '1': '1d4+1' } },
       };
       renderPopup(spell);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
     });
 
-    it.each([
-      { scenario: 'spell not in array', freeCast: ['Healing Word'], spellName: 'Fire Bolt', expectAuthorized: false },
-      { scenario: 'empty array', freeCast: [], spellName: 'Healing Word', expectAuthorized: false },
-    ])('does not authorize via Natural Recovery when $scenario', ({ freeCast, spellName, expectAuthorized }) => {
+    it('does not authorize when spell name is not in the free cast array', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'naturalRecoveryFreeCast') return freeCast;
+        if (key === 'naturalRecoveryFreeCast') return ['Healing Word'];
         return null;
       });
 
       const spell = {
         ...baseMockSpell,
-        name: spellName,
-        level: spellName === 'Fire Bolt' ? 0 : 1,
-        damage: { damage_at_slot_level: { '0': '1d10', '1': '1d4+1' }[spellName === 'Fire Bolt' ? '0' : '1'] },
+        name: 'Fire Bolt',
+        level: 0,
+        damage: { damage_at_slot_level: { '0': '1d10' } },
       };
       renderPopup(spell);
-      if (expectAuthorized) {
-        expect(screen.getByText('Free Cast — no spell slot consumed')).toBeInTheDocument();
-      } else {
-        expect(screen.queryByText('Free Cast — no spell slot consumed')).not.toBeInTheDocument();
-      }
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
 
-    it('authorizes via Bewitching Magic when the free cast flag is true for Misty Step', () => {
+    it('does not authorize when the free cast array is empty', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'naturalRecoveryFreeCast') return [];
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Healing Word',
+        level: 1,
+        damage: { damage_at_slot_level: { '1': '1d4+1' } },
+      };
+      renderPopup(spell);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Bewitching Magic', () => {
+    it('authorizes Misty Step when the free cast flag is true', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Bewitching_Magic_freeCast') return true;
         return null;
@@ -132,12 +136,10 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '2': '3d6' } },
       };
       renderPopup(spell);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
     });
 
-    it('does not authorize via Bewitching Magic for a non-Misty Step spell', () => {
+    it('does not authorize non-Misty Step spells even when the flag is true', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Bewitching_Magic_freeCast') return true;
         return null;
@@ -150,11 +152,13 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '3': '8d6' } },
       };
       renderPopup(spell);
-      expect(screen.queryByText('Free Cast — no spell slot consumed')).not.toBeInTheDocument();
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
+  });
 
-    it('authorizes via Spell Mastery when spell name and level match', () => {
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+  describe('Spell Mastery', () => {
+    it('authorizes when spell name and level match level 1', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'SpellMastery_level1') return 'Shield';
         return null;
       });
@@ -166,59 +170,79 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '1': '1d5+1' } },
       };
       renderPopup(spell);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
+    });
+
+    it('does not authorize when spell name matches but level does not', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'SpellMastery_level1') return 'Shield';
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Shield',
+        level: 2,
+        damage: { damage_at_slot_level: { '2': '1d5+1' } },
+      };
+      renderPopup(spell);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+
+    it('does not authorize when the mastered spell name does not match', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'SpellMastery_level1') return 'Shield';
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Magic Missile',
+        level: 1,
+        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+      };
+      renderPopup(spell);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
   });
 
-  describe('Selection-based free cast (Signature Spells, Divination Savant)', () => {
-    it.each([
-      { selectionKey: 'SignatureSpells_selection', usedKey: 'SignatureSpells_Fireball_used', spellName: 'Fireball', level: 3, dmg: { '3': '8d6' }, selection: ['Fireball'], name: 'Signature Spells' },
-      { selectionKey: '_Divination_Savant_selection', usedKey: '_Divination_Savant_Warding_Bond_used', spellName: 'Warding Bond', level: 2, dmg: { '2': '2d6' }, selection: ['Warding Bond'], name: 'Divination Savant' },
-    ])('authorizes when spell is in $name selection and not yet used', ({ selectionKey, usedKey, spellName, level, dmg }) => {
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-        if (key === selectionKey) return [spellName];
-        if (key === usedKey) return false;
+  describe('Signature Spells', () => {
+    it('authorizes when spell is selected, level 3, and not yet used', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'SignatureSpells_selection') return ['Fireball'];
+        if (key === 'SignatureSpells_Fireball_used') return false;
         return null;
       });
 
       const spell = {
         ...baseMockSpell,
-        name: spellName,
-        level,
-        damage: { damage_at_slot_level: dmg },
+        name: 'Fireball',
+        level: 3,
+        damage: { damage_at_slot_level: { '3': '8d6' } },
       };
       renderPopup(spell);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
     });
 
-    it.each([
-      { selectionKey: 'SignatureSpells_selection', usedKey: 'SignatureSpells_Fireball_used', spellName: 'Fireball', level: 3, dmg: { '3': '8d6' }, name: 'Signature Spells' },
-      { selectionKey: '_Divination_Savant_selection', usedKey: '_Divination_Savant_Warding_Bond_used', spellName: 'Warding Bond', level: 2, dmg: { '2': '2d6' }, name: 'Divination Savant' },
-    ])('does not authorize when spell in $name selection has already been used', ({ selectionKey, usedKey, spellName, level, dmg }) => {
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
-        if (key === selectionKey) return [spellName];
-        if (key === usedKey) return true;
+    it('does not authorize when spell has already been used', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'SignatureSpells_selection') return ['Fireball'];
+        if (key === 'SignatureSpells_Fireball_used') return true;
         return null;
       });
 
       const spell = {
         ...baseMockSpell,
-        name: spellName,
-        level,
-        damage: { damage_at_slot_level: dmg },
+        name: 'Fireball',
+        level: 3,
+        damage: { damage_at_slot_level: { '3': '8d6' } },
       };
       renderPopup(spell);
-      expect(
-        screen.queryByText('Free Cast — no spell slot consumed')
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
 
     it('does not authorize when spell is not in the selection', () => {
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'SignatureSpells_selection') return ['Fireball'];
         if (key === 'SignatureSpells_Fireball_used') return false;
         return null;
@@ -231,19 +255,84 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '1': '3d4+1' } },
       };
       renderPopup(spell);
-      expect(
-        screen.queryByText('Free Cast — no spell slot consumed')
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+
+    it('does not authorize when spell is level 3 but not in the selection', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'SignatureSpells_selection') return ['Fireball'];
+        if (key === 'SignatureSpells_Fireball_used') return false;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Haste',
+        level: 3,
+        damage: { damage_at_slot_level: { '3': 'N/A' } },
+      };
+      renderPopup(spell);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
   });
 
-  describe('counter-based free_spell actions', () => {
-    it.each([
-      { entryType: 'free_spell', entryName: "Paladin's Smite", spellName: 'Divine Smite', level: 1, dmg: { '1': '2d8' }, usesMax: 1, countKey: "_Paladin's_Smite_freeCastCount" },
-      { entryType: 'free_spell', entryName: 'Mystic Arcanum', spellName: 'Incendiary Cloud', level: 8, dmg: { '8': '8d8' }, usesMax: 1, countKey: '_Mystic_Arcanum_freeCastCount' },
-    ])('authorizes when count > 0 and spell matches for $entryType', ({ entryType, entryName, spellName, level, dmg, usesMax, countKey }) => {
+  describe('Divination Savant', () => {
+    it('authorizes when spell is selected and not yet used', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === countKey) return 1;
+        if (key === '_Divination_Savant_selection') return ['Warding Bond'];
+        if (key === '_Divination_Savant_Warding_Bond_used') return false;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Warding Bond',
+        level: 2,
+        damage: { damage_at_slot_level: { '2': '2d6' } },
+      };
+      renderPopup(spell);
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
+    });
+
+    it('does not authorize when spell has already been used', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_Divination_Savant_selection') return ['Warding Bond'];
+        if (key === '_Divination_Savant_Warding_Bond_used') return true;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Warding Bond',
+        level: 2,
+        damage: { damage_at_slot_level: { '2': '2d6' } },
+      };
+      renderPopup(spell);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+
+    it('does not authorize when spell is not in the selection', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_Divination_Savant_selection') return ['Warding Bond'];
+        if (key === '_Divination_Savant_Warding_Bond_used') return false;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Magic Missile',
+        level: 1,
+        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+      };
+      renderPopup(spell);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Counter-based free_spell actions', () => {
+    it('authorizes when count > 0 and spell matches', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === "_Paladin's_Smite_freeCastCount") return 1;
         return null;
       });
 
@@ -253,28 +342,26 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
           passives: [],
           actions: [
             {
-              name: entryName,
-              type: entryType,
-              spell: entryType === 'Mystic Arcanum' ? `level ${level} spell` : spellName,
+              name: "Paladin's Smite",
+              type: 'free_spell',
+              spell: 'Divine Smite',
               uses_expression: '1/rest',
-              usesMax,
+              usesMax: 1,
             },
           ],
         },
       };
       const spell = {
         ...baseMockSpell,
-        name: spellName,
-        level,
-        damage: { damage_at_slot_level: dmg },
+        name: 'Divine Smite',
+        level: 1,
+        damage: { damage_at_slot_level: { '1': '2d8' } },
       };
       renderPopup(spell, stats);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
     });
 
-    it('does not authorize when count is 0 for counter-based free_spell', () => {
+    it('does not authorize when count is 0', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === "_Paladin's_Smite_freeCastCount") return 0;
         return null;
@@ -302,12 +389,41 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '1': '2d8' } },
       };
       renderPopup(spell, stats);
-      expect(screen.queryByText('Free Cast — no spell slot consumed')).not.toBeInTheDocument();
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+
+    it('does not authorize when count > 0 but spell name does not match', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === "_Paladin's_Smite_freeCastCount") return 1;
+        return null;
+      });
+
+      const stats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [],
+          actions: [
+            {
+              name: "Paladin's Smite",
+              type: 'free_spell',
+              spell: 'Divine Smite',
+              uses_expression: '1/rest',
+              usesMax: 1,
+            },
+          ],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        name: 'Fireball',
+        level: 3,
+        damage: { damage_at_slot_level: { '3': '8d6' } },
+      };
+      renderPopup(spell, stats);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
 
     it('falls back to uses value when count is not in runtime state', () => {
-      vi.mocked(getRuntimeValue).mockReturnValue(null);
-
       const stats = {
         ...baseMockPlayerStats,
         automation: {
@@ -330,14 +446,10 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '1': '2d8' } },
       };
       renderPopup(spell, stats);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
     });
 
     it('does not authorize when uses is 0 and count is not in runtime state', () => {
-      vi.mocked(getRuntimeValue).mockReturnValue(null);
-
       const stats = {
         ...baseMockPlayerStats,
         automation: {
@@ -360,15 +472,38 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '1': '2d8' } },
       };
       renderPopup(spell, stats);
-      expect(screen.queryByText('Free Cast — no spell slot consumed')).not.toBeInTheDocument();
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
 
-    it.each([
-      { entryType: 'fey_reinforcements', entryName: 'Fey Reinforcements', freeCastKey: '_Fey_Reinforcements_freeCast', spellName: 'Hunters Mark', level: 1, dmg: { '1': '1d6' } },
-      { entryType: 'dragon_companion', entryName: 'Dragon Companion', freeCastKey: '_Dragon_Companion_freeCast', spellName: 'Dragon Breath', level: 1, dmg: { '1': '2d6' } },
-    ])('authorizes via $entryType by spell name', ({ entryType, entryName, freeCastKey, spellName, level, dmg }) => {
+    it('does not authorize when spell does not match for fallback uses', () => {
+      const stats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [],
+          actions: [
+            {
+              name: "Paladin's Smite",
+              type: 'free_spell',
+              spell: 'Divine Smite',
+              uses: 1,
+              recharge: 'long_rest',
+            },
+          ],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        name: 'Fireball',
+        level: 3,
+        damage: { damage_at_slot_level: { '3': '8d6' } },
+      };
+      renderPopup(spell, stats);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+
+    it('authorizes Mystic Arcanum when count > 0 and level matches', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === freeCastKey) return [spellName];
+        if (key === '_Mystic_Arcanum_freeCastCount') return 1;
         return null;
       });
 
@@ -378,26 +513,177 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
           passives: [],
           actions: [
             {
-              name: entryName,
-              type: entryType,
-              spell: spellName,
+              name: 'Mystic Arcanum',
+              type: 'free_spell',
+              spell: 'level 8 spell',
+              uses_expression: '1/long rest',
+              usesMax: 1,
             },
           ],
         },
       };
       const spell = {
         ...baseMockSpell,
-        name: spellName,
-        level,
-        damage: { damage_at_slot_level: dmg },
+        name: 'Incendiary Cloud',
+        level: 8,
+        damage: { damage_at_slot_level: { '8': '8d8' } },
       };
       renderPopup(spell, stats);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
     });
 
-    it('authorizes via bonusActions free_spell by spell name', () => {
+    it('does not authorize Mystic Arcanum when level does not match', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_Mystic_Arcanum_freeCastCount') return 1;
+        return null;
+      });
+
+      const stats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [],
+          actions: [
+            {
+              name: 'Mystic Arcanum',
+              type: 'free_spell',
+              spell: 'level 8 spell',
+              uses_expression: '1/long rest',
+              usesMax: 1,
+            },
+          ],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        name: 'Incendiary Cloud',
+        level: 7,
+        damage: { damage_at_slot_level: { '7': '8d8' } },
+      };
+      renderPopup(spell, stats);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Fey Reinforcements / Dragon Companion', () => {
+    it('authorizes via Fey Reinforcements when spell name matches', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_Fey_Reinforcements_freeCast') return ["Hunter's Mark"];
+        return null;
+      });
+
+      const stats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [],
+          actions: [
+            {
+              name: 'Fey Reinforcements',
+              type: 'fey_reinforcements',
+              spell: "Hunter's Mark",
+            },
+          ],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        name: "Hunter's Mark",
+        level: 1,
+        damage: { damage_at_slot_level: { '1': '1d6' } },
+      };
+      renderPopup(spell, stats);
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
+    });
+
+    it('does not authorize Fey Reinforcements when spell name does not match', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_Fey_Reinforcements_freeCast') return ["Hunter's Mark"];
+        return null;
+      });
+
+      const stats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [],
+          actions: [
+            {
+              name: 'Fey Reinforcements',
+              type: 'fey_reinforcements',
+              spell: "Hunter's Mark",
+            },
+          ],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        name: 'Fireball',
+        level: 3,
+        damage: { damage_at_slot_level: { '3': '8d6' } },
+      };
+      renderPopup(spell, stats);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+
+    it('authorizes via Dragon Companion when spell name matches', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_Dragon_Companion_freeCast') return ['Dragon Breath'];
+        return null;
+      });
+
+      const stats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [],
+          actions: [
+            {
+              name: 'Dragon Companion',
+              type: 'dragon_companion',
+              spell: 'Dragon Breath',
+            },
+          ],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        name: 'Dragon Breath',
+        level: 1,
+        damage: { damage_at_slot_level: { '1': '2d6' } },
+      };
+      renderPopup(spell, stats);
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
+    });
+
+    it('does not authorize Dragon Companion when spell name does not match', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_Dragon_Companion_freeCast') return ['Dragon Breath'];
+        return null;
+      });
+
+      const stats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [],
+          actions: [
+            {
+              name: 'Dragon Companion',
+              type: 'dragon_companion',
+              spell: 'Dragon Breath',
+            },
+          ],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        name: 'Fireball',
+        level: 3,
+        damage: { damage_at_slot_level: { '3': '8d6' } },
+      };
+      renderPopup(spell, stats);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Mantle of Majesty bonusActions free_spell', () => {
+    it('authorizes when spell name is in the free cast array', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Mantle_of_Majesty_freeCast') return ['Command'];
         return null;
@@ -425,9 +711,37 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         dc: { dc_type: 'WIS', dc_success: 'none' },
       };
       renderPopup(spell, stats);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
+    });
+
+    it('does not authorize when spell name does not match', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_Mantle_of_Majesty_freeCast') return ['Command'];
+        return null;
+      });
+
+      const stats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [],
+          actions: [],
+          bonusActions: [
+            {
+              name: 'Mantle of Majesty',
+              type: 'free_spell',
+              spell: 'Command',
+            },
+          ],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        name: 'Fireball',
+        level: 3,
+        damage: { damage_at_slot_level: { '3': '8d6' } },
+      };
+      renderPopup(spell, stats);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
 
     it('authorizes via bonusActions with uses + recharge when count > 0', () => {
@@ -459,9 +773,39 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '1': '1d6' } },
       };
       renderPopup(spell, stats);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
+    });
+
+    it('does not authorize when bonusActions count is 0', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_Test_Feature_freeCastCount') return 0;
+        return null;
+      });
+
+      const stats = {
+        ...baseMockPlayerStats,
+        automation: {
+          passives: [],
+          actions: [],
+          bonusActions: [
+            {
+              name: 'Test Feature',
+              type: 'free_spell',
+              spell: 'Test Spell',
+              uses: 2,
+              recharge: 'long_rest',
+            },
+          ],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        name: 'Test Spell',
+        level: 1,
+        damage: { damage_at_slot_level: { '1': '1d6' } },
+      };
+      renderPopup(spell, stats);
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
   });
 
@@ -488,9 +832,7 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         dc: { dc_type: 'WIS', dc_success: 'none' },
       };
       renderPopup(spell, stats);
-      expect(
-        screen.getByText('Free Cast — no spell slot consumed')
-      ).toBeInTheDocument();
+      expect(screen.getByText(freeCastText)).toBeInTheDocument();
     });
 
     it('does not authorize Command when Mantle of Majesty is not active', () => {
@@ -502,7 +844,6 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
           bonusActions: [],
         },
       };
-      vi.mocked(getRuntimeValue).mockReturnValue(null);
 
       const spell = {
         ...baseMockSpell,
@@ -512,9 +853,7 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         dc: { dc_type: 'WIS', dc_success: 'none' },
       };
       renderPopup(spell, stats);
-      expect(
-        screen.queryByText('Free Cast — no spell slot consumed')
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
 
     it('does not authorize a different spell when Mantle of Majesty is active', () => {
@@ -538,9 +877,7 @@ describe('SpellDetailPopup - Free Cast Authorization', () => {
         damage: { damage_at_slot_level: { '3': '8d6' } },
       };
       renderPopup(spell, stats);
-      expect(
-        screen.queryByText('Free Cast — no spell slot consumed')
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(freeCastText)).not.toBeInTheDocument();
     });
   });
 });

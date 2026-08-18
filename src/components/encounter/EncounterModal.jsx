@@ -3,7 +3,7 @@ import { formatEncounterName } from '../../services/encounters/encountersService
 import MarkdownPreview from '../common/MarkdownPreview.jsx';
 import './EncounterBuilder.css';
 
-function EncounterModal({ isOpen, onClose, mode, onSave, onLoad, onDelete, onRename, encounters, loading }) {
+function EncounterModal({ isOpen, onClose, mode, onSave, onLoad, onDelete, onRename, encounters, loading, renameTarget: renameTargetProp }) {
   const [name, setName] = useState('');
   const [newName, setNewName] = useState('');
   const [error, setError] = useState('');
@@ -18,6 +18,13 @@ function EncounterModal({ isOpen, onClose, mode, onSave, onLoad, onDelete, onRen
       setError('');
     }
   }, [mode, renameTarget]);
+
+  useEffect(() => {
+    if (mode === 'rename' && renameTargetProp) {
+      setNewName(renameTargetProp.name);
+      setError('');
+    }
+  }, [mode, renameTargetProp]);
 
   if (!isOpen) return null;
 
@@ -38,7 +45,8 @@ function EncounterModal({ isOpen, onClose, mode, onSave, onLoad, onDelete, onRen
       return;
     }
     setError('');
-    await onRename(renameTarget.name, newName.trim());
+    const targetName = renameTargetProp ? renameTargetProp.name : renameTarget?.name;
+    await onRename(targetName, newName.trim());
     setRenameTarget(null);
     setNewName('');
   };

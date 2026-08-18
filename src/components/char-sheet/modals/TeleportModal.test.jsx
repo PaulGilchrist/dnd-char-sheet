@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TeleportModal from './TeleportModal.jsx';
@@ -42,12 +43,6 @@ function makeAction(overrides) {
   };
 }
 
-// ── Helpers ──
-
-function getRadios(container) {
-  return container.querySelectorAll('input[type="radio"]');
-}
-
 // ── Tests ──
 
 describe('TeleportModal', () => {
@@ -55,6 +50,7 @@ describe('TeleportModal', () => {
     vi.clearAllMocks();
     localStorage.clear();
     tempTeleportHandler.isExtendedAvailable.mockReturnValue(true);
+    tempTeleportHandler.confirmTeleport.mockReset();
   });
 
   // ── Standard teleport modal rendering ──
@@ -66,10 +62,24 @@ describe('TeleportModal', () => {
       expect(screen.getByText('Misty Step')).toBeInTheDocument();
     });
 
+    it('renders header with moon icon when isMoonlightStep is true', () => {
+      const action = makeAction({ name: 'Shadow Step' });
+      render(<TeleportModal action={action} {...makeProps({ isMoonlightStep: true })} />);
+      expect(screen.getByText('Shadow Step')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Standard teleport')).not.toBeInTheDocument();
+    });
+
     it('displays teleport instruction text', () => {
       const action = makeAction();
       render(<TeleportModal action={action} {...makeProps()} />);
       expect(screen.getByText('Teleport to an unoccupied space you can see:')).toBeInTheDocument();
+    });
+
+    it('displays advantage text for moonlight step', () => {
+      const action = makeAction({ name: 'Shadow Step' });
+      render(<TeleportModal action={action} {...makeProps({ isMoonlightStep: true })} />);
+      expect(screen.getByText('Gains Advantage on next attack roll.')).toBeInTheDocument();
+      expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     });
 
     it('renders standard and extended distance radios with correct labels', () => {
@@ -95,12 +105,13 @@ describe('TeleportModal', () => {
     it('selects standard distance radio by default and allows switching', () => {
       const action = makeAction();
       render(<TeleportModal action={action} {...makeProps()} />);
-      const radios = getRadios(document);
-      expect(radios[0]).toBeChecked();
-      expect(radios[1]).not.toBeChecked();
-      fireEvent.click(radios[1]);
-      expect(radios[1]).toBeChecked();
-      expect(radios[0]).not.toBeChecked();
+      const standardRadio = screen.getByRole('radio', { name: '30 ft— Standard teleport' });
+      const extendedRadio = screen.getByRole('radio', { name: '60 ft— Once per Rage' });
+      expect(standardRadio).toBeChecked();
+      expect(extendedRadio).not.toBeChecked();
+      fireEvent.click(extendedRadio);
+      expect(extendedRadio).toBeChecked();
+      expect(standardRadio).not.toBeChecked();
     });
 
     it('renders Teleport and Cancel buttons', () => {
@@ -108,6 +119,13 @@ describe('TeleportModal', () => {
       render(<TeleportModal action={action} {...makeProps()} />);
       expect(screen.getByRole('button', { name: /Teleport/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
+    it('calls onClose when Cancel is clicked', () => {
+      const action = makeAction();
+      render(<TeleportModal action={action} {...makeProps()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
 
     it('does not show result state on initial render', () => {
@@ -125,8 +143,8 @@ describe('TeleportModal', () => {
       tempTeleportHandler.isExtendedAvailable.mockReturnValue(false);
       const action = makeAction();
       render(<TeleportModal action={action} {...makeProps()} />);
-      const radios = getRadios(document);
-      expect(radios[1].disabled).toBe(true);
+      const extendedRadio = screen.getByRole('radio', { name: '60 ft— Already used this Rage' });
+      expect(extendedRadio.disabled).toBe(true);
       expect(screen.getByText('— Already used this Rage')).toBeInTheDocument();
     });
 
@@ -134,10 +152,11 @@ describe('TeleportModal', () => {
       tempTeleportHandler.isExtendedAvailable.mockReturnValue(false);
       const action = makeAction();
       render(<TeleportModal action={action} {...makeProps()} />);
-      const radios = getRadios(document);
-      fireEvent.click(radios[1]);
-      expect(radios[1]).not.toBeChecked();
-      expect(radios[0]).toBeChecked();
+      const standardRadio = screen.getByRole('radio', { name: '30 ft— Standard teleport' });
+      const extendedRadio = screen.getByRole('radio', { name: '60 ft— Already used this Rage' });
+      fireEvent.click(extendedRadio);
+      expect(extendedRadio).not.toBeChecked();
+      expect(standardRadio).toBeChecked();
     });
   });
 
@@ -185,11 +204,6 @@ describe('TeleportModal', () => {
       render(<TeleportModal action={swapAction()} {...makeProps()} />);
       expect(screen.getByText(/Swap places with your illusion/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Swap/ })).toBeInTheDocument();
-    });
-
-    it('renders Cancel button', () => {
-      render(<TeleportModal action={swapAction()} {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
     it('uses custom distance from automation config or defaults to 30 ft', () => {
@@ -315,12 +329,12 @@ describe('TeleportModal', () => {
     it('calls confirmTeleport with useExtended=true when extended radio is selected', async () => {
       tempTeleportHandler.confirmTeleport.mockResolvedValue({
         type: 'popup',
-        payload: { description: 'Teleported 150 ft' },
+        payload: { description: 'Teleported 60 ft' },
       });
       const action = makeAction();
       render(<TeleportModal action={action} {...makeProps()} />);
-      const radios = getRadios(document);
-      fireEvent.click(radios[1]);
+      const extendedRadio = screen.getByRole('radio', { name: '60 ft— Once per Rage' });
+      fireEvent.click(extendedRadio);
       fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));
 
       await waitFor(() => {
@@ -368,7 +382,7 @@ describe('TeleportModal', () => {
   // ── Swap teleport confirm flow ──
 
   describe('swap teleport confirm flow', () => {
-    it('calls confirmTeleport when Swap button is clicked', async () => {
+    it('calls confirmTeleport with correct arguments when Swap is clicked', async () => {
       tempTeleportHandler.confirmTeleport.mockResolvedValue({
         type: 'popup',
         payload: { description: 'Swapped places with your illusion.' },
@@ -380,7 +394,28 @@ describe('TeleportModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /Swap/ }));
 
       await waitFor(() => {
-        expect(tempTeleportHandler.confirmTeleport).toHaveBeenCalled();
+        expect(tempTeleportHandler.confirmTeleport).toHaveBeenCalledWith(
+          action,
+          mockPlayerStats,
+          mockCampaignName,
+          false
+        );
+      });
+    });
+
+    it('shows result state with Done button after swap confirm', async () => {
+      tempTeleportHandler.confirmTeleport.mockResolvedValue({
+        type: 'popup',
+        payload: { description: 'Swapped places with your illusion.' },
+      });
+      const action = makeAction({
+        automation: { type: 'teleport', effect: 'teleport_swap_with_illusion' },
+      });
+      render(<TeleportModal action={action} {...makeProps()} />);
+      fireEvent.click(screen.getByRole('button', { name: /Swap/ }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
       });
     });
   });

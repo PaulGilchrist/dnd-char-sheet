@@ -1,6 +1,6 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
 
 const createDefaultProps = (overrides = {}) => ({
@@ -12,88 +12,95 @@ const createDefaultProps = (overrides = {}) => ({
     ...overrides,
 });
 
-const findActionByText = (text) => {
-    const actions = document.querySelectorAll('.admin-action');
-    for (const action of actions) {
-        const h3 = action.querySelector('h3');
-        if (h3 && h3.textContent === text) {
-            return action;
-        }
-    }
-    return null;
-};
+const getActionButton = (buttonText) =>
+    screen.getByRole('button', { name: new RegExp(`^${buttonText}$`, 'i') });
 
 describe('CampaignAdmin - Rollback & Upload', () => {
     const defaultProps = createDefaultProps();
 
     beforeEach(() => {
-        vi.clearAllMocks();
-        window.alert = vi.fn();
-        window.confirm = vi.fn(() => true);
-        window.prompt = vi.fn(() => 'test-campaign');
-        Object.defineProperty(window, 'location', {
-            value: { reload: vi.fn() },
-            writable: true,
-        });
+        vi.spyOn(window, 'alert').mockImplementation(() => {});
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        vi.spyOn(window, 'prompt').mockReturnValue('test-campaign');
+        vi.stubGlobal('location', { reload: vi.fn() });
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     describe('Rollback - confirmation modal', () => {
         it('opens rollback confirmation modal when button is clicked', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
 
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Rollback Campaign' })).toBeInTheDocument();
             expect(screen.getByText(/overwrite ALL current campaign data/)).toBeInTheDocument();
         });
 
-        it('closes modal via cancel, close button, and overlay', () => {
+        it('closes modal via cancel button', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
 
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+            expect(screen.queryByRole('heading', { name: 'Rollback Campaign' })).not.toBeInTheDocument();
+        });
 
-            // Cancel button
-            fireEvent.click(screen.getByText('Cancel'));
-            expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
+        it('closes modal via close (X) button', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
 
-            // Re-open for next test
-            fireEvent.click(btn);
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', { name: '' }));
+            expect(screen.queryByRole('heading', { name: 'Rollback Campaign' })).not.toBeInTheDocument();
+        });
 
-            // Close (X) button
-            fireEvent.click(document.querySelector('.ct-modal-close'));
-            expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
+        it('closes modal via overlay click', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
 
-            // Re-open for next test
-            fireEvent.click(btn);
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+            const modalEl = screen.getByRole('heading', { name: 'Rollback Campaign' }).closest('.ct-modal');
+            fireEvent.click(modalEl.parentElement);
+            expect(screen.queryByRole('heading', { name: 'Rollback Campaign' })).not.toBeInTheDocument();
+        });
 
-            // Overlay click
-            fireEvent.click(document.querySelector('.ct-modal-overlay'));
-            expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
+        it('displays the campaign name in the rollback confirmation message', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+
+            expect(screen.getByText(/"test-campaign"/)).toBeInTheDocument();
+        });
+
+        it('displays the campaign name with special characters in the rollback confirmation message', () => {
+            render(<CampaignAdmin {...createDefaultProps({ campaignName: 'my campaign/1' })} />);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+
+            expect(screen.getByText(/"my campaign\/1"/)).toBeInTheDocument();
+        });
+
+        it('renders the confirm button with danger styling and warning icon', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+
+            const confirmBtn = screen.getByRole('button', { name: /confirm/i });
+            expect(confirmBtn).toHaveClass('ct-btn-danger');
+            expect(confirmBtn.querySelector('i.fa-exclamation-triangle')).toBeInTheDocument();
         });
     });
 
     describe('Rollback - confirm action', () => {
         it('sends POST request to rollback endpoint on confirm', async () => {
-            global.fetch = vi.fn(() =>
+            const fetchMock = vi.fn(() =>
                 Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Rolled back' }) })
             );
+            global.fetch = fetchMock;
 
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
-                expect(global.fetch).toHaveBeenCalledWith(
+                expect(fetchMock).toHaveBeenCalledWith(
                     '/api/campaigns/test-campaign/admin/rollback',
                     { method: 'POST' }
                 );
@@ -101,20 +108,17 @@ describe('CampaignAdmin - Rollback & Upload', () => {
         });
 
         it('URL-encodes the campaign name in rollback endpoint', async () => {
-            global.fetch = vi.fn(() =>
+            const fetchMock = vi.fn(() =>
                 Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Rolled back' }) })
             );
+            global.fetch = fetchMock;
 
             render(<CampaignAdmin {...createDefaultProps({ campaignName: 'my campaign/1' })} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
-                expect(global.fetch).toHaveBeenCalledWith(
+                expect(fetchMock).toHaveBeenCalledWith(
                     '/api/campaigns/my%20campaign%2F1/admin/rollback',
                     { method: 'POST' }
                 );
@@ -122,18 +126,15 @@ describe('CampaignAdmin - Rollback & Upload', () => {
         });
 
         it('shows loading status while rolling back', async () => {
-            global.fetch = vi.fn(() => new Promise(() => { }));
+            global.fetch = vi.fn(() => new Promise(() => {}));
 
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(screen.getByText('Rolling back...')).toBeInTheDocument();
+                expect(screen.getByText('Rolling back...').closest('.admin-status')).toHaveClass('admin-status--loading');
             });
         });
 
@@ -143,15 +144,12 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(screen.getByText('Rolled back successfully')).toBeInTheDocument();
+                expect(screen.getByText('Rolled back successfully').closest('.admin-status')).toHaveClass('admin-status--success');
             });
         });
 
@@ -161,12 +159,8 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(window.location.reload).toHaveBeenCalledTimes(1);
@@ -179,15 +173,12 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(screen.getByText('Rollback failed')).toBeInTheDocument();
+                expect(screen.getByText('Rollback failed').closest('.admin-status')).toHaveClass('admin-status--error');
                 expect(window.location.reload).not.toHaveBeenCalled();
             });
         });
@@ -196,49 +187,58 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             global.fetch = vi.fn(() => Promise.reject(new Error('Network failed')));
 
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(screen.getByText('Network failed')).toBeInTheDocument();
+                expect(screen.getByText('Network failed').closest('.admin-status')).toHaveClass('admin-status--error');
             });
         });
 
         it('disables rollback action button after confirm during async operation', async () => {
-            global.fetch = vi.fn(() => new Promise(() => { }));
+            global.fetch = vi.fn(() => new Promise(() => {}));
 
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Rollback');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            const rollbackBtn = getActionButton('Rollback to Snapshot');
+            fireEvent.click(rollbackBtn);
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
-                expect(btn).toBeDisabled();
+                expect(rollbackBtn).toBeDisabled();
+            });
+        });
+
+        it('does not call onConfirm when modal is canceled', async () => {
+            const fetchMock = vi.fn();
+            global.fetch = fetchMock;
+
+            render(<CampaignAdmin {...defaultProps} />);
+            fireEvent.click(getActionButton('Rollback to Snapshot'));
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+            await waitFor(() => {
+                expect(fetchMock).not.toHaveBeenCalled();
             });
         });
     });
 
     describe('Upload - file validation', () => {
+        const getFileInput = () =>
+            document.querySelector('.admin-upload-label input[type="file"]');
+
         it('shows error when non-zip file is selected', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'test.txt', { type: 'text/plain' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
 
             expect(screen.getByText('Please select a .zip file')).toBeInTheDocument();
         });
 
         it('clears file input after non-zip error', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
+            const fileInput = getFileInput();
             const file = new File(['test'], 'test.txt', { type: 'text/plain' });
 
             fireEvent.change(fileInput, { target: { files: [file] } });
@@ -248,106 +248,144 @@ describe('CampaignAdmin - Rollback & Upload', () => {
 
         it('does not show error for .zip file', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'test.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
 
             expect(screen.queryByText('Please select a .zip file')).not.toBeInTheDocument();
         });
 
         it('rejects .ZIP and .Zip extensions (case-sensitive check)', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
 
-            // Test .ZIP
-            fireEvent.change(fileInput, { target: { files: [new File(['test'], 'test.ZIP', { type: 'application/zip' })] } });
+            fireEvent.change(getFileInput(), { target: { files: [new File(['test'], 'test.ZIP', { type: 'application/zip' })] } });
             expect(screen.getByText('Please select a .zip file')).toBeInTheDocument();
 
-            // Test .Zip
-            fireEvent.change(fileInput, { target: { files: [new File(['test'], 'test.Zip', { type: 'application/zip' })] } });
+            fireEvent.change(getFileInput(), { target: { files: [new File(['test'], 'test.Zip', { type: 'application/zip' })] } });
             expect(screen.getByText('Please select a .zip file')).toBeInTheDocument();
+        });
+
+        it('renders the upload file input with accept=".zip" attribute', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            const fileInput = getFileInput();
+
+            expect(fileInput).toHaveAttribute('accept', '.zip');
         });
     });
 
     describe('Upload - confirmation modal', () => {
+        const getFileInput = () =>
+            document.querySelector('.admin-upload-label input[type="file"]');
+
         it('opens upload confirmation modal when valid zip is selected', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
 
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Upload Campaign' })).toBeInTheDocument();
             expect(screen.getByText(/backup\.zip/)).toBeInTheDocument();
         });
 
         it('shows campaign name in upload message', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
 
             expect(screen.getByText(/"test-campaign"/)).toBeInTheDocument();
         });
 
-        it('closes modal via cancel, close button, and overlay; body click is ignored', () => {
+        it('shows file name in upload message', () => {
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
+            const file = new File(['test'], 'my-backup.zip', { type: 'application/zip' });
+
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+
+            expect(screen.getByText(/"my-backup\.zip"/)).toBeInTheDocument();
+        });
+
+        it('closes modal via cancel button', () => {
+            render(<CampaignAdmin {...defaultProps} />);
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+            expect(screen.queryByRole('heading', { name: 'Upload Campaign' })).not.toBeInTheDocument();
+        });
 
-            // Cancel button
-            fireEvent.click(screen.getByText('Cancel'));
-            expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
+        it('closes modal via close (X) button', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            // Re-open for next test
-            fireEvent.change(fileInput, { target: { files: [file] } });
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: '' }));
 
-            // Close (X) button
-            fireEvent.click(document.querySelector('.ct-modal-close'));
-            expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
+            expect(screen.queryByRole('heading', { name: 'Upload Campaign' })).not.toBeInTheDocument();
+        });
 
-            // Re-open for next test
-            fireEvent.change(fileInput, { target: { files: [file] } });
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+        it('closes modal via overlay click', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            // Overlay click
-            fireEvent.click(document.querySelector('.ct-modal-overlay'));
-            expect(document.querySelector('.ct-modal')).not.toBeInTheDocument();
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            const modalEl = screen.getByRole('heading', { name: 'Upload Campaign' }).closest('.ct-modal');
+            fireEvent.click(modalEl.parentElement);
 
-            // Re-open for body click test
-            fireEvent.change(fileInput, { target: { files: [file] } });
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+            expect(screen.queryByRole('heading', { name: 'Upload Campaign' })).not.toBeInTheDocument();
+        });
 
-            // Body click is prevented
-            fireEvent.click(document.querySelector('.ct-modal'));
-            expect(document.querySelector('.ct-modal')).toBeInTheDocument();
+        it('prevents closing modal when clicking inside the modal content', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
+
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('heading', { name: 'Upload Campaign' }));
+
+            expect(screen.getByRole('heading', { name: 'Upload Campaign' })).toBeInTheDocument();
+        });
+
+        it('renders the confirm button with danger styling and warning icon', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
+
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+
+            const confirmBtn = screen.getByRole('button', { name: /confirm/i });
+            expect(confirmBtn).toHaveClass('ct-btn-danger');
+            expect(confirmBtn.querySelector('i.fa-exclamation-triangle')).toBeInTheDocument();
+        });
+
+        it('displays a safety warning about automatic rollback on failure', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
+
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+
+            expect(screen.getByText(/safety net/i)).toBeInTheDocument();
+            expect(screen.getByText(/rolled back/i)).toBeInTheDocument();
         });
     });
 
     describe('Upload - confirm action', () => {
+        const getFileInput = () =>
+            document.querySelector('.admin-upload-label input[type="file"]');
+
         it('sends POST request with FormData on confirm', async () => {
-            global.fetch = vi.fn(() =>
+            const fetchMock = vi.fn(() =>
                 Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Upload complete' }) })
             );
+            global.fetch = fetchMock;
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
-                expect(global.fetch).toHaveBeenCalledWith(
+                expect(fetchMock).toHaveBeenCalledWith(
                     '/api/campaigns/test-campaign/admin/upload',
                     expect.objectContaining({ method: 'POST' })
                 );
@@ -355,21 +393,19 @@ describe('CampaignAdmin - Rollback & Upload', () => {
         });
 
         it('URL-encodes the campaign name in upload endpoint', async () => {
-            global.fetch = vi.fn(() =>
+            const fetchMock = vi.fn(() =>
                 Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Upload complete' }) })
             );
+            global.fetch = fetchMock;
 
             render(<CampaignAdmin {...createDefaultProps({ campaignName: 'my campaign/1' })} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
-                expect(global.fetch).toHaveBeenCalledWith(
+                expect(fetchMock).toHaveBeenCalledWith(
                     '/api/campaigns/my%20campaign%2F1/admin/upload',
                     expect.objectContaining({ method: 'POST' })
                 );
@@ -377,47 +413,40 @@ describe('CampaignAdmin - Rollback & Upload', () => {
         });
 
         it('includes file in FormData', async () => {
-            global.fetch = vi.fn(() =>
+            const fetchMock = vi.fn(() =>
                 Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Upload complete' }) })
             );
-
-            const formDataSpy = vi.fn();
-            global.fetch.mockImplementation(async (url, options) => {
-                formDataSpy(options.body);
+            let capturedBody = null;
+            fetchMock.mockImplementation(async (url, options) => {
+                capturedBody = options.body;
                 return Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Upload complete' }) });
             });
+            global.fetch = fetchMock;
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
-                expect(formDataSpy).toHaveBeenCalled();
-                const body = formDataSpy.mock.calls[0][0];
-                expect(body instanceof FormData).toBe(true);
-                expect(body.get('file')).toBe(file);
+                expect(capturedBody).toBeInstanceOf(FormData);
+                expect(capturedBody.get('file')).toBe(file);
             });
         });
 
         it('shows loading status while uploading', async () => {
-            global.fetch = vi.fn(() => new Promise(() => { }));
+            global.fetch = vi.fn(() => new Promise(() => {}));
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(screen.getByText('Uploading and extracting...')).toBeInTheDocument();
+                expect(screen.getByText('Uploading and extracting...').closest('.admin-status')).toHaveClass('admin-status--loading');
             });
         });
 
@@ -427,16 +456,14 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(screen.getByText('Upload complete')).toBeInTheDocument();
+                expect(screen.getByText('Upload complete').closest('.admin-status')).toHaveClass('admin-status--success');
             });
         });
 
@@ -446,13 +473,10 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(window.location.reload).toHaveBeenCalledTimes(1);
@@ -465,13 +489,10 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(window.alert).toHaveBeenCalledWith(
@@ -486,13 +507,10 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(window.alert).toHaveBeenCalledWith(
@@ -505,13 +523,10 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             global.fetch = vi.fn(() => Promise.reject(new Error('Network failed')));
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(window.alert).toHaveBeenCalledWith(
@@ -526,13 +541,11 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
+            const fileInput = getFileInput();
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
             fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(fileInput.value).toBe('');
@@ -545,13 +558,11 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
+            const fileInput = getFileInput();
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
             fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(fileInput.value).toBe('');
@@ -562,13 +573,11 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             global.fetch = vi.fn(() => Promise.reject(new Error('Network failed')));
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
+            const fileInput = getFileInput();
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
             fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
                 expect(fileInput.value).toBe('');
@@ -576,21 +585,32 @@ describe('CampaignAdmin - Rollback & Upload', () => {
         });
 
         it('disables buttons after confirm during async operation', async () => {
-            global.fetch = vi.fn(() => new Promise(() => { }));
+            global.fetch = vi.fn(() => new Promise(() => {}));
 
             render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
+            const fileInput = getFileInput();
             const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
 
             fireEvent.change(fileInput, { target: { files: [file] } });
-
-            const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
-            fireEvent.click(confirmBtn);
+            fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
             await waitFor(() => {
-                const uploadLabel = document.querySelector('.admin-upload-label');
-                const uploadInput = uploadLabel.querySelector('input[type="file"]');
-                expect(uploadInput).toBeDisabled();
+                expect(fileInput).toBeDisabled();
+            });
+        });
+
+        it('does not call fetch when upload modal is canceled', async () => {
+            const fetchMock = vi.fn();
+            global.fetch = fetchMock;
+
+            render(<CampaignAdmin {...defaultProps} />);
+            const file = new File(['test'], 'backup.zip', { type: 'application/zip' });
+
+            fireEvent.change(getFileInput(), { target: { files: [file] } });
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+            await waitFor(() => {
+                expect(fetchMock).not.toHaveBeenCalled();
             });
         });
     });

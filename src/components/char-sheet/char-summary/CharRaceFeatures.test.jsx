@@ -1,42 +1,24 @@
-// @cleaned-by-ai
-import { render } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharRaceFeatures from './CharRaceFeatures.jsx';
 
 /*
- * TrackedResourceInput is mocked so CharRaceFeatures tests focus on:
- *  - Which component is selected per race/subrace
- *  - Which props (label, resourceKey, getMax) are passed through
- *  - Null/early-return paths for unsupported races
+ * Tests CharRaceFeatures behavior:
+ *  - Supported races render TrackedResourceInput with the correct label/resourceKey/maxUses
+ *  - Unsupported/missing races return null (no DOM output)
+ *  - Null/undefined playerStats returns null
  *
- * The mock captures all props via a shared registry object so tests can
- * assert exact prop passthrough without exercising the real TrackedResourceInput
- * (which depends on hooks and DOM APIs).
+ * TrackedResourceInput is mocked to render the label text so we can verify
+ * observable DOM output rather than implementation details (prop passthrough).
  */
 
-// Shared capture object for the mock so each test can inspect what was rendered
-const mockRenderData = {
-    label: null,
-    resourceKey: null,
-    playerName: null,
-    getMaxValue: null,
-    deps: null,
-    campaignName: null,
-    playerStats: null,
-    called: false,
-};
+const mockCalls = [];
 
 vi.mock('./TrackedResourceInput.jsx', () => ({
-    default: function MockTrackedResourceInput(props) {
-        mockRenderData.called = true;
-        mockRenderData.label = props.label;
-        mockRenderData.resourceKey = props.resourceKey;
-        mockRenderData.playerName = props.playerName;
-        mockRenderData.getMaxValue = props.getMax();
-        mockRenderData.deps = props.deps;
-        mockRenderData.campaignName = props.campaignName;
-        mockRenderData.playerStats = props.playerStats;
-        return <div data-testid="tracked-resource" />;
+    default: function MockTrackedResourceInput({ label, getMax, resourceKey }) {
+        mockCalls.push({ label, resourceKey, max: getMax() });
+        return <div className="race-features">{label}</div>;
     },
 }));
 
@@ -47,128 +29,132 @@ const basePlayerStats = {
     race: { name: 'Mountain Dwarf' },
 };
 
-const mockCampaignName = 'test-campaign';
+const campaignName = 'test-campaign';
 
 function makeStats(overrides = {}) {
     return { ...basePlayerStats, ...overrides };
 }
 
-function renderComponent(playerStats, campaign = mockCampaignName) {
+function renderComponent(playerStats, campaign = campaignName) {
     return render(<CharRaceFeatures playerStats={playerStats} campaignName={campaign} />);
 }
 
 beforeEach(() => {
-    mockRenderData.called = false;
-    mockRenderData.label = null;
-    mockRenderData.resourceKey = null;
-    mockRenderData.playerName = null;
-    mockRenderData.getMaxValue = null;
-    mockRenderData.deps = null;
-    mockRenderData.campaignName = null;
-    mockRenderData.playerStats = null;
+    vi.clearAllMocks();
+    mockCalls.length = 0;
 });
 
-function assertTrackedResourceRendered(expectedProps) {
-    expect(mockRenderData.called).toBe(true);
-    if (expectedProps.label !== undefined) expect(mockRenderData.label).toBe(expectedProps.label);
-    if (expectedProps.resourceKey !== undefined) expect(mockRenderData.resourceKey).toBe(expectedProps.resourceKey);
-    if (expectedProps.playerName !== undefined) expect(mockRenderData.playerName).toBe(expectedProps.playerName);
-    if (expectedProps.getMaxValue !== undefined) expect(mockRenderData.getMaxValue).toBe(expectedProps.getMaxValue);
-    if (expectedProps.campaignName !== undefined) expect(mockRenderData.campaignName).toBe(expectedProps.campaignName);
-    if (expectedProps.playerStats !== undefined) expect(mockRenderData.playerStats).toBe(expectedProps.playerStats);
-    if (expectedProps.deps !== undefined) expect(mockRenderData.deps).toEqual(expectedProps.deps);
+function assertTrackedResourceRendered(expected) {
+    expect(mockCalls.length).toBe(1);
+    expect(mockCalls[0].label).toBe(expected.label);
+    expect(mockCalls[0].resourceKey).toBe(expected.resourceKey);
+    expect(mockCalls[0].max).toBe(expected.max);
 }
 
 function assertNoTrackedResourceRendered() {
-    expect(mockRenderData.called).toBe(false);
+    expect(mockCalls.length).toBe(0);
 }
 
 describe('CharRaceFeatures', () => {
-    describe('Dragonborn features', () => {
-        const dragonbornCases = [
-            { desc: 'max uses from automation.uses number', race: { name: 'Dragonborn', traits: [{ automation: { uses: 3 } }] }, maxUses: 3, deps: [5] },
-            { desc: 'max uses from proficiency_bonus string', race: { name: 'Dragonborn', traits: [{ automation: { uses: 'proficiency_bonus' } }] }, proficiency: 4, maxUses: 4, deps: [5] },
-            { desc: 'max uses defaults to 1 when automation.uses is undefined', race: { name: 'Dragonborn', traits: [{}] }, maxUses: 1 },
-            { desc: 'max uses defaults to 1 when traits is undefined', race: { name: 'Dragonborn' }, maxUses: 1 },
-            { desc: 'max uses defaults to 1 when traits is empty', race: { name: 'Dragonborn', traits: [] }, maxUses: 1 },
-        ];
-
-        for (const { desc, race, proficiency, maxUses, deps } of dragonbornCases) {
-            it(`renders Breath Weapon — ${desc}`, () => {
-                const stats = makeStats({ race, proficiency });
-                renderComponent(stats);
-                const expectedDeps = deps !== undefined ? deps : [stats.level];
-                assertTrackedResourceRendered({
-                    label: 'Breath Weapon',
-                    resourceKey: 'breathweaponUses',
-                    getMaxValue: maxUses,
-                    playerName: 'Thorin',
-                    campaignName: mockCampaignName,
-                    playerStats: stats,
-                    deps: expectedDeps,
-                });
+    describe('Dragonborn — Breath Weapon', () => {
+        it.each([
+            ['number uses', { uses: 3 }, 3],
+            ['proficiency_bonus uses', { uses: 'proficiency_bonus' }, 4],
+            ['undefined uses defaults to 1', {}, 1],
+        ])('renders Breath Weapon with max uses when automation.uses is %s', (_desc, automation, maxUses) => {
+            const stats = makeStats({
+                race: { name: 'Dragonborn', traits: [{ automation }] },
+                proficiency: 4,
             });
-        }
+            renderComponent(stats);
+            assertTrackedResourceRendered({
+                label: 'Breath Weapon',
+                resourceKey: 'breathweaponUses',
+                max: maxUses,
+            });
+        });
+
+        it('renders Breath Weapon when traits is missing or empty', () => {
+            const stats1 = makeStats({ race: { name: 'Dragonborn' } });
+            renderComponent(stats1);
+            expect(mockCalls.length).toBe(1);
+            expect(mockCalls[0].label).toBe('Breath Weapon');
+            expect(mockCalls[0].max).toBe(1);
+
+            mockCalls.length = 0;
+            const stats2 = makeStats({ race: { name: 'Dragonborn', traits: [] } });
+            renderComponent(stats2);
+            expect(mockCalls.length).toBe(1);
+            expect(mockCalls[0].max).toBe(1);
+        });
     });
 
-    describe('Goliath features', () => {
-        const goliathNullCases = [
-            { desc: 'no subrace', race: { name: 'Goliath' } },
-            { desc: 'unknown subrace', race: { name: 'Goliath', subrace: { name: 'Iron Giant' } } },
-            { desc: 'undefined subrace', race: { name: 'Goliath', subrace: undefined } },
-        ];
+    describe('Goliath — Giant Ancestry', () => {
+        it.each([
+            ['no subrace', { name: 'Goliath' }],
+            ['unknown subrace', { name: 'Goliath', subrace: { name: 'Iron Giant' } }],
+            ['undefined subrace', { name: 'Goliath', subrace: undefined }],
+        ])('renders nothing when Goliath has %s', (_desc, race) => {
+            const stats = makeStats({ race });
+            renderComponent(stats);
+            assertNoTrackedResourceRendered();
+            expect(screen.queryByText(/Stone's Endurance|Cloud's Jaunt|Fire's Burn|Frost's Chill|Hill's Tumble|Storm's Thunder/)).not.toBeInTheDocument();
+        });
 
-        for (const { desc, race } of goliathNullCases) {
-            it(`returns null when Goliath has ${desc}`, () => {
-                const stats = makeStats({ race });
-                renderComponent(stats);
-                assertNoTrackedResourceRendered();
+        it.each([
+            ['Stone Giant', 'Stone Giant', "Stone's Endurance", 'stonesEnduranceUses'],
+            ['Cloud Giant', 'Cloud Giant', "Cloud's Jaunt", 'cloudsJauntUses'],
+            ['Fire Giant', 'Fire Giant', "Fire's Burn", 'firesBurnUses'],
+            ['Frost Giant', 'Frost Giant', "Frost's Chill", 'frostsChillUses'],
+            ['Hill Giant', 'Hill Giant', "Hill's Tumble", 'hillsTumbleUses'],
+            ['Storm Giant', 'Storm Giant', "Storm's Thunder", 'stormsThunderUses'],
+        ])('renders %s ancestry feature for Goliath', (_name, subraceName, expectedLabel, expectedResourceKey) => {
+            const stats = makeStats({
+                race: { name: 'Goliath', subrace: { name: subraceName } },
+                proficiency: 5,
             });
-        }
-
-        const goliathSupportedCases = [
-            { desc: 'Stone Giant with proficiency', race: { name: 'Goliath', subrace: { name: 'Stone Giant' } }, proficiency: 6, maxUses: 6 },
-            { desc: 'Cloud Giant with undefined proficiency', race: { name: 'Goliath', subrace: { name: 'Cloud Giant' } }, proficiency: undefined, maxUses: 0 },
-        ];
-
-        for (const { desc, race, proficiency, maxUses } of goliathSupportedCases) {
-            it(`renders Goliath ancestry feature — ${desc}`, () => {
-                const stats = makeStats({ proficiency, race });
-                renderComponent(stats);
-                assertTrackedResourceRendered({
-                    getMaxValue: maxUses,
-                    campaignName: mockCampaignName,
-                    playerStats: stats,
-                    deps: [stats],
-                });
+            renderComponent(stats);
+            assertTrackedResourceRendered({
+                label: expectedLabel,
+                resourceKey: expectedResourceKey,
+                max: 5,
             });
-        }
+        });
+
+        it('renders with max uses equal to proficiency (0 when undefined)', () => {
+            const stats = makeStats({
+                race: { name: 'Goliath', subrace: { name: 'Stone Giant' } },
+                proficiency: undefined,
+            });
+            renderComponent(stats);
+            assertTrackedResourceRendered({
+                label: "Stone's Endurance",
+                resourceKey: 'stonesEnduranceUses',
+                max: 0,
+            });
+        });
     });
 
-    describe('Unsupported/missing races return null', () => {
-        const unsupportedRaces = ['Human', 'Elf', 'Halfling'];
+    describe('Unsupported races and null input — render nothing', () => {
+        it.each(['Human', 'Elf', 'Halfling'])('renders nothing for %s race', (raceName) => {
+            const stats = makeStats({ race: { name: raceName } });
+            renderComponent(stats);
+            assertNoTrackedResourceRendered();
+        });
 
-        for (const raceName of unsupportedRaces) {
-            it(`returns null for ${raceName} race`, () => {
-                const stats = makeStats({ race: { name: raceName } });
-                renderComponent(stats);
-                assertNoTrackedResourceRendered();
-            });
-        }
-
-        it('returns null when race is undefined', () => {
+        it('renders nothing when race is undefined', () => {
             const stats = makeStats({ race: undefined });
             renderComponent(stats);
             assertNoTrackedResourceRendered();
         });
 
-        it('returns null when playerStats is null', () => {
-            render(<CharRaceFeatures playerStats={null} campaignName={mockCampaignName} />);
+        it('renders nothing when playerStats is null', () => {
+            render(<CharRaceFeatures playerStats={null} campaignName={campaignName} />);
             assertNoTrackedResourceRendered();
         });
 
-        it('returns null when playerStats is undefined', () => {
-            render(<CharRaceFeatures playerStats={undefined} campaignName={mockCampaignName} />);
+        it('renders nothing when playerStats is undefined', () => {
+            render(<CharRaceFeatures playerStats={undefined} campaignName={campaignName} />);
             assertNoTrackedResourceRendered();
         });
     });

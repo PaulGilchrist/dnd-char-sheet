@@ -1,11 +1,9 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
 import { getRuntimeValue, useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-
-const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -68,13 +66,12 @@ const renderPopup = (
       campaignName={campaignName}
       onClose={vi.fn()}
       {...extraProps}
-    />
+    />,
   );
 
 describe('SpellDetailPopup - Overchannel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
   });
@@ -90,7 +87,7 @@ describe('SpellDetailPopup - Overchannel', () => {
 
     describe('checkbox visibility', () => {
       it.each([
-        { name: 'level 0 cantrip', level: 0, hasDamage: true, shouldShow: false },
+        { name: 'level 0 cantrip with damage', level: 0, hasDamage: true, shouldShow: false },
         { name: 'level 1 spell with damage', level: 1, hasDamage: true, shouldShow: true },
         { name: 'level 3 spell with damage', level: 3, hasDamage: true, shouldShow: true },
         { name: 'level 5 spell with damage (upper boundary)', level: 5, hasDamage: true, shouldShow: true },
@@ -150,7 +147,7 @@ describe('SpellDetailPopup - Overchannel', () => {
       it.each([
         { toggled: false, expectedOverchannel: false, label: 'not toggled' },
         { toggled: true, expectedOverchannel: true, label: 'toggled' },
-      ])('passes overchannel:$expectedOverchannel in metaCtx when $label', async ({ toggled, expectedOverchannel }) => {
+      ])('passes overchannel:$expectedOverchannel in metaCtx when $label', ({ toggled, expectedOverchannel }) => {
         vi.mocked(useRuntimeValue).mockReturnValue(0);
         const onCast = vi.fn();
         const spell = {
@@ -164,11 +161,11 @@ describe('SpellDetailPopup - Overchannel', () => {
           fireEvent.click(screen.getByRole('checkbox'));
         }
         fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-        await flushPromises();
 
         expect(onCast).toHaveBeenCalledTimes(1);
-        const metaCtx = onCast.mock.calls[0][1];
+        const [passedSpell, metaCtx] = onCast.mock.calls[0];
         expect(metaCtx.overchannel).toBe(expectedOverchannel);
+        expect(passedSpell.overchannel).toBe(expectedOverchannel);
       });
     });
   });

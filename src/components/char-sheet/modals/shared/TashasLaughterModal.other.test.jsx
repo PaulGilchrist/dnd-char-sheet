@@ -1,5 +1,6 @@
-import { render, fireEvent, act } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TashasLaughterModal from './TashasLaughterModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -76,54 +77,71 @@ beforeEach(() => {
     setRuntimeValue.mockReturnValue(undefined);
 });
 
-afterEach(() => {
-    vi.clearAllMocks();
-});
-
 describe('TashasLaughterModal - Metamagic & Other', () => {
     describe('metamagic heighten', () => {
         it('shows heighten note in description when metamagicHeighten is true', () => {
-            const { container } = render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
-            const noteEl = container.querySelector('.sp-note');
-            expect(noteEl.textContent).toContain('Heightened Spell');
-            expect(noteEl.textContent).toContain('one target will have disadvantage');
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
+            expect(screen.getByText(/Heightened Spell/)).toBeInTheDocument();
+            expect(screen.getByText(/one target will have disadvantage/)).toBeInTheDocument();
         });
 
-        it('does not show heighten note when metamagicHeighten is false', () => {
-            const { container } = render(<TashasLaughterModal {...makeProps({ metamagicHeighten: false })} />);
-            const noteEl = container.querySelector('.sp-note');
-            expect(noteEl.textContent).not.toContain('Heightened Spell');
-        });
+        it('does not show heighten note when metamagicHeighten is false or undefined', () => {
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: false })} />);
+            expect(screen.queryByText(/Heightened Spell/)).not.toBeInTheDocument();
 
-        it('does not show heighten note when metamagicHeighten is undefined', () => {
-            const { container } = render(<TashasLaughterModal {...makeProps()} />);
-            const noteEl = container.querySelector('.sp-note');
-            expect(noteEl.textContent).not.toContain('Heightened Spell');
+            render(<TashasLaughterModal {...makeProps()} />);
+            expect(screen.queryByText(/Heightened Spell/)).not.toBeInTheDocument();
         });
 
         it('shows heighten radio buttons when metamagicHeighten is true', () => {
             render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
             const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
-            expect(heightenRadios.length).toBeGreaterThan(0);
+            expect(heightenRadios).toHaveLength(baseCombatSummary.creatures.length);
         });
 
         it('does not show heighten radio buttons when metamagicHeighten is false', () => {
             render(<TashasLaughterModal {...makeProps({ metamagicHeighten: false })} />);
-            const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
-            expect(heightenRadios).toHaveLength(0);
+            expect(document.querySelectorAll('input[name="heightenTarget"]')).toHaveLength(0);
         });
 
-        it('tracks heightenTarget state', async () => {
+        it('tracks heightenTarget selection state when a radio is clicked', () => {
             render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
-            // Click heighten radio for first creature
             const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
-            if (heightenRadios.length > 0) {
-                await act(async () => {
-                    fireEvent.click(heightenRadios[0]);
-                });
-            }
-            // Verify the heighten target was set by checking the radio is checked
+            expect(heightenRadios).toHaveLength(3);
+
+            fireEvent.click(heightenRadios[0]);
             expect(heightenRadios[0]).toBeChecked();
+        });
+
+        it('shows heighten radio buttons equal to creature count', () => {
+            const combatSummary = {
+                creatures: [
+                    { name: 'Spider', type: 'npc', currentHp: 3, maxHp: 5, saveBonuses: { wis: -1 } },
+                ],
+            };
+            getCombatSummary.mockReturnValue(combatSummary);
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
+            expect(document.querySelectorAll('input[name="heightenTarget"]')).toHaveLength(1);
+        });
+
+    });
+
+    describe('edge cases', () => {
+        it('shows heighten radios when there is only one creature', () => {
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'SoloEnemy', type: 'npc', currentHp: 10, maxHp: 10, saveBonuses: { wis: 3 } },
+                ],
+            });
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
+            expect(document.querySelectorAll('input[name="heightenTarget"]')).toHaveLength(1);
+        });
+
+        it('shows heighten radios when there are no creatures', () => {
+            getCombatSummary.mockReturnValue({ creatures: [] });
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
+            expect(document.querySelectorAll('input[name="heightenTarget"]')).toHaveLength(0);
+            expect(screen.getByText('No targets available.')).toBeInTheDocument();
         });
     });
 });

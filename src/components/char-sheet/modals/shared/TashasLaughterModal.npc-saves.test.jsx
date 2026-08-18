@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import TashasLaughterModal from './TashasLaughterModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -21,7 +22,7 @@ vi.mock('../../../../services/encounters/combatData.js', () => ({
 
 vi.mock('../../../../services/automation/common/damageRollback.js', () => ({
     storeSpellLastAttack: vi.fn(),
-    addTargetResult: vi.fn().mockResolvedValue(undefined),
+    addTargetResult: vi.fn(),
 }));
 
 vi.mock('../../../../services/rules/effects/expirations.js', () => ({
@@ -74,68 +75,26 @@ function makeProps(overrides = {}) {
     };
 }
 
-function selectTargetRow(labels, index) {
-    return act(async () => { fireEvent.click(labels[index]); });
+function selectTarget(index) {
+    const checkboxes = screen.getAllByRole('checkbox');
+    const label = checkboxes[index].closest('label');
+    fireEvent.click(label);
 }
 
-function clickConfirmButton() {
-    return act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter/ }));
-    });
+function clickConfirm() {
+    const confirmBtn = screen.getByRole('button', { name: /Tasha's Hideous Laughter/ });
+    fireEvent.click(confirmBtn);
 }
 
-async function selectAndConfirm(props, targetIndices) {
-    render(<TashasLaughterModal {...makeProps(props)} />);
-    const labels = document.querySelectorAll('.secondary-target-row');
-    for (const idx of targetIndices) {
-        await selectTargetRow(labels, idx);
-    }
-    await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter/ })).toBeInTheDocument();
-    });
-    await clickConfirmButton();
+function clickSkip() {
+    const skipBtn = screen.getByRole('button', { name: 'Skip' });
+    fireEvent.click(skipBtn);
 }
 
-async function selectAndConfirmWithRandom(props, targetIndices, randomVal) {
-    getRuntimeValue.mockReturnValue([]);
-    vi.spyOn(Math, 'random').mockReturnValue(randomVal);
-    await selectAndConfirm(props, targetIndices);
-}
-
-function waitForConditionCalls(targetName, assertFn) {
-    return waitFor(() => {
-        const conditionCalls = setRuntimeValue.mock.calls.filter(
-            call => call[1] === 'activeConditions' && call[0] === targetName
-        );
-        assertFn(conditionCalls);
-    });
-}
-
-function waitForTeCalls(assertFn) {
-    return waitFor(() => {
-        const teCalls = setRuntimeValue.mock.calls.filter(
-            call => call[1] === 'targetEffects' && call[0] === 'campaign'
-        );
-        assertFn(teCalls);
-    });
-}
-
-function waitForSaveEntries(assertFn) {
-    return waitFor(() => {
-        const saveEntries = addEntry.mock.calls.filter(
-            call => call[1]?.type === 'save_result'
-        );
-        assertFn(saveEntries);
-    });
-}
-
-function waitForConditionEntries(assertFn) {
-    return waitFor(() => {
-        const conditionEntries = addEntry.mock.calls.filter(
-            call => call[1]?.type === 'condition' && call[1]?.action === 'applied'
-        );
-        assertFn(conditionEntries);
-    });
+function findSetRuntimeValueCalls(targetName, subKey) {
+    return setRuntimeValue.mock.calls.filter(
+        call => call[0] === targetName && call[1] === subKey
+    );
 }
 
 beforeEach(() => {
@@ -152,58 +111,115 @@ afterEach(() => {
 });
 
 describe('TashasLaughterModal - NPC Saves', () => {
-    describe('NPC save resolution', () => {
-        it('calls storeSpellLastAttack when targets are selected', async () => {
+    describe('initial setup', () => {
+        it('renders the modal with all creatures as selectable targets', () => {
             render(<TashasLaughterModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await selectTargetRow(labels, 0);
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter/ })).toBeInTheDocument();
-            });
-            await clickConfirmButton();
+            expect(screen.getByText('Goblin')).toBeInTheDocument();
+            expect(screen.getByText('Orc')).toBeInTheDocument();
+            expect(screen.getByText('PlayerAlly')).toBeInTheDocument();
+        });
 
-            expect(storeSpellLastAttack).toHaveBeenCalledWith(campaignName, {
-                casterName: 'Wizard1',
-                spellName: "Tasha's Hideous Laughter",
-                saveType: 'WIS',
-                saveDc: 14,
-                attackScope: 'single',
+        it('disables confirm button when no targets are selected', () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            const confirmBtn = screen.getByRole('button', { name: /Tasha's Hideous Laughter/ });
+            expect(confirmBtn).toBeDisabled();
+        });
+
+        it('enables confirm button after selecting a target', () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            const confirmBtn = screen.getByRole('button', { name: /Tasha's Hideous Laughter/ });
+            expect(confirmBtn).toBeEnabled();
+        });
+
+        it('skips and closes modal when skip is clicked', () => {
+            const onClose = vi.fn();
+            render(<TashasLaughterModal {...makeProps({ onClose })} />);
+            clickSkip();
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not call any services when skip is clicked', async () => {
+            const onClose = vi.fn();
+            render(<TashasLaughterModal {...makeProps({ onClose })} />);
+            clickSkip();
+            await waitFor(() => {
+                expect(storeSpellLastAttack).not.toHaveBeenCalled();
+                expect(sendSavePrompt).not.toHaveBeenCalled();
+                expect(addEntry).not.toHaveBeenCalled();
+            });
+        });
+    });
+
+    describe('storeSpellLastAttack and ability_use logging', () => {
+        it('calls storeSpellLastAttack with correct payload when targets are selected', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            clickConfirm();
+            await waitFor(() => {
+                expect(storeSpellLastAttack).toHaveBeenCalledWith(campaignName, {
+                    casterName: 'Wizard1',
+                    spellName: "Tasha's Hideous Laughter",
+                    saveType: 'WIS',
+                    saveDc: 14,
+                    attackScope: 'single',
+                });
             });
         });
 
-        it('logs ability_use entry when targets are selected', async () => {
+        it('logs ability_use entry with correct format when targets are selected', async () => {
             render(<TashasLaughterModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await selectTargetRow(labels, 0);
+            selectTarget(0);
+            clickConfirm();
             await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter/ })).toBeInTheDocument();
+                expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                    type: 'ability_use',
+                    characterName: 'Wizard1',
+                    abilityName: "Tasha's Hideous Laughter",
+                    description: expect.stringContaining('Selecting 1 target(s)'),
+                }));
             });
-            await clickConfirmButton();
-
-            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                type: 'ability_use',
-                characterName: 'Wizard1',
-                abilityName: "Tasha's Hideous Laughter",
-                description: expect.stringContaining('Selecting 1 target'),
-            }));
         });
+
+        it('logs ability_use with correct target count for multiple selections', async () => {
+            render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 2 })} />);
+            selectTarget(0);
+            selectTarget(1);
+            clickConfirm();
+            await waitFor(() => {
+                const abilityCalls = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'ability_use'
+                );
+                expect(abilityCalls.length).toBeGreaterThan(0);
+                expect(abilityCalls[0][1].description).toContain('Selecting 2 target(s)');
+            });
+        });
+    });
+
+    describe('NPC failed save path', () => {
+        function mockNpcSaveFailure() {
+            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+        }
 
         it('applies prone and incapacitated conditions on failed NPC save', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.01);
-            waitForConditionCalls('Goblin', (conditionCalls) => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveFailure();
+            clickConfirm();
+            await waitFor(() => {
+                const conditionCalls = findSetRuntimeValueCalls('Goblin', 'activeConditions');
                 expect(conditionCalls.length).toBeGreaterThan(0);
-                const conditions = conditionCalls[0][2];
-                expect(conditions).toContain('prone');
-                expect(conditions).toContain('incapacitated');
+                expect(conditionCalls[0][2]).toEqual(expect.arrayContaining(['prone', 'incapacitated']));
             });
         });
 
         it('sets condition meta with DC and ability for prone and incapacitated', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.01);
-            waitFor(() => {
-                const metaCalls = setRuntimeValue.mock.calls.filter(
-                    call => call[1] === 'activeConditionMeta' && call[0] === 'Goblin'
-                );
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveFailure();
+            clickConfirm();
+            await waitFor(() => {
+                const metaCalls = findSetRuntimeValueCalls('Goblin', 'activeConditionMeta');
                 expect(metaCalls.length).toBeGreaterThan(0);
                 const meta = metaCalls[0][2];
                 expect(meta.prone).toEqual(expect.objectContaining({ dc: 14, ability: 'wis' }));
@@ -212,22 +228,31 @@ describe('TashasLaughterModal - NPC Saves', () => {
         });
 
         it('calls addExpiration with prone, incapacitated, and tashas_laughter_expiration', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.01);
-            expect(addExpiration).toHaveBeenCalledWith(
-                'Wizard1',
-                'Goblin',
-                [
-                    { type: 'condition', condition: 'prone' },
-                    { type: 'condition', condition: 'incapacitated' },
-                    { type: 'tashas_laughter_expiration' },
-                ],
-                campaignName,
-            );
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveFailure();
+            clickConfirm();
+            await waitFor(() => {
+                expect(addExpiration).toHaveBeenCalledWith(
+                    'Wizard1',
+                    'Goblin',
+                    [
+                        { type: 'condition', condition: 'prone' },
+                        { type: 'condition', condition: 'incapacitated' },
+                        { type: 'tashas_laughter_expiration' },
+                    ],
+                    campaignName,
+                );
+            });
         });
 
         it('sets targetEffects with tashas_hideous_laughter effect', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.01);
-            waitForTeCalls((teCalls) => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveFailure();
+            clickConfirm();
+            await waitFor(() => {
+                const teCalls = findSetRuntimeValueCalls('campaign', 'targetEffects');
                 expect(teCalls.length).toBeGreaterThan(0);
                 const effects = teCalls[0][2];
                 const laughterEffect = effects.find(e => e.effect === 'tashas_hideous_laughter');
@@ -243,8 +268,14 @@ describe('TashasLaughterModal - NPC Saves', () => {
         });
 
         it('logs condition entry on failed NPC save', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.01);
-            waitForConditionEntries((conditionEntries) => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveFailure();
+            clickConfirm();
+            await waitFor(() => {
+                const conditionEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'condition' && call[1]?.action === 'applied'
+                );
                 expect(conditionEntries.length).toBeGreaterThan(0);
                 expect(conditionEntries[0][1]).toEqual(expect.objectContaining({
                     type: 'condition',
@@ -255,42 +286,67 @@ describe('TashasLaughterModal - NPC Saves', () => {
             });
         });
 
-        it('logs save_result entry for NPC saves', async () => {
+        it('logs save_result entry with failure details for NPC saves', async () => {
             render(<TashasLaughterModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[0]);
-            await clickConfirmButton();
-            waitForSaveEntries((saveEntries) => {
+            selectTarget(0);
+            mockNpcSaveFailure();
+            clickConfirm();
+            await waitFor(() => {
+                const saveEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'save_result'
+                );
                 expect(saveEntries.length).toBeGreaterThan(0);
                 expect(saveEntries[0][1]).toEqual(expect.objectContaining({
                     type: 'save_result',
                     saveType: 'WIS',
                     saveDc: 14,
+                    success: false,
+                    targetName: 'Goblin',
                 }));
             });
         });
 
-        it('does not filter out prone/incapacitated when target has no existing conditions', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.01);
-            waitForConditionCalls('Goblin', (conditionCalls) => {
-                expect(conditionCalls.length).toBeGreaterThan(0);
-                const conditions = conditionCalls[0][2];
-                expect(conditions).toContain('prone');
-                expect(conditions).toContain('incapacitated');
+        it('records addTargetResult with failure for NPC save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveFailure();
+            clickConfirm();
+            await waitFor(() => {
+                const targetResultCalls = addTargetResult.mock.calls.filter(
+                    call => call[0] === campaignName && call[1]?.targetName === 'Goblin'
+                );
+                expect(targetResultCalls.length).toBeGreaterThan(0);
+                expect(targetResultCalls[0][1].saveResult).toBe('failure');
+                expect(targetResultCalls[0][1].conditions).toEqual(['prone', 'incapacitated']);
             });
         });
 
-        it('filters out existing prone and incapacitated conditions before re-adding', async () => {
+        it('logs condition entry with correct reason on failed NPC save', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveFailure();
+            clickConfirm();
+            await waitFor(() => {
+                const conditionEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'condition' && call[1]?.action === 'applied'
+                );
+                expect(conditionEntries[0][1].characterName).toBe('Goblin');
+                expect(conditionEntries[0][1].condition).toBe('Prone, Incapacitated');
+                expect(conditionEntries[0][1].note).toContain("Tasha's Hideous Laughter");
+                expect(conditionEntries[0][1].note).toContain("can't end the Prone condition");
+            });
+        });
+    });
+
+    describe('condition deduplication', () => {
+        it('filters out existing prone and incapacitated before re-adding', async () => {
             getRuntimeValue.mockReturnValue(['prone', 'incapacitated', 'blinded']);
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             render(<TashasLaughterModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await selectTargetRow(labels, 0);
+            selectTarget(0);
+            clickConfirm();
             await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter/ })).toBeInTheDocument();
-            });
-            await clickConfirmButton();
-            waitForConditionCalls('Goblin', (conditionCalls) => {
+                const conditionCalls = findSetRuntimeValueCalls('Goblin', 'activeConditions');
                 expect(conditionCalls.length).toBeGreaterThan(0);
                 const conditions = conditionCalls[0][2];
                 expect(conditions).toContain('blinded');
@@ -303,6 +359,22 @@ describe('TashasLaughterModal - NPC Saves', () => {
             });
         });
 
+        it('preserves other conditions when filtering prone/incapacitated', async () => {
+            getRuntimeValue
+                .mockReturnValueOnce(['prone', 'incapacitated', 'blinded', 'poisoned'])
+                .mockReturnValueOnce([]);
+            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            clickConfirm();
+            await waitFor(() => {
+                const conditionCalls = findSetRuntimeValueCalls('Goblin', 'activeConditions');
+                expect(conditionCalls[0][2]).toEqual(expect.arrayContaining(['blinded', 'poisoned', 'prone', 'incapacitated']));
+            });
+        });
+    });
+
+    describe('targetEffects update behavior', () => {
         it('updates existing targetEffects entry if one already exists for same target/effect/source', async () => {
             getRuntimeValue
                 .mockReturnValueOnce([])
@@ -316,13 +388,10 @@ describe('TashasLaughterModal - NPC Saves', () => {
                 }]);
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             render(<TashasLaughterModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await selectTargetRow(labels, 0);
+            selectTarget(0);
+            clickConfirm();
             await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter/ })).toBeInTheDocument();
-            });
-            await clickConfirmButton();
-            waitForTeCalls((teCalls) => {
+                const teCalls = findSetRuntimeValueCalls('campaign', 'targetEffects');
                 expect(teCalls.length).toBeGreaterThan(0);
                 const effects = teCalls[0][2];
                 expect(effects.length).toBeGreaterThan(0);
@@ -331,31 +400,51 @@ describe('TashasLaughterModal - NPC Saves', () => {
     });
 
     describe('NPC save success path', () => {
+        function mockNpcSaveSuccess() {
+            vi.spyOn(Math, 'random').mockReturnValue(0.99);
+        }
+
         it('does not apply conditions when NPC succeeds on save', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.99);
-            waitForConditionCalls('Goblin', (conditionCalls) => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveSuccess();
+            clickConfirm();
+            await waitFor(() => {
+                const conditionCalls = findSetRuntimeValueCalls('Goblin', 'activeConditions');
                 expect(conditionCalls.length).toBe(0);
             });
         });
 
         it('does not call addExpiration when NPC succeeds on save', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.99);
-            expect(addExpiration).not.toHaveBeenCalled();
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveSuccess();
+            clickConfirm();
+            await waitFor(() => {
+                expect(addExpiration).not.toHaveBeenCalled();
+            });
         });
 
         it('logs save_result success for NPC', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.99);
-            waitFor(() => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveSuccess();
+            clickConfirm();
+            await waitFor(() => {
                 const saveEntries = addEntry.mock.calls.filter(
                     call => call[1]?.type === 'save_result' && call[1]?.success === true
                 );
                 expect(saveEntries.length).toBeGreaterThan(0);
+                expect(saveEntries[0][1].targetName).toBe('Goblin');
             });
         });
 
         it('records addTargetResult with success for NPC save', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.99);
-            waitFor(() => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveSuccess();
+            clickConfirm();
+            await waitFor(() => {
                 const targetResultCalls = addTargetResult.mock.calls.filter(
                     call => call[0] === campaignName && call[1]?.targetName === 'Goblin'
                 );
@@ -366,8 +455,12 @@ describe('TashasLaughterModal - NPC Saves', () => {
         });
 
         it('does not update targetEffects when NPC succeeds', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.99);
-            waitForTeCalls((teCalls) => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            mockNpcSaveSuccess();
+            clickConfirm();
+            await waitFor(() => {
+                const teCalls = findSetRuntimeValueCalls('campaign', 'targetEffects');
                 expect(teCalls.length).toBe(0);
             });
         });
@@ -375,30 +468,44 @@ describe('TashasLaughterModal - NPC Saves', () => {
 
     describe('multiple NPC targets', () => {
         it('resolves saves for multiple NPC targets', async () => {
-            await selectAndConfirmWithRandom({ spellSlotLevel: 2 }, [0, 1], 0.01);
-            waitFor(() => {
-                const conditionCalls = setRuntimeValue.mock.calls.filter(
+            render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 2 })} />);
+            selectTarget(0);
+            selectTarget(1);
+            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+            clickConfirm();
+            await waitFor(() => {
+                const allConditionCalls = setRuntimeValue.mock.calls.filter(
                     call => call[1] === 'activeConditions'
                 );
-                expect(conditionCalls.length).toBeGreaterThan(0);
+                const targetNames = allConditionCalls.map(call => call[0]);
+                expect(targetNames).toContain('Goblin');
+                expect(targetNames).toContain('Orc');
             });
         });
 
         it('resolves saves for mixed NPC and player targets', async () => {
-            await selectAndConfirmWithRandom({ spellSlotLevel: 2 }, [0, 2], 0.01);
-            waitForConditionCalls('Goblin', (conditionCalls) => {
+            render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 2 })} />);
+            selectTarget(0);
+            selectTarget(2);
+            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+            clickConfirm();
+            await waitFor(() => {
+                const conditionCalls = findSetRuntimeValueCalls('Goblin', 'activeConditions');
                 expect(conditionCalls.length).toBeGreaterThan(0);
+                expect(sendSavePrompt).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                    targetName: 'PlayerAlly',
+                }));
             });
-            expect(sendSavePrompt).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                targetName: 'PlayerAlly',
-            }));
         });
     });
 
     describe('save bonus handling', () => {
         it('uses the target save bonus for NPC saves', async () => {
-            await selectAndConfirmWithRandom({}, [1], 0.99);
-            waitFor(() => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(1); // Orc has wis: 2
+            vi.spyOn(Math, 'random').mockReturnValue(0.99);
+            clickConfirm();
+            await waitFor(() => {
                 const saveEntries = addEntry.mock.calls.filter(
                     call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Orc'
                 );
@@ -418,18 +525,21 @@ describe('TashasLaughterModal - NPC Saves', () => {
             });
             render(<TashasLaughterModal {...makeProps()} />);
 
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Tasha's Hideous Laughter/ }));
-            });
-
-            expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter/ })).toBeDisabled();
+            // Only Goblin is available, confirm without selecting (should be disabled)
+            const confirmBtn = screen.getByRole('button', { name: /Tasha's Hideous Laughter/ });
+            expect(confirmBtn).toBeDisabled();
         });
     });
 
-    describe('persistAndNotify calls', () => {
+    describe('persistAndNotify', () => {
         it('calls persistAndNotify after NPC save resolution', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.01);
-            expect(persistAndNotify).toHaveBeenCalled();
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+            clickConfirm();
+            await waitFor(() => {
+                expect(persistAndNotify).toHaveBeenCalled();
+            });
         });
     });
 
@@ -437,7 +547,10 @@ describe('TashasLaughterModal - NPC Saves', () => {
         it('shows popup when at least one creature failed save', async () => {
             const onClose = vi.fn();
             const setPopupHtml = vi.fn();
-            await selectAndConfirmWithRandom({ onClose, setPopupHtml }, [0], 0.01);
+            render(<TashasLaughterModal {...makeProps({ onClose, setPopupHtml })} />);
+            selectTarget(0);
+            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+            clickConfirm();
             await waitFor(() => {
                 expect(setPopupHtml).toHaveBeenCalled();
             });
@@ -450,31 +563,93 @@ describe('TashasLaughterModal - NPC Saves', () => {
         it('does not show popup when all creatures succeed on save', async () => {
             const onClose = vi.fn();
             const setPopupHtml = vi.fn();
-            await selectAndConfirmWithRandom({ onClose, setPopupHtml }, [0], 0.99);
+            render(<TashasLaughterModal {...makeProps({ onClose, setPopupHtml })} />);
+            selectTarget(0);
+            vi.spyOn(Math, 'random').mockReturnValue(0.99);
+            clickConfirm();
             await waitFor(() => {
                 expect(setPopupHtml).not.toHaveBeenCalled();
             });
         });
 
-        it('closes modal after popup is shown', async () => {
+        it('closes modal after popup is shown for failed saves', async () => {
             const onClose = vi.fn();
-            await selectAndConfirmWithRandom({ onClose }, [0], 0.01);
+            render(<TashasLaughterModal {...makeProps({ onClose })} />);
+            selectTarget(0);
+            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+            clickConfirm();
             await waitFor(() => {
                 expect(onClose).toHaveBeenCalledTimes(1);
             });
         });
+
+        it('closes modal when all targets succeed without showing popup', async () => {
+            const onClose = vi.fn();
+            const setPopupHtml = vi.fn();
+            render(<TashasLaughterModal {...makeProps({ onClose, setPopupHtml })} />);
+            selectTarget(0);
+            vi.spyOn(Math, 'random').mockReturnValue(0.99);
+            clickConfirm();
+            await waitFor(() => {
+                expect(onClose).toHaveBeenCalledTimes(1);
+                expect(setPopupHtml).not.toHaveBeenCalled();
+            });
+        });
     });
 
-    describe('condition entry logging detail', () => {
-        it('logs condition entry with correct reason on failed NPC save', async () => {
-            await selectAndConfirmWithRandom({}, [0], 0.01);
-            waitForConditionEntries((conditionEntries) => {
-                expect(conditionEntries.length).toBeGreaterThan(0);
-                expect(conditionEntries[0][1].characterName).toBe('Goblin');
-                expect(conditionEntries[0][1].condition).toBe('Prone, Incapacitated');
-                expect(conditionEntries[0][1].note).toContain("Tasha's Hideous Laughter");
-                expect(conditionEntries[0][1].note).toContain("can't end the Prone condition");
+    describe('player target save prompts', () => {
+        it('sends save prompt for player targets', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(2); // PlayerAlly
+            clickConfirm();
+            await waitFor(() => {
+                expect(sendSavePrompt).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                    targetName: 'PlayerAlly',
+                    saveType: 'WIS',
+                    saveDc: 14,
+                    sourceName: 'Wizard1',
+                    disadvantage: false,
+                }));
             });
+        });
+
+        it('does not apply conditions immediately for player targets', async () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(2);
+            clickConfirm();
+            await waitFor(() => {
+                const conditionCalls = findSetRuntimeValueCalls('PlayerAlly', 'activeConditions');
+                expect(conditionCalls.length).toBe(0);
+            });
+        });
+    });
+
+    describe('spell slot level and max targets', () => {
+        it('allows selecting up to spellSlotLevel targets', () => {
+            render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 3 })} />);
+            selectTarget(0);
+            selectTarget(1);
+            selectTarget(2);
+            const confirmBtn = screen.getByRole('button', { name: /Tasha's Hideous Laughter/ });
+            expect(confirmBtn).toBeEnabled();
+        });
+
+        it('disables targets beyond spellSlotLevel limit', () => {
+            render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 1 })} />);
+            selectTarget(0);
+            const checkboxes = screen.getAllByRole('checkbox');
+            // Third target (index 2) should be disabled since maxTargets=1
+            expect(checkboxes[2]).toBeDisabled();
+        });
+    });
+
+    describe('empty targets', () => {
+        it('shows no targets message when combat has no creatures', () => {
+            getCombatSummary.mockReturnValue({ creatures: [] });
+            render(<TashasLaughterModal {...makeProps()} />);
+            expect(screen.getByText('No targets available.')).toBeInTheDocument();
+            const confirmBtn = screen.getByRole('button', { name: /Tasha's Hideous Laughter/ });
+            expect(confirmBtn).toBeDisabled();
         });
     });
 });

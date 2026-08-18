@@ -1,33 +1,22 @@
-// @cleaned-by-ai
+// @improved-by-ai
 //
-// Cleanup: Removed 4 redundant/brittle/low-value tests (67% reduction).
+// Quality improvements:
+//   - Added missing mock for useDiceRollPopup (component calls it, was crashing)
+//   - Added missing mocks for unmocked subcomponents
+//     (AllySelectionModal, TrackedResourceInput, CreatureBadge, ConditionEffectBadges)
+//   - Replaced window.location.hostname assignment with Object.defineProperty
+//   - Removed duplicate/dead rulesFactory mock (not imported by CharSummary)
+//   - Replaced expect.any(Function) with captured setPopupHtml reference
+//   - Added assertion verifying rendered background text in positive test
 //
-// Removed:
-//   - "renders avatar image when imagePath is provided" — duplicate of
-//     CharSummary-Display.test.jsx "renders avatar image when imagePath is present".
-//   - "renders char-feats placeholder when feats array is provided" (3 tests) —
-//     brittle: the mocked CharFeats always returns <div data-testid="char-feats">
-//     regardless of input. These tests assert the mock renders, not actual component
-//     behavior. Real feat popup behavior is covered by:
-//       * CharSummary-MissingCoverage.test.jsx (array desc, string description,
-//         prerequisites, benefits rendering with showPopup callback assertions)
-//       * CharSummary-BranchCoverage.test.jsx (string desc else branch, benefits
-//         true branch, null desc no-popup)
-//       * CharSummary-LastGaps.test.jsx (feat popup HTML content, benefits HTML)
-//
-// Kept:
-//   - "calls showBackgroundPopup with background name, setPopupHtml, and rules" —
-//     unique behavioral coverage for the background popup interaction.
-//   - "does not call showBackgroundPopup when background is empty" — unique edge
-//     case verifying no popup fires when background is empty string.
-//
-// Original: 6 tests / 222 lines
-// After: 2 tests / ~70 lines
+// Original: 2 tests / 174 lines
+// After: 2 tests / ~150 lines
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { showBackgroundPopup } from '../../../hooks/combat/useActionPopup.js';
+import { useDiceRollPopup } from '../../../hooks/combat/DiceRollContext.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
@@ -40,6 +29,10 @@ vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-
 vi.mock('../ShortRestButton.jsx', () => ({ default: () => <div data-testid="short-rest-btn">Short Rest</div> }));
 vi.mock('../ShortRestModal.jsx', () => ({ default: () => <div data-testid="short-rest-modal">Short Rest Modal</div> }));
 vi.mock('./CharConditions.jsx', () => ({ default: () => <div data-testid="char-conditions">Conditions</div> }));
+vi.mock('../../common/AllySelectionModal.jsx', () => ({ default: () => <div data-testid="ally-selection-modal">Ally Selection</div> }));
+vi.mock('./TrackedResourceInput.jsx', () => ({ default: () => <div data-testid="tracked-resource-input">Tracked Resource</div> }));
+vi.mock('../../common/CreatureBadge.jsx', () => ({ default: ({ label }) => <span data-testid="creature-badge">{label}</span> }));
+vi.mock('../../initiative/ConditionEffectBadges.jsx', () => ({ default: () => <div data-testid="condition-effect-badges">Condition Effects</div> }));
 
 vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
     default: vi.fn((key, name, init, _deps, _campaign) => ({ current: init(), update: vi.fn() })),
@@ -56,6 +49,12 @@ vi.mock('../../../hooks/runtime/useSyncedState.js', () => ({
     useSyncedState: vi.fn((_name, _key, defaultValue) => [defaultValue, vi.fn()]),
 }));
 
+let setPopupHtml;
+
+vi.mock('../../../hooks/combat/DiceRollContext.js', () => ({
+    useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
+}));
+
 vi.mock('../../../hooks/combat/useActionPopup.js', () => ({
     showBackgroundPopup: vi.fn(),
 }));
@@ -66,21 +65,6 @@ vi.mock('../../../hooks/combat/useLoggedDiceRoll.js', () => ({
 
 vi.mock('../../../services/combat/buffs/buffService.js', () => ({
     getActiveBuffs: vi.fn(() => []),
-}));
-
-vi.mock('../../../services/rules/rulesFactory.js', () => ({
-    default: {
-        getRules: vi.fn(() => ({ classRules: { getUnarmoredMovementIncrease: vi.fn(() => 0) } })),
-    },
-    getRules: vi.fn(() => ({ classRules: { getUnarmoredMovementIncrease: vi.fn(() => 0) } })),
-}));
-
-vi.mock('../../../services/rules/core/attackCalc.js', () => ({
-    parseMagicItemName: (name) => ({ baseName: name }),
-}));
-
-vi.mock('../../../services/ui/logService.js', () => ({
-    addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../../services/encounters/combatData.js', () => ({
@@ -149,8 +133,13 @@ const mockCampaignName = 'test-campaign';
 describe('CharSummary - Background Popup', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        window.location.hostname = 'localhost';
+        Object.defineProperty(window, 'location', {
+            value: { hostname: 'localhost' },
+            writable: true,
+        });
         getActiveBuffs.mockReturnValue([]);
+        setPopupHtml = vi.fn();
+        vi.mocked(useDiceRollPopup).mockImplementation(() => ({ setPopupHtml }));
     });
 
     it('calls showBackgroundPopup with background name, setPopupHtml, and rules when background exists', () => {
@@ -161,8 +150,9 @@ describe('CharSummary - Background Popup', () => {
         };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         const bgEl = screen.getByText('Soldier');
+        expect(bgEl).toBeInTheDocument();
         bgEl.click();
-        expect(showBackgroundPopup).toHaveBeenCalledWith('Soldier', expect.any(Function), '5e');
+        expect(showBackgroundPopup).toHaveBeenCalledWith('Soldier', setPopupHtml, '5e');
     });
 
     it('does not call showBackgroundPopup when background is empty', () => {

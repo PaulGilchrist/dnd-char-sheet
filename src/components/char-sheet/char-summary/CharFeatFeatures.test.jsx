@@ -1,9 +1,8 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import CharFeatFeatures from './CharFeatFeatures.jsx';
-import TrackedResourceInput from './TrackedResourceInput.jsx';
 
 const stores = new Map();
 
@@ -15,18 +14,16 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 }));
 
 vi.mock('./TrackedResourceInput.jsx', () => {
-  const mock = vi.fn((props) => {
+  const Mock = (props) => {
     const max = props.getMax ? props.getMax() : 0;
+    const label = props.label || '';
     return React.createElement(
       'div',
-      {
-        'data-testid': `tracked-${props.resourceKey}`,
-        'data-max': max,
-      },
-      `${props.label}: ${max}`,
+      null,
+      `${label}: ${max}`,
     );
-  });
-  return { default: mock };
+  };
+  return { default: Mock };
 });
 
 const basePlayerStats = {
@@ -62,27 +59,61 @@ describe('CharFeatFeatures', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearStore();
-    TrackedResourceInput.mockClear();
   });
 
   describe('null rendering when no features are active', () => {
-    it('renders nothing when there are no features and no runtime values', () => {
-      const { container } = render(<CharFeatFeatures {...defaultProps} />);
-      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
+    it('returns null when automation is null', () => {
+      const stats = { ...basePlayerStats, automation: null };
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('div')).toBeNull();
     });
-  });
 
-  describe('lucky feat — visibility gating', () => {
+    it('returns null when automation is undefined', () => {
+      const stats = { ...basePlayerStats, automation: undefined };
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('div')).toBeNull();
+    });
+
+    it('returns null when automation is missing', () => {
+      const stats = { ...basePlayerStats, automation: undefined };
+      delete stats.automation;
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('div')).toBeNull();
+    });
+
+    it('returns null when feats array is missing', () => {
+      const stats = { ...basePlayerStats };
+      delete stats.feats;
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('div')).toBeNull();
+    });
+
     it('does not render when lucky feat exists but proficiency is 0', () => {
       const stats = { ...basePlayerStats, feats: ['Lucky'], proficiency: 0 };
       setStore('luckyPoints', 5);
       const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
+      expect(container.querySelector('div')).toBeNull();
     });
   });
 
-  describe('poisoner feat detection', () => {
-    it('renders when poisoner is detected via matching special action', () => {
+  describe('lucky feat — rendering', () => {
+    it('renders Luck Points input when luckyPoints value is 0 (lpMax drives visibility, not the value)', () => {
+      const stats = { ...basePlayerStats, feats: ['Lucky'] };
+      setStore('luckyPoints', 0);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.getByText('Luck Points: 3')).toBeInTheDocument();
+    });
+
+    it('passes correct props to TrackedResourceInput for luckyPoints', () => {
+      const stats = { ...basePlayerStats, feats: ['Lucky'] };
+      setStore('luckyPoints', 0);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.getByText('Luck Points: 3')).toBeInTheDocument();
+    });
+  });
+
+  describe('poisoner feat — detection and rendering', () => {
+    it('renders Poison Doses input when poisoner is detected via matching special action', () => {
       const stats = {
         ...basePlayerStats,
         automation: {
@@ -92,72 +123,14 @@ describe('CharFeatFeatures', () => {
       };
       setStore('poisonDoses', 2);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(screen.getByTestId('tracked-poisonDoses')).toBeInTheDocument();
+      expect(screen.getByText('Poison Doses: 3')).toBeInTheDocument();
     });
-  });
 
-  describe('chef feat detection', () => {
-    it('renders when chef is detected via matching special action', () => {
-      const stats = {
-        ...basePlayerStats,
-        automation: {
-          ...basePlayerStats.automation,
-          specialActions: [{ type: 'temp_hp_buff', name: 'Bolstering Treats' }],
-        },
-      };
-      setStore('chefBolsteringTreats', 2);
+    it('does not render when poisoner feat is absent', () => {
+      const stats = { ...basePlayerStats };
+      setStore('poisonDoses', 5);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(screen.getByTestId('tracked-chefBolsteringTreats')).toBeInTheDocument();
-    });
-  });
-
-  describe('replenishing meal detection', () => {
-    it('renders when replenishing meal passive exists and runtime value > 0', () => {
-      const stats = {
-        ...basePlayerStats,
-        automation: {
-          ...basePlayerStats.automation,
-          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }],
-        },
-      };
-      setStore('replenishingMeals', 2);
-      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(screen.getByTestId('tracked-replenishingMeals')).toBeInTheDocument();
-    });
-
-    it('renders when runtime value > 0 regardless of matching passive', () => {
-      const stats = {
-        ...basePlayerStats,
-        automation: {
-          ...basePlayerStats.automation,
-          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Other Passive' }],
-        },
-      };
-      setStore('replenishingMeals', 2);
-      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(screen.getByTestId('tracked-replenishingMeals')).toBeInTheDocument();
-    });
-
-    it('does not render when runtime value is 0 even with matching passive', () => {
-      const stats = {
-        ...basePlayerStats,
-        automation: {
-          ...basePlayerStats.automation,
-          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }],
-        },
-      };
-      setStore('replenishingMeals', 0);
-      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
-    });
-  });
-
-  describe('lucky feat — rendering', () => {
-    it('renders when luckyPoints value is 0 (lpMax drives visibility, not the value)', () => {
-      const stats = { ...basePlayerStats, feats: ['Lucky'] };
-      setStore('luckyPoints', 0);
-      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(screen.getByTestId('tracked-luckyPoints')).toBeInTheDocument();
+      expect(screen.queryByText(/Poison Doses/)).not.toBeInTheDocument();
     });
   });
 
@@ -173,7 +146,10 @@ describe('CharFeatFeatures', () => {
       setStore('poisonDoses', 2);
       setStore('poisonedWeaponsActive', true);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(screen.getByText('Poisoned Weapons active')).toBeInTheDocument();
+      const badge = screen.getByText('Poisoned Weapons active');
+      expect(badge).toBeInTheDocument();
+      expect(badge.closest('span')).toHaveClass('automation-badge');
+      expect(badge.querySelector('i.fa-solid.fa-vial')).toBeInTheDocument();
     });
 
     it('omits the poisoned weapons badge when poisonedWeaponsActive is false', () => {
@@ -191,11 +167,74 @@ describe('CharFeatFeatures', () => {
     });
   });
 
-  describe('bolstering treat (standalone resource)', () => {
+  describe('chef feat — detection and rendering', () => {
+    it('renders Bolstering Treats input when chef is detected via matching special action', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          specialActions: [{ type: 'temp_hp_buff', name: 'Bolstering Treats' }],
+        },
+      };
+      setStore('chefBolsteringTreats', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.getByText('Bolstering Treats: 3')).toBeInTheDocument();
+    });
+
+    it('does not render when chef feat is absent', () => {
+      const stats = { ...basePlayerStats };
+      setStore('chefBolsteringTreats', 5);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.queryByText(/Bolstering Treats/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('replenishing meal — detection and rendering', () => {
+    it('renders Replenishing Meals input when matching passive exists and runtime value > 0', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }],
+        },
+      };
+      setStore('replenishingMeals', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.getByText('Replenishing Meals: 7')).toBeInTheDocument();
+    });
+
+    it('renders when runtime value > 0 regardless of matching passive', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Other Passive' }],
+        },
+      };
+      setStore('replenishingMeals', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.getByText('Replenishing Meals: 1')).toBeInTheDocument();
+    });
+
+    it('does not render when runtime value is 0 even with matching passive', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }],
+        },
+      };
+      setStore('replenishingMeals', 0);
+      const { container } = render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(container.querySelector('div')).toBeNull();
+    });
+  });
+
+  describe('bolstering treat — standalone resource', () => {
     it('renders when bolsteringTreat > 0 with no features', () => {
       setStore('bolsteringTreat', 1);
       render(<CharFeatFeatures {...defaultProps} />);
-      expect(screen.getByTestId('tracked-bolsteringTreat')).toBeInTheDocument();
+      expect(screen.getByText('Bolstering Treat: 1')).toBeInTheDocument();
     });
   });
 
@@ -219,10 +258,10 @@ describe('CharFeatFeatures', () => {
       setStore('chefBolsteringTreats', 3);
       setStore('replenishingMeals', 2);
       render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
-      expect(screen.getByTestId('tracked-luckyPoints')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-poisonDoses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-chefBolsteringTreats')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-replenishingMeals')).toBeInTheDocument();
+      expect(screen.getByText('Luck Points: 3')).toBeInTheDocument();
+      expect(screen.getByText('Poison Doses: 3')).toBeInTheDocument();
+      expect(screen.getByText('Bolstering Treats: 3')).toBeInTheDocument();
+      expect(screen.getByText('Replenishing Meals: 7')).toBeInTheDocument();
     });
   });
 });

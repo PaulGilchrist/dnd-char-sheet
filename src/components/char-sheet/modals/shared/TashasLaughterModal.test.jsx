@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TashasLaughterModal from './TashasLaughterModal.jsx';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -69,15 +70,27 @@ function makeProps(overrides = {}) {
     };
 }
 
+// Helper: select a target row by index (clicks the label, not raw checkbox)
+function selectTarget(index) {
+    const labels = document.querySelectorAll('.secondary-target-row');
+    fireEvent.click(labels[index]);
+}
+
+// Helper: get the confirm button
+function getConfirmButton() {
+    return screen.getByRole('button', { name: /Tasha's Hideous Laughter/ });
+}
+
+// Helper: get the skip button
+function clickSkip() {
+    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+}
+
 beforeEach(() => {
     vi.resetAllMocks();
     getCombatSummary.mockReturnValue(baseCombatSummary);
     getRuntimeValue.mockReturnValue([]);
     setRuntimeValue.mockReturnValue(undefined);
-});
-
-afterEach(() => {
-    vi.clearAllMocks();
 });
 
 describe('TashasLaughterModal - UI Tests', () => {
@@ -98,17 +111,16 @@ describe('TashasLaughterModal - UI Tests', () => {
         });
 
         it('renders the note about prone and incapacitated conditions', () => {
-            const { container } = render(<TashasLaughterModal {...makeProps()} />);
-            const noteEl = container.querySelector('.sp-note');
-            expect(noteEl).toHaveTextContent(/Prone/);
-            expect(noteEl).toHaveTextContent(/Incapacitated/);
-            expect(noteEl).toHaveTextContent(/can't end the Prone condition/);
-            expect(noteEl).toHaveTextContent(/Concentration/);
+            render(<TashasLaughterModal {...makeProps()} />);
+            // Use a unique substring from the note to avoid matching multiple elements
+            expect(screen.getByText(/On a failed save/)).toBeInTheDocument();
+            expect(screen.getByText(/can't end the Prone condition/)).toBeInTheDocument();
+            expect(screen.getByText(/Concentration/)).toBeInTheDocument();
         });
 
         it('disables the confirm button when no target is selected', () => {
             render(<TashasLaughterModal {...makeProps()} />);
-            expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(0\)/ })).toBeDisabled();
+            expect(getConfirmButton()).toBeDisabled();
         });
 
         it('renders skip button', () => {
@@ -116,9 +128,10 @@ describe('TashasLaughterModal - UI Tests', () => {
             expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
         });
 
-        it('renders with music icon', () => {
+        it('renders with music icon in the header', () => {
             render(<TashasLaughterModal {...makeProps()} />);
-            expect(document.querySelector('.sp-header .fa-solid.fa-music')).toBeInTheDocument();
+            const header = document.querySelector('.sp-header');
+            expect(header.querySelector('.fa-solid.fa-music')).toBeInTheDocument();
         });
     });
 
@@ -138,58 +151,61 @@ describe('TashasLaughterModal - UI Tests', () => {
             expect(screen.getByText(/Select up to 5 creature/)).toBeInTheDocument();
         });
 
-        it('enforces maxTargets limit when selecting', async () => {
+        it('enforces maxTargets limit when selecting', () => {
             render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 2 })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await act(async () => { fireEvent.click(labels[1]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(2\)/ })).toBeEnabled();
-            });
-            // Third target should be disabled
-            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-            await waitFor(() => {
-                expect(checkboxes[2]).toBeDisabled();
-            });
+            selectTarget(0);
+            selectTarget(1);
+            expect(getConfirmButton()).toHaveTextContent('(2)');
+            // Third target checkbox should be disabled since maxTargets=2
+            const checkboxes = screen.getAllByRole('checkbox');
+            expect(checkboxes[2]).toBeDisabled();
         });
     });
 
     describe('target selection', () => {
-        it('selects a target when its checkbox is clicked and enables confirm', async () => {
+        it('selects a target when its row is clicked and enables confirm', () => {
             render(<TashasLaughterModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-                expect(checkboxes[0].checked).toBe(true);
-            });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(1\)/ })).toBeEnabled();
-            });
+            selectTarget(0);
+            const checkboxes = screen.getAllByRole('checkbox');
+            expect(checkboxes[0]).toBeChecked();
+            expect(getConfirmButton()).toBeEnabled();
         });
 
-        it('allows selecting multiple targets when spellSlotLevel > 1', async () => {
+        it('allows selecting multiple targets when spellSlotLevel > 1', () => {
             render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 3 })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await act(async () => { fireEvent.click(labels[1]); });
-            await waitFor(() => {
-                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-                expect(checkboxes[0].checked).toBe(true);
-                expect(checkboxes[1].checked).toBe(true);
-            });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(2\)/ })).toBeEnabled();
-            });
+            selectTarget(0);
+            selectTarget(1);
+            const checkboxes = screen.getAllByRole('checkbox');
+            expect(checkboxes[0]).toBeChecked();
+            expect(checkboxes[1]).toBeChecked();
+            expect(getConfirmButton()).toHaveTextContent('(2)');
+        });
+
+        it('toggles a target off when its row is clicked again', () => {
+            render(<TashasLaughterModal {...makeProps()} />);
+            selectTarget(0);
+            const checkboxes = screen.getAllByRole('checkbox');
+            expect(checkboxes[0]).toBeChecked();
+            selectTarget(0);
+            expect(checkboxes[0]).not.toBeChecked();
+            expect(getConfirmButton()).toBeDisabled();
         });
     });
 
-    describe('close behavior', () => {
+    describe('close/skip behavior', () => {
         it('closes when Skip is clicked', () => {
             const onClose = vi.fn();
             render(<TashasLaughterModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+            clickSkip();
             expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not call any services when skipped', () => {
+            const onClose = vi.fn();
+            render(<TashasLaughterModal {...makeProps({ onClose })} />);
+            clickSkip();
+            expect(getRuntimeValue).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
     });
 
@@ -198,7 +214,7 @@ describe('TashasLaughterModal - UI Tests', () => {
             getCombatSummary.mockReturnValue({ creatures: [] });
             render(<TashasLaughterModal {...makeProps()} />);
             expect(screen.getByText('No targets available.')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(0\)/ })).toBeDisabled();
+            expect(getConfirmButton()).toBeDisabled();
         });
 
         it('renders the caster as a target when caster is the only creature', () => {
@@ -212,22 +228,73 @@ describe('TashasLaughterModal - UI Tests', () => {
         });
     });
 
-    describe('skip behavior', () => {
-        it('closes modal without applying any effects when skipped', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
+    describe('null combat summary', () => {
+        it('handles null combat summary gracefully - no targets shown', () => {
+            getCombatSummary.mockReturnValue(null);
+            render(<TashasLaughterModal {...makeProps()} />);
+            expect(screen.getByText('No targets available.')).toBeInTheDocument();
+            expect(getConfirmButton()).toBeDisabled();
         });
     });
 
-    describe('null combat summary', () => {
-        it('handles null combat summary gracefully - no targets shown', async () => {
-            getCombatSummary.mockReturnValue(null);
-            render(<TashasLaughterModal {...makeProps()} />);
+    describe('metamagic heighten rendering', () => {
+        it('shows heighten note when metamagicHeighten is true', () => {
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
+            expect(screen.getByText(/Heightened Spell/)).toBeInTheDocument();
+            expect(screen.getByText(/one target will have disadvantage/)).toBeInTheDocument();
+        });
 
+        it('does not show heighten note when metamagicHeighten is false or undefined', () => {
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: false })} />);
+            expect(screen.queryByText(/Heightened Spell/)).not.toBeInTheDocument();
+
+            render(<TashasLaughterModal {...makeProps()} />);
+            expect(screen.queryByText(/Heightened Spell/)).not.toBeInTheDocument();
+        });
+
+        it('shows heighten radio buttons when metamagicHeighten is true', () => {
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
+            const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
+            expect(heightenRadios).toHaveLength(baseCombatSummary.creatures.length);
+        });
+
+        it('does not show heighten radio buttons when metamagicHeighten is false', () => {
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: false })} />);
+            expect(document.querySelectorAll('input[name="heightenTarget"]')).toHaveLength(0);
+        });
+
+        it('tracks heightenTarget selection state when a radio is clicked', () => {
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
+            const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
+            expect(heightenRadios).toHaveLength(3);
+
+            fireEvent.click(heightenRadios[0]);
+            expect(heightenRadios[0]).toBeChecked();
+        });
+    });
+
+    describe('edge cases', () => {
+        it('shows heighten radios when there is only one creature', () => {
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'SoloEnemy', type: 'npc', currentHp: 10, maxHp: 10, saveBonuses: { wis: 3 } },
+                ],
+            });
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
+            expect(document.querySelectorAll('input[name="heightenTarget"]')).toHaveLength(1);
+        });
+
+        it('shows heighten radios when there are no creatures', () => {
+            getCombatSummary.mockReturnValue({ creatures: [] });
+            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
+            expect(document.querySelectorAll('input[name="heightenTarget"]')).toHaveLength(0);
             expect(screen.getByText('No targets available.')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /Tasha's Hideous Laughter \(0\)/ })).toBeDisabled();
+        });
+
+        it('shows no targets when combat summary has no creatures array', () => {
+            getCombatSummary.mockReturnValue({});
+            render(<TashasLaughterModal {...makeProps()} />);
+            expect(screen.getByText('No targets available.')).toBeInTheDocument();
         });
     });
 });

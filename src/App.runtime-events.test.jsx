@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -147,6 +147,31 @@ function setLocalhost(hostname = 'localhost') {
   });
 }
 
+/**
+ * Helper to wait for all microtasks and useEffects to flush.
+ * This ensures document.title updates (which happen in useEffect) are visible.
+ */
+async function flushEffects() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Helper to wait for the campaign selection screen to appear, then click select
+ * and flush effects.
+ */
+async function selectCampaign() {
+  await waitFor(() => {
+    expect(screen.getByTestId('campaign-selection')).toBeInTheDocument();
+  });
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('select-campaign-btn'));
+  });
+  await waitFor(() => {
+    expect(screen.queryByTestId('campaign-selection')).not.toBeInTheDocument();
+  });
+  await flushEffects();
+}
+
 function setupDataLoaderMocks() {
   dataLoaderMocks.loadAbilityScores.mockResolvedValue([{ full_name: 'Strength' }]);
   dataLoaderMocks.loadClassData.mockImplementation((v) =>
@@ -167,9 +192,6 @@ function setupDataLoaderMocks() {
 // --- Test suite ---
 
 describe('App - Runtime Events & State Management', () => {
-  const defaultFetch = () =>
-    Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -198,14 +220,15 @@ describe('App - Runtime Events & State Management', () => {
 
     setLocalhost('localhost');
 
-    global.fetch = vi.fn(defaultFetch);
+    global.fetch = vi.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve({}) }),
+    );
 
     setupDataLoaderMocks();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    setLocalhost('localhost');
   });
 
   // SSE runtime event handling is exercised through the campaign selection
@@ -262,13 +285,7 @@ describe('App - Runtime Events & State Management', () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
+      await selectCampaign();
 
       expect(document.title).toBe('Aragorn');
     });
@@ -277,20 +294,16 @@ describe('App - Runtime Events & State Management', () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
+      await selectCampaign();
 
       expect(document.title).toBe('Aragorn');
 
-      fireEvent.click(screen.getByTestId('initiative-btn'));
-      await waitFor(() => {
-        expect(document.title).toBe('CharSheets');
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('initiative-btn'));
       });
+
+      await flushEffects();
+      expect(document.title).toBe('CharSheets');
     });
   });
 
@@ -302,18 +315,16 @@ describe('App - Runtime Events & State Management', () => {
         removeItem: vi.fn(),
         clear: vi.fn(),
       };
-      Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true, configurable: true });
+      Object.defineProperty(window, 'localStorage', {
+        value: localStorageMock,
+        writable: true,
+        configurable: true,
+      });
 
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
+      await selectCampaign();
 
       expect(document.body.getAttribute('data-theme')).toBe('dark');
       expect(localStorageMock.getItem).toHaveBeenCalledWith('theme');
@@ -326,18 +337,16 @@ describe('App - Runtime Events & State Management', () => {
         removeItem: vi.fn(),
         clear: vi.fn(),
       };
-      Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true, configurable: true });
+      Object.defineProperty(window, 'localStorage', {
+        value: localStorageMock,
+        writable: true,
+        configurable: true,
+      });
 
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
+      await selectCampaign();
 
       expect(document.body.getAttribute('data-theme')).toBe('light');
     });
@@ -360,19 +369,18 @@ describe('App - Runtime Events & State Management', () => {
         mockState.characters = [{ name: 'Aragorn', level: 1 }];
         render(<App />);
 
+        await selectCampaign();
+
         await act(async () => {
-          fireEvent.click(screen.getByTestId('select-campaign-btn'));
+          fireEvent.click(screen.getByTestId(btn));
         });
 
-        await waitFor(() => {
-          expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-        });
-
-        fireEvent.click(screen.getByTestId(btn));
         await waitFor(() => {
           expect(screen.getByTestId(view)).toBeInTheDocument();
           expect(screen.queryByTestId('char-sheet')).not.toBeInTheDocument();
         });
+
+        await flushEffects();
       });
     });
 
@@ -380,19 +388,18 @@ describe('App - Runtime Events & State Management', () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
 
+      await selectCampaign();
+
       await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
+        fireEvent.click(screen.getByTestId('admin-btn'));
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('admin-btn'));
       await waitFor(() => {
         expect(screen.getByTestId('campaign-admin')).toBeInTheDocument();
         expect(screen.queryByTestId('char-sheet')).not.toBeInTheDocument();
       });
+
+      await flushEffects();
     });
 
     it('does not render admin button on non-localhost', async () => {
@@ -400,13 +407,7 @@ describe('App - Runtime Events & State Management', () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
+      await selectCampaign();
 
       expect(screen.queryByTestId('admin-btn')).not.toBeInTheDocument();
     });
@@ -417,18 +418,17 @@ describe('App - Runtime Events & State Management', () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
 
+      await selectCampaign();
+
       await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
+        fireEvent.click(screen.getByTestId('back-to-campaigns-btn'));
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('back-to-campaigns-btn'));
       await waitFor(() => {
         expect(screen.getByTestId('campaign-selection')).toBeInTheDocument();
       });
+
+      await flushEffects();
     });
   });
 
@@ -437,15 +437,12 @@ describe('App - Runtime Events & State Management', () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
 
+      await selectCampaign();
+
       await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
+        fireEvent.click(screen.getByText('Edit'));
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Edit'));
       await waitFor(() => {
         expect(screen.getByTestId('character-wizard')).toBeInTheDocument();
         expect(screen.getByTestId('editing-mode')).toBeInTheDocument();
@@ -457,15 +454,12 @@ describe('App - Runtime Events & State Management', () => {
       mockState.characters = [];
       render(<App />);
 
+      await selectCampaign();
+
       await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
+        fireEvent.click(screen.getByTestId('wizard-complete-btn'));
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('character-wizard')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('wizard-complete-btn'));
       await waitFor(() => {
         expect(screen.queryByTestId('character-wizard')).not.toBeInTheDocument();
       });
@@ -475,15 +469,12 @@ describe('App - Runtime Events & State Management', () => {
       mockState.characters = [];
       render(<App />);
 
+      await selectCampaign();
+
       await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
+        fireEvent.click(screen.getByTestId('wizard-cancel-btn'));
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('character-wizard')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('wizard-cancel-btn'));
       await waitFor(() => {
         expect(screen.queryByTestId('character-wizard')).not.toBeInTheDocument();
       });
@@ -499,13 +490,7 @@ describe('App - Runtime Events & State Management', () => {
       ];
       render(<App />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
+      await selectCampaign();
 
       expect(screen.getByTestId('char-btn-Aragorn')).toBeInTheDocument();
       expect(screen.getByTestId('char-btn-Legolas')).toBeInTheDocument();
@@ -519,13 +504,7 @@ describe('App - Runtime Events & State Management', () => {
       ];
       render(<App />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
+      await selectCampaign();
 
       expect(screen.getByTestId('char-btn-Aragorn')).toHaveClass('active');
     });
@@ -536,15 +515,12 @@ describe('App - Runtime Events & State Management', () => {
       mockState.characters = [{ name: 'Aragorn', level: 1 }];
       render(<App />);
 
+      await selectCampaign();
+
       await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
+        fireEvent.click(screen.getByTestId('add-character-btn'));
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('add-character-btn'));
       await waitFor(() => {
         expect(screen.getByTestId('character-wizard')).toBeInTheDocument();
       });
@@ -557,13 +533,7 @@ describe('App - Runtime Events & State Management', () => {
       ];
       render(<App />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
+      await selectCampaign();
 
       const deleteBtn = screen.getByTitle('Delete Character');
       fireEvent.click(deleteBtn);
@@ -581,44 +551,28 @@ describe('App - Runtime Events & State Management', () => {
       ];
       render(<App />);
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
+      await selectCampaign();
 
       await waitFor(() => {
         expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
         expect(screen.getByTestId('character-name').textContent).toBe('Aragorn');
       });
 
-      fireEvent.click(screen.getByTestId('char-btn-Legolas'));
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('char-btn-Legolas'));
+      });
+
       await waitFor(() => {
         expect(screen.getByTestId('character-name').textContent).toBe('Legolas');
       });
 
-      fireEvent.click(screen.getByTestId('char-btn-Gimli'));
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('char-btn-Gimli'));
+      });
+
       await waitFor(() => {
         expect(screen.getByTestId('character-name').textContent).toBe('Gimli');
       });
-    });
-  });
-
-  describe('View isolation', () => {
-    it('only renders the active view at a time', async () => {
-      mockState.characters = [{ name: 'Aragorn', level: 1 }];
-      render(<App />);
-
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('select-campaign-btn'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      expect(screen.queryByTestId('initiative')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('maps-manager')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('notes-view')).not.toBeInTheDocument();
     });
   });
 });

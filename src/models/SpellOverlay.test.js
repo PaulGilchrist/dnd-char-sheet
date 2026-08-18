@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import { toGrid, createOverlay, hitTestOverlay, svgOrigin, OverlayShape, DEFAULTS } from './SpellOverlay.js';
 
@@ -95,6 +95,15 @@ describe('createOverlay', () => {
     uuidSpy.mockRestore();
   });
 
+  it('assigns a unique id to each overlay', () => {
+    let counter = 0;
+    const uuidSpy = vi.spyOn(crypto, 'randomUUID').mockImplementation(() => `id-${counter++}`);
+    const a = makeOverlay('sphere', 0, 0);
+    const b = makeOverlay('sphere', 0, 0);
+    uuidSpy.mockRestore();
+    expect(a.id).not.toBe(b.id);
+  });
+
   it('overrides defaults with params', () => {
     const overlay = makeOverlay('sphere', 3, 4, 0, { radiusFt: 30, color: 'rgba(100,200,50,0.5)' });
     expect(overlay.radiusFt).toBe(30);
@@ -121,84 +130,18 @@ describe('createOverlay', () => {
     expect(makeOverlay('sphere', 0, 0, 45).angle).toBe(45);
   });
 
-  it('keeps position, angle, and explicit params for unknown shapes', () => {
-    const overlay = makeOverlay('bogus', 1, 2, 90, { radiusFt: 5 });
-    expect(overlay.shape).toBe('bogus');
+  it('passes through empty params with no side effects', () => {
+    const overlay = makeOverlay('sphere', 1, 2);
+    expect(overlay.shape).toBe('sphere');
     expect(overlay.startGridX).toBe(1);
     expect(overlay.startGridY).toBe(2);
-    expect(overlay.angle).toBe(90);
-    expect(overlay.radiusFt).toBe(5);
-    expect(overlay).not.toHaveProperty('color');
-    expect(overlay).not.toHaveProperty('coneAngle');
-  });
-});
-
-// ── createOverlay ──────────────────────────────────────────────────
-
-describe('createOverlay', () => {
-  it('creates an overlay with shape, position, angle, and defaults', () => {
-    const overlay = makeOverlay('sphere', 3, 4);
-    expect(overlay.shape).toBe('sphere');
-    expect(overlay.startGridX).toBe(3);
-    expect(overlay.startGridY).toBe(4);
     expect(overlay.angle).toBe(0);
     expect(overlay.radiusFt).toBe(20);
     expect(overlay.color).toBe('rgba(255,80,60,0.35)');
   });
 
-  it('assigns a unique id sourced from crypto.randomUUID', () => {
-    const uuidSpy = vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce('mock-uuid-1');
-    const overlay = makeOverlay('sphere', 0, 0);
-    expect(overlay.id).toBe('mock-uuid-1');
-    expect(uuidSpy).toHaveBeenCalledTimes(1);
-    uuidSpy.mockRestore();
-  });
-
-  it('overrides defaults with params', () => {
-    const overlay = makeOverlay('sphere', 3, 4, 0, { radiusFt: 30, color: 'rgba(100,200,50,0.5)' });
-    expect(overlay.radiusFt).toBe(30);
-    expect(overlay.color).toBe('rgba(100,200,50,0.5)');
-    expect(overlay.startGridX).toBe(3);
-  });
-
-  it('uses shape-specific defaults', () => {
-    const cone = makeOverlay('cone', 1, 1);
-    expect(cone.distanceFt).toBe(60);
-    expect(cone.coneAngle).toBe(53);
-    expect(cone.radiusFt).toBe(0);
-
-    const cube = makeOverlay('cube', 1, 1);
-    expect(cube.sizeFt).toBe(15);
-    expect(cube.radiusFt).toBe(0);
-
-    const line = makeOverlay('line', 1, 1);
-    expect(line.distanceFt).toBe(60);
-    expect(line.widthFt).toBe(5);
-  });
-
-  it('params override shape-specific defaults', () => {
-    const cone = makeOverlay('cone', 1, 1, 0, { distanceFt: 30 });
-    expect(cone.distanceFt).toBe(30);
-    expect(cone.coneAngle).toBe(53);
-  });
-
-  it('accepts a custom angle parameter', () => {
-    expect(makeOverlay('sphere', 0, 0, 45).angle).toBe(45);
-  });
-
-  it('returns all expected properties', () => {
-    const overlay = makeOverlay('sphere', 2, 3, 90, { radiusFt: 10 });
-    expect(overlay).toHaveProperty('id');
-    expect(overlay).toHaveProperty('shape', 'sphere');
-    expect(overlay).toHaveProperty('startGridX', 2);
-    expect(overlay).toHaveProperty('startGridY', 3);
-    expect(overlay).toHaveProperty('angle', 90);
-    expect(overlay).toHaveProperty('radiusFt', 10);
-    expect(overlay).toHaveProperty('color');
-  });
-
   it('keeps position, angle, and explicit params for unknown shapes', () => {
-    const overlay = makeOverlay('bogus', 1, 2, 90, { radiusFt: 5 });
+    const overlay = createOverlay('bogus', 1, 2, 90, { radiusFt: 5 });
     expect(overlay.shape).toBe('bogus');
     expect(overlay.startGridX).toBe(1);
     expect(overlay.startGridY).toBe(2);
@@ -246,6 +189,20 @@ describe('hitTestOverlay', () => {
     });
   });
 
+  // ── CYLINDER ──────────────────────────────────────────────────────
+
+  describe('CYLINDER', () => {
+    it('behaves identically to sphere for hit testing', () => {
+      const sphere = makeOverlay('sphere', 5, 5, 0, { radiusFt: 20 });
+      const cylinder = makeOverlay('cylinder', 5, 5, 0, { radiusFt: 20 });
+      const [x, y] = pointAt(5, 5, 15, 0);
+      const [outsideX, outsideY] = pointAt(5, 5, 25, 0);
+      expect(hitTestOverlay(sphere, 5, 5)).toBe(hitTestOverlay(cylinder, 5, 5));
+      expect(hitTestOverlay(sphere, x, y)).toBe(hitTestOverlay(cylinder, x, y));
+      expect(hitTestOverlay(sphere, outsideX, outsideY)).toBe(hitTestOverlay(cylinder, outsideX, outsideY));
+    });
+  });
+
   // ── CUBE ─────────────────────────────────────────────────────────
 
   describe('CUBE', () => {
@@ -256,6 +213,15 @@ describe('hitTestOverlay', () => {
       expect(hitTestOverlay(overlay, withinX, withinY)).toBe(true);
       const [outsideX, outsideY] = pointAt(5, 5, 10, 0);
       expect(hitTestOverlay(makeOverlay('cube', 5, 5, 0, { sizeFt: 15 }), outsideX, outsideY)).toBe(false);
+    });
+
+    it('hits exactly at size boundary, misses just beyond', () => {
+      // sizeFt=10 => half-extent is 5ft. Point at 5ft is on boundary.
+      const [x, y] = pointAt(5, 5, 5, 0);
+      expect(hitTestOverlay(makeOverlay('cube', 5, 5, 0, { sizeFt: 10 }), x, y)).toBe(true);
+      // Point at 5.1ft is just beyond boundary
+      const [justBeyondX, justBeyondY] = pointAt(5, 5, 5.1, 0);
+      expect(hitTestOverlay(makeOverlay('cube', 5, 5, 0, { sizeFt: 10 }), justBeyondX, justBeyondY)).toBe(false);
     });
 
     it('rotated 45 degrees reaches further along axis than unrotated', () => {
@@ -384,8 +350,8 @@ describe('hitTestOverlay', () => {
 
   describe('unknown shape', () => {
     it('returns false for unknown, empty, or missing shape values', () => {
-      const overlay = createOverlay('sphere', 5, 5);
       for (const shape of ['unknown', '', undefined, null]) {
+        const overlay = createOverlay('sphere', 5, 5);
         overlay.shape = shape;
         expect(hitTestOverlay(overlay, 5, 5)).toBe(false);
       }

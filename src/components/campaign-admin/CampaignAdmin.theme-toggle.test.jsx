@@ -1,6 +1,6 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
 
 const createDefaultProps = (overrides = {}) => ({
@@ -12,56 +12,48 @@ const createDefaultProps = (overrides = {}) => ({
     ...overrides,
 });
 
+// Shared window mocks — restored after every test to prevent leaks into other tests
+beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.spyOn(window, 'confirm').mockImplementation(() => true);
+    vi.spyOn(window, 'prompt').mockImplementation(() => 'test-campaign');
+    vi.stubGlobal('location', { reload: vi.fn() });
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
+});
+
 describe('CampaignAdmin - Theme Toggle', () => {
-    const defaultProps = createDefaultProps();
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.alert = vi.fn();
-        window.confirm = vi.fn(() => true);
-        window.prompt = vi.fn(() => 'test-campaign');
-        Object.defineProperty(window, 'location', {
-            value: { reload: vi.fn() },
-            writable: true,
-        });
-    });
-
     it('calls toggleTheme when theme button is clicked', () => {
-        render(<CampaignAdmin {...defaultProps} />);
-        const btn = screen.getByText('Switch to Light Mode');
+        const props = createDefaultProps();
+        render(<CampaignAdmin {...props} />);
+        const btn = screen.getByRole('button', { name: /switch to/i });
         fireEvent.click(btn);
-        expect(defaultProps.toggleTheme).toHaveBeenCalledTimes(1);
+        expect(props.toggleTheme).toHaveBeenCalledTimes(1);
     });
 
-    it('shows light mode button text and sun icon when theme is dark', () => {
-        render(<CampaignAdmin {...defaultProps} theme="dark" />);
-        expect(screen.getByText('Switch to Light Mode')).toBeInTheDocument();
-    });
+    it('shows correct button text and icon for each theme', () => {
+        const props = createDefaultProps();
+        render(<CampaignAdmin {...props} theme="dark" />);
+        const darkBtn = screen.getByRole('button', { name: /switch to light mode/i });
+        expect(darkBtn).toBeInTheDocument();
+        expect(darkBtn.querySelector('i.fa-sun')).toBeInTheDocument();
 
-    it('shows dark mode button text and moon icon when theme is light', () => {
-        render(<CampaignAdmin {...defaultProps} theme="light" />);
-        expect(screen.getByText('Switch to Dark Mode')).toBeInTheDocument();
+        render(<CampaignAdmin {...props} theme="light" />);
+        const lightBtn = screen.getByRole('button', { name: /switch to dark mode/i });
+        expect(lightBtn).toBeInTheDocument();
+        expect(lightBtn.querySelector('i.fa-moon')).toBeInTheDocument();
     });
 });
 
 describe('CampaignAdmin - Back Button', () => {
-    const defaultProps = createDefaultProps();
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.alert = vi.fn();
-        window.confirm = vi.fn(() => true);
-        window.prompt = vi.fn(() => 'test-campaign');
-        Object.defineProperty(window, 'location', {
-            value: { reload: vi.fn() },
-            writable: true,
-        });
-    });
-
     it('calls onBack when back button is clicked', () => {
-        render(<CampaignAdmin {...defaultProps} />);
-        const backBtn = document.querySelector('.ct-back-btn');
+        const props = createDefaultProps();
+        render(<CampaignAdmin {...props} />);
+        const backBtn = screen.getByRole('button', { name: /^Back$/ });
         fireEvent.click(backBtn);
-        expect(defaultProps.onBack).toHaveBeenCalledTimes(1);
+        expect(props.onBack).toHaveBeenCalledTimes(1);
     });
 });

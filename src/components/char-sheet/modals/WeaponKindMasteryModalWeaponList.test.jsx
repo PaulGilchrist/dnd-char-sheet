@@ -1,14 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-vi.mock('../../../services/automation/index.js', () => ({
-  applyWeaponKindMastery: vi.fn(),
-}));
-
-vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn(),
-}));
 
 import WeaponKindMasteryModal from './WeaponKindMasteryModal.jsx';
 
@@ -51,6 +43,21 @@ function renderWithWeapons(overrides, weaponsToMock = mockWeapons) {
   return render(<WeaponKindMasteryModal {...makeProps(overrides)} />);
 }
 
+async function waitForWeapons() {
+  await waitFor(() => screen.getByText('Battleaxe'));
+}
+
+function resetModulesAndMock() {
+  vi.resetModules();
+  vi.doMock('../../../services/automation/index.js', () => ({
+    applyWeaponKindMastery: vi.fn(),
+  }));
+  vi.doMock('../../../hooks/runtime/useRuntimeState.js', () => ({
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+  }));
+}
+
 describe('WeaponKindMasteryModal', () => {
 
   beforeEach(() => {
@@ -60,27 +67,17 @@ describe('WeaponKindMasteryModal', () => {
   describe('weapon list', () => {
     it('renders all weapons when meleeOnly is false', async () => {
       renderWithWeapons();
-      await waitFor(() => {
-        const labels = document.querySelectorAll('label');
-        const names = Array.from(labels).map(l => l.querySelector('strong')?.textContent);
-        expect(names).toContain('Battleaxe');
-        expect(names).toContain('Blowgun');
-        expect(names).toContain('Club');
-        expect(names).toContain('Longbow');
-        expect(names).toContain('Shortsword');
-      });
+      await waitForWeapons();
+
+      expect(screen.getByRole('checkbox', { name: /Battleaxe/ })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /Blowgun/ })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /Club/ })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /Longbow/ })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /Shortsword/ })).toBeInTheDocument();
     });
 
     it('renders only melee weapons when meleeOnly is true', async () => {
-      vi.resetModules();
-      vi.doMock('../../../services/automation/index.js', () => ({
-        applyWeaponKindMastery: vi.fn(),
-      }));
-      vi.doMock('../../../hooks/runtime/useRuntimeState.js', () => ({
-        getRuntimeValue: vi.fn(),
-        setRuntimeValue: vi.fn(),
-      }));
-
+      resetModulesAndMock();
       const mod = await import('./WeaponKindMasteryModal.jsx');
       const Modal = mod.default;
 
@@ -93,45 +90,32 @@ describe('WeaponKindMasteryModal', () => {
         json: () => Promise.resolve(meleeWeapons),
       });
       globalThis.fetch = fetchMock;
-      render(<Modal {...makeProps({ meleeOnly: true })} />);
-      await waitFor(() => {
-        const labels = document.querySelectorAll('label');
-        const names = Array.from(labels).map(l => l.querySelector('strong')?.textContent);
-        expect(names).toContain('Battleaxe');
-        expect(names).toContain('Club');
-        expect(names).not.toContain('Blowgun');
-        expect(names).toHaveLength(2);
-      });
+      render(<Modal meleeOnly {...makeProps()} />);
+      await waitFor(() => screen.getByText('Battleaxe'));
+
+      expect(screen.getByRole('checkbox', { name: /Battleaxe/ })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /Club/ })).toBeInTheDocument();
+      expect(screen.queryByRole('checkbox', { name: /Blowgun/ })).not.toBeInTheDocument();
     });
 
-    it('renders weapon category and range info', async () => {
+    it('renders weapon category and range info next to each weapon name', async () => {
       renderWithWeapons();
-      await waitFor(() => {
-        const labels = document.querySelectorAll('label');
-        const firstLabel = labels[0];
-        expect(firstLabel.textContent).toContain('[Martial Melee]');
-      });
+      await waitForWeapons();
+
+      const battleaxeLabel = screen.getByRole('checkbox', { name: /Battleaxe/ }).closest('label');
+      expect(battleaxeLabel.textContent).toContain('[Martial Melee]');
     });
 
-    it('renders the mastery property for each weapon', async () => {
+    it('renders the mastery property for weapons that have one', async () => {
       renderWithWeapons();
-      await waitFor(() => {
-        const labels = document.querySelectorAll('label');
-        const firstLabel = labels[0];
-        expect(firstLabel.textContent).toContain('Topple');
-      });
+      await waitForWeapons();
+
+      const battleaxeLabel = screen.getByRole('checkbox', { name: /Battleaxe/ }).closest('label');
+      expect(battleaxeLabel.textContent).toContain('Topple');
     });
 
     it('renders "—" when a weapon has no mastery property', async () => {
-      vi.resetModules();
-      vi.doMock('../../../services/automation/index.js', () => ({
-        applyWeaponKindMastery: vi.fn(),
-      }));
-      vi.doMock('../../../hooks/runtime/useRuntimeState.js', () => ({
-        getRuntimeValue: vi.fn(),
-        setRuntimeValue: vi.fn(),
-      }));
-
+      resetModulesAndMock();
       const mod = await import('./WeaponKindMasteryModal.jsx');
       const Modal = mod.default;
 
@@ -143,23 +127,14 @@ describe('WeaponKindMasteryModal', () => {
       });
       globalThis.fetch = fetchMock;
       render(<Modal {...makeProps()} />);
-      await waitFor(() => {
-        const labels = document.querySelectorAll('label');
-        const firstLabel = labels[0];
-        expect(firstLabel.textContent).toContain('—');
-      });
+      await waitFor(() => screen.getByText('Test Weapon'));
+
+      const label = screen.getByRole('checkbox', { name: /Test Weapon/ }).closest('label');
+      expect(label.textContent).toContain('—');
     });
 
     it('renders weapons sorted alphabetically by name', async () => {
-      vi.resetModules();
-      vi.doMock('../../../services/automation/index.js', () => ({
-        applyWeaponKindMastery: vi.fn(),
-      }));
-      vi.doMock('../../../hooks/runtime/useRuntimeState.js', () => ({
-        getRuntimeValue: vi.fn(),
-        setRuntimeValue: vi.fn(),
-      }));
-
+      resetModulesAndMock();
       const mod = await import('./WeaponKindMasteryModal.jsx');
       const Modal = mod.default;
 
@@ -173,23 +148,18 @@ describe('WeaponKindMasteryModal', () => {
       });
       globalThis.fetch = fetchMock;
       render(<Modal {...makeProps()} />);
-      await waitFor(() => {
-        const labels = document.querySelectorAll('label');
-        const names = Array.from(labels).map(l => l.querySelector('strong')?.textContent);
-        expect(names).toEqual(['Axe', 'Mace', 'Zweihander']);
+      await waitFor(() => screen.getByText('Axe'));
+
+      const checkboxes = screen.getAllByRole('checkbox');
+      const names = checkboxes.map(cb => {
+        const strong = cb.parentElement?.querySelector('strong');
+        return strong?.textContent?.trim() || '';
       });
+      expect(names).toEqual(['Axe', 'Mace', 'Zweihander']);
     });
 
     it('filters out non-weapon items', async () => {
-      vi.resetModules();
-      vi.doMock('../../../services/automation/index.js', () => ({
-        applyWeaponKindMastery: vi.fn(),
-      }));
-      vi.doMock('../../../hooks/runtime/useRuntimeState.js', () => ({
-        getRuntimeValue: vi.fn(),
-        setRuntimeValue: vi.fn(),
-      }));
-
+      resetModulesAndMock();
       const mod = await import('./WeaponKindMasteryModal.jsx');
       const Modal = mod.default;
 
@@ -202,22 +172,14 @@ describe('WeaponKindMasteryModal', () => {
       });
       globalThis.fetch = fetchMock;
       render(<Modal {...makeProps()} />);
-      await waitFor(() => {
-        expect(screen.getByText('Battleaxe')).toBeInTheDocument();
-        expect(screen.queryByText('Potion')).not.toBeInTheDocument();
-      });
+      await waitFor(() => screen.getByText('Battleaxe'));
+
+      expect(screen.getByText('Battleaxe')).toBeInTheDocument();
+      expect(screen.queryByText('Potion')).not.toBeInTheDocument();
     });
 
-    it('filters out weapons without weapon_category or weapon_range', async () => {
-      vi.resetModules();
-      vi.doMock('../../../services/automation/index.js', () => ({
-        applyWeaponKindMastery: vi.fn(),
-      }));
-      vi.doMock('../../../hooks/runtime/useRuntimeState.js', () => ({
-        getRuntimeValue: vi.fn(),
-        setRuntimeValue: vi.fn(),
-      }));
-
+    it('filters out weapons without both weapon_category and weapon_range', async () => {
+      resetModulesAndMock();
       const mod = await import('./WeaponKindMasteryModal.jsx');
       const Modal = mod.default;
 
@@ -230,9 +192,70 @@ describe('WeaponKindMasteryModal', () => {
       });
       globalThis.fetch = fetchMock;
       render(<Modal {...makeProps()} />);
-      await waitFor(() => {
-        expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    });
+
+    it('toggles weapon selection when checkbox is clicked', async () => {
+      renderWithWeapons();
+      await waitForWeapons();
+
+      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      expect(battleaxeCheckbox.checked).toBe(false);
+
+      await fireEvent.click(battleaxeCheckbox);
+      expect(battleaxeCheckbox.checked).toBe(true);
+
+      await fireEvent.click(battleaxeCheckbox);
+      expect(battleaxeCheckbox.checked).toBe(false);
+    });
+
+    it('disables the Select button when no weapons are selected', async () => {
+      renderWithWeapons();
+      expect(screen.getByRole('button', { name: 'Select' })).toBeDisabled();
+    });
+
+    it('enables the Select button when at least one weapon is selected', async () => {
+      renderWithWeapons();
+      await waitForWeapons();
+
+      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      await fireEvent.click(battleaxeCheckbox);
+
+      expect(screen.getByRole('button', { name: 'Select' })).toBeEnabled();
+    });
+
+    it('disables unchecked weapons when max kinds limit is reached', async () => {
+      const props = makeProps({
+        action: { automation: { maxKinds: 2 } },
       });
+      renderWithWeapons(props);
+      await waitForWeapons();
+
+      const checkboxes = screen.getAllByRole('checkbox');
+      expect(checkboxes).toHaveLength(5);
+
+      await fireEvent.click(checkboxes[0]);
+      await fireEvent.click(checkboxes[1]);
+
+      expect(checkboxes[2].disabled).toBe(true);
+      expect(checkboxes[3].disabled).toBe(true);
+      expect(checkboxes[4].disabled).toBe(true);
+    });
+
+    it('renders "Selected: X/Y" count after selecting weapons', async () => {
+      const props = makeProps({
+        action: { automation: { maxKinds: 3 } },
+      });
+      renderWithWeapons(props);
+      await waitForWeapons();
+
+      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      await fireEvent.click(battleaxeCheckbox);
+
+      const clubCheckbox = screen.getByRole('checkbox', { name: /Club/ });
+      await fireEvent.click(clubCheckbox);
+
+      expect(screen.getByText(/Selected: 2\/3/)).toBeInTheDocument();
     });
   });
 });

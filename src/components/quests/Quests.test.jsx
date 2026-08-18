@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Quests from './Quests.jsx';
@@ -69,7 +69,7 @@ describe('Quests', () => {
   describe('visibility', () => {
     it('renders nothing when isLocalhost is false', () => {
       const { container } = renderWithQuests([], {}, { isLocalhost: false });
-      expect(container.innerHTML).toBe('');
+      expect(container.querySelector('.ct-container')).toBeNull();
     });
   });
 
@@ -107,6 +107,16 @@ describe('Quests', () => {
       const emptyState = screen.getByText(/No quests found matching/);
       expect(emptyState.textContent).toContain('dragons');
     });
+
+    it('does not show a no-results message for whitespace-only search', () => {
+      renderWithQuests([quest({ name: 'Find the Lost Sword' })]);
+
+      const searchInput = screen.getByRole('textbox', { name: /Search Quests/ });
+      fireEvent.change(searchInput, { target: { value: '   ' } });
+
+      expect(screen.getByText('Find the Lost Sword')).toBeInTheDocument();
+      expect(screen.queryByText(/No quests found matching/)).not.toBeInTheDocument();
+    });
   });
 
   describe('back navigation', () => {
@@ -124,14 +134,17 @@ describe('Quests', () => {
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
     });
 
-    it('closes the modal via Cancel or X button', () => {
+    it('closes the modal via Cancel button', () => {
       renderWithQuests([]);
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
+    });
 
+    it('closes the modal via the X (Close) button', () => {
+      renderWithQuests([]);
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
 
@@ -139,7 +152,17 @@ describe('Quests', () => {
       expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
     });
 
-    it('allows changing the form fields', () => {
+    it('closes the modal when clicking the overlay', () => {
+      const { container } = renderWithQuests([]);
+      fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
+      expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
+
+      const overlay = container.querySelector('.ct-modal-overlay');
+      fireEvent.click(overlay);
+      expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
+    });
+
+    it('allows changing all form fields', () => {
       renderWithQuests([]);
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
 
@@ -196,6 +219,10 @@ describe('Quests', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
       fireEvent.change(screen.getByRole('textbox', { name: /Name/ }), { target: { value: 'New Quest' } });
+      fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'completed' } });
+      fireEvent.change(screen.getByTestId('field-quest-description'), { target: { value: 'A quest' } });
+      fireEvent.change(screen.getByTestId('field-quest-rewards'), { target: { value: '50 gold' } });
+      fireEvent.change(screen.getByTestId('field-quest-notes'), { target: { value: 'Notes' } });
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
       await waitFor(() => {
@@ -204,8 +231,13 @@ describe('Quests', () => {
 
       expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
 
+      // Re-open to verify form reset to defaults
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
       expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('');
+      expect(screen.getByLabelText('Status')).toHaveValue('active');
+      expect(screen.getByTestId('field-quest-description')).toHaveValue('');
+      expect(screen.getByTestId('field-quest-rewards')).toHaveValue('');
+      expect(screen.getByTestId('field-quest-notes')).toHaveValue('');
     });
 
     it('passes the new quest data to saveItems while preserving existing quests', async () => {
@@ -261,15 +293,16 @@ describe('Quests', () => {
       expect(screen.getByText('A'.repeat(100) + '...')).toBeInTheDocument();
     });
 
-    it('opens the edit modal when a quest item is clicked or activated via keyboard', () => {
+    it('opens the edit modal when a quest item is clicked', () => {
       renderWithQuests([quest({ name: 'Clickable Quest' })]);
 
       fireEvent.click(screen.getByRole('button', { name: 'Edit quest: Clickable Quest' }));
       expect(screen.getByRole('heading', { name: 'Edit Quest' })).toBeInTheDocument();
+    });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-
+    it('opens the edit modal when a quest item is activated via keyboard', () => {
       renderWithQuests([quest({ name: 'Keyboard Quest' })]);
+
       const listItem = screen.getByRole('button', { name: 'Edit quest: Keyboard Quest' });
 
       fireEvent.keyDown(listItem, { key: 'Enter' });
@@ -362,9 +395,7 @@ describe('Quests', () => {
         expect(screen.getByRole('button', { name: /Deleting/ })).toHaveAttribute('disabled');
       });
 
-      await act(async () => {
-        deleteResolve();
-      });
+      await act(async () => deleteResolve());
 
       expect(screen.getByRole('button', { name: 'Delete' })).not.toHaveAttribute('disabled');
     });
@@ -380,8 +411,8 @@ describe('Quests', () => {
       const searchInput = screen.getByRole('textbox', { name: /Search Quests/ });
       fireEvent.change(searchInput, { target: { value: 'dragon' } });
 
+      expect(screen.queryByText('Defeat the Dragon')).toBeInTheDocument();
       expect(screen.queryByText('Find the Lost Sword')).not.toBeInTheDocument();
-      expect(screen.getByText('Defeat the Dragon')).toBeInTheDocument();
     });
 
     it('matches the search case-insensitively', () => {

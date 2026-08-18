@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -9,57 +9,28 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(),
 }));
 
-vi.mock('../../common/HiddenInput.jsx', () => {
-  function HiddenInput({ handleInputToggle, handleValueChange, showInput, value }) {
-    const [localValue, setLocalValue] = React.useState(value ?? '');
-
-    const commit = () => {
-      const numVal = Number(localValue);
-      const clamped = Math.max(numVal, 0);
-      handleValueChange(clamped);
-      handleInputToggle();
-    };
-
-    const handleChange = (event) => {
-      setLocalValue(event.target.value);
-    };
-
-    if (showInput) {
-      return (
-        <span className="hidden-input clickable">
-          <input
-            data-testid="gold-input"
-            type="number"
-            min="0"
-            value={localValue}
-            onChange={handleChange}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (e.key === 'Enter') {
-                commit();
-              }
-            }}
-          />
-        </span>
-      );
-    }
-    return <span data-testid="gold-value">{value}</span>;
-  }
-  const React = require('react');
-  HiddenInput.displayName = 'HiddenInput';
-  return { default: HiddenInput };
-});
-
 import { setRuntimeValue, useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 const campaignName = 'test-campaign';
 
-const createPlayerStats = (overrides = {}) => ({
-  name: 'Test Character',
-  inventory: { gold: 500 },
-  ...overrides,
-});
+function createPlayerStats(overrides = {}) {
+  return {
+    name: 'Test Character',
+    inventory: { gold: 500 },
+    ...overrides,
+  };
+}
+
+function renderCharGold(overrides = {}) {
+  const { campaignName: customCampaign, playerStats: customPlayerStats, ...statsOverrides } = overrides;
+  const playerStats = customPlayerStats || createPlayerStats(statsOverrides);
+  return render(
+    <CharGold
+      playerStats={playerStats}
+      campaignName={customCampaign || campaignName}
+    />
+  );
+}
 
 describe('CharGold', () => {
   beforeEach(() => {
@@ -68,74 +39,108 @@ describe('CharGold', () => {
   });
 
   describe('value display priority', () => {
-    const scenarios = [
-      { name: 'runtime value when available', runtime: 250, inventory: { gold: 500 }, expected: '250' },
-      { name: 'fallback to inventory.gold when runtime is null', runtime: null, inventory: { gold: 500 }, expected: '500' },
-      { name: 'fallback to 0 when both are missing', runtime: null, inventory: {}, expected: '0' },
-      { name: 'runtime prioritized over inventory.gold', runtime: 100, inventory: { gold: 500 }, expected: '100' },
-    ];
+    it('displays stored runtime gold when available', () => {
+      useRuntimeValue.mockReturnValue(250);
 
-    for (const { name, runtime, inventory, expected } of scenarios) {
-      it(`displays ${expected} - ${name}`, () => {
-        useRuntimeValue.mockReturnValue(runtime);
+      renderCharGold();
 
-        render(<CharGold playerStats={createPlayerStats({ inventory })} campaignName={campaignName} />);
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      expect(clickable).toHaveTextContent(/Gold:\s*250/);
+    });
 
-        expect(screen.getByTestId('gold-value')).toHaveTextContent(expected);
-      });
-    }
+    it('falls back to inventory.gold when runtime value is null', () => {
+      renderCharGold();
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      expect(clickable).toHaveTextContent(/Gold:\s*500/);
+    });
+
+    it('falls back to 0 when both runtime and inventory.gold are missing', () => {
+      useRuntimeValue.mockReturnValue(null);
+
+      renderCharGold({ inventory: {} });
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      expect(clickable).toHaveTextContent(/Gold:\s*0/);
+    });
+
+    it('prioritizes runtime over inventory when both exist', () => {
+      useRuntimeValue.mockReturnValue(100);
+
+      renderCharGold();
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      expect(clickable).toHaveTextContent(/Gold:\s*100/);
+    });
   });
 
   describe('input toggling', () => {
     it('shows the input field when the display area is clicked', () => {
-      render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
+      renderCharGold();
 
       const clickable = screen.getByText(/Gold:/).parentElement;
       fireEvent.click(clickable);
 
-      expect(screen.getByTestId('gold-input')).toBeInTheDocument();
-      expect(screen.queryByTestId('gold-value')).not.toBeInTheDocument();
+      expect(screen.getByRole('spinbutton')).toBeInTheDocument();
+      expect(screen.queryByText(/Gold: \d+/)).not.toBeInTheDocument();
+    });
+
+    it('hides the input and shows the value when clicked again', () => {
+      renderCharGold();
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      fireEvent.click(clickable);
+      expect(screen.getByRole('spinbutton')).toBeInTheDocument();
+
+      fireEvent.click(clickable);
+      expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+      expect(clickable).toHaveTextContent(/Gold:\s*\d+/);
+    });
+
+    it('can be activated via keyboard Enter', () => {
+      renderCharGold();
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      fireEvent.keyDown(clickable, { key: 'Enter' });
+
+      expect(screen.getByRole('spinbutton')).toBeInTheDocument();
     });
   });
 
   describe('value persistence', () => {
-    const saveScenarios = [
-      { name: 'on blur', trigger: 'blur' },
-      { name: 'on Enter', trigger: 'enter' },
-    ];
-
-    for (const { name, trigger } of saveScenarios) {
-      it(`saves the new value to runtime store ${name}`, () => {
-        render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
-
-        const clickable = screen.getByText(/Gold:/).parentElement;
-        fireEvent.click(clickable);
-
-        const input = screen.getByTestId('gold-input');
-        fireEvent.change(input, { target: { value: '750' } });
-
-        if (trigger === 'blur') {
-          fireEvent.blur(input);
-        } else {
-          fireEvent.keyDown(input, { key: 'Enter' });
-        }
-
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-          'Test Character',
-          'gold',
-          750,
-          'test-campaign',
-        );
-      });
-    }
-
-    it('clamps negative input values to 0', () => {
-      render(<CharGold playerStats={createPlayerStats()} campaignName={campaignName} />);
+    it.each([
+      ['blur', 'blur'],
+      ['Enter key', 'enter'],
+    ])('saves the new value to runtime store on %s', (_trigger, trigger) => {
+      renderCharGold();
 
       const clickable = screen.getByText(/Gold:/).parentElement;
       fireEvent.click(clickable);
 
-      const input = screen.getByTestId('gold-input');
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '750' } });
+
+      if (trigger === 'blur') {
+        fireEvent.blur(input);
+      } else {
+        fireEvent.keyDown(input, { key: 'Enter' });
+      }
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Character',
+        'gold',
+        750,
+        'test-campaign',
+      );
+    });
+
+    it('clamps negative input values to 0', () => {
+      renderCharGold();
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      fireEvent.click(clickable);
+
+      const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: '-100' } });
       fireEvent.blur(input);
 
@@ -144,6 +149,78 @@ describe('CharGold', () => {
         'gold',
         0,
         'test-campaign',
+      );
+    });
+
+    it('clamps NaN input values to 0', () => {
+      renderCharGold();
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      fireEvent.click(clickable);
+
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: 'not-a-number' } });
+      fireEvent.blur(input);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Character',
+        'gold',
+        0,
+        'test-campaign',
+      );
+    });
+
+    it('does not commit when Escape is pressed (only Enter triggers save)', () => {
+      renderCharGold();
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      fireEvent.click(clickable);
+
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '999' } });
+      fireEvent.keyDown(input, { key: 'Escape' });
+
+      // HiddenInput only commits on Enter key; Escape falls through without triggering commit
+      expect(setRuntimeValue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setRuntimeValue arguments', () => {
+    it('passes character name as the first argument', () => {
+      const customStats = { name: 'DragonSlayer', inventory: { gold: 100 } };
+
+      renderCharGold({ playerStats: customStats });
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      fireEvent.click(clickable);
+
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '200' } });
+      fireEvent.blur(input);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'DragonSlayer',
+        'gold',
+        200,
+        'test-campaign',
+      );
+    });
+
+    it('uses the campaignName prop as the last argument', () => {
+      renderCharGold({ campaignName: 'my-campaign' });
+
+      const clickable = screen.getByText(/Gold:/).parentElement;
+      fireEvent.click(clickable);
+
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '300' } });
+      fireEvent.blur(input);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Character',
+        'gold',
+        300,
+        'my-campaign',
       );
     });
   });

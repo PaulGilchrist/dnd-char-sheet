@@ -1,17 +1,15 @@
-// @cleaned-by-ai
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import EncounterModal from './EncounterModal.jsx';
 
 vi.mock('../../services/encounters/encountersService.js', () => ({
-    formatEncounterName: vi.fn((name) => name
-        .replace(/\.json$/i, '')
-        .split('-')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')),
+    formatEncounterName: vi.fn((name) => name),
 }));
 
-vi.mock('../common/MarkdownPreview.jsx', () => ({ default: ({ text }) => <div data-testid="markdown-preview">{text}</div> }));
+vi.mock('../common/MarkdownPreview.jsx', () => ({
+    default: ({ text }) => <div data-testid="markdown-preview">{text}</div>,
+}));
 
 const mockOnClose = vi.fn();
 const mockOnSave = vi.fn();
@@ -38,16 +36,13 @@ const encounter = (name, overrides = {}) => ({
     ...overrides,
 });
 
-const openRenameMode = (encounters) => {
-    const utils = render(<EncounterModal {...createProps({ mode: 'load', encounters })} />);
-    fireEvent.click(screen.getByRole('button', { name: `Rename ${encounters[0].name}` }));
-    utils.rerender(<EncounterModal {...createProps({ mode: 'rename', encounters })} />);
-    return utils;
-};
-
 describe('EncounterModal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     describe('rendering', () => {
@@ -69,8 +64,10 @@ describe('EncounterModal', () => {
         });
 
         it('closes when the backdrop overlay is clicked', () => {
-            const { container } = render(<EncounterModal {...createProps()} />);
-            fireEvent.click(container.firstChild);
+            render(<EncounterModal {...createProps()} />);
+            const overlay = document.querySelector('.encounter-modal-overlay');
+            expect(overlay).toBeTruthy();
+            fireEvent.click(overlay);
             expect(mockOnClose).toHaveBeenCalledTimes(1);
         });
 
@@ -114,6 +111,15 @@ describe('EncounterModal', () => {
             expect(onSave).toHaveBeenCalledWith('Enter Save');
         });
 
+        it('does not save when a non-Enter key is pressed', () => {
+            const onSave = vi.fn();
+            render(<EncounterModal {...createProps({ mode: 'save', onSave })} />);
+            const input = screen.getByLabelText('Encounter Name');
+            fireEvent.change(input, { target: { value: 'Test' } });
+            fireEvent.keyDown(input, { key: 'a' });
+            expect(onSave).not.toHaveBeenCalled();
+        });
+
         it.each(['', '   '])('does not save and shows an error when the name is "%s"', (value) => {
             render(<EncounterModal {...createProps({ mode: 'save' })} />);
             const input = screen.getByLabelText('Encounter Name');
@@ -145,8 +151,9 @@ describe('EncounterModal', () => {
                 encounter('first-50', { effectiveXP: 50 }),
             ];
             render(<EncounterModal {...createProps({ mode: 'load', encounters })} />);
-            const names = screen.getAllByRole('listitem').map((li) => li.querySelector('.encounter-list-name').textContent);
-            expect(names).toEqual(['No Xp', 'First 50', 'Low Xp', 'First 100', 'High Xp']);
+            const listItems = screen.getAllByRole('listitem');
+            const names = listItems.map((li) => li.querySelector('.encounter-list-name').textContent);
+            expect(names).toEqual(['no-xp', 'first-50', 'low-xp', 'first-100', 'high-xp']);
         });
 
         it('hides the XP label when effectiveXP is missing', () => {
@@ -179,15 +186,14 @@ describe('EncounterModal', () => {
             expect(mockOnLoad).toHaveBeenCalledWith('dragon-lair');
         });
 
-        it('deletes the encounter after confirmation, using the formatted name in the prompt', async () => {
+        it('calls onDelete after confirmation using the formatted name in the prompt', async () => {
             const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
             render(<EncounterModal {...createProps({ mode: 'load', encounters: [encounter('goblin-ambush')] })} />);
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: 'Delete goblin-ambush' }));
             });
-            expect(confirmSpy).toHaveBeenCalledWith('Delete "Goblin Ambush"?');
+            expect(confirmSpy).toHaveBeenCalledWith('Delete "goblin-ambush"?');
             expect(mockOnDelete).toHaveBeenCalledWith('goblin-ambush');
-            confirmSpy.mockRestore();
         });
 
         it('does not delete when confirmation is cancelled', () => {
@@ -196,27 +202,32 @@ describe('EncounterModal', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Delete goblin-ambush' }));
             expect(confirmSpy).toHaveBeenCalled();
             expect(mockOnDelete).not.toHaveBeenCalled();
-            confirmSpy.mockRestore();
+        });
+
+        it('renders load, rename, and delete buttons for each encounter', () => {
+            const encounters = [encounter('test-encounter')];
+            render(<EncounterModal {...createProps({ mode: 'load', encounters })} />);
+            expect(screen.getByRole('button', { name: 'Load test-encounter' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Rename test-encounter' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Delete test-encounter' })).toBeInTheDocument();
         });
     });
 
     describe('Rename mode', () => {
-        const encounters = [encounter('old-name')];
-
         it('renders the new name input and rename button', () => {
-            render(<EncounterModal {...createProps({ mode: 'rename' })} />);
+            render(<EncounterModal {...createProps({ mode: 'rename', renameTarget: { name: 'old-name' } })} />);
             expect(screen.getByLabelText('New Name')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Rename' })).toBeInTheDocument();
         });
 
-        it('pre-fills the new name input when switching from load mode', () => {
-            openRenameMode(encounters);
+        it('pre-fills the new name input when renameTarget is provided', () => {
+            render(<EncounterModal {...createProps({ mode: 'rename', renameTarget: { name: 'old-name' } })} />);
             expect(screen.getByRole('heading', { name: 'Rename Encounter' })).toBeInTheDocument();
             expect(screen.getByLabelText('New Name')).toHaveValue('old-name');
         });
 
         it('does not rename and shows an error when the new name is empty', () => {
-            openRenameMode(encounters);
+            render(<EncounterModal {...createProps({ mode: 'rename', renameTarget: { name: 'old-name' } })} />);
             const input = screen.getByLabelText('New Name');
             fireEvent.change(input, { target: { value: '   ' } });
             fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
@@ -225,7 +236,7 @@ describe('EncounterModal', () => {
         });
 
         it('calls onRename with the old and new names and resets the input', async () => {
-            openRenameMode(encounters);
+            render(<EncounterModal {...createProps({ mode: 'rename', renameTarget: { name: 'old-name' } })} />);
             const input = screen.getByLabelText('New Name');
             fireEvent.change(input, { target: { value: 'New Name' } });
             await act(async () => {
@@ -238,7 +249,7 @@ describe('EncounterModal', () => {
         });
 
         it('renames when Enter is pressed in the input', async () => {
-            openRenameMode(encounters);
+            render(<EncounterModal {...createProps({ mode: 'rename', renameTarget: { name: 'old-name' } })} />);
             const input = screen.getByLabelText('New Name');
             fireEvent.change(input, { target: { value: 'Enter Rename' } });
             await act(async () => {

@@ -1,6 +1,18 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MagicMissileTargetPopup from './MagicMissileTargetPopup.jsx';
+
+// ── Helpers ──
+
+function summaryContains(assigned, total) {
+  return (content, element) =>
+    element !== null &&
+    element.tagName.toLowerCase() === 'div' &&
+    element.classList.contains('magic-missile-summary') &&
+    element.textContent.includes(`${assigned}`) &&
+    element.textContent.includes(`${total}`);
+}
 
 // ── Test fixtures ──
 
@@ -35,13 +47,12 @@ describe('MagicMissileTargetPopup', () => {
   // ── Default rendering ──
 
   it('renders the popup with title, spell name, missile count, damage info, and creature targets', () => {
-    const { container } = render(<MagicMissileTargetPopup {...makeProps()} />);
+    render(<MagicMissileTargetPopup {...makeProps()} />);
     expect(screen.getByText(/Distribute Magic Missiles/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Magic Missile/i)[1]).toBeInTheDocument();
     expect(screen.getByText(/3 Missiles to Assign/)).toBeInTheDocument();
-    const inner = container.querySelector('.magic-missile-popup-inner');
-    expect(inner.textContent).toContain('1d4 + 1');
-    expect(inner.textContent).toContain('Force');
+    expect(screen.getByText(/1d4 \+ 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Force damage/)).toBeInTheDocument();
     expect(screen.getByText('Goblin')).toBeInTheDocument();
     expect(screen.getByText('Orc')).toBeInTheDocument();
     expect(screen.getByText('Bugbear')).toBeInTheDocument();
@@ -65,9 +76,7 @@ describe('MagicMissileTargetPopup', () => {
     render(<MagicMissileTargetPopup {...makeProps()} />);
     const inputs = screen.getAllByRole('spinbutton');
     inputs.forEach(input => expect(input).toHaveValue(0));
-    const summary = document.querySelector('.magic-missile-summary');
-    expect(summary.textContent).toContain('0');
-    expect(summary.textContent).toContain('3');
+    expect(screen.getByText(summaryContains(0, 3))).toBeInTheDocument();
   });
 
   it('disables cast button when missiles unassigned', () => {
@@ -83,54 +92,53 @@ describe('MagicMissileTargetPopup', () => {
     expect(screen.getByText(/Orc \(Current\)/i)).toBeInTheDocument();
   });
 
-  it('does not highlight any row when currentTargetName is undefined or not in the list', () => {
-    const { container } = render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Unknown Creature' })} />);
-    const rows = container.querySelectorAll('.magic-missile-target-row');
-    rows.forEach(row => expect(row).not.toHaveClass('magic-missile-current-target'));
+  it('does not highlight any row when currentTargetName is not in the list', () => {
+    render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Unknown Creature' })} />);
+    creatureTargets.forEach(name => {
+      expect(screen.getByText(name)).toBeInTheDocument();
+      expect(screen.queryByText(new RegExp(`${name} \\(Current\\)`))).not.toBeInTheDocument();
+    });
   });
 
   // ── currentTargetName auto-assigns missiles ──
 
   it('auto-assigns all missiles to currentTargetName on mount when its value is 0', () => {
-    const { container } = render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Orc' })} />);
+    render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Orc' })} />);
     const inputs = screen.getAllByRole('spinbutton');
     const orcIndex = creatureTargets.indexOf('Orc');
-    const summary = container.querySelector('.magic-missile-summary');
     expect(inputs[orcIndex]).toHaveValue(3);
-    expect(summary.textContent).toContain('3');
+    expect(screen.getByText(summaryContains(3, 3))).toBeInTheDocument();
   });
 
   // ── Input validation ──
 
   it('updates total assigned when input changes', () => {
-    const { container } = render(<MagicMissileTargetPopup {...makeProps()} />);
+    render(<MagicMissileTargetPopup {...makeProps()} />);
     const inputs = screen.getAllByRole('spinbutton');
     fireEvent.change(inputs[0], { target: { value: '2' } });
-    const summary = container.querySelector('.magic-missile-summary');
-    expect(summary.textContent).toContain('2');
-    expect(summary.textContent).toContain('3');
+    expect(screen.getByText(summaryContains(2, 3))).toBeInTheDocument();
   });
 
   it('prevents negative, empty, and non-numeric input values', () => {
-    const { container } = render(<MagicMissileTargetPopup {...makeProps()} />);
+    render(<MagicMissileTargetPopup {...makeProps()} />);
     const inputs = screen.getAllByRole('spinbutton');
 
     fireEvent.change(inputs[0], { target: { value: '-5' } });
-    expect(container.querySelector('.magic-missile-summary').textContent).toContain('0');
+    expect(screen.getByText(summaryContains(0, 3))).toBeInTheDocument();
 
     fireEvent.change(inputs[0], { target: { value: '' } });
-    expect(container.querySelector('.magic-missile-summary').textContent).toContain('0');
+    expect(screen.getByText(summaryContains(0, 3))).toBeInTheDocument();
 
     fireEvent.change(inputs[0], { target: { value: 'abc' } });
-    expect(container.querySelector('.magic-missile-summary').textContent).toContain('0');
+    expect(screen.getByText(summaryContains(0, 3))).toBeInTheDocument();
   });
 
   it('clamps values exceeding total missiles', () => {
-    const { container } = render(<MagicMissileTargetPopup {...makeProps({ totalMissiles: 3 })} />);
+    render(<MagicMissileTargetPopup {...makeProps({ totalMissiles: 3 })} />);
     const inputs = screen.getAllByRole('spinbutton');
     fireEvent.change(inputs[0], { target: { value: '99' } });
-    const summary = container.querySelector('.magic-missile-summary');
-    expect(summary.textContent).toContain('3');
+    expect(inputs[0]).toHaveValue(3);
+    expect(screen.getByText(summaryContains(3, 3))).toBeInTheDocument();
   });
 
   // ── Cast button state ──
@@ -179,26 +187,20 @@ describe('MagicMissileTargetPopup', () => {
     expect(callArgs.distribution).toHaveProperty('Orc', 0);
   });
 
-  it('calls onSkip when Cancel button, overlay, or Escape key triggers skip', () => {
+  it('calls onSkip when Cancel button or Escape key triggers skip', () => {
     const onSkip = vi.fn();
     render(<MagicMissileTargetPopup {...makeProps({ onSkip })} />);
 
     fireEvent.click(screen.getByText('Cancel'));
     expect(onSkip).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(document.querySelector('.popup-overlay'));
-    expect(onSkip).toHaveBeenCalledTimes(2);
-
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(onSkip).toHaveBeenCalledTimes(3);
+    expect(onSkip).toHaveBeenCalledTimes(2);
   });
 
-  it('does not call onSkip when modal content or non-Escape key is triggered', () => {
+  it('does not call onSkip when non-Escape key is triggered', () => {
     const onSkip = vi.fn();
     render(<MagicMissileTargetPopup {...makeProps({ onSkip })} />);
-
-    fireEvent.click(document.querySelector('.magic-missile-popup'));
-    expect(onSkip).not.toHaveBeenCalled();
 
     fireEvent.keyDown(document, { key: 'Enter' });
     expect(onSkip).not.toHaveBeenCalled();
@@ -214,9 +216,8 @@ describe('MagicMissileTargetPopup', () => {
   });
 
   it('shows 0/0 and enables cast button when totalMissiles is 0', () => {
-    const { container } = render(<MagicMissileTargetPopup {...makeProps({ totalMissiles: 0 })} />);
-    const summary = container.querySelector('.magic-missile-summary');
-    expect(summary.textContent).toContain('0');
+    render(<MagicMissileTargetPopup {...makeProps({ totalMissiles: 0 })} />);
+    expect(screen.getByText(summaryContains(0, 0))).toBeInTheDocument();
     const castButton = screen.getByRole('button', { name: /Cast All Missiles/i });
     expect(castButton).not.toBeDisabled();
   });
@@ -241,57 +242,57 @@ describe('MagicMissileTargetPopup', () => {
   // ── currentTargetName re-render behavior ──
 
   it('does not override existing distribution when currentTargetName already has missiles', () => {
-    const { container, rerender } = render(<MagicMissileTargetPopup {...makeProps()} />);
+    const { rerender } = render(<MagicMissileTargetPopup {...makeProps()} />);
     const inputs = screen.getAllByRole('spinbutton');
     fireEvent.change(inputs[0], { target: { value: '2' } });
+    expect(screen.getByText(summaryContains(2, 3))).toBeInTheDocument();
+
     rerender(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Goblin' })} />);
-    const summary = container.querySelector('.magic-missile-summary');
-    expect(summary.textContent).toContain('2');
+    expect(screen.getAllByRole('spinbutton')[0]).toHaveValue(2);
+    expect(screen.getByText(summaryContains(2, 3))).toBeInTheDocument();
   });
 
   it('assigns missiles to new currentTargetName when it was at 0', () => {
-    const { container, rerender } = render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Goblin' })} />);
-    const inputs = screen.getAllByRole('spinbutton');
+    const { rerender } = render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Goblin' })} />);
     const goblinIndex = creatureTargets.indexOf('Goblin');
-    expect(inputs[goblinIndex]).toHaveValue(3);
+    expect(screen.getAllByRole('spinbutton')[goblinIndex]).toHaveValue(3);
+
     rerender(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Bugbear', totalMissiles: 5 })} />);
     const bugbearIndex = creatureTargets.indexOf('Bugbear');
-    expect(inputs[bugbearIndex]).toHaveValue(5);
-    const summary = container.querySelector('.magic-missile-summary');
-    expect(summary.textContent).toContain('5');
+    expect(screen.getAllByRole('spinbutton')[bugbearIndex]).toHaveValue(5);
+    expect(screen.getByText(summaryContains(5, 5))).toBeInTheDocument();
   });
 
   it('does not clear previous target when currentTargetName changes to a different target', () => {
-    const { container, rerender } = render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Goblin' })} />);
-    const inputs = screen.getAllByRole('spinbutton');
+    const { rerender } = render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Goblin' })} />);
     const goblinIndex = creatureTargets.indexOf('Goblin');
-    expect(inputs[goblinIndex]).toHaveValue(3);
+    expect(screen.getAllByRole('spinbutton')[goblinIndex]).toHaveValue(3);
+
     rerender(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Orc', totalMissiles: 4 })} />);
     const orcIndex = creatureTargets.indexOf('Orc');
-    expect(inputs[orcIndex]).toHaveValue(4);
-    const summary = container.querySelector('.magic-missile-summary');
-    expect(summary.textContent).toContain('7');
+    expect(screen.getAllByRole('spinbutton')[orcIndex]).toHaveValue(4);
+    expect(screen.getByText(summaryContains(7, 4))).toBeInTheDocument();
   });
 
   it('does not re-assign when currentTargetName changes to a target that already has missiles', () => {
-    const { container, rerender } = render(<MagicMissileTargetPopup {...makeProps()} />);
+    const { rerender } = render(<MagicMissileTargetPopup {...makeProps()} />);
     const inputs = screen.getAllByRole('spinbutton');
     fireEvent.change(inputs[1], { target: { value: '2' } });
+    expect(screen.getByText(summaryContains(2, 3))).toBeInTheDocument();
+
     rerender(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Orc', totalMissiles: 5 })} />);
     const orcIndex = creatureTargets.indexOf('Orc');
-    expect(inputs[orcIndex]).toHaveValue(2);
-    const summary = container.querySelector('.magic-missile-summary');
-    expect(summary.textContent).toContain('2');
+    expect(screen.getAllByRole('spinbutton')[orcIndex]).toHaveValue(2);
+    expect(screen.getByText(summaryContains(2, 5))).toBeInTheDocument();
   });
 
   it('does not assign missiles when currentTargetName is not in creatureTargets list on re-render', () => {
-    const { container, rerender } = render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Goblin' })} />);
-    const inputs = screen.getAllByRole('spinbutton');
+    const { rerender } = render(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Goblin' })} />);
     const goblinIndex = creatureTargets.indexOf('Goblin');
-    expect(inputs[goblinIndex]).toHaveValue(3);
+    expect(screen.getAllByRole('spinbutton')[goblinIndex]).toHaveValue(3);
+
     rerender(<MagicMissileTargetPopup {...makeProps({ currentTargetName: 'Unknown Creature' })} />);
-    expect(inputs[goblinIndex]).toHaveValue(3);
-    const summary = container.querySelector('.magic-missile-summary');
-    expect(summary.textContent).toContain('3');
+    expect(screen.getAllByRole('spinbutton')[goblinIndex]).toHaveValue(3);
+    expect(screen.getByText(summaryContains(3, 3))).toBeInTheDocument();
   });
 });

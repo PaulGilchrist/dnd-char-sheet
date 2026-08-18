@@ -313,6 +313,7 @@ function StepsOfTheFeyTauntModal({ mode, title, targets, action, playerStats, ca
                             <div
                                 key={option.key}
                                 className={hasUses ? "clickable" : ""}
+                                data-testid={`step-option-${option.key}`}
                                 onClick={hasUses ? () => handleChoice(option.key) : undefined}
                                 style={{
                                     padding: '12px',

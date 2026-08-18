@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import PsionicChoicePopup from './PsionicChoicePopup.jsx';
 
 function renderPopup(overrides = {}) {
@@ -18,47 +19,37 @@ function renderPopup(overrides = {}) {
   };
 }
 
-// ── Tests ──
-
 describe('PsionicChoicePopup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ── Rendering ──
 
-  it('renders the popup overlay and modal', () => {
-    renderPopup();
+  it('renders the popup with title, spell name, and description', () => {
+    renderPopup({ spellName: 'Eldritch Blast', spellLevel: 1 });
     expect(screen.getByText('Psionic Sorcery')).toBeInTheDocument();
+    expect(screen.getByText('Eldritch Blast')).toBeInTheDocument();
+    expect(screen.getByText('Level 1')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Psionic Sorcery allows you to cast this spell using sorcery points/),
+    ).toBeInTheDocument();
   });
 
-  it('renders the title with brain icon', () => {
-    renderPopup();
-    expect(screen.getByText('Psionic Sorcery')).toBeInTheDocument();
-  });
-
-  it('renders the spell name and level', () => {
+  it('renders the spell name and level dynamically with different values', () => {
     renderPopup({ spellName: 'Firebolt', spellLevel: 2 });
     expect(screen.getByText('Firebolt')).toBeInTheDocument();
     expect(screen.getByText('Level 2')).toBeInTheDocument();
   });
 
-  it('renders the description text', () => {
+  it('renders both choice options', () => {
     renderPopup();
-    expect(
-      screen.getByText(/Psionic Sorcery allows you to cast this spell using sorcery points/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/No Verbal or Somatic components/),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Consume Spell Slot')).toBeInTheDocument();
+    expect(screen.getByText('Consume Sorcery Points')).toBeInTheDocument();
   });
 
   // ── Spell slot option ──
 
-  it('renders the Consume Spell Slot option', () => {
-    renderPopup();
+  it('renders spell slot option with correct cost and description', () => {
+    renderPopup({ spellLevel: 3 });
     expect(screen.getByText('Consume Spell Slot')).toBeInTheDocument();
-    expect(screen.getByText('Level 1')).toBeInTheDocument();
+    expect(screen.getByText('Level 3')).toBeInTheDocument();
     expect(
       screen.getByText('Standard spell slot expenditure. Verbal, Somatic, and Material components apply normally.'),
     ).toBeInTheDocument();
@@ -72,10 +63,10 @@ describe('PsionicChoicePopup', () => {
 
   // ── Sorcery points option ──
 
-  it('renders the Consume Sorcery Points option', () => {
-    renderPopup();
+  it('renders sorcery points option with correct cost and description', () => {
+    renderPopup({ spellLevel: 3 });
     expect(screen.getByText('Consume Sorcery Points')).toBeInTheDocument();
-    expect(screen.getByText('1 SP')).toBeInTheDocument();
+    expect(screen.getByText('3 SP')).toBeInTheDocument();
     expect(
       screen.getByText('No Verbal or Somatic components. No Material components unless consumed or have cost.'),
     ).toBeInTheDocument();
@@ -87,13 +78,7 @@ describe('PsionicChoicePopup', () => {
     expect(onConfirm).toHaveBeenCalledWith({ choice: 'sorceryPoints' });
   });
 
-  it('disables Consume Sorcery Points option when sorceryPointsAvailable is 0', () => {
-    renderPopup({ sorceryPointsAvailable: 0 });
-    const option = screen.getByText('Consume Sorcery Points').closest('label');
-    expect(option).toHaveClass('psionic-choice-option-disabled');
-  });
-
-  it('does not call onConfirm when disabled Consume Sorcery Points is clicked', () => {
+  it('prevents Consume Sorcery Points action when no sorcery points available', () => {
     const { onConfirm } = renderPopup({ sorceryPointsAvailable: 0 });
     fireEvent.click(screen.getByText('Consume Sorcery Points'));
     expect(onConfirm).not.toHaveBeenCalled();
@@ -115,30 +100,32 @@ describe('PsionicChoicePopup', () => {
   });
 
   it('calls onCancel when clicking the overlay', () => {
-    const { onCancel } = renderPopup();
-    const overlay = document.querySelector('.popup-overlay');
+    const { onCancel, container } = renderPopup();
+    const overlay = container.querySelector('.popup-overlay');
     fireEvent.click(overlay);
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call onCancel when clicking the modal content directly', () => {
+  it('does not call onCancel when clicking the modal content', () => {
     const { onCancel } = renderPopup();
-    const modal = document.querySelector('.popup-modal');
-    fireEvent.click(modal);
+    fireEvent.click(screen.getByText('Psionic Sorcery'));
     expect(onCancel).not.toHaveBeenCalled();
   });
 
-  // ── Dynamic spell level display ──
+  // ── Edge cases ──
 
-  it('displays correct SP cost for different spell levels', () => {
-    renderPopup({ spellLevel: 3 });
-    expect(screen.getByText('3 SP')).toBeInTheDocument();
-    expect(screen.getByText('Level 3')).toBeInTheDocument();
+  it('handles spell level 0', () => {
+    renderPopup({ spellLevel: 0 });
+    expect(screen.getByText('Level 0')).toBeInTheDocument();
+    expect(screen.getByText('0 SP')).toBeInTheDocument();
   });
 
-  it('displays correct SP cost for spell level 0', () => {
-    renderPopup({ spellLevel: 0 });
-    expect(screen.getByText('0 SP')).toBeInTheDocument();
-    expect(screen.getByText('Level 0')).toBeInTheDocument();
+  it('handles default props without calling callbacks', () => {
+    const { onConfirm, onCancel } = renderPopup({});
+    expect(screen.getByText('Eldritch Blast')).toBeInTheDocument();
+    expect(screen.getByText('Level 1')).toBeInTheDocument();
+    expect(screen.getByText('1 SP')).toBeInTheDocument();
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
   });
 });

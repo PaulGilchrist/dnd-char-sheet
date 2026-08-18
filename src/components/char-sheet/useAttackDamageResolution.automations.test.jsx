@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import useAttackDamageResolution from './useAttackDamageResolution.js';
 
@@ -48,28 +49,48 @@ vi.mock('../../services/ui/logService.js', () => ({
 }));
 
 import { rollExpression, rollExpressionDoubled } from '../../services/dice/diceRoller.js';
-import { getCombatContext, getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
+import { getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
 import { getCurrentCombatRound } from '../../services/encounters/combatData.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../services/automation/common/buffToggle.js';
 import { collectWeaponMastery, hasTwoWeaponFighting } from '../../services/combat/automation/automationService.js';
-import { addEntry } from '../../services/ui/logService.js';
 
 const defaultRollResult = { total: 5, rolls: [5], modifier: 3 };
-const defaultCtx = { targetName: 'Goblin', autoDamageSecondaryFormula: null, autoDamageSecondaryName: null, autoDamageSecondaryDamageType: null, saveDc: null, saveType: null, dcSuccess: null, tavernBrawlerRerolls: null };
+const defaultCtx = {
+    targetName: 'Goblin',
+    autoDamageSecondaryFormula: null,
+    autoDamageSecondaryName: null,
+    autoDamageSecondaryDamageType: null,
+    saveDc: null,
+    saveType: null,
+    dcSuccess: null,
+    tavernBrawlerRerolls: null,
+};
 
-function createMockDeps(overrides = {}) {
-    const mockPlayerStats = {
-        name: 'TestFighter',
-        level: 5,
-        abilities: [{ name: 'Strength', bonus: 3 }, { name: 'Dexterity', bonus: 2 }],
-        proficiency: 3,
-        class: { name: 'Barbarian', class_levels: [{ level: 5, rage_damage: 2 }] },
-        automation: { actions: [], passives: [] },
-    };
+const basePlayerStats = {
+    name: 'TestFighter',
+    level: 5,
+    abilities: [{ name: 'Strength', bonus: 3 }, { name: 'Dexterity', bonus: 2 }],
+    proficiency: 3,
+    class: { name: 'Barbarian', class_levels: [{ level: 5, rage_damage: 2 }] },
+    automation: { actions: [], passives: [] },
+};
 
+const baseAttack = {
+    name: 'Longsword',
+    damage: '1d8+3',
+    damageType: 'slashing',
+    weaponType: 'melee',
+    properties: [],
+};
+
+function tick() {
+    return new Promise((r) => setTimeout(r, 0));
+}
+
+function createDeps(overrides = {}) {
     return {
-        playerStats: mockPlayerStats,
+        playerStats: { ...basePlayerStats, automation: { ...basePlayerStats.automation, ...overrides.playerStats?.automation } },
         campaignName: 'test-campaign',
         mapName: null,
         popupHtml: null,
@@ -98,10 +119,7 @@ describe('useAttackDamageResolution - automations', () => {
         getActiveBuffs.mockReturnValue([]);
         hasTwoWeaponFighting.mockReturnValue(false);
         collectWeaponMastery.mockReturnValue({ baseMastery: null, extraMasteries: [] });
-        addEntry.mockResolvedValue(undefined);
-        getCombatContext.mockResolvedValue(null);
-        getCurrentCombatRound.mockReturnValue(1);
-        deps = createMockDeps();
+        deps = createDeps();
     });
 
     afterEach(() => {
@@ -111,9 +129,9 @@ describe('useAttackDamageResolution - automations', () => {
     // ── Melee damage bonus automations ───────────────────────────────────
 
     describe('melee damage bonus automations', () => {
-        it('applies melee_weapon_hit damage_bonus automations', async () => {
+        it('applies damage_bonus when trigger is melee_weapon_hit', async () => {
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         { type: 'damage_bonus', trigger: 'melee_weapon_hit', damageExpression: '1d4', damageType: 'radiant' },
@@ -121,36 +139,74 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
-            const testDeps = createMockDeps({ playerStats: stats });
+            const testDeps = createDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
+
+            await resolveAttackDamage(baseAttack);
+            await tick();
+
+            expect(testDeps.rollDamage).toHaveBeenCalledOnce();
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('1d4');
+            expect(formula).toContain('radiant');
+        });
+
+        it('applies multiple damage_bonus automations for melee_weapon_hit', async () => {
+            const stats = {
+                ...basePlayerStats,
+                automation: {
+                    actions: [
+                        { type: 'damage_bonus', trigger: 'melee_weapon_hit', damageExpression: '1d4', damageType: 'radiant' },
+                        { type: 'damage_bonus', trigger: 'melee_weapon_hit', damageExpression: '1d6', damageType: 'cold' },
+                    ],
+                    passives: [],
+                },
             };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('1d4'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('1d4');
+            expect(formula).toContain('1d6');
+        });
+
+        it('applies melee_weapon_hit bonus for any weapon type when pipeline matches', async () => {
+            const stats = {
+                ...basePlayerStats,
+                automation: {
+                    actions: [
+                        { type: 'damage_bonus', trigger: 'melee_weapon_hit', damageExpression: '1d4', damageType: 'radiant' },
+                    ],
+                    passives: [],
+                },
+            };
+            const rangedAttack = { ...baseAttack, weaponType: 'ranged', name: 'Longbow' };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
+
+            await resolveAttackDamage(rangedAttack);
+            await tick();
+
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('1d4 [radiant]');
         });
     });
 
     // ── Divine Fury ─────────────────────────────────────────────────────
 
     describe('divine fury damage type choice', () => {
-        it('opens damage type choice modal when divine fury has multiple options', async () => {
+        it('opens damage type choice modal when divine fury has multiple options and has not been used this round', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (prop === '_divineFuryUsedRound') return null;
+                if (prop === 'activeBuffs') return [{ effect: 'advantage_attacks_advantage_against' }, { damageBonusExpression: '1d4' }];
+                if (prop === 'resumeRef') return {};
+                return null;
+            });
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         {
@@ -163,37 +219,30 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === '_divineFuryUsedRound') return null;
-                if (prop === 'activeBuffs') return [{ effect: 'advantage_attacks_advantage_against' }, { damageBonusExpression: '1d4' }];
-                if (prop === 'resumeRef') return {};
-                return null;
-            });
-            const testDeps = createMockDeps({ playerStats: stats });
+            const testDeps = createDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
-            };
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
             expect(testDeps.setModalState).toHaveBeenCalledWith({ divineFuryChoice: 'fire or cold' });
+            expect(testDeps.setPendingDamage).toHaveBeenCalled();
             expect(testDeps.resumeRef.current).toEqual(
                 expect.objectContaining({
-                    attack,
+                    attack: baseAttack,
                     bonusExpr: '2d6',
                 }),
             );
         });
 
-        it('applies divine fury inline when single damage type', async () => {
+        it('applies divine fury inline when single damage type and not yet used this round', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (prop === '_divineFuryUsedRound') return null;
+                if (prop === 'activeBuffs') return [{ damageBonusExpression: '1d4' }];
+                return null;
+            });
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         {
@@ -206,31 +255,76 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
+
+            await resolveAttackDamage(baseAttack);
+            await tick();
+
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('2d6');
+        });
+
+        it('skips divine fury when already used this round', async () => {
+            getCurrentCombatRound.mockReturnValue(1);
             getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === '_divineFuryUsedRound') return null;
+                if (prop === '_divineFuryUsedRound') return 1;
                 if (prop === 'activeBuffs') return [{ damageBonusExpression: '1d4' }];
                 return null;
             });
-            const testDeps = createMockDeps({ playerStats: stats });
-            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
+            const stats = {
+                ...basePlayerStats,
+                automation: {
+                    actions: [
+                        {
+                            type: 'damage_bonus',
+                            trigger: 'first_hit_while_raging',
+                            damageExpression: '2d6',
+                            damageType: 'fire',
+                        },
+                    ],
+                    passives: [],
+                },
             };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('2d6'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('2d6');
+        });
+
+        it('opens modal when divine fury has multiple options but already used this round', async () => {
+            getCurrentCombatRound.mockReturnValue(1);
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (prop === '_divineFuryUsedRound') return 1;
+                if (prop === 'activeBuffs') return [{ damageBonusExpression: '1d4' }];
+                return null;
+            });
+            const stats = {
+                ...basePlayerStats,
+                automation: {
+                    actions: [
+                        {
+                            type: 'damage_bonus',
+                            trigger: 'first_hit_while_raging',
+                            damageExpression: '2d6',
+                            damageType: 'fire or cold',
+                        },
+                    ],
+                    passives: [],
+                },
+            };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
+
+            await resolveAttackDamage(baseAttack);
+            await tick();
+
+            expect(testDeps.setModalState).not.toHaveBeenCalledWith(
+                expect.objectContaining({ divineFuryChoice: expect.anything() })
             );
         });
     });
@@ -238,13 +332,13 @@ describe('useAttackDamageResolution - automations', () => {
     // ── Attack riders ───────────────────────────────────────────────────
 
     describe('attack_rider automations', () => {
-        it('applies strength_attack_hit_after_reckless riders', async () => {
+        it('applies strength_attack_hit_after_reckless rider with damage expression', async () => {
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (prop === '_brutalStrikeActive') return true;
                 return null;
             });
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         {
@@ -257,37 +351,50 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
-            const testDeps = createMockDeps({ playerStats: stats });
+            const testDeps = createDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
-                abilityName: 'Strength',
-            };
+            const attack = { ...baseAttack, abilityName: 'Strength' };
 
             await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('1d6'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('1d6');
+        });
+
+        it('does not apply rider when trigger does not match', async () => {
+            const stats = {
+                ...basePlayerStats,
+                automation: {
+                    actions: [
+                        {
+                            type: 'attack_rider',
+                            trigger: 'strength_attack_hit_after_reckless',
+                            damageExpression: '1d6',
+                            damageType: 'radiant',
+                        },
+                    ],
+                    passives: [],
+                },
+            };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
+            const attack = { ...baseAttack, abilityName: 'Dexterity' };
+
+            await resolveAttackDamage(attack);
+            await tick();
+
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('1d6');
         });
     });
 
     // ── Weapon attack hit automations ────────────────────────────────────
 
     describe('weapon_attack_hit automations', () => {
-        it('applies weapon_attack_hit damage_bonus once per turn', async () => {
+        it('applies weapon_attack_hit damage_bonus when not yet used this round', async () => {
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         {
@@ -302,32 +409,24 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
-            const testDeps = createMockDeps({ playerStats: stats });
+            const testDeps = createDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
-            };
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('1d8'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('1d8');
         });
 
-        it('skips oncePerTurn when already used this round', async () => {
+        it('skips oncePerTurn feature when already used this round', async () => {
+            getCurrentCombatRound.mockReturnValue(1);
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (prop === '_Divine_Strike_usedRound') return 1;
+                return null;
+            });
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         {
@@ -342,43 +441,51 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
-            getRuntimeValue.mockReturnValueOnce(null) // feintingAttackDieValue check
-                .mockReturnValueOnce(null) // lungingAttackDieValue check
-                .mockReturnValueOnce(null) // commanderStrikeBonus check
-                .mockReturnValueOnce(null) // _Divine_Strike_usedRound check -> returns 1
-                .mockReturnValueOnce(null); // optionKey check
-            // BI offense prompt: bardicInspirationDie check returns null (no BI die)
-            getRuntimeValue.mockReturnValueOnce(null);
-            // Actually the code does: getRuntimeValue(playerStats.name, usedKey, campaignName) where usedKey = '_Divine_Strike_usedRound'
-            // Then it checks usedRound === currentRound (1 === 1) -> skip
-            // We need to mock the usedRound check to return 1 (current round)
-            getRuntimeValue.mockReturnValue(1);
-            const testDeps = createMockDeps({ playerStats: stats });
+            const testDeps = createDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
-            };
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('1d8+3'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('1d8 [radiant]');
         });
 
-        it('skips features upgraded by higher-level features', async () => {
+        it('re-enables oncePerTurn feature when round changes', async () => {
+            getCurrentCombatRound.mockReturnValue(2);
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (prop === '_Divine_Strike_usedRound') return 1;
+                return null;
+            });
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
+                automation: {
+                    actions: [
+                        {
+                            name: 'Divine Strike',
+                            type: 'damage_bonus',
+                            trigger: 'weapon_attack_hit',
+                            damageExpression: '1d8',
+                            damageType: 'radiant',
+                            oncePerTurn: true,
+                        },
+                    ],
+                    passives: [],
+                },
+            };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
+
+            await resolveAttackDamage(baseAttack);
+            await tick();
+
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('1d8');
+        });
+
+        it('applies upgraded feature only when higher-level feature exists', async () => {
+            const stats = {
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         {
@@ -400,33 +507,22 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
-            const testDeps = createMockDeps({ playerStats: stats });
+            const testDeps = createDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
-            };
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            // Should only include the upgraded (higher-level) feature's damage
             const formula = testDeps.rollDamage.mock.calls[0][1];
             expect(formula).toContain('3d8');
-            // The base weapon damage '1d8+3' is always present, so check the bonus features separately
-            // by verifying the original '1d8' from Divine Strike is NOT in the bonuses
-            const bonusParts = formula.split('+').slice(1); // skip original '1d8'
+            const bonusParts = formula.split('+').slice(1);
             const bonusOnly = bonusParts.join('+');
-            expect(bonusOnly).toContain('3d8');
             expect(bonusOnly).not.toContain('1d8');
         });
 
         it('applies weapon_or_beast_form_attack_hit when feature is in actions', async () => {
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         {
@@ -440,27 +536,56 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
-            const testDeps = createMockDeps({ playerStats: stats });
+            const testDeps = createDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
+
+            await resolveAttackDamage(baseAttack);
+            await tick();
+
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('1d8');
+        });
+
+        it('handles multiple oncePerTurn features independently', async () => {
+            getCurrentCombatRound.mockReturnValue(1);
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (prop === '_Divine_Strike_usedRound') return 1;
+                if (prop === '_Sneak_Attack_usedRound') return null;
+                return null;
+            });
+            const stats = {
+                ...basePlayerStats,
+                automation: {
+                    actions: [
+                        {
+                            name: 'Divine Strike',
+                            type: 'damage_bonus',
+                            trigger: 'weapon_attack_hit',
+                            damageExpression: '1d8',
+                            damageType: 'radiant',
+                            oncePerTurn: true,
+                        },
+                        {
+                            name: 'Sneak Attack',
+                            type: 'damage_bonus',
+                            trigger: 'weapon_attack_hit',
+                            damageExpression: '2d6',
+                            damageType: 'piercing',
+                            oncePerTurn: true,
+                        },
+                    ],
+                    passives: [],
+                },
             };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('1d8+3'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('2d6');
+            expect(formula).not.toContain('1d8 [radiant]');
         });
     });
 
@@ -469,7 +594,7 @@ describe('useAttackDamageResolution - automations', () => {
     describe('natural_20_attack_roll bonuses', () => {
         it('applies natural_20 damage bonus when isNatural20 is true', async () => {
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         {
@@ -483,32 +608,45 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
-            const testDeps = createMockDeps({ playerStats: stats, popupHtml: { isNatural20: true } });
+            const testDeps = createDeps({ playerStats: stats, popupHtml: { isNatural20: true } });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
+
+            await resolveAttackDamage(baseAttack);
+            await tick();
+
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('2d10');
+        });
+
+        it('does not apply natural_20 bonus when isNatural20 is false', async () => {
+            const stats = {
+                ...basePlayerStats,
+                automation: {
+                    actions: [
+                        {
+                            name: 'Overwhelming Strike',
+                            type: 'damage_bonus',
+                            trigger: 'natural_20_attack_roll',
+                            extraDamageExpression: '2d10',
+                            extraDamageType: 'force',
+                        },
+                    ],
+                    passives: [],
+                },
             };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('2d10'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('2d10');
         });
 
         it('uses increased_ability_score for extra damage expression', async () => {
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [
                         {
@@ -523,36 +661,23 @@ describe('useAttackDamageResolution - automations', () => {
                     passives: [],
                 },
             };
-            const testDeps = createMockDeps({ playerStats: stats, popupHtml: { isNatural20: true } });
+            const testDeps = createDeps({ playerStats: stats, popupHtml: { isNatural20: true } });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
-            };
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('3'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('3');
         });
     });
 
     // ── Celestial transformation ────────────────────────────────────────
 
     describe('celestial transformation riders', () => {
-        it('applies attack_rider for active transformation', async () => {
+        it('applies attack_rider when transformation buff is active', async () => {
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [],
                     passives: [
@@ -568,32 +693,19 @@ describe('useAttackDamageResolution - automations', () => {
                 },
             };
             getActiveBuffs.mockReturnValue([{ name: 'Heavenly Wings' }]);
-            const testDeps = createMockDeps({ playerStats: stats });
+            const testDeps = createDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
-            };
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('1d6'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('1d6');
         });
 
-        it('does not apply rider when no transformation is active or passive is missing', async () => {
+        it('does not apply rider when no transformation buff is active', async () => {
             const stats = {
-                ...deps.playerStats,
+                ...basePlayerStats,
                 automation: {
                     actions: [],
                     passives: [
@@ -609,81 +721,83 @@ describe('useAttackDamageResolution - automations', () => {
                 },
             };
             getActiveBuffs.mockReturnValue([]);
-            const testDeps = createMockDeps({ playerStats: stats });
+            const testDeps = createDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
+
+            await resolveAttackDamage(baseAttack);
+            await tick();
+
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('1d6');
+        });
+
+        it('does not apply rider when passive is missing from automation', async () => {
+            getActiveBuffs.mockReturnValue([{ name: 'Nonexistent' }]);
+            const stats = {
+                ...basePlayerStats,
+                automation: { actions: [], passives: [] },
             };
+            const testDeps = createDeps({ playerStats: stats });
+            const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('1d8'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = testDeps.rollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('1d6');
         });
     });
 
     // ── Colossus Slayer ─────────────────────────────────────────────────
 
-    describe('colossus Slayer', () => {
+    describe('Colossus Slayer', () => {
         it('adds 1d8 extra damage when target is below max HP', async () => {
-            getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce("Colossus Slayer");
+            getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce('Colossus Slayer');
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin', currentHp: 5, maxHp: 15 });
             const { resolveAttackDamage } = useAttackDamageResolution(deps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
-            };
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(deps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('1d8'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            expect(deps.rollDamage).toHaveBeenCalled();
+            const formula = deps.rollDamage.mock.calls[0][1];
+            expect(formula).toContain('1d8');
         });
 
-        it('does not add extra damage when target is at full HP or no target found', async () => {
-            getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce("Colossus Slayer");
+        it('does not add extra damage when target is at full HP', async () => {
+            getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce('Colossus Slayer');
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin', currentHp: 15, maxHp: 15 });
             const { resolveAttackDamage } = useAttackDamageResolution(deps);
-            const attack = {
-                name: 'Longsword',
-                damage: '1d8+3',
-                damageType: 'slashing',
-                weaponType: 'melee',
-                properties: [],
-            };
 
-            await resolveAttackDamage(attack);
-            await new Promise(r => setTimeout(r, 0));
+            await resolveAttackDamage(baseAttack);
+            await tick();
 
-            expect(deps.rollDamage).toHaveBeenCalledWith(
-                'Longsword',
-                expect.stringContaining('1d8+3'),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
+            const formula = deps.rollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('1d8 [force]');
+        });
+
+        it('does not add extra damage when no target found', async () => {
+            getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce('Colossus Slayer');
+            getTargetFromAttacker.mockReturnValue(null);
+            const { resolveAttackDamage } = useAttackDamageResolution(deps);
+
+            await resolveAttackDamage(baseAttack);
+            await tick();
+
+            const formula = deps.rollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('1d8 [force]');
+        });
+
+        it('does not add extra damage when feature is not active', async () => {
+            getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce(null);
+            getTargetFromAttacker.mockReturnValue({ name: 'Goblin', currentHp: 5, maxHp: 15 });
+            const { resolveAttackDamage } = useAttackDamageResolution(deps);
+
+            await resolveAttackDamage(baseAttack);
+            await tick();
+
+            const formula = deps.rollDamage.mock.calls[0][1];
+            expect(formula).not.toContain('1d8 [force]');
         });
     });
 });

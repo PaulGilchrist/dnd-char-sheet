@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
 
@@ -69,24 +70,57 @@ describe('StepsOfTheFeyTauntModal - No Uses', () => {
         localStorage.clear();
     });
 
-    describe('no uses remaining', () => {
-        it('renders the no uses remaining message when newCount is 0', () => {
+    describe('no uses remaining (newCount is 0)', () => {
+        it('renders the no uses remaining message', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
-            expect(screen.getByText(/No uses remaining/)).toBeInTheDocument();
+            expect(screen.getByText(/No uses remaining — finish a Long Rest to regain/)).toBeInTheDocument();
         });
 
-        it('does not make options clickable when newCount is 0', () => {
+        it('does not transition to any step confirmation when an option is clicked', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
-            const options = document.querySelectorAll('.clickable');
-            options.forEach(option => {
-                expect(option.style.cursor).toBe('default');
-                expect(option.style.opacity).toBe('0.4');
-            });
+            const refreshingOption = screen.getByTestId('step-option-refreshing');
+            fireEvent.click(refreshingOption);
+            expect(screen.getByText(/Choose how you use/)).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Refresh/ })).not.toBeInTheDocument();
         });
 
-        it('still shows the Misty Step only button when no uses', () => {
+        it('does not transition to any step confirmation when any option is clicked', () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
+            const allOptionKeys = ['refreshing', 'taunting', 'disappearing', 'dreadful'];
+            for (const key of allOptionKeys) {
+                const option = screen.getByTestId(`step-option-${key}`);
+                fireEvent.click(option);
+                expect(screen.getByText(/Choose how you use/)).toBeInTheDocument();
+            }
+        });
+
+        it('still shows the Skip button when no uses', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
             expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+        });
+
+        it('shows Misty Step only skip button when mode is mistyEscape and no uses', () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0, mode: 'mistyEscape' })} />);
+            expect(screen.getByRole('button', { name: 'Misty Step only (free cast)' })).toBeInTheDocument();
+        });
+
+        it('shows Misty Step only skip button when title is Bewitching Magic and no uses', () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0, title: 'Bewitching Magic' })} />);
+            expect(screen.getByRole('button', { name: 'Misty Step only (free cast)' })).toBeInTheDocument();
+        });
+
+        it('transitions to result view when Skip is clicked with no uses', () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
+            const skipButton = screen.getByRole('button', { name: 'Skip' });
+            fireEvent.click(skipButton);
+            expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+        });
+
+        it('transitions to result view when overlay is clicked with no uses', () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
+            const overlay = document.querySelector('.sp-overlay');
+            fireEvent.click(overlay);
+            expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
         });
     });
 });

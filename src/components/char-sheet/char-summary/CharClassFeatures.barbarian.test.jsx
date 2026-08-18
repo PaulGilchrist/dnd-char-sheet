@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import BarbarianFeatures from './CharClassFeatures.jsx';
@@ -9,16 +9,16 @@ vi.mock('../../../services/character/classFeatures.js', () => ({
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  useRuntimeValue: vi.fn(() => undefined),
+  useRuntimeValue: vi.fn(),
   getRuntimeValue: vi.fn(() => null),
   setRuntimeValue: vi.fn(),
 }));
 
 vi.mock('./TrackedResourceInput.jsx', () => ({
-  default: function MockTrackedResourceInput({ label, getMax, resourceKey }) {
+  default: function MockTrackedResourceInput({ label, getMax }) {
     const max = getMax ? getMax() : 0;
     return (
-      <div data-testid={`tracked-resource-${resourceKey}`}>
+      <div>
         <b>{label}:</b> <span>{max}/{max}</span>
       </div>
     );
@@ -27,7 +27,7 @@ vi.mock('./TrackedResourceInput.jsx', () => ({
 
 vi.mock('../modals/WeaponKindMasteryModal.jsx', () => ({
   default: function MockWeaponKindMasteryModal() {
-    return <div data-testid="weapon-kind-mastery-modal">WeaponKindMasteryModal</div>;
+    return <div>WeaponKindMasteryModal</div>;
   },
 }));
 
@@ -75,19 +75,19 @@ describe('BarbarianFeatures', () => {
   });
 
   describe('5e ruleset', () => {
-    it('renders extra attacks as 0 for level <= 4', () => {
+    it('renders extra attacks as 0 for level 3', () => {
       const stats = buildPlayerStats({ level: 3 });
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Extra Attacks: 0');
     });
 
-    it('renders extra attacks as 1 for level 5+', () => {
+    it('renders extra attacks as 1 for level 5', () => {
       const stats = buildPlayerStats({ level: 5 });
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Extra Attacks: 1');
     });
 
-    it('reads rage count from class_specific.rage_count at level 2', () => {
+    it('renders rage points tracked resource at level 2', () => {
       const stats = buildPlayerStats({
         level: 2,
         class: {
@@ -99,7 +99,7 @@ describe('BarbarianFeatures', () => {
         },
       });
       render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-ragePoints')).toBeInTheDocument();
+      expect(screen.getByText('Rage Points:')).toBeInTheDocument();
     });
 
     it('renders rage damage bonus from class_specific', () => {
@@ -115,6 +115,21 @@ describe('BarbarianFeatures', () => {
       });
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Rage Damage Bonus: 2');
+    });
+
+    it('renders rage damage as 0 when class_specific lacks rage_damage_bonus', () => {
+      const stats = buildPlayerStats({
+        level: 2,
+        class: {
+          name: 'Barbarian',
+          major: {},
+          subclass: {},
+          class_levels: [null, { level: 2, class_specific: { rage_count: 2 } }],
+          fightingStyles: [],
+        },
+      });
+      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
+      expect(container.textContent).toContain('Rage Damage Bonus: 0');
     });
 
     it('renders weapon mastery as N/A for 5e regardless of class_level data', () => {
@@ -179,7 +194,7 @@ describe('BarbarianFeatures', () => {
         },
       });
       render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-ragePoints')).toBeInTheDocument();
+      expect(screen.getByText('Rage Points:')).toBeInTheDocument();
     });
 
     it('reads rage damage from classLevel.rage_damage', () => {
@@ -232,7 +247,7 @@ describe('BarbarianFeatures', () => {
   });
 
   describe('rage active state', () => {
-    it('applies stat--buffed class to rage damage when rage is active', () => {
+    it('highlights rage damage with buffed styling when rage is active', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [{ name: 'Rage' }];
         return undefined;
@@ -253,7 +268,7 @@ describe('BarbarianFeatures', () => {
       expect(buffedSpan.textContent).toBe('2');
     });
 
-    it('shows automation badge with rage details when rage is active', () => {
+    it('shows rage automation badge with details when rage is active', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [{ name: 'Rage' }];
         return undefined;
@@ -272,7 +287,7 @@ describe('BarbarianFeatures', () => {
       expect(container.textContent).toContain('BPS Resist, STR Adv, +2 dmg');
     });
 
-    it('does not show rage automation badge when rage is not active', () => {
+    it('omits rage automation badge when rage is not active', () => {
       const stats = buildPlayerStats({
         level: 2,
         class: {
@@ -286,10 +301,25 @@ describe('BarbarianFeatures', () => {
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).not.toContain('BPS Resist');
     });
+
+    it('does not apply buffed styling when rage is not active', () => {
+      const stats = buildPlayerStats({
+        level: 2,
+        class: {
+          name: 'Barbarian',
+          major: {},
+          subclass: {},
+          class_levels: [null, { level: 2, class_specific: { rage_damage_bonus: 2 } }],
+          fightingStyles: [],
+        },
+      });
+      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
+      expect(container.querySelector('.stat--buffed')).toBeFalsy();
+    });
   });
 
   describe('reckless attack', () => {
-    it('shows reckless attack badge when advantage_attacks_advantage_against buff is present', () => {
+    it('renders reckless attack badge when advantage_attacks_advantage_against buff is present', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [{ effect: 'advantage_attacks_advantage_against' }];
         return undefined;
@@ -298,14 +328,14 @@ describe('BarbarianFeatures', () => {
       expect(container.textContent).toContain('Reckless Attack');
     });
 
-    it('does not show reckless attack badge when no matching buff', () => {
+    it('omits reckless attack badge when no matching buff', () => {
       const { container } = render(<BarbarianFeatures playerStats={buildPlayerStats()} campaignName="test" />);
       expect(container.textContent).not.toContain('Reckless Attack');
     });
   });
 
   describe('aspect of the wilds', () => {
-    it('shows aspect badge when feature exists and choice is set', () => {
+    it('renders aspect badge when feature exists and choice is set', () => {
       const stats = buildPlayerStats({
         automation: { specialActions: [{ type: 'animal_aspect' }] },
       });
@@ -317,7 +347,7 @@ describe('BarbarianFeatures', () => {
       expect(container.textContent).toContain('Aspect of the Wilds: Flying Speed');
     });
 
-    it('does not show aspect badge when feature exists but no choice set', () => {
+    it('omits aspect badge when feature exists but no choice set', () => {
       const stats = buildPlayerStats({
         automation: { specialActions: [{ type: 'animal_aspect' }] },
       });
@@ -325,7 +355,7 @@ describe('BarbarianFeatures', () => {
       expect(container.textContent).not.toContain('Aspect of the Wilds');
     });
 
-    it('does not show aspect badge when no feature even if choice is set', () => {
+    it('omits aspect badge when feature is missing even if choice is set', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'aspectOfTheWildsOption') return 'Swimming Speed';
         return undefined;
@@ -336,7 +366,7 @@ describe('BarbarianFeatures', () => {
   });
 
   describe('rage of the wilds', () => {
-    it('shows wild heart option badge when buff exists with optionName', () => {
+    it('renders wild heart option badge when buff exists with optionName', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [{ name: 'Rage of the Wilds', optionName: 'Gale Force' }];
         return undefined;
@@ -345,7 +375,7 @@ describe('BarbarianFeatures', () => {
       expect(container.textContent).toContain('Rage of the Wilds: Gale Force');
     });
 
-    it('does not show wild heart badge when no matching buff', () => {
+    it('omits wild heart badge when no matching buff', () => {
       const { container } = render(<BarbarianFeatures playerStats={buildPlayerStats()} campaignName="test" />);
       expect(container.textContent).not.toContain('Rage of the Wilds');
     });
@@ -357,20 +387,23 @@ describe('BarbarianFeatures', () => {
         bonusActions: [{ name: 'Warrior of the Gods' }],
       });
       render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-warriorofthegodsPool')).toBeInTheDocument();
+      expect(screen.getByText('Warrior of the Gods:')).toBeInTheDocument();
     });
 
-    it('does not render tracked resource when feature is missing', () => {
+    it('omits tracked resource when feature is missing', () => {
       const stats = buildPlayerStats({ bonusActions: [] });
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.querySelector('[data-testid="tracked-resource-warriorofthegodsPool"]')).toBeFalsy();
+      expect(container.textContent).not.toContain('Warrior of the Gods');
     });
 
     it('sets maxDice based on level brackets', () => {
       const levels = [
         { level: 3, expected: '4/4' },
+        { level: 5, expected: '4/4' },
         { level: 6, expected: '5/5' },
+        { level: 11, expected: '5/5' },
         { level: 12, expected: '6/6' },
+        { level: 16, expected: '6/6' },
         { level: 17, expected: '7/7' },
         { level: 20, expected: '7/7' },
       ];

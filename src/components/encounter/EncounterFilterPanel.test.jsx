@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EncounterFilterPanel from './EncounterFilterPanel.jsx';
@@ -130,9 +130,8 @@ describe('EncounterFilterPanel', () => {
     });
 
     it('shows the difficulty label in the threshold display', () => {
-      const { container } = render(<EncounterFilterPanel {...props} filter={{ ...props.filter, difficultyIndex: 0 }} />);
-      const thresholdDisplay = container.querySelector('.threshold-display');
-      expect(thresholdDisplay.textContent).toContain('Easy');
+      render(<EncounterFilterPanel {...props} filter={{ ...props.filter, difficultyIndex: 0 }} />);
+      expect(screen.getByText(/Target:.*Easy/)).toBeInTheDocument();
     });
 
     it('shows Unknown when difficultyLabels is null or out of bounds', () => {
@@ -147,6 +146,11 @@ describe('EncounterFilterPanel', () => {
     it('formats large thresholds with commas', () => {
       render(<EncounterFilterPanel {...props} filter={{ ...props.filter, totalThreshold: 15000 }} />);
       expect(screen.getByText(/15,000 XP/)).toBeInTheDocument();
+    });
+
+    it('falls back to default color when difficultyColors is null', () => {
+      render(<EncounterFilterPanel {...props} filter={{ ...props.filter, difficultyColors: null }} />);
+      expect(screen.getByText(/600 XP/)).toBeInTheDocument();
     });
   });
 });

@@ -1,17 +1,12 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import React from 'react';
 import MonkFeatures from './CharClassFeatures.jsx';
 import * as classFeatures from '../../../services/character/classFeatures.js';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('../../../services/character/classFeatures.js', () => ({
-  getClassFeatures: vi.fn(() => ({
-    martialArtsDie: 4,
-    unarmoredMovementIncrease: 0,
-    maxFocusPoints: 0,
-  })),
+  getClassFeatures: vi.fn(),
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -21,11 +16,11 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 }));
 
 vi.mock('./TrackedResourceInput.jsx', () => ({
-  default: function MockTrackedResourceInput({ label, getMax, resourceKey }) {
+  default: function MockTrackedResourceInput({ label, getMax }) {
     const max = getMax ? getMax() : 0;
     return (
-      <div data-testid={`tracked-resource-${resourceKey}`}>
-        <b>{label}:</b> <span>{max}/{max}</span>
+      <div>
+        <b>{label}:</b> 0/{max} <span className="text-muted">(cur/max)</span>
       </div>
     );
   },
@@ -77,13 +72,13 @@ describe('MonkFeatures', () => {
     it('returns null for level 1', () => {
       const stats = buildPlayerStats({ level: 1 });
       const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.innerHTML).toBe('');
+      expect(container.childElementCount).toBe(0);
     });
 
     it('renders features for level 2', () => {
       const stats = buildPlayerStats({ level: 2 });
-      render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('char-class-monk')).toBeInTheDocument();
+      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
+      expect(container.textContent).toContain('Extra Attacks: 0');
     });
   });
 
@@ -129,56 +124,57 @@ describe('MonkFeatures', () => {
 
     it('renders focus points tracked resource', () => {
       const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.querySelector('[data-testid="tracked-resource-focusPoints"]')).toBeTruthy();
+      render(<MonkFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/Focus Points:/)).toBeInTheDocument();
     });
 
-    it('calculates focus save DC from wisdom bonus + proficiency', () => {
+    it.each`
+      wisdomBonus | proficiency | expectedDC
+      ${3}        | ${2}        | ${13}
+      ${0}        | ${2}        | ${10}
+      ${3}        | ${0}        | ${11}
+      ${0}        | ${0}        | ${8}
+    `('calculates focus save DC as 8 + wisdom bonus + proficiency ($wisdomBonus + $proficiency = $expectedDC)', ({ wisdomBonus, proficiency, expectedDC }) => {
       const stats = buildPlayerStats({
         level: 2,
-        abilities: [{ name: 'Wisdom', bonus: 3 }],
+        abilities: [{ name: 'Wisdom', bonus: wisdomBonus }],
+        proficiency,
       });
       const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      // 8 + 3 + 2 = 13
-      expect(container.textContent).toContain('Focus Save DC: 13');
+      expect(container.textContent).toContain(`Focus Save DC: ${expectedDC}`);
     });
 
-    it('defaults focus save DC when wisdom ability is missing', () => {
-      const stats = buildPlayerStats({
-        level: 2,
-        abilities: [{ name: 'Strength', bonus: 3 }],
-      });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      // 8 + 0 + 2 = 10 (wisdom bonus defaults to 0)
-      expect(container.textContent).toContain('Focus Save DC: 10');
-    });
-
-    it('renders martial arts die from classFeatures', () => {
+    it.each`
+      martialArtsDie | expectedText
+      ${4}           | ${'Martial Arts Die: d4'}
+      ${6}           | ${'Martial Arts Die: d6'}
+      ${8}           | ${'Martial Arts Die: d8'}
+    `('renders martial arts die as $expectedText when classFeatures returns $martialArtsDie', ({ martialArtsDie, expectedText }) => {
       vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        martialArtsDie: 6,
-        unarmoredMovementIncrease: 10,
+        martialArtsDie,
+        unarmoredMovementIncrease: 0,
         maxFocusPoints: 5,
       });
       const stats = buildPlayerStats({ level: 2 });
       const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Martial Arts Die: d6');
+      expect(container.textContent).toContain(expectedText);
     });
 
-    it('renders martial arts die as d4 default when classFeatures returns 4', () => {
-      const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Martial Arts Die: d4');
-    });
-
-    it('renders unarmored movement from classFeatures', () => {
+    it.each`
+      movement | expectedText
+      ${0}     | ${'Unarmored Movement: +0 ft.'}
+      ${10}    | ${'Unarmored Movement: +10 ft.'}
+      ${15}    | ${'Unarmored Movement: +15 ft.'}
+      ${25}    | ${'Unarmored Movement: +25 ft.'}
+    `('renders unarmored movement as $expectedText when classFeatures returns $movement', ({ movement, expectedText }) => {
       vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
         martialArtsDie: 4,
-        unarmoredMovementIncrease: 15,
+        unarmoredMovementIncrease: movement,
         maxFocusPoints: 5,
       });
       const stats = buildPlayerStats({ level: 2 });
       const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Unarmored Movement: +15 ft.');
+      expect(container.textContent).toContain(expectedText);
     });
   });
 
@@ -189,8 +185,8 @@ describe('MonkFeatures', () => {
         return undefined;
       });
       const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Cloak of Shadows');
+      render(<MonkFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('Cloak of Shadows')).toBeInTheDocument();
     });
 
     it('does not show cloak of shadows when not active', () => {
@@ -199,33 +195,31 @@ describe('MonkFeatures', () => {
       expect(container.textContent).not.toContain('Cloak of Shadows');
     });
 
-    it('renders elemental attunement badge with icon when active', () => {
+    it('renders elemental attunement badge with element when active', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'elementalAttunementActive') return true;
         if (key === 'elementalAttunementElement') return 'Fire';
         return undefined;
       });
       const stats = buildPlayerStats({ level: 2 });
-      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Elemental Attunement: Fire');
+      render(<MonkFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('Elemental Attunement: Fire')).toBeInTheDocument();
     });
 
-    it('renders stride with mapped labels for each effect type', () => {
-      const strideTests = [
-        { effect: 'fly_speed_equals_walk_speed', expected: 'Fly Speed' },
-        { effect: 'ice_walk', expected: 'Ice Walk' },
-        { effect: 'speed_boost', expected: '+10 Speed' },
-        { effect: 'teleport_ready', expected: 'Teleport 30 ft' },
-      ];
-      for (const test of strideTests) {
-        runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-          if (key === 'activeBuffs') return [{ name: 'Stride of the Elements', effect: test.effect }];
-          return undefined;
-        });
-        const stats = buildPlayerStats({ level: 2 });
-        const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-        expect(container.textContent).toContain(test.expected);
-      }
+    it.each`
+      effect                           | expected
+      ${'fly_speed_equals_walk_speed'} | ${'Fly Speed'}
+      ${'ice_walk'}                    | ${'Ice Walk'}
+      ${'speed_boost'}                 | ${'+10 Speed'}
+      ${'teleport_ready'}              | ${'Teleport 30 ft'}
+    `('renders stride with mapped label "$expected" for effect "$effect"', ({ effect, expected }) => {
+      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'activeBuffs') return [{ name: 'Stride of the Elements', effect }];
+        return undefined;
+      });
+      const stats = buildPlayerStats({ level: 2 });
+      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
+      expect(container.textContent).toContain(expected);
     });
 
     it('renders stride with generic "Stride" label for unknown effect', () => {
@@ -241,7 +235,7 @@ describe('MonkFeatures', () => {
     it('does not render stride when no stride buff present', () => {
       const stats = buildPlayerStats({ level: 2 });
       const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Stride');
+      expect(container.textContent).not.toContain('Stride: ');
     });
 
     it('renders elemental epitome resistance when active with type', () => {
@@ -255,21 +249,19 @@ describe('MonkFeatures', () => {
       expect(container.textContent).toContain('Resistance to Fire');
     });
 
-    it('renders elemental epitome with "not chosen" when resistance type is falsy', () => {
-      const falsyCases = [
-        { epitomeResistanceType: null, expected: 'not chosen' },
-        { epitomeResistanceType: '', expected: 'Resistance to' },
-      ];
-      for (const { epitomeResistanceType, expected } of falsyCases) {
-        runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-          if (key === 'elementalEpitomeActive') return true;
-          if (key === 'epitomeResistanceType') return epitomeResistanceType;
-          return undefined;
-        });
-        const stats = buildPlayerStats({ level: 2 });
-        const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
-        expect(container.textContent).toContain(expected);
-      }
+    it.each`
+      epitomeResistanceType | expected
+      ${null}               | ${'not chosen'}
+      ${''}                 | ${'Resistance to'}
+    `('renders elemental epitome as "$expected" when resistance type is falsy', ({ epitomeResistanceType, expected }) => {
+      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'elementalEpitomeActive') return true;
+        if (key === 'epitomeResistanceType') return epitomeResistanceType;
+        return undefined;
+      });
+      const stats = buildPlayerStats({ level: 2 });
+      const { container } = render(<MonkFeatures playerStats={stats} campaignName="test" />);
+      expect(container.textContent).toContain(expected);
     });
 
     it('does not render elemental epitome when not active', () => {

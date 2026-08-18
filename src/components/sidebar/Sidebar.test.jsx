@@ -1,6 +1,6 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import Sidebar from './Sidebar.jsx';
 
 const LOCALHOST_ONLY_BUTTONS = ['Encounters', 'Factions', 'NPCs', 'Quests', 'Settlements', 'Admin'];
@@ -36,15 +36,16 @@ function renderSidebar(overrides = {}) {
   return { props, ...render(<Sidebar {...props} />) };
 }
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
 describe('Sidebar', () => {
   describe('rendering', () => {
     it('displays the campaign name', () => {
       renderSidebar();
       expect(screen.getByText('Test Campaign')).toBeInTheDocument();
+    });
+
+    it('displays a different campaign name when provided', () => {
+      renderSidebar({ campaignName: 'My Adventure' });
+      expect(screen.getByText('My Adventure')).toBeInTheDocument();
     });
 
     it('renders Maps on localhost and Map on non-localhost', () => {
@@ -79,6 +80,7 @@ describe('Sidebar', () => {
     it('renders the characters header but no character buttons when the list is empty', () => {
       renderSidebar({ characters: [] });
       expect(screen.getByText('Characters')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Add Character' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Aragorn' })).not.toBeInTheDocument();
     });
   });
@@ -151,6 +153,25 @@ describe('Sidebar', () => {
       });
       expect(screen.getByRole('button', { name: 'Aragorn' })).not.toHaveClass('active');
       expect(screen.getByRole('button', { name: 'Legolas' })).not.toHaveClass('active');
+    });
+
+    it('does not highlight any character when charSheet is active but activeCharacter is null', () => {
+      renderSidebar({
+        characters: [{ name: 'Aragorn' }, { name: 'Legolas' }],
+        activeCharacter: null,
+        activeView: 'charSheet',
+      });
+      expect(screen.getByRole('button', { name: 'Aragorn' })).not.toHaveClass('active');
+      expect(screen.getByRole('button', { name: 'Legolas' })).not.toHaveClass('active');
+    });
+
+    it('does not highlight any character when charSheet is active and characters list is empty', () => {
+      renderSidebar({
+        characters: [],
+        activeCharacter: null,
+        activeView: 'charSheet',
+      });
+      expect(screen.queryByRole('button', { name: 'Aragorn' })).not.toBeInTheDocument();
     });
 
     it.each([

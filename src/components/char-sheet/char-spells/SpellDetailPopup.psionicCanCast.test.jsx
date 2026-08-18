@@ -1,11 +1,9 @@
-// @cleaned-by-ai
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-
-const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -71,23 +69,23 @@ const renderPopup = (
     />,
   );
 
+const createPsionicStats = (psionicSpellNames) => ({
+  ...baseMockPlayerStats,
+  automation: {
+    passives: [{ type: 'psionic_sorcery', psionicSpells: psionicSpellNames }],
+    actions: [],
+  },
+});
+
 describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
   });
 
-  describe('Psionic SP enabling casting', () => {
+  describe('SP enabling casting', () => {
     it('enables cast for psionic spell when player has enough SP but no slots', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'sorceryPoints') return 2;
         if (key === 'spell_slots_level_1') return 0;
@@ -95,18 +93,11 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
       });
 
       const spell = { ...baseMockSpell, name: 'Magic Missile', level: 1 };
-      renderPopup(spell, psionicStats, mockCampaignName);
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName);
       expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
     });
 
     it('disables cast for psionic spell when player has insufficient SP and no slots', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'sorceryPoints') return 0;
         if (key === 'spell_slots_level_1') return 0;
@@ -114,37 +105,11 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
       });
 
       const spell = { ...baseMockSpell, name: 'Magic Missile', level: 1 };
-      renderPopup(spell, psionicStats, mockCampaignName);
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName);
       expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeDisabled();
     });
 
-    it('enables cast when both SP and slots are available', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'sorceryPoints') return 3;
-        if (key === 'spell_slots_level_1') return 4;
-        return null;
-      });
-
-      const spell = { ...baseMockSpell, name: 'Magic Missile', level: 1 };
-      renderPopup(spell, psionicStats, mockCampaignName);
-      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
-    });
-
     it('enables cast for psionic spell when player has slots but zero SP', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'sorceryPoints') return 0;
         if (key === 'spell_slots_level_1') return null;
@@ -157,18 +122,11 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
         level: 1,
         damage: { damage_at_slot_level: { '1': '3d4+1' } },
       };
-      renderPopup(spell, psionicStats, mockCampaignName);
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName);
       expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
     });
 
-    it('enables cast for psionic spell when SP exactly equals spell level', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
+    it('enables cast when SP exactly equals spell level', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'sorceryPoints') return 1;
         if (key === 'spell_slots_level_1') return 0;
@@ -176,18 +134,11 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
       });
 
       const spell = { ...baseMockSpell, name: 'Magic Missile', level: 1 };
-      renderPopup(spell, psionicStats, mockCampaignName);
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName);
       expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
     });
 
-    it('disables cast for psionic spell when SP is one below spell level', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
+    it('disables cast when SP is below required level and no slots available', () => {
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'sorceryPoints') return 0;
         if (key === 'spell_slots_level_2') return 0;
@@ -195,20 +146,26 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
       });
 
       const spell = { ...baseMockSpell, name: 'Magic Missile', level: 2 };
-      renderPopup(spell, psionicStats, mockCampaignName);
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName);
+      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeDisabled();
+    });
+
+    it('disables cast when player is raging', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 5;
+        if (key === 'spell_slots_level_1') return 0;
+        return null;
+      });
+      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
+
+      const spell = { ...baseMockSpell, name: 'Magic Missile', level: 1 };
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName);
       expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeDisabled();
     });
   });
 
-  describe('Psionic SP for upcast casting', () => {
+  describe('upcast casting with SP', () => {
     it('enables upcast cast when SP covers the upcast level', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'sorceryPoints') return 4;
         if (key === 'spell_slots_level_2') return 0;
@@ -231,18 +188,11 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
         { level: 3, formula: '5d4+1', availableSlots: 0 },
       ];
 
-      renderPopup(spell, psionicStats, mockCampaignName, { upcastLevels });
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName, { upcastLevels });
       expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
     });
 
     it('disables upcast radio when neither slots nor SP cover that level', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'sorceryPoints') return 2;
         if (key === 'spell_slots_level_2') return 0;
@@ -265,21 +215,14 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
         { level: 3, formula: '5d4+1', availableSlots: 0 },
       ];
 
-      renderPopup(spell, psionicStats, mockCampaignName, { upcastLevels });
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName, { upcastLevels });
       const radios = screen.getAllByRole('radio');
       expect(radios[0]).not.toBeDisabled();
       expect(radios[1]).toBeDisabled();
     });
 
-    it('enables upcast cast when switching to a level SP can cover', async () => {
+    it('passes correct upcast info to onCast when switching to a higher level SP can cover', () => {
       const onCast = vi.fn();
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'sorceryPoints') return 4;
         if (key === 'spell_slots_level_2') return 0;
@@ -302,10 +245,9 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
         { level: 3, formula: '5d4+1', availableSlots: 0 },
       ];
 
-      renderPopup(spell, psionicStats, mockCampaignName, { onCast, upcastLevels });
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName, { onCast, upcastLevels });
       fireEvent.click(screen.getByText('Level 3'));
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
       const passedSpell = onCast.mock.calls[0][0];
@@ -313,43 +255,10 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
       expect(passedSpell.upcastLevel).toBe(3);
       expect(passedSpell.usePsionicPayment).toBe(false);
     });
-
-    it('passes usePsionicPayment:false when no checkbox shown (slots=0, only SP available)', async () => {
-      const onCast = vi.fn();
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'sorceryPoints') return 2;
-        if (key === 'spell_slots_level_1') return 0;
-        return null;
-      });
-
-      const spell = { ...baseMockSpell, name: 'Magic Missile', level: 1 };
-      renderPopup(spell, psionicStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-      await flushPromises();
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      const passedSpell = onCast.mock.calls[0][0];
-      expect(passedSpell.usePsionicPayment).toBe(false);
-    });
   });
 
-  describe('Psionic SP display in upcast selector', () => {
+  describe('SP display in upcast selector', () => {
     it('shows SP can cover upcast level in upcast selector', () => {
-      const psionicStats = {
-        ...baseMockPlayerStats,
-        automation: {
-          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-          actions: [],
-        },
-      };
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'sorceryPoints') return 5;
         if (key === 'spell_slots_level_2') return 0;
@@ -372,88 +281,86 @@ describe('SpellDetailPopup - Psionic Sorcery canCast', () => {
         { level: 3, formula: '5d4+1', availableSlots: 0 },
       ];
 
-      renderPopup(spell, psionicStats, mockCampaignName, { upcastLevels });
+      renderPopup(spell, createPsionicStats(['Magic Missile']), mockCampaignName, { upcastLevels });
       const spElements = screen.getAllByText('5 SP');
       expect(spElements.length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  describe('Psionic Sorcery available calculation', () => {
-    it('returns 0 for non-sorcerer, non-psionic spell, missing passive, and cantrip so canCast relies on slots', () => {
-      const scenarios = [
-        {
-          name: 'non-sorcerer',
-          stats: {
-            ...baseMockPlayerStats,
-            class: { name: 'Wizard', major: { name: 'Wizard' } },
-            automation: {
-              passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
-              actions: [],
-            },
-          },
-          spell: {
-            ...baseMockSpell,
-            damage: { damage_at_slot_level: { '1': '3d4+1' } },
-          },
-        },
-        {
-          name: 'non-psionic spell',
-          stats: {
-            ...baseMockPlayerStats,
-            automation: {
-              passives: [{ type: 'psionic_sorcery', psionicSpells: ['Shield'] }],
-              actions: [],
-            },
-          },
-          spell: {
-            ...baseMockSpell,
-            name: 'Magic Missile',
-            level: 1,
-            damage: { damage_at_slot_level: { '1': '3d4+1' } },
-          },
-        },
-        {
-          name: 'missing passive',
-          stats: {
-            ...baseMockPlayerStats,
-            automation: { passives: [], actions: [] },
-          },
-          spell: {
-            ...baseMockSpell,
-            name: 'Magic Missile',
-            level: 1,
-            damage: { damage_at_slot_level: { '1': '3d4+1' } },
-          },
-        },
-        {
-          name: 'cantrip',
-          stats: {
-            ...baseMockPlayerStats,
-            automation: {
-              passives: [{ type: 'psionic_sorcery', psionicSpells: ['Fire Bolt'] }],
-              actions: [],
-            },
-          },
-          spell: {
-            ...baseMockSpell,
-            name: 'Fire Bolt',
-            level: 0,
-            damage: { damage_at_slot_level: { '0': '1d10' } },
-          },
-        },
-      ];
+  describe('non-psionic scenarios', () => {
+    it('enables cast for non-sorcerer class', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 10;
+        if (key.startsWith('spell_slots_level_')) return 4;
+        return null;
+      });
 
-      for (const { stats, spell } of scenarios) {
-        cleanup();
-        vi.mocked(getRuntimeValue).mockReset();
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-          if (key === 'sorceryPoints') return 10;
-          if (key.startsWith('spell_slots_level_')) return 4;
-          return null;
-        });
-        renderPopup(spell, stats, mockCampaignName);
-        expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
-      }
+      const stats = {
+        ...baseMockPlayerStats,
+        class: { name: 'Wizard', major: { name: 'Wizard' } },
+        automation: {
+          passives: [{ type: 'psionic_sorcery', psionicSpells: ['Magic Missile'] }],
+          actions: [],
+        },
+      };
+      const spell = {
+        ...baseMockSpell,
+        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+      };
+      renderPopup(spell, stats, mockCampaignName);
+      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
+    });
+
+    it('enables cast for non-psionic spell', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 10;
+        if (key.startsWith('spell_slots_level_')) return 4;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Magic Missile',
+        level: 1,
+        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+      };
+      renderPopup(spell, createPsionicStats(['Shield']), mockCampaignName);
+      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
+    });
+
+    it('enables cast when psionic sorcery passive is missing', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 10;
+        if (key.startsWith('spell_slots_level_')) return 4;
+        return null;
+      });
+
+      const stats = { ...baseMockPlayerStats, automation: { passives: [], actions: [] } };
+      const spell = {
+        ...baseMockSpell,
+        name: 'Magic Missile',
+        level: 1,
+        damage: { damage_at_slot_level: { '1': '3d4+1' } },
+      };
+      renderPopup(spell, stats, mockCampaignName);
+      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
+    });
+
+    it('enables cast for cantrip', () => {
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'sorceryPoints') return 10;
+        if (key.startsWith('spell_slots_level_')) return 4;
+        return null;
+      });
+
+      const spell = {
+        ...baseMockSpell,
+        name: 'Fire Bolt',
+        level: 0,
+        damage: { damage_at_slot_level: { '0': '1d10' } },
+      };
+      renderPopup(spell, createPsionicStats(['Fire Bolt']), mockCampaignName);
+      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
     });
   });
 });

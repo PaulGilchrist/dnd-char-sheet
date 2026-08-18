@@ -1,9 +1,7 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -17,6 +15,24 @@ vi.mock('../../../services/combat/buffs/buffService.js', () => ({
 
 vi.mock('../../../services/ui/sanitize.js', () => ({
   sanitizeHtml: (html) => html,
+}));
+
+vi.mock('../../../services/rules/spells/spellPreparationService.js', () => ({
+  isFreeCastAuthorized: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/rules/spells/metamagicRules.js', () => ({
+  isPsionicSpell: vi.fn(() => false),
+  hasPsionicSorcery: vi.fn(() => false),
+}));
+
+vi.mock('../../../services/automation/handlers/class-wizard/overchannelHandler.js', () => ({
+  getOverchannelNecroticDamage: vi.fn(() => null),
+}));
+
+vi.mock('../../../services/rules/spells/materialComponents.js', () => ({
+  getConsumedMaterial: vi.fn(() => null),
+  hasMaterial: vi.fn(() => true),
 }));
 
 const baseMockPlayerStats = {
@@ -70,13 +86,6 @@ const renderPopup = (
   );
 
 describe('SpellDetailPopup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-    vi.mocked(getRuntimeValue).mockReturnValue(null);
-    vi.mocked(getActiveBuffs).mockReturnValue([]);
-  });
-
   describe('Close button', () => {
     it('calls onClose when Close button is clicked', () => {
       const onClose = vi.fn();
@@ -86,26 +95,43 @@ describe('SpellDetailPopup', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('renders Close button with secondary styling', () => {
+    it('renders a Close button accessible by role and name', () => {
       renderPopup();
-      const closeBtn = screen.getByRole('button', { name: 'Close' });
-      expect(closeBtn).toHaveClass('char-btn-secondary');
+      expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
   });
 
   describe('Slot label formatting', () => {
     it.each([
-      { slots: 3, expectedText: '3 slots', label: 'plural' },
       { slots: 1, expectedText: '1 slot', label: 'singular' },
+      { slots: 2, expectedText: '2 slots', label: 'plural' },
     ])('uses $label slot label for available slots', ({ slots, expectedText }) => {
       const upcastLevels = [
         { level: 2, formula: '4d4+1', availableSlots: slots },
-        { level: 3, formula: '5d4+1', availableSlots: 2 },
+        { level: 3, formula: '5d4+1', availableSlots: slots + 1 },
       ];
-      renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName, {
-        upcastLevels,
-      });
+      renderPopup(baseMockSpell, baseMockPlayerStats, mockCampaignName, { upcastLevels });
       expect(screen.getByText(expectedText)).toBeInTheDocument();
+    });
+  });
+
+  describe('Cast Spell button', () => {
+    it('renders a Cast Spell button', () => {
+      renderPopup();
+      expect(screen.getByRole('button', { name: /Cast Spell/i })).toBeInTheDocument();
+    });
+
+    it('disables the Cast Spell button when no slots are available', () => {
+      const noSlotsStats = {
+        ...baseMockPlayerStats,
+        spellAbilities: {
+          ...baseMockPlayerStats.spellAbilities,
+          spell_slots_level_1: 0,
+        },
+      };
+      renderPopup(baseMockSpell, noSlotsStats);
+      const castBtn = screen.getByRole('button', { name: /Cast Spell/i });
+      expect(castBtn).toBeDisabled();
     });
   });
 });

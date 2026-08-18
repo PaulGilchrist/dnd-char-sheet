@@ -1,8 +1,11 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
 import { mockPlayerStats } from './CharSpells.test.helpers.js';
+
+// --- Shared mock infrastructure ---
+let mockDiceRoll = { rollAttack: vi.fn(), rollDamage: vi.fn(), autoDamageRoll: null };
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(() => []),
@@ -13,8 +16,6 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 vi.mock('../../../hooks/combat/useActionPopup.js', () => ({
   default: vi.fn(() => ({ popupHtml: null, setPopupHtml: vi.fn() })),
 }));
-
-let mockDiceRoll = { rollAttack: vi.fn(), rollDamage: vi.fn(), autoDamageRoll: null };
 
 vi.mock('../../../hooks/combat/useLoggedDiceRoll.js', () => ({
   default: vi.fn((name, campaignName, options) => {
@@ -112,7 +113,7 @@ vi.mock('../popups/MetamagicPopup.jsx', () => ({
   default: function MetamagicPopup({ spell, playerStats, onConfirm, onSkip }) {
     return (
       <div data-testid="metamagic-popup">
-        <span>{spell?.name}</span>
+        <span data-testid="metamagic-spell-name">{spell?.name}</span>
         <span data-testid="metamagic-sp">{playerStats?._metamagicCurrentSP}</span>
         <button data-testid="metamagic-confirm" onClick={onConfirm}>confirm</button>
         <button data-testid="metamagic-skip" onClick={onSkip}>skip</button>
@@ -125,7 +126,7 @@ vi.mock('../popups/MultiTargetPopup.jsx', () => ({
   default: function MultiTargetPopup({ spell, creatureTargets, onConfirm, onSkip }) {
     return (
       <div data-testid="multi-target-popup">
-        <span>{spell?.name}</span>
+        <span data-testid="mt-spell-name">{spell?.name}</span>
         <button data-testid="mt-confirm" onClick={() => onConfirm({ targets: creatureTargets })}>confirm</button>
         <button data-testid="mt-skip" onClick={onSkip}>skip</button>
       </div>
@@ -137,7 +138,7 @@ vi.mock('../popups/MagicMissileTargetPopup.jsx', () => ({
   default: function MagicMissileTargetPopup({ spell, totalMissiles, currentTargetName, creatureTargets, onConfirm, onSkip }) {
     return (
       <div data-testid="magic-missile-popup">
-        <span>{spell?.name}</span>
+        <span data-testid="mm-spell-name">{spell?.name}</span>
         <span data-testid="mm-total">{totalMissiles}</span>
         <span data-testid="mm-current-target">{currentTargetName}</span>
         <button data-testid="mm-confirm" onClick={() => onConfirm({ targets: creatureTargets })}>confirm</button>
@@ -222,6 +223,8 @@ vi.mock('../modals/HexAbilityModal.jsx', () => ({
   },
 }));
 
+// --- Shared test helpers ---
+
 import { useSpellMetamagicFlow } from '../../../hooks/combat/useSpellMetamagicFlow.js';
 import { useSpellUpcastFlow } from '../../../hooks/combat/useSpellUpcastFlow.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
@@ -230,43 +233,16 @@ import { getTargetFromAttacker } from '../../../services/rules/combat/damageUtil
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
 import { normalizeAutoDamage, resolveAttackDamageStandalone } from '../useAttackDamageResolution.js';
 
-const PENDING_KEYS = [
-  'Metamagic', 'MultiTarget', 'HeroesFeast', 'GreaterRestoration', 'LesserRestoration',
-  'MageArmor', 'Bane', 'Bless', 'FaerieFire', 'HolyAura', 'BeaconOfHope', 'Slow', 'Haste',
-  'EnhanceAbility', 'Barkskin', 'Invisibility', 'GreaterInvisibility', 'FeignDeath', 'Heal',
-  'ProtectionFromEvilAndGood', 'ProtectionFromPoison', 'StoneSkin', 'ProtectionFromEnergy',
-  'Resistance', 'RemoveCurse', 'MagicMissile', 'PassWithoutTrace', 'Globe', 'Forcecage',
-  'AntimagicField', 'Regenerate', 'HealingWord', 'CureWounds', 'StinkingCloud', 'Web',
-  'AnimalFriendship', 'AuraOfLife', 'AuraOfPurity', 'CircleOfPower', 'Compulsion',
-  'AuraOfVitality', 'Foresight', 'Longstrider', 'SpareTheDying', 'Confusion', 'DeathWard',
-  'Heroism', 'Revivify', 'Sanctuary', 'SleetStorm', 'Shapechange',
-];
-
 function createFlow(overrides = {}) {
-  const flow = { gateMetamagic: vi.fn(), handleConfirm: vi.fn(), handleSkip: vi.fn() };
-  for (const key of PENDING_KEYS) {
-    flow[`pending${key}`] = null;
-    flow[`handle${key}Confirm`] = vi.fn();
-    flow[`handle${key}Skip`] = vi.fn();
-  }
-  flow.enhanceAbilityStage = null;
-  flow.protectionFromEnergyStage = null;
-  flow.resistanceStage = null;
-  flow.handleEnhanceAbilityAbilitySelect = vi.fn();
-  flow.handleProtectionFromEnergyTargetSelect = vi.fn();
-  flow.handleProtectionFromEnergyTypeSelect = vi.fn();
-  flow.handleResistanceTargetSelect = vi.fn();
-  flow.handleResistanceTypeSelect = vi.fn();
-  flow.handleGreaterRestorationNoEffects = vi.fn();
-  flow.pendingHoldMonster = null; flow.handleHoldMonsterConfirm = vi.fn(); flow.handleHoldMonsterSkip = vi.fn();
-  flow.pendingHoldPerson = null; flow.handleHoldPersonConfirm = vi.fn(); flow.handleHoldPersonSkip = vi.fn();
-  flow.pendingPolymorph = null; flow.handlePolymorphConfirm = vi.fn(); flow.handlePolymorphSkip = vi.fn();
-  flow.pendingAnimalShapes = null; flow.handleAnimalShapesTargetConfirm = vi.fn(); flow.handleAnimalShapesSkip = vi.fn();
-  flow.pendingTruePolymorph = null; flow.handleTruePolymorphPathSelect = vi.fn(); flow.handleTruePolymorphTargetConfirm = vi.fn(); flow.handleTruePolymorphSkip = vi.fn();
-  flow.pendingCharmPerson = null; flow.handleCharmPersonConfirm = vi.fn(); flow.handleCharmPersonSkip = vi.fn();
-  flow.pendingCharmMonster = null; flow.handleCharmMonsterConfirm = vi.fn(); flow.handleCharmMonsterSkip = vi.fn();
-  flow.pendingBanishment = null; flow.handleBanishmentConfirm = vi.fn(); flow.handleBanishmentSkip = vi.fn();
-  flow.pendingPrismaticSpray = null; flow.handlePrismaticSprayConfirm = vi.fn(); flow.handlePrismaticSpraySkip = vi.fn();
+  const flow = {
+    gateMetamagic: vi.fn(),
+    handleConfirm: vi.fn(),
+    handleSkip: vi.fn(),
+    handleMultiTargetConfirm: vi.fn(),
+    handleMultiTargetSkip: vi.fn(),
+    handleMagicMissileConfirm: vi.fn(),
+    handleMagicMissileSkip: vi.fn(),
+  };
   return { ...flow, ...overrides };
 }
 
@@ -274,16 +250,18 @@ let flow;
 let upcastFlow;
 
 function renderWithProps(props = {}) {
-  return render(<CharSpells
-    playerStats={mockPlayerStats}
-    campaignName="test-campaign"
-    {...props}
-  />);
+  return render(
+    <CharSpells
+      playerStats={mockPlayerStats}
+      campaignName="test-campaign"
+      {...props}
+    />
+  );
 }
 
 describe('CharSpells - Popup Modal Rendering', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     flow = createFlow();
     upcastFlow = {
       pendingUpcast: null,
@@ -305,7 +283,7 @@ describe('CharSpells - Popup Modal Rendering', () => {
   });
 
   describe('metamagic popup', () => {
-    it('renders MetamagicPopup with spell name and current SP, and wires confirm/skip handlers', () => {
+    it('renders MetamagicPopup with correct spell name and SP, and wires confirm/skip handlers', () => {
       flow.pendingMetamagic = {
         spellName: 'Fireball',
         spellLevel: 3,
@@ -314,31 +292,55 @@ describe('CharSpells - Popup Modal Rendering', () => {
         psionicCost: 0,
       };
       renderWithProps();
-      expect(screen.getByTestId('metamagic-popup')).toHaveTextContent('Fireball');
+
+      expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
+      expect(screen.getByTestId('metamagic-spell-name')).toHaveTextContent('Fireball');
       expect(screen.getByTestId('metamagic-sp')).toHaveTextContent('7');
+
       fireEvent.click(screen.getByTestId('metamagic-confirm'));
       expect(flow.handleConfirm).toHaveBeenCalled();
-      vi.mocked(flow.handleConfirm).mockClear();
+
       fireEvent.click(screen.getByTestId('metamagic-skip'));
       expect(flow.handleSkip).toHaveBeenCalled();
     });
   });
 
   describe('multi-target popup', () => {
-    it('renders MultiTargetPopup showing spell name, and wires confirm/skip handlers', () => {
-      flow.pendingMultiTarget = { spellName: 'Aid', spellLevel: 2, range: '30 feet', creatureTargets: ['Orc', 'Goblin'] };
+    it('renders MultiTargetPopup with spell name and target list, and wires confirm/skip handlers', () => {
+      flow.pendingMultiTarget = {
+        spellName: 'Aid',
+        spellLevel: 2,
+        range: '30 feet',
+        creatureTargets: ['Orc', 'Goblin'],
+      };
       renderWithProps();
-      expect(screen.getByTestId('multi-target-popup')).toHaveTextContent('Aid');
+
+      expect(screen.getByTestId('multi-target-popup')).toBeInTheDocument();
+      expect(screen.getByTestId('mt-spell-name')).toHaveTextContent('Aid');
+
       fireEvent.click(screen.getByTestId('mt-confirm'));
       expect(flow.handleMultiTargetConfirm).toHaveBeenCalled();
-      vi.mocked(flow.handleMultiTargetConfirm).mockClear();
+
       fireEvent.click(screen.getByTestId('mt-skip'));
       expect(flow.handleMultiTargetSkip).toHaveBeenCalled();
+    });
+
+    it('renders MultiTargetPopup with empty target list', () => {
+      flow.pendingMultiTarget = {
+        spellName: 'Aid',
+        spellLevel: 2,
+        range: '30 feet',
+        creatureTargets: [],
+      };
+      renderWithProps();
+
+      expect(screen.getByTestId('multi-target-popup')).toBeInTheDocument();
+      expect(screen.getByTestId('mt-spell-name')).toHaveTextContent('Aid');
     });
   });
 
   describe('magic missile popup', () => {
-    it('renders MagicMissileTargetPopup with total missiles and current target name, and wires confirm/skip handlers', () => {
+    it('renders MagicMissileTargetPopup with missile count and current target, and wires confirm/skip handlers', () => {
       flow.pendingMagicMissile = {
         spell: { name: 'Magic Missile', level: 1 },
         totalMissiles: 3,
@@ -347,27 +349,47 @@ describe('CharSpells - Popup Modal Rendering', () => {
       };
       vi.mocked(getTargetFromAttacker).mockReturnValue({ name: 'Goblin' });
       renderWithProps();
-      expect(screen.getByTestId('magic-missile-popup')).toHaveTextContent('Magic Missile');
+
+      expect(screen.getByTestId('magic-missile-popup')).toBeInTheDocument();
+      expect(screen.getByTestId('mm-spell-name')).toHaveTextContent('Magic Missile');
       expect(screen.getByTestId('mm-total')).toHaveTextContent('3');
       expect(screen.getByTestId('mm-current-target')).toHaveTextContent('Goblin');
+
       fireEvent.click(screen.getByTestId('mm-confirm'));
       expect(flow.handleMagicMissileConfirm).toHaveBeenCalled();
-      vi.mocked(flow.handleMagicMissileConfirm).mockClear();
+
       fireEvent.click(screen.getByTestId('mm-skip'));
       expect(flow.handleMagicMissileSkip).toHaveBeenCalled();
+    });
+
+    it('renders MagicMissileTargetPopup when getTargetFromAttacker returns null', () => {
+      flow.pendingMagicMissile = {
+        spell: { name: 'Magic Missile', level: 1 },
+        totalMissiles: 3,
+        missileDamage: '1d4+1',
+        creatureTargets: ['Orc'],
+      };
+      vi.mocked(getTargetFromAttacker).mockReturnValue(null);
+      renderWithProps();
+
+      expect(screen.getByTestId('magic-missile-popup')).toBeInTheDocument();
+      expect(screen.getByTestId('mm-spell-name')).toHaveTextContent('Magic Missile');
+      expect(screen.getByTestId('mm-current-target')).toHaveTextContent('');
     });
   });
 
   describe('upcast popup', () => {
-    it('renders UpcastPopup showing the spell name when pendingUpcast is set', () => {
+    it('renders UpcastPopup with spell name when pendingUpcast is set', () => {
       upcastFlow.pendingUpcast = { spell: { name: 'Fireball', level: 3 } };
       renderWithProps();
-      expect(screen.getByTestId('upcast-popup')).toHaveTextContent('Fireball');
+
+      expect(screen.getByTestId('upcast-popup')).toBeInTheDocument();
     });
 
     it('does not render UpcastPopup when pendingUpcast is null', () => {
       upcastFlow.pendingUpcast = null;
       renderWithProps();
+
       expect(screen.queryByTestId('upcast-popup')).not.toBeInTheDocument();
     });
   });

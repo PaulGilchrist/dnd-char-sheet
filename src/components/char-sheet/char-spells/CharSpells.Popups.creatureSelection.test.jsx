@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -258,34 +258,68 @@ describe('CharSpells - Popup Modal Rendering', () => {
     vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
     vi.mocked(normalizeAutoDamage).mockReturnValue({ attack: { name: 'Fire Bolt' }, ctx: { targetName: 'Orc' } });
     vi.mocked(resolveAttackDamageStandalone).mockResolvedValue(undefined);
+    vi.mocked(loadMonsters).mockResolvedValue([]);
   });
 
-  describe('staged flow - shapechange', () => {
-    it('confirms a Shapechange by selecting a beast form and casting the spell', async () => {
+  describe('shapechange beast form selection', () => {
+    const mockBeasts = [
+      {
+        index: 'brown-bear',
+        name: 'Brown Bear',
+        type: 'beast',
+        challenge_rating: '1',
+        size: 'Large',
+        speed: { walk: '40 ft' },
+        actions: [{ name: 'Bite' }],
+      },
+    ];
+
+    it('disables the confirm button when no beast is selected', async () => {
       flow.pendingShapechange = {
         spell: { name: 'Shapechange', level: 9, isUpcast: false, upcastLevel: 9 },
         spellLevel: 9,
       };
-      vi.mocked(loadMonsters).mockResolvedValue([
-        { index: 'brown-bear', name: 'Brown Bear', type: 'beast', challenge_rating: '1', size: 'Large', speed: { walk: '40 ft' }, actions: [{ name: 'Bite' }] },
-      ]);
+      vi.mocked(loadMonsters).mockResolvedValue(mockBeasts);
       renderWithProps({ playerStats: { ...mockPlayerStats, level: 3 } });
 
       await waitFor(() => {
         expect(screen.getByText('Brown Bear')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Brown Bear').closest('.wild-shape-beast-item'));
+      expect(
+        screen.getByRole('button', { name: /Shapechange/i })
+      ).toBeDisabled();
+    });
+
+    it('confirms shapechange transformation when a beast is selected and the confirm button is clicked', async () => {
+      flow.pendingShapechange = {
+        spell: { name: 'Shapechange', level: 9, isUpcast: false, upcastLevel: 9 },
+        spellLevel: 9,
+      };
+      vi.mocked(loadMonsters).mockResolvedValue(mockBeasts);
+      renderWithProps({ playerStats: { ...mockPlayerStats, level: 3 } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Brown Bear')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Brown Bear'));
       fireEvent.click(screen.getByRole('button', { name: /Shapechange/i }));
 
       await waitFor(() => {
-        expect(prepareSpellCast).toHaveBeenCalled();
+        expect(prepareSpellCast).toHaveBeenCalledTimes(1);
+        expect(confirmShapechangeTransform).toHaveBeenCalledTimes(1);
       });
+
       expect(prepareSpellCast).toHaveBeenCalledWith(
         flow.pendingShapechange.spell,
         {},
-        expect.objectContaining({ playerName: 'Test Character', campaignName: 'test-campaign' })
+        expect.objectContaining({
+          playerName: 'Test Character',
+          campaignName: 'test-campaign',
+        })
       );
+
       expect(confirmShapechangeTransform).toHaveBeenCalledWith(
         expect.objectContaining({
           targetName: 'Test Character',
@@ -294,6 +328,39 @@ describe('CharSpells - Popup Modal Rendering', () => {
           spellLevel: 9,
         })
       );
+    });
+
+    it('does not trigger transformation when cancel is clicked after selecting a beast', async () => {
+      flow.pendingShapechange = {
+        spell: { name: 'Shapechange', level: 9, isUpcast: false, upcastLevel: 9 },
+        spellLevel: 9,
+      };
+      vi.mocked(loadMonsters).mockResolvedValue(mockBeasts);
+      renderWithProps({ playerStats: { ...mockPlayerStats, level: 3 } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Brown Bear')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Brown Bear'));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(prepareSpellCast).not.toHaveBeenCalled();
+      expect(confirmShapechangeTransform).not.toHaveBeenCalled();
+    });
+
+    it('shows a no results message when no beasts match the CR requirement', async () => {
+      flow.pendingShapechange = {
+        spell: { name: 'Shapechange', level: 9, isUpcast: false, upcastLevel: 9 },
+        spellLevel: 9,
+      };
+      renderWithProps({ playerStats: { ...mockPlayerStats, level: 3 } });
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("No creatures match the target's CR requirement.")
+        ).toBeInTheDocument();
+      });
     });
   });
 });

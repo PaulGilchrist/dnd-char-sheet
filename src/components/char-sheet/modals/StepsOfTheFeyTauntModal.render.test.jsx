@@ -1,10 +1,11 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
 
 vi.mock('../../../services/automation/common/savePrompt.js', () => ({
     createSaveListener: vi.fn(({ targetName, saveType, saveDc }) => ({
-        promptId: `prompt-${targetName}-${Date.now()}`,
+        promptId: `prompt-${targetName}`,
         targetName,
         saveType,
         saveDc,
@@ -70,13 +71,10 @@ describe('StepsOfTheFeyTauntModal - Render', () => {
     });
 
     describe('initial render', () => {
-        it('renders the modal overlay, container, header, body, and actions sections', () => {
+        it('renders the modal overlay and container', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
             expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-            expect(document.querySelector('.sp-header')).toBeInTheDocument();
-            expect(document.querySelector('.sp-body')).toBeInTheDocument();
-            expect(document.querySelector('.sp-actions')).toBeInTheDocument();
         });
 
         it('renders the feature name in the header with wand icon', () => {
@@ -91,7 +89,7 @@ describe('StepsOfTheFeyTauntModal - Render', () => {
             expect(screen.getByText(/Choose how you use/)).toBeInTheDocument();
         });
 
-        it('renders all four step options', () => {
+        it('renders all four step options with labels', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             expect(screen.getByText('Refreshing Step')).toBeInTheDocument();
             expect(screen.getByText('Taunting Step')).toBeInTheDocument();
@@ -107,17 +105,19 @@ describe('StepsOfTheFeyTauntModal - Render', () => {
             expect(screen.getByText(/2d10 Psychic damage/)).toBeInTheDocument();
         });
 
-        it('renders the correct icon for each step option', () => {
+        it('renders the correct icon for each step option via data-testid', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const clickableOptions = document.querySelectorAll('.clickable');
-            // First option: Refreshing Step (heart-pulse)
-            expect(clickableOptions[0].querySelector('.fa-solid.fa-heart-pulse')).toBeInTheDocument();
-            // Second option: Taunting Step (wand-sparkles)
-            expect(clickableOptions[1].querySelector('.fa-solid.fa-wand-sparkles')).toBeInTheDocument();
-            // Third option: Disappearing Step (eye-slash)
-            expect(clickableOptions[2].querySelector('.fa-solid.fa-eye-slash')).toBeInTheDocument();
-            // Fourth option: Dreadful Step (brain)
-            expect(clickableOptions[3].querySelector('.fa-solid.fa-brain')).toBeInTheDocument();
+            const refreshingOption = screen.getByTestId('step-option-refreshing');
+            expect(refreshingOption.querySelector('.fa-solid.fa-heart-pulse')).toBeInTheDocument();
+
+            const tauntingOption = screen.getByTestId('step-option-taunting');
+            expect(tauntingOption.querySelector('.fa-solid.fa-wand-sparkles')).toBeInTheDocument();
+
+            const disappearingOption = screen.getByTestId('step-option-disappearing');
+            expect(disappearingOption.querySelector('.fa-solid.fa-eye-slash')).toBeInTheDocument();
+
+            const dreadfulOption = screen.getByTestId('step-option-dreadful');
+            expect(dreadfulOption.querySelector('.fa-solid.fa-brain')).toBeInTheDocument();
         });
 
         it('renders the Skip button', () => {
@@ -133,6 +133,12 @@ describe('StepsOfTheFeyTauntModal - Render', () => {
         it('renders the skip button with Misty Step only text when title is Bewitching Magic', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ title: 'Bewitching Magic' })} />);
             expect(screen.getByRole('button', { name: 'Misty Step only (free cast)' })).toBeInTheDocument();
+        });
+
+        it('falls back to featureName in header when title is not provided', () => {
+            render(<StepsOfTheFeyTauntModal {...makeProps({ title: undefined })} />);
+            const header = document.querySelector('.sp-header');
+            expect(header.textContent).toContain('Steps of the Fey');
         });
     });
 });

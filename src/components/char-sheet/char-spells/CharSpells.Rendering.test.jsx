@@ -1,109 +1,15 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
 import * as helpers from './CharSpells.test.helpers.js';
 
-const { useSpellMetamagicFlow } = vi.hoisted(() => {
-  const spellFlowHandlers = [
-    'gateMetamagic','handleConfirm','handleSkip','handleMultiTargetConfirm','handleMultiTargetSkip',
-    'handleAidConfirm','handleAidSkip','handleHeroesFeastConfirm','handleHeroesFeastSkip',
-    'handleGreaterRestorationConfirm','handleGreaterRestorationSkip',
-    'handleLesserRestorationConfirm','handleLesserRestorationSkip',
-    'handleMageArmorConfirm','handleMageArmorSkip',
-    'handleProtectionFromEnergyConfirm','handleProtectionFromEnergySkip',
-    'handleResistanceConfirm','handleResistanceSkip',
-    'handleRemoveCurseConfirm','handleRemoveCurseSkip',
-    'handleMagicMissileConfirm','handleMagicMissileSkip',
-    'handleBaneConfirm','handleBaneSkip',
-    'handleBlessConfirm','handleBlessSkip',
-    'handleFaerieFireConfirm','handleFaerieFireSkip',
-    'handleHolyAuraConfirm','handleHolyAuraSkip',
-    'handleBeaconOfHopeConfirm','handleBeaconOfHopeSkip',
-    'handleSlowConfirm','handleSlowSkip',
-    'handleHasteConfirm','handleHasteSkip',
-    'handleEnhanceAbilityAbilitySelect','handleEnhanceAbilityConfirm','handleEnhanceAbilitySkip',
-    'handleBarkskinConfirm','handleBarkskinSkip',
-    'handleInvisibilityConfirm','handleInvisibilitySkip',
-    'handleGreaterInvisibilityConfirm','handleGreaterInvisibilitySkip',
-    'handleFeignDeathConfirm','handleFeignDeathSkip',
-    'handleHealConfirm','handleHealSkip',
-    'handleProtectionFromEvilAndGoodConfirm','handleProtectionFromEvilAndGoodSkip',
-    'handleProtectionFromPoisonConfirm','handleProtectionFromPoisonSkip',
-    'handleStoneSkinConfirm','handleStoneSkinSkip',
-    'handlePassWithoutTraceConfirm','handlePassWithoutTraceSkip',
-    'handleGlobeConfirm','handleGlobeSkip',
-    'handleAntimagicFieldConfirm','handleAntimagicFieldSkip',
-    'handleForcecageConfirm','handleForcecageSkip',
-    'handleStinkingCloudConfirm','handleStinkingCloudSkip',
-    'handleConfusionConfirm','handleConfusionSkip',
-    'handleWebConfirm','handleWebSkip',
-    'handleAnimalFriendshipConfirm','handleAnimalFriendshipSkip',
-    'handleAuraOfLifeConfirm','handleAuraOfLifeSkip',
-    'handleAuraOfPurityConfirm','handleAuraOfPuritySkip',
-    'handleCircleOfPowerConfirm','handleCircleOfPowerSkip',
-    'handleCompulsionConfirm','handleCompulsionSkip',
-    'handleSleetStormConfirm','handleSleetStormSkip',
-    'handleAuraOfVitalityConfirm','handleAuraOfVitalitySkip',
-    'handleForesightConfirm','handleForesightSkip',
-    'handleLongstriderConfirm','handleLongstriderSkip',
-    'handleSpareTheDyingConfirm','handleSpareTheDyingSkip',
-    'handleDeathWardConfirm','handleDeathWardSkip',
-    'handleHeroismConfirm','handleHeroismSkip',
-    'handleSanctuaryConfirm','handleSanctuarySkip',
-    'handleRegenerateConfirm','handleRegenerateSkip',
-    'handleHealingWordConfirm','handleHealingWordSkip',
-    'handleCureWoundsConfirm','handleCureWoundsSkip',
-    'handleRevivifyConfirm','handleRevivifySkip',
-    'handleUpcastConfirm','handleUpcastCancel',
-    'handleHoldMonsterConfirm','handleHoldMonsterSkip',
-    'handleHoldPersonConfirm','handleHoldPersonSkip',
-    'handlePolymorphConfirm','handlePolymorphSkip',
-    'handleAnimalShapesTargetConfirm','handleAnimalShapesSkip',
-    'handleTruePolymorphPathSelect','handleTruePolymorphTargetConfirm','handleTruePolymorphSkip',
-    'handleCharmPersonConfirm','handleCharmPersonSkip',
-    'handleCharmMonsterConfirm','handleCharmMonsterSkip',
-    'handleBanishmentConfirm','handleBanishmentSkip',
-    'handlePrismaticSprayConfirm','handlePrismaticSpraySkip',
-  ];
-
-  const pendingProps = [
-    'pendingMetamagic','pendingMultiTarget','pendingAid','pendingHeroesFeast',
-    'pendingGreaterRestoration','pendingLesserRestoration','pendingMageArmor',
-    'pendingProtectionFromEnergy','pendingResistance','pendingRemoveCurse',
-    'pendingMagicMissile','pendingBane','pendingBless','pendingFaerieFire',
-    'pendingHolyAura','pendingBeaconOfHope','pendingSlow','pendingHaste',
-    'pendingEnhanceAbility','pendingBarkskin','pendingInvisibility','pendingGreaterInvisibility',
-    'pendingFeignDeath','pendingHeal','pendingProtectionFromEvilAndGood',
-    'pendingProtectionFromPoison','pendingStoneSkin','pendingPassWithoutTrace',
-    'pendingGlobe','pendingAntimagicField','pendingForcecage','pendingStinkingCloud',
-    'pendingConfusion','pendingWeb','pendingAnimalFriendship','pendingAuraOfLife',
-    'pendingAuraOfPurity','pendingCircleOfPower','pendingCompulsion','pendingSleetStorm',
-    'pendingAuraOfVitality','pendingForesight','pendingLongstrider','pendingSpareTheDying',
-    'pendingDeathWard','pendingHeroism','pendingSanctuary','pendingRegenerate',
-    'pendingHealingWord','pendingCureWounds','pendingRevivify','pendingShapechange',
-    'pendingUpcast',
-  ];
-
-  const flowMock = {};
-  spellFlowHandlers.forEach(h => { flowMock[h] = vi.fn(); });
-  pendingProps.forEach(p => { flowMock[p] = null; });
-  flowMock.enhanceAbilityStage = null;
-  flowMock.protectionFromEnergyStage = null;
-  flowMock.resistanceStage = null;
-  flowMock.flowHoldMonster = null;
-  flowMock.flowHoldPerson = null;
-  flowMock.flowPolymorph = null;
-  flowMock.flowAnimalShapes = null;
-  flowMock.flowTruePolymorph = null;
-  flowMock.flowCharmPerson = null;
-  flowMock.flowCharmMonster = null;
-  flowMock.flowBanishment = null;
-  flowMock.flowPrismaticSpray = null;
-  flowMock.buildUpcastLevels = vi.fn(() => []);
-
-  return { useSpellMetamagicFlow: vi.fn(() => flowMock) };
-});
+const { useSpellMetamagicFlow } = vi.hoisted(() => ({
+  useSpellMetamagicFlow: vi.fn(() => ({
+    gateMetamagic: vi.fn(),
+    buildUpcastLevels: vi.fn(() => []),
+  })),
+}));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(() => []),
@@ -130,9 +36,7 @@ vi.mock('../../../hooks/combat/DiceRollContext.js', () => ({
 }));
 
 vi.mock('../../../hooks/combat/useSpellCastExecutor.js', () => ({
-  useSpellCastExecutor: vi.fn(() => ({
-    castAction: vi.fn(),
-  })),
+  useSpellCastExecutor: vi.fn(() => ({ castAction: vi.fn() })),
 }));
 
 vi.mock('../../../hooks/combat/useSpellPositionResolver.js', () => ({
@@ -157,9 +61,7 @@ vi.mock('../../../hooks/combat/useMetamagic.js', () => ({
   spendSorceryPoints: vi.fn(),
 }));
 
-vi.mock('../../../hooks/combat/useSpellMetamagicFlow.js', () => ({
-  useSpellMetamagicFlow,
-}));
+vi.mock('../../../hooks/combat/useSpellMetamagicFlow.js', () => ({ useSpellMetamagicFlow }));
 
 vi.mock('../../../hooks/combat/useSpellUpcastFlow.js', () => ({
   useSpellUpcastFlow: vi.fn(() => ({
@@ -339,13 +241,24 @@ function renderWithProps(props) {
   return render(<CharSpells {...baseProps} {...props} />);
 }
 
+// Helper to create a minimal stats object with a single spell, replacing the default spells list.
+function statsWithSpell(spell) {
+  return {
+    ...basePlayerStats,
+    spellAbilities: {
+      ...basePlayerStats.spellAbilities,
+      spells: [spell],
+    },
+  };
+}
+
 describe('CharSpells - Rendering Edge Cases', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('spell effect rendering', () => {
-    it('renders effect with save DC half success', () => {
+    it('renders damage with DEX half save DC', () => {
       const spell = {
         name: 'Cone of Cold',
         level: 2,
@@ -354,29 +267,17 @@ describe('CharSpells - Rendering Edge Cases', () => {
         duration: 'Instantaneous',
         components: ['V', 'S', 'M'],
         damage: {
-          damage_at_slot_level: {
-            '2': '3d8',
-          },
+          damage_at_slot_level: { '2': '3d8' },
           damage_type: 'Cold',
         },
-        dc: {
-          dc_type: 'DEX',
-          dc_success: 'half',
-        },
+        dc: { dc_type: 'DEX', dc_success: 'half' },
         prepared: 'Prepared',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       expect(screen.getByText('3d8 Cold (DEX half)')).toBeInTheDocument();
     });
 
-    it('renders effect with save DC negates success', () => {
+    it('renders damage with CON negates save DC', () => {
       const spell = {
         name: 'Frostbite',
         level: 0,
@@ -385,25 +286,13 @@ describe('CharSpells - Rendering Edge Cases', () => {
         duration: 'Instantaneous',
         components: ['V', 'S'],
         damage: {
-          damage_at_slot_level: {
-            '1': '1d6',
-          },
+          damage_at_slot_level: { '1': '1d6' },
           damage_type: 'Cold',
         },
-        dc: {
-          dc_type: 'CON',
-          dc_success: 'negates',
-        },
+        dc: { dc_type: 'CON', dc_success: 'negates' },
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       expect(screen.getByText('1d6 Cold (CON negates)')).toBeInTheDocument();
     });
 
@@ -411,31 +300,22 @@ describe('CharSpells - Rendering Edge Cases', () => {
       const spell = {
         name: 'Character Level Spell',
         level: 1,
-        casting_time: '1 turn',
+        casting_time: '1 action',
         range: '60 feet',
         duration: 'Instantaneous',
         components: ['V'],
         damage: {
-          damage_at_character_level: {
-            '1': '3d6',
-          },
+          damage_at_character_level: { '1': '3d6' },
           damage_type: 'Thunder',
         },
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       expect(screen.getByText('3d6 Thunder')).toBeInTheDocument();
     });
 
     it('renders Utility when spell has no damage and no DC', () => {
-      const utilitySpell = {
+      const spell = {
         name: 'Comprehend Languages',
         level: 1,
         casting_time: '1 action',
@@ -444,18 +324,11 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components: ['S'],
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [utilitySpell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       expect(screen.getByText('Utility')).toBeInTheDocument();
     });
 
-    it('renders Utility when damage is null', () => {
+    it('renders Utility when damage property is null', () => {
       const spell = {
         name: 'Null Damage Spell',
         level: 1,
@@ -466,14 +339,22 @@ describe('CharSpells - Rendering Edge Cases', () => {
         damage: null,
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      expect(screen.getByText('Utility')).toBeInTheDocument();
+    });
+
+    it('renders Utility when damage is an empty object', () => {
+      const spell = {
+        name: 'Empty Damage Spell',
+        level: 1,
+        casting_time: '1 action',
+        range: 'Self',
+        duration: 'Instantaneous',
+        components: ['V'],
+        damage: {},
+        prepared: 'Always',
       };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       expect(screen.getByText('Utility')).toBeInTheDocument();
     });
 
@@ -486,11 +367,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
         duration: 'Instantaneous',
         components: ['V', 'S'],
         damage: {
-          damage_at_slot_level: {
-            '1': '1d10',
-            '5': '2d10',
-            '11': '3d10',
-          },
+          damage_at_slot_level: { '1': '1d10', '5': '2d10', '11': '3d10' },
           damage_type: 'Fire',
         },
         prepared: 'Always',
@@ -498,10 +375,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
       const stats = {
         ...basePlayerStats,
         level: 5,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [cantrip],
-        },
+        spellAbilities: { ...basePlayerStats.spellAbilities, spells: [cantrip] },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       expect(screen.getByText('2d10 Fire')).toBeInTheDocument();
@@ -516,10 +390,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
         duration: 'Instantaneous',
         components: ['V'],
         damage: {
-          damage_at_slot_level: {
-            '5': '2d10',
-            '11': '3d10',
-          },
+          damage_at_slot_level: { '5': '2d10', '11': '3d10' },
           damage_type: 'Lightning',
         },
         prepared: 'Always',
@@ -527,23 +398,88 @@ describe('CharSpells - Rendering Edge Cases', () => {
       const stats = {
         ...basePlayerStats,
         level: 0,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [cantrip],
-        },
+        spellAbilities: { ...basePlayerStats.spellAbilities, spells: [cantrip] },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       expect(screen.getByText('2d10 Lightning')).toBeInTheDocument();
+    });
+
+    it('falls back to first damage key when player level is undefined', () => {
+      const cantrip = {
+        name: 'Undefined Level Cantrip',
+        level: 0,
+        casting_time: '1 turn',
+        range: 'Self',
+        duration: 'Instantaneous',
+        components: ['V'],
+        damage: {
+          damage_at_slot_level: { '5': '2d10' },
+          damage_type: 'Acid',
+        },
+        prepared: 'Always',
+      };
+      const stats = {
+        ...basePlayerStats,
+        spellAbilities: { ...basePlayerStats.spellAbilities, spells: [cantrip] },
+      };
+      render(<CharSpells playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('2d10 Acid')).toBeInTheDocument();
+    });
+
+    it('renders Utility when cantrip has no damage object and no DC', () => {
+      const cantrip = {
+        name: 'Non-Damaging Cantrip',
+        level: 0,
+        casting_time: '1 action',
+        range: 'Self',
+        duration: 'Instantaneous',
+        components: ['V'],
+        prepared: 'Always',
+      };
+      render(<CharSpells playerStats={statsWithSpell(cantrip)} campaignName="test" />);
+      expect(screen.getByText('Utility')).toBeInTheDocument();
+    });
+
+    it('renders DC-only effect (no damage) with half success', () => {
+      const spell = {
+        name: 'Hex',
+        level: 1,
+        casting_time: '1 bonus action',
+        range: '60 feet',
+        duration: 'Concentration, up to 1 hour',
+        components: ['V'],
+        dc: { dc_type: 'WIS', dc_success: 'half' },
+        prepared: 'Always',
+      };
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      expect(screen.getByText('WIS half')).toBeInTheDocument();
+    });
+
+    it('renders DC-only effect (no damage) with negates success', () => {
+      const spell = {
+        name: 'Sleep',
+        level: 1,
+        casting_time: '1 action',
+        range: '60 feet',
+        duration: '1 minute',
+        components: ['V', 'S', 'M'],
+        dc: { dc_type: 'WIS', dc_success: 'negates' },
+        prepared: 'Always',
+      };
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      expect(screen.getByText('WIS negates')).toBeInTheDocument();
     });
   });
 
   describe('duration formatting', () => {
     it.each`
-      durationInput              | expectedOutput
-      ${'1 minute'}              | ${'1 min'}
-      ${'10 minutes'}            | ${'10 mins'}
-      ${'up to 1 hour'}          | ${'1 hour'}
-      ${'Instantaneous'}         | ${'Instant'}
+      durationInput                         | expectedOutput
+      ${'1 minute'}                         | ${'1 min'}
+      ${'10 minutes'}                       | ${'10 mins'}
+      ${'up to 1 hour'}                     | ${'1 hour'}
+      ${'Instantaneous'}                    | ${'Instant'}
+      ${'Concentration, up to 10 minutes'}  | ${'Concentration, 10 mins'}
+      ${'1 hour'}                           | ${'1 hour'}
     `('formats duration "$durationInput" as "$expectedOutput"', ({ durationInput, expectedOutput }) => {
       const spell = {
         name: 'Duration Test Spell',
@@ -554,14 +490,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components: ['V'],
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       expect(screen.getByText(expectedOutput)).toBeInTheDocument();
     });
 
@@ -574,22 +503,31 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components: ['V'],
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       const table = screen.getByRole('table');
-      const allCells = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
-      expect(allCells).toContain('');
+      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
+      expect(allCellTexts).toContain('');
+    });
+
+    it('renders empty cell when duration is null', () => {
+      const spell = {
+        name: 'Null Duration Spell',
+        level: 1,
+        casting_time: '1 action',
+        range: 'Self',
+        duration: null,
+        components: ['V'],
+        prepared: 'Always',
+      };
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      const table = screen.getByRole('table');
+      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
+      expect(allCellTexts).toContain('');
     });
   });
 
   describe('casting time formatting', () => {
-    it('abbreviates "1 action" to "1  A"', async () => {
+    it('abbreviates "1 action" to "1  A" (double space)', async () => {
       const spell = {
         name: 'Casting Time Test Spell',
         level: 1,
@@ -599,14 +537,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components: ['V'],
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [...basePlayerStats.spellAbilities.spells, spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       const table = await screen.findByRole('table');
       const row = Array.from(table.querySelectorAll('tbody tr')).find(r => r.textContent.includes('Casting Time Test Spell'));
       const cells = Array.from(row.querySelectorAll('td'));
@@ -615,7 +546,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
 
     it('abbreviates "1 bonus action" to "1 BA"', async () => {
       const spell = {
-        name: 'Casting Time Test Spell',
+        name: 'Bonus Action Test',
         level: 1,
         casting_time: '1 bonus action',
         range: 'Self',
@@ -623,23 +554,13 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components: ['V'],
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [...basePlayerStats.spellAbilities.spells, spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const table = await screen.findByRole('table');
-      const row = Array.from(table.querySelectorAll('tbody tr')).find(r => r.textContent.includes('Casting Time Test Spell'));
-      const cells = Array.from(row.querySelectorAll('td'));
-      expect(cells[3].textContent).toBe('1 BA');
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      expect(await screen.findByText('1 BA')).toBeInTheDocument();
     });
 
     it('abbreviates "1 reaction" to "1 Reaction"', async () => {
       const spell = {
-        name: 'Casting Time Test Spell',
+        name: 'Reaction Test',
         level: 1,
         casting_time: '1 reaction',
         range: 'Self',
@@ -647,18 +568,8 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components: ['V'],
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [...basePlayerStats.spellAbilities.spells, spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const table = await screen.findByRole('table');
-      const row = Array.from(table.querySelectorAll('tbody tr')).find(r => r.textContent.includes('Casting Time Test Spell'));
-      const cells = Array.from(row.querySelectorAll('td'));
-      expect(cells[3].textContent).toBe('1 Reaction');
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      expect(await screen.findByText('1 Reaction')).toBeInTheDocument();
     });
 
     it('renders empty cell when casting_time is missing', () => {
@@ -670,17 +581,26 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components: ['V'],
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       const table = screen.getByRole('table');
-      const allCells = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
-      expect(allCells).toContain('');
+      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
+      expect(allCellTexts).toContain('');
+    });
+
+    it('renders empty cell when casting_time is null', () => {
+      const spell = {
+        name: 'Null Casting Time Spell',
+        level: 1,
+        casting_time: null,
+        range: 'Self',
+        duration: 'Instantaneous',
+        components: ['V'],
+        prepared: 'Always',
+      };
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      const table = screen.getByRole('table');
+      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
+      expect(allCellTexts).toContain('');
     });
   });
 
@@ -691,6 +611,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
       ${['V', 'S']}                     | ${'V/S'}
       ${['V', 'M']}                     | ${'V/M'}
       ${['V', 'Concentration']}         | ${'V/Con'}
+      ${['S', 'M', 'Concentration']}    | ${'S/M/Con'}
     `('formats components $components as notes "$expectedNotes"', ({ components, expectedNotes }) => {
       const spell = {
         name: 'Notes Test Spell',
@@ -701,14 +622,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components,
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       expect(screen.getByText(expectedNotes)).toBeInTheDocument();
     });
 
@@ -722,18 +636,41 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components: [],
         prepared: 'Always',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       const table = screen.getByRole('table');
-      const row = Array.from(table.querySelectorAll('tbody tr')).find(r => r.textContent.includes('Empty Components Spell'));
-      const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
-      expect(cells).toContain('');
+      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
+      expect(allCellTexts).toContain('');
+    });
+
+    it('renders empty notes cell when components is missing', () => {
+      const spell = {
+        name: 'Missing Components Spell',
+        level: 1,
+        casting_time: '1 action',
+        range: 'Self',
+        duration: 'Instantaneous',
+        prepared: 'Always',
+      };
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      const table = screen.getByRole('table');
+      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
+      expect(allCellTexts).toContain('');
+    });
+
+    it('renders empty notes cell when components is null', () => {
+      const spell = {
+        name: 'Null Components Spell',
+        level: 1,
+        casting_time: '1 action',
+        range: 'Self',
+        duration: 'Instantaneous',
+        components: null,
+        prepared: 'Always',
+      };
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      const table = screen.getByRole('table');
+      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
+      expect(allCellTexts).toContain('');
     });
   });
 
@@ -748,16 +685,24 @@ describe('CharSpells - Rendering Edge Cases', () => {
         components: ['V'],
         prepared: '',
       };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
       const checkboxes = screen.getAllByRole('checkbox');
       expect(checkboxes).toHaveLength(1);
+    });
+
+    it('does not render checkbox for spells with "Always" prepared value', () => {
+      const spell = {
+        name: 'Always Prepared Spell',
+        level: 1,
+        casting_time: '1 action',
+        range: 'Self',
+        duration: 'Instantaneous',
+        components: ['V'],
+        prepared: 'Always',
+      };
+      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
+      const checkboxes = screen.queryAllByRole('checkbox');
+      expect(checkboxes).toHaveLength(0);
     });
   });
 

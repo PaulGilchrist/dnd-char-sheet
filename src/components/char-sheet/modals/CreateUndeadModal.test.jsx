@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreateUndeadModal from './CreateUndeadModal.jsx';
@@ -16,14 +16,20 @@ function makeProps(overrides) {
 
 // ── Helpers ──
 
-function findTotalDisplay() {
-  const all = document.querySelectorAll('div');
-  for (const el of all) {
-    if (el.textContent.includes('Total creatures:')) {
-      return el;
-    }
-  }
-  return null;
+function getGhoulCountDisplay() {
+  return screen.getByText((content) =>
+    typeof content === 'string' && content.includes('Total creatures:')
+  );
+}
+
+function getGhoulCountValue() {
+  const inlineCount = document.querySelector('.sp-body > div[style] > div > span[style]');
+  return inlineCount ? parseInt(inlineCount.textContent, 10) : null;
+}
+
+function getAdjustButtons() {
+  const adjustSection = document.querySelector('.sp-body > div[style]');
+  return adjustSection ? adjustSection.querySelectorAll('button') : [];
 }
 
 // ── Tests ──
@@ -45,7 +51,8 @@ describe('CreateUndeadModal', () => {
     it('renders the header with skull icon and title', () => {
       render(<CreateUndeadModal {...makeProps()} />);
       expect(screen.getByText('Create Undead')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header i.fa-solid.fa-skull')).toBeInTheDocument();
+      const skullIcon = document.querySelector('.sp-header i.fa-solid.fa-skull');
+      expect(skullIcon).toBeInTheDocument();
     });
 
     it('renders the instruction text with maxTargets', () => {
@@ -60,14 +67,19 @@ describe('CreateUndeadModal', () => {
 
     it('renders the total display showing initial ghoulCount of 1', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 3 })} />);
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 3/);
+      expect(getGhoulCountDisplay()).toHaveTextContent(/Total creatures: 1 \/ 3/);
     });
 
     it('renders Confirm and Cancel buttons', () => {
       render(<CreateUndeadModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Create Undead \(1\)/ })).toBeInTheDocument();
+    });
+
+    it('renders all buttons with type="button"', () => {
+      render(<CreateUndeadModal {...makeProps()} />);
+      const buttons = document.querySelectorAll('button[type="button"]');
+      expect(buttons.length).toBe(4);
     });
   });
 
@@ -76,39 +88,52 @@ describe('CreateUndeadModal', () => {
   describe('ghoul count adjustment', () => {
     it('increments with plus button', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
-      const buttons = document.querySelectorAll('.sp-roll-btn');
-      const plusBtn = buttons[0];
+      const buttons = getAdjustButtons();
+      const plusBtn = buttons[1];
       fireEvent.click(plusBtn);
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 2 \/ 5/);
+      expect(getGhoulCountDisplay()).toHaveTextContent(/Total creatures: 2 \/ 5/);
     });
 
     it('does not go below 1 when at minimum', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
-      const buttons = document.querySelectorAll('.sp-dismiss-btn');
+      const buttons = getAdjustButtons();
       const minusBtn = buttons[0];
       fireEvent.click(minusBtn);
       fireEvent.click(minusBtn);
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 5/);
+      expect(getGhoulCountDisplay()).toHaveTextContent(/Total creatures: 1 \/ 5/);
     });
 
     it('does not exceed maxTargets', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 2 })} />);
-      const buttons = document.querySelectorAll('.sp-roll-btn');
-      const plusBtn = buttons[0];
+      const buttons = getAdjustButtons();
+      const plusBtn = buttons[1];
       fireEvent.click(plusBtn);
       fireEvent.click(plusBtn);
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 2 \/ 2/);
+      expect(getGhoulCountDisplay()).toHaveTextContent(/Total creatures: 2 \/ 2/);
     });
 
     it('updates confirm button label when count changes', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
-      const buttons = document.querySelectorAll('.sp-roll-btn');
-      const plusBtn = buttons[0];
+      const buttons = getAdjustButtons();
+      const plusBtn = buttons[1];
       fireEvent.click(plusBtn);
       expect(screen.getByRole('button', { name: /Create Undead \(2\)/ })).toBeInTheDocument();
+    });
+
+    it('updates the inline ghoul count display when adjusted up', () => {
+      render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
+      const buttons = getAdjustButtons();
+      const plusBtn = buttons[1];
+      fireEvent.click(plusBtn);
+      expect(getGhoulCountValue()).toBe(2);
+    });
+
+    it('updates the inline ghoul count display when adjusted down', () => {
+      render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
+      const buttons = getAdjustButtons();
+      const minusBtn = buttons[0];
+      fireEvent.click(minusBtn);
+      expect(getGhoulCountValue()).toBe(1);
     });
   });
 
@@ -126,8 +151,8 @@ describe('CreateUndeadModal', () => {
     it('calls onConfirm with correct ghoulCount after adjustments', () => {
       const props = makeProps({ maxTargets: 5 });
       render(<CreateUndeadModal {...props} />);
-      const buttons = document.querySelectorAll('.sp-roll-btn');
-      const plusBtn = buttons[0];
+      const buttons = getAdjustButtons();
+      const plusBtn = buttons[1];
       fireEvent.click(plusBtn);
       fireEvent.click(plusBtn);
       const confirmBtn = screen.getByRole('button', { name: /Create Undead/ });
@@ -138,8 +163,8 @@ describe('CreateUndeadModal', () => {
     it('calls onConfirm with ghoulCount at maxTargets', () => {
       const props = makeProps({ maxTargets: 4 });
       render(<CreateUndeadModal {...props} />);
-      const buttons = document.querySelectorAll('.sp-roll-btn');
-      const plusBtn = buttons[0];
+      const buttons = getAdjustButtons();
+      const plusBtn = buttons[1];
       fireEvent.click(plusBtn);
       fireEvent.click(plusBtn);
       fireEvent.click(plusBtn);
@@ -180,14 +205,25 @@ describe('CreateUndeadModal', () => {
     it('handles maxTargets of 0 (count clamped to 1 but display shows 1/0)', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 0 })} />);
       expect(screen.getByText(/You can create up to/)).toHaveTextContent(/0 ghoul/);
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ 0/);
+      expect(getGhoulCountDisplay()).toHaveTextContent(/Total creatures: 1 \/ 0/);
     });
 
     it('handles negative maxTargets (count stays at 1)', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: -1 })} />);
-      const totalDisplay = findTotalDisplay();
-      expect(totalDisplay).toHaveTextContent(/Total creatures: 1 \/ -1/);
+      expect(getGhoulCountDisplay()).toHaveTextContent(/Total creatures: 1 \/ -1/);
+    });
+
+    it('does not increment when already at maxTargets of 1', () => {
+      render(<CreateUndeadModal {...makeProps({ maxTargets: 1 })} />);
+      const buttons = getAdjustButtons();
+      const plusBtn = buttons[1];
+      fireEvent.click(plusBtn);
+      expect(getGhoulCountDisplay()).toHaveTextContent(/Total creatures: 1 \/ 1/);
+    });
+
+    it('shows ghoul label with correct singular/plural based on maxTargets', () => {
+      render(<CreateUndeadModal {...makeProps({ maxTargets: 1 })} />);
+      expect(screen.getByText('Ghoul(s)')).toBeInTheDocument();
     });
   });
 });

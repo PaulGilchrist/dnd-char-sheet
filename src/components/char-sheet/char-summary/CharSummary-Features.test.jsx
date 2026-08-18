@@ -6,8 +6,7 @@
 //     heroism, faerie fire, auraOfLife, auraOfPurity, protectionFromPoison, wardingBond,
 //     starryForm, climb speed, swim speed, sanctuary info memo, short rest modal, avatar modal,
 //     char feats popup, xp modal save, condition objects memo)
-//   - CharSummary-ExtraCoverage.test.jsx (cover source badges characters loop,
-//     sanctuary info creatures loop, fly_speed_20_hover buff)
+//   - CharSummary-ExtraCoverage.test.jsx (cover source badges, sanctuary info, fly speed hover)
 //   - CharSummary-OtherEffects.test.jsx (target effects filtering, vulnerabilities)
 //   - CharSummary-BuffEffects.test.jsx (haste AC bonus, haste speed doubling,
 //     all other buff-based AC/speed/fly/swim/ice walk/hover/tremorsense/hunter's mark)

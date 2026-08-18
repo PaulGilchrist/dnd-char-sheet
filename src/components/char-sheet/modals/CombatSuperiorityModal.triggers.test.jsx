@@ -1,5 +1,5 @@
-// @cleaned-by-ai
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CombatSuperiorityModal from './CombatSuperiorityModal.jsx';
 import * as runtimeModule from '../../../hooks/runtime/useRuntimeState.js';
@@ -34,6 +34,23 @@ function renderModalDirect(props) {
   return render(<CombatSuperiorityModal {...props} />);
 }
 
+// ── Test helpers ──
+
+beforeEach(() => {
+  vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(1);
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+function maneuverInList(name) {
+  return screen.queryByText(name) !== null;
+}
+
+function maneuverNotInList(name) {
+  return screen.queryByText(name) === null;
+}
+
 // ── availableManeuvers override ──
 
 describe('CombatSuperiorityModal - availableManeuvers override', () => {
@@ -53,7 +70,7 @@ describe('CombatSuperiorityModal - availableManeuvers override', () => {
     });
     expect(screen.getByText('Available Only')).toBeInTheDocument();
     expect(screen.getByText('Also Available')).toBeInTheDocument();
-    expect(screen.queryByText('Ki-Fueled Attack')).not.toBeInTheDocument();
+    expect(maneuverNotInList('Ki-Fueled Attack')).toBe(true);
   });
 
   it('filters availableManeuvers by knownManeuvers in use mode but shows all in selection mode', () => {
@@ -71,8 +88,8 @@ describe('CombatSuperiorityModal - availableManeuvers override', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
-    expect(screen.queryByText('Unknown Maneuver')).not.toBeInTheDocument();
+    expect(maneuverInList('Ki-Fueled Attack')).toBe(true);
+    expect(maneuverNotInList('Unknown Maneuver')).toBe(true);
 
     renderModalDirect({
       payload: {
@@ -104,20 +121,13 @@ describe('CombatSuperiorityModal - availableManeuvers override', () => {
         availableManeuvers: val,
       },
     });
-    expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
+    expect(maneuverInList('Ki-Fueled Attack')).toBe(true);
   });
 });
 
 // ── Prompt mode with attackContext / skillContext ──
 
 describe('CombatSuperiorityModal - prompt mode', () => {
-  beforeEach(() => {
-    vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(1);
-  });
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('renders correct header in selection vs use mode with attackContext', () => {
     renderModalDirect({
       payload: {
@@ -163,9 +173,9 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Trip Attack')).toBeInTheDocument();
-    expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
-    expect(screen.queryByText('Ranged Strike')).not.toBeInTheDocument();
+    expect(maneuverInList('Trip Attack')).toBe(true);
+    expect(maneuverInList('Ki-Fueled Attack')).toBe(true);
+    expect(maneuverNotInList('Ranged Strike')).toBe(true);
   });
 
   it('filters by melee_weapon_attack_hit trigger for ranged weapons', () => {
@@ -184,8 +194,8 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Ranged Strike')).toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
+    expect(maneuverInList('Ranged Strike')).toBe(true);
+    expect(maneuverNotInList('Trip Attack')).toBe(true);
   });
 
   it('includes unarmed strike for melee_weapon_attack_hit trigger', () => {
@@ -204,8 +214,8 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Unarmed Maneuver')).toBeInTheDocument();
-    expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
+    expect(maneuverInList('Unarmed Maneuver')).toBe(true);
+    expect(maneuverInList('Ki-Fueled Attack')).toBe(true);
   });
 
   it('filters by attack_roll_miss trigger', () => {
@@ -224,8 +234,8 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Precision Attack')).toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
+    expect(maneuverInList('Precision Attack')).toBe(true);
+    expect(maneuverNotInList('Trip Attack')).toBe(true);
   });
 
   it.each([
@@ -247,8 +257,8 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText(expectedName)).toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
+    expect(maneuverInList(expectedName)).toBe(true);
+    expect(maneuverNotInList('Trip Attack')).toBe(true);
   });
 
   it.each([
@@ -270,8 +280,8 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText(expectedName)).toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
+    expect(maneuverInList(expectedName)).toBe(true);
+    expect(maneuverNotInList('Trip Attack')).toBe(true);
   });
 
   it.each([
@@ -293,8 +303,8 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText(expectedName)).toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
+    expect(maneuverInList(expectedName)).toBe(true);
+    expect(maneuverNotInList('Trip Attack')).toBe(true);
   });
 
   it('filters by replace_attack trigger', () => {
@@ -313,8 +323,8 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Replace Strike')).toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
+    expect(maneuverInList('Replace Strike')).toBe(true);
+    expect(maneuverNotInList('Trip Attack')).toBe(true);
   });
 
   it('includes maneuvers with no trigger or trigger "any" in prompt mode', () => {
@@ -334,9 +344,9 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Free Maneuver')).toBeInTheDocument();
-    expect(screen.getByText('Universal Maneuver')).toBeInTheDocument();
-    expect(screen.getByText('Trip Attack')).toBeInTheDocument();
+    expect(maneuverInList('Free Maneuver')).toBe(true);
+    expect(maneuverInList('Universal Maneuver')).toBe(true);
+    expect(maneuverInList('Trip Attack')).toBe(true);
   });
 
   it('excludes maneuver when attackerName does not match playerStats.name', () => {
@@ -355,8 +365,8 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.queryByText('Other Character Maneuver')).not.toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
+    expect(maneuverNotInList('Other Character Maneuver')).toBe(true);
+    expect(maneuverNotInList('Trip Attack')).toBe(true);
   });
 
   it('excludes maneuver when targetName does not match playerStats.name', () => {
@@ -375,8 +385,8 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.queryByText('Other Target Maneuver')).not.toBeInTheDocument();
-    expect(screen.queryByText('Trip Attack')).not.toBeInTheDocument();
+    expect(maneuverNotInList('Other Target Maneuver')).toBe(true);
+    expect(maneuverNotInList('Trip Attack')).toBe(true);
   });
 
   it('treats skillContext same as attackContext for isPromptMode', () => {
@@ -417,20 +427,29 @@ describe('CombatSuperiorityModal - prompt mode', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Free Maneuver')).toBeInTheDocument();
+    expect(maneuverInList('Free Maneuver')).toBe(true);
+  });
+
+  it('shows empty state when no maneuvers match the prompt filter', () => {
+    renderModalDirect({
+      payload: {
+        allManeuvers: [{ name: 'Trip Attack', actionType: 'attack_rider', trigger: 'melee_weapon_attack_hit' }],
+        knownManeuvers: ['Trip Attack'],
+        maxOptions: 3,
+        selectionMode: false,
+        attackContext: { hit: true, weaponType: 'ranged', attackerName: 'TestChar' },
+        playerStats: PLAYER_STATS,
+      },
+      onConfirm: vi.fn(),
+      onClose: vi.fn(),
+    });
+    expect(screen.getByText(/No maneuvers selected/)).toBeInTheDocument();
   });
 });
 
 // ── lastAttack fallback ──
 
 describe('CombatSuperiorityModal - lastAttack fallback', () => {
-  beforeEach(() => {
-    vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(1);
-  });
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('constructs effectiveAttack from lastAttack when attackContext is null', () => {
     renderModalDirect({
       payload: {
@@ -445,7 +464,7 @@ describe('CombatSuperiorityModal - lastAttack fallback', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Trip Attack')).toBeInTheDocument();
+    expect(maneuverInList('Trip Attack')).toBe(true);
   });
 
   it('defaults missing lastAttack fields to safe values', () => {
@@ -463,7 +482,7 @@ describe('CombatSuperiorityModal - lastAttack fallback', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Any Trigger Maneuver')).toBeInTheDocument();
+    expect(maneuverInList('Any Trigger Maneuver')).toBe(true);
 
     // defaults replacingAttack to false
     renderModalDirect({
@@ -479,7 +498,7 @@ describe('CombatSuperiorityModal - lastAttack fallback', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.queryByText('Replace Attack Maneuver')).not.toBeInTheDocument();
+    expect(maneuverNotInList('Replace Attack Maneuver')).toBe(true);
   });
 
   it('prefers attackContext over lastAttack when both are present', () => {
@@ -499,8 +518,8 @@ describe('CombatSuperiorityModal - lastAttack fallback', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    expect(screen.getByText('Melee Maneuver')).toBeInTheDocument();
-    expect(screen.queryByText('Ranged Maneuver')).not.toBeInTheDocument();
+    expect(maneuverInList('Melee Maneuver')).toBe(true);
+    expect(maneuverNotInList('Ranged Maneuver')).toBe(true);
   });
 
   it.each([
@@ -530,8 +549,8 @@ describe('CombatSuperiorityModal - lastAttack fallback', () => {
       onConfirm: vi.fn(),
       onClose: vi.fn(),
     });
-    shown.forEach(name => expect(screen.getByText(name)).toBeInTheDocument());
-    excluded.forEach(name => expect(screen.queryByText(name)).not.toBeInTheDocument());
+    shown.forEach(name => expect(maneuverInList(name)).toBe(true));
+    excluded.forEach(name => expect(maneuverNotInList(name)).toBe(true));
   });
 });
 
@@ -553,7 +572,7 @@ describe('CombatSuperiorityModal - onReopenSelection', () => {
       onConfirm: vi.fn(),
     });
     fireEvent.click(screen.getByRole('button', { name: /Manage Maneuvers/ }));
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(onReopenSelection).toHaveBeenCalledTimes(1);
     });
     expect(onClose).not.toHaveBeenCalled();
@@ -592,7 +611,7 @@ describe('CombatSuperiorityModal - onReopenSelection', () => {
       onConfirm,
     });
     fireEvent.click(screen.getByRole('button', { name: /Manage Maneuvers/ }));
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(onReopenSelection).toHaveBeenCalledTimes(1);
     });
     expect(onConfirm).not.toHaveBeenCalled();
@@ -613,10 +632,10 @@ describe('CombatSuperiorityModal - onReopenSelection', () => {
     });
     const btn = screen.getByRole('button', { name: /Manage Maneuvers/ });
     fireEvent.click(btn);
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
         '[CombatSuperiorityModal] Reopen selection failed:',
-        expect.any(Error)
+        expect.objectContaining({ message: 'fail' })
       );
     });
     consoleSpy.mockRestore();
@@ -629,7 +648,7 @@ describe('CombatSuperiorityModal - handleUseManeuver error', () => {
   it('logs error, does not set applied state, and does not show result when onConfirm rejects', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
     const onConfirm = vi.fn().mockRejectedValue(new Error('use failed'));
-    const { container } = renderModalDirect({
+    renderModalDirect({
       payload: {
         allManeuvers: [{ name: 'Ki-Fueled Attack', actionType: 'bonus_action' }],
         knownManeuvers: ['Ki-Fueled Attack'],
@@ -639,19 +658,18 @@ describe('CombatSuperiorityModal - handleUseManeuver error', () => {
       onConfirm,
       onClose: vi.fn(),
     });
-    const radios = container.querySelectorAll('input[name="combatManeuver"]');
-    fireEvent.click(radios[0]);
+    const radio = screen.getByRole('radio', { name: /Ki-Fueled Attack/ });
+    fireEvent.click(radio);
     fireEvent.click(screen.getByRole('button', { name: /Use Maneuver/ }));
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
         '[CombatSuperiorityModal] Use maneuver failed:',
-        expect.any(Error)
+        expect.objectContaining({ message: 'use failed' })
       );
       expect(screen.queryByText('Done')).not.toBeInTheDocument();
     });
     consoleSpy.mockRestore();
   });
-
 });
 
 // ── Maneuver description rendering ──
@@ -684,5 +702,4 @@ describe('CombatSuperiorityModal - maneuver descriptions', () => {
     expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
     expect(screen.getByText('Add die to attack roll.')).toBeInTheDocument();
   });
-
 });

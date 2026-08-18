@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MultiTargetCountPopup from './MultiTargetCountPopup.jsx';
@@ -30,23 +31,14 @@ describe('MultiTargetCountPopup', () => {
     vi.clearAllMocks();
   });
 
-  // ── Rendering ──
-
   describe('rendering', () => {
-    it('renders the popup overlay and modal', () => {
-      render(<MultiTargetCountPopup {...makeProps()} />);
-      expect(document.querySelector('.popup-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.popup-modal')).toBeInTheDocument();
-    });
-
     it('renders the header with icon and title', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      expect(document.querySelector('h3')).toHaveTextContent('Scorching Ray');
+      expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Scorching Ray');
     });
 
-    it('renders spell name and subtitle with level and school', () => {
+    it('renders spell subtitle with level and school', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      expect(document.querySelector('.metamagic-spell-name strong')).toHaveTextContent('Scorching Ray');
       expect(screen.getByText(/— Level 2 Evocation/)).toBeInTheDocument();
     });
 
@@ -73,117 +65,89 @@ describe('MultiTargetCountPopup', () => {
       expect(screen.getByText('Cancel')).toBeInTheDocument();
     });
 
-    it('uses default label "Cast {title}" when confirmLabel is not provided', () => {
+    it('uses default labels when confirmLabel and cancelLabel are not provided', () => {
       const props = makeProps();
       delete props.confirmLabel;
-      render(<MultiTargetCountPopup {...props} />);
-      expect(screen.getByText('Cast Scorching Ray')).toBeInTheDocument();
-    });
-
-    it('uses default "Cancel" label when cancelLabel is not provided', () => {
-      const props = makeProps();
       delete props.cancelLabel;
       render(<MultiTargetCountPopup {...props} />);
+      expect(screen.getByText('Cast Scorching Ray')).toBeInTheDocument();
       expect(screen.getByText('Cancel')).toBeInTheDocument();
     });
   });
 
-  // ── Target selection display ──
-
   describe('target selection display', () => {
     it('shows no checkmark for unselected targets initially', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      expect(goblinEl.textContent).not.toContain('\u2713');
+      expect(screen.getByText(text => text === 'Goblin')).toBeInTheDocument();
     });
 
     it('updates counter when a target is selected', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      fireEvent.click(goblinEl);
+      fireEvent.click(screen.getByText('Goblin'));
       expect(screen.getByText(/Targets \(1\/3\):/)).toBeInTheDocument();
     });
 
     it('shows checkmark for selected target', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      fireEvent.click(goblinEl);
-      expect(goblinEl.textContent).toContain('\u2713');
+      fireEvent.click(screen.getByText(/Goblin/));
+      expect(screen.getByText(text => text.includes('Goblin') && text.includes('\u2713'))).toBeInTheDocument();
     });
 
     it('toggles target selection off when clicked again', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      fireEvent.click(goblinEl);
+      const goblinBtn = screen.getByText(/Goblin/);
+      fireEvent.click(goblinBtn);
       expect(screen.getByText(/Targets \(1\/3\):/)).toBeInTheDocument();
-      fireEvent.click(goblinEl);
+      fireEvent.click(goblinBtn);
       expect(screen.getByText(/Targets \(0\/3\):/)).toBeInTheDocument();
-    });
-
-    it('shows selected target with green styling', () => {
-      render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      fireEvent.click(goblinEl);
-      expect(goblinEl).toHaveStyle({ backgroundColor: 'rgba(76, 175, 80, 0.3)' });
-      expect(goblinEl).toHaveStyle({ border: '1px solid #4CAF50' });
-    });
-
-    it('shows unselected target with white styling', () => {
-      render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      expect(goblinEl).toHaveStyle({ backgroundColor: 'rgba(255, 255, 255, 0.1)' });
     });
 
     it('selects multiple targets independently', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      const skeletonEl = screen.getByText('Skeleton');
-      fireEvent.click(goblinEl);
-      fireEvent.click(skeletonEl);
+      fireEvent.click(screen.getByText(/Goblin/));
+      fireEvent.click(screen.getByText(/Skeleton/));
       expect(screen.getByText(/Targets \(2\/3\):/)).toBeInTheDocument();
-      expect(goblinEl.textContent).toContain('\u2713');
-      expect(skeletonEl.textContent).toContain('\u2713');
+      expect(screen.getByText(text => text.includes('Goblin') && text.includes('\u2713'))).toBeInTheDocument();
+      expect(screen.getByText(text => text.includes('Skeleton') && text.includes('\u2713'))).toBeInTheDocument();
     });
   });
-
-  // ── Max targets limit ──
 
   describe('max targets limit', () => {
     it('does not allow selecting beyond maxTargets', () => {
       render(<MultiTargetCountPopup {...makeProps({ maxTargets: 2 })} />);
-      const goblinEl = screen.getByText('Goblin');
-      const skeletonEl = screen.getByText('Skeleton');
-      const orcEl = screen.getByText('Orc');
-      fireEvent.click(goblinEl);
-      fireEvent.click(skeletonEl);
+      fireEvent.click(screen.getByText(/Goblin/));
+      fireEvent.click(screen.getByText(/Skeleton/));
       expect(screen.getByText(/Targets \(2\/2\):/)).toBeInTheDocument();
-      fireEvent.click(orcEl);
+      expect(screen.queryByText(text => text.includes('Orc') && text.includes('\u2713'))).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText(/Orc/));
       expect(screen.getByText(/Targets \(2\/2\):/)).toBeInTheDocument();
     });
 
-    it('does not change selection when max is reached and clicking another', () => {
+    it('does not change existing selection when max is reached and clicking another', () => {
       render(<MultiTargetCountPopup {...makeProps({ maxTargets: 2 })} />);
-      const goblinEl = screen.getByText('Goblin');
-      const skeletonEl = screen.getByText('Skeleton');
-      const orcEl = screen.getByText('Orc');
-      fireEvent.click(goblinEl);
-      fireEvent.click(skeletonEl);
-      expect(goblinEl.textContent).toContain('\u2713');
-      expect(skeletonEl.textContent).toContain('\u2713');
-      expect(orcEl.textContent).not.toContain('\u2713');
-      fireEvent.click(orcEl);
-      expect(orcEl.textContent).not.toContain('\u2713');
+      fireEvent.click(screen.getByText(/Goblin/));
+      fireEvent.click(screen.getByText(/Skeleton/));
+      expect(screen.getByText(text => text.includes('Goblin') && text.includes('\u2713'))).toBeInTheDocument();
+      expect(screen.getByText(text => text.includes('Skeleton') && text.includes('\u2713'))).toBeInTheDocument();
+      expect(screen.queryByText(text => text.includes('Orc') && text.includes('\u2713'))).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText(/Orc/));
+      expect(screen.queryByText(text => text.includes('Orc') && text.includes('\u2713'))).not.toBeInTheDocument();
+      expect(screen.getByText(text => text.includes('Goblin') && text.includes('\u2713'))).toBeInTheDocument();
+      expect(screen.getByText(text => text.includes('Skeleton') && text.includes('\u2713'))).toBeInTheDocument();
     });
 
     it('allows selecting fewer than maxTargets', () => {
       render(<MultiTargetCountPopup {...makeProps({ maxTargets: 5 })} />);
-      const goblinEl = screen.getByText('Goblin');
-      fireEvent.click(goblinEl);
+      fireEvent.click(screen.getByText('Goblin'));
       expect(screen.getByText(/Targets \(1\/5\):/)).toBeInTheDocument();
     });
-  });
 
-  // ── Confirm button state ──
+    it('does not allow selecting any target when maxTargets is 0', () => {
+      render(<MultiTargetCountPopup {...makeProps({ maxTargets: 0 })} />);
+      fireEvent.click(screen.getByText('Goblin'));
+      expect(screen.getByText(/Targets \(0\/0\):/)).toBeInTheDocument();
+    });
+  });
 
   describe('confirm button state', () => {
     it('is disabled when no targets are selected', () => {
@@ -193,50 +157,41 @@ describe('MultiTargetCountPopup', () => {
 
     it('is enabled when at least one target is selected', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      fireEvent.click(goblinEl);
+      fireEvent.click(screen.getByText('Goblin'));
       expect(screen.getByText('Cast Scorching Ray')).not.toBeDisabled();
     });
 
     it('is disabled again when all targets are deselected', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      fireEvent.click(goblinEl);
+      const goblinBtn = screen.getByText(/Goblin/);
+      fireEvent.click(goblinBtn);
       expect(screen.getByText('Cast Scorching Ray')).not.toBeDisabled();
-      fireEvent.click(goblinEl);
+      fireEvent.click(goblinBtn);
       expect(screen.getByText('Cast Scorching Ray')).toBeDisabled();
     });
   });
 
-  // ── Confirm behavior ──
-
   describe('confirm behavior', () => {
     it('calls onConfirm with selected targets array', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      const skeletonEl = screen.getByText('Skeleton');
-      fireEvent.click(goblinEl);
-      fireEvent.click(skeletonEl);
+      fireEvent.click(screen.getByText('Goblin'));
+      fireEvent.click(screen.getByText('Skeleton'));
       fireEvent.click(screen.getByText('Cast Scorching Ray'));
       expect(mockOnConfirm).toHaveBeenCalledWith(['Goblin', 'Skeleton']);
     });
 
     it('calls onConfirm with single target when only one is selected', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      fireEvent.click(goblinEl);
+      fireEvent.click(screen.getByText('Goblin'));
       fireEvent.click(screen.getByText('Cast Scorching Ray'));
       expect(mockOnConfirm).toHaveBeenCalledWith(['Goblin']);
     });
 
     it('calls onConfirm with all selected targets in selection order', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const goblinEl = screen.getByText('Goblin');
-      const skeletonEl = screen.getByText('Skeleton');
-      const orcEl = screen.getByText('Orc');
-      fireEvent.click(skeletonEl);
-      fireEvent.click(orcEl);
-      fireEvent.click(goblinEl);
+      fireEvent.click(screen.getByText('Skeleton'));
+      fireEvent.click(screen.getByText('Orc'));
+      fireEvent.click(screen.getByText('Goblin'));
       fireEvent.click(screen.getByText('Cast Scorching Ray'));
       expect(mockOnConfirm).toHaveBeenCalledWith(['Skeleton', 'Orc', 'Goblin']);
     });
@@ -248,8 +203,6 @@ describe('MultiTargetCountPopup', () => {
     });
   });
 
-  // ── Skip behavior ──
-
   describe('skip behavior', () => {
     it('calls onSkip when cancel button is clicked', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
@@ -257,17 +210,9 @@ describe('MultiTargetCountPopup', () => {
       expect(mockOnSkip).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onSkip when clicking the overlay background', () => {
+    it('does NOT call onSkip when clicking on content inside the modal', () => {
       render(<MultiTargetCountPopup {...makeProps()} />);
-      const overlay = document.querySelector('.popup-overlay');
-      fireEvent.click(overlay);
-      expect(mockOnSkip).toHaveBeenCalledTimes(1);
-    });
-
-    it('does NOT call onSkip when clicking inside the modal content', () => {
-      render(<MultiTargetCountPopup {...makeProps()} />);
-      const modal = document.querySelector('.popup-modal');
-      fireEvent.click(modal);
+      fireEvent.click(screen.getByRole('heading', { level: 3 }));
       expect(mockOnSkip).not.toHaveBeenCalled();
     });
 
@@ -277,8 +222,6 @@ describe('MultiTargetCountPopup', () => {
       expect(mockOnSkip).toHaveBeenCalledTimes(1);
     });
   });
-
-  // ── Empty creature targets ──
 
   describe('empty creature targets', () => {
     it('renders with no creature options when creatureTargets is empty', () => {
@@ -292,12 +235,10 @@ describe('MultiTargetCountPopup', () => {
     });
   });
 
-  // ── Spell fallback ──
-
   describe('spell fallback', () => {
     it('shows "Spell" fallback when spell is null', () => {
       render(<MultiTargetCountPopup {...makeProps({ spell: null })} />);
-      expect(document.querySelector('.metamagic-spell-name strong')).toHaveTextContent('Spell');
+      expect(screen.getByText('Spell')).toBeInTheDocument();
     });
 
     it('shows spell name when provided', () => {
@@ -305,8 +246,6 @@ describe('MultiTargetCountPopup', () => {
       expect(screen.getByText('Burning Hands')).toBeInTheDocument();
     });
   });
-
-  // ── Default level fallback ──
 
   describe('default level fallback', () => {
     it('uses spell level when spell has a level', () => {

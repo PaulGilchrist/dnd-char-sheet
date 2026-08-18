@@ -1,8 +1,6 @@
-// @cleaned-by-ai
 // @improved-by-ai
-// Absorbed coverage from deleted CharClassFeatures-Advanced.test.jsx (Sorcerer + AdrenalineRush/Stonecunning/Dodge sections)
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 import CharClassFeatures from './CharClassFeatures.jsx';
 import * as classFeatures from '../../../services/character/classFeatures.js';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
@@ -33,25 +31,7 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn(),
 }));
 
-vi.mock('../../../services/automation/index.js', () => ({
-  executeHandler: vi.fn(),
-}));
-
-vi.mock('../../../services/automation/handlers/class-wizard/portentHandler.js', () => ({
-  applyPortentChoice: vi.fn(),
-}));
-
-vi.mock('../../../services/ui/dataLoader.js', () => ({
-  loadFightingStyles: vi.fn(() => Promise.resolve([])),
-}));
-
-vi.mock('../modals/WeaponKindMasteryModal.jsx', () => ({
-  default: function MockWeaponKindMasteryModal() {
-    return <div data-testid="weapon-kind-mastery-modal">WeaponKindMasteryModal</div>;
-  },
-}));
-
-const MOCK_CAMPAIGN_NAME = 'test-campaign';
+const MOCK_CAMPAIGN = 'test-campaign';
 
 function buildSorcererStats(overrides = {}) {
   return {
@@ -72,174 +52,147 @@ function buildSorcererStats(overrides = {}) {
   };
 }
 
+function setBuffs(buffs) {
+  runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    if (key === 'activeBuffs') return buffs;
+    return undefined;
+  });
+}
+
+function setTranceOfOrder(active) {
+  runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    if (key === 'tranceOfOrderActive') return active;
+    if (key === 'activeBuffs') return [];
+    return undefined;
+  });
+}
+
 describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-      switch (key) {
-        case 'activeBuffs': return [];
-        default: return undefined;
-      }
+      if (key === 'activeBuffs') return [];
+      return undefined;
     });
   });
 
+  afterEach(cleanup);
+
   describe('tracked resources', () => {
-    it('renders sorcery points tracked resource', () => {
+    it('renders sorcery points with correct label and max from classFeatures', () => {
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByTestId('tracked-resource-sorceryPoints')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
+      expect(screen.getByTestId('tracked-resource-sorceryPoints')).toHaveTextContent('5/5');
     });
 
-    it('renders metamagic known tracked resource', () => {
+    it('renders metamagic known with correct label and max from classFeatures', () => {
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByTestId('tracked-resource-metamagicKnown')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Metamagic Known:')).toBeInTheDocument();
+      expect(screen.getByTestId('tracked-resource-metamagicKnown')).toHaveTextContent('2/2');
     });
 
-    it('renders innate sorcery tracked resource', () => {
+    it('renders innate sorcery with correct label and max from classFeatures', () => {
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByTestId('tracked-resource-innateSorceryUses')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Innate Sorcery:')).toBeInTheDocument();
+      expect(screen.getByTestId('tracked-resource-innateSorceryUses')).toHaveTextContent('0/0');
     });
 
     it('renders sorcerous restoration when resource_restoration passive exists', () => {
       const stats = buildSorcererStats({
         automation: { passives: [{ type: 'resource_restoration' }] },
       });
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByTestId('tracked-resource-sorcerousRestorationUses')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Sorcerous Restoration:')).toBeInTheDocument();
+      expect(screen.getByTestId('tracked-resource-sorcerousRestorationUses')).toHaveTextContent('1/1');
     });
 
-    it('does not render sorcerous restoration when passive is missing', () => {
-      const stats = buildSorcererStats({
-        automation: { passives: [] },
-      });
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.queryByTestId('tracked-resource-sorcerousRestorationUses')).not.toBeInTheDocument();
+    it('does not render sorcerous restoration when resource_restoration passive is absent', () => {
+      const stats = buildSorcererStats({ automation: { passives: [] } });
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByText('Sorcerous Restoration:')).not.toBeInTheDocument();
     });
   });
 
   describe('active buff badges', () => {
-    it('shows innate sorcery badge when activeBuffs contains it', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Innate Sorcery' }];
-        return undefined;
-      });
+    it('shows innate sorcery badge text when the buff is active', () => {
+      setBuffs([{ name: 'Innate Sorcery' }]);
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText('+1 Save DC, Spell Adv')).toBeInTheDocument();
     });
 
-    it('does not show innate sorcery badge when not active', () => {
+    it('does not show innate sorcery badge when the buff is absent', () => {
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText('+1 Save DC, Spell Adv')).not.toBeInTheDocument();
     });
 
-    it('shows telepathic speech badge when active', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Telepathic Speech' }];
-        return undefined;
-      });
+    it('shows telepathic speech badge when the buff is active', () => {
+      setBuffs([{ name: 'Telepathic Speech' }]);
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText('Telepathic Speech')).toBeInTheDocument();
     });
 
-    it('does not show telepathic speech badge when not active', () => {
+    it('does not show telepathic speech badge when the buff is absent', () => {
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText('Telepathic Speech')).not.toBeInTheDocument();
     });
 
-    it('shows trance of order when tranceOfOrderActive is true', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'tranceOfOrderActive') return true;
-        return undefined;
-      });
+    it('shows trance of order badge when tranceOfOrderActive is true', () => {
+      setTranceOfOrder(true);
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText('Trance of Order')).toBeInTheDocument();
     });
 
-    it('does not show trance of order when tranceOfOrderActive is false', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'tranceOfOrderActive') return false;
-        return undefined;
-      });
+    it('does not show trance of order badge when tranceOfOrderActive is false', () => {
+      setTranceOfOrder(false);
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText('Trance of Order')).not.toBeInTheDocument();
     });
   });
 
   describe('revelation in flesh effect mapping', () => {
-    it('maps aquatic_adaptation effect to display label', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Revelation in Flesh', effect: 'aquatic_adaptation' }];
-        return undefined;
-      });
+    const effectMappings = [
+      { effect: 'aquatic_adaptation', label: 'Aquatic Adaptation' },
+      { effect: 'glistening_flight', label: 'Glistening Flight' },
+      { effect: 'see_the_invisible', label: 'See the Invisible' },
+      { effect: 'wormhole_movement', label: 'Wormhole Movement' },
+    ];
+
+    it.each(effectMappings)('displays "$label" for effect "$effect"', ({ effect, label }) => {
+      setBuffs([{ name: 'Revelation in Flesh', effect }]);
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByText('Aquatic Adaptation')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText(label)).toBeInTheDocument();
     });
 
-    it('maps glistening_flight effect to display label', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Revelation in Flesh', effect: 'glistening_flight' }];
-        return undefined;
-      });
+    it('falls back to "Revelation in Flesh" for an unknown effect key', () => {
+      setBuffs([{ name: 'Revelation in Flesh', effect: 'unknown_effect' }]);
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByText('Glistening Flight')).toBeInTheDocument();
-    });
-
-    it('maps see_the_invisible effect to display label', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Revelation in Flesh', effect: 'see_the_invisible' }];
-        return undefined;
-      });
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByText('See the Invisible')).toBeInTheDocument();
-    });
-
-    it('maps wormhole_movement effect to display label', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Revelation in Flesh', effect: 'wormhole_movement' }];
-        return undefined;
-      });
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByText('Wormhole Movement')).toBeInTheDocument();
-    });
-
-    it('falls back to "Revelation in Flesh" for unknown effect', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Revelation in Flesh', effect: 'unknown_effect' }];
-        return undefined;
-      });
-      const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText('Revelation in Flesh')).toBeInTheDocument();
     });
 
-    it('does not show revelation badge when no matching buff', () => {
+    it('does not show revelation badge when no matching buff exists', () => {
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText('Revelation in Flesh')).not.toBeInTheDocument();
     });
 
     it('renders multiple revelation effects joined with comma', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [
-          { name: 'Revelation in Flesh', effect: 'aquatic_adaptation' },
-          { name: 'Revelation in Flesh', effect: 'glistening_flight' },
-        ];
-        return undefined;
-      });
+      setBuffs([
+        { name: 'Revelation in Flesh', effect: 'aquatic_adaptation' },
+        { name: 'Revelation in Flesh', effect: 'glistening_flight' },
+      ]);
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       const badge = screen.getByText(/Aquatic Adaptation.*Glistening Flight/);
       expect(badge).toBeInTheDocument();
     });
@@ -254,11 +207,12 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
         creatingSpellSlotCosts: ['1 sorcery point', '2 sorcery points'],
       });
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText(/Spell Slot \(level 1-5\) Costs:/)).toBeInTheDocument();
+      expect(screen.getByText(/1 sorcery point, 2 sorcery points/)).toBeInTheDocument();
     });
 
-    it('does not render spell slot costs when array is empty', () => {
+    it('does not render spell slot costs header when array is empty', () => {
       vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
         maxSorceryPoints: 5,
         metamagicKnown: 2,
@@ -266,7 +220,7 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
         creatingSpellSlotCosts: [],
       });
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText(/Spell Slot \(level 1-5\) Costs/)).not.toBeInTheDocument();
     });
   });
@@ -278,8 +232,8 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
         return undefined;
       });
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByTestId('tracked-resource-sorceryPoints')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
     });
 
     it('does not crash when activeBuffs is undefined', () => {
@@ -288,42 +242,41 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
         return undefined;
       });
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByTestId('tracked-resource-sorceryPoints')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
     });
   });
 
-  describe('interaction with main entry point features', () => {
+  describe('integration with entry point features', () => {
     it('renders dodge badge alongside sorcerer features when dodge buff is active', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'dodge' }];
-        return undefined;
-      });
+      setBuffs([{ effect: 'dodge' }]);
       const stats = buildSorcererStats();
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText('Dodge — Disadv on attacks vs you, Adv on DEX saves')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-sorceryPoints')).toBeInTheDocument();
+      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
     });
 
-    it('renders adrenaline rush alongside sorcerer features', () => {
+    it('renders adrenaline rush alongside sorcerer features when bonus_action_dash special action exists', () => {
       const stats = buildSorcererStats({
         automation: { specialActions: [{ effect: 'bonus_action_dash' }] },
       });
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByTestId('tracked-resource-adrenalineRushUses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-sorceryPoints')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Adrenaline Rush:')).toBeInTheDocument();
+      expect(screen.getByTestId('tracked-resource-adrenalineRushUses')).toHaveTextContent('2/2');
+      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
     });
 
-    it('renders stonecunning alongside sorcerer features', () => {
+    it('renders stonecunning alongside sorcerer features when race has automation trait', () => {
       const stats = buildSorcererStats({
         race: { traits: [{ name: 'Stonecunning', automation: true }] },
       });
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByTestId('tracked-resource-stonecunningUses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-sorceryPoints')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Stonecunning:')).toBeInTheDocument();
+      expect(screen.getByTestId('tracked-resource-stonecunningUses')).toHaveTextContent('2/2');
+      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
     });
 
-    it('renders all three: class features + adrenaline rush + stonecunning', () => {
+    it('renders all tracked resources together: class + adrenaline rush + stonecunning + restoration', () => {
       const stats = buildSorcererStats({
         race: { traits: [{ name: 'Stonecunning', automation: true }] },
         automation: {
@@ -331,11 +284,11 @@ describe('SorcererFeatures (via CharClassFeatures entry point)', () => {
           specialActions: [{ effect: 'bonus_action_dash' }],
         },
       });
-      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN_NAME} />);
-      expect(screen.getByTestId('tracked-resource-sorceryPoints')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-adrenalineRushUses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-stonecunningUses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-sorcerousRestorationUses')).toBeInTheDocument();
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.getByText('Sorcery Points:')).toBeInTheDocument();
+      expect(screen.getByText('Adrenaline Rush:')).toBeInTheDocument();
+      expect(screen.getByText('Stonecunning:')).toBeInTheDocument();
+      expect(screen.getByText('Sorcerous Restoration:')).toBeInTheDocument();
     });
   });
 });

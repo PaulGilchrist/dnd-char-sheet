@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import MultiTargetPopup from './MultiTargetPopup.jsx';
@@ -29,33 +30,30 @@ describe('MultiTargetPopup', () => {
     describe('rendering', () => {
         it('renders the popup with header, spell info, creature select, and action buttons', () => {
             render(<MultiTargetPopup {...makeProps()} />);
-            expect(document.querySelector('.popup-overlay')).toBeInTheDocument();
-            expect(document.querySelector('.popup-modal')).toBeInTheDocument();
             expect(screen.getByText('Words of Creation')).toBeInTheDocument();
             expect(screen.getByText('Create Water')).toBeInTheDocument();
-            expect(screen.getByText(/Spread to Second Target/)).toBeInTheDocument();
+            expect(screen.getByText(/— Spread to Second Target/)).toBeInTheDocument();
             expect(screen.getByText(/30 ft/)).toBeInTheDocument();
             expect(screen.getByText(/Select a second creature within/)).toBeInTheDocument();
             expect(screen.getByText('Second Target:')).toBeInTheDocument();
-            expect(document.querySelector('select')).toBeInTheDocument();
+            expect(screen.getByRole('combobox')).toBeInTheDocument();
             expect(screen.getByText('-- Select target --')).toBeInTheDocument();
             expect(screen.getByText('Goblin')).toBeInTheDocument();
             expect(screen.getByText('Skeleton')).toBeInTheDocument();
             expect(screen.getByText('Orc')).toBeInTheDocument();
-            expect(screen.getByText('Cast on First Target Only')).toBeInTheDocument();
-            expect(screen.getByText('Cast on Both Targets')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Cast on First Target Only' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Cast on Both Targets' })).toBeInTheDocument();
         });
 
         it('shows "Spell" fallback when spell is null or missing a name', () => {
             render(<MultiTargetPopup {...makeProps({ spell: null })} />);
             expect(screen.getByText(/— Spread to Second Target/)).toBeInTheDocument();
-            expect(document.querySelector('.metamagic-spell-name strong')).toHaveTextContent('Spell');
+            expect(screen.getByText('Spell')).toBeInTheDocument();
         });
 
         it('renders select with only placeholder when creatureTargets is empty', () => {
             render(<MultiTargetPopup {...makeProps({ creatureTargets: [] })} />);
-            const select = document.querySelector('select');
-            expect(select).toBeInTheDocument();
+            const select = screen.getByRole('combobox');
             expect(select.querySelectorAll('option')).toHaveLength(1);
             expect(select.querySelector('option').value).toBe('');
         });
@@ -64,50 +62,36 @@ describe('MultiTargetPopup', () => {
     describe('confirm button state', () => {
         it('is disabled by default and enabled after selecting a target', () => {
             render(<MultiTargetPopup {...makeProps()} />);
-            expect(screen.getByText('Cast on Both Targets')).toBeDisabled();
-            const select = document.querySelector('select');
+            const btn = screen.getByRole('button', { name: 'Cast on Both Targets' });
+            expect(btn).toBeDisabled();
+            const select = screen.getByRole('combobox');
             fireEvent.change(select, { target: { value: 'Goblin' } });
-            expect(screen.getByText('Cast on Both Targets')).not.toBeDisabled();
+            expect(btn).not.toBeDisabled();
         });
 
         it('is disabled again when target selection is cleared', () => {
             render(<MultiTargetPopup {...makeProps()} />);
-            const select = document.querySelector('select');
+            const btn = screen.getByRole('button', { name: 'Cast on Both Targets' });
+            const select = screen.getByRole('combobox');
             fireEvent.change(select, { target: { value: 'Goblin' } });
-            expect(screen.getByText('Cast on Both Targets')).not.toBeDisabled();
+            expect(btn).not.toBeDisabled();
             fireEvent.change(select, { target: { value: '' } });
-            expect(screen.getByText('Cast on Both Targets')).toBeDisabled();
+            expect(btn).toBeDisabled();
         });
     });
 
     describe('confirm behavior', () => {
         it('calls onConfirm with selected second target', () => {
             render(<MultiTargetPopup {...makeProps()} />);
-            const select = document.querySelector('select');
+            const select = screen.getByRole('combobox');
             fireEvent.change(select, { target: { value: 'Orc' } });
-            fireEvent.click(screen.getByText('Cast on Both Targets'));
+            fireEvent.click(screen.getByRole('button', { name: 'Cast on Both Targets' }));
             expect(mockOnConfirm).toHaveBeenCalledWith({ secondTarget: 'Orc' });
         });
 
         it('does not call onConfirm when clicked without a target selected', () => {
             render(<MultiTargetPopup {...makeProps()} />);
-            fireEvent.click(screen.getByText('Cast on Both Targets'));
-            expect(mockOnConfirm).not.toHaveBeenCalled();
-        });
-
-        it('calls handleConfirm early return path when no target is selected (coverage)', () => {
-            render(<MultiTargetPopup {...makeProps()} />);
-            const btn = screen.getByText('Cast on Both Targets');
-            expect(btn.disabled).toBe(true);
-            // Access React 19 fiber node to get the onClick handler
-            const reactFiber = Object.keys(btn).find(k => k.startsWith('__reactFiber'));
-            if (reactFiber) {
-                const fiber = btn[reactFiber];
-                const handler = fiber?.memoizedProps?.onClick;
-                if (handler) {
-                    handler();
-                }
-            }
+            fireEvent.click(screen.getByRole('button', { name: 'Cast on Both Targets' }));
             expect(mockOnConfirm).not.toHaveBeenCalled();
         });
     });
@@ -115,20 +99,20 @@ describe('MultiTargetPopup', () => {
     describe('skip behavior', () => {
         it('calls onSkip when "Cast on First Target Only" button is clicked', () => {
             render(<MultiTargetPopup {...makeProps()} />);
-            fireEvent.click(screen.getByText('Cast on First Target Only'));
+            fireEvent.click(screen.getByRole('button', { name: 'Cast on First Target Only' }));
             expect(mockOnSkip).toHaveBeenCalledTimes(1);
         });
 
-        it('calls onSkip when clicking the overlay background', () => {
+        it('calls onSkip when clicking outside the modal', () => {
             render(<MultiTargetPopup {...makeProps()} />);
-            const overlay = document.querySelector('.popup-overlay');
+            const overlay = screen.getByText('Words of Creation').closest('.popup-overlay');
             fireEvent.click(overlay);
             expect(mockOnSkip).toHaveBeenCalledTimes(1);
         });
 
         it('does NOT call onSkip when clicking inside the modal content', () => {
             render(<MultiTargetPopup {...makeProps()} />);
-            const modal = document.querySelector('.popup-modal');
+            const modal = screen.getByText('Words of Creation').closest('.popup-modal');
             fireEvent.click(modal);
             expect(mockOnSkip).not.toHaveBeenCalled();
         });

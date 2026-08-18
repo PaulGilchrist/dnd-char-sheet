@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
@@ -12,15 +12,13 @@ vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">G
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
 vi.mock('./CharClassFeatures.jsx', () => ({ default: () => <div data-testid="char-class-features">Class Features</div> }));
 vi.mock('../char-feats/CharFeats.jsx', () => ({ default: () => <div data-testid="char-feats">Feats</div> }));
-vi.mock('../../common/AvatarImage.jsx', () => ({ default: () => <div data-testid="avatar-image">Avatar</div> }));
 vi.mock('../../common/AvatarModal.jsx', () => ({ default: () => null }));
 vi.mock('../LongRestButton.jsx', () => ({ default: () => <div data-testid="long-rest-btn">Long Rest</div> }));
-vi.mock('../ShortRestButton.jsx', () => ({ default: () => <div data-testid="short-rest-btn">Short Rest</div> }));
 vi.mock('../ShortRestModal.jsx', () => ({ default: () => <div data-testid="short-rest-modal">Short Rest Modal</div> }));
 vi.mock('./CharConditions.jsx', () => ({ default: () => <div data-testid="char-conditions">Conditions</div> }));
 
 vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
-    default: vi.fn((key, name, init, _deps, _campaign) => ({ current: init(), update: vi.fn() })),
+    default: vi.fn((_key, _name, init) => ({ current: init(), update: vi.fn() })),
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -48,17 +46,6 @@ vi.mock('../../../services/ui/sanitize.js', () => ({
 
 vi.mock('../../../services/combat/buffs/buffService.js', () => ({
     getActiveBuffs: vi.fn(() => []),
-}));
-
-vi.mock('../../../services/rules/rulesFactory.js', () => ({
-    default: {
-        getRules: vi.fn(() => ({ classRules: { getUnarmoredMovementIncrease: vi.fn(() => 0) } })),
-    },
-    getRules: vi.fn(() => ({ classRules: { getUnarmoredMovementIncrease: vi.fn(() => 0) } })),
-}));
-
-vi.mock('../../../services/rules/core/attackCalc.js', () => ({
-    parseMagicItemName: (name) => ({ baseName: name }),
 }));
 
 vi.mock('../../../services/encounters/combatData.js', () => ({
@@ -89,26 +76,35 @@ vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () =>
     handle: vi.fn(),
 }));
 
+vi.mock('../../../services/rules/core/attackCalc.js', () => ({
+    parseMagicItemName: (name) => ({ baseName: name }),
+}));
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe('CharSummary - Display', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
-        window.location.hostname = 'localhost';
     });
 
     // -------------------------------------------------------------------
-    // Basic rendering — avatar image always renders (imagePath optional)
+    // Avatar Image — tests real AvatarImage rendering, not the mock
     // -------------------------------------------------------------------
     describe('Avatar Image', () => {
-        it('renders avatar image when imagePath is present', () => {
+        it('renders an img element with correct src and alt when imagePath is provided', () => {
             const stats = { ...mockPlayerStats, imagePath: '/images/character.png' };
             render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
+            expect(screen.getByRole('img', { name: mockPlayerStats.name })).toBeInTheDocument();
+            expect(screen.getByRole('img').getAttribute('src')).toContain('test-campaign');
         });
 
-        it('renders avatar image when imagePath is null', () => {
+        it('renders an initial when imagePath is null', () => {
             const stats = { ...mockPlayerStats, imagePath: null };
             render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
+            // AvatarImage falls back to a div with the initial letter when no image
+            expect(screen.getByText(mockPlayerStats.name.charAt(0).toUpperCase())).toBeInTheDocument();
         });
     });
 
@@ -125,6 +121,12 @@ describe('CharSummary - Display', () => {
 
         it('does not render senses section when senses array is empty', () => {
             const stats = { ...mockPlayerStats, senses: [] };
+            render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+            expect(screen.queryByText(/Senses:/)).not.toBeInTheDocument();
+        });
+
+        it('does not render senses section when senses is null', () => {
+            const stats = { ...mockPlayerStats, senses: null };
             render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
             expect(screen.queryByText(/Senses:/)).not.toBeInTheDocument();
         });
@@ -158,8 +160,8 @@ describe('CharSummary - Display', () => {
             expect(screen.queryByText(/10 from:/)).not.toBeInTheDocument();
         });
 
-        it('does not render proficiencies section when both arrays are empty', () => {
-            const stats = { ...mockPlayerStats, proficiencies: [], toolProficiencies: [] };
+        it('does not render proficiencies section when proficiencies is null', () => {
+            const stats = { ...mockPlayerStats, proficiencies: null, toolProficiencies: [] };
             render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
             expect(screen.queryByText(/Proficiencies:/)).not.toBeInTheDocument();
         });
@@ -178,8 +180,8 @@ describe('CharSummary - Display', () => {
             expect(screen.getByText(/Celestial/)).toBeInTheDocument();
         });
 
-        it('does not render languages section when array is empty', () => {
-            const stats = { ...mockPlayerStats, languages: [] };
+        it('does not render languages section when languages is null', () => {
+            const stats = { ...mockPlayerStats, languages: null };
             render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
             expect(screen.queryByText(/Languages:/)).not.toBeInTheDocument();
         });
@@ -189,9 +191,11 @@ describe('CharSummary - Display', () => {
     // Short rest button rendering
     // -------------------------------------------------------------------
     describe('Short Rest Button', () => {
-        it('renders the short rest button on localhost', () => {
+        it('renders the short rest button with correct label and role', () => {
             render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-            expect(screen.getByTestId('short-rest-btn')).toBeInTheDocument();
+            const btn = screen.getByRole('button', { name: /short rest/i });
+            expect(btn).toBeInTheDocument();
+            expect(btn).toHaveAttribute('title', 'Short Rest: spend Hit Dice and restore short-rest resources');
         });
     });
 });

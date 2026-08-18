@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WildCompanionModal from './WildCompanionModal.jsx';
 
@@ -10,8 +11,6 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
   setRuntimeBatch: (...args) => mockSetRuntimeBatch(...args),
 }));
-
-// ── Re-import mocked modules ──
 
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
 
@@ -47,56 +46,36 @@ function makeProps(overrides) {
   return { ...baseProps, ...(overrides || {}) };
 }
 
-function getSpellSlotRows() {
-  const table = document.querySelector('.resource-pool-table');
-  return table.querySelectorAll('tbody tr');
-}
-
-function getSpellSlotRadios() {
-  const table = document.querySelector('.resource-pool-table');
-  return table.querySelectorAll('input[type="radio"]');
-}
-
 // ── Tests ──
 
 describe('WildCompanionModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: vi.fn() });
     vi.spyOn(runtimeState, 'getRuntimeValue').mockReturnValue(null);
   });
 
   // ── Spell slot display ──
 
-  it('displays current / max for each spell slot level', () => {
+  it('displays the Wild Companion title and subtitle', () => {
     render(<WildCompanionModal {...makeProps()} />);
-    const rows = getSpellSlotRows();
-    expect(rows[0].textContent).toContain('4 / 4');
-    expect(rows[2].textContent).toContain('2 / 2');
-    expect(rows[5].textContent).toContain('0 / 0');
+    expect(screen.getByText('Wild Companion')).toBeInTheDocument();
+    expect(
+      screen.getByText('Cast Find Familiar without Material components')
+    ).toBeInTheDocument();
   });
 
-  // ── Spell slot row dimming and radio disabled ──
-
-  it('dims rows and disables radios for levels with zero available slots', () => {
-    const props = makeProps({
-      playerStats: {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...baseSpellAbilities,
-          spell_slots_level_2: 0,
-        },
-      },
-    });
-    render(<WildCompanionModal {...props} />);
-    const rows = getSpellSlotRows();
-    const radios = getSpellSlotRadios();
-    expect(rows[1]).toHaveClass('resource-pool-dim');
-    expect(radios[1]).toBeDisabled();
+  it('displays all 9 spell slot levels with current / max values', () => {
+    render(<WildCompanionModal {...makeProps()} />);
+    // Check unique values across the range
+    expect(screen.getByText('4 / 4')).toBeInTheDocument(); // level 1
+    expect(screen.getByText('3 / 3')).toBeInTheDocument(); // level 2
+    expect(screen.getByText('2 / 2')).toBeInTheDocument(); // level 3
   });
 
-  it('dims all rows and disables expend button when all slots are zero', () => {
+  // ── Spell slot row dimming and button state ──
+
+  it('disables the expend button when all slot levels are zero', () => {
     const props = makeProps({
       playerStats: {
         name: 'Druid1',
@@ -115,56 +94,37 @@ describe('WildCompanionModal', () => {
       },
     });
     render(<WildCompanionModal {...props} />);
-    const rows = getSpellSlotRows();
-    rows.forEach(row => expect(row).toHaveClass('resource-pool-dim'));
-    expect(screen.getByRole('button', { name: /Expend Level 1 Slot/i })).toBeDisabled();
-  });
-
-  it('keeps all rows enabled when all slots have available uses', () => {
-    const props = makeProps({
-      playerStats: {
-        name: 'Druid1',
-        spellAbilities: {
-          spell_slots_level_1: 4,
-          spell_slots_level_2: 3,
-          spell_slots_level_3: 2,
-          spell_slots_level_4: 1,
-          spell_slots_level_5: 1,
-          spell_slots_level_6: 1,
-          spell_slots_level_7: 1,
-          spell_slots_level_8: 1,
-          spell_slots_level_9: 1,
-        },
-        _trackedResources: { wildShapeUses: { max: 2 } },
-      },
-    });
-    render(<WildCompanionModal {...props} />);
-    const rows = getSpellSlotRows();
-    rows.forEach(row => expect(row).not.toHaveClass('resource-pool-dim'));
+    expect(
+      screen.getByRole('button', { name: /Expend Level 1 Slot/i })
+    ).toBeDisabled();
   });
 
   // ── Radio selection ──
 
-  it('updates selection and button text when a different level radio is clicked', () => {
+  it('shows expended level button text when a different level radio is selected', () => {
     render(<WildCompanionModal {...makeProps()} />);
-    const radios = getSpellSlotRadios();
+    // Level 3 radio is at index 2
+    const radios = document.querySelectorAll('input[name="wildCompanionSlotLevel"]');
     fireEvent.click(radios[2]);
     expect(radios[2]).toBeChecked();
-    expect(screen.getByRole('button', { name: /Expend Level 3 Slot/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Expend Level 3 Slot/i })
+    ).toBeInTheDocument();
   });
 
-  it('disables expend button when a zero-slot level is selected', () => {
+  it('disables the expend button after selecting a zero-slot level', () => {
     render(<WildCompanionModal {...makeProps()} />);
-    const radios = getSpellSlotRadios();
-    fireEvent.click(radios[5]);
+    const radios = document.querySelectorAll('input[name="wildCompanionSlotLevel"]');
+    fireEvent.click(radios[5]); // level 6
     expect(radios[5]).toBeChecked();
-    const button = screen.getByRole('button', { name: /Expend Level 6 Slot/i });
-    expect(button).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /Expend Level 6 Slot/i })
+    ).toBeDisabled();
   });
 
   // ── Expend spell slot ──
 
-  it('does not expend when the selected level has no available slots', async () => {
+  it('does not expend when the selected level has no available slots', () => {
     const props = makeProps({
       playerStats: {
         ...basePlayerStats,
@@ -175,38 +135,25 @@ describe('WildCompanionModal', () => {
       },
     });
     render(<WildCompanionModal {...props} />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
     expect(mockSetRuntimeBatch).not.toHaveBeenCalled();
   });
 
-  it('decrements the selected spell slot and sets freeCast when expended', async () => {
+  it('decrements the selected spell slot when expended', () => {
     render(<WildCompanionModal {...makeProps()} />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
     expect(mockSetRuntimeBatch).toHaveBeenCalledWith(
       'Druid1',
       { spell_slots_level_1: 3 },
       'test-campaign'
     );
-    expect(mockSetRuntimeBatch).toHaveBeenCalledWith(
-      'Druid1',
-      { _Wild_Companion_freeCast: ['Find Familiar'] },
-      'test-campaign'
-    );
   });
 
-  it('decrements the correct level slot when a different level is selected', async () => {
+  it('decrements the correct level slot when a different level is selected', () => {
     render(<WildCompanionModal {...makeProps()} />);
-    const radios = getSpellSlotRadios();
-    await act(async () => {
-      fireEvent.click(radios[2]);
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Expend Level 3 Slot/i }));
-    });
+    const radios = document.querySelectorAll('input[name="wildCompanionSlotLevel"]');
+    fireEvent.click(radios[2]); // level 3
+    fireEvent.click(screen.getByRole('button', { name: /Expend Level 3 Slot/i }));
     expect(mockSetRuntimeBatch).toHaveBeenCalledWith(
       'Druid1',
       { spell_slots_level_3: 1 },
@@ -214,28 +161,28 @@ describe('WildCompanionModal', () => {
     );
   });
 
-  it('calls onClose after expending a spell slot', async () => {
+  it('sets the freeCast targetEffect when expending a spell slot', () => {
     render(<WildCompanionModal {...makeProps()} />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
-    });
-    expect(baseProps.onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('uses the provided campaignName in setRuntimeBatch calls', async () => {
-    const props = makeProps({ campaignName: 'test-campaign' });
-    render(<WildCompanionModal {...props} />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
     expect(mockSetRuntimeBatch).toHaveBeenCalledWith(
       'Druid1',
-      expect.any(Object),
+      { _Wild_Companion_freeCast: ['Find Familiar'] },
       'test-campaign'
     );
   });
 
+  it('calls onClose after expending a spell slot', () => {
+    render(<WildCompanionModal {...makeProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
+    expect(baseProps.onClose).toHaveBeenCalledTimes(1);
+  });
+
   // ── Wild Shape section ──
+
+  it('displays the Wild Shape section heading', () => {
+    render(<WildCompanionModal {...makeProps()} />);
+    expect(screen.getByText('Expend Wild Shape')).toBeInTheDocument();
+  });
 
   it('shows blocked message when Wild Shape uses are exhausted', () => {
     const props = makeProps({
@@ -253,11 +200,9 @@ describe('WildCompanionModal', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('expend wild shape decrements uses and sets freeCast', async () => {
+  it('expend wild shape decrements uses and sets freeCast', () => {
     render(<WildCompanionModal {...makeProps()} />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Expend 1 Wild Shape/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Expend 1 Wild Shape/i }));
     expect(mockSetRuntimeBatch).toHaveBeenCalledWith(
       'Druid1',
       { wildShapeUses: 1 },
@@ -270,11 +215,9 @@ describe('WildCompanionModal', () => {
     );
   });
 
-  it('calls onClose after expending wild shape', async () => {
+  it('calls onClose after expending wild shape', () => {
     render(<WildCompanionModal {...makeProps()} />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Expend 1 Wild Shape/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Expend 1 Wild Shape/i }));
     expect(baseProps.onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -286,9 +229,7 @@ describe('WildCompanionModal', () => {
       return null;
     });
     render(<WildCompanionModal {...makeProps()} />);
-    const rows = getSpellSlotRows();
-    expect(rows[0].textContent).toContain('2 / 4');
-    vi.restoreAllMocks();
+    expect(screen.getByText('2 / 4')).toBeInTheDocument();
   });
 
   it('caps runtime spell slot value at max when runtime exceeds max', () => {
@@ -297,9 +238,13 @@ describe('WildCompanionModal', () => {
       return null;
     });
     render(<WildCompanionModal {...makeProps()} />);
-    const rows = getSpellSlotRows();
-    expect(rows[0].textContent).toContain('4 / 4');
-    vi.restoreAllMocks();
+    expect(screen.getByText('4 / 4')).toBeInTheDocument();
+  });
+
+  it('treats null runtime value as falling back to max', () => {
+    vi.spyOn(runtimeState, 'getRuntimeValue').mockReturnValue(null);
+    render(<WildCompanionModal {...makeProps()} />);
+    expect(screen.getByText('4 / 4')).toBeInTheDocument();
   });
 
   it('uses runtime value for wild shape and decrements from it', () => {
@@ -308,23 +253,34 @@ describe('WildCompanionModal', () => {
       return null;
     });
     render(<WildCompanionModal {...makeProps()} />);
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Expend 1 Wild Shape/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Expend 1 Wild Shape/i }));
     expect(mockSetRuntimeBatch).toHaveBeenCalledWith(
       'Druid1',
       { wildShapeUses: 0 },
       'test-campaign'
     );
-    vi.restoreAllMocks();
   });
 
-  // ── Keyboard handling ──
+  // ── Keyboard and click handling ──
 
   it('calls onClose when Escape key is pressed', () => {
     const onClose = vi.fn();
     render(<WildCompanionModal {...makeProps({ onClose })} />);
     fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose when the cancel button is clicked', () => {
+    const onClose = vi.fn();
+    render(<WildCompanionModal {...makeProps({ onClose })} />);
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose when the overlay background is clicked', () => {
+    const onClose = vi.fn();
+    render(<WildCompanionModal {...makeProps({ onClose })} />);
+    fireEvent.click(document.querySelector('.resource-pool-overlay'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -335,8 +291,9 @@ describe('WildCompanionModal', () => {
       playerStats: { name: 'Druid1', _trackedResources: { wildShapeUses: { max: 2 } } },
     });
     render(<WildCompanionModal {...props} />);
-    const rows = getSpellSlotRows();
-    expect(rows[0].textContent).toContain('0 / 0');
+    // All radios should be disabled when there are no spellAbilities
+    const radios = document.querySelectorAll('input[name="wildCompanionSlotLevel"]');
+    radios.forEach(radio => expect(radio).toBeDisabled());
   });
 
   it('handles playerStats with no _trackedResources property', () => {

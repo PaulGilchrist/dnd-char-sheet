@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import WizardFeatures from './CharClassFeatures.jsx';
@@ -6,14 +6,11 @@ import * as classFeatures from '../../../services/character/classFeatures.js';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('../../../services/character/classFeatures.js', () => ({
-  getClassFeatures: vi.fn(() => ({
-    arcaneRecoveryLevels: 1,
-    showWizardFeatures: true,
-  })),
+  getClassFeatures: vi.fn(),
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  useRuntimeValue: vi.fn(() => undefined),
+  useRuntimeValue: vi.fn(),
   getRuntimeValue: vi.fn(() => null),
   setRuntimeValue: vi.fn(),
 }));
@@ -54,218 +51,301 @@ function buildPlayerStats(overrides = {}) {
 describe('WizardFeatures', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'activeBuffs') return [];
-      return undefined;
+    classFeatures.getClassFeatures.mockReturnValue({
+      arcaneRecoveryLevels: 1,
+      showWizardFeatures: true,
     });
+    runtimeState.useRuntimeValue.mockReturnValue(undefined);
   });
 
   describe('arcane recovery', () => {
-    it('renders arcane recovery tracked resource', () => {
+    it('renders arcane recovery tracked resource at level 5', () => {
       const stats = buildPlayerStats({ level: 5 });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.querySelector('[data-testid="tracked-resource-arcaneRecoveryLevels"]')).toBeTruthy();
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('Arcane Recovery Levels:')).toBeInTheDocument();
+      expect(screen.getByText('1/1')).toBeInTheDocument();
+    });
+
+    it('uses arcaneRecoveryLevels from getClassFeatures for max value', () => {
+      classFeatures.getClassFeatures.mockReturnValue({
+        arcaneRecoveryLevels: 3,
+        showWizardFeatures: true,
+      });
+      const stats = buildPlayerStats({ level: 18 });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('3/3')).toBeInTheDocument();
     });
   });
 
   describe('arcane ward', () => {
-    it.each([
-      [{ type: 'arcane_ward' }, 'arcane_ward passive'],
-      [{ type: 'passive_rule', effect: 'arcane_ward' }, 'passive_rule with effect'],
-    ])('renders arcane ward tracked resource when passive exists (%s)', (_, label) => {
+    it('renders arcane ward tracked resource when passive has type arcana_ward', () => {
       const stats = buildPlayerStats({
         level: 5,
-        automation: { passives: [label === 'arcane_ward passive' ? { type: 'arcane_ward' } : { type: 'passive_rule', effect: 'arcane_ward' }] },
-      });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.querySelector('[data-testid="tracked-resource-arcaneWardHp"]')).toBeTruthy();
-    });
-
-    it('does not render arcane ward when no matching passive', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        automation: { passives: [] },
-      });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.querySelector('[data-testid="tracked-resource-arcaneWardHp"]')).toBeFalsy();
-    });
-
-    it.each([
-      [{ level: 5, intBonus: 3 }, 13, 'with int bonus'],
-      [{ level: 5, intBonus: 0 }, 10, 'without int bonus'],
-    ])('calculates ward max as 2 * level + int bonus (%s)', (opts, expected) => {
-      const abilities = opts.intBonus !== undefined ? [{ name: 'Intelligence', bonus: opts.intBonus }] : [];
-      render(<WizardFeatures playerStats={buildPlayerStats({
-        level: opts.level,
-        abilities,
         automation: { passives: [{ type: 'arcane_ward' }] },
-      })} campaignName="test" />);
-      expect(screen.getByText(`${expected}/${expected}`)).toBeTruthy();
+      });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('Arcane Ward HP:')).toBeInTheDocument();
+    });
+
+    it('renders arcane ward tracked resource when passive has type passive_rule with effect arcana_ward', () => {
+      const stats = buildPlayerStats({
+        level: 5,
+        automation: { passives: [{ type: 'passive_rule', effect: 'arcane_ward' }] },
+      });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('Arcane Ward HP:')).toBeInTheDocument();
+    });
+
+    it('does not render arcane ward when no matching passive exists', () => {
+      const stats = buildPlayerStats({
+        level: 5,
+        automation: { passives: [{ type: 'something_else' }] },
+      });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.queryByText('Arcane Ward HP:')).not.toBeInTheDocument();
+    });
+
+    it('calculates ward max as 2 * level + intelligence bonus', () => {
+      const stats = buildPlayerStats({
+        level: 5,
+        abilities: [{ name: 'Intelligence', bonus: 3 }],
+        automation: { passives: [{ type: 'arcane_ward' }] },
+      });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('13/13')).toBeInTheDocument();
+    });
+
+    it('calculates ward max without intelligence bonus when absent', () => {
+      const stats = buildPlayerStats({
+        level: 5,
+        abilities: [],
+        automation: { passives: [{ type: 'arcane_ward' }] },
+      });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('10/10')).toBeInTheDocument();
     });
   });
 
   describe('portent', () => {
-    it.each([
-      [{ specialActions: [{ automation: { type: 'portent' } }], expectVisible: true }, 'feature exists'],
-      [{ specialActions: [], expectVisible: false }, 'feature missing'],
-    ])('renders portent dice section (%s)', (opts) => {
-      const stats = buildPlayerStats(opts);
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      if (opts.expectVisible) {
-        expect(container.textContent).toContain('Portent Dice:');
-      } else {
-        expect(container.textContent).not.toContain('Portent Dice');
-      }
+    it('renders portent dice section when specialAction has portent automation type', () => {
+      const stats = buildPlayerStats({
+        specialActions: [{ automation: { type: 'portent' } }],
+      });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('Portent Dice:')).toBeInTheDocument();
     });
 
-    it('renders parsed portent dice values', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    it('does not render portent dice section when missing', () => {
+      const stats = buildPlayerStats({ specialActions: [] });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.queryByText('Portent Dice:')).not.toBeInTheDocument();
+    });
+
+    it('renders each parsed portent die value', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
         if (key === 'portentDice') return [12, 7, 19];
         return undefined;
       });
       const stats = buildPlayerStats({
         specialActions: [{ automation: { type: 'portent' } }],
       });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('12');
-      expect(container.textContent).toContain('7');
-      expect(container.textContent).toContain('19');
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/12/)).toBeInTheDocument();
+      expect(screen.getByText(/7/)).toBeInTheDocument();
+      expect(screen.getByText(/19/)).toBeInTheDocument();
     });
 
-    it('renders string JSON portent dice without throwing', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    it('renders parsed values from string JSON portent dice without throwing', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
         if (key === 'portentDice') return '[15, 3]';
         return undefined;
       });
       const stats = buildPlayerStats({
         specialActions: [{ automation: { type: 'portent' } }],
       });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Portent Dice:');
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('Portent Dice:')).toBeInTheDocument();
+      expect(screen.getByText(/15/)).toBeInTheDocument();
+      expect(screen.getByText(/3/)).toBeInTheDocument();
+      expect(screen.getByText('2 remaining (refreshes on Long Rest)')).toBeInTheDocument();
     });
 
-    it('shows no dice remaining when parsed array is empty', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+    it('shows no dice remaining when array is empty', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
         if (key === 'portentDice') return [];
         return undefined;
       });
       const stats = buildPlayerStats({
         specialActions: [{ automation: { type: 'portent' } }],
       });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('No dice remaining');
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('No dice remaining')).toBeInTheDocument();
     });
 
     it('shows remaining count matching array length', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
         if (key === 'portentDice') return [10, 11];
         return undefined;
       });
       const stats = buildPlayerStats({
         specialActions: [{ automation: { type: 'portent' } }],
       });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('2 remaining');
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('2 remaining (refreshes on Long Rest)')).toBeInTheDocument();
     });
 
     it('handles invalid JSON in portentDice gracefully', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
         if (key === 'portentDice') return 'not json';
         return undefined;
       });
       const stats = buildPlayerStats({
         specialActions: [{ automation: { type: 'portent' } }],
       });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('No dice remaining');
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('No dice remaining')).toBeInTheDocument();
+    });
+
+    it('handles null portentDice gracefully', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
+        if (key === 'portentDice') return null;
+        return undefined;
+      });
+      const stats = buildPlayerStats({
+        specialActions: [{ automation: { type: 'portent' } }],
+      });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('No dice remaining')).toBeInTheDocument();
+    });
+
+    it('handles undefined portentDice gracefully', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
+        if (key === 'portentDice') return undefined;
+        return undefined;
+      });
+      const stats = buildPlayerStats({
+        specialActions: [{ automation: { type: 'portent' } }],
+      });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText('No dice remaining')).toBeInTheDocument();
     });
   });
 
   describe('projected ward', () => {
-    it.each([
-      [{ type: 'projected_ward', range: 30 }, 'default range'],
-      [{ type: 'projected_ward', range: 60 }, 'custom range 60'],
-      [{ name: 'Projected Ward' }, 'name match'],
-    ])('renders projected ward badge (%s)', (reaction) => {
+    it('renders projected ward badge when reaction has type projected_ward', () => {
       const stats = buildPlayerStats({
-        automation: { reactions: [reaction] },
+        automation: { reactions: [{ type: 'projected_ward', range: 30 }] },
       });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Projected Ward');
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/Projected Ward: Allies within 30 ft/)).toBeInTheDocument();
     });
 
-    it('shows the correct range in projected ward badge', () => {
+    it('renders projected ward badge with custom range', () => {
       const stats = buildPlayerStats({
         automation: { reactions: [{ type: 'projected_ward', range: 60 }] },
       });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('60 ft.');
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/Projected Ward: Allies within 60 ft/)).toBeInTheDocument();
     });
 
-    it('does not render projected ward when reaction missing', () => {
+    it('renders projected ward badge when reaction has name match', () => {
+      const stats = buildPlayerStats({
+        automation: { reactions: [{ name: 'Projected Ward' }] },
+      });
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/Projected Ward: Allies within 30 ft/)).toBeInTheDocument();
+    });
+
+    it('does not render projected ward when reactions array is empty', () => {
       const stats = buildPlayerStats({ automation: { reactions: [] } });
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Projected Ward');
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.queryByText(/Projected Ward/)).not.toBeInTheDocument();
+    });
+
+    it('does not render projected ward when reactions property is missing', () => {
+      const stats = buildPlayerStats();
+      render(<WizardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.queryByText(/Projected Ward/)).not.toBeInTheDocument();
     });
   });
 
   describe('the third eye', () => {
-    it.each([
-      [{ effect: 'darkvision_120', expected: 'Darkvision 120 ft.' }, 'darkvision'],
-      [{ effect: 'greater_comprehension', expected: 'Greater Comprehension' }, 'greater comprehension'],
-      [{ effect: 'see_invisibility', expected: 'See Invisibility' }, 'see invisibility'],
-    ])('renders third eye badge with %s effect', (opts) => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: opts.effect }];
+    it('renders darkvision badge when third eye buff has darkvision_120 effect', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
+        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: 'darkvision_120' }];
         return undefined;
       });
-      const stats = buildPlayerStats();
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain(opts.expected);
+      render(<WizardFeatures playerStats={buildPlayerStats()} campaignName="test" />);
+      expect(screen.getByText('The Third Eye: Darkvision 120 ft.')).toBeInTheDocument();
     });
 
-    it('shows Active for unknown effect', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: 'unknown' }];
+    it('renders greater comprehension badge when third eye buff has that effect', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
+        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: 'greater_comprehension' }];
         return undefined;
       });
-      const stats = buildPlayerStats();
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('The Third Eye: Active');
+      render(<WizardFeatures playerStats={buildPlayerStats()} campaignName="test" />);
+      expect(screen.getByText('The Third Eye: Greater Comprehension')).toBeInTheDocument();
     });
 
-    it('does not render third eye when no buff', () => {
-      const stats = buildPlayerStats();
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('The Third Eye');
+    it('renders see invisibility badge when third eye buff has that effect', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
+        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: 'see_invisibility' }];
+        return undefined;
+      });
+      render(<WizardFeatures playerStats={buildPlayerStats()} campaignName="test" />);
+      expect(screen.getByText('The Third Eye: See Invisibility')).toBeInTheDocument();
+    });
+
+    it('shows Active label for unknown third eye effect', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
+        if (key === 'activeBuffs') return [{ name: 'The Third Eye', effect: 'unknown_effect' }];
+        return undefined;
+      });
+      render(<WizardFeatures playerStats={buildPlayerStats()} campaignName="test" />);
+      expect(screen.getByText('The Third Eye: Active')).toBeInTheDocument();
+    });
+
+    it('does not render third eye when activeBuffs is empty', () => {
+      render(<WizardFeatures playerStats={buildPlayerStats()} campaignName="test" />);
+      expect(screen.queryByText(/The Third Eye/)).not.toBeInTheDocument();
+    });
+
+    it('does not render third eye when no buff matches The Third Eye name', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_, key) => {
+        if (key === 'activeBuffs') return [{ name: 'Some Other Buff' }];
+        return undefined;
+      });
+      render(<WizardFeatures playerStats={buildPlayerStats()} campaignName="test" />);
+      expect(screen.queryByText(/The Third Eye/)).not.toBeInTheDocument();
     });
   });
 
   describe('show wizard features toggle', () => {
-    it.each([
-      [{ showWizardFeatures: false }, 'false'],
-      [{ showWizardFeatures: true }, 'true'],
-    ])('returns null when showWizardFeatures is %s', (opts) => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
+    it('returns null (renders nothing) when showWizardFeatures is false', () => {
+      classFeatures.getClassFeatures.mockReturnValue({
         arcaneRecoveryLevels: 1,
-        showWizardFeatures: opts.showWizardFeatures,
+        showWizardFeatures: false,
       });
-      const stats = buildPlayerStats();
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      if (opts.showWizardFeatures === false) {
-        expect(container.textContent).toBe('');
-      } else {
-        expect(container.textContent).not.toBe('');
-      }
+      render(<WizardFeatures playerStats={buildPlayerStats()} campaignName="test" />);
+      expect(screen.queryByTestId('char-class-wizard')).not.toBeInTheDocument();
     });
 
-    it('renders normally when showWizardFeatures is undefined', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
+    it('renders wizard features when showWizardFeatures is true', () => {
+      classFeatures.getClassFeatures.mockReturnValue({
+        arcaneRecoveryLevels: 1,
+        showWizardFeatures: true,
+      });
+      render(<WizardFeatures playerStats={buildPlayerStats()} campaignName="test" />);
+      expect(screen.getByTestId('char-class-wizard')).toBeInTheDocument();
+    });
+
+    it('renders wizard features when showWizardFeatures is undefined (defaults to true)', () => {
+      classFeatures.getClassFeatures.mockReturnValue({
         arcaneRecoveryLevels: 1,
       });
-      const stats = buildPlayerStats();
-      const { container } = render(<WizardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toBe('');
+      render(<WizardFeatures playerStats={buildPlayerStats()} campaignName="test" />);
+      expect(screen.getByTestId('char-class-wizard')).toBeInTheDocument();
     });
   });
 });

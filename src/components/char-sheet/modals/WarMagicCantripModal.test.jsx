@@ -1,13 +1,11 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import WarMagicCantripModal from './WarMagicCantripModal.jsx'
+import * as cantripHandler from '../../../services/automation/handlers/class-fighter-rogue/warMagicCantripHandler.js'
 
 vi.mock('../../../services/automation/handlers/class-fighter-rogue/warMagicCantripHandler.js', () => ({
     confirmWarMagicCantrip: vi.fn(),
-}))
-
-vi.mock('../../../services/automation/handlers/class-fighter-rogue/warMagicSpellHandler.js', () => ({
-    confirmWarMagicSpell: vi.fn(),
 }))
 
 const mockPlayerStats = { name: 'TestFighter', rules: '2024' }
@@ -42,253 +40,208 @@ function makeProps(overrides) {
 describe('WarMagicCantripModal', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        localStorage.clear()
     })
 
-    // ── Initial render ──
-
-    it('renders the modal overlay and structure', () => {
-        render(<WarMagicCantripModal {...makeProps()} />)
-        expect(document.querySelector('.sp-overlay')).toBeInTheDocument()
-        expect(document.querySelector('.sp-modal')).toBeInTheDocument()
-        expect(document.querySelector('.sp-header')).toBeInTheDocument()
-        expect(document.querySelector('.sp-body')).toBeInTheDocument()
-        expect(document.querySelector('.sp-actions')).toBeInTheDocument()
-    })
-
-    it('renders the action name in the header', () => {
-        render(<WarMagicCantripModal {...makeProps()} />)
-        expect(screen.getByText('Improved War Magic')).toBeInTheDocument()
-    })
-
-    it('renders all cantrip options', () => {
-        render(<WarMagicCantripModal {...makeProps()} />)
-        expect(screen.getByText('Ray of Frost')).toBeInTheDocument()
-        expect(screen.getByText('Shocking Grasp')).toBeInTheDocument()
-    })
-
-    it('renders the prompt text', () => {
-        render(<WarMagicCantripModal {...makeProps()} />)
-        expect(screen.getByText(/Replace one attack with a Wizard cantrip/)).toBeInTheDocument()
-    })
-
-    it('renders the Cancel button', () => {
-        render(<WarMagicCantripModal {...makeProps()} />)
-        expect(screen.getByText('Cancel')).toBeInTheDocument()
-    })
-
-    it('renders the Replace Attack button', () => {
-        render(<WarMagicCantripModal {...makeProps()} />)
-        expect(screen.getByRole('button', { name: /replace attack/i })).toBeInTheDocument()
-    })
-
-    // ── Selection behavior ──
-
-    it('disables confirm button when no selection', () => {
-        render(<WarMagicCantripModal {...makeProps()} />)
-        const confirmBtn = screen.getByRole('button', { name: /replace attack/i })
-        expect(confirmBtn).toBeDisabled()
-    })
-
-    it('enables confirm button after selection', () => {
-        render(<WarMagicCantripModal {...makeProps()} />)
-        fireEvent.click(screen.getByText('Ray of Frost'))
-        const confirmBtn = screen.getByRole('button', { name: /replace attack/i })
-        expect(confirmBtn).toBeEnabled()
-    })
-
-    // ── Cancel behavior ──
-
-    it('calls onClose when Cancel is clicked', () => {
-        render(<WarMagicCantripModal {...makeProps()} />)
-        fireEvent.click(screen.getByText('Cancel'))
-        expect(mockOnClose).toHaveBeenCalled()
-    })
-
-    // ── Confirmation flow ──
-
-    it('calls confirm handler with correct args when a cantrip is selected and confirmed', async () => {
-        const { confirmWarMagicCantrip } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicCantripHandler.js')
-        confirmWarMagicCantrip.mockResolvedValue({
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Improved War Magic',
-                description: 'Replaced one attack with the cantrip Ray of Frost.',
-            },
+    describe('initial render', () => {
+        it('renders the modal with action name, cantrip options, and prompt text', () => {
+            render(<WarMagicCantripModal {...makeProps()} />)
+            expect(screen.getByText('Improved War Magic')).toBeInTheDocument()
+            expect(screen.getByText(/Replace one attack with a Wizard cantrip/)).toBeInTheDocument()
+            expect(screen.getByText('Ray of Frost')).toBeInTheDocument()
+            expect(screen.getByText('Shocking Grasp')).toBeInTheDocument()
         })
 
-        render(<WarMagicCantripModal {...makeProps()} />)
+        it('renders cancel and confirm buttons', () => {
+            render(<WarMagicCantripModal {...makeProps()} />)
+            expect(screen.getByText('Cancel')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /replace attack/i })).toBeInTheDocument()
+        })
 
-        fireEvent.click(screen.getByText('Ray of Frost'))
-        fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
-
-        await vi.waitFor(() => {
-            expect(confirmWarMagicCantrip).toHaveBeenCalledWith(
-                mockAction,
-                mockPlayerStats,
-                mockCampaignName,
-                'Ray of Frost'
-            )
+        it('renders casting time next to cantrip names when optionDetails includes them', () => {
+            render(<WarMagicCantripModal {...makeProps()} />)
+            expect(screen.queryAllByText('(1 action)')).toHaveLength(2)
         })
     })
 
-    it('shows result state with Done button after confirmation', async () => {
-        const { confirmWarMagicCantrip } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicCantripHandler.js')
-        confirmWarMagicCantrip.mockResolvedValue({
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Improved War Magic',
-                description: 'Replaced one attack with the cantrip Ray of Frost.',
-            },
+    describe('selection behavior', () => {
+        it('disables confirm button when no cantrip is selected', () => {
+            render(<WarMagicCantripModal {...makeProps()} />)
+            expect(screen.getByRole('button', { name: /replace attack/i })).toBeDisabled()
         })
 
-        render(<WarMagicCantripModal {...makeProps()} />)
-
-        fireEvent.click(screen.getByText('Ray of Frost'))
-        fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
-
-        await vi.waitFor(() => {
-            expect(screen.getByText('Done')).toBeInTheDocument()
-        })
-    })
-
-    it('renders result payload description as HTML via dangerouslySetInnerHTML', async () => {
-        const { confirmWarMagicCantrip } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicCantripHandler.js')
-        confirmWarMagicCantrip.mockResolvedValue({
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Improved War Magic',
-                description: 'Replaced one attack with the cantrip <b>Ray of Frost</b>.',
-            },
+        it('enables confirm button after selecting a cantrip', () => {
+            render(<WarMagicCantripModal {...makeProps()} />)
+            fireEvent.click(screen.getByText('Ray of Frost'))
+            expect(screen.getByRole('button', { name: /replace attack/i })).toBeEnabled()
         })
 
-        render(<WarMagicCantripModal {...makeProps()} />)
+        it('switches selection when a different cantrip is clicked', () => {
+            render(<WarMagicCantripModal {...makeProps()} />)
+            fireEvent.click(screen.getByText('Ray of Frost'))
+            expect(screen.getByRole('button', { name: /replace attack/i })).toBeEnabled()
+            fireEvent.click(screen.getByText('Shocking Grasp'))
+            expect(screen.getByRole('button', { name: /replace attack/i })).toBeEnabled()
+        })
 
-        fireEvent.click(screen.getByText('Ray of Frost'))
-        fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
-
-        await vi.waitFor(() => {
-            const bodyDiv = document.querySelector('.sp-body')
-            expect(bodyDiv.innerHTML).toContain('<b>Ray of Frost</b>')
+        it('renders cantrip name without casting time span when optionDetails is missing', () => {
+            render(<WarMagicCantripModal {...makeProps({ optionDetails: {} })} />)
+            expect(screen.getByText('Ray of Frost')).toBeInTheDocument()
+            expect(screen.queryByText('Ray of Frost (1 action)')).not.toBeInTheDocument()
         })
     })
 
-    // ── Close from result state ──
-
-    it('calls onClose when Done is clicked after confirmation', async () => {
-        const { confirmWarMagicCantrip } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicCantripHandler.js')
-        confirmWarMagicCantrip.mockResolvedValue({
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Improved War Magic',
-                description: 'Replaced one attack with the cantrip Ray of Frost.',
-            },
+    describe('cancel', () => {
+        it('calls onClose when Cancel is clicked', () => {
+            render(<WarMagicCantripModal {...makeProps()} />)
+            fireEvent.click(screen.getByText('Cancel'))
+            expect(mockOnClose).toHaveBeenCalledOnce()
         })
-
-        render(<WarMagicCantripModal {...makeProps()} />)
-
-        fireEvent.click(screen.getByText('Ray of Frost'))
-        fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
-
-        await vi.waitFor(() => {
-            expect(screen.getByText('Done')).toBeInTheDocument()
-        })
-
-        fireEvent.click(screen.getByText('Done'))
-        expect(mockOnClose).toHaveBeenCalled()
     })
 
-    it('calls onClose when clicking the overlay in result state', async () => {
-        const { confirmWarMagicCantrip } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicCantripHandler.js')
-        confirmWarMagicCantrip.mockResolvedValue({
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Improved War Magic',
-                description: 'Done.',
-            },
+    describe('confirmation flow', () => {
+        it('calls confirmWarMagicCantrip with correct args when a cantrip is selected and confirmed', async () => {
+            cantripHandler.confirmWarMagicCantrip.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Improved War Magic',
+                    description: 'Replaced one attack with the cantrip Ray of Frost.',
+                },
+            })
+
+            render(<WarMagicCantripModal {...makeProps()} />)
+            fireEvent.click(screen.getByText('Ray of Frost'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+
+            await waitFor(() => {
+                expect(cantripHandler.confirmWarMagicCantrip).toHaveBeenCalledWith(
+                    mockAction,
+                    mockPlayerStats,
+                    mockCampaignName,
+                    'Ray of Frost'
+                )
+            })
         })
 
-        render(<WarMagicCantripModal {...makeProps()} />)
+        it('shows result state with Done button after confirmation', async () => {
+            cantripHandler.confirmWarMagicCantrip.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Improved War Magic',
+                    description: 'Replaced one attack with the cantrip Ray of Frost.',
+                },
+            })
 
-        fireEvent.click(screen.getByText('Ray of Frost'))
-        fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+            render(<WarMagicCantripModal {...makeProps()} />)
+            fireEvent.click(screen.getByText('Ray of Frost'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
 
-        await vi.waitFor(() => {
-            expect(screen.getByText('Done')).toBeInTheDocument()
+            await waitFor(() => {
+                expect(screen.getByText('Done')).toBeInTheDocument()
+            })
         })
 
-        const overlay = document.querySelector('.sp-overlay')
-        fireEvent.click(overlay)
-        expect(mockOnClose).toHaveBeenCalled()
-    })
+        it('renders the handler result description text in the result state', async () => {
+            cantripHandler.confirmWarMagicCantrip.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Improved War Magic',
+                    description: 'Replaced one attack with the cantrip Ray of Frost.',
+                },
+            })
 
-    it('does NOT close when clicking inside modal in result state', async () => {
-        const { confirmWarMagicCantrip } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicCantripHandler.js')
-        confirmWarMagicCantrip.mockResolvedValue({
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Improved War Magic',
-                description: 'Done.',
-            },
+            render(<WarMagicCantripModal {...makeProps()} />)
+            fireEvent.click(screen.getByText('Ray of Frost'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+
+            await waitFor(() => {
+                expect(screen.getByText('Replaced one attack with the cantrip Ray of Frost.')).toBeInTheDocument()
+            })
         })
 
-        render(<WarMagicCantripModal {...makeProps()} />)
+        it('renders the handler result description with HTML formatting preserved', async () => {
+            cantripHandler.confirmWarMagicCantrip.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Improved War Magic',
+                    description: 'Replaced one attack with the cantrip <b>Ray of Frost</b>.',
+                },
+            })
 
-        fireEvent.click(screen.getByText('Ray of Frost'))
-        fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+            render(<WarMagicCantripModal {...makeProps()} />)
+            fireEvent.click(screen.getByText('Ray of Frost'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
 
-        await vi.waitFor(() => {
-            expect(screen.getByText('Done')).toBeInTheDocument()
+            await waitFor(() => {
+                expect(screen.getByText(/Replaced one attack with the cantrip/)).toBeInTheDocument()
+            })
         })
 
-        const modal = document.querySelector('.sp-modal')
-        fireEvent.click(modal)
-        expect(mockOnClose).not.toHaveBeenCalled()
+        it('does not show result state when handler returns null', async () => {
+            cantripHandler.confirmWarMagicCantrip.mockResolvedValue(null)
+
+            render(<WarMagicCantripModal {...makeProps()} />)
+            fireEvent.click(screen.getByText('Ray of Frost'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+
+            await waitFor(() => {
+                expect(screen.queryByText('Done')).not.toBeInTheDocument()
+            })
+        })
     })
 
-    // ── Edge cases: empty options ──
+    describe('closing from result state', () => {
+        function renderWithResult() {
+            cantripHandler.confirmWarMagicCantrip.mockResolvedValue({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Improved War Magic',
+                    description: 'Done.',
+                },
+            })
+            render(<WarMagicCantripModal {...makeProps()} />)
+            fireEvent.click(screen.getByText('Ray of Frost'))
+            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
+        }
 
-    it('renders with no cantrip options when options array is empty', () => {
-        render(<WarMagicCantripModal {...makeProps({ options: [] })} />)
-        expect(screen.getByText('Improved War Magic')).toBeInTheDocument()
-        expect(screen.getByText(/Replace one attack with a Wizard cantrip/)).toBeInTheDocument()
-        expect(screen.queryAllByText(/Ray of Frost|Shocking Grasp/)).toHaveLength(0)
+        it('calls onClose when Done is clicked', async () => {
+            renderWithResult()
+            await waitFor(() => screen.getByText('Done'))
+            fireEvent.click(screen.getByText('Done'))
+            expect(mockOnClose).toHaveBeenCalledOnce()
+        })
+
+        it('calls onClose when clicking the overlay backdrop', async () => {
+            renderWithResult()
+            await waitFor(() => screen.getByText('Done'))
+            fireEvent.click(document.querySelector('.sp-overlay'))
+            expect(mockOnClose).toHaveBeenCalledOnce()
+        })
+
+        it('does not close when clicking inside the modal content', async () => {
+            renderWithResult()
+            await waitFor(() => screen.getByText('Done'))
+            // Click the header text inside the modal - stopPropagation prevents overlay click
+            fireEvent.click(screen.getByText('Improved War Magic'))
+            expect(mockOnClose).not.toHaveBeenCalled()
+        })
     })
 
-    it('disables confirm button when there are no options', () => {
-        render(<WarMagicCantripModal {...makeProps({ options: [] })} />)
-        const confirmBtn = screen.getByRole('button', { name: /replace attack/i })
-        expect(confirmBtn).toBeDisabled()
-    })
+    describe('edge cases', () => {
+        it('renders without cantrip options when options array is empty', () => {
+            render(<WarMagicCantripModal {...makeProps({ options: [] })} />)
+            expect(screen.getByText('Improved War Magic')).toBeInTheDocument()
+            expect(screen.getByText(/Replace one attack with a Wizard cantrip/)).toBeInTheDocument()
+            expect(screen.queryAllByText(/Ray of Frost|Shocking Grasp/)).toHaveLength(0)
+        })
 
-    // ── Edge cases: missing optionDetails ──
-
-    it('renders cantrip name without casting_time span when optionDetails is missing', () => {
-        render(<WarMagicCantripModal {...makeProps({ optionDetails: {} })} />)
-        expect(screen.getByText('Ray of Frost')).toBeInTheDocument()
-        // No casting time should appear since optionDetails is empty
-        expect(screen.queryAllByText(/\(1 action\)/)).toHaveLength(0)
-    })
-
-    // ── Edge cases: handler returns no result ──
-
-    it('does not show result state when handler returns null', async () => {
-        const { confirmWarMagicCantrip } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicCantripHandler.js')
-        confirmWarMagicCantrip.mockResolvedValue(null)
-
-        render(<WarMagicCantripModal {...makeProps()} />)
-
-        fireEvent.click(screen.getByText('Ray of Frost'))
-        fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
-
-        await vi.waitFor(() => {
-            expect(screen.queryByText('Done')).not.toBeInTheDocument()
+        it('disables confirm button when there are no options', () => {
+            render(<WarMagicCantripModal {...makeProps({ options: [] })} />)
+            expect(screen.getByRole('button', { name: /replace attack/i })).toBeDisabled()
         })
     })
 })

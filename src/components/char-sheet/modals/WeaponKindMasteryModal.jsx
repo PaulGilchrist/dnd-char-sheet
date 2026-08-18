@@ -4,6 +4,10 @@ import '../CharSheet.css';
 
 let weaponsCache = null;
 
+export function resetWeaponsCache() {
+    weaponsCache = null;
+}
+
 async function loadWeapons() {
     if (weaponsCache === null) {
         weaponsCache = await (await fetch('/data/equipment.json')).json();

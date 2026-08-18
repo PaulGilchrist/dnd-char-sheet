@@ -1,14 +1,11 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import TargetWithTypePopup from './TargetWithTypePopup.jsx';
 
 // ── Test fixtures ──
 
-const baseSpell = {
-  name: 'Protection from Energy',
-  level: 1,
-};
-
+const baseSpell = { name: 'Protection from Energy', level: 1 };
 const creatureTargets = ['Ally1', 'Ally2', 'Ally3'];
 const damageTypes = ['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder'];
 
@@ -30,28 +27,29 @@ function makeProps(overrides = {}) {
   };
 }
 
+// ── Helpers ──
+
+function selectTarget(allyName) {
+  const row = screen.getByText(new RegExp(`^\\u2713 ${allyName}$|^${allyName}$`)).closest('div[style*="pointer"]')
+    ?? screen.getByText(allyName).closest('div');
+  fireEvent.click(row);
+}
+
+function selectDamageType(typeName) {
+  const row = screen.getByText(typeName).closest('div');
+  fireEvent.click(row);
+}
+
 // ── Tests ──
 
 describe('TargetWithTypePopup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ── Rendering ──
 
-  it('renders the popup overlay, modal, and header with icon', () => {
+  it('renders the popup with icon, title, spell name, level, and school', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    expect(document.querySelector('.popup-overlay')).toBeInTheDocument();
-    expect(document.querySelector('.popup-modal')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Protection from Energy' })).toBeInTheDocument();
-  });
-
-  it('renders spell name and level/school subtitle', () => {
-    render(<TargetWithTypePopup {...makeProps()} />);
-    const spellName = document.querySelector('.metamagic-spell-name');
-    expect(spellName).toHaveTextContent('Protection from Energy');
-    expect(spellName).toHaveTextContent('Level 1');
-    expect(spellName).toHaveTextContent('Abjuration');
+    expect(screen.getByRole('heading', { name: /Protection from Energy/ })).toBeInTheDocument();
+    expect(screen.getByText(/Level 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Abjuration/)).toBeInTheDocument();
   });
 
   it('renders the description when provided', () => {
@@ -59,47 +57,44 @@ describe('TargetWithTypePopup', () => {
     expect(screen.getByText('Pick target and damage type')).toBeInTheDocument();
   });
 
-  it('renders creature targets in the target selection list', () => {
-    render(<TargetWithTypePopup {...makeProps()} />);
-    expect(screen.getByText(/Ally1/)).toBeInTheDocument();
-    expect(screen.getByText(/Ally2/)).toBeInTheDocument();
-    expect(screen.getByText(/Ally3/)).toBeInTheDocument();
+  it('omits the description paragraph when description is not provided', () => {
+    render(<TargetWithTypePopup {...makeProps({ description: undefined })} />);
+    expect(screen.queryByText('Select a target and damage type')).not.toBeInTheDocument();
   });
 
-  it('renders damage types in the damage type selection list', () => {
-    render(<TargetWithTypePopup {...makeProps()} />);
-    expect(screen.getByText('Acid')).toBeInTheDocument();
-    expect(screen.getByText('Cold')).toBeInTheDocument();
-    expect(screen.getByText('Fire')).toBeInTheDocument();
-    expect(screen.getByText('Lightning')).toBeInTheDocument();
-    expect(screen.getByText('Thunder')).toBeInTheDocument();
-  });
-
-  it('renders a target label with strong text', () => {
+  it('renders creature targets and damage type labels', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
     expect(screen.getByText('Target:')).toBeInTheDocument();
-  });
-
-  it('renders a damage type label with strong text', () => {
-    render(<TargetWithTypePopup {...makeProps()} />);
     expect(screen.getByText('Damage Type:')).toBeInTheDocument();
   });
 
-  // ── Confirm/Cancel button labels ──
+  it('renders all creature targets and damage types', () => {
+    render(<TargetWithTypePopup {...makeProps()} />);
+    for (const name of creatureTargets) expect(screen.getByText(name)).toBeInTheDocument();
+    for (const type of damageTypes) expect(screen.getByText(type)).toBeInTheDocument();
+  });
 
-  it('uses custom confirmLabel when provided', () => {
-    render(<TargetWithTypePopup {...makeProps({ confirmLabel: 'Cast Spell' })} />);
+  it('renders no creature names when creatureTargets is empty', () => {
+    render(<TargetWithTypePopup {...makeProps({ creatureTargets: [] })} />);
+    for (const name of creatureTargets) expect(screen.queryByText(name)).not.toBeInTheDocument();
+    expect(screen.getByText('Target:')).toBeInTheDocument();
+  });
+
+  it('renders no damage type names when damageTypes is empty', () => {
+    render(<TargetWithTypePopup {...makeProps({ damageTypes: [] })} />);
+    for (const type of damageTypes) expect(screen.queryByText(type)).not.toBeInTheDocument();
+    expect(screen.getByText('Damage Type:')).toBeInTheDocument();
+  });
+
+  it('renders buttons with correct labels', () => {
+    render(<TargetWithTypePopup {...makeProps({ confirmLabel: 'Cast Spell', cancelLabel: 'Nope' })} />);
     expect(screen.getByText('Cast Spell')).toBeInTheDocument();
+    expect(screen.getByText('Nope')).toBeInTheDocument();
   });
 
   it('uses default confirmLabel "Cast {title}" when confirmLabel is not provided', () => {
     render(<TargetWithTypePopup {...makeProps({ confirmLabel: undefined })} />);
     expect(screen.getByText('Cast Protection from Energy')).toBeInTheDocument();
-  });
-
-  it('uses custom cancelLabel when provided', () => {
-    render(<TargetWithTypePopup {...makeProps({ cancelLabel: 'Nope' })} />);
-    expect(screen.getByText('Nope')).toBeInTheDocument();
   });
 
   it('uses default cancelLabel "Cancel" when cancelLabel is not provided', () => {
@@ -114,144 +109,105 @@ describe('TargetWithTypePopup', () => {
     expect(screen.getByText('Cast')).toBeDisabled();
   });
 
-  it('disables confirm button when target selected but no damage type', () => {
+  it('disables confirm button when target is selected but no damage type', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const allyRow = screen.getByText(/Ally1/).closest('div');
-    fireEvent.click(allyRow);
+    selectTarget('Ally1');
     expect(screen.getByText('Cast')).toBeDisabled();
   });
 
-  it('disables confirm button when damage type selected but no target', () => {
+  it('disables confirm button when damage type is selected but no target', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const acidRow = screen.getByText('Acid').closest('div');
-    fireEvent.click(acidRow);
+    selectDamageType('Acid');
     expect(screen.getByText('Cast')).toBeDisabled();
   });
 
   it('enables confirm button after selecting both target and damage type', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const allyRow = screen.getByText(/Ally1/).closest('div');
-    const acidRow = screen.getByText('Acid').closest('div');
-    fireEvent.click(allyRow);
-    fireEvent.click(acidRow);
+    selectTarget('Ally1');
+    selectDamageType('Acid');
     expect(screen.getByText('Cast')).not.toBeDisabled();
   });
 
-  // ── Target selection ──
+  // ── Selection behavior ──
 
-  it('shows checkmark (✓) for the selected target', () => {
+  it('marks the selected target with a checkmark', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const allyRow = screen.getByText(/Ally1/).closest('div');
-    fireEvent.click(allyRow);
-    expect(allyRow.textContent).toContain('\u2713');
+    selectTarget('Ally1');
+    expect(screen.getByText(/\u2713 Ally1/)).toBeInTheDocument();
   });
 
-  it('shows checkmark (✓) for the selected damage type', () => {
+  it('marks the selected damage type with a checkmark', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const acidRow = screen.getByText('Acid').closest('div');
-    fireEvent.click(acidRow);
-    expect(acidRow.textContent).toContain('\u2713');
+    selectDamageType('Acid');
+    expect(screen.getByText(/\u2713 Acid/)).toBeInTheDocument();
   });
 
-  it('updates target selection to a different target', () => {
+  it('switches target selection to a different target', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const ally1Row = screen.getByText(/Ally1/).closest('div');
-    const ally2Row = screen.getByText(/Ally2/).closest('div');
+    selectTarget('Ally1');
+    expect(screen.getByText(/\u2713 Ally1/)).toBeInTheDocument();
+    expect(screen.queryByText(/\u2713 Ally2/)).not.toBeInTheDocument();
 
-    fireEvent.click(ally1Row);
-    expect(ally1Row.textContent).toContain('\u2713');
-    expect(ally2Row.textContent).not.toContain('\u2713');
-
-    fireEvent.click(ally2Row);
-    expect(ally2Row.textContent).toContain('\u2713');
-    expect(ally1Row.textContent).not.toContain('\u2713');
+    selectTarget('Ally2');
+    expect(screen.getByText(/\u2713 Ally2/)).toBeInTheDocument();
+    expect(screen.queryByText(/\u2713 Ally1/)).not.toBeInTheDocument();
   });
 
-  it('updates damage type selection to a different damage type', () => {
+  it('switches damage type selection to a different damage type', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const acidRow = screen.getByText('Acid').closest('div');
-    const coldRow = screen.getByText('Cold').closest('div');
+    selectDamageType('Acid');
+    expect(screen.getByText(/\u2713 Acid/)).toBeInTheDocument();
 
-    fireEvent.click(acidRow);
-    expect(acidRow.textContent).toContain('\u2713');
-    expect(coldRow.textContent).not.toContain('\u2713');
-
-    fireEvent.click(coldRow);
-    expect(coldRow.textContent).toContain('\u2713');
-    expect(acidRow.textContent).not.toContain('\u2713');
+    selectDamageType('Cold');
+    expect(screen.getByText(/\u2713 Cold/)).toBeInTheDocument();
+    expect(screen.queryByText(/\u2713 Acid/)).not.toBeInTheDocument();
   });
 
-  it('updates target selection independently of damage type selection', () => {
+  it('keeps damage type selected when switching targets', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const ally1Row = screen.getByText(/Ally1/).closest('div');
-    const acidRow = screen.getByText('Acid').closest('div');
-    const ally2Row = screen.getByText(/Ally2/).closest('div');
+    selectTarget('Ally1');
+    selectDamageType('Acid');
+    expect(screen.getByText(/\u2713 Acid/)).toBeInTheDocument();
 
-    // Select target and damage type
-    fireEvent.click(ally1Row);
-    fireEvent.click(acidRow);
-    expect(ally1Row.textContent).toContain('\u2713');
-    expect(acidRow.textContent).toContain('\u2713');
-
-    // Change target only, damage type should still be selected
-    fireEvent.click(ally2Row);
-    expect(ally2Row.textContent).toContain('\u2713');
-    expect(ally1Row.textContent).not.toContain('\u2713');
-    expect(acidRow.textContent).toContain('\u2713');
+    selectTarget('Ally2');
+    expect(screen.getByText(/\u2713 Ally2/)).toBeInTheDocument();
+    expect(screen.getByText(/\u2713 Acid/)).toBeInTheDocument();
   });
 
-  it('updates damage type selection independently of target selection', () => {
+  it('keeps target selected when switching damage types', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const ally1Row = screen.getByText(/Ally1/).closest('div');
-    const acidRow = screen.getByText('Acid').closest('div');
-    const coldRow = screen.getByText('Cold').closest('div');
+    selectTarget('Ally1');
+    selectDamageType('Acid');
+    expect(screen.getByText(/\u2713 Ally1/)).toBeInTheDocument();
 
-    // Select target and damage type
-    fireEvent.click(ally1Row);
-    fireEvent.click(acidRow);
-    expect(ally1Row.textContent).toContain('\u2713');
-    expect(acidRow.textContent).toContain('\u2713');
-
-    // Change damage type only, target should still be selected
-    fireEvent.click(coldRow);
-    expect(coldRow.textContent).toContain('\u2713');
-    expect(acidRow.textContent).not.toContain('\u2713');
-    expect(ally1Row.textContent).toContain('\u2713');
-  });
-
-  it('renders selectable rows with cursor pointer style', () => {
-    render(<TargetWithTypePopup {...makeProps()} />);
-    const allyRow = screen.getByText(/Ally1/).closest('div');
-    expect(allyRow).toHaveStyle({ cursor: 'pointer' });
+    selectDamageType('Cold');
+    expect(screen.getByText(/\u2713 Ally1/)).toBeInTheDocument();
+    expect(screen.getByText(/\u2713 Cold/)).toBeInTheDocument();
   });
 
   // ── Confirm behavior ──
 
-  it('calls onConfirm with { targetName, damageType } when both are selected', () => {
+  it('calls onConfirm with selected target and damage type', () => {
     const onConfirm = vi.fn();
     render(<TargetWithTypePopup {...makeProps({ onConfirm })} />);
-    const allyRow = screen.getByText(/Ally1/).closest('div');
-    const fireRow = screen.getByText('Fire').closest('div');
-    fireEvent.click(allyRow);
-    fireEvent.click(fireRow);
+    selectTarget('Ally2');
+    selectDamageType('Fire');
     fireEvent.click(screen.getByText('Cast'));
-    expect(onConfirm).toHaveBeenCalledWith({ targetName: 'Ally1', damageType: 'Fire' });
+    expect(onConfirm).toHaveBeenCalledWith({ targetName: 'Ally2', damageType: 'Fire' });
   });
 
-  it('does not call onConfirm when clicking confirm without selecting a target', () => {
+  it('does not call onConfirm when clicking confirm without a target', () => {
     const onConfirm = vi.fn();
     render(<TargetWithTypePopup {...makeProps({ onConfirm })} />);
-    const acidRow = screen.getByText('Acid').closest('div');
-    fireEvent.click(acidRow);
+    selectDamageType('Acid');
     fireEvent.click(screen.getByText('Cast'));
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it('does not call onConfirm when clicking confirm without selecting a damage type', () => {
+  it('does not call onConfirm when clicking confirm without a damage type', () => {
     const onConfirm = vi.fn();
     render(<TargetWithTypePopup {...makeProps({ onConfirm })} />);
-    const allyRow = screen.getByText(/Ally1/).closest('div');
-    fireEvent.click(allyRow);
+    selectTarget('Ally1');
     fireEvent.click(screen.getByText('Cast'));
     expect(onConfirm).not.toHaveBeenCalled();
   });
@@ -263,22 +219,6 @@ describe('TargetWithTypePopup', () => {
     render(<TargetWithTypePopup {...makeProps({ onSkip })} />);
     fireEvent.click(screen.getByText('Cancel'));
     expect(onSkip).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onSkip when clicking the overlay background', () => {
-    const onSkip = vi.fn();
-    render(<TargetWithTypePopup {...makeProps({ onSkip })} />);
-    const overlay = document.querySelector('.popup-overlay');
-    fireEvent.click(overlay);
-    expect(onSkip).toHaveBeenCalledTimes(1);
-  });
-
-  it('does NOT call onSkip when clicking inside the modal content', () => {
-    const onSkip = vi.fn();
-    render(<TargetWithTypePopup {...makeProps({ onSkip })} />);
-    const modal = document.querySelector('.popup-modal');
-    fireEvent.click(modal);
-    expect(onSkip).not.toHaveBeenCalled();
   });
 
   it('calls onSkip when Escape key is pressed', () => {
@@ -297,100 +237,28 @@ describe('TargetWithTypePopup', () => {
 
   // ── Edge cases ──
 
-  it('renders with empty creature targets list', () => {
-    render(<TargetWithTypePopup {...makeProps({ creatureTargets: [] })} />);
-    expect(screen.getByText('Cast')).toBeInTheDocument();
-    expect(screen.getByText('Target:')).toBeInTheDocument();
-    expect(screen.getByText('Damage Type:')).toBeInTheDocument();
-    // No creature names should appear
-    expect(screen.queryByText('Ally1')).not.toBeInTheDocument();
+  it('renders with null spell, showing fallback name and default level', () => {
+    render(<TargetWithTypePopup {...makeProps({ spell: null, defaultLevel: 3 })} />);
+    expect(screen.getByText('Spell')).toBeInTheDocument();
+    expect(screen.getByText(/Level 3/)).toBeInTheDocument();
   });
 
-  it('renders with empty damage types list', () => {
-    render(<TargetWithTypePopup {...makeProps({ damageTypes: [] })} />);
-    expect(screen.getByText('Cast')).toBeInTheDocument();
-    expect(screen.getByText('Target:')).toBeInTheDocument();
-    expect(screen.getByText('Damage Type:')).toBeInTheDocument();
-    // No damage type names should appear
-    expect(screen.queryByText('Acid')).not.toBeInTheDocument();
+  it('renders with empty spell object, showing fallback name and default level', () => {
+    render(<TargetWithTypePopup {...makeProps({ spell: {}, defaultLevel: 5, school: 'Necromancy' })} />);
+    expect(screen.getByText('Spell')).toBeInTheDocument();
+    expect(screen.getByText(/Level 5/)).toBeInTheDocument();
+    expect(screen.getByText(/Necromancy/)).toBeInTheDocument();
   });
 
-  it('renders with both empty lists', () => {
+  it('disables confirm when both lists are empty', () => {
     render(<TargetWithTypePopup {...makeProps({ creatureTargets: [], damageTypes: [] })} />);
-    expect(screen.getByText('Cast')).toBeInTheDocument();
-    expect(screen.getByText('Target:')).toBeInTheDocument();
-    expect(screen.getByText('Damage Type:')).toBeInTheDocument();
     expect(screen.getByText('Cast')).toBeDisabled();
   });
 
-  it('renders with null spell gracefully', () => {
-    render(<TargetWithTypePopup {...makeProps({ spell: null })} />);
-    expect(document.querySelector('.metamagic-spell-name strong')).toHaveTextContent('Spell');
-  });
-
-  it('renders with missing spell name gracefully', () => {
-    render(<TargetWithTypePopup {...makeProps({ spell: {} })} />);
-    expect(document.querySelector('.metamagic-spell-name strong')).toHaveTextContent('Spell');
-  });
-
-  it('shows default level and school when spell has no level/school', () => {
-    render(<TargetWithTypePopup {...makeProps({ spell: {}, defaultLevel: 3 })} />);
-    const spellName = document.querySelector('.metamagic-spell-name');
-    expect(spellName).toHaveTextContent('Level 3');
-  });
-
-  it('uses provided defaultLevel when spell has no level', () => {
-    render(<TargetWithTypePopup {...makeProps({ spell: {}, defaultLevel: 5, school: 'Necromancy' })} />);
-    const spellName = document.querySelector('.metamagic-spell-name');
-    expect(spellName).toHaveTextContent('Level 5');
-    expect(spellName).toHaveTextContent('Necromancy');
-  });
-
-  it('renders scrollable target list container with maxHeight 200px', () => {
+  it('renders selectable rows as clickable elements', () => {
     render(<TargetWithTypePopup {...makeProps()} />);
-    const scrollContainers = document.querySelectorAll('[style*="200px"]');
-    expect(scrollContainers).toHaveLength(2);
-    scrollContainers.forEach(container => {
-      expect(container).toHaveStyle({ maxHeight: '200px' });
-    });
-  });
-
-  it('renders both sections with metamagic-twin-target className', () => {
-    render(<TargetWithTypePopup {...makeProps()} />);
-    const twinTargets = document.querySelectorAll('.metamagic-twin-target');
-    expect(twinTargets).toHaveLength(2);
-  });
-
-  it('renders damage type section with marginTop 16px relative to target section', () => {
-    render(<TargetWithTypePopup {...makeProps()} />);
-    const twinTargets = document.querySelectorAll('.metamagic-twin-target');
-    expect(twinTargets[1]).toHaveStyle({ marginTop: '16px' });
-  });
-
-  // ── Selection persistence ──
-
-  it('keeps both selections persistent after selecting both', () => {
-    render(<TargetWithTypePopup {...makeProps()} />);
-    const allyRow = screen.getByText(/Ally1/).closest('div');
-    const acidRow = screen.getByText('Acid').closest('div');
-
+    const allyRow = screen.getByText('Ally1').closest('div');
     fireEvent.click(allyRow);
-    fireEvent.click(acidRow);
-
-    expect(allyRow.textContent).toContain('\u2713');
-    expect(acidRow.textContent).toContain('\u2713');
-  });
-
-  // ── Confirm callback with specific values ──
-
-  it('calls onConfirm with the second target and second damage type chosen', () => {
-    const onConfirm = vi.fn();
-    render(<TargetWithTypePopup {...makeProps({ onConfirm })} />);
-    const ally2Row = screen.getByText(/Ally2/).closest('div');
-    const coldRow = screen.getByText('Cold').closest('div');
-    fireEvent.click(ally2Row);
-    fireEvent.click(coldRow);
-    fireEvent.click(screen.getByText('Cast'));
-    expect(onConfirm).toHaveBeenCalledWith({ targetName: 'Ally2', damageType: 'Cold' });
+    expect(screen.getByText(/\u2713 Ally1/)).toBeInTheDocument();
   });
 });

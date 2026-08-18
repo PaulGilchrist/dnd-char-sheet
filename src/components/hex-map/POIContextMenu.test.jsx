@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import POIContextMenu from './POIContextMenu.jsx';
@@ -6,10 +6,10 @@ import POIContextMenu from './POIContextMenu.jsx';
 const BASE_POI = { id: 'poi-1', type: 'city', q: 0, r: 0, label: 'City A', visible: true, linkedMap: null };
 
 describe('POIContextMenu', () => {
-    let props;
+    let defaultProps;
 
     beforeEach(() => {
-        props = {
+        defaultProps = {
             selectedPoi: { id: 'poi-1', q: 0, r: 0 },
             pois: [BASE_POI],
             onToggleVisibility: vi.fn(),
@@ -26,51 +26,59 @@ describe('POIContextMenu', () => {
         };
     });
 
-    function renderMenu(overrideProps = {}) {
-        return render(<POIContextMenu {...props} {...overrideProps} />);
+    function renderMenu(props = {}) {
+        return render(<POIContextMenu {...defaultProps} {...props} />);
     }
 
     describe('rendering', () => {
         it.each([
             { name: 'no selected POI', selectedPoi: null },
             { name: 'selected POI not in pois list', pois: [] },
-            { name: 'selected POI ID not found in pois', pois: [{ id: 'other-poi', q: 1, r: 1 }] },
-        ])('renders nothing when %s', ({ selectedPoi, pois }) => {
+            { name: 'selected POI ID not found in pois list', pois: [{ id: 'other-poi', q: 1, r: 1 }] },
+        ])('returns null (no menu) when %s', ({ selectedPoi, pois }) => {
             const { container } = renderMenu({ selectedPoi, pois });
             expect(container.querySelector('.poi-context-menu')).not.toBeInTheDocument();
         });
 
-        it('renders the menu when the selected POI exists', () => {
-            const { container } = renderMenu();
-            expect(container.querySelector('.poi-context-menu')).toBeInTheDocument();
+        it('renders menu options when the selected POI exists', () => {
+            renderMenu();
+            expect(screen.getByText('Hide')).toBeInTheDocument();
+            expect(screen.getByText('Rename')).toBeInTheDocument();
+            expect(screen.getByText('Link to Map...')).toBeInTheDocument();
+            expect(screen.getByText('Delete')).toBeInTheDocument();
+        });
+
+        it('renders the close button', () => {
+            renderMenu();
+            expect(screen.getByText('✕')).toBeInTheDocument();
         });
     });
 
     describe('contextual options', () => {
         const optionCases = [
             {
-                name: 'a POI with no linked map and no roads',
+                name: 'no linked map and no roads',
                 pois: [BASE_POI],
                 roads: [],
                 present: ['Hide', 'Rename', 'Link to Map...', 'Delete'],
                 absent: [/Unlink Map/, /Remove Roads/],
             },
             {
-                name: 'a POI with a linked map but no roads',
+                name: 'a linked map but no roads',
                 pois: [{ ...BASE_POI, linkedMap: 'dungeon-map.json' }],
                 roads: [],
                 present: ['Hide', 'Rename', 'Unlink Map (Dungeon Map)', 'Delete'],
                 absent: ['Link to Map...', /Remove Roads/],
             },
             {
-                name: 'a POI with roads but no linked map',
+                name: 'roads but no linked map',
                 pois: [BASE_POI],
                 roads: [{ fromPoiId: 'poi-1', toPoiId: 'poi-2' }],
                 present: ['Hide', 'Rename', 'Link to Map...', 'Remove Roads (1)', 'Delete'],
                 absent: [/Unlink Map/],
             },
             {
-                name: 'a POI with both a linked map and roads',
+                name: 'both a linked map and roads',
                 pois: [{ ...BASE_POI, linkedMap: 'map.json' }],
                 roads: [{ fromPoiId: 'poi-1', toPoiId: 'poi-2' }],
                 present: ['Hide', 'Rename', 'Unlink Map (Map)', 'Remove Roads (1)', 'Delete'],
@@ -87,12 +95,12 @@ describe('POIContextMenu', () => {
             }
         );
 
-        it('counts roads that terminate at the POI as connected', () => {
+        it('counts roads terminating at the POI (toPoiId) as connected', () => {
             renderMenu({ roads: [{ fromPoiId: 'poi-2', toPoiId: 'poi-1' }] });
             expect(screen.getByText('Remove Roads (1)')).toBeInTheDocument();
         });
 
-        it('shows the total count when multiple roads touch the POI', () => {
+        it('sums roads from both directions when multiple roads touch the POI', () => {
             renderMenu({
                 roads: [
                     { fromPoiId: 'poi-1', toPoiId: 'poi-2' },
@@ -102,76 +110,78 @@ describe('POIContextMenu', () => {
             expect(screen.getByText('Remove Roads (2)')).toBeInTheDocument();
         });
 
-        it('labels the visibility option Show for a hidden POI', () => {
+        it('shows "Show" for a hidden POI instead of "Hide"', () => {
             renderMenu({ pois: [{ ...BASE_POI, visible: false }] });
             expect(screen.getByText('Show')).toBeInTheDocument();
             expect(screen.queryByText('Hide')).not.toBeInTheDocument();
         });
 
-        it('labels the visibility option Hide when visible is undefined', () => {
+        it('shows "Hide" when visible is undefined (treated as visible)', () => {
             renderMenu({ pois: [{ ...BASE_POI, visible: undefined }] });
             expect(screen.getByText('Hide')).toBeInTheDocument();
             expect(screen.queryByText('Show')).not.toBeInTheDocument();
         });
-
     });
 
     describe('action callbacks', () => {
         it.each([
-            { label: 'visible', visible: true, button: 'Hide' },
-            { label: 'hidden', visible: false, button: 'Show' },
-        ])('toggles a %s POI and closes on %s', ({ visible, button }) => {
+            { toggleLabel: 'visible', buttonLabel: 'Hide', newVisible: false },
+            { toggleLabel: 'hidden', buttonLabel: 'Show', newVisible: true },
+        ])('toggles a %s POI via "%s" and closes the menu', ({ buttonLabel }) => {
+            const visible = buttonLabel === 'Hide';
             renderMenu({ pois: [{ ...BASE_POI, visible }] });
-            fireEvent.click(screen.getByText(button));
-            expect(props.onToggleVisibility).toHaveBeenCalledWith('poi-1');
-            expect(props.onClose).toHaveBeenCalled();
+            fireEvent.click(screen.getByText(buttonLabel));
+            expect(defaultProps.onToggleVisibility).toHaveBeenCalledWith('poi-1');
+            expect(defaultProps.onClose).toHaveBeenCalled();
         });
 
         it('opens the rename input via setShowRename when Rename is clicked', () => {
             renderMenu();
             fireEvent.click(screen.getByText('Rename'));
-            expect(props.setShowRename).toHaveBeenCalledWith('poi-1');
+            expect(defaultProps.setShowRename).toHaveBeenCalledWith('poi-1');
         });
 
-        it('deletes the POI and closes on Delete', () => {
+        it('deletes the POI and closes the menu on Delete', () => {
             renderMenu();
             fireEvent.click(screen.getByText('Delete'));
-            expect(props.onDelete).toHaveBeenCalledWith('poi-1');
-            expect(props.onClose).toHaveBeenCalled();
+            expect(defaultProps.onDelete).toHaveBeenCalledWith('poi-1');
+            expect(defaultProps.onClose).toHaveBeenCalled();
         });
 
-        it('unlinks the map and closes on Unlink Map', () => {
+        it('unlinks the map and closes the menu on Unlink Map', () => {
             renderMenu({ pois: [{ ...BASE_POI, linkedMap: 'dungeon-map.json' }] });
             fireEvent.click(screen.getByText(/Unlink Map/));
-            expect(props.onUnlinkMap).toHaveBeenCalledWith('poi-1');
-            expect(props.onClose).toHaveBeenCalled();
+            expect(defaultProps.onUnlinkMap).toHaveBeenCalledWith('poi-1');
+            expect(defaultProps.onClose).toHaveBeenCalled();
         });
 
-        it('removes connected roads and closes on Remove Roads', () => {
+        it('removes connected roads and closes the menu on Remove Roads', () => {
             renderMenu({ roads: [{ fromPoiId: 'poi-1', toPoiId: 'poi-2' }] });
             fireEvent.click(screen.getByText('Remove Roads (1)'));
-            expect(props.onRemoveRoads).toHaveBeenCalledWith('poi-1');
-            expect(props.onClose).toHaveBeenCalled();
+            expect(defaultProps.onRemoveRoads).toHaveBeenCalledWith('poi-1');
+            expect(defaultProps.onClose).toHaveBeenCalled();
         });
 
-        it('closes the menu when the close button is clicked', () => {
+        it('closes the menu when the close button (✕) is clicked', () => {
             renderMenu();
             fireEvent.click(screen.getByText('✕'));
-            expect(props.onClose).toHaveBeenCalled();
+            expect(defaultProps.onClose).toHaveBeenCalled();
         });
 
-        it('does not let clicks or pointer events inside the menu bubble to the map beneath it', () => {
+        it('prevents pointer and click events from bubbling to the map beneath', () => {
             const mapClick = vi.fn();
             const mapPointerDown = vi.fn();
             render(
                 <svg onClick={mapClick} onPointerDown={mapPointerDown}>
-                    <POIContextMenu {...props} />
+                    <POIContextMenu {...defaultProps} />
                 </svg>
             );
             fireEvent.pointerDown(screen.getByText('Hide'));
             fireEvent.click(screen.getByText('Hide'));
-            expect(props.onToggleVisibility).toHaveBeenCalledWith('poi-1');
-            expect(props.onClose).toHaveBeenCalled();
+            // The action should fire
+            expect(defaultProps.onToggleVisibility).toHaveBeenCalledWith('poi-1');
+            expect(defaultProps.onClose).toHaveBeenCalled();
+            // But map handlers should NOT fire
             expect(mapPointerDown).not.toHaveBeenCalled();
             expect(mapClick).not.toHaveBeenCalled();
         });
@@ -182,8 +192,8 @@ describe('POIContextMenu', () => {
             renderMenu({ indoorMaps: ['dungeon-map.json'], pois: [BASE_POI] });
             fireEvent.click(screen.getByText('Link to Map...'));
             fireEvent.click(screen.getByText('Dungeon Map'));
-            expect(props.onLinkMap).toHaveBeenCalledWith('poi-1', 'dungeon-map.json');
-            expect(props.onClose).toHaveBeenCalled();
+            expect(defaultProps.onLinkMap).toHaveBeenCalledWith('poi-1', 'dungeon-map.json');
+            expect(defaultProps.onClose).toHaveBeenCalled();
         });
 
         it('shows a hint when there are no indoor maps to link', () => {
@@ -192,7 +202,7 @@ describe('POIContextMenu', () => {
             expect(screen.getByText('No indoor maps available')).toBeInTheDocument();
         });
 
-        it('shows at most six maps in the picker', () => {
+        it('limits the picker to at most six maps', () => {
             const indoorMaps = Array.from({ length: 8 }, (_, i) => `map-0${i + 1}.json`);
             renderMenu({ indoorMaps, pois: [BASE_POI] });
             fireEvent.click(screen.getByText('Link to Map...'));
@@ -203,7 +213,7 @@ describe('POIContextMenu', () => {
             expect(screen.queryByText('Map 08')).not.toBeInTheDocument();
         });
 
-        it('shows all maps when there are exactly six', () => {
+        it('handles map names without zero-padding correctly', () => {
             const indoorMaps = Array.from({ length: 6 }, (_, i) => `map-${i + 1}.json`);
             renderMenu({ indoorMaps, pois: [BASE_POI] });
             fireEvent.click(screen.getByText('Link to Map...'));
@@ -212,13 +222,21 @@ describe('POIContextMenu', () => {
             }
         });
 
-        it('closes the link picker when the close button is clicked', () => {
+        it('closes the link picker and the menu when the close button (✕) is clicked', () => {
             renderMenu({ indoorMaps: ['dungeon-map.json'], pois: [BASE_POI] });
             fireEvent.click(screen.getByText('Link to Map...'));
             expect(screen.getByText('Dungeon Map')).toBeInTheDocument();
             fireEvent.click(screen.getByText('✕'));
             expect(screen.queryByText('Dungeon Map')).not.toBeInTheDocument();
-            expect(props.onClose).toHaveBeenCalled();
+            expect(defaultProps.onClose).toHaveBeenCalled();
+        });
+
+        it('handles undefined indoorMaps gracefully', () => {
+            const props = { ...defaultProps };
+            delete props.indoorMaps;
+            render(<POIContextMenu {...props} />);
+            fireEvent.click(screen.getByText('Link to Map...'));
+            expect(screen.getByText('No indoor maps available')).toBeInTheDocument();
         });
     });
 
@@ -238,27 +256,28 @@ describe('POIContextMenu', () => {
             expect(screen.getByRole('textbox')).toHaveValue('');
         });
 
-        it('commits the entered name and closes on Enter', () => {
+        it('commits the entered name and closes the menu on Enter', () => {
             renderMenu({ showRename: 'poi-1' });
             const input = screen.getByRole('textbox');
             fireEvent.change(input, { target: { value: 'Northern Bastion' } });
             fireEvent.keyDown(input, { key: 'Enter' });
-            expect(props.onRename).toHaveBeenCalledWith('poi-1', 'Northern Bastion');
-            expect(props.onClose).toHaveBeenCalled();
+            expect(defaultProps.onRename).toHaveBeenCalledWith('poi-1', 'Northern Bastion');
+            expect(defaultProps.onClose).toHaveBeenCalled();
         });
 
-        it('commits the entered name and closes on blur', () => {
+        it('commits the entered name and closes the menu on blur', () => {
             renderMenu({ showRename: 'poi-1' });
             const input = screen.getByRole('textbox');
             fireEvent.change(input, { target: { value: 'Northern Bastion' } });
             fireEvent.blur(input);
-            expect(props.onRename).toHaveBeenCalledWith('poi-1', 'Northern Bastion');
-            expect(props.onClose).toHaveBeenCalled();
+            expect(defaultProps.onRename).toHaveBeenCalledWith('poi-1', 'Northern Bastion');
+            expect(defaultProps.onClose).toHaveBeenCalled();
         });
     });
 
     describe('positioning', () => {
-        it('places the menu next to the selected POI hex', () => {
+        it('places the menu offset from the selected POI hex center', () => {
+            // hexToPixel(0, 0, 30) = {x: 0, y: 0}, so menuX = 10, menuY = 10
             const { container } = renderMenu();
             const rect = container.querySelector('.poi-context-menu rect');
             expect(rect).toHaveAttribute('x', '10');
@@ -266,6 +285,9 @@ describe('POIContextMenu', () => {
         });
 
         it('clamps the menu into the viewport when it would overflow', () => {
+            // POI at (0,0) -> menuX=10, menuY=10, menuWidth=160, menuHeight=98
+            // Bounds: left=0, top=0, right=50, bottom=50
+            // Clamped: x = max(4, min(10, -150)) = 4, y = max(4, min(10, -178)) = 4
             const { container } = renderMenu({ viewPortBounds: { left: 0, top: 0, right: 50, bottom: 50 } });
             const rect = container.querySelector('.poi-context-menu rect');
             expect(rect).toHaveAttribute('x', '4');

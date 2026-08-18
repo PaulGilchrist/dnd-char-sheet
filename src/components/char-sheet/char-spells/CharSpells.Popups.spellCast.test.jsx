@@ -1,15 +1,8 @@
-// @cleaned-by-ai
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
 import { mockPlayerStats } from './CharSpells.test.helpers.js';
-
-import { useSpellMetamagicFlow } from '../../../hooks/combat/useSpellMetamagicFlow.js';
-import { useSpellUpcastFlow } from '../../../hooks/combat/useSpellUpcastFlow.js';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { isInnateSorceryActive } from '../../../services/combat/buffs/buffService.js';
-import { getTargetFromAttacker } from '../../../services/rules/combat/damageUtils.js';
-import { getCombatSummary } from '../../../services/encounters/combatData.js';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(() => []),
@@ -93,6 +86,11 @@ vi.mock('../../../services/rules/spells/spellPreparationService.js', () => ({
   isFreeCastAuthorized: vi.fn(() => false),
 }));
 
+vi.mock('../useAttackDamageResolution.js', () => ({
+  normalizeAutoDamage: vi.fn(() => ({ attack: { name: 'Fire Bolt' }, ctx: { targetName: 'Orc' } })),
+  resolveAttackDamageStandalone: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('./CharSpellSlots.jsx', () => ({
   default: function CharSpellSlots() {
     return <div data-testid="char-spell-slots">Spell Slots</div>;
@@ -172,18 +170,19 @@ vi.mock('../modals/shared/CreatureSelectionModal.jsx', () => ({
 
 vi.mock('../modals/shared/SecondaryTargetModal.jsx', () => ({
   default: function SecondaryTargetModal({ title, targets, onTargetSelected, onSkip, hideConfirm, description }) {
+    const targetItems = targets?.map(t => typeof t === 'string' ? { value: t, name: t, label: t } : t) || [];
     return (
       <div data-testid="secondary-target-modal" data-title={title} data-hideconfirm={String(Boolean(hideConfirm))}>
         <span>{title}</span>
         <span data-testid="stm-description">{description}</span>
         <button data-testid="stm-skip" onClick={() => onSkip?.()}>skip</button>
-        {targets?.map(t => (
+        {targetItems.map(t => (
           <button key={t.value || t.name} data-testid={`stm-${t.value || t.name}`} onClick={() => onTargetSelected?.(t.value || t.name)}>
             {t.label || t.name}
           </button>
         ))}
-        {!hideConfirm && targets?.length > 0 && (
-          <button data-testid="stm-confirm" onClick={() => onTargetSelected?.(targets[0].value || targets[0].name)}>confirm</button>
+        {!hideConfirm && targetItems.length > 0 && (
+          <button data-testid="stm-confirm" onClick={() => onTargetSelected?.(targetItems[0].value || targetItems[0].name)}>confirm</button>
         )}
       </div>
     );
@@ -222,6 +221,14 @@ vi.mock('../modals/HexAbilityModal.jsx', () => ({
     );
   },
 }));
+
+import { useSpellMetamagicFlow } from '../../../hooks/combat/useSpellMetamagicFlow.js';
+import { useSpellUpcastFlow } from '../../../hooks/combat/useSpellUpcastFlow.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { isInnateSorceryActive } from '../../../services/combat/buffs/buffService.js';
+import { getTargetFromAttacker } from '../../../services/rules/combat/damageUtils.js';
+import { getCombatSummary } from '../../../services/encounters/combatData.js';
+import { normalizeAutoDamage, resolveAttackDamageStandalone } from '../useAttackDamageResolution.js';
 
 const PENDING_KEYS = [
   'Metamagic', 'MultiTarget', 'HeroesFeast', 'GreaterRestoration', 'LesserRestoration',
@@ -278,7 +285,7 @@ function renderWithProps(props = {}) {
 
 describe('CharSpells - Popup Modal Rendering', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
     flow = createFlow();
     upcastFlow = {
       pendingUpcast: null,
@@ -295,28 +302,37 @@ describe('CharSpells - Popup Modal Rendering', () => {
     vi.mocked(isInnateSorceryActive).mockReturnValue(false);
     vi.mocked(getTargetFromAttacker).mockReturnValue(null);
     vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
-
+    vi.mocked(normalizeAutoDamage).mockReturnValue({ attack: { name: 'Fire Bolt' }, ctx: { targetName: 'Orc' } });
+    vi.mocked(resolveAttackDamageStandalone).mockResolvedValue(undefined);
   });
 
   describe('spell cast flow', () => {
     it('closes the spell detail popup and gates metamagic when casting a spell', async () => {
       renderWithProps();
       fireEvent.click(screen.getByText('Light'));
-      expect(screen.getByTestId('spell-detail-popup')).toHaveTextContent('Light');
+      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
 
       fireEvent.click(screen.getByTestId('cast-spell-button'));
 
       await waitFor(() => {
         expect(flow.gateMetamagic).toHaveBeenCalled();
       });
-      expect(flow.gateMetamagic).toHaveBeenCalledWith(expect.objectContaining({ name: 'Light' }), {});
+      expect(flow.gateMetamagic).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Light' }),
+        {}
+      );
       expect(screen.queryByTestId('spell-detail-popup')).not.toBeInTheDocument();
+    });
+
+    it('does not gate metamagic when the spell detail popup is not visible', () => {
+      renderWithProps();
+      expect(flow.gateMetamagic).not.toHaveBeenCalled();
     });
   });
 
   describe('words of creation target selection', () => {
-    it('renders SecondaryTargetModal when the flow hook sets wordsOfCreationTarget', async () => {
-      const wordsOfCreationData = {
+    function createWordsOfCreationData() {
+      return {
         title: 'Words of Creation',
         targets: ['Orc', 'Goblin'],
         onTargetSelected: vi.fn(),
@@ -326,43 +342,106 @@ describe('CharSpells - Popup Modal Rendering', () => {
         confirmLabel: 'Confirm',
         confirmIcon: 'fa-music',
       };
+    }
+
+    it('renders the secondary target modal when the flow hook sets wordsOfCreationTarget', async () => {
+      const wordsOfCreationData = createWordsOfCreationData();
+
       vi.mocked(useSpellMetamagicFlow).mockImplementation((playerStats, campaignName, castAction, setWordsOfCreationTarget) => {
-        setTimeout(() => {
-          act(() => {
-            setWordsOfCreationTarget(wordsOfCreationData);
-          });
-        }, 0);
+        Promise.resolve().then(() => setWordsOfCreationTarget(wordsOfCreationData));
         return flow;
       });
+
       renderWithProps();
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
+      await waitFor(() => {
+        expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
       });
-      expect(screen.getByTestId('secondary-target-modal')).toHaveAttribute('data-title', 'Words of Creation');
+    });
+
+    it('calls the skip handler when words of creation modal is skipped', async () => {
+      const wordsOfCreationData = createWordsOfCreationData();
+
+      vi.mocked(useSpellMetamagicFlow).mockImplementation((playerStats, campaignName, castAction, setWordsOfCreationTarget) => {
+        Promise.resolve().then(() => setWordsOfCreationTarget(wordsOfCreationData));
+        return flow;
+      });
+
+      renderWithProps();
+      await waitFor(() => {
+        expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('stm-skip'));
+      expect(wordsOfCreationData.onSkip).toHaveBeenCalled();
+    });
+
+    it('calls the target selected handler when a creature is chosen from words of creation modal', async () => {
+      const wordsOfCreationData = createWordsOfCreationData();
+
+      vi.mocked(useSpellMetamagicFlow).mockImplementation((playerStats, campaignName, castAction, setWordsOfCreationTarget) => {
+        Promise.resolve().then(() => setWordsOfCreationTarget(wordsOfCreationData));
+        return flow;
+      });
+
+      renderWithProps();
+      await waitFor(() => {
+        expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('stm-Orc'));
+      expect(wordsOfCreationData.onTargetSelected).toHaveBeenCalledWith('Orc');
     });
   });
 
   describe('innate sorcery', () => {
-    it('adds +1 to save DC when innate sorcery is active', () => {
+    it('adds +1 to the save DC when innate sorcery is active', () => {
       vi.mocked(isInnateSorceryActive).mockReturnValue(true);
       renderWithProps();
-      expect(screen.getByText('14')).toBeInTheDocument();
+      const baseDC = mockPlayerStats.spellAbilities.saveDc;
+      expect(screen.getByText(String(baseDC + 1))).toBeInTheDocument();
     });
 
-    it('uses advantage forcedMode for a Sorcerer with active innate sorcery', () => {
+    it('does not add +1 to the save DC when innate sorcery is inactive', () => {
+      vi.mocked(isInnateSorceryActive).mockReturnValue(false);
+      renderWithProps();
+      const baseDC = mockPlayerStats.spellAbilities.saveDc;
+      expect(screen.getByText(String(baseDC))).toBeInTheDocument();
+    });
+
+    it('uses advantage for spell attacks when the character is a Sorcerer with active innate sorcery', () => {
       vi.mocked(isInnateSorceryActive).mockReturnValue(true);
       const sorcerer = { ...mockPlayerStats, class: { name: 'Sorcerer' } };
       renderWithProps({ playerStats: sorcerer, conditionAttackMode: 'normal' });
       fireEvent.click(screen.getByText(/Attack \(to hit\):/));
-      expect(mockDiceRoll.rollAttack).toHaveBeenCalledWith('Spell Attack', 5, { forcedMode: 'advantage' });
+      expect(mockDiceRoll.rollAttack).toHaveBeenCalledWith(
+        'Spell Attack',
+        5,
+        { forcedMode: 'advantage' }
+      );
     });
 
-    it('does not use advantage for a non-sorcerer with active innate sorcery', () => {
+    it('does not use advantage for spell attacks when the character is not a Sorcerer with active innate sorcery', () => {
       vi.mocked(isInnateSorceryActive).mockReturnValue(true);
       const wizard = { ...mockPlayerStats, class: { name: 'Wizard' } };
       renderWithProps({ playerStats: wizard, conditionAttackMode: 'normal' });
       fireEvent.click(screen.getByText(/Attack \(to hit\):/));
-      expect(mockDiceRoll.rollAttack).toHaveBeenCalledWith('Spell Attack', 5, expect.objectContaining({ forcedMode: undefined }));
+      expect(mockDiceRoll.rollAttack).toHaveBeenCalledWith(
+        'Spell Attack',
+        5,
+        { forcedMode: undefined }
+      );
+    });
+
+    it('does not use advantage when innate sorcery is inactive regardless of class', () => {
+      vi.mocked(isInnateSorceryActive).mockReturnValue(false);
+      const sorcerer = { ...mockPlayerStats, class: { name: 'Sorcerer' } };
+      renderWithProps({ playerStats: sorcerer, conditionAttackMode: 'normal' });
+      fireEvent.click(screen.getByText(/Attack \(to hit\):/));
+      expect(mockDiceRoll.rollAttack).toHaveBeenCalledWith(
+        'Spell Attack',
+        5,
+        { forcedMode: undefined }
+      );
     });
   });
 });

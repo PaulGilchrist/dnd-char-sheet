@@ -170,8 +170,7 @@ describe('CharSummary - Starry Form Constellation Badge', () => {
 
 // ---------------------------------------------------------------------------
 // Sanctuary info badge from creatures loop (sanctuaryInfoChar useMemo)
-// Consolidated from CharSummary-ExtraCoverage.test.jsx — the only remaining
-// unique test after removing 5 redundant/brittle tests.
+// Consolidated from CharSummary-ExtraCoverage.test.jsx.
 // ---------------------------------------------------------------------------
 describe('CharSummary - Sanctuary Info Badge from Creatures Loop', () => {
     beforeEach(() => {

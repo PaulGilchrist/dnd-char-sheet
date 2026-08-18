@@ -1,6 +1,6 @@
-// @cleaned-by-ai
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
 
 const createDefaultProps = (overrides = {}) => ({
@@ -12,121 +12,139 @@ const createDefaultProps = (overrides = {}) => ({
     ...overrides,
 });
 
-const findActionByText = (text) => {
-    const actions = document.querySelectorAll('.admin-action');
-    for (const action of actions) {
-        const h3 = action.querySelector('h3');
-        if (h3 && h3.textContent === text) {
-            return action;
-        }
-    }
-    return null;
-};
+const getActionButton = (buttonText) =>
+    screen.getByRole('button', { name: new RegExp(`^${buttonText}$`, 'i') });
 
 describe('CampaignAdmin - Status Display', () => {
     const defaultProps = createDefaultProps();
 
     beforeEach(() => {
-        vi.clearAllMocks();
-        window.alert = vi.fn();
-        window.confirm = vi.fn(() => true);
-        window.prompt = vi.fn(() => 'test-campaign');
-        Object.defineProperty(window, 'location', {
-            value: { reload: vi.fn() },
-            writable: true,
-        });
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        vi.spyOn(window, 'prompt').mockReturnValue('test-campaign');
+        vi.spyOn(window, 'alert').mockImplementation(() => {});
+        vi.spyOn(window, 'location', 'get').mockReturnValue({ reload: vi.fn() });
     });
 
-    afterEach(cleanup);
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
 
-    describe('loading status', () => {
-        it('shows loading class, spinner icon, and text for each operation', async () => {
-            const tests = [
-                { action: 'Snapshot', text: 'Creating snapshot...', confirm: false },
-                { action: 'Rollback', text: 'Rolling back...', confirm: true },
-                { action: 'Download', text: 'Preparing download...', confirm: false },
-                { action: 'Clear Change Data', text: 'Clearing change data...', confirm: false },
-                { action: 'Clear Campaign Log', text: 'Clearing log...', confirm: false },
-                { action: 'Full Reset', text: 'Performing full reset...', confirm: false },
-            ];
+    describe('loading feedback', () => {
+        const loadingOperations = [
+            { button: 'Create Snapshot', statusText: 'Creating snapshot...' },
+            { button: 'Rollback to Snapshot', statusText: 'Rolling back...' },
+            { button: 'Download Campaign', statusText: 'Preparing download...' },
+            { button: 'Clear Change Data', statusText: 'Clearing change data...' },
+            { button: 'Clear Campaign Log', statusText: 'Clearing log...' },
+            { button: 'Full Reset', statusText: 'Performing full reset...' },
+        ];
 
-            for (const test of tests) {
-                vi.clearAllMocks();
-                global.fetch = vi.fn(() => new Promise(() => {}));
+        for (const op of loadingOperations) {
+            it(`shows loading indicator when ${op.button} is triggered`, async () => {
+                const fetchMock = vi.fn(() =>
+                    Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
+                );
+                global.fetch = fetchMock;
 
                 render(<CampaignAdmin {...defaultProps} />);
-                const action = findActionByText(test.action);
-                const btn = action.querySelector('button');
+                const btn = getActionButton(op.button);
                 fireEvent.click(btn);
 
-                if (test.confirm) {
-                    const confirmBtn = document.querySelector('.ct-modal-footer .ct-btn-danger');
+                if (op.button === 'Rollback to Snapshot') {
+                    const confirmBtn = screen.getByRole('button', { name: /confirm/i });
                     fireEvent.click(confirmBtn);
                 }
 
                 await waitFor(() => {
-                    const statusEl = document.querySelector('.admin-status--loading');
-                    expect(statusEl).toBeInTheDocument();
-                    expect(statusEl.querySelector('.fa-spinner')).toBeTruthy();
-                    expect(statusEl.querySelector('.fa-spin')).toBeTruthy();
-                    expect(screen.getByText(test.text)).toBeInTheDocument();
+                    expect(fetchMock).toHaveBeenCalled();
+                    expect(screen.getByText(op.statusText)).toBeInTheDocument();
+                    expect(screen.getByText(op.statusText).closest('.admin-status')).toHaveClass('admin-status--loading');
                 });
-
-                cleanup();
-            }
-        });
+            });
+        }
     });
 
-    describe('status transitions', () => {
-        it('re-enables all buttons after operation completes', async () => {
+    describe('button state during operations', () => {
+        it('disables all action buttons while an operation is in progress', async () => {
+            global.fetch = vi.fn(() => new Promise(() => {}));
+
+            render(<CampaignAdmin {...defaultProps} />);
+            const snapshotBtn = getActionButton('Create Snapshot');
+            fireEvent.click(snapshotBtn);
+
+            await waitFor(() => {
+                expect(snapshotBtn).toBeDisabled();
+                expect(getActionButton('Clear Change Data')).toBeDisabled();
+                expect(getActionButton('Clear Campaign Log')).toBeDisabled();
+                expect(getActionButton('Full Reset')).toBeDisabled();
+                expect(getActionButton('Download Campaign')).toBeDisabled();
+                expect(getActionButton('Rollback to Snapshot')).toBeDisabled();
+            });
+        });
+
+        it('re-enables all buttons after operation completes successfully', async () => {
             global.fetch = vi.fn(() =>
                 Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
             );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Clear Change Data');
-            const btn = action.querySelector('button');
-            fireEvent.click(btn);
-
-            expect(btn).toBeDisabled();
+            const clearDataBtn = getActionButton('Clear Change Data');
+            fireEvent.click(clearDataBtn);
 
             await waitFor(() => {
-                expect(btn).not.toBeDisabled();
-
-                const snapshotAction = findActionByText('Snapshot');
-                expect(snapshotAction.querySelector('button')).not.toBeDisabled();
-
-                const rollbackAction = findActionByText('Rollback');
-                expect(rollbackAction.querySelector('button')).not.toBeDisabled();
+                expect(clearDataBtn).not.toBeDisabled();
+                expect(getActionButton('Create Snapshot')).not.toBeDisabled();
+                expect(getActionButton('Rollback to Snapshot')).not.toBeDisabled();
             });
         });
     });
 
-    describe('isBusy state', () => {
-        it('all action buttons are disabled during any operation', async () => {
-            global.fetch = vi.fn(() => new Promise(() => {}));
+    describe('error handling', () => {
+        it('shows error status when operation fails', async () => {
+            global.fetch = vi.fn(() =>
+                Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Server error' }) })
+            );
 
             render(<CampaignAdmin {...defaultProps} />);
-            const action = findActionByText('Snapshot');
-            const btn = action.querySelector('button');
+            const btn = getActionButton('Create Snapshot');
             fireEvent.click(btn);
 
-            expect(btn).toBeDisabled();
+            await waitFor(() => {
+                const statusEl = screen.getByText('Server error').closest('.admin-status');
+                expect(statusEl).toHaveClass('admin-status--error');
+                expect(statusEl.querySelector('.fa-exclamation-circle')).toBeInTheDocument();
+            });
+        });
 
-            const clearChangeAction = findActionByText('Clear Change Data');
-            expect(clearChangeAction.querySelector('button')).toBeDisabled();
+        it('shows error status when fetch throws', async () => {
+            global.fetch = vi.fn(() => Promise.reject(new Error('Network failure')));
 
-            const clearLogAction = findActionByText('Clear Campaign Log');
-            expect(clearLogAction.querySelector('button')).toBeDisabled();
+            render(<CampaignAdmin {...defaultProps} />);
+            const btn = getActionButton('Clear Change Data');
+            fireEvent.click(btn);
 
-            const resetAction = findActionByText('Full Reset');
-            expect(resetAction.querySelector('button')).toBeDisabled();
+            await waitFor(() => {
+                const statusEl = screen.getByText('Network failure').closest('.admin-status');
+                expect(statusEl).toHaveClass('admin-status--error');
+            });
+        });
+    });
 
-            const downloadAction = findActionByText('Download');
-            expect(downloadAction.querySelector('button')).toBeDisabled();
+    describe('success feedback', () => {
+        it('shows success message after operation completes', async () => {
+            global.fetch = vi.fn(() =>
+                Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Snapshot created' }) })
+            );
 
-            const rollbackAction = findActionByText('Rollback');
-            expect(rollbackAction.querySelector('button')).toBeDisabled();
+            render(<CampaignAdmin {...defaultProps} />);
+            const btn = getActionButton('Create Snapshot');
+            fireEvent.click(btn);
+
+            await waitFor(() => {
+                const statusEl = screen.getByText(/Snapshot created/i).closest('.admin-status');
+                expect(statusEl).toHaveClass('admin-status--success');
+                expect(statusEl.querySelector('.fa-check-circle')).toBeInTheDocument();
+            });
         });
     });
 });

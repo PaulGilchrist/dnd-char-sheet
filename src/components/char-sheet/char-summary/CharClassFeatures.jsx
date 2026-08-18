@@ -468,7 +468,7 @@ const RogueFeatures = function RogueFeatures({ playerStats, campaignName }) {
     const hasEnergy = classLevel?.energy && classLevel.energy.required_major === majorName;
     return (
           <div data-testid="char-class-rogue">
-              {rogueFeatures?.expertise && <div><b>Expertise: </b>{rogueFeatures.expertise.join(', ')}</div>}
+              {rogueFeatures?.expertise?.length > 0 && <div><b>Expertise: </b>{rogueFeatures.expertise.join(', ')}</div>}
               {hasEnergy && (
                   <div>
                       <TrackedResourceInput label="Energy Dice" resourceKey="psionicEnergy" playerName={playerStats.name} getMax={() => classLevel?.energy?.energy_die_num || 0} deps={[playerStats]} campaignName={campaignName} playerStats={playerStats} />
@@ -671,7 +671,7 @@ function CharClassFeatures({ playerStats, campaignName }) {
         }});
     };
 
-    if (!Cmp && !hasAdrenalineRush) return null;
+    if (!Cmp && !hasAdrenalineRush && !hasStonecunning) return null;
 
     return (
         <>

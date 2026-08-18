@@ -53,11 +53,13 @@ function MapsManager({ campaignName, onOpenMap, onBack }) {
             loadMapsList();
           } else if (event.key === activateKey) {
               // Update active map directly without re-fetching the list
-            const { activeMap } = event.data;
-            setMapsGuarded(prev => prev.map(m => ({
-                  ...m,
-                 isActive: m.fileName.replace(/\.json$/, '') === activeMap
-              })));
+            const { activeMap } = event.data || {};
+            if (activeMap) {
+                setMapsGuarded(prev => prev.map(m => ({
+                      ...m,
+                      isActive: m.fileName.replace(/\.json$/, '') === activeMap
+                   })));
+            }
           }
       }, [campaignName, loadMapsList, setMapsGuarded]);
 

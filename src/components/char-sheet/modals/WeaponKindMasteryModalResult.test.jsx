@@ -1,4 +1,5 @@
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/automation/index.js', () => ({
@@ -52,6 +53,10 @@ function renderWithWeapons(overrides, weaponsToMock = mockWeapons) {
   return render(<WeaponKindMasteryModal {...makeProps(overrides)} />);
 }
 
+async function waitForWeapons() {
+  await waitFor(() => screen.getByText('Battleaxe'));
+}
+
 describe('WeaponKindMasteryModal', () => {
 
   beforeEach(() => {
@@ -59,14 +64,8 @@ describe('WeaponKindMasteryModal', () => {
   });
 
   describe('result state', () => {
-    function setupResultState(result) {
-      automation.applyWeaponKindMastery.mockResolvedValue(result);
-      renderWithWeapons();
-      return { checkboxes: () => document.querySelectorAll('input[type="checkbox"]') };
-    }
-
     it('shows the result description after applying', async () => {
-      setupResultState({
+      automation.applyWeaponKindMastery.mockResolvedValue({
         type: 'popup',
         payload: {
           type: 'automation_info',
@@ -74,21 +73,24 @@ describe('WeaponKindMasteryModal', () => {
           description: 'Weapon kinds set to: Battleaxe, Club.',
         },
       });
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-        fireEvent.click(checkboxes[2]);
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-      });
+      renderWithWeapons();
+      await waitForWeapons();
+
+      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      battleaxeCheckbox.click();
+
+      const clubCheckbox = screen.getByRole('checkbox', { name: /Club/ });
+      clubCheckbox.click();
+
+      await fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+
       await waitFor(() => {
         expect(screen.getByText(/Weapon kinds set to/)).toBeInTheDocument();
       });
     });
 
     it('replaces the weapon list with a Done button after applying', async () => {
-      setupResultState({
+      automation.applyWeaponKindMastery.mockResolvedValue({
         type: 'popup',
         payload: {
           type: 'automation_info',
@@ -96,13 +98,14 @@ describe('WeaponKindMasteryModal', () => {
           description: 'Weapon kinds set to: Battleaxe.',
         },
       });
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-      });
+      renderWithWeapons();
+      await waitForWeapons();
+
+      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      battleaxeCheckbox.click();
+
+      await fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+
       await waitFor(() => {
         expect(screen.queryByLabelText('Battleaxe')).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
@@ -112,7 +115,7 @@ describe('WeaponKindMasteryModal', () => {
     });
 
     it('renders result payload description as HTML via dangerouslySetInnerHTML', async () => {
-      setupResultState({
+      automation.applyWeaponKindMastery.mockResolvedValue({
         type: 'popup',
         payload: {
           type: 'automation_info',
@@ -120,13 +123,14 @@ describe('WeaponKindMasteryModal', () => {
           description: '<strong>Battleaxe</strong> selected.',
         },
       });
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-      });
+      renderWithWeapons();
+      await waitForWeapons();
+
+      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      battleaxeCheckbox.click();
+
+      await fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+
       await waitFor(() => {
         const bodyDiv = document.querySelector('.sp-body');
         expect(bodyDiv.querySelector('strong')).toBeInTheDocument();
@@ -134,23 +138,22 @@ describe('WeaponKindMasteryModal', () => {
     });
 
     it('renders result state when result payload description is falsy', async () => {
-      const falsyDescription = '';
       automation.applyWeaponKindMastery.mockResolvedValue({
         type: 'popup',
         payload: {
           type: 'automation_info',
           name: 'Weapon Mastery',
-          description: falsyDescription,
+          description: '',
         },
       });
       renderWithWeapons();
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-      });
+      await waitForWeapons();
+
+      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      battleaxeCheckbox.click();
+
+      await fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
       });
@@ -169,37 +172,32 @@ describe('WeaponKindMasteryModal', () => {
         },
       });
       renderWithWeapons({ onClose });
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-      });
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-      });
+      await waitForWeapons();
+
+      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      battleaxeCheckbox.click();
+
+      await fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+      await waitFor(() => screen.getByRole('button', { name: 'Done' }));
+      await fireEvent.click(screen.getByRole('button', { name: 'Done' }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('calls onClose when Skip button is clicked', async () => {
       const onClose = vi.fn();
       renderWithWeapons({ onClose });
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-      });
+      await fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('does not call applyWeaponKindMastery when Skip is clicked', async () => {
       renderWithWeapons();
-      await waitFor(() => {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        fireEvent.click(checkboxes[0]);
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-      });
+      await waitForWeapons();
+
+      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
+      battleaxeCheckbox.click();
+
+      await fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
       expect(automation.applyWeaponKindMastery).not.toHaveBeenCalled();
     });
   });
@@ -207,11 +205,9 @@ describe('WeaponKindMasteryModal', () => {
   describe('edge cases', () => {
     it('renders with no weapons when equipment.json returns empty array', async () => {
       renderWithWeapons([], []);
-      await waitFor(() => {
-        expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-        expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
-        expect(screen.getByRole('button', { name: 'Select' })).toBeDisabled();
-      });
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+      expect(screen.getByRole('button', { name: 'Select' })).toBeDisabled();
     });
 
     it('renders with no weapons when no weapons match the filter criteria', async () => {
@@ -219,9 +215,7 @@ describe('WeaponKindMasteryModal', () => {
         { name: 'Potion', equipment_category: 'Adventuring Gear' },
       ];
       renderWithWeapons({}, nonWeaponItems);
-      await waitFor(() => {
-        expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
-      });
+      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
     });
 
     it('renders with meleeOnly=true when no melee weapons exist', async () => {
@@ -229,9 +223,7 @@ describe('WeaponKindMasteryModal', () => {
         { name: 'Longbow', equipment_category: 'Weapon', weapon_category: 'Martial', weapon_range: 'Ranged', mastery: 'Vex' },
       ];
       renderWithWeapons({ meleeOnly: true }, rangedOnly);
-      await waitFor(() => {
-        expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
-      });
+      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
     });
   });
 });

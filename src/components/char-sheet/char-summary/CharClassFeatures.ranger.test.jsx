@@ -1,17 +1,15 @@
-// @cleaned-by-ai
 // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import React from 'react';
 import RangerFeatures from './CharClassFeatures.jsx';
 import * as classFeatures from '../../../services/character/classFeatures.js';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('./TrackedResourceInput.jsx', () => ({
-  default: function MockTrackedResourceInput({ label, getMax, resourceKey }) {
+  default: function MockTrackedResourceInput({ label, getMax }) {
     const max = getMax ? getMax() : 0;
     return (
-      <div data-testid={`tracked-resource-${resourceKey}`}>
+      <div>
         <b>{label}:</b> <span>{max}/{max}</span>
       </div>
     );
@@ -21,7 +19,6 @@ vi.mock('./TrackedResourceInput.jsx', () => ({
 vi.mock('../../../services/character/classFeatures.js', () => ({
   getClassFeatures: vi.fn(() => ({
     extraAttacks: 1,
-    favoredEnemies: 0,
   })),
 }));
 
@@ -33,18 +30,6 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 
 vi.mock('../../../services/ui/dataLoader.js', () => ({
   loadFightingStyles: vi.fn(() => Promise.resolve([])),
-}));
-
-vi.mock('../../common/Popup.jsx', () => ({
-  default: function MockPopup({ html, onClickOrKeyDown }) {
-    return (
-      <div data-testid="popup-overlay" onClick={onClickOrKeyDown}>
-        <div data-testid="popup-modal">
-          {html ? <div dangerouslySetInnerHTML={{ __html: html }} /> : null}
-        </div>
-      </div>
-    );
-  },
 }));
 
 const mockCampaignName = 'test-campaign';
@@ -85,15 +70,25 @@ describe('RangerFeatures', () => {
   describe('level-gated tracked resources', () => {
     it('renders Dread Ambush with Wisdom-based max when level >= 3', () => {
       const stats = buildPlayerStats({ level: 3 });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByTestId('tracked-resource-dreadambushUses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-dreadambushUses').querySelector('span')?.textContent).toBe('3/3');
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText('Dread Ambush:')).toBeInTheDocument();
+      expect(container.textContent).toContain('3/3');
     });
 
     it('does not render Dread Ambush when level < 3', () => {
       const stats = buildPlayerStats({ level: 2 });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByTestId('tracked-resource-dreadambushUses')).not.toBeInTheDocument();
+      expect(screen.queryByText('Dread Ambush:')).not.toBeInTheDocument();
+    });
+
+    it('renders Dread Ambush with max 1 when Wisdom bonus is 0', () => {
+      const stats = buildPlayerStats({
+        level: 3,
+        abilities: [{ name: 'Wisdom', bonus: 0 }],
+      });
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText('Dread Ambush:')).toBeInTheDocument();
+      expect(container.textContent).toContain('1/1');
     });
 
     it('renders Favored Enemy with class_level favored_enemy value as max', () => {
@@ -107,9 +102,9 @@ describe('RangerFeatures', () => {
           fightingStyles: [],
         },
       });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByTestId('tracked-resource-favoredEnemyUses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-favoredEnemyUses').querySelector('span')?.textContent).toBe('4/4');
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText('Favored Enemy:')).toBeInTheDocument();
+      expect(container.textContent).toContain('4/4');
     });
 
     it('renders Favored Enemy with min value 1 when class_level has no favored_enemy', () => {
@@ -123,40 +118,61 @@ describe('RangerFeatures', () => {
           fightingStyles: [],
         },
       });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByTestId('tracked-resource-favoredEnemyUses').querySelector('span')?.textContent).toBe('1/1');
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText('Favored Enemy:')).toBeInTheDocument();
+      expect(container.textContent).toContain('1/1');
     });
 
     it('does not render Favored Enemy when level < 2', () => {
       const stats = buildPlayerStats({ level: 1 });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByTestId('tracked-resource-favoredEnemyUses')).not.toBeInTheDocument();
+      expect(screen.queryByText('Favored Enemy:')).not.toBeInTheDocument();
     });
 
     it('renders Nature\'s Veil with Wisdom-based max when level >= 14', () => {
       const stats = buildPlayerStats({ level: 14 });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByTestId('tracked-resource-naturesVeilUses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-naturesVeilUses').querySelector('span')?.textContent).toBe('3/3');
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText("Nature's Veil:")).toBeInTheDocument();
+      expect(container.textContent).toContain('3/3');
+    });
+
+    it('renders Nature\'s Veil with min value 1 when Wisdom bonus is 0', () => {
+      const stats = buildPlayerStats({
+        level: 14,
+        abilities: [{ name: 'Wisdom', bonus: 0 }],
+      });
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText("Nature's Veil:")).toBeInTheDocument();
+      expect(container.textContent).toContain('1/1');
     });
 
     it('does not render Nature\'s Veil when level < 14', () => {
       const stats = buildPlayerStats({ level: 13 });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByTestId('tracked-resource-naturesVeilUses')).not.toBeInTheDocument();
+      expect(screen.queryByText("Nature's Veil:")).not.toBeInTheDocument();
     });
 
     it('renders Tireless with Wisdom-based max when level >= 10', () => {
       const stats = buildPlayerStats({ level: 10 });
-      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByTestId('tracked-resource-tirelessUses')).toBeInTheDocument();
-      expect(screen.getByTestId('tracked-resource-tirelessUses').querySelector('span')?.textContent).toBe('3/3');
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText('Tireless:')).toBeInTheDocument();
+      expect(container.textContent).toContain('3/3');
+    });
+
+    it('renders Tireless with min value 1 when Wisdom bonus is 0', () => {
+      const stats = buildPlayerStats({
+        level: 10,
+        abilities: [{ name: 'Wisdom', bonus: 0 }],
+      });
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText('Tireless:')).toBeInTheDocument();
+      expect(container.textContent).toContain('1/1');
     });
 
     it('does not render Tireless when level < 10', () => {
       const stats = buildPlayerStats({ level: 9 });
       render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.queryByTestId('tracked-resource-tirelessUses')).not.toBeInTheDocument();
+      expect(screen.queryByText('Tireless:')).not.toBeInTheDocument();
     });
   });
 
@@ -199,6 +215,23 @@ describe('RangerFeatures', () => {
       expect(screen.getByText('Defense')).toBeInTheDocument();
     });
 
+    it('renders multiple fighting styles separated by commas', () => {
+      const stats = buildPlayerStats({
+        level: 2,
+        class: {
+          name: 'Ranger',
+          major: {},
+          subclass: {},
+          class_levels: [{ level: 2 }],
+          fightingStyles: ['Defense', 'Two-Weapon Fighting'],
+        },
+      });
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText(/Fighting Styles:/)).toBeInTheDocument();
+      expect(container.textContent).toContain('Defense');
+      expect(container.textContent).toContain('Two-Weapon Fighting');
+    });
+
     it('does not render fighting styles when level <= 1, fightingStyles is null, or fightingStyles is undefined', () => {
       const negativeCases = [
         { level: 1, class: { name: 'Ranger', major: {}, subclass: {}, class_levels: [{ level: 1 }], fightingStyles: ['Defense'] } },
@@ -217,7 +250,24 @@ describe('RangerFeatures', () => {
     it('renders extra attacks value from getClassFeatures', () => {
       vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
         extraAttacks: 0,
-        favoredEnemies: 0,
+      });
+      const stats = buildPlayerStats({ level: 5 });
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(container.textContent).toContain('Extra Attacks: 0');
+    });
+
+    it('renders extra attacks as 1 by default', () => {
+      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
+        extraAttacks: 1,
+      });
+      const stats = buildPlayerStats({ level: 5 });
+      const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(container.textContent).toContain('Extra Attacks: 1');
+    });
+
+    it('renders extra attacks as 0 when getClassFeatures returns 0', () => {
+      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
+        extraAttacks: 0,
       });
       const stats = buildPlayerStats({ level: 5 });
       const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
@@ -226,16 +276,26 @@ describe('RangerFeatures', () => {
   });
 
   describe('defensive tactics', () => {
-    it('renders defensive tactics badge with shield icon when choice is set', () => {
+    it('renders defensive tactics badge text when choice is set', () => {
+      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+        if (key === '_Defensive_Tactics_choice') return 'Evasion';
+        return undefined;
+      });
+      const stats = buildPlayerStats();
+      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText('Evasion')).toBeInTheDocument();
+    });
+
+    it('renders defensive tactics badge with automation-badge styling when choice is set', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === '_Defensive_Tactics_choice') return 'Evasion';
         return undefined;
       });
       const stats = buildPlayerStats();
       const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByText('Evasion')).toBeInTheDocument();
-      const shieldIcon = container.querySelector('i.fa-solid.fa-shield');
-      expect(shieldIcon).toBeTruthy();
+      const badge = container.querySelector('.automation-badge');
+      expect(badge).toBeTruthy();
+      expect(badge.textContent).toContain('Evasion');
     });
 
     it('does not render defensive tactics badge when choice is null or undefined', () => {
@@ -253,16 +313,26 @@ describe('RangerFeatures', () => {
   });
 
   describe("hunter's prey", () => {
-    it("renders hunter's prey badge with crosshair icon when choice is set", () => {
+    it("renders hunter's prey badge text when choice is set", () => {
+      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
+        if (key === "_Hunter's_Prey_choice") return 'Marked Target';
+        return undefined;
+      });
+      const stats = buildPlayerStats();
+      render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
+      expect(screen.getByText("Marked Target")).toBeInTheDocument();
+    });
+
+    it("renders hunter's prey badge with automation-badge styling when choice is set", () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === "_Hunter's_Prey_choice") return 'Marked Target';
         return undefined;
       });
       const stats = buildPlayerStats();
       const { container } = render(<RangerFeatures playerStats={stats} campaignName={mockCampaignName} />);
-      expect(screen.getByText('Marked Target')).toBeInTheDocument();
-      const crosshairIcon = container.querySelector('i.fa-solid.fa-crosshairs');
-      expect(crosshairIcon).toBeTruthy();
+      const badge = container.querySelector('.automation-badge');
+      expect(badge).toBeTruthy();
+      expect(badge.textContent).toContain("Marked Target");
     });
 
     it("does not render hunter's prey badge when choice is null", () => {

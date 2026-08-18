@@ -1,22 +1,26 @@
-// @cleaned-by-ai
 // @improved-by-ai
-// Consolidated redundant tests: removed duplicate crash test, merged wisMod edge cases,
-// removed low-value render-only tests, eliminated brittle implementation-specific assertions.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import React from 'react';
 import ClericFeatures from './CharClassFeatures.jsx';
 import * as classFeatures from '../../../services/character/classFeatures.js';
 
-vi.mock('./TrackedResourceInput.jsx', () => ({
-  default: function MockTrackedResourceInput({ label, getMax, resourceKey }) {
-    const max = getMax ? getMax() : 0;
-    return (
-      <div data-testid={`tracked-resource-${resourceKey}`}>
-        <b>{label}:</b> <span>{max}/{max}</span>
-      </div>
-    );
-  },
+// Helper to verify a resource section displays the expected label and max value.
+// The real TrackedResourceInput splits text across elements (label, current span, "/", max),
+// so we query the parent div and check its normalized text content.
+function expectResourceToDisplay(label, maxValue) {
+  const labelEl = screen.getByText(new RegExp(`^${label}:$`));
+  const sectionDiv = labelEl.closest('div.clickable');
+  expect(sectionDiv).toBeTruthy();
+  expect(sectionDiv.textContent).toContain(maxValue);
+}
+
+vi.mock('../../../hooks/runtime/useTrackedResource.js', () => ({
+  default: vi.fn((_storageKey, _playerName, getMax, _deps, _campaignName, _playerStats) => ({
+    current: getMax ? getMax() : 0,
+    max: getMax ? getMax() : 0,
+    update: vi.fn(),
+  })),
 }));
 
 vi.mock('../../../services/character/classFeatures.js', () => ({
@@ -24,15 +28,6 @@ vi.mock('../../../services/character/classFeatures.js', () => ({
     maxChannelDivinity: 2,
     destroyUndeadCR: 5,
   })),
-}));
-
-vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  useRuntimeValue: vi.fn((_name, key) => {
-    if (key === 'activeBuffs') return [];
-    return undefined;
-  }),
-  getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn(),
 }));
 
 function buildPlayerStats(overrides = {}) {
@@ -67,32 +62,26 @@ describe('ClericFeatures', () => {
   });
 
   describe('channel divinity charges', () => {
-    it('renders the tracked resource', () => {
+    it('renders with label and max value from class features', () => {
       const stats = buildPlayerStats({ level: 5 });
       render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-channelDivinityCharges')).toBeInTheDocument();
-    });
-
-    it('uses maxChannelDivinity from class features as the max value', () => {
-      const stats = buildPlayerStats({ level: 5 });
-      const { container } = render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('2/2');
+      expectResourceToDisplay('Channel Divinity Charges', '2');
     });
 
     it('uses 0 when maxChannelDivinity is missing from class features', () => {
       vi.mocked(classFeatures.getClassFeatures).mockReturnValue({});
       const stats = buildPlayerStats({ level: 5 });
-      const { container } = render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('0/0');
+      render(<ClericFeatures playerStats={stats} campaignName="test" />);
+      expectResourceToDisplay('Channel Divinity Charges', '0');
     });
   });
 
   describe('destroy undead CR', () => {
-    it('renders when destroyUndeadCR is a non-null number', () => {
+    it('renders label and value when destroyUndeadCR is a non-null number', () => {
       const stats = buildPlayerStats();
-      const { container } = render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Destroy Undead Challenge Rating:');
-      expect(container.textContent).toContain('5');
+      render(<ClericFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/Destroy Undead Challenge Rating:/)).toBeInTheDocument();
+      expect(screen.getByText(/5/)).toBeInTheDocument();
     });
 
     it('renders when destroyUndeadCR is 0', () => {
@@ -101,9 +90,9 @@ describe('ClericFeatures', () => {
         destroyUndeadCR: 0,
       });
       const stats = buildPlayerStats();
-      const { container } = render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Destroy Undead Challenge Rating:');
-      expect(container.textContent).toContain('0');
+      render(<ClericFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/Destroy Undead Challenge Rating:/)).toBeInTheDocument();
+      expect(screen.getByText(/0/)).toBeInTheDocument();
     });
 
     it('does not render when destroyUndeadCR is null', () => {
@@ -112,8 +101,8 @@ describe('ClericFeatures', () => {
         destroyUndeadCR: null,
       });
       const stats = buildPlayerStats();
-      const { container } = render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('Destroy Undead');
+      render(<ClericFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.queryByText(/Destroy Undead/)).not.toBeInTheDocument();
     });
   });
 
@@ -130,12 +119,12 @@ describe('ClericFeatures', () => {
         },
       });
       render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-preserveLifePool')).toBeInTheDocument();
+      expectResourceToDisplay('Preserve Life Pool', '25');
     });
 
-    it('calculates max as 5 * level', () => {
+    it('calculates max as 5 * level for Life Domain', () => {
       const stats = buildPlayerStats({
-        level: 5,
+        level: 10,
         class: {
           name: 'Cleric',
           major: { name: 'Life Domain' },
@@ -144,8 +133,8 @@ describe('ClericFeatures', () => {
           fightingStyles: [],
         },
       });
-      const { container } = render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('25/25');
+      render(<ClericFeatures playerStats={stats} campaignName="test" />);
+      expectResourceToDisplay('Preserve Life Pool', '50');
     });
 
     it('does not render for non-Life Domain subclass', () => {
@@ -160,7 +149,7 @@ describe('ClericFeatures', () => {
         },
       });
       render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByTestId('tracked-resource-preserveLifePool')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Preserve Life Pool/)).not.toBeInTheDocument();
     });
 
     it('does not render when both major and subclass are non-Life Domain', () => {
@@ -175,35 +164,37 @@ describe('ClericFeatures', () => {
         },
       });
       render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByTestId('tracked-resource-preserveLifePool')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Preserve Life Pool/)).not.toBeInTheDocument();
     });
 
     it('does not render when class is null', () => {
       const stats = buildPlayerStats({ class: null });
-      const { container } = render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(container.querySelector('[data-testid="tracked-resource-preserveLifePool"]')).toBeFalsy();
+      render(<ClericFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.queryByText(/Preserve Life Pool/)).not.toBeInTheDocument();
     });
   });
 
   describe('warding flare uses', () => {
-    it('renders the tracked resource', () => {
+    it('renders with label', () => {
       const stats = buildPlayerStats();
       render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByTestId('tracked-resource-wardingflareUses')).toBeInTheDocument();
+      expectResourceToDisplay('Warding Flare Uses', '3');
     });
 
     it('uses Math.max(1, wisMod) for max with various wisdom modifiers', () => {
       const cases = [
-        { wisBonus: 3, expected: '3/3' },
-        { wisBonus: -2, expected: '1/1' },
-        { wisBonus: 0, expected: '1/1' },
+        { wisBonus: 3, expectedMax: '3' },
+        { wisBonus: -2, expectedMax: '1' },
+        { wisBonus: 0, expectedMax: '1' },
+        { wisBonus: 10, expectedMax: '10' },
       ];
-      for (const { wisBonus, expected } of cases) {
+      for (const { wisBonus, expectedMax } of cases) {
         const stats = buildPlayerStats({
           abilities: [{ name: 'Wisdom', bonus: wisBonus }],
         });
-        const { container } = render(<ClericFeatures playerStats={stats} campaignName="test" />);
-        expect(container.textContent).toContain(expected);
+        render(<ClericFeatures playerStats={stats} campaignName="test" />);
+        expectResourceToDisplay('Warding Flare Uses', expectedMax);
+        cleanup();
       }
     });
 
@@ -211,8 +202,8 @@ describe('ClericFeatures', () => {
       const stats = buildPlayerStats({
         abilities: [{ name: 'Charisma', bonus: 3 }],
       });
-      const { container } = render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('1/1');
+      render(<ClericFeatures playerStats={stats} campaignName="test" />);
+      expectResourceToDisplay('Warding Flare Uses', '1');
     });
   });
 });
