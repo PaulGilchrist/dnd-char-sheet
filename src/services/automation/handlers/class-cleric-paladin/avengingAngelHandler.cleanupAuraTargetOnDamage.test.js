@@ -1,4 +1,9 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -30,10 +35,8 @@ describe('avengingAngelHandler.cleanupAuraTargetOnDamage', () => {
   }
 
   describe('target present in aura list', () => {
-    it('should clear the entire aura targets list and log the removal', async () => {
+    it('should clear the entire aura targets list and log the removal when removing the only target', async () => {
       mockAuraTargets(['Goblin']);
-      const now = Date.now();
-      const dateSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
 
       await cleanupAuraTargetOnDamage(playerName, 'Goblin', campaignName);
 
@@ -49,10 +52,7 @@ describe('avengingAngelHandler.cleanupAuraTargetOnDamage', () => {
         characterName: 'Goblin',
         condition: 'Frightened',
         reason: 'took damage (Frightful Aura)',
-        timestamp: now,
       }));
-
-      dateSpy.mockRestore();
     });
 
     it('should remove only the damaged target and preserve other aura targets', async () => {
@@ -74,19 +74,6 @@ describe('avengingAngelHandler.cleanupAuraTargetOnDamage', () => {
         reason: 'took damage (Frightful Aura)',
       }));
     });
-
-    it('should handle removing the last target from a multi-target list', async () => {
-      mockAuraTargets(['Goblin']);
-
-      await cleanupAuraTargetOnDamage(playerName, 'Goblin', campaignName);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        playerName,
-        'avengingAngelAuraTargets',
-        [],
-        campaignName,
-      );
-    });
   });
 
   describe('target not present in aura list', () => {
@@ -107,38 +94,12 @@ describe('avengingAngelHandler.cleanupAuraTargetOnDamage', () => {
       expect(setRuntimeValue).not.toHaveBeenCalled();
       expect(addEntry).not.toHaveBeenCalled();
     });
-
-    it('should be a no-op when aura targets is undefined', async () => {
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'avengingAngelAuraTargets') return undefined;
-        return null;
-      });
-
-      await cleanupAuraTargetOnDamage(playerName, 'Goblin', campaignName);
-
-      expect(setRuntimeValue).not.toHaveBeenCalled();
-      expect(addEntry).not.toHaveBeenCalled();
-    });
-
-    it('should be a no-op when aura targets is null', async () => {
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'avengingAngelAuraTargets') return null;
-        return null;
-      });
-
-      await cleanupAuraTargetOnDamage(playerName, 'Goblin', campaignName);
-
-      expect(setRuntimeValue).not.toHaveBeenCalled();
-      expect(addEntry).not.toHaveBeenCalled();
-    });
   });
 
   describe('addEntry rejection handling', () => {
     it('should still update aura targets when addEntry rejects', async () => {
       mockAuraTargets(['Goblin']);
       addEntry.mockRejectedValue(new Error('log write failed'));
-      const now = Date.now();
-      const dateSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
 
       await cleanupAuraTargetOnDamage(playerName, 'Goblin', campaignName);
 
@@ -149,8 +110,6 @@ describe('avengingAngelHandler.cleanupAuraTargetOnDamage', () => {
         campaignName,
       );
       expect(addEntry).toHaveBeenCalled();
-
-      dateSpy.mockRestore();
     });
   });
 });

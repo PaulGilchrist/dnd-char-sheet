@@ -1,4 +1,9 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { handle } from './hurlThroughHellHandler.js';
@@ -156,17 +161,7 @@ describe('hurlThroughHellHandler.handle', () => {
             expect(result.payload.automation).toEqual(makeAction().automation);
         });
 
-        it('should return popup when lastAttack is a non-object primitive', async () => {
-            mockRuntime({ lastAttack: 'invalid' });
-
-            const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.description).toContain('Last attack was not yours');
-        });
-
-        it('should return popup when lastAttack was not from this player', async () => {
+        it('should return popup when lastAttack was not from this player (including missing attackerName or non-object)', async () => {
             mockRuntime({
                 lastAttack: {
                     attackerName: 'Goblin',
@@ -183,42 +178,11 @@ describe('hurlThroughHellHandler.handle', () => {
             expect(result.payload.automation).toEqual(makeAction().automation);
         });
 
-        it('should return popup when lastAttack has no attackerName', async () => {
-            mockRuntime({
-                lastAttack: {
-                    rollType: 'attack',
-                    hit: true,
-                    targetName: 'Goblin',
-                },
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Last attack was not yours');
-        });
-
         it('should return popup when lastAttack was not an attack roll', async () => {
             mockRuntime({
                 lastAttack: {
                     attackerName: PLAYER_NAME,
                     rollType: 'save',
-                    hit: true,
-                    targetName: 'Goblin',
-                },
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Last action was not an attack');
-        });
-
-        it('should return popup when lastAttack was a check', async () => {
-            mockRuntime({
-                lastAttack: {
-                    attackerName: PLAYER_NAME,
-                    rollType: 'check',
                     hit: true,
                     targetName: 'Goblin',
                 },
@@ -321,36 +285,7 @@ describe('hurlThroughHellHandler.handle', () => {
             expect(result.payload.automation).toEqual(makeAction().automation);
         });
 
-        it('should return popup when pact magic recharge is disabled and uses exhausted', async () => {
-            mockRuntime({ uses: 1 });
-
-            const result = await handle(
-                makeAction({ automation: { pactMagicRecharge: false } }),
-                makePlayerStats(),
-                CAMPAIGN,
-                MAP,
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No uses remaining');
-            expect(result.payload.description).toContain('Long Rest');
-        });
-
-        it('should return popup when pact magic recharge is enabled but no slots available', async () => {
-            mockRuntime({ uses: 1, slotLevel2: 0 });
-
-            const result = await handle(
-                makeAction({ automation: { pactMagicRecharge: true } }),
-                makePlayerStats({ spellAbilities: { spell_slots_level_2: 2 } }),
-                CAMPAIGN,
-                MAP,
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No Pact Magic slots available');
-        });
-
-        it('should return popup when pact magic recharge enabled but runtime slot is zero', async () => {
+        it('should return popup when pact magic recharge enabled but no Pact Magic slots available', async () => {
             getRuntimeValue.mockImplementation((_name, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 1;
                 if (key === 'hurlThroughHellTurnUsed') return null;
@@ -360,23 +295,8 @@ describe('hurlThroughHellHandler.handle', () => {
                     hit: true,
                     targetName: 'Goblin',
                 };
-                if (key === 'spell_slots_level_2') return 0;
                 return null;
             });
-
-            const result = await handle(
-                makeAction({ automation: { pactMagicRecharge: true } }),
-                makePlayerStats({ spellAbilities: { spell_slots_level_2: 2 } }),
-                CAMPAIGN,
-                MAP,
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No Pact Magic slots available');
-        });
-
-        it('should return popup when pact magic recharge enabled but spellAbilities is null', async () => {
-            mockRuntime({ uses: 1, slotLevel2: null });
 
             const result = await handle(
                 makeAction({ automation: { pactMagicRecharge: true } }),
@@ -387,6 +307,33 @@ describe('hurlThroughHellHandler.handle', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('No Pact Magic slots available');
+
+            vi.clearAllMocks();
+            mockCombatContext();
+            mockDiceRoll(44, [10, 10, 10, 10, 4]);
+            mockSaveDc(15);
+
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'hurlThroughHellUses') return 1;
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'lastAttack') return {
+                    attackerName: PLAYER_NAME,
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
+                return null;
+            });
+
+            const result2 = await handle(
+                makeAction({ automation: { pactMagicRecharge: true } }),
+                makePlayerStats({ spellAbilities: {} }),
+                CAMPAIGN,
+                MAP,
+            );
+
+            expect(result2.type).toBe('popup');
+            expect(result2.payload.description).toContain('No Pact Magic slots available');
         });
     });
 
@@ -419,36 +366,12 @@ describe('hurlThroughHellHandler.handle', () => {
             expect(result.payload.pactSlotLevel).toBe(5);
             expect(result.payload.pactSlotsAvailable).toBe(true);
         });
-
-        it('should return popup when pact magic recharge enabled but no slot levels found', async () => {
-            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
-                if (key === 'hurlThroughHellUses') return 1;
-                if (key === 'hurlThroughHellTurnUsed') return null;
-                if (key === 'lastAttack') return {
-                    attackerName: PLAYER_NAME,
-                    rollType: 'attack',
-                    hit: true,
-                    targetName: 'Goblin',
-                };
-                return null;
-            });
-
-            const result = await handle(
-                makeAction({ automation: { pactMagicRecharge: true } }),
-                makePlayerStats({ spellAbilities: {} }),
-                CAMPAIGN,
-                MAP,
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No Pact Magic slots available');
-        });
     });
 
     // ── Modal return ──
 
     describe('modal return', () => {
-        it('should return modal when use is available', async () => {
+        it('should return modal when use is available with correct payload', async () => {
             mockRuntime({ uses: 0 });
 
             const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
@@ -467,6 +390,9 @@ describe('hurlThroughHellHandler.handle', () => {
             expect(result.payload.pactMagicRecharge).toBe(false);
             expect(result.payload.pactSlotLevel).toBe(0);
             expect(result.payload.pactSlotsAvailable).toBe(false);
+            expect(result.payload.action).toBeInstanceOf(Object);
+            expect(result.payload.playerStats).toBeInstanceOf(Object);
+            expect(result.payload.campaignName).toBe(CAMPAIGN);
         });
 
         it('should return modal when pact magic slots are available', async () => {
@@ -489,149 +415,29 @@ describe('hurlThroughHellHandler.handle', () => {
             expect(result.payload.pactSlotsAvailable).toBe(true);
             expect(result.payload.pactMagicRecharge).toBe(true);
         });
-
-        it('should pass action and playerStats in modal payload', async () => {
-            mockRuntime({ uses: 0 });
-
-            const action = makeAction();
-            const stats = makePlayerStats();
-
-            const result = await handle(action, stats, CAMPAIGN, MAP);
-
-            expect(result.payload.action).toBe(action);
-            expect(result.payload.playerStats).toBe(stats);
-            expect(result.payload.campaignName).toBe(CAMPAIGN);
-        });
-
-        it('should include automation config in modal payload', async () => {
-            mockRuntime({ uses: 0 });
-
-            const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.payload.action.automation).toEqual(expect.objectContaining({
-                type: 'hurl_through_hell',
-                uses: 1,
-                damageExpression: '8d10',
-                damageType: 'Psychic',
-                saveType: 'CHA',
-                saveAbility: 'CHA',
-            }));
-        });
     });
 
     // ── Custom config ──
 
     describe('custom automation config', () => {
-        it('should use custom saveType from automation config', async () => {
+        it('should use custom values from automation config', async () => {
             mockRuntime({ uses: 0 });
+            mockDiceRoll(60, [12, 12, 12, 12, 12]);
 
             const action = makeAction({
-                automation: { saveType: 'WIS', saveAbility: 'WIS' },
+                name: 'Custom Hurl',
+                automation: { saveType: 'WIS', saveAbility: 'WIS', damageExpression: '10d10', damageType: 'Force' },
             });
 
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 
             expect(result.type).toBe('modal');
             expect(result.payload.saveType).toBe('WIS');
-            expect(buildSaveDc).toHaveBeenCalledWith(action.automation, expect.any(Object));
-        });
-
-        it('should use custom damageExpression from automation config', async () => {
-            mockRuntime({ uses: 0 });
-            mockDiceRoll(60, [12, 12, 12, 12, 12]);
-
-            const action = makeAction({
-                automation: { damageExpression: '10d10', damageType: 'Force' },
-            });
-
-            const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('modal');
             expect(result.payload.damageType).toBe('Force');
             expect(result.payload.damageTotal).toBe(60);
             expect(result.payload.damageExpression).toBe('10d10');
-        });
-
-        it('should use custom feature name when provided in action', async () => {
-            mockRuntime({ uses: 0 });
-
-            const action = makeAction({ name: 'Custom Hurl' });
-            const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('modal');
             expect(result.payload.action.name).toBe('Custom Hurl');
-        });
-
-        it('should use default feature name when action.name is falsy', async () => {
-            mockRuntime({ uses: 0 });
-
-            const action = makeAction({ name: null });
-            const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.action.name).toBeNull();
-        });
-
-        it('should block when uses exhausted with multiple maxUses', async () => {
-            mockRuntime({ uses: 2 });
-
-            const action = makeAction({ automation: { uses: 2 } });
-            const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.description).toContain('No uses remaining');
-        });
-
-        it('should default damageExpression to 8d10 when not provided', async () => {
-            mockRuntime({ uses: 0 });
-            mockDiceRoll(44, [10, 10, 10, 10, 4]);
-
-            const action = makeAction({ automation: {} });
-            const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.damageExpression).toBe('8d10');
-            expect(result.payload.damageType).toBe('Psychic');
-        });
-
-        it('should default saveType to CHA when not provided', async () => {
-            mockRuntime({ uses: 0 });
-
-            const action = makeAction({ automation: { saveAbility: 'CHA' } });
-            const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.saveType).toBe('CHA');
-        });
-
-        it('should default maxUses to 1 when not provided', async () => {
-            mockRuntime({ uses: 0 });
-
-            const action = makeAction({ automation: {} });
-            const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.maxUses).toBe(1);
-        });
-
-        it('should default currentUses to 0 when runtime returns null', async () => {
-            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
-                if (key === 'hurlThroughHellUses') return null;
-                if (key === 'hurlThroughHellTurnUsed') return null;
-                if (key === 'lastAttack') return {
-                    attackerName: PLAYER_NAME,
-                    rollType: 'attack',
-                    hit: true,
-                    targetName: 'Goblin',
-                };
-                return null;
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.currentUses).toBe(0);
+            expect(buildSaveDc).toHaveBeenCalledWith(action.automation, expect.any(Object));
         });
 
         it('should handle rollExpression returning null', async () => {

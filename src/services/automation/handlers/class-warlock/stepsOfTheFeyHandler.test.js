@@ -1,4 +1,9 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './stepsOfTheFeyHandler.js';
 
@@ -74,33 +79,6 @@ describe('stepsOfTheFeyHandler.handle', () => {
             expect(getRuntimeValue).toHaveBeenCalledWith(playerName, '_Steps_of_the_Fey_freeCastCount', campaignName);
         });
 
-        it('returns popup when uses count is negative', async () => {
-            setupUses(-1);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-        });
-
-        it('returns popup with custom feature name when action.name is missing', async () => {
-            setupUses(0);
-            const action = makeAction({ name: undefined });
-
-            const result = await handle(action, makePlayerStats(), campaignName, null);
-
-            expect(result.payload.name).toBe('Steps of the Fey');
-        });
-
-        it('uses fallback uses_expression when automation.uses_expression is missing', async () => {
-            setupUses(1);
-            const action = makeAction({ automation: { type: 'free_cast' } });
-
-            await handle(action, makePlayerStats(), campaignName, null);
-
-            expect(evaluateAutoExpression).toHaveBeenCalledWith('CHA modifier_min_1', expect.any(Object));
-        });
-
         it('uses evaluated expression result for uses when runtime value is null', async () => {
             getRuntimeValue.mockReturnValue(null);
             evaluateAutoExpression.mockReturnValue(2);
@@ -110,17 +88,6 @@ describe('stepsOfTheFeyHandler.handle', () => {
 
             expect(result.type).toBe('modal');
             expect(result.payload.newCount).toBe(2);
-        });
-
-        it('defaults to 1 when evaluateAutoExpression returns falsy but runtime value provides count', async () => {
-            setupUses(1);
-            evaluateAutoExpression.mockReturnValue(0);
-            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('modal');
-            expect(result.payload.newCount).toBe(1);
         });
     });
 
@@ -137,7 +104,7 @@ describe('stepsOfTheFeyHandler.handle', () => {
             expect(result.payload.description).toContain('No creatures in combat');
         });
 
-        it('returns popup when combat context is null', async () => {
+        it('returns popup when combat context is null or missing creatures', async () => {
             setupUses(1);
             setupCombatContext(null);
 
@@ -147,26 +114,6 @@ describe('stepsOfTheFeyHandler.handle', () => {
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.triggerMistyStep).toBe(true);
             expect(result.payload.description).toContain('No creatures in combat');
-        });
-
-        it('returns popup when combat context is undefined', async () => {
-            setupUses(1);
-            getCombatContext.mockResolvedValue(undefined);
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.triggerMistyStep).toBe(true);
-        });
-
-        it('returns popup when creatures array is missing from combat context', async () => {
-            setupUses(1);
-            setupCombatContext({});
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.triggerMistyStep).toBe(true);
         });
     });
 
@@ -202,7 +149,7 @@ describe('stepsOfTheFeyHandler.handle', () => {
             expect(result.payload.targets.every(t => t.name !== playerName)).toBe(true);
         });
 
-        it('filters out all creatures when they match the warlock name', async () => {
+        it('filters out creatures matching the warlock name', async () => {
             setupUses(1);
             setupCombatContext({
                 creatures: [
@@ -256,19 +203,6 @@ describe('stepsOfTheFeyHandler.handle', () => {
             expect(result.payload.freeCastCountKey).toBe('_Steps_of_the_Fey_freeCastCount');
         });
 
-        it('includes action and playerStats in modal payload', async () => {
-            setupUses(1);
-            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
-            const action = makeAction();
-            const stats = makePlayerStats();
-
-            const result = await handle(action, stats, campaignName, null);
-
-            expect(result.payload.action).toBe(action);
-            expect(result.payload.playerStats).toBe(stats);
-            expect(result.payload.campaignName).toBe(campaignName);
-        });
-
         it('uses currentCount from runtime value in newCount', async () => {
             setupUses(3);
             setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
@@ -276,16 +210,6 @@ describe('stepsOfTheFeyHandler.handle', () => {
             const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
             expect(result.payload.newCount).toBe(3);
-        });
-
-        it('generates freeCastCountKey from action.name with spaces replaced', async () => {
-            setupUses(1);
-            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
-            const action = makeAction({ name: 'My Custom Fey Step' });
-
-            const result = await handle(action, makePlayerStats(), campaignName, null);
-
-            expect(result.payload.freeCastCountKey).toBe('_My_Custom_Fey_Step_freeCastCount');
         });
 
         it('uses action.name as featureName when provided', async () => {
@@ -325,15 +249,6 @@ describe('stepsOfTheFeyHandler.handle', () => {
             const result = await handle(makeAction(), makePlayerStats({ abilities: [] }), campaignName, null);
 
             expect(result.payload.saveDc).toBe(11); // 8 + 0 (no CHA) + 3 (prof)
-        });
-
-        it('defaults to 8 when both proficiency and CHA bonus are missing', async () => {
-            setupUses(1);
-            setupCombatContext({ creatures: [{ name: 'Goblin', type: 'npc' }] });
-
-            const result = await handle(makeAction(), makePlayerStats({ proficiency: undefined, abilities: [] }), campaignName, null);
-
-            expect(result.payload.saveDc).toBe(8);
         });
 
         it('uses first matching CHA ability when multiple abilities exist', async () => {

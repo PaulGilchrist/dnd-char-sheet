@@ -1,3 +1,8 @@
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../services/combat/conditions/savePromptService.js', () => ({

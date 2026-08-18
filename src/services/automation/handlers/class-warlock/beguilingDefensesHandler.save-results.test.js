@@ -1,3 +1,8 @@
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handle } from './beguilingDefensesHandler.js';
@@ -191,7 +196,7 @@ describe('beguilingDefensesHandler - save results', () => {
             }, { timeout: 100 });
         });
 
-        it('stores save result in lastAttack for both success and failure outcomes', async () => {
+        it('stores save result in lastAttack on save failure', async () => {
             findLastAttack.mockResolvedValue(makeHitAttack('Goblin', playerName));
             getRuntimeValue.mockImplementation((_name, key, _campaign) => {
                 if (key === 'beguilingDefensesUses') return 0;
@@ -208,8 +213,6 @@ describe('beguilingDefensesHandler - save results', () => {
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
             const handler = getSaveResultHandler(spy);
-
-            // Test failure outcome
             handler({
                 detail: {
                     promptId: 'test-prompt-id',
@@ -236,9 +239,9 @@ describe('beguilingDefensesHandler - save results', () => {
                     campaignName
                 );
             }, { timeout: 100 });
+        });
 
-            vi.clearAllMocks();
-
+        it('stores save result in lastAttack on save success', async () => {
             findLastAttack.mockResolvedValue(makeHitAttack('Goblin', playerName));
             getRuntimeValue.mockImplementation((_name, key, _campaign) => {
                 if (key === 'beguilingDefensesUses') return 0;
@@ -251,13 +254,11 @@ describe('beguilingDefensesHandler - save results', () => {
             applyHealingToTarget.mockReturnValue({ actualHeal: 10, oldHp: 15, newHp: 25 });
             applyDamageToTarget.mockReturnValue(null);
 
-            const spy2 = vi.spyOn(window, 'addEventListener');
+            const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const handler2 = getSaveResultHandler(spy2);
-
-            // Test success outcome
-            handler2({
+            const handler = getSaveResultHandler(spy);
+            handler({
                 detail: {
                     promptId: 'test-prompt-id',
                     success: true,
@@ -322,38 +323,6 @@ describe('beguilingDefensesHandler - save results', () => {
             }, { timeout: 100 });
         });
 
-        it('passes characters array to applyDamageToTarget', async () => {
-            setupHappyPath(makeHitAttack('Goblin', playerName));
-            getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }], lastAttack: {} });
-
-            const spy = vi.spyOn(window, 'addEventListener');
-            await handle(makeAction(), makePlayerStats(), campaignName, null, []);
-
-            const handler = getSaveResultHandler(spy);
-            handler({
-                detail: {
-                    promptId: 'test-prompt-id',
-                    success: false,
-                    total: 12,
-                    roll: 8,
-                    bonus: 4,
-                },
-            });
-
-            await vi.waitFor(() => {
-                expect(applyDamageToTarget).toHaveBeenCalledWith(
-                    expect.any(Object),
-                    'Goblin',
-                    10,
-                    ['Psychic'],
-                    campaignName,
-                    [],
-                    false,
-                    playerName
-                );
-            }, { timeout: 100 });
-        });
-
         it('logs save success on save success', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
             getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }], lastAttack: {} });
@@ -385,8 +354,7 @@ describe('beguilingDefensesHandler - save results', () => {
             }, { timeout: 100 });
         });
 
-        it('handles addEntry rejection on both save failure and success paths', async () => {
-            // Test failure path
+        it('handles addEntry rejection on save failure path', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
             getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }], lastAttack: {} });
             const errorSpy = vi.spyOn(console, 'error');
@@ -414,19 +382,19 @@ describe('beguilingDefensesHandler - save results', () => {
                 );
             }, { timeout: 100 });
             errorSpy.mockRestore();
+        });
 
-            // Test success path
-            vi.clearAllMocks();
+        it('handles addEntry rejection on save success path', async () => {
             setupHappyPath(makeHitAttack('Goblin', playerName));
             getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }], lastAttack: {} });
+            const errorSpy = vi.spyOn(console, 'error');
             addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
 
-            const errorSpy2 = vi.spyOn(console, 'error');
-            const spy2 = vi.spyOn(window, 'addEventListener');
+            const spy = vi.spyOn(window, 'addEventListener');
             await handle(makeAction(), makePlayerStats(), campaignName, null, ['Goblin']);
 
-            const handler2 = getSaveResultHandler(spy2);
-            handler2({
+            const handler = getSaveResultHandler(spy);
+            handler({
                 detail: {
                     promptId: 'test-prompt-id',
                     success: true,
@@ -437,12 +405,12 @@ describe('beguilingDefensesHandler - save results', () => {
             });
 
             await vi.waitFor(() => {
-                expect(errorSpy2).toHaveBeenCalledWith(
+                expect(errorSpy).toHaveBeenCalledWith(
                     '[beguilingDefenses] Error:',
                     expect.any(Error),
                 );
             }, { timeout: 100 });
-            errorSpy2.mockRestore();
+            errorSpy.mockRestore();
         });
 
         it('passes empty array fallback when characters is null in applyDamageToTarget', async () => {

@@ -1,3 +1,8 @@
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { endInvisibilityOnHostileAction, endGreaterInvisibilityOnHostileAction, endGreaterInvisibility } from './invisibilityService.js';
 import { getActiveBuffs } from '../../automation/common/buffToggle.js';

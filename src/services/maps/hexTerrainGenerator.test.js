@@ -1,3 +1,8 @@
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import { generateHexTerrain, generateRiversFromTerrain } from './hexTerrainGenerator.js';
 import { TERRAIN_TYPES } from '../../config/outdoorConfig.js';

@@ -1,3 +1,8 @@
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerRemoveCurse, confirmRemoveCurse } from './removeCurseService.js';
 import { executeHandler, applyRemoveCurseEffect } from '../../automation/index.js';

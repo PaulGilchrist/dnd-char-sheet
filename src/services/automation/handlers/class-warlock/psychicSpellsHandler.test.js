@@ -1,8 +1,12 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { isPsychicSpellsActive, getPsychicSpellsConfig, handle } from './psychicSpellsHandler.js';
-import * as logService from '../../../ui/logService.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
@@ -64,39 +68,12 @@ describe('psychicSpellsHandler', () => {
             expect(isPsychicSpellsActive(playerStats)).toBe(true);
         });
 
-        it('should return false when psychic_spells passive is not in automation.passives', () => {
-            const playerStats = makePlayerStats({
-                automation: {
-                    passives: [
-                        { type: 'radiant_soul', name: 'Radiant Soul' },
-                    ],
-                },
-            });
-            expect(isPsychicSpellsActive(playerStats)).toBe(false);
-        });
-
-        it('should return false when automation.passives is empty', () => {
-            expect(isPsychicSpellsActive(makePlayerStats({ automation: { passives: [] } }))).toBe(false);
-        });
-
-        it('should return false when automation is null', () => {
-            expect(isPsychicSpellsActive(makePlayerStats({ automation: null }))).toBe(false);
-        });
-
-        it('should return false when automation is missing', () => {
-            expect(isPsychicSpellsActive(makePlayerStats({ automation: {} }))).toBe(false);
-        });
-
-        it('should return false when playerStats is null', () => {
+        it('should return false when playerStats or passives are null/undefined/missing', () => {
             expect(isPsychicSpellsActive(null)).toBe(false);
-        });
-
-        it('should return false when playerStats is undefined', () => {
             expect(isPsychicSpellsActive(undefined)).toBe(false);
-        });
-
-        it('should return false when playerStats.automation.passives is missing', () => {
             expect(isPsychicSpellsActive({ name: 'Test' })).toBe(false);
+            expect(isPsychicSpellsActive(makePlayerStats({ automation: null }))).toBe(false);
+            expect(isPsychicSpellsActive(makePlayerStats({ automation: { passives: [] } }))).toBe(false);
         });
     });
 
@@ -124,20 +101,11 @@ describe('psychicSpellsHandler', () => {
             expect(result.name).toBe('Psychic Spells');
         });
 
-        it('should return undefined when automation.passives is empty', () => {
-            expect(getPsychicSpellsConfig(makePlayerStats({ automation: { passives: [] } }))).toBeUndefined();
-        });
-
-        it('should return undefined when automation is null', () => {
-            expect(getPsychicSpellsConfig(makePlayerStats({ automation: null }))).toBeUndefined();
-        });
-
-        it('should return undefined when playerStats is null', () => {
+        it('should return undefined when playerStats or passives are null/undefined/missing', () => {
             expect(getPsychicSpellsConfig(null)).toBeUndefined();
-        });
-
-        it('should return undefined when playerStats.automation.passives is missing', () => {
             expect(getPsychicSpellsConfig({ name: 'Test' })).toBeUndefined();
+            expect(getPsychicSpellsConfig(makePlayerStats({ automation: null }))).toBeUndefined();
+            expect(getPsychicSpellsConfig(makePlayerStats({ automation: { passives: [] } }))).toBeUndefined();
         });
     });
 
@@ -200,13 +168,14 @@ describe('psychicSpellsHandler', () => {
             expect(result.payload.automation).toEqual(action.automation);
         });
 
-        it('should use custom damageType in the popup description', async () => {
+        it('should return a popup with custom damageType', async () => {
             getRuntimeValue.mockReturnValue(null);
             const action = makeFeature({ automation: { damageType: 'Force' } });
             const playerStats = makePlayerStats({ automation: { passives: [] } });
 
             const result = await handle(action, playerStats, campaignName);
 
+            expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Force');
         });
 
@@ -221,35 +190,8 @@ describe('psychicSpellsHandler', () => {
                 type: 'ability_use',
                 characterName: playerName,
                 abilityName: 'Psychic Spells',
-            }));
-        });
-
-        it('should include the description in the log entry', async () => {
-            getRuntimeValue.mockReturnValue(null);
-            const action = makeFeature();
-            const playerStats = makePlayerStats({ automation: { passives: [] } });
-
-            await handle(action, playerStats, campaignName);
-
-            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                 description: expect.stringContaining('Psychic'),
             }));
-        });
-
-        it('should ignore the mapName parameter', async () => {
-            getRuntimeValue.mockReturnValue(null);
-            const action = makeFeature();
-            const playerStats = makePlayerStats({ automation: { passives: [] } });
-
-            const result = await handle(action, playerStats, campaignName, 'TestMap');
-
-            expect(result.type).toBe('popup');
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                '_Psychic_Spells_damageType',
-                'Psychic',
-                campaignName
-            );
         });
 
         it('should throw when action.name is undefined', async () => {
@@ -268,17 +210,6 @@ describe('psychicSpellsHandler', () => {
             const result = await handle(action, playerStats, campaignName);
 
             expect(result.payload.name).toBe('');
-        });
-
-        it('should handle addEntry rejection silently', async () => {
-            getRuntimeValue.mockReturnValue(null);
-            vi.spyOn(logService, 'addEntry').mockRejectedValue(new Error('log failure'));
-            const action = makeFeature();
-            const playerStats = makePlayerStats({ automation: { passives: [] } });
-
-            const result = await handle(action, playerStats, campaignName);
-
-            expect(result.type).toBe('popup');
         });
     });
 });

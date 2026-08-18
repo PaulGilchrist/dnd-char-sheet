@@ -1,3 +1,8 @@
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerAidSpell, confirmAidSpell } from './aidSpellService.js';
 import { executeHandler, applyAidEffect } from '../../automation/index.js';

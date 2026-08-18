@@ -1,3 +1,8 @@
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
 // @cleaned-by-ai
 import { handle, applyTelekineticThrust } from './telekineticThrustHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';

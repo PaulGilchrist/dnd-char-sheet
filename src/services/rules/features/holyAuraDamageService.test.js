@@ -1,3 +1,8 @@
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkHolyAuraDamage } from './holyAuraDamageService.js';
 import { rollD20 } from '../../dice/diceRoller.js';

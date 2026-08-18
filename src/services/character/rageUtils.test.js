@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleRestoreRage } from './rageUtils.js';
 import * as runtimeState from '../../hooks/runtime/useRuntimeState.js';

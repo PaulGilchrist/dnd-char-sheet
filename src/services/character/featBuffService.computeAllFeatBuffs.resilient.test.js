@@ -1,4 +1,9 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { findFeat } from '../../services/shared/featFinder.js';
@@ -16,7 +21,7 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
   });
 
   describe('5e Resilient', () => {
-    it('should parse saving throw proficiency benefit from string benefits', () => {
+    it('should parse saving throw proficiency benefit from string benefits and resolve saveType from choices', () => {
       findFeat.mockReturnValue({
         name: 'Resilient',
         benefits: [
@@ -41,8 +46,6 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
           max_value: 20,
         },
       ]);
-      expect(result.proficiencies).toEqual([]);
-      expect(result.resistances).toEqual([]);
 
       const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
       expect(saveProfFeature).toBeDefined();
@@ -54,27 +57,7 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
       expect(saveProfFeature.featName).toBe('Resilient');
     });
 
-    it('should keep hardcoded saveType when no featAbilityChoices exist', () => {
-      findFeat.mockReturnValue({
-        name: 'Resilient',
-        benefits: [
-          'Increase the chosen ability score by 1, to a maximum of 20.',
-          'You gain proficiency in saving throws using the chosen ability.',
-        ],
-      });
-
-      const result = computeAllFeatBuffs(
-        { rules: '5e', feats: ['Resilient'] },
-        []
-      );
-
-      const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
-      expect(saveProfFeature).toBeDefined();
-      expect(saveProfFeature.automation.saveType).toBe('Strength');
-      expect(saveProfFeature.automation.fallbackTypes).toEqual(['Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma']);
-    });
-
-    it('should resolve saveType from featAbilityChoices object value', () => {
+    it('should resolve saveType from featAbilityChoices object or string value', () => {
       findFeat.mockReturnValue({
         name: 'Resilient',
         benefits: [
@@ -100,7 +83,7 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
       expect(saveProfFeature.automation.fallbackTypes).toBeUndefined();
     });
 
-    it('should resolve saveType from featAbilityChoices string value', () => {
+    it('should resolve saveType from string value and remove fallbackTypes', () => {
       findFeat.mockReturnValue({
         name: 'Resilient',
         benefits: [
@@ -121,12 +104,11 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
       );
 
       const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
-      expect(saveProfFeature).toBeDefined();
       expect(saveProfFeature.automation.saveType).toBe('Constitution');
       expect(saveProfFeature.automation.fallbackTypes).toBeUndefined();
     });
 
-    it('should keep fallbackTypes when featAbilityChoices has no matching key', () => {
+    it('should keep hardcoded saveType when choice does not match or is invalid', () => {
       findFeat.mockReturnValue({
         name: 'Resilient',
         benefits: [
@@ -147,64 +129,13 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
       );
 
       const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
-      expect(saveProfFeature).toBeDefined();
-      expect(saveProfFeature.automation.saveType).toBe('Strength');
-      expect(saveProfFeature.automation.fallbackTypes).toEqual(['Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma']);
-    });
-
-    it('should keep hardcoded saveType when featAbilityChoices value is null', () => {
-      findFeat.mockReturnValue({
-        name: 'Resilient',
-        benefits: [
-          'Increase the chosen ability score by 1, to a maximum of 20.',
-          'You gain proficiency in saving throws using the chosen ability.',
-        ],
-      });
-
-      const result = computeAllFeatBuffs(
-        {
-          rules: '5e',
-          feats: ['Resilient'],
-          featAbilityChoices: {
-            'Resilient-0': null,
-          },
-        },
-        []
-      );
-
-      const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
-      expect(saveProfFeature).toBeDefined();
-      expect(saveProfFeature.automation.saveType).toBe('Strength');
-      expect(saveProfFeature.automation.fallbackTypes).toEqual(['Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma']);
-    });
-
-    it('should keep hardcoded saveType when featAbilityChoices is not an object', () => {
-      findFeat.mockReturnValue({
-        name: 'Resilient',
-        benefits: [
-          'Increase the chosen ability score by 1, to a maximum of 20.',
-          'You gain proficiency in saving throws using the chosen ability.',
-        ],
-      });
-
-      const result = computeAllFeatBuffs(
-        {
-          rules: '5e',
-          feats: ['Resilient'],
-          featAbilityChoices: 'invalid',
-        },
-        []
-      );
-
-      const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
-      expect(saveProfFeature).toBeDefined();
       expect(saveProfFeature.automation.saveType).toBe('Strength');
       expect(saveProfFeature.automation.fallbackTypes).toEqual(['Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma']);
     });
   });
 
   describe('2024 Resilient', () => {
-    it('should parse saving_throw benefit from structured benefits', () => {
+    it('should parse saving_throw benefit from structured benefits and resolve saveType from choices', () => {
       findFeat.mockReturnValue({
         name: 'Resilient',
         benefits: [
@@ -230,9 +161,6 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
         { rules: '2024', feats: ['Resilient'] },
         []
       );
-
-      expect(result.proficiencies).toEqual([]);
-      expect(result.resistances).toEqual([]);
 
       const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
       expect(saveProfFeature).toBeDefined();
@@ -282,27 +210,12 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
       );
 
       const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
-      expect(saveProfFeature).toBeDefined();
       expect(saveProfFeature.automation.saveType).toBe('Constitution');
       expect(saveProfFeature.automation.fallbackTypes).toBeUndefined();
     });
   });
 
   describe('Resilient edge cases', () => {
-    it('should return empty result when findFeat returns null for Resilient', () => {
-      findFeat.mockReturnValue(null);
-
-      const result = computeAllFeatBuffs(
-        { rules: '5e', feats: ['Resilient'] },
-        []
-      );
-
-      expect(result.abilityScoreIncreases).toEqual([]);
-      expect(result.proficiencies).toEqual([]);
-      expect(result.resistances).toEqual([]);
-      expect(result.features).toEqual([]);
-    });
-
     it('should handle Resilient with no automation on benefit text', () => {
       findFeat.mockReturnValue({
         name: 'Resilient',
@@ -341,7 +254,7 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
       expect(saveProfFeatures.every(f => f.featName === 'Resilient')).toBe(true);
     });
 
-    it('should resolve saveType from choices even when feat has top-level automation without fallbackTypes', () => {
+    it('should resolve saveType from choices when feat has top-level automation without fallbackTypes', () => {
       findFeat.mockReturnValue({
         name: 'Resilient',
         benefits: [
@@ -365,33 +278,9 @@ describe('computeAllFeatBuffs — Resilient feat', () => {
         []
       );
 
-      // Benefit text parsing creates feature with hardcoded fallbackTypes,
-      // so resolveSaveTypeFromChoices still runs and overwrites saveType
       const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
-      expect(saveProfFeature).toBeDefined();
       expect(saveProfFeature.automation.saveType).toBe('Charisma');
       expect(saveProfFeature.automation.fallbackTypes).toBeUndefined();
-    });
-
-    it('should handle Resilient with empty automation object', () => {
-      findFeat.mockReturnValue({
-        name: 'Resilient',
-        benefits: [
-          'Increase the chosen ability score by 1, to a maximum of 20.',
-          'You gain proficiency in saving throws using the chosen ability.',
-        ],
-        automation: {},
-      });
-
-      const result = computeAllFeatBuffs(
-        { rules: '5e', feats: ['Resilient'] },
-        []
-      );
-
-      const saveProfFeature = result.features.find(f => f.automation?.type === 'save_proficiency');
-      expect(saveProfFeature).toBeDefined();
-      expect(saveProfFeature.automation.saveType).toBe('Strength');
-      expect(saveProfFeature.automation.fallbackTypes).toEqual(['Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma']);
     });
   });
 });

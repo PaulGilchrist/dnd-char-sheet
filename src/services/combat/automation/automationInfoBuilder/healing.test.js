@@ -1,3 +1,8 @@
+// @improved-by-ai
+// @cleaned-by-ai
+// @cleaned-by-ai
+// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi } from 'vitest'
 import { healingHandlers } from './healing.js'
 import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
