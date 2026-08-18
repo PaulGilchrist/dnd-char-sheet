@@ -1,4 +1,8 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Tests removed as duplicates already covered in:
+//   CharInventory.edgeCases.test.jsx - null/undefined array handling in renderItems (same guard path)
+//   CharInventory.popup.test.jsx - desc array joining with <br/><br/> (same popup flow)
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { createRenderComponent } from './charInventoryTestHelpers.jsx';
@@ -66,39 +70,6 @@ describe('CharInventory rendering', () => {
       expect(screen.queryByText(/Backpack:/)).not.toBeInTheDocument();
     });
 
-    it('should render equipped items when equipped is null without crashing', () => {
-      const stats = { inventory: { magicItems: [], equipped: null, backpack: null } };
-      helpers.renderComponent(stats);
-      expect(screen.getByText('Inventory')).toBeInTheDocument();
-      expect(screen.queryByText(/Equipped:/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Backpack:/)).not.toBeInTheDocument();
-    });
-
-    it('should render equipped items when equipped is undefined without crashing', () => {
-      const stats = { inventory: { magicItems: [], equipped: undefined, backpack: undefined } };
-      helpers.renderComponent(stats);
-      expect(screen.getByText('Inventory')).toBeInTheDocument();
-      expect(screen.queryByText(/Equipped:/)).not.toBeInTheDocument();
-    });
-
-    it('should render equipped items when backpack is null without crashing', () => {
-      const stats = { inventory: { magicItems: [], equipped: [], backpack: null } };
-      helpers.renderComponent(stats);
-      expect(screen.getByText('Inventory')).toBeInTheDocument();
-      expect(screen.queryByText(/Backpack:/)).not.toBeInTheDocument();
-    });
-
-    it('should render popup with description when clicking equipped item with desc array containing empty strings', async () => {
-      helpers.setup([
-        { name: 'Odd Item', index: 'odd-item', desc: ['', 'Valid description', ''] },
-      ]);
-      const stats = { inventory: { magicItems: [], equipped: ['Odd Item'], backpack: [] } };
-      helpers.renderComponent(stats);
-      await helpers.clickItemByText('Odd Item');
-      const popupContent = helpers.setPopupHtmlSpy.mock.calls[0][0];
-      expect(popupContent).toContain('<b>Odd Item</b>');
-      expect(popupContent).toContain('Valid description');
-    });
   });
 
   describe('magic items', () => {

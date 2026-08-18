@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, waitFor } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import CharSheet from './CharSheet';
@@ -257,72 +258,42 @@ describe('CharSheet popup rendering', () => {
     });
   });
 
-  describe('string popup', () => {
-    it('renders a popup with sanitized string content', async () => {
-      sharedPopupReturnValue.popupHtml = '<p>Some HTML content</p>';
-      getRenderedComponent();
+  describe('popup rendering', () => {
+    const popupCases = [
+      { name: 'string popup', html: '<p>Some HTML content</p>', expectedText: 'Some HTML content' },
+      { name: 'html-type popup', html: { html: '<span>dice roll result</span>' }, expectedText: 'dice roll result' },
+      {
+        name: 'automation_info popup',
+        html: { type: 'automation_info', name: 'Test Feature', description: '<p>Feature description</p>' },
+        expectedText: 'Test Feature',
+        expectedDesc: 'Feature description',
+      },
+      { name: 'shield_of_faith_target_selection', html: { type: 'shield_of_faith_target_selection' }, expectedText: null },
+      { name: 'barkskin_target_selection', html: { type: 'barkskin_target_selection' }, expectedText: null },
+    ];
 
-      await waitFor(() => {
-        expect(screen.getByTestId('popup')).toBeInTheDocument();
+    for (const { name, html, expectedText, expectedDesc } of popupCases) {
+      it(`renders ${name}`, async () => {
+        sharedPopupReturnValue.popupHtml = html;
+        getRenderedComponent();
+
+        await waitFor(() => {
+          if (expectedText) {
+            expect(screen.getByTestId('popup')).toBeInTheDocument();
+          } else {
+            expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+            expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
+          }
+        });
+
+        if (expectedText) {
+          expect(screen.getByText(expectedText)).toBeInTheDocument();
+        }
+        if (expectedDesc) {
+          expect(screen.getByText(expectedDesc)).toBeInTheDocument();
+        }
       });
-
-      expect(screen.getByText('Some HTML content')).toBeInTheDocument();
-    });
-  });
-
-  describe('html-type popup', () => {
-    it('renders a popup with dice-roll-result class for html-type content', async () => {
-      sharedPopupReturnValue.popupHtml = { html: '<span>dice roll result</span>' };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('popup')).toBeInTheDocument();
-      });
-
-      expect(screen.getByText('dice roll result')).toBeInTheDocument();
-    });
-  });
-
-  describe('automation_info popup', () => {
-    it('renders an automation_info popup with info icon and description', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'automation_info',
-        name: 'Test Feature',
-        description: '<p>Feature description</p>',
-      };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('popup')).toBeInTheDocument();
-      });
-
-      expect(screen.getByText('Test Feature')).toBeInTheDocument();
-      expect(screen.getByText('Feature description')).toBeInTheDocument();
-    });
-  });
-
-  describe('target selection popups (no renderPopup output)', () => {
-    it('returns null for shield_of_faith_target_selection popup type', async () => {
-      sharedPopupReturnValue.popupHtml = { type: 'shield_of_faith_target_selection' };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
-    });
-
-    it('returns null for barkskin_target_selection popup type', async () => {
-      sharedPopupReturnValue.popupHtml = { type: 'barkskin_target_selection' };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      });
-
-      expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
-    });
+    }
   });
 
   describe('heal_multi popup', () => {
@@ -394,138 +365,34 @@ describe('CharSheet popup rendering', () => {
       expect(screen.getByText('Longsword Attack')).toBeInTheDocument();
     });
 
-    it('renders AttackResultPopup with superiority maneuver callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Longsword Attack',
-        availableSuperiorityManeuvers: ['Trip Attack'],
-      };
-      getRenderedComponent();
+    it('renders AttackResultPopup with feature flags (superiority, bardic inspiration, empowered spell, piercer, savage attacker, tactical mind, dark ones luck, psi bolstered knack, bardic offense, stroke of luck)', async () => {
+      const featureFlags = [
+        { key: 'availableSuperiorityManeuvers', value: ['Trip Attack'] },
+        { key: 'bardicInspiration', value: true },
+        { key: 'empoweredSpell', value: true },
+        { key: 'piercerPuncture', value: true },
+        { key: 'savageAttacker', value: true },
+        { key: 'tacticalMind', value: true },
+        { key: 'darkOnesLuck', value: true },
+        { key: 'psiBolsteredKnack', value: true },
+        { key: 'bardicInspirationOffense', value: true },
+        { key: 'strokeOfLuck', value: true },
+      ];
 
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
-    });
+      for (const { key, value } of featureFlags) {
+        sharedPopupReturnValue.popupHtml = {
+          type: 'attack',
+          name: 'Test Attack',
+          [key]: value,
+        };
+        getRenderedComponent();
 
-    it('renders AttackResultPopup with bardic inspiration callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Ability Check',
-        bardicInspiration: true,
-        rolls: [15],
-        bonus: 3,
-        modifier: 2,
-      };
-      getRenderedComponent();
+        await waitFor(() => {
+          expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
+        });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
-    });
-
-    it('renders AttackResultPopup with empowered spell callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Magic Missile',
-        empoweredSpell: true,
-        empoweredSpellChaMod: 3,
-      };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
-    });
-
-    it('renders AttackResultPopup with piercer puncture callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Rapier Attack',
-        piercerPuncture: true,
-      };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
-    });
-
-    it('renders AttackResultPopup with savage attacker callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Greatsword Attack',
-        savageAttacker: true,
-      };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
-    });
-
-    it('renders AttackResultPopup with tactical mind callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Stealth Check',
-        tacticalMind: true,
-      };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
-    });
-
-    it('renders AttackResultPopup with dark ones luck callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Persuasion Check',
-        darkOnesLuck: true,
-      };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
-    });
-
-    it('renders AttackResultPopup with psi bolstered knack callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Arcana Check',
-        psiBolsteredKnack: true,
-      };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
-    });
-
-    it('renders AttackResultPopup with bardic inspiration offense callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Attack Roll',
-        bardicInspirationOffense: true,
-      };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
-    });
-
-    it('renders AttackResultPopup with stroke of luck callback', async () => {
-      sharedPopupReturnValue.popupHtml = {
-        type: 'attack',
-        name: 'Attack Roll',
-        strokeOfLuck: true,
-      };
-      getRenderedComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('attack-result-popup')).toBeInTheDocument();
-      });
+        cleanup();
+      }
     });
   });
 });

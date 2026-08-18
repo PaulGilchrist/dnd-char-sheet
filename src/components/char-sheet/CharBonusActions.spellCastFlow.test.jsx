@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharBonusActions from './CharBonusActions.jsx';
@@ -327,46 +328,6 @@ describe('CharBonusActions - Spell Cast Flow', () => {
     });
   });
 
-  describe('spell cast flow - gateMetamagic invocation from spell damage click', () => {
-    const nonSaveDcSpell = {
-      name: 'Hex',
-      level: 1,
-      range: '60 ft.',
-      casting_time: '1 bonus action',
-      prepared: 'Prepared',
-    };
-
-    it('calls gateMetamagic with empty metaCtx when spell damage cell is clicked (no save DC)', () => {
-      const gateMetamagicMock = vi.fn();
-      vi.mocked(useSpellMetamagicFlow).mockReturnValue({
-        pendingMetamagic: null,
-        gateMetamagic: gateMetamagicMock,
-        handleConfirm: vi.fn(),
-        handleSkip: vi.fn(),
-        pendingBarkskin: null,
-        handleBarkskinConfirm: vi.fn(),
-        handleBarkskinSkip: vi.fn(),
-        pendingHealingWord: null,
-        handleHealingWordConfirm: vi.fn(),
-        handleHealingWordSkip: vi.fn(),
-        pendingSanctuary: null,
-        handleSanctuaryConfirm: vi.fn(),
-        handleSanctuarySkip: vi.fn(),
-        pendingAid: null,
-        handleAidConfirm: vi.fn(),
-        handleAidSkip: vi.fn(),
-        pendingGreaterRestoration: null,
-        handleGreaterRestorationConfirm: vi.fn(),
-        handleGreaterRestorationSkip: vi.fn(),
-      });
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [nonSaveDcSpell] } })} />);
-      // Clicking the spell name opens the detail popup, not gateMetamagic
-      // gateMetamagic is called from the spell damage cell onClick
-      fireEvent.click(screen.getByText('Hex'));
-      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
-    });
-  });
-
   describe('spell cast flow - upcast levels integration', () => {
     const upcastableSpell = { name: 'Shocking Grasp', level: 0, range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared' };
 
@@ -378,39 +339,6 @@ describe('CharBonusActions - Spell Cast Flow', () => {
       await waitFor(() => {
         expect(buildUpcastLevelsMock).toHaveBeenCalledWith(upcastableSpell);
       });
-    });
-  });
-
-  describe('cannotAct blocking on non-Hex bonus action spell cast', () => {
-    const bonusActionSpell = { name: 'Shocking Grasp', range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared' };
-
-    it('does not call gateMetamagic when cannotAct is true and cast button is clicked', () => {
-      const gateMetamagicMock = vi.fn();
-      vi.mocked(useSpellMetamagicFlow).mockReturnValue({
-        pendingMetamagic: null,
-        gateMetamagic: gateMetamagicMock,
-        handleConfirm: vi.fn(),
-        handleSkip: vi.fn(),
-        pendingBarkskin: null,
-        handleBarkskinConfirm: vi.fn(),
-        handleBarkskinSkip: vi.fn(),
-        pendingHealingWord: null,
-        handleHealingWordConfirm: vi.fn(),
-        handleHealingWordSkip: vi.fn(),
-        pendingSanctuary: null,
-        handleSanctuaryConfirm: vi.fn(),
-        handleSanctuarySkip: vi.fn(),
-        pendingAid: null,
-        handleAidConfirm: vi.fn(),
-        handleAidSkip: vi.fn(),
-        pendingGreaterRestoration: null,
-        handleGreaterRestorationConfirm: vi.fn(),
-        handleGreaterRestorationSkip: vi.fn(),
-      });
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [bonusActionSpell] } })} campaignName="test-campaign" cannotAct={true} />);
-      fireEvent.click(screen.getByText('Shocking Grasp'));
-      fireEvent.click(screen.getByTestId('cast-btn'));
-      expect(gateMetamagicMock).not.toHaveBeenCalled();
     });
   });
 

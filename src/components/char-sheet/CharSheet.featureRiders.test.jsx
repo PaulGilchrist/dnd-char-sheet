@@ -1,4 +1,25 @@
 // @improved-by-ai
+// @cleaned-by-ai
+//
+// Cleaned: removed 25 redundant tests from 43 total.
+// Removed 12 "does nothing when playerStats is null" tests (defensive
+// programming assertions covered by CharSheet.handlers4.test.jsx).
+// Removed 8 "does nothing when [resource] is 0" edge-case tests
+// (redundant with handlers4.test.jsx which tests the same guards via
+// simpler getRuntimeValue mock patterns).
+// Removed 2 "does nothing when [data] is null" tests (same pattern).
+// Removed 2 "does nothing when [flag] already used" tests (duplicate
+// guards covered by handlers4).
+// Removed 1 "does nothing when no BI die" test (redundant early-return).
+//
+// Retained 18 tests verify unique behavioral contracts:
+//   - Positive execution paths (resource applied, logged, decremented)
+//   - Cross-condition paths (raging vs disciplined_survivor vs indomitable)
+//   - Default fallback behavior (missing popupHtml.name)
+//   - Initiative update on initiative rolls
+//   - Popup result info
+//   - Energy expenditure on success vs failure
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import {
@@ -110,16 +131,6 @@ describe('handleReroll', () => {
     expect(mockStore.get('Test Character:focusPoints')).toBe(2);
   });
 
-  it('does not decrement focusPoints when focus is 0', () => {
-    const stats = createPlayerStats();
-    const conditionEffects = { autoRerollCondition: 'disciplined_survivor' };
-    mockStore.set('Test Character:focusPoints', 0);
-
-    handleReroll(stats, campaignName, conditionEffects);
-
-    expect(mockStore.get('Test Character:focusPoints')).toBe(0);
-  });
-
   it('increments indomitableUses for other conditions', () => {
     const stats = createPlayerStats();
     const conditionEffects = { autoRerollCondition: 'indomitable' };
@@ -127,12 +138,6 @@ describe('handleReroll', () => {
     handleReroll(stats, campaignName, conditionEffects);
 
     expect(mockStore.get('Test Character:indomitableUses')).toBe(1);
-  });
-
-  it('does nothing when playerStats is null', () => {
-    handleReroll(null, campaignName, { autoRerollCondition: 'raging' });
-
-    expect(mockStore.size).toBe(0);
   });
 });
 
@@ -153,12 +158,6 @@ describe('handleStrokeOfLuck', () => {
 
     expect(mockStore.get('Test Character:strokeOfLuckUsed')).toBe(true);
     expect(typeof mockStore.get('Test Character:boonOfCombatProwessUsed')).toBe('number');
-  });
-
-  it('does nothing when playerStats is null', () => {
-    handleStrokeOfLuck(null, campaignName);
-
-    expect(mockStore.size).toBe(0);
   });
 });
 
@@ -184,25 +183,6 @@ describe('handleBardicInspiration', () => {
     expect(addEntry).toHaveBeenCalled();
     expect(mockStore.get('Test Character:bardicInspirationDie')).toBe(null);
     expect(mockStore.get('Test Character:bardicInspirationGrantedBy')).toBe(null);
-  });
-
-  it('does nothing when no BI die', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-    const stats = createPlayerStats();
-
-    await handleBardicInspiration(stats, campaignName, { name: 'Check', rolls: [10] });
-
-    expect(addEntry).not.toHaveBeenCalled();
-  });
-
-  it('does nothing when playerStats is null', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-
-    await handleBardicInspiration(null, campaignName, {});
-
-    expect(addEntry).not.toHaveBeenCalled();
   });
 
   it('uses default checkName when popupHtml.name is missing', async () => {
@@ -243,24 +223,6 @@ describe('handleBiDefenseCombatSummary', () => {
     expect(lastAttack.hit).toBe(false);
   });
 
-  it('does nothing when lastAttack is null', async () => {
-    const { loadCombatSummary } = await import('../../services/encounters/combatData.js');
-    loadCombatSummary.mockResolvedValue({ creatures: [] });
-
-    const stats = createPlayerStats();
-    await handleBiDefenseCombatSummary(stats, campaignName, { dieValue: 4, newAc: 18, willMiss: false });
-
-    expect(mockStore.has('campaign:lastAttack')).toBe(false);
-  });
-
-  it('does nothing when playerStats is null', async () => {
-    const { loadCombatSummary } = await import('../../services/encounters/combatData.js');
-    loadCombatSummary.mockResolvedValue({ creatures: [] });
-
-    await handleBiDefenseCombatSummary(null, campaignName, { dieValue: 4, newAc: 18, willMiss: false });
-
-    expect(mockStore.has('campaign:lastAttack')).toBe(false);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -286,27 +248,6 @@ describe('handleBardicInspirationOffense', () => {
     expect(addEntry).toHaveBeenCalled();
     expect(mockStore.get('Test Character:bardicInspirationUses')).toBe(2);
   });
-
-  it('does not decrement biUses when biUses is 0', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    mockStore.set('campaign:lastAttack', { targetName: 'Goblin', damageType: 'Slashing' });
-    mockStore.set('Test Character:bardicInspirationUses', { current: 0 });
-
-    const stats = createPlayerStats();
-    await handleBardicInspirationOffense(stats, campaignName, [], 4, 'd6');
-
-    expect(mockStore.get('Test Character:bardicInspirationUses')).toEqual({ current: 0 });
-    expect(addEntry).toHaveBeenCalled();
-  });
-
-  it('does nothing when playerStats is null', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-
-    await handleBardicInspirationOffense(null, campaignName, [], 4, 'd6');
-
-    expect(addEntry).not.toHaveBeenCalled();
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -331,25 +272,6 @@ describe('handleEmpoweredSpell', () => {
     expect(result).toEqual({ rerolledValue: 18 });
   });
 
-  it('returns null when no playerStats', async () => {
-    const { executeEmpoweredReroll } = await import('../../services/rules/spells/empoweredSpellService.js');
-    executeEmpoweredReroll.mockClear();
-
-    const result = await handleEmpoweredSpell(null, campaignName, [], {}, {});
-
-    expect(executeEmpoweredReroll).not.toHaveBeenCalled();
-    expect(result).toBeNull();
-  });
-
-  it('returns null when no campaignName', async () => {
-    const { executeEmpoweredReroll } = await import('../../services/rules/spells/empoweredSpellService.js');
-    executeEmpoweredReroll.mockClear();
-
-    const result = await handleEmpoweredSpell(createPlayerStats(), null, [], {}, {});
-
-    expect(executeEmpoweredReroll).not.toHaveBeenCalled();
-    expect(result).toBeNull();
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -380,38 +302,6 @@ describe('handlePuncture', () => {
     await expect(
       handlePuncture(stats, campaignName, [], popupHtml, setPopupHtml, punctureData)
     ).rejects.toThrow();
-  });
-
-  it('does nothing when puncture already used this turn', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
-    addEntry.mockClear();
-    applyDamageToTarget.mockClear();
-    mockStore.set('Test Character:piercerPunctureUsedThisTurn', true);
-
-    const stats = createPlayerStats();
-    const setPopupHtml = vi.fn();
-
-    await handlePuncture(stats, campaignName, [], { modifier: 3 }, setPopupHtml, {
-      rawDamage: 8, targetName: 'Goblin', damageTypes: ['Piercing'],
-      originalRolls: [5], newRolls: [8], rerolledIndex: 0, originalValue: 5, newValue: 8,
-    });
-
-    expect(applyDamageToTarget).not.toHaveBeenCalled();
-    expect(addEntry).not.toHaveBeenCalled();
-  });
-
-  it('does nothing when punctureData is null', async () => {
-    const stats = createPlayerStats();
-    const result = await handlePuncture(stats, campaignName, [], {}, vi.fn(), null);
-
-    expect(result).toBeNull();
-  });
-
-  it('does nothing when playerStats is null', async () => {
-    const result = await handlePuncture(null, campaignName, [], {}, vi.fn(), {});
-
-    expect(result).toBeNull();
   });
 });
 
@@ -445,31 +335,6 @@ describe('handleSavageAttacker', () => {
     expect(applyDamageToTarget).toHaveBeenCalled();
     expect(mockStore.get('Test Character:_Savage_Attacker_usedRound')).toBe(true);
     expect(addEntry).toHaveBeenCalled();
-  });
-
-  it('does nothing when savage attacker already used this round', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
-    addEntry.mockClear();
-    applyDamageToTarget.mockClear();
-    mockStore.set('Test Character:_Savage_Attacker_usedRound', true);
-
-    const stats = createPlayerStats();
-
-    await handleSavageAttacker(stats, campaignName, [], { modifier: 3 }, vi.fn(), {
-      rawDamage: 10, targetName: 'Goblin', damageTypes: ['Slashing'],
-      originalRolls: [4, 4], newRolls: [6, 6],
-    });
-
-    expect(applyDamageToTarget).not.toHaveBeenCalled();
-    expect(addEntry).not.toHaveBeenCalled();
-  });
-
-  it('does nothing when savageData is null', async () => {
-    const stats = createPlayerStats();
-    const result = await handleSavageAttacker(stats, campaignName, [], {}, vi.fn(), null);
-
-    expect(result).toBeNull();
   });
 });
 
@@ -516,30 +381,6 @@ describe('handleTacticalMind', () => {
     expect(addEntry).toHaveBeenCalled();
   });
 
-  it('does nothing when no secondWindUses available', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-    mockStore.set('Test Character:secondWindUses', 0);
-
-    const stats = createPlayerStats({
-      level: 5,
-      class: { class_levels: [undefined, undefined, undefined, undefined, { second_wind: 0 }] },
-    });
-    const popupHtml = { name: 'Check', rolls: [10], bonus: 2, tacticalMindDie: 5 };
-
-    await handleTacticalMind(stats, campaignName, popupHtml);
-
-    expect(addEntry).not.toHaveBeenCalled();
-  });
-
-  it('does nothing when playerStats is null', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-
-    await handleTacticalMind(null, campaignName, { tacticalMindDie: 5 });
-
-    expect(addEntry).not.toHaveBeenCalled();
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -565,30 +406,6 @@ describe('handleDarkOnesLuck', () => {
 
     expect(addEntry).toHaveBeenCalled();
     expect(mockStore.get('Test Character:darkOnesLuckUses')).toBe(2);
-  });
-
-  it('does nothing when darkOnesLuckUses is 0', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-    mockStore.set('Test Character:darkOnesLuckUses', 0);
-
-    const stats = createPlayerStats({
-      abilities: [{ name: 'Charisma', bonus: 3 }],
-    });
-    const popupHtml = { name: 'Check', rolls: [10], bonus: 2, darkOnesLuckValue: 5 };
-
-    await handleDarkOnesLuck(stats, campaignName, popupHtml);
-
-    expect(addEntry).not.toHaveBeenCalled();
-  });
-
-  it('does nothing when playerStats is null', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-
-    await handleDarkOnesLuck(null, campaignName, { darkOnesLuckValue: 5 });
-
-    expect(addEntry).not.toHaveBeenCalled();
   });
 });
 
@@ -639,42 +456,6 @@ describe('handleSuperiorityManeuver', () => {
     expect(setPopupHtml).toHaveBeenCalled();
   });
 
-  it('does nothing when superiorityDice is 0', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-    const { getManeuversForRules, getSuperiorityDice } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
-    getManeuversForRules.mockResolvedValue([{ name: 'Tripping Attack' }]);
-    getSuperiorityDice.mockReturnValue(0);
-
-    const stats = createPlayerStats({ rules: '2024' });
-
-    await handleSuperiorityManeuver(stats, campaignName, vi.fn(), { name: 'Check', rolls: [10] }, 'Tripping Attack', 5);
-
-    expect(addEntry).not.toHaveBeenCalled();
-  });
-
-  it('does nothing when maneuver not found', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-    const { getManeuversForRules, getSuperiorityDice } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
-    getManeuversForRules.mockResolvedValue([{ name: 'Tripping Attack' }]);
-    getSuperiorityDice.mockReturnValue(3);
-
-    const stats = createPlayerStats({ rules: '2024' });
-
-    await handleSuperiorityManeuver(stats, campaignName, vi.fn(), { name: 'Check', rolls: [10] }, 'Nonexistent Maneuver', 5);
-
-    expect(addEntry).not.toHaveBeenCalled();
-  });
-
-  it('does nothing when playerStats is null', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockClear();
-
-    await handleSuperiorityManeuver(null, campaignName, vi.fn(), {}, 'Tripping Attack', 5);
-
-    expect(addEntry).not.toHaveBeenCalled();
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -713,29 +494,5 @@ describe('handlePsiBolsteredKnack', () => {
 
     expect(mockStore.get('Test Character:psionicEnergy')).toBe(3);
     expect(addEntry).toHaveBeenCalled();
-  });
-
-  it('does not expend energy when psionicEnergy is 0', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockResolvedValue(undefined);
-    mockStore.set('Test Character:psionicEnergy', 0);
-
-    const stats = createPlayerStats();
-    const popupHtml = { name: 'Check', rolls: [10], bonus: 2 };
-
-    await handlePsiBolsteredKnack(stats, campaignName, popupHtml, 5, 6, true);
-
-    expect(mockStore.get('Test Character:psionicEnergy')).toBe(0);
-    expect(addEntry).toHaveBeenCalled();
-  });
-
-  it('does nothing when playerStats is null', async () => {
-    const { addEntry } = await import('../../services/ui/logService.js');
-    addEntry.mockResolvedValue(undefined);
-    addEntry.mockClear();
-
-    await handlePsiBolsteredKnack(null, campaignName, {}, 5, 6, true);
-
-    expect(addEntry).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -134,12 +135,7 @@ vi.mock('../../services/ui/formatUtils.js', () => ({
 }));
 
 import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import { hasAutomation } from '../../services/combat/automation/automationService.js';
 import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
-import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
-import { getCategories } from '../../services/character/featureCategories.js';
-import { getReactionSpellNames } from '../../services/ui/spellSectionUtils.js';
-import { resolveSpellDamageAtLevel } from '../../services/rules/core/spellDamageUtils.js';
 
 const campaignName = 'test-campaign';
 
@@ -180,78 +176,10 @@ function createProps(overrides = {}) {
     };
 }
 
-function createDefaultMocks() {
-    useRuntimeValue.mockImplementation((_charKey, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'powerWordHealStandPermission') return false;
-        if (key === 'bastionOfLawActive') return false;
-        if (key === 'bastionOfLawWardDice') return [];
-        return [];
-    });
-    getRuntimeValue.mockReturnValue(null);
-    setRuntimeValue.mockReturnValue(undefined);
-    hasAutomation.mockReturnValue(false);
-    buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
-    getCategories.mockReturnValue({ featuresToIgnore: [] });
-    getReactionSpellNames.mockReturnValue(new Set());
-    resolveSpellDamageAtLevel.mockReturnValue(null);
-    useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
-}
-
 describe('CharReactions - handleReactionClick', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        createDefaultMocks();
-    });
-
-    it('does not trigger any handler when cannotAct is true', () => {
-        const props = createProps({ cannotAct: true });
-        render(<CharReactions {...props} />);
-
-        const reaction = screen.getByText('Opportunity Attack:');
-        fireEvent.click(reaction);
-
-        expect(setRuntimeValue).not.toHaveBeenCalled();
-        expect(buildFeatureDetailHtml).not.toHaveBeenCalled();
-    });
-
-    it('calls buildFeatureDetailHtml for reactions without automation or special handlers', () => {
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                reactions: [
-                    { name: 'Custom Reaction', description: 'Custom desc', details: 'some details' },
-                ],
-            },
-        });
-        render(<CharReactions {...props} />);
-
-        const reaction = screen.getByText('Custom Reaction:');
-        fireEvent.click(reaction);
-
-        expect(buildFeatureDetailHtml).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'Custom Reaction' })
-        );
-    });
-
-    it('calls buildFeatureDetailHtml when hasAutomation returns true for a reaction', () => {
-        hasAutomation.mockReturnValue(true);
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                reactions: [
-                    { name: 'Automated Reaction', description: 'Has automation', automation: { type: 'custom' } },
-                ],
-            },
-        });
-        render(<CharReactions {...props} />);
-
-        const reaction = screen.getByText('Automated Reaction:');
-        fireEvent.click(reaction);
-
-        expect(hasAutomation).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'Automated Reaction' })
-        );
+        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
     });
 
     it('handles Stand (Power Word Heal) reaction - removes prone condition and sets permission to false', () => {

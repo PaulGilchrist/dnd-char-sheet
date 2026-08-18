@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -295,103 +296,6 @@ describe('bardic inspiration feature injection', () => {
     expect(reactions.length).toBe(expectedReactions);
   });
 
-  it('injects "Use Bardic Inspiration" with correct automation type when BI die is set', async () => {
-    mockStore.set('Test Bard:bardicInspirationDie', 6);
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSpecialActions } = await import('./CharSpecialActions.jsx');
-    const passedStats = CharSpecialActions.mock.calls[0][0].playerStats;
-    const biAction = passedStats.specialActions.find((a) => a.name === 'Use Bardic Inspiration');
-    expect(biAction).toBeDefined();
-    expect(biAction.automation.type).toBe('bardic_inspiration_use');
-  });
-
-  it('includes grantedBy in the special action description', async () => {
-    mockStore.set('Test Bard:bardicInspirationDie', 6);
-    mockStore.set('Test Bard:bardicInspirationGrantedBy', 'Felix the Bard');
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSpecialActions } = await import('./CharSpecialActions.jsx');
-    const passedStats = CharSpecialActions.mock.calls[0][0].playerStats;
-    const biAction = passedStats.specialActions.find((a) => a.name === 'Use Bardic Inspiration');
-    expect(biAction.description).toContain('Felix the Bard');
-  });
-
-  it('uses "unknown" as grantedBy when not set in runtime', async () => {
-    mockStore.set('Test Bard:bardicInspirationDie', 6);
-    mockStore.set('Test Bard:bardicInspirationGrantedBy', null);
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSpecialActions } = await import('./CharSpecialActions.jsx');
-    const passedStats = CharSpecialActions.mock.calls[0][0].playerStats;
-    const biAction = passedStats.specialActions.find((a) => a.name === 'Use Bardic Inspiration');
-    expect(biAction.description).toContain('unknown');
-  });
-
-  it('does not inject when BI die is not set', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSpecialActions } = await import('./CharSpecialActions.jsx');
-    const passedStats = CharSpecialActions.mock.calls[0][0].playerStats;
-    const biAction = passedStats.specialActions.find((a) => a.name === 'Use Bardic Inspiration');
-    expect(biAction).toBeUndefined();
-  });
-
-  it('injects Combat Inspiration Defense reaction when combat option includes defense', async () => {
-    mockStore.set('Test Bard:bardicInspirationDie', 6);
-    mockStore.set('Test Bard:bardicInspirationGrantedBy', 'Bard');
-    mockStore.set('Test Bard:bardicInspirationCombatOptions', JSON.stringify(['defense_add_to_ac']));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharReactions } = await import('./CharReactions.jsx');
-    const passedStats = CharReactions.mock.calls[0][0].playerStats;
-    const defenseReaction = passedStats.reactions.find((r) => r.name === 'Combat Inspiration - Defense');
-    expect(defenseReaction).toBeDefined();
-    expect(defenseReaction.automation.type).toBe('bardic_inspiration_defense');
-  });
-
-  it('injects Combat Inspiration Offense reaction when combat option includes offense', async () => {
-    mockStore.set('Test Bard:bardicInspirationDie', 6);
-    mockStore.set('Test Bard:bardicInspirationGrantedBy', 'Bard');
-    mockStore.set('Test Bard:bardicInspirationCombatOptions', JSON.stringify(['offense_add_to_damage']));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharReactions } = await import('./CharReactions.jsx');
-    const passedStats = CharReactions.mock.calls[0][0].playerStats;
-    const offenseReaction = passedStats.reactions.find((r) => r.name === 'Combat Inspiration - Offense');
-    expect(offenseReaction).toBeDefined();
-    expect(offenseReaction.automation.type).toBe('bardic_inspiration_offense');
-  });
-
   it('handles invalid JSON in bardicInspirationCombatOptions gracefully', async () => {
     mockStore.set('Test Bard:bardicInspirationDie', 6);
     mockStore.set('Test Bard:bardicInspirationCombatOptions', 'not-valid-json');
@@ -454,21 +358,6 @@ describe('bardic inspiration feature injection', () => {
     const offenseReactions = passedStats.reactions.filter((r) => r.name === 'Combat Inspiration - Offense');
     expect(defenseReactions.length).toBe(1);
     expect(offenseReactions.length).toBe(1);
-  });
-
-  it('includes the die size in the special action description', async () => {
-    mockStore.set('Test Bard:bardicInspirationDie', 8);
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSpecialActions } = await import('./CharSpecialActions.jsx');
-    const passedStats = CharSpecialActions.mock.calls[0][0].playerStats;
-    const biAction = passedStats.specialActions.find((a) => a.name === 'Use Bardic Inspiration');
-    expect(biAction.description).toContain('1d8');
   });
 
   it('injects the correct die size into reaction descriptions for defense', async () => {

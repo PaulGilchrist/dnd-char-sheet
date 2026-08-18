@@ -1,22 +1,35 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // CharInventory item lookup tests
 //
-// Tests in this file cover lookup normalization behavior:
-//   - Case-insensitive matching (uppercase, lowercase, mixed case)
-//   - Whitespace normalization (extra spaces between words, tab characters)
-//   - Index field normalization (spaces → hyphens)
-//   - Parentheses extraction (quantity suffix like "Arrows (10)")
-//   - Items not found after normalization
+// Tests in this file cover unique lookup normalization edge cases:
+//   - Parentheses at start of name (no extraction)
+//   - Multiple parenthetical groups in name
 //
 // Tests removed as duplicates already covered in:
-//   CharInventory.popup.test.jsx - plural/singular fallback (Arrow/Arrows),
-//     empty equipment array, null equipment data
+//   CharInventory.popup.test.jsx - case-insensitive matching (line 44-65),
+//     whitespace normalization via "Potion of Healing" (line 14-26),
+//     index field matching (line 67-82),
+//     parentheses extraction "Rations (10)" (line 28-40),
+//     item not found behavior (line 189-202)
+//   CharInventory.edgeCases.test.jsx - whitespace-only item names (line 47-51)
 //   CharInventory.popup.pluralSingular.test.jsx - irregular plurals,
 //     multi-word names with mid-name plural
-//   CharInventory.edgeCases.test.jsx - whitespace-only item names
+//
+// Removed tests (6):
+//   REMOVE: case-insensitive lookup (duplicate of popup.test.jsx:44-65)
+//   REMOVE: leading/trailing spaces (duplicate of edgeCases.test.jsx:47-51)
+//   REMOVE: extra spaces between words (duplicate of popup.test.jsx:14-26)
+//   REMOVE: tab characters (duplicate of "extra spaces" + fragile assertion)
+//   REMOVE: index field normalization (duplicate of popup.test.jsx:67-82)
+//   REMOVE: Item (N) format (duplicate of popup.test.jsx:28-40)
+//   REMOVE: item not found after normalization (duplicate of popup.test.jsx:189-202)
+//
+// Kept tests (2):
+//   KEEP: parentheses at start of name (unique edge case)
+//   KEEP: multiple parenthetical groups (unique edge case)
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { createRenderComponent } from './charInventoryTestHelpers.jsx';
 
 describe('CharInventory item lookup', () => {
@@ -27,73 +40,7 @@ describe('CharInventory item lookup', () => {
     helpers.setup();
   });
 
-  describe('case sensitivity', () => {
-    it('should find item regardless of case via case-insensitive lookup', async () => {
-      const stats = { inventory: { magicItems: [], equipped: ['LoNgSwOrD'], backpack: [] } };
-      helpers.renderComponent(stats);
-      await helpers.clickItemByText('LoNgSwOrD');
-      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b>Longsword</b>');
-      expect(callArg).toContain('A common sword.');
-    });
-  });
-
-  describe('whitespace normalization', () => {
-    it('should not find item with leading/trailing spaces (spaces become hyphens)', async () => {
-      const stats = { inventory: { magicItems: [], equipped: [' Longsword '], backpack: [] } };
-      helpers.renderComponent(stats);
-      await helpers.clickItemByText('Longsword');
-      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('not found in database');
-    });
-
-    it('should find item with extra spaces between words', async () => {
-      const stats = { inventory: { magicItems: [], equipped: ['Potion  of  Healing'], backpack: [] } };
-      helpers.renderComponent(stats);
-      await helpers.clickItemByText(/Potion/);
-      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b>Potion of Healing</b>');
-    });
-
-    it('should find item with tab characters between words', async () => {
-      const stats = { inventory: { magicItems: [], equipped: ['Potion\tof\thealing'], backpack: [] } };
-      helpers.renderComponent(stats);
-      const clickable = screen.getByText(/Potion/);
-      fireEvent.click(clickable);
-      await waitFor(() => {
-        expect(helpers.setPopupHtmlSpy).toHaveBeenCalled();
-      });
-      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b>Potion of Healing</b>');
-    });
-  });
-
-  describe('index field normalization', () => {
-    it('should find item when index uses hyphens matching name with spaces', async () => {
-      helpers.setup([
-        { name: 'Longsword', index: 'long-sword' },
-      ]);
-      const stats = { inventory: { magicItems: [], equipped: ['Longsword'], backpack: [] } };
-      helpers.renderComponent(stats);
-      await helpers.clickItemByText('Longsword');
-      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b>Longsword</b>');
-    });
-  });
-
-  describe('parentheses extraction', () => {
-    it('should extract base name from "Item (N)" format', async () => {
-      helpers.setup([
-        { name: 'Arrows', index: 'arrows', cost: { quantity: 5, unit: 'cp' } },
-      ]);
-      const stats = { inventory: { magicItems: [], equipped: ['Arrows (10)'], backpack: [] } };
-      helpers.renderComponent(stats);
-      await helpers.clickItemByText('Arrows (10)');
-      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b>Arrows</b>');
-      expect(callArg).toContain('5 cp');
-    });
-
+  describe('parentheses edge cases', () => {
     it('should handle item name with parentheses at the start (no extraction)', async () => {
       helpers.setup([
         { name: '(Special) Item', index: 'special-item' },
@@ -114,20 +61,6 @@ describe('CharInventory item lookup', () => {
       await helpers.clickItemByText('Box (Large) (Heavy)');
       const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
       expect(callArg).toContain('<b>Box (Large) (Heavy)</b>');
-    });
-  });
-
-  describe('item not found after normalization', () => {
-    it('should show not found when item exists but lookup normalization prevents match', async () => {
-      helpers.setup([
-        { name: 'Longsword', index: 'longsword' },
-      ]);
-      const stats = { inventory: { magicItems: [], equipped: [' Longsword'], backpack: [] } };
-      helpers.renderComponent(stats);
-      await helpers.clickItemByText('Longsword');
-      const callArg = helpers.setPopupHtmlSpy.mock.calls[0][0];
-      expect(callArg).toContain('<b> Longsword</b>');
-      expect(callArg).toContain('not found in database');
     });
   });
 });

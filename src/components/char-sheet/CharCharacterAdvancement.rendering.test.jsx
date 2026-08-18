@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import CharCharacterAdvancement from './CharCharacterAdvancement.jsx';
@@ -28,122 +29,15 @@ describe('CharCharacterAdvancement - Rendering', () => {
 
   afterEach(cleanup);
 
-  describe('container and structure', () => {
-    it('renders the main container with the correct CSS class', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: [
-          { name: 'Feature', description: 'A feature' },
-        ],
-      };
-      const { container } = render(
-        <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-      );
-      const mainDiv = container.querySelector('.char-character-advancement');
-      expect(mainDiv).toBeInTheDocument();
-    });
-
-    it('renders the section header with the correct CSS class', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: [],
-      };
-      const { container } = render(
-        <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-      );
-      const headerDiv = container.querySelector('.sectionHeader');
-      expect(headerDiv).toBeInTheDocument();
-      expect(headerDiv.textContent).toBe('Character Advancement');
-    });
-
-    it('renders a half-line divider at the end of the container', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: [
-          { name: 'Feature', description: 'Desc' },
-        ],
-      };
-      const { container } = render(
-        <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-      );
-      const halfLineDivs = container.querySelectorAll('.half-line');
-      expect(halfLineDivs.length).toBe(1);
-    });
-  });
-
-  describe('feature rendering structure', () => {
-    it('wraps each feature in a div with the feature name as bold label followed by description', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: [
-          { name: 'Darkvision', description: 'See in darkness' },
-        ],
-      };
-      const { container } = render(
-        <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-      );
-      const featureDivs = container.querySelectorAll('.char-character-advancement > div > b');
-      expect(featureDivs.length).toBe(1);
-      expect(featureDivs[0].textContent).toBe('Darkvision:');
-    });
-
-    it('renders feature descriptions in a span element', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: [
-          { name: 'Feature', description: 'Some description' },
-        ],
-      };
-      const { container } = render(
-        <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-      );
-      const spans = container.querySelectorAll('.char-character-advancement > div > span');
-      expect(spans.length).toBe(1);
-      expect(spans[0].textContent).toBe('Some description');
-    });
-
-    it('renders multiple features in order as separate divs', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: [
-          { name: 'First', description: '1' },
-          { name: 'Second', description: '2' },
-          { name: 'Third', description: '3' },
-        ],
-      };
-      const { container } = render(
-        <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-      );
-      const featureBolds = container.querySelectorAll('.char-character-advancement > div > b');
-      expect(featureBolds.length).toBe(3);
-      expect(featureBolds[0].textContent).toBe('First:');
-      expect(featureBolds[1].textContent).toBe('Second:');
-      expect(featureBolds[2].textContent).toBe('Third:');
-    });
-  });
-
   describe('null/missing data handling', () => {
-    it('renders the section header when characterAdvancement is empty', () => {
-      const playerStats = {
+    it.each([
+      { value: [], label: 'empty array' },
+      { value: undefined, label: 'undefined' },
+      { value: null, label: 'null' },
+    ])('renders the section header when characterAdvancement is %s', ({ label }) => {
+      const playerStats = label === 'null' ? { name: 'Test Character' } : {
         name: 'Test Character',
         characterAdvancement: [],
-      };
-      render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-      expect(screen.getByText('Character Advancement')).toBeInTheDocument();
-    });
-
-    it('renders the section header when characterAdvancement is missing', () => {
-      const playerStats = {
-        name: 'Test Character',
-      };
-      render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-      expect(screen.getByText('Character Advancement')).toBeInTheDocument();
-    });
-
-    it('renders the section header when characterAdvancement is undefined', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: undefined,
       };
       render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
       expect(screen.getByText('Character Advancement')).toBeInTheDocument();
@@ -161,6 +55,35 @@ describe('CharCharacterAdvancement - Rendering', () => {
     });
   });
 
+  describe('feature rendering', () => {
+    it('renders feature name and description for each feature', () => {
+      const playerStats = {
+        name: 'Test Character',
+        characterAdvancement: [
+          { name: 'Darkvision', description: 'See in darkness' },
+        ],
+      };
+      render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
+      expect(screen.getByText('Darkvision:')).toBeInTheDocument();
+      expect(screen.getByText('See in darkness')).toBeInTheDocument();
+    });
+
+    it('renders multiple features in order', () => {
+      const playerStats = {
+        name: 'Test Character',
+        characterAdvancement: [
+          { name: 'First', description: '1' },
+          { name: 'Second', description: '2' },
+          { name: 'Third', description: '3' },
+        ],
+      };
+      render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
+      expect(screen.getByText('First:')).toBeInTheDocument();
+      expect(screen.getByText('Second:')).toBeInTheDocument();
+      expect(screen.getByText('Third:')).toBeInTheDocument();
+    });
+  });
+
   describe('count suffix for duplicates', () => {
     it('appends " * N" count suffix when the same feature name appears multiple times', () => {
       const playerStats = {
@@ -173,18 +96,6 @@ describe('CharCharacterAdvancement - Rendering', () => {
       };
       render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
       expect(screen.getByText('Mystic Arcanum * 3:')).toBeInTheDocument();
-    });
-
-    it('omits count suffix when a feature appears exactly once', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: [
-          { name: 'Mystic Arcanum', description: '9th level' },
-        ],
-      };
-      render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-      expect(screen.getByText('Mystic Arcanum:')).toBeInTheDocument();
-      expect(screen.queryByText('Mystic Arcanum * 1:')).not.toBeInTheDocument();
     });
 
     it('groups by feature name only, ignoring description differences', () => {
@@ -252,38 +163,10 @@ describe('CharCharacterAdvancement - Rendering', () => {
       expect(screen.queryByText('Darkvision:')).not.toBeInTheDocument();
     });
 
-    it('keeps features not in the ignore list', () => {
+    it.each([null, undefined])('defaults to 5e filtering when playerStats.rules is %s', (rulesValue) => {
       const playerStats = {
         name: 'Test Character',
-        characterAdvancement: [
-          { name: 'Mystic Arcanum', description: '9th level spells' },
-          { name: 'Draconic Ancestry', description: 'Dragon parent' },
-          { name: 'Spellcasting', description: 'Casts spells' },
-        ],
-      };
-      render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-      expect(screen.getByText('Mystic Arcanum:')).toBeInTheDocument();
-      expect(screen.getByText('Draconic Ancestry:')).toBeInTheDocument();
-      expect(screen.queryByText('Spellcasting:')).not.toBeInTheDocument();
-    });
-
-    it('defaults to 5e filtering when playerStats.rules is null', () => {
-      const playerStats = {
-        name: 'Test Character',
-        rules: null,
-        characterAdvancement: [
-          { name: 'Spellcasting', description: 'Casts spells' },
-          { name: 'Valid Feature', description: 'Should appear' },
-        ],
-      };
-      render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-      expect(screen.getByText('Valid Feature:')).toBeInTheDocument();
-      expect(screen.queryByText('Spellcasting:')).not.toBeInTheDocument();
-    });
-
-    it('defaults to 5e filtering when playerStats.rules is undefined', () => {
-      const playerStats = {
-        name: 'Test Character',
+        rules: rulesValue,
         characterAdvancement: [
           { name: 'Spellcasting', description: 'Casts spells' },
           { name: 'Valid Feature', description: 'Should appear' },
@@ -317,31 +200,6 @@ describe('CharCharacterAdvancement - Rendering', () => {
       };
       render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
       expect(screen.getByText('Feature:')).toBeInTheDocument();
-    });
-
-    it('renders a feature with no description property', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: [
-          { name: 'Feature' },
-        ],
-      };
-      render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-      expect(screen.getByText('Feature:')).toBeInTheDocument();
-    });
-
-    it('renders the half-line divider at the end when there are features', () => {
-      const playerStats = {
-        name: 'Test Character',
-        characterAdvancement: [
-          { name: 'Feature', description: 'Desc' },
-        ],
-      };
-      const { container } = render(
-        <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-      );
-      const halfLineDivs = container.querySelectorAll('.half-line');
-      expect(halfLineDivs.length).toBe(1);
     });
   });
 });

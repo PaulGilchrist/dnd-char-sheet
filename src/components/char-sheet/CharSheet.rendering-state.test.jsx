@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -427,6 +428,24 @@ describe('passive effect speed modifications', () => {
     const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
     const passedStats = CharSummary.mock.calls[0][0].playerStats;
     expect(passedStats.swimSpeed).toBe(30);
+  });
+
+  it('does not override existing swimSpeed when aquatic affinity passive exists', async () => {
+    const stats = createMockPlayerStats({
+      swimSpeed: 40,
+      automation: { passives: [{ effect: 'aquatic_affinity' }] },
+    });
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
+
+    render(<CharSheet {...createDefaultProps()} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const passedStats = CharSummary.mock.calls[0][0].playerStats;
+    expect(passedStats.swimSpeed).toBe(40);
   });
 
   it('applies second-storywork passive climb speed', async () => {

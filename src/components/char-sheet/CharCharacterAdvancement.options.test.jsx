@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import CharCharacterAdvancement from './CharCharacterAdvancement.jsx';
@@ -28,74 +29,28 @@ describe('CharCharacterAdvancement - Default Options', () => {
 
   afterEach(cleanup);
 
-  it('shows first string option as default when no runtime value exists', () => {
+  it.each([
+    { options: ['Option A', 'Option B', 'Option C'], label: 'string' },
+    { options: [{ name: 'Opt Alpha' }, { name: 'Opt Beta' }], label: 'object' },
+    { options: ['String Option', { name: 'Object Option' }], label: 'mixed' },
+  ])('renders %s options when no runtime value exists', ({ options }) => {
     const playerStats = {
       name: 'Test Character',
       characterAdvancement: [
         {
           name: 'Choose Feature',
           description: 'A choice',
-          automation: {
-            options: ['Option A', 'Option B', 'Option C'],
-          },
+          automation: { options },
         },
       ],
     };
     render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
     expect(screen.getByText('Choice:')).toBeInTheDocument();
-    expect(screen.getByText('Option A')).toBeInTheDocument();
-    expect(screen.getByText('Option B')).toBeInTheDocument();
-    expect(screen.getByText('Option C')).toBeInTheDocument();
+    for (const opt of options) {
+      const text = typeof opt === 'object' ? opt.name : opt;
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
   });
-
-  it('shows first object option as default when no runtime value exists', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        {
-          name: 'Choose Feature',
-          description: 'A choice',
-          automation: {
-            options: [{ name: 'Opt Alpha' }, { name: 'Opt Beta' }],
-          },
-        },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('Choice:')).toBeInTheDocument();
-    expect(screen.getByText('Opt Alpha')).toBeInTheDocument();
-    expect(screen.getByText('Opt Beta')).toBeInTheDocument();
-  });
-
-  it('marks the runtime-selected option as current when it differs from the first option', () => {
-    mockGetRuntimeValue.mockReturnValue('Option B');
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        {
-          name: 'Choose Feature',
-          description: 'A choice',
-          automation: {
-            options: ['Option A', 'Option B', 'Option C'],
-          },
-        },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('Choice:')).toBeInTheDocument();
-    expect(screen.getByText('Option A')).toBeInTheDocument();
-    expect(screen.getByText('Option B')).toBeInTheDocument();
-    expect(screen.getByText('Option C')).toBeInTheDocument();
-  });
-});
-
-describe('CharCharacterAdvancement - Option Selection Styling', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetRuntimeValue.mockReturnValue(null);
-  });
-
-  afterEach(cleanup);
 
   it('renders all options when automation.options has exactly 2 items', () => {
     const playerStats = {
@@ -115,75 +70,9 @@ describe('CharCharacterAdvancement - Option Selection Styling', () => {
     expect(screen.getByText('Beta')).toBeInTheDocument();
     expect(screen.getByText('Choice:')).toBeInTheDocument();
   });
-
-  it('renders all options when automation.options has more than 3 items', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        {
-          name: 'Choice',
-          description: 'Pick one',
-          automation: {
-            options: ['A', 'B', 'C', 'D', 'E'],
-          },
-        },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('A')).toBeInTheDocument();
-    expect(screen.getByText('B')).toBeInTheDocument();
-    expect(screen.getByText('C')).toBeInTheDocument();
-    expect(screen.getByText('D')).toBeInTheDocument();
-    expect(screen.getByText('E')).toBeInTheDocument();
-  });
-
-  it('does not render choice section when automation.options is null', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        {
-          name: 'Feature',
-          description: 'No options',
-          automation: { options: null },
-        },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.queryByText('Choice:')).not.toBeInTheDocument();
-  });
-
-  it('does not crash when automation is null', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        {
-          name: 'Feature',
-          description: 'No automation',
-          automation: null,
-        },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('Feature:')).toBeInTheDocument();
-    expect(screen.getByText('No automation')).toBeInTheDocument();
-  });
-
-  it('does not crash when automation is undefined', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        {
-          name: 'Feature',
-          description: 'No automation',
-        },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('Feature:')).toBeInTheDocument();
-  });
 });
 
-describe('CharCharacterAdvancement - Interaction', () => {
+describe('CharCharacterAdvancement - Option Selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetRuntimeValue.mockReturnValue(null);
@@ -218,27 +107,9 @@ describe('CharCharacterAdvancement - Interaction', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'buffs-updated' }));
     dispatchSpy.mockRestore();
   });
-
-  it('handles mixed string and object options correctly', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        {
-          name: 'Mixed Choices',
-          description: 'Mixed types',
-          automation: {
-            options: ['String Option', { name: 'Object Option' }],
-          },
-        },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('String Option')).toBeInTheDocument();
-    expect(screen.getByText('Object Option')).toBeInTheDocument();
-  });
 });
 
-describe('CharCharacterAdvancement - Edge Cases', () => {
+describe('CharCharacterAdvancement - Null/Undefined Handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetRuntimeValue.mockReturnValue(null);
@@ -246,137 +117,47 @@ describe('CharCharacterAdvancement - Edge Cases', () => {
 
   afterEach(cleanup);
 
-  it('handles feature with empty name', () => {
+  it.each([null, undefined])('does not render choice section when automation.options is %s', (optionsValue) => {
     const playerStats = {
       name: 'Test Character',
       characterAdvancement: [
-        { name: '', description: 'Empty name feature' },
+        {
+          name: 'Feature',
+          description: 'No options',
+          automation: { options: optionsValue },
+        },
       ],
     };
     render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText(':')).toBeInTheDocument();
-    expect(screen.getByText('Empty name feature')).toBeInTheDocument();
+    expect(screen.queryByText('Choice:')).not.toBeInTheDocument();
   });
 
-  it('handles feature with empty description', () => {
+  it.each([null, undefined])('does not crash when automation is %s', (automationValue) => {
     const playerStats = {
       name: 'Test Character',
       characterAdvancement: [
-        { name: 'Feature', description: '' },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('Feature:')).toBeInTheDocument();
-  });
-
-  it('handles feature with no description property', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        { name: 'Feature' },
+        {
+          name: 'Feature',
+          description: 'No automation',
+          automation: automationValue,
+        },
       ],
     };
     render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
     expect(screen.getByText('Feature:')).toBeInTheDocument();
+    if (automationValue !== undefined) {
+      expect(screen.getByText('No automation')).toBeInTheDocument();
+    }
   });
 
-  it('handles playerStats with no name property', () => {
+  it.each([null, undefined])('handles campaignName being %s', (campaignNameValue) => {
     const playerStats = {
+      name: 'Test Character',
       characterAdvancement: [
         { name: 'Feature', description: 'Desc' },
       ],
     };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
+    render(<CharCharacterAdvancement playerStats={playerStats} campaignName={campaignNameValue} />);
     expect(screen.getByText('Character Advancement')).toBeInTheDocument();
-    expect(screen.getByText('Feature:')).toBeInTheDocument();
-  });
-
-  it('handles campaignName being null', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        { name: 'Feature', description: 'Desc' },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName={null} />);
-    expect(screen.getByText('Character Advancement')).toBeInTheDocument();
-  });
-
-  it('handles campaignName being undefined', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        { name: 'Feature', description: 'Desc' },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName={undefined} />);
-    expect(screen.getByText('Character Advancement')).toBeInTheDocument();
-  });
-
-  it('renders multiple features in order', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        { name: 'First', description: '1' },
-        { name: 'Second', description: '2' },
-        { name: 'Third', description: '3' },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('First:')).toBeInTheDocument();
-    expect(screen.getByText('Second:')).toBeInTheDocument();
-    expect(screen.getByText('Third:')).toBeInTheDocument();
-  });
-
-  it('handles duplicate features with different descriptions', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        { name: 'Feature', description: 'First description' },
-        { name: 'Feature', description: 'Second description' },
-      ],
-    };
-    render(<CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />);
-    expect(screen.getByText('Feature * 2:')).toBeInTheDocument();
-    expect(screen.getByText('First description')).toBeInTheDocument();
-  });
-
-  it('renders the half-line divider at the end', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [
-        { name: 'Feature', description: 'Desc' },
-      ],
-    };
-    const { container } = render(
-      <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-    );
-    const halfLineDivs = container.querySelectorAll('.half-line');
-    expect(halfLineDivs.length).toBe(1);
-  });
-
-  it('renders the main container with correct class', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [],
-    };
-    const { container } = render(
-      <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-    );
-    const mainDiv = container.querySelector('.char-character-advancement');
-    expect(mainDiv).toBeInTheDocument();
-  });
-
-  it('renders sectionHeader text content', () => {
-    const playerStats = {
-      name: 'Test Character',
-      characterAdvancement: [],
-    };
-    const { container } = render(
-      <CharCharacterAdvancement playerStats={playerStats} campaignName="test-campaign" />
-    );
-    const headerDiv = container.querySelector('.sectionHeader');
-    expect(headerDiv).toBeInTheDocument();
-    expect(headerDiv.textContent).toBe('Character Advancement');
   });
 });

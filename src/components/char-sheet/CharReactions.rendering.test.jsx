@@ -212,35 +212,17 @@ describe('CharReactions - Basic Rendering', () => {
 
     afterEach(cleanup);
 
-    it('renders the reactions section header', () => {
+    it('renders the reactions section header and opportunity attack reaction', () => {
         render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Reactions')).toBeInTheDocument();
-    });
-
-    it('renders the opportunity attack reaction with its label', () => {
-        render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Opportunity Attack:')).toBeInTheDocument();
-    });
-
-    it('renders the opportunity attack description', () => {
-        render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Can attack creature that moves out of your reach')).toBeInTheDocument();
     });
 
-    it('renders reaction spells from getReactionSpellNames', () => {
+    it('renders reaction spells with name, level, and range columns', () => {
         render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Shield')).toBeInTheDocument();
         expect(screen.getByText('Hellish Rebuke')).toBeInTheDocument();
-    });
-
-    it('renders spell level column for each reaction spell', () => {
-        render(<CharReactions {...createProps()} />);
-        const levelElements = screen.getAllByText('1');
-        expect(levelElements.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('renders spell range column for each reaction spell', () => {
-        render(<CharReactions {...createProps()} />);
         expect(screen.getByText('Self')).toBeInTheDocument();
         expect(screen.getByText('60 ft.')).toBeInTheDocument();
     });
@@ -388,16 +370,6 @@ describe('CharReactions - Basic Rendering', () => {
         });
         render(<CharReactions {...props} />);
         expect(screen.queryByText('Shield')).not.toBeInTheDocument();
-    });
-
-    it('does not render spells section when spellAbilities.spells is missing', () => {
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                spellAbilities: {},
-            },
-        });
-        expect(() => render(<CharReactions {...props} />)).toThrow();
     });
 
     it('opens spell detail popup when clicking a spell name', () => {

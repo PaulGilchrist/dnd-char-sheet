@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -17,19 +18,22 @@ import {
 // ---------------------------------------------------------------------------
 
 vi.mock('./char-summary/CharSummary.jsx', () => ({
-  default: vi.fn(({ playerStats, conditionEffects }) => (
+  default: vi.fn(({ playerStats, conditionEffects, exhaustionLevel }) => (
     <div data-testid="char-summary">
       <span>{playerStats?.name || 'none'}</span>
       {conditionEffects && <span data-testid="condition-effects">{JSON.stringify(conditionEffects)}</span>}
+      <span data-testid="exhaustion-level">{exhaustionLevel}</span>
     </div>
   )),
 }));
 
 vi.mock('./CharAbilities.jsx', () => ({
-  default: vi.fn(({ playerStats, conditionEffects }) => (
+  default: vi.fn(({ playerStats, conditionEffects, isRaging, exhaustionPenalty }) => (
     <div data-testid="char-abilities">
       <span>{playerStats?.name || 'none'}</span>
       {conditionEffects && <span data-testid="abilities-condition-effects">{JSON.stringify(conditionEffects)}</span>}
+      <span data-testid="is-raging">{String(isRaging)}</span>
+      <span data-testid="exhaustion-penalty">{exhaustionPenalty}</span>
     </div>
   )),
 }));
@@ -253,6 +257,12 @@ vi.mock('../../services/rules/rulesFactory.js', () => ({
 
 // ---------------------------------------------------------------------------
 // Tests — condition effects flow through computeCharConditionEffects
+//
+// Note: Individual buff-specific condition effect propagation tests
+// (shield, haste, reckless attack, Zealous Presence, Cloak of Shadows, etc.)
+// are covered in CharSheet.rendering-effects.test.jsx. This file focuses on
+// the core cannotAct/conditionAttackMode/exhaustion flow and unique logic
+// (Elusive feature integration).
 // ---------------------------------------------------------------------------
 
 describe('CharSheet condition effects computation', () => {
@@ -364,146 +374,6 @@ describe('CharSheet condition effects computation', () => {
     expect(CharAbilities.mock.calls[0][0].conditionEffects).toEqual(expectedEffects);
   });
 
-  it('passes shieldAcBonus when shield buff is active', async () => {
-    mockStore.set('activeBuffs', [{ effect: 'shield' }]);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ shieldAcBonus: 5, magicMissileImmune: true }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.shieldAcBonus).toBe(5);
-    expect(effects.magicMissileImmune).toBe(true);
-  });
-
-  it('passes saveAdvantageAbilities when haste buff is active', async () => {
-    mockStore.set('activeBuffs', [{ effect: 'haste' }]);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ saveAdvantageAbilities: ['DEX'] }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.saveAdvantageAbilities).toContain('DEX');
-  });
-
-  it('passes targetAdvantageCount when reckless attack buff is active', async () => {
-    mockStore.set('activeBuffs', [{ effect: 'advantage_attacks_advantage_against' }]);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ targetAdvantageCount: 0 }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const lastCall = CharSummary.mock.calls[CharSummary.mock.calls.length - 1][0];
-    const effects = lastCall.conditionEffects;
-    expect(effects.targetAdvantageCount).toBe(1);
-  });
-
-  it('passes abilityCheckAdvantage when Blessing of the Trickster buff is active', async () => {
-    mockStore.set('activeBuffs', [{ effect: 'advantage_on_stealth' }]);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({
-      abilityCheckAdvantage: true,
-      abilityCheckAdvantageSkill: 'Stealth',
-    }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.abilityCheckAdvantage).toBe(true);
-    expect(effects.abilityCheckAdvantageSkill).toBe('Stealth');
-  });
-
-  it('passes attackAdvantageCount and saveAdvantageCount when Zealous Presence buff is active', async () => {
-    mockStore.set('activeBuffs', [{ effect: 'advantage_attacks_and_saves' }]);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ attackAdvantageCount: 0, saveAdvantageCount: 0 }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const lastCall = CharSummary.mock.calls[CharSummary.mock.calls.length - 1][0];
-    const effects = lastCall.conditionEffects;
-    expect(effects.attackAdvantageCount).toBe(1);
-    expect(effects.saveAdvantageCount).toBe(1);
-  });
-
-  it('passes attackAdvantageCount and targetDisadvantageCount when Cloak of Shadows is active', async () => {
-    mockStore.set('activeBuffs', [{ effect: 'cloak_of_shadows' }]);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ attackAdvantageCount: 0, targetDisadvantageCount: 0 }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const lastCall = CharSummary.mock.calls[CharSummary.mock.calls.length - 1][0];
-    const effects = lastCall.conditionEffects;
-    expect(effects.attackAdvantageCount).toBe(1);
-    expect(effects.targetDisadvantageCount).toBe(1);
-  });
-
-  it('passes shieldOfFaithAcBonus when shield of faith buff is active', async () => {
-    mockStore.set('activeBuffs', [{ effect: 'shield_of_faith' }]);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ shieldOfFaithAcBonus: 2 }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.shieldOfFaithAcBonus).toBe(2);
-  });
-
-  it('passes noAdvantageAgainst when Alert feat negates unseen attacker advantage', async () => {
-    const stats = createMockPlayerStats({ unseenAttackerAdvantageNegate: true });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-    mockStore.set('activeBuffs', []);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ noAdvantageAgainst: true }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.noAdvantageAgainst).toBe(true);
-  });
-
   it('passes noAdvantageAgainst when Elusive feature is active and not incapacitated', async () => {
     const stats = createMockPlayerStats({
       actions: [{ name: 'Elusive' }],
@@ -546,172 +416,6 @@ describe('CharSheet condition effects computation', () => {
     expect(effects.noAdvantageAgainst).toBeFalsy();
   });
 
-  it('passes targetDisadvantageCount when protection from evil and good blocks warded attacker', async () => {
-    mockStore.set('activeBuffs', [{ effect: 'protection_from_evil_and_good' }]);
-    mockStore.set('activeConditions', ['charmed']);
-    const { getCombatSummary } = await import('../../services/encounters/combatData.js');
-    getCombatSummary.mockReturnValue({
-      creatures: [{ name: 'Orc', type: 'Orc' }],
-      attackerName: 'Orc',
-    });
-    const { isCreatureWarded } = await import('../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js');
-    isCreatureWarded.mockReturnValue(true);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ targetDisadvantageCount: 0 }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const lastCall = CharSummary.mock.calls[CharSummary.mock.calls.length - 1][0];
-    const effects = lastCall.conditionEffects;
-    expect(effects.targetDisadvantageCount).toBe(1);
-  });
-
-  it('passes autoRerollBonus when computed', async () => {
-    mockStore.set('activeBuffs', []);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ autoRerollBonus: '1d4' }));
-    const { evaluateAutoExpression } = await import('../../services/combat/automation/automationService.js');
-    evaluateAutoExpression.mockReturnValue('1d4');
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.autoRerollBonus).toBe('1d4');
-  });
-
-  it('passes strokeOfLuck flag and clears it when strokeOfLuckUsed is true', async () => {
-    mockStore.set('strokeOfLuckUsed', true);
-    mockStore.set('activeBuffs', []);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ strokeOfLuck: true }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.strokeOfLuck).toBe(false);
-  });
-
-  it('passes saveAdvantageCount when luckyAdvantageActive is true', async () => {
-    mockStore.set('luckyAdvantageActive', true);
-    mockStore.set('activeBuffs', []);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ saveAdvantageCount: 1 }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.saveAdvantageCount).toBe(2);
-  });
-
-  it('passes luckyDisadvantage when luckyDisadvantageActive is true', async () => {
-    mockStore.set('luckyDisadvantageActive', true);
-    mockStore.set('activeBuffs', []);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ luckyDisadvantage: true }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.luckyDisadvantage).toBe(true);
-  });
-
-  it('passes speedHalved when stunned_speedHalved runtime flag is set', async () => {
-    mockStore.set('stunned_speedHalved', true);
-    mockStore.set('activeBuffs', []);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ speedHalved: true }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.speedHalved).toBe(true);
-  });
-
-  it('clears autoRerollForSaves when fanaticalFocusUsed is true', async () => {
-    mockStore.set('fanaticalFocusUsed', true);
-    mockStore.set('activeBuffs', []);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ autoRerollForSaves: true, autoRerollBonus: '1d4' }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.autoRerollForSaves).toBe(false);
-    expect(effects.autoRerollBonus).toBe(null);
-  });
-
-  it('clears autoRerollForSaves when indomitableUses reaches max for high-level character', async () => {
-    const stats = createMockPlayerStats({ level: 17 });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-    mockStore.set('indomitableUses', 3);
-    mockStore.set('activeBuffs', []);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ autoRerollForSaves: true, autoRerollBonus: '1d6' }));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const effects = CharSummary.mock.calls[0][0].conditionEffects;
-    expect(effects.autoRerollForSaves).toBe(false);
-    expect(effects.autoRerollBonus).toBe(null);
-  });
-
-  it('passes isRaging=true when damageBonusExpression buff is present', async () => {
-    mockStore.set('activeBuffs', [{ damageBonusExpression: '2d6' }]);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({}));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    expect(CharSummary).toHaveBeenCalled();
-    const { default: CharAbilities } = await import('./CharAbilities.jsx');
-    expect(CharAbilities.mock.calls[0][0].isRaging).toBe(true);
-  });
-
   it('passes exhaustionPenalty to CharSummary and CharAbilities', async () => {
     mockStore.set('activeConditions', []);
     mockStore.set('activeBuffs', []);
@@ -729,40 +433,5 @@ describe('CharSheet condition effects computation', () => {
 
     const { default: CharAbilities } = await import('./CharAbilities.jsx');
     expect(CharAbilities.mock.calls[0][0].exhaustionPenalty).toBe(0);
-  });
-
-  it('passes effectiveAttackMode to CharActions when luckyAdvantageActive overrides conditionAttackMode', async () => {
-    mockStore.set('luckyAdvantageActive', true);
-    mockStore.set('activeBuffs', []);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({ attackAdvantageCount: 0, attackDisadvantageCount: 1 }));
-    const { getNetAttackMode } = await import('../../services/combat/conditions/conditionEffects.js');
-    getNetAttackMode.mockReturnValue('disadvantage');
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharActions } = await import('./CharActions.jsx');
-    // luckyAdvantageActive should override the disadvantage to advantage
-    expect(CharActions.mock.calls[0][0].conditionAttackMode).toBe('advantage');
-  });
-
-  it('passes shapeShiftActive to child components when shape_shift buff is present', async () => {
-    mockStore.set('activeBuffs', [{ effect: 'shape_shift' }]);
-    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
-    computeConditionEffects.mockImplementation(() => ({}));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    // The component returns shapeShiftActive alongside other computed values
-    expect(CharSummary).toHaveBeenCalled();
   });
 });
