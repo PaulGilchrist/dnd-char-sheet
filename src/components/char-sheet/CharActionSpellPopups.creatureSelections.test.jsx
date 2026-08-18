@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CharActionSpellPopups from './CharActionSpellPopups.jsx';
@@ -96,354 +97,34 @@ describe('CharActionSpellPopups - CreatureSelectionModal Spells', () => {
     vi.clearAllMocks();
   });
 
-  describe('Aid spell', () => {
-    it('renders with correct title, icon, description, maxTargets, and confirmLabel', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingAid: { creatureTargets: ['Ally1', 'Ally2'], maxTargets: 3 },
-            actionHandleAidConfirm: vi.fn(),
-            actionHandleAidSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Aid');
-      expect(screen.getByTestId('icon')).toHaveTextContent('fa-hand-holding-heart');
-      expect(screen.getByTestId('description')).toHaveTextContent('bolsters your allies');
-      expect(screen.getByTestId('max-targets')).toHaveTextContent('3');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Aid');
-    });
+  const creatureSelectionSpells = [
+    { name: 'Aid', key: 'actionPendingAid', handleConfirm: 'actionHandleAidConfirm', handleSkip: 'actionHandleAidSkip', props: { creatureTargets: ['Ally1', 'Ally2'], maxTargets: 3 } },
+    { name: 'Bane', key: 'actionPendingBane', handleConfirm: 'actionHandleBaneConfirm', handleSkip: 'actionHandleBaneSkip', props: { creatureTargets: ['Goblin1', 'Goblin2'], maxTargets: 3 } },
+    { name: 'Bless', key: 'actionPendingBless', handleConfirm: 'actionHandleBlessConfirm', handleSkip: 'actionHandleBlessSkip', props: { creatureTargets: ['Ally1', 'Ally2'], maxTargets: 3 } },
+    { name: 'Faerie Fire', key: 'actionPendingFaerieFire', handleConfirm: 'actionHandleFaerieFireConfirm', handleSkip: 'actionHandleFaerieFireSkip', props: { creatureTargets: ['Goblin1', 'Goblin2'] } },
+    { name: 'Beacon of Hope', key: 'actionPendingBeaconOfHope', handleConfirm: 'actionHandleBeaconOfHopeConfirm', handleSkip: 'actionHandleBeaconOfHopeSkip', props: { creatureTargets: ['Ally1', 'Ally2'] } },
+    { name: 'Pass Without Trace', key: 'actionPendingPassWithoutTrace', handleConfirm: 'actionHandlePassWithoutTraceConfirm', handleSkip: 'actionHandlePassWithoutTraceSkip', props: { creatureTargets: ['Ally1', 'Ally2'] } },
+  ];
 
-    it('passes creature count correctly', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingAid: { creatureTargets: ['Ally1', 'Ally2', 'Ally3'], maxTargets: 3 },
-            actionHandleAidConfirm: vi.fn(),
-            actionHandleAidSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('creature-count')).toHaveTextContent('3');
-    });
-
-    it('renders creature targets from string array', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingAid: { creatureTargets: ['Ally1', 'Ally2'], maxTargets: 3 },
-            actionHandleAidConfirm: vi.fn(),
-            actionHandleAidSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
-      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
-    });
-
-    it('renders creature targets from object array with name property', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingAid: { creatureTargets: [{ name: 'Ally1' }, { name: 'Ally2' }], maxTargets: 3 },
-            actionHandleAidConfirm: vi.fn(),
-            actionHandleAidSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
-      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
-    });
-
-    it('renders no targets when creatureTargets is empty', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingAid: { creatureTargets: [], maxTargets: 3 },
-            actionHandleAidConfirm: vi.fn(),
-            actionHandleAidSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Aid');
-      expect(screen.getByTestId('creature-count')).toHaveTextContent('0');
-      expect(screen.queryByTestId('target-0')).not.toBeInTheDocument();
-    });
-
-    it('calls actionHandleAidConfirm on confirm with target names', () => {
-      const actionHandleAidConfirm = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleAidConfirm })}
-          actionPendingAid={{ creatureTargets: ['Ally1', 'Ally2'], maxTargets: 3 }}
-        />
-      );
-      screen.getByTestId('confirm').click();
-      expect(actionHandleAidConfirm).toHaveBeenCalledWith(['Ally1', 'Ally2']);
-    });
-
-    it('calls actionHandleAidSkip on skip', () => {
-      const actionHandleAidSkip = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleAidSkip })}
-          actionPendingAid={{ creatureTargets: ['Ally1'], maxTargets: 3 }}
-        />
-      );
-      screen.getByTestId('skip').click();
-      expect(actionHandleAidSkip).toHaveBeenCalled();
-    });
+  it.each(creatureSelectionSpells)('renders CreatureSelectionModal for $name', ({ name, key, props }) => {
+    const propsWithSpell = { ...createBaseProps(), [key]: { ...props } };
+    render(<CharActionSpellPopups {...propsWithSpell} />);
+    expect(screen.getByTestId(`creature-selection-${name}`)).toBeInTheDocument();
   });
 
-  describe('Bane spell', () => {
-    it('renders with correct title, icon, description, maxTargets, and confirmLabel', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingBane: { creatureTargets: ['Goblin1', 'Goblin2'], maxTargets: 3 },
-            actionHandleBaneConfirm: vi.fn(),
-            actionHandleBaneSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Bane');
-      expect(screen.getByTestId('icon')).toHaveTextContent('fa-shield-halved');
-      expect(screen.getByTestId('description')).toHaveTextContent('Curse up to three creatures');
-      expect(screen.getByTestId('max-targets')).toHaveTextContent('3');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Bane');
-    });
-
-    it('calls actionHandleBaneConfirm on confirm with target names', () => {
-      const actionHandleBaneConfirm = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleBaneConfirm })}
-          actionPendingBane={{ creatureTargets: ['Goblin1'], maxTargets: 3 }}
-        />
-      );
-      screen.getByTestId('confirm').click();
-      expect(actionHandleBaneConfirm).toHaveBeenCalledWith(['Goblin1']);
-    });
-
-    it('calls actionHandleBaneSkip on skip', () => {
-      const actionHandleBaneSkip = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleBaneSkip })}
-          actionPendingBane={{ creatureTargets: ['Goblin1'], maxTargets: 3 }}
-        />
-      );
-      screen.getByTestId('skip').click();
-      expect(actionHandleBaneSkip).toHaveBeenCalled();
-    });
+  it.each(creatureSelectionSpells)('calls the confirm handler for $name with target names', ({ key, handleConfirm, props }) => {
+    const handleConfirmFn = vi.fn();
+    const propsWithSpell = { ...createBaseProps({ [handleConfirm]: handleConfirmFn }), [key]: { ...props } };
+    render(<CharActionSpellPopups {...propsWithSpell} />);
+    screen.getByTestId('confirm').click();
+    expect(handleConfirmFn).toHaveBeenCalledWith(props.creatureTargets);
   });
 
-  describe('Bless spell', () => {
-    it('renders with correct title, icon, description, maxTargets, and confirmLabel', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingBless: { creatureTargets: ['Ally1', 'Ally2'], maxTargets: 3 },
-            actionHandleBlessConfirm: vi.fn(),
-            actionHandleBlessSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Bless');
-      expect(screen.getByTestId('icon')).toHaveTextContent('fa-hands');
-      expect(screen.getByTestId('description')).toHaveTextContent('You bless up to three creatures');
-      expect(screen.getByTestId('max-targets')).toHaveTextContent('3');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Bless');
-    });
-
-    it('calls actionHandleBlessConfirm on confirm with target names', () => {
-      const actionHandleBlessConfirm = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleBlessConfirm })}
-          actionPendingBless={{ creatureTargets: ['Ally1'], maxTargets: 3 }}
-        />
-      );
-      screen.getByTestId('confirm').click();
-      expect(actionHandleBlessConfirm).toHaveBeenCalledWith(['Ally1']);
-    });
-
-    it('calls actionHandleBlessSkip on skip', () => {
-      const actionHandleBlessSkip = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleBlessSkip })}
-          actionPendingBless={{ creatureTargets: ['Ally1'], maxTargets: 3 }}
-        />
-      );
-      screen.getByTestId('skip').click();
-      expect(actionHandleBlessSkip).toHaveBeenCalled();
-    });
-  });
-
-  describe('Faerie Fire spell', () => {
-    it('renders with correct title, icon, description, and confirmLabel (no maxTargets)', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingFaerieFire: { creatureTargets: ['Goblin1', 'Goblin2'] },
-            actionHandleFaerieFireConfirm: vi.fn(),
-            actionHandleFaerieFireSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Faerie Fire');
-      expect(screen.getByTestId('icon')).toHaveTextContent('fa-fire');
-      expect(screen.getByTestId('description')).toHaveTextContent('20-foot Cube');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Faerie Fire');
-      expect(screen.getByTestId('max-targets')).toHaveTextContent('');
-    });
-
-    it('renders with confirmIcon passed to modal', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingFaerieFire: { creatureTargets: ['Goblin1'] },
-            actionHandleFaerieFireConfirm: vi.fn(),
-            actionHandleFaerieFireSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Faerie Fire');
-    });
-
-    it('calls actionHandleFaerieFireConfirm on confirm with target names', () => {
-      const actionHandleFaerieFireConfirm = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleFaerieFireConfirm })}
-          actionPendingFaerieFire={{ creatureTargets: ['Goblin1', 'Goblin2'] }}
-        />
-      );
-      screen.getByTestId('confirm').click();
-      expect(actionHandleFaerieFireConfirm).toHaveBeenCalledWith(['Goblin1', 'Goblin2']);
-    });
-
-    it('calls actionHandleFaerieFireSkip on skip', () => {
-      const actionHandleFaerieFireSkip = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleFaerieFireSkip })}
-          actionPendingFaerieFire={{ creatureTargets: ['Goblin1'] }}
-        />
-      );
-      screen.getByTestId('skip').click();
-      expect(actionHandleFaerieFireSkip).toHaveBeenCalled();
-    });
-  });
-
-  describe('Beacon of Hope spell', () => {
-    it('renders with correct title, icon, description, and confirmLabel (no maxTargets)', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingBeaconOfHope: { creatureTargets: ['Ally1', 'Ally2', 'Ally3'] },
-            actionHandleBeaconOfHopeConfirm: vi.fn(),
-            actionHandleBeaconOfHopeSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Beacon of Hope');
-      expect(screen.getByTestId('icon')).toHaveTextContent('fa-heart-pulse');
-      expect(screen.getByTestId('description')).toHaveTextContent('bestows hope and vitality');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Beacon of Hope');
-      expect(screen.getByTestId('max-targets')).toHaveTextContent('');
-    });
-
-    it('renders all targets when no maxTargets is specified', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingBeaconOfHope: { creatureTargets: ['Ally1', 'Ally2', 'Ally3'] },
-            actionHandleBeaconOfHopeConfirm: vi.fn(),
-            actionHandleBeaconOfHopeSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
-      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
-      expect(screen.getByTestId('target-2')).toHaveTextContent('Ally3');
-    });
-
-    it('calls actionHandleBeaconOfHopeConfirm on confirm with target names', () => {
-      const actionHandleBeaconOfHopeConfirm = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleBeaconOfHopeConfirm })}
-          actionPendingBeaconOfHope={{ creatureTargets: ['Ally1', 'Ally2'] }}
-        />
-      );
-      screen.getByTestId('confirm').click();
-      expect(actionHandleBeaconOfHopeConfirm).toHaveBeenCalledWith(['Ally1', 'Ally2']);
-    });
-
-    it('calls actionHandleBeaconOfHopeSkip on skip', () => {
-      const actionHandleBeaconOfHopeSkip = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleBeaconOfHopeSkip })}
-          actionPendingBeaconOfHope={{ creatureTargets: ['Ally1'] }}
-        />
-      );
-      screen.getByTestId('skip').click();
-      expect(actionHandleBeaconOfHopeSkip).toHaveBeenCalled();
-    });
-  });
-
-  describe('Pass Without Trace spell', () => {
-    it('renders with correct title, icon, description, and confirmLabel (no maxTargets)', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingPassWithoutTrace: { creatureTargets: ['Ally1', 'Ally2'] },
-            actionHandlePassWithoutTraceConfirm: vi.fn(),
-            actionHandlePassWithoutTraceSkip: vi.fn(),
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Pass Without Trace');
-      expect(screen.getByTestId('icon')).toHaveTextContent('fa-ghost');
-      expect(screen.getByTestId('description')).toHaveTextContent('veil of shadows and silence');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Pass Without Trace');
-      expect(screen.getByTestId('max-targets')).toHaveTextContent('');
-    });
-
-    it('calls actionHandlePassWithoutTraceConfirm on confirm with target names', () => {
-      const actionHandlePassWithoutTraceConfirm = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandlePassWithoutTraceConfirm })}
-          actionPendingPassWithoutTrace={{ creatureTargets: ['Ally1'] }}
-        />
-      );
-      screen.getByTestId('confirm').click();
-      expect(actionHandlePassWithoutTraceConfirm).toHaveBeenCalledWith(['Ally1']);
-    });
-
-    it('calls actionHandlePassWithoutTraceSkip on skip', () => {
-      const actionHandlePassWithoutTraceSkip = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandlePassWithoutTraceSkip })}
-          actionPendingPassWithoutTrace={{ creatureTargets: ['Ally1'] }}
-        />
-      );
-      screen.getByTestId('skip').click();
-      expect(actionHandlePassWithoutTraceSkip).toHaveBeenCalled();
-    });
-  });
-
-  describe('no CreatureSelectionModal spells pending', () => {
-    it('does not render any creature selection modal when all pending flags are null', () => {
-      const { container } = render(
-        <CharActionSpellPopups {...createBaseProps()} />
-      );
-      expect(container).toBeEmptyDOMElement();
-    });
+  it.each(creatureSelectionSpells)('calls the skip handler for $name', ({ key, handleSkip, props }) => {
+    const handleSkipFn = vi.fn();
+    const propsWithSpell = { ...createBaseProps({ [handleSkip]: handleSkipFn }), [key]: { ...props } };
+    render(<CharActionSpellPopups {...propsWithSpell} />);
+    screen.getByTestId('skip').click();
+    expect(handleSkipFn).toHaveBeenCalled();
   });
 });

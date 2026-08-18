@@ -1,10 +1,20 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Tests for createBaseProps — the shared test fixture used by all CharActionModals test files.
 // Verifies the fixture's contract: default values, override behavior, isolation guarantees.
 //
 // Note: This file tests the test-utils fixture itself (not the CharActionModals component).
 // Component rendering is covered in CharActionModals.rendering.test.jsx;
 // handler callbacks are covered in CharActionModals.handlers.test.jsx and related files.
+//
+// Removed — redundant/brittle tests:
+// - "each handler is a unique vi.fn instance" (O(n²) pairwise comparison of 24 handlers = 276 assertions
+//   testing a Vitest framework guarantee, not application behavior. Fragile: breaks when handler list grows.)
+// - "tracks call count for the vi.fn" (asserts mock implementation detail, not behavior. Covered by
+//   the setModalState updater function test which validates the actual contract.)
+// - "each call gets independent modalState that starts empty" (duplicates "modifying one modalState
+//   does not affect another" — both test isolation; starting-empty is already asserted by default value tests.)
+// - "allows adding extra custom props via spread" (tests JavaScript language behavior, not application logic.)
 
 import { describe, it, expect, vi } from 'vitest';
 import { createBaseProps } from './CharActionModals.test-utils.jsx';
@@ -70,16 +80,6 @@ describe('createBaseProps', () => {
       }
     });
 
-    it('each handler is a unique vi.fn instance', () => {
-      const props = createBaseProps();
-      const handlers = handlerNames.map((h) => props[h]);
-      for (let i = 0; i < handlers.length; i++) {
-        for (let j = i + 1; j < handlers.length; j++) {
-          expect(handlers[i]).not.toBe(handlers[j]);
-        }
-      }
-    });
-
     it('handlers track calls independently', () => {
       const props = createBaseProps();
       props.handleCleaveAttack();
@@ -104,12 +104,6 @@ describe('createBaseProps', () => {
       expect(updater).toHaveBeenCalledWith(props.modalState);
     });
 
-    it('tracks call count for the vi.fn', () => {
-      const props = createBaseProps();
-      props.setModalState({ a: 1 });
-      props.setModalState({ b: 2 });
-      expect(props.setModalState).toHaveBeenCalledTimes(2);
-    });
   });
 
   describe('overrides', () => {
@@ -179,10 +173,6 @@ describe('createBaseProps', () => {
       expect(typeof props.handleDivineFuryDamageType).toBe('function');
     });
 
-    it('allows adding extra custom props via spread', () => {
-      const props = createBaseProps({ extraProp: 'custom' });
-      expect(props.extraProp).toBe('custom');
-    });
   });
 
   describe('isolation', () => {
@@ -203,13 +193,6 @@ describe('createBaseProps', () => {
       const props2 = createBaseProps();
       props1.modalState.existing = true;
       expect(props2.modalState.existing).toBeUndefined();
-    });
-
-    it('each call gets independent modalState that starts empty', () => {
-      const props1 = createBaseProps();
-      const props2 = createBaseProps();
-      props1.setModalState({ key: 'value1' });
-      expect(props2.modalState).not.toHaveProperty('key');
     });
 
     it('overrides are isolated between calls', () => {

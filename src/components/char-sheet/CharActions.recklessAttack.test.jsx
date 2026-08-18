@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, waitFor, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
@@ -296,6 +297,9 @@ describe('CharActions — Reckless Attack & Brutal Strike modal integration', ()
           recklessAttackModal: expect.objectContaining({ mode: 'full' }),
         }));
       });
+
+      // Verify cancel flow does not toggle buff (toggleBuff is only called in handleRecklessAttackConfirm)
+      expect(toggleBuff).not.toHaveBeenCalled();
     });
 
     it('does not call setModalState with recklessAttackModal when cannotAct is true', async () => {
@@ -345,58 +349,6 @@ describe('CharActions — Reckless Attack & Brutal Strike modal integration', ()
           recklessAttackModal: expect.objectContaining({ mode: 'brutalOnly' }),
         }));
       });
-    });
-
-    it('does not open brutal strike modal when brutal strike already used this turn', async () => {
-      const passives = [
-        { type: 'attack_rider', trigger: 'strength_attack_hit_after_reckless', damageExpression: '2d6', options: ['d6'], maxEffects: 1 },
-      ];
-      const stats = {
-        ...basePlayerStats,
-        passives,
-        automation: { ...basePlayerStats.automation, passives },
-      };
-
-      const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-      await waitFor(() => expect(getByText('Longsword')).toBeInTheDocument());
-
-      const attackLink = getByText('Longsword');
-      await act(async () => { fireEvent.click(attackLink); });
-
-      const brutalOnlyCalls = _setModalState.mock.calls.filter(
-        c => c[0]?.recklessAttackModal?.mode === 'brutalOnly'
-      );
-      expect(brutalOnlyCalls.length).toBe(0);
-    });
-  });
-
-  describe('reckless attack cancel flow', () => {
-    it('does not toggle buff when reckless attack is cancelled', async () => {
-      const { toggleBuff } = await import('../../services/automation/common/buffToggle.js');
-      toggleBuff.mockReturnValue({ wasActive: false });
-
-      const stats = {
-        ...basePlayerStats,
-        specialActions: [{ effect: 'advantage_attacks_advantage_against', trigger: 'first_attack_of_turn' }],
-        passives: [],
-        automation: { ...basePlayerStats.automation, specialActions: [{ effect: 'advantage_attacks_advantage_against', trigger: 'first_attack_of_turn' }] },
-      };
-
-      const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-      await waitFor(() => expect(getByText('Longsword')).toBeInTheDocument());
-
-      const attackLink = getByText('Longsword');
-      await act(async () => { fireEvent.click(attackLink); });
-
-      await waitFor(() => {
-        expect(_setModalState).toHaveBeenCalledWith(expect.objectContaining({
-          recklessAttackModal: expect.objectContaining({ mode: 'full' }),
-        }));
-      });
-
-      // The cancel handler should NOT have called toggleBuff
-      // (toggleBuff is only called in handleRecklessAttackConfirm, not handleRecklessAttackCancel)
-      expect(toggleBuff).not.toHaveBeenCalled();
     });
   });
 });

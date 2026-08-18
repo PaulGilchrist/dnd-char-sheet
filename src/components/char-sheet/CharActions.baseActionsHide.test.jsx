@@ -1,4 +1,6 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Cleanup: Removed low-value buff dedup test (redundant with success path). Consolidated 3 brittle conditionEffects forcedMode tests into 1 parameterized test. Pass Without Trace bonus test kept separate (tests bonus calculation, not forcedMode).
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
@@ -350,44 +352,6 @@ describe('CharActions Hide action behavior', () => {
       });
     });
 
-    it('does not duplicate advantage_on_stealth buff when it is already active', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const mockRollSkillCheck = vi.fn().mockResolvedValue(undefined);
-      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
-      const stealthSkillBonus = 5;
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ effect: 'advantage_on_stealth' }];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        if (_name === 'campaign' && key === 'lastAttack') return { d20: 12, bonus: stealthSkillBonus, total: 12 + stealthSkillBonus };
-        return null;
-      });
-
-      useLoggedDiceRoll.mockReturnValue({
-        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(),
-        rollSkillCheck: mockRollSkillCheck, rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
-      });
-
-      const stats = makeStealthStats(stealthSkillBonus);
-
-      await renderWithWrapper(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper);
-      await clickHide();
-
-      await waitFor(() => {
-        expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'activeConditions', expect.arrayContaining(['invisible']), 'test-campaign');
-      });
-
-      await waitFor(() => {
-        expect(setRuntimeValue).toHaveBeenNthCalledWith(
-          2,
-          'TestCharacter',
-          'activeBuffs',
-          [{ effect: 'advantage_on_stealth' }],
-          'test-campaign'
-        );
-      });
-    });
   });
 
   describe('Hide — failure path (< DC 15)', () => {
@@ -495,7 +459,11 @@ describe('CharActions Hide action behavior', () => {
       });
     });
 
-    it('applies hex disadvantage when hexAbilityCheckDisadvantage applies to DEX', async () => {
+    it.each([
+      { conditionEffects: { hexAbilityCheckDisadvantage: true, hexAbilityCheckDisadvantageAbility: 'DEX' }, expectedForcedMode: 'disadvantage', label: 'applies hex disadvantage when hex targets DEX' },
+      { conditionEffects: { peerlessAthleteAdvantageSkills: ['Stealth'] }, expectedForcedMode: 'advantage', label: 'applies Peerless Athlete advantage for Stealth' },
+      { conditionEffects: { hexAbilityCheckDisadvantage: true, hexAbilityCheckDisadvantageAbility: 'DEX', peerlessAthleteAdvantageSkills: ['Stealth'] }, expectedForcedMode: undefined, label: 'peerless athlete cancels hex disadvantage on Stealth' },
+    ])('conditionEffects: $label', async ({ conditionEffects, expectedForcedMode }) => {
       const mockSetPopupHtml = vi.fn();
       const mockRollSkillCheck = vi.fn().mockResolvedValue(undefined);
       const wrapper = makeDefaultWrapper(mockSetPopupHtml);
@@ -516,86 +484,27 @@ describe('CharActions Hide action behavior', () => {
       const stats = makeStealthStats(5);
 
       await renderWithWrapper(
-        <CharActions playerStats={stats} campaignName="test-campaign" conditionEffects={{ hexAbilityCheckDisadvantage: true, hexAbilityCheckDisadvantageAbility: 'DEX' }} />,
+        <CharActions playerStats={stats} campaignName="test-campaign" conditionEffects={conditionEffects} />,
         wrapper
       );
       await clickHide();
 
       await waitFor(() => {
-        expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), expect.objectContaining({ forcedMode: 'disadvantage' }));
-      });
-    });
-
-    it('applies Peerless Athlete advantage when listed in peerlessAthleteAdvantageSkills', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const mockRollSkillCheck = vi.fn().mockResolvedValue(undefined);
-      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        if (_name === 'campaign' && key === 'lastAttack') return { d20: 12, bonus: 5, total: 17 };
-        return null;
-      });
-
-      useLoggedDiceRoll.mockReturnValue({
-        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(),
-        rollSkillCheck: mockRollSkillCheck, rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
-      });
-
-      const stats = makeStealthStats(5);
-
-      await renderWithWrapper(
-        <CharActions playerStats={stats} campaignName="test-campaign" conditionEffects={{ peerlessAthleteAdvantageSkills: ['Stealth'] }} />,
-        wrapper
-      );
-      await clickHide();
-
-      await waitFor(() => {
-        expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), expect.objectContaining({ forcedMode: 'advantage' }));
-      });
-    });
-
-    it('cancels hex disadvantage when peerless athlete advantage also applies (peerless athlete wins)', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const mockRollSkillCheck = vi.fn().mockResolvedValue(undefined);
-      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        if (_name === 'campaign' && key === 'lastAttack') return { d20: 12, bonus: 5, total: 17 };
-        return null;
-      });
-
-      useLoggedDiceRoll.mockReturnValue({
-        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(),
-        rollSkillCheck: mockRollSkillCheck, rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
-      });
-
-      const stats = makeStealthStats(5);
-
-      await renderWithWrapper(
-        <CharActions playerStats={stats} campaignName="test-campaign" conditionEffects={{
-          hexAbilityCheckDisadvantage: true,
-          hexAbilityCheckDisadvantageAbility: 'DEX',
-          peerlessAthleteAdvantageSkills: ['Stealth'],
-        }} />,
-        wrapper
-      );
-      await clickHide();
-
-      await waitFor(() => {
-        // peerless athlete advantage cancels hex disadvantage, so forcedMode should be undefined
-        expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), {});
+        if (expectedForcedMode !== undefined) {
+          expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), expect.objectContaining({ forcedMode: expectedForcedMode }));
+        } else {
+          expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), {});
+        }
       });
     });
   });
 
-  describe('Hide — Skulker feat (2024 rules)', () => {
-    it('applies Skulker feat advantage for 2024 rules', async () => {
+  describe('Hide — Skulker feat', () => {
+    it.each([
+      { rules: '2024', feats: ['Skulker'], expectedForcedMode: 'advantage', label: 'applies Skulker advantage in 2024 rules' },
+      { rules: '5e', feats: ['Skulker'], expectedForcedMode: undefined, label: 'does NOT apply Skulker advantage in 5e rules' },
+      { rules: '2024', feats: [], expectedForcedMode: undefined, label: 'does NOT apply Skulker advantage without the feat' },
+    ])('Skulker: $label', async ({ rules, feats, expectedForcedMode }) => {
       const mockSetPopupHtml = vi.fn();
       const mockRollSkillCheck = vi.fn().mockResolvedValue(undefined);
       const wrapper = makeDefaultWrapper(mockSetPopupHtml);
@@ -615,8 +524,8 @@ describe('CharActions Hide action behavior', () => {
 
       const stats = createStats({
         actions: ['Hide'],
-        rules: '2024',
-        feats: ['Skulker'],
+        rules,
+        feats,
         level: 5,
       });
       stats.abilities = [
@@ -632,48 +541,11 @@ describe('CharActions Hide action behavior', () => {
       await clickHide();
 
       await waitFor(() => {
-        expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), expect.objectContaining({ forcedMode: 'advantage' }));
-      });
-    });
-
-    it('does NOT apply Skulker advantage when not using 2024 rules', async () => {
-      const mockSetPopupHtml = vi.fn();
-      const mockRollSkillCheck = vi.fn().mockResolvedValue(undefined);
-      const wrapper = makeDefaultWrapper(mockSetPopupHtml);
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        if (_name === 'campaign' && key === 'lastAttack') return { d20: 12, bonus: 5, total: 17 };
-        return null;
-      });
-
-      useLoggedDiceRoll.mockReturnValue({
-        popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(),
-        rollSkillCheck: mockRollSkillCheck, rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
-      });
-
-      const stats = createStats({
-        actions: ['Hide'],
-        rules: '5e',
-        feats: ['Skulker'],
-        level: 5,
-      });
-      stats.abilities = [
-        { name: 'Dexterity', bonus: 2, skills: [{ name: 'Stealth', bonus: 5 }] },
-        { name: 'Strength', bonus: 0, skills: [] },
-        { name: 'Constitution', bonus: 0, skills: [] },
-        { name: 'Intelligence', bonus: 0, skills: [] },
-        { name: 'Wisdom', bonus: 0, skills: [] },
-        { name: 'Charisma', bonus: 0, skills: [] },
-      ];
-
-      await renderWithWrapper(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper);
-      await clickHide();
-
-      await waitFor(() => {
-        expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), {});
+        if (expectedForcedMode !== undefined) {
+          expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), expect.objectContaining({ forcedMode: expectedForcedMode }));
+        } else {
+          expect(mockRollSkillCheck).toHaveBeenCalledWith('Stealth', expect.any(Number), {});
+        }
       });
     });
   });

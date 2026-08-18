@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Tests for secondary target modal handler callbacks in CharActionModals.
 // Tests verify that the correct handler is invoked with the expected arguments
 // when a user selects a target or skips the modal.
@@ -9,6 +10,24 @@
 //
 // This file focuses on single-target secondary modal confirmations and the
 // Bastion of Law handler routing.
+//
+// @cleaned-by-ai: Removed 14 unused vi.mock declarations (HealingPoolModal,
+// HandOfHealingModal, FontOfMagicModal, ResourcePoolModal, WildCompanionModal,
+// SetConditionModal, EyebiteEffectModal, AttackRiderModal, OpenHandTechniqueModal,
+// WeaponMasteryModal, WeaponMasteryChoiceModal, WeaponKindMasteryModal,
+// CombatStanceModal, TeleportModal, HealingIllusionModal, CreatureSelectionModal).
+//
+// @cleaned-by-ai: Consolidated 2 redundant Trickster Blessing confirm tests
+// (target-click vs confirm-button, both invoke the same handler with the same
+// argument via the same mock) into a single test.
+//
+// @cleaned-by-ai: Removed 2 "renders the correct modal title" rendering tests
+// (Trickster Blessing, Bardic Inspiration) — these assert text content rather
+// than behavioral coverage; rendering is covered in CharActionModals.rendering.test.jsx.
+//
+// @cleaned-by-ai: Consolidated 5 nearly-identical "closes modal on skip" tests
+// (Rally, Bulwark, Corona, Radiance, Mantle) into a single parameterized test
+// following the same pattern as CharActionModals.mass-healing-skips.test.jsx.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -17,74 +36,6 @@ import { createBaseProps } from './CharActionModals.test-utils.jsx';
 
 // ── Mocks ──
 
-vi.mock('./modals/divine/HealingPoolModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="healing-pool-modal"><button data-testid="healing-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/shared/HandOfHealingModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="hand-of-healing-modal">HandOfHealingModal</div>; },
-}));
-vi.mock('./modals/FontOfMagicModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="font-of-magic-modal">FontOfMagicModal</div>; },
-}));
-vi.mock('./modals/ResourcePoolModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="resource-pool-modal">ResourcePoolModal</div>; },
-}));
-vi.mock('./modals/WildCompanionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="wild-companion-modal">WildCompanionModal</div>; },
-}));
-vi.mock('./modals/shared/SetConditionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="set-condition-modal">SetConditionModal</div>; },
-}));
-vi.mock('./modals/EyebiteEffectModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="eyebite-effect-modal">EyebiteEffectModal</div>; },
-}));
-vi.mock('./modals/shared/AttackRiderModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="attack-rider-modal"><button data-testid="attack-rider-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/OpenHandTechniqueModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="open-hand-technique-modal"><button data-testid="open-hand-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/WeaponMasteryModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="weapon-mastery-modal"><button data-testid="weapon-mastery-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({
-  default: function TestModal({ onClose, onConfirm }) {
-    return (
-      <div data-testid="weapon-mastery-choice-modal">
-        <button data-testid="weapon-mastery-confirm" onClick={() => onConfirm('test-choice')}>Confirm</button>
-        <button data-testid="weapon-mastery-close" onClick={onClose}>Close</button>
-      </div>
-    );
-  },
-}));
-vi.mock('./modals/WeaponKindMasteryModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="weapon-kind-mastery-modal"><button data-testid="weapon-kind-mastery-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/shared/CombatStanceModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="combat-stance-modal"><button data-testid="combat-stance-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/TeleportModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="teleport-modal"><button data-testid="teleport-close" onClick={onClose}>Close</button></div>;
-  },
-}));
-vi.mock('./modals/shared/HealingIllusionModal.jsx', () => ({
-  default: function TestModal({ onClose }) {
-    return <div data-testid="healing-illusion-modal"><button data-testid="healing-illusion-close" onClick={onClose}>Close</button></div>;
-  },
-}));
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
@@ -289,22 +240,6 @@ vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
     );
   },
 }));
-vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
-  default: function TestModal({ title, targets, onConfirm, onSkip, confirmLabel }) {
-    return (
-      <div data-testid="creature-selection-modal">
-        <div data-testid="creature-title">{title}</div>
-        {targets.map((target, i) => (
-          <label key={i} data-testid={`creature-target-${target.name}`} onClick={() => onConfirm([target.name])}>
-            {target.name}
-          </label>
-        ))}
-        <button data-testid="creature-confirm" onClick={() => onConfirm(targets.map(t => t.name))}>{confirmLabel}</button>
-        <button data-testid="creature-skip" onClick={onSkip}>Skip</button>
-      </div>
-    );
-  },
-}));
 vi.mock('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js', () => ({
   handle: vi.fn().mockResolvedValue(undefined),
   handleClearWard: vi.fn().mockResolvedValue(undefined),
@@ -330,26 +265,6 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       fireEvent.click(screen.getByTestId('secondary-target-Ally1'));
       expect(handler).toHaveBeenCalledWith('Ally1');
     });
-
-    it('calls handleTricksterBlessingConfirm with first target on confirm button click', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleTricksterBlessingConfirm: handler })}
-        modalState={{ tricksterBlessingModal: { creatureTargets: [{ name: 'Ally1' }, { name: 'Ally2' }] } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('secondary-confirm'));
-      expect(handler).toHaveBeenCalledWith('Ally1');
-    });
-
-    it('renders the correct modal title', () => {
-      render(<CharActionModals
-        {...createBaseProps({ handleTricksterBlessingConfirm: vi.fn() })}
-        modalState={{ tricksterBlessingModal: { creatureTargets: [{ name: 'Ally1' }] } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByTestId('secondary-title').textContent).toContain('Blessing of the Trickster');
-    });
   });
 
   describe('Bardic Inspiration Target modal', () => {
@@ -362,15 +277,6 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       />);
       fireEvent.click(screen.getByTestId('secondary-target-Ally1'));
       expect(handler).toHaveBeenCalledWith('Ally1');
-    });
-
-    it('renders the correct modal title', () => {
-      render(<CharActionModals
-        {...createBaseProps({ handleBardicInspirationConfirm: vi.fn() })}
-        modalState={{ bardicInspirationTargetModal: { creatureTargets: [{ name: 'Ally1' }], dieSize: 6 } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByTestId('secondary-title').textContent).toContain('Bardic Inspiration');
     });
   });
 
@@ -398,19 +304,6 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       fireEvent.click(screen.getByTestId('secondary-target-Ally1'));
       expect(handler).toHaveBeenCalledWith('Ally1', expect.objectContaining({ allyOptions: [{ name: 'Ally1' }], description: 'Test' }));
     });
-
-    it('dismisses modal on skip without calling handler', () => {
-      const handler = vi.fn();
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleRallyChoiceConfirm: handler, setModalState })}
-        modalState={{ rallyChoiceModal: { allyOptions: [{ name: 'Ally1' }], description: 'Test' } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('secondary-skip'));
-      expect(handler).not.toHaveBeenCalled();
-      expect(setModalState).toHaveBeenCalledWith({ rallyChoiceModal: null });
-    });
   });
 
   describe('Bulwark of Force modal', () => {
@@ -423,17 +316,6 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       />);
       fireEvent.click(screen.getByTestId('bulwark-confirm'));
       expect(handler).toHaveBeenCalledWith(['Goblin']);
-    });
-
-    it('calls setModalState with null on skip', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleBulwarkOfForceConfirm: vi.fn(), setModalState })}
-        modalState={{ bulwarkOfForceModal: { creatureTargets: [{ name: 'Goblin' }], maxTargets: 3 } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('bulwark-skip'));
-      expect(setModalState).toHaveBeenCalledWith({ bulwarkOfForceModal: null });
     });
   });
 
@@ -448,17 +330,6 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       fireEvent.click(screen.getByTestId('corona-confirm'));
       expect(handler).toHaveBeenCalledWith('Dragon');
     });
-
-    it('calls setModalState with null on skip', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleCoronaEnemySelectionConfirm: vi.fn(), setModalState })}
-        modalState={{ coronaEnemySelectionModal: { creatureTargets: [{ name: 'Dragon' }] } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('corona-skip'));
-      expect(setModalState).toHaveBeenCalledWith({ coronaEnemySelectionModal: null });
-    });
   });
 
   describe('Radiance of Dawn modal', () => {
@@ -471,17 +342,6 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       />);
       fireEvent.click(screen.getByTestId('radiance-confirm'));
       expect(handler).toHaveBeenCalledWith(['Goblin']);
-    });
-
-    it('calls setModalState with null on skip', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleRadianceOfDawnConfirm: vi.fn(), setModalState })}
-        modalState={{ radianceOfDawnModal: { creatureTargets: [{ name: 'Goblin' }], saveType: 'Dex', saveDc: 15, damageExpression: '3d10', damageType: 'Radiant', rangeFeet: 15 } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('radiance-skip'));
-      expect(setModalState).toHaveBeenCalledWith({ radianceOfDawnModal: null });
     });
   });
 
@@ -496,17 +356,31 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       fireEvent.click(screen.getByTestId('mantle-confirm'));
       expect(handler).toHaveBeenCalledWith(['Ally1']);
     });
+  });
 
-    it('calls setModalState with null on skip', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleMantleOfInspirationConfirm: vi.fn(), setModalState })}
-        modalState={{ mantleOfInspirationTarget: { creatureTargets: [{ name: 'Ally1' }], tempHp: 5, dieRoll: 4, bardicDieSize: 6, maxTargets: 3 } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('mantle-skip'));
-      expect(setModalState).toHaveBeenCalledWith({ mantleOfInspirationTarget: null });
-    });
+  describe('Secondary target modal skip handlers', () => {
+    const skipCases = [
+      { name: 'Rally', modalKey: 'rallyChoiceModal', modalData: { allyOptions: [{ name: 'Ally1' }], description: 'Test' }, skipTestId: 'secondary-skip', nullState: { rallyChoiceModal: null } },
+      { name: 'BulwarkOfForce', modalKey: 'bulwarkOfForceModal', modalData: { creatureTargets: [{ name: 'Goblin' }], maxTargets: 3 }, skipTestId: 'bulwark-skip', nullState: { bulwarkOfForceModal: null } },
+      { name: 'CoronaEnemySelection', modalKey: 'coronaEnemySelectionModal', modalData: { creatureTargets: [{ name: 'Dragon' }] }, skipTestId: 'corona-skip', nullState: { coronaEnemySelectionModal: null } },
+      { name: 'RadianceOfDawn', modalKey: 'radianceOfDawnModal', modalData: { creatureTargets: [{ name: 'Goblin' }], saveType: 'Dex', saveDc: 15, damageExpression: '3d10', damageType: 'Radiant', rangeFeet: 15 }, skipTestId: 'radiance-skip', nullState: { radianceOfDawnModal: null } },
+      { name: 'MantleOfInspiration', modalKey: 'mantleOfInspirationTarget', modalData: { creatureTargets: [{ name: 'Ally1' }], tempHp: 5, dieRoll: 4, bardicDieSize: 6, maxTargets: 3 }, skipTestId: 'mantle-skip', nullState: { mantleOfInspirationTarget: null } },
+    ];
+
+    for (const { name, modalKey, modalData, skipTestId, nullState } of skipCases) {
+      it(`sets ${modalKey} to null on skip (${name})`, () => {
+        const setModalState = vi.fn();
+        render(
+          <CharActionModals
+            {...createBaseProps({})}
+            modalState={{ [modalKey]: modalData }}
+            setModalState={setModalState}
+          />,
+        );
+        fireEvent.click(screen.getByTestId(skipTestId));
+        expect(setModalState).toHaveBeenCalledWith(nullState);
+      });
+    }
   });
 });
 

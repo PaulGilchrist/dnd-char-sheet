@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharBonusActions from './CharBonusActions.jsx';
@@ -166,7 +167,6 @@ describe('CharBonusActions - Wrath of the Sea', () => {
       return null;
     });
     render(<CharBonusActions playerStats={createStats({ bonusActions: [{ name: 'Wrath of the Sea', description: '...' }, { name: 'TestFeature', description: 'test' }] })} onAutomationAction={vi.fn()} />);
-    // Only the existing bonusAction entry should appear, not the auto-generated clickable
     const allWrathElements = screen.queryAllByText(/Wrath of the Sea/);
     expect(allWrathElements.length).toBe(1);
   });
@@ -223,46 +223,25 @@ describe('CharBonusActions - Starry Form: Luminous Arrow', () => {
     expect(screen.getByText(/Ranged spell attack, 60 ft/)).toBeInTheDocument();
   });
 
-  it('shows 2d8 damage dice for level 10+ characters', () => {
+  it.each([
+    { label: 'level 10+', level: 10, expectedDice: /2d8/ },
+    { label: 'level < 10', level: 5, expectedDice: /1d8/ },
+  ])('shows $expectedDice damage dice for $level characters', ({ level, expectedDice }) => {
     vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
       if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
       return null;
     });
-    const stats = makeStatsWithWisdom(3, 10);
+    const stats = makeStatsWithWisdom(3, level);
     render(<CharBonusActions playerStats={stats} onAutomationAction={vi.fn()} />);
-    expect(screen.getByText(/2d8/)).toBeInTheDocument();
+    expect(screen.getByText(expectedDice)).toBeInTheDocument();
   });
 
-  it('shows 1d8 damage dice for level < 10 characters', () => {
+  it.each([
+    { label: 'buff is absent', buffs: null, expected: false },
+    { label: 'constellation is not Archer', buffs: [{ name: 'Starry Form', constellation: 'Hunter' }], expected: false },
+  ])('does not render Starry Form when $label', ({ buffs }) => {
     vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
-      return null;
-    });
-    const stats = makeStatsWithWisdom(3, 5);
-    render(<CharBonusActions playerStats={stats} onAutomationAction={vi.fn()} />);
-    expect(screen.getByText(/1d8/)).toBeInTheDocument();
-  });
-
-  it('shows 0 in damage text when Wisdom modifier is 0', () => {
-    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Archer' }];
-      return null;
-    });
-    const stats = makeStatsWithWisdom(0, 5);
-    render(<CharBonusActions playerStats={stats} onAutomationAction={vi.fn()} />);
-    expect(screen.getByText(/Radiant damage/)).toBeInTheDocument();
-    expect(screen.getByText(/1d8/)).toBeInTheDocument();
-  });
-
-  it('does not render when Starry Form buff is absent', () => {
-    vi.mocked(useRuntimeValue).mockReturnValue(null);
-    render(<CharBonusActions playerStats={createStats({ level: 10, bonusActions: [{ name: 'TestFeature', description: 'test' }] })} onAutomationAction={vi.fn()} />);
-    expect(screen.queryByText(/Starry Form: Luminous Arrow:/)).not.toBeInTheDocument();
-  });
-
-  it('does not render when constellation is not Archer', () => {
-    vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
-      if (key === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Hunter' }];
+      if (key === 'activeBuffs') return buffs;
       return null;
     });
     render(<CharBonusActions playerStats={createStats({ level: 10, bonusActions: [{ name: 'TestFeature', description: 'test' }] })} onAutomationAction={vi.fn()} />);

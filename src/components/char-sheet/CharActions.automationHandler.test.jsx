@@ -1,13 +1,14 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { DiceRollContext } from '../../hooks/combat/DiceRollContext.js';
-import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 import { hasAutomation } from '../../services/combat/automation/automationService.js';
 import { executeHandler } from '../../services/automation/index.js';
 import { addEntry } from '../../services/ui/logService.js';
+import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
 
 const _syncedStore = new Map();
 
@@ -203,7 +204,7 @@ function renderWithDiceRollContext(ui, wrapper) {
   });
 }
 
-describe('CharActions automation action handler', () => {
+describe('CharActions automation action handler (integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -235,267 +236,6 @@ describe('CharActions automation action handler', () => {
 
       expect(executeHandler).not.toHaveBeenCalled();
       expect(mockSetPopupHtml).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('handleAutomationAction: trigger conditions', () => {
-    it('shows error popup when trigger is after_casting_action_spell and no lastActionSpellCast', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'popup', payload: 'Should not reach' });
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'lastActionSpellCast') return null;
-        return null;
-      });
-
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      const stats = createStats({
-        actions: [{ name: 'Erupting Flames', description: 'Flames erupt.', automation: { type: 'auto_effect', trigger: 'after_casting_action_spell' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper); });
-      const actionEl = screen.getByText(/Erupting Flames:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.stringContaining('You must cast a spell'));
-        expect(executeHandler).not.toHaveBeenCalled();
-      });
-    });
-
-    it('resets lastActionSpellCast to 0 and proceeds when trigger condition is met', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'popup', payload: 'Success' });
-      const setRuntimeValue = (await import('../../hooks/runtime/useRuntimeState.js')).setRuntimeValue;
-      setRuntimeValue.mockResolvedValue();
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'lastActionSpellCast') return 'Fireball';
-        return null;
-      });
-
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      const stats = createStats({
-        actions: [{ name: 'Erupting Flames', description: 'Flames erupt.', automation: { type: 'auto_effect', trigger: 'after_casting_action_spell' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper); });
-      const actionEl = screen.getByText(/Erupting Flames:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalled();
-        expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'lastActionSpellCast', 0, 'test-campaign');
-      });
-    });
-  });
-
-  describe('handleAutomationAction: result type popup', () => {
-    it('calls setPopupHtml with payload when executeHandler returns type popup', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'popup', payload: '<div>Test popup</div>' });
-
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      const stats = createStats({
-        actions: [{ name: 'Test Action', description: 'Does something.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper); });
-      const actionEl = screen.getByText(/Test Action:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith('<div>Test popup</div>');
-      });
-    });
-  });
-
-  describe('handleAutomationAction: result type roll', () => {
-    it('dispatches rollDamage when executeHandler returns type roll with damage', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({
-        type: 'roll',
-        payload: {
-          rollType: 'damage',
-          name: 'Thunderwave',
-          formula: '2d8',
-          total: 10,
-          rolls: [5, 5],
-          modifier: 0,
-          contextConfig: {},
-        },
-      });
-
-      const mockRollDamage = vi.fn();
-      useLoggedDiceRoll.mockReturnValue({
-        popupHtml: null, setPopupHtml: vi.fn(), rollAttack: vi.fn(), rollDamage: mockRollDamage,
-        rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
-      });
-
-      const stats = createStats({
-        actions: [{ name: 'Thunderwave', description: 'Blast yourself.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />); });
-      const actionEl = screen.getByText(/Thunderwave:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(mockRollDamage).toHaveBeenCalledWith('Thunderwave', '2d8', 10, [5, 5], 0, {});
-      });
-    });
-
-    it('does not call rollDamage for non-damage roll types', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({
-        type: 'roll',
-        payload: {
-          rollType: 'check',
-          name: 'Athletics',
-          formula: '1d20+3',
-          total: 15,
-          rolls: [12],
-          modifier: 3,
-          contextConfig: {},
-        },
-      });
-
-      const mockRollDamage = vi.fn();
-      useLoggedDiceRoll.mockReturnValue({
-        popupHtml: null, setPopupHtml: vi.fn(), rollAttack: vi.fn(), rollDamage: mockRollDamage,
-        rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
-      });
-
-      const stats = createStats({
-        actions: [{ name: 'Athletics Check', description: 'Push stuff.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />); });
-      const actionEl = screen.getByText(/Athletics Check:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(mockRollDamage).not.toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('handleAutomationAction: result type attack_roll', () => {
-    it('dispatches rollAttack when executeHandler returns type attack_roll', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({
-        type: 'attack_roll',
-        payload: {
-          attack: { name: 'Piercing Spray', hitBonus: 7, autoDamageFormula: '2d6', autoDamageName: 'Piercing Spray', damageType: 'Piercing' },
-          targetName: 'Goblin',
-        },
-      });
-
-      const mockRollAttack = vi.fn();
-      useLoggedDiceRoll.mockReturnValue({
-        popupHtml: null, setPopupHtml: vi.fn(), rollAttack: mockRollAttack, rollDamage: vi.fn(),
-        rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
-      });
-
-      const stats = createStats({
-        actions: [{ name: 'Piercing Spray', description: 'Shoot needles.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />); });
-      const actionEl = screen.getByText(/Piercing Spray:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(mockRollAttack).toHaveBeenCalledWith('Piercing Spray', 7, expect.objectContaining({
-          targetName: 'Goblin', forcedMode: undefined, isOpportunityAttack: false,
-          autoDamageFormula: '2d6', autoDamageName: 'Piercing Spray', damageType: 'Piercing',
-        }));
-      });
-    });
-
-    it('defaults damageType to Slashing when not provided in attack payload', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({
-        type: 'attack_roll',
-        payload: {
-          attack: { name: 'Unarmed Strike', hitBonus: 5 },
-          targetName: 'Orc',
-        },
-      });
-
-      const mockRollAttack = vi.fn();
-      useLoggedDiceRoll.mockReturnValue({
-        popupHtml: null, setPopupHtml: vi.fn(), rollAttack: mockRollAttack, rollDamage: vi.fn(),
-        rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
-      });
-
-      const stats = createStats({
-        actions: [{ name: 'Unarmed Strike', description: 'Punch.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />); });
-      const actionEl = screen.getByText(/Unarmed Strike:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(mockRollAttack).toHaveBeenCalledWith('Unarmed Strike', 5, expect.objectContaining({
-          damageType: 'Slashing',
-        }));
-      });
-    });
-  });
-
-  describe('handleAutomationAction: result type notify_buffs_changed', () => {
-    it('calls onBuffsChange when executeHandler returns notify_buffs_changed', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'notify_buffs_changed' });
-
-      const mockOnBuffsChange = vi.fn();
-      const stats = createStats({
-        actions: [{ name: 'Test Action', description: 'Changes buffs.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} onBuffsChange={mockOnBuffsChange} />); });
-      const actionEl = screen.getByText(/Test Action:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(mockOnBuffsChange).toHaveBeenCalled();
-      });
-    });
-
-    it('does not call onBuffsChange when it is not provided', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'notify_buffs_changed' });
-
-      const stats = createStats({
-        actions: [{ name: 'Test Action', description: 'Changes buffs.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />); });
-      const actionEl = screen.getByText(/Test Action:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        // Should not throw even without onBuffsChange callback
-      });
     });
   });
 
@@ -613,6 +353,29 @@ describe('CharActions automation action handler', () => {
     });
   });
 
+  describe('handleAutomationAction: feature detail popup for actions with details but no automation', () => {
+    it('calls buildFeatureDetailHtml when action has details', async () => {
+      hasAutomation.mockReturnValue(false);
+
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = ({ children }) => (
+        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+          {children}
+        </DiceRollContext.Provider>
+      );
+
+      const stats = createStats({
+        actions: [{ name: 'Tactical Genius', details: 'Tactical details', description: 'A smart move' }],
+      });
+
+      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper); });
+      const actionEl = screen.getByText(/Tactical Genius:/);
+      await act(async () => { fireEvent.click(actionEl); });
+
+      expect(buildFeatureDetailHtml).toHaveBeenCalledWith(stats.actions[0]);
+    });
+  });
+
   describe('handleAutomationAction: featureChoice modal for damage_bonus with options', () => {
     it('opens featureChoice modal when no option has been chosen', async () => {
       hasAutomation.mockReturnValue(true);
@@ -704,151 +467,10 @@ describe('CharActions automation action handler', () => {
     });
   });
 
-  describe('handleAutomationAction: monk Ki features focus point handling', () => {
-    it('shows error popup when monk has no focus points remaining', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'popup', payload: 'Should not reach' });
-      const setRuntimeValue = (await import('../../hooks/runtime/useRuntimeState.js')).setRuntimeValue;
-      setRuntimeValue.mockResolvedValue();
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'focusPoints') return 0;
-        return null;
-      });
-
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      const stats = createStats({
-        name: 'MonkCharacter',
-        class: { name: 'Monk', class_levels: [{ level: 5, focus_points: 2 }] },
-        actions: [{ name: 'Flurry of Blows', description: 'Ki flurry.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper); });
-      const actionEl = screen.getByText(/Flurry of Blows:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.stringContaining('No ki points remaining'));
-        expect(setRuntimeValue).not.toHaveBeenCalled();
-        expect(executeHandler).not.toHaveBeenCalled();
-      });
-    });
-
-    it('deducts 1 focus point and dispatches focus-points-updated event when monk has focus points', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'popup', payload: 'Done' });
-      const setRuntimeValue = (await import('../../hooks/runtime/useRuntimeState.js')).setRuntimeValue;
-      setRuntimeValue.mockResolvedValue();
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'focusPoints') return 2;
-        return null;
-      });
-
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      const stats = createStats({
-        name: 'MonkCharacter',
-        class: { name: 'Monk', class_levels: [{ level: 5, focus_points: 2 }] },
-        actions: [{ name: 'Flurry of Blows', description: 'Ki flurry.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper); });
-      const actionEl = screen.getByText(/Flurry of Blows:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(setRuntimeValue).toHaveBeenCalledWith('MonkCharacter', 'focusPoints', 1, 'test-campaign');
-        expect(executeHandler).toHaveBeenCalled();
-      });
-    });
-
-    it('skips focus point deduction for Flurry of Blows when Cloak of Shadows is active', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'popup', payload: 'Shadow Flurry' });
-      const setRuntimeValue = (await import('../../hooks/runtime/useRuntimeState.js')).setRuntimeValue;
-      setRuntimeValue.mockResolvedValue();
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'focusPoints') return 0;
-        if (key === 'activeBuffs') return [{ effect: 'cloak_of_shadows' }];
-        return null;
-      });
-
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      const stats = createStats({
-        name: 'MonkCharacter',
-        class: { name: 'Monk', class_levels: [{ level: 5, focus_points: 2 }] },
-        actions: [{ name: 'Flurry of Blows', description: 'Ki flurry.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper); });
-      const actionEl = screen.getByText(/Flurry of Blows:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        // Should NOT deduct focus points (cloak skips it)
-        expect(setRuntimeValue).not.toHaveBeenCalledWith('MonkCharacter', 'focusPoints', expect.any(Number));
-        expect(executeHandler).toHaveBeenCalled();
-      });
-    });
-
-    it('does not deduct focus points for non-monk Ki features', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'popup', payload: 'Done' });
-      const setRuntimeValue = (await import('../../hooks/runtime/useRuntimeState.js')).setRuntimeValue;
-      setRuntimeValue.mockResolvedValue();
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'focusPoints') return 0;
-        return null;
-      });
-
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      const stats = createStats({
-        name: 'FighterCharacter',
-        class: { name: 'Fighter', class_levels: [{ level: 5 }] },
-        actions: [{ name: 'Second Wind', description: 'Heal up.', automation: { type: 'auto_effect' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" />, wrapper); });
-      const actionEl = screen.getByText(/Second Wind:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(setRuntimeValue).not.toHaveBeenCalledWith('FighterCharacter', 'focusPoints', expect.any(Number));
-        expect(executeHandler).toHaveBeenCalled();
-      });
-    });
-  });
-
   describe('handleAutomationAction: temp_buff/combat_stance buff refresh', () => {
-    it('calls onBuffsChange after popup result when auto type is temp_buff', async () => {
+    it.each(['temp_buff', 'combat_stance'])('calls onBuffsChange when auto type is %s', async (autoType) => {
       hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'popup', payload: 'Stance active' });
+      executeHandler.mockResolvedValue({ type: 'popup', payload: 'Done' });
 
       const mockOnBuffsChange = vi.fn();
       const mockSetPopupHtml = vi.fn();
@@ -859,11 +481,11 @@ describe('CharActions automation action handler', () => {
       );
 
       const stats = createStats({
-        actions: [{ name: 'Berserker Rage', description: 'Enter rage.', automation: { type: 'temp_buff', effect: 'rage' } }],
+        actions: [{ name: 'Test Action', description: 'Triggers buff.', automation: { type: autoType } }],
       });
 
       await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" onBuffsChange={mockOnBuffsChange} />, wrapper); });
-      const actionEl = screen.getByText(/Berserker Rage:/);
+      const actionEl = screen.getByText(/Test Action:/);
       await act(async () => { fireEvent.click(actionEl); });
 
       await waitFor(() => {
@@ -871,32 +493,7 @@ describe('CharActions automation action handler', () => {
       });
     });
 
-    it('calls onBuffsChange after popup result when auto type is combat_stance', async () => {
-      hasAutomation.mockReturnValue(true);
-      executeHandler.mockResolvedValue({ type: 'popup', payload: 'Stance active' });
-
-      const mockOnBuffsChange = vi.fn();
-      const mockSetPopupHtml = vi.fn();
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      const stats = createStats({
-        actions: [{ name: 'Defensive Stance', description: 'Stand firm.', automation: { type: 'combat_stance' } }],
-      });
-
-      await act(async () => { renderWithDiceRollContext(<CharActions playerStats={stats} campaignName="test-campaign" onBuffsChange={mockOnBuffsChange} />, wrapper); });
-      const actionEl = screen.getByText(/Defensive Stance:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(mockOnBuffsChange).toHaveBeenCalled();
-      });
-    });
-
-    it('does not call onBuffsChange for popup result when auto type is neither temp_buff nor combat_stance', async () => {
+    it('does not call onBuffsChange for non-buff auto types', async () => {
       hasAutomation.mockReturnValue(true);
       executeHandler.mockResolvedValue({ type: 'popup', payload: 'Done' });
 

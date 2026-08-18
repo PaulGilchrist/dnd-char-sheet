@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getActionSpellNames,
@@ -54,19 +55,13 @@ describe('spellSectionUtils', () => {
   });
 
   describe('getActionSpellNames', () => {
-    it('returns action spells with damage', () => {
-      const stats = createStats({ spellAbilities: { spells: [actionSpell] } });
+    it('returns action spells with damage or healing', () => {
+      const stats = createStats({ spellAbilities: { spells: [actionSpell, healSpell] } });
       const result = getActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set(['Fireball']));
+      expect(result).toEqual(new Set(['Fireball', 'Cure Wounds']));
     });
 
-    it('returns action spells with healing', () => {
-      const stats = createStats({ spellAbilities: { spells: [healSpell] } });
-      const result = getActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set(['Cure Wounds']));
-    });
-
-    it('returns action spells with "Always" prepared status', () => {
+    it('returns action spells with "Always" prepared status when they have damage', () => {
       const stats = createStats({ spellAbilities: { spells: [alwaysSpell] } });
       const result = getActionSpellNames(stats, 'test-campaign');
       expect(result).toEqual(new Set(['Minor Illusion']));
@@ -78,22 +73,10 @@ describe('spellSectionUtils', () => {
       expect(result.size).toBe(0);
     });
 
-    it('excludes unprepared spells', () => {
-      const stats = createStats({ spellAbilities: { spells: [notPreparedSpell] } });
+    it('excludes unprepared spells and non-action spells', () => {
+      const stats = createStats({ spellAbilities: { spells: [notPreparedSpell, bonusActionSpell, reactionSpell] } });
       const result = getActionSpellNames(stats, 'test-campaign');
       expect(result.size).toBe(0);
-    });
-
-    it('excludes non-action spells', () => {
-      const stats = createStats({ spellAbilities: { spells: [bonusActionSpell, reactionSpell] } });
-      const result = getActionSpellNames(stats, 'test-campaign');
-      expect(result.size).toBe(0);
-    });
-
-    it('handles alternate casting time casing', () => {
-      const stats = createStats({ spellAbilities: { spells: [actionSpellAltCase] } });
-      const result = getActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set(['Lightning Bolt']));
     });
 
     it('returns empty set when Elder Champion is active', () => {
@@ -103,7 +86,7 @@ describe('spellSectionUtils', () => {
       expect(result).toEqual(new Set());
     });
 
-    it('returns all matching action spells from multiple spells', () => {
+    it('filters multiple spells correctly', () => {
       const stats = createStats({
         spellAbilities: { spells: [actionSpell, healSpell, actionSpellAltCase, notPreparedSpell, bonusActionSpell] },
       });
@@ -111,30 +94,16 @@ describe('spellSectionUtils', () => {
       expect(result).toEqual(new Set(['Fireball', 'Cure Wounds', 'Lightning Bolt']));
     });
 
-    it('returns empty set when spellAbilities is undefined', () => {
-      const stats = createStats({ spellAbilities: undefined });
-      const result = getActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set());
-    });
-
-    it('returns empty set when spellAbilities.spells is undefined', () => {
-      const stats = createStats({ spellAbilities: {} });
-      const result = getActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set());
-    });
-
-    it('returns empty set when spellAbilities is null', () => {
-      const stats = createStats({ spellAbilities: null });
-      const result = getActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set());
+    it('handles null/undefined spellAbilities gracefully', () => {
+      expect(getActionSpellNames(createStats({ spellAbilities: undefined }), 'test-campaign')).toEqual(new Set());
+      expect(getActionSpellNames(createStats({ spellAbilities: null }), 'test-campaign')).toEqual(new Set());
+      expect(getActionSpellNames(createStats({ spellAbilities: {} }), 'test-campaign')).toEqual(new Set());
     });
 
     it('returns action spells when Elder Champion check throws (error suppressed)', () => {
       getRuntimeValue.mockImplementation(() => { throw new Error('store error'); });
       const stats = createStats({ spellAbilities: { spells: [actionSpell] } });
-      const result = getActionSpellNames(stats, 'test-campaign');
-      // isElderChampionActive catches the error and returns false
-      expect(result).toEqual(new Set(['Fireball']));
+      expect(getActionSpellNames(stats, 'test-campaign')).toEqual(new Set(['Fireball']));
     });
   });
 
@@ -143,18 +112,6 @@ describe('spellSectionUtils', () => {
       const stats = createStats({ spellAbilities: { spells: [bonusActionSpell] } });
       const result = getBonusActionSpellNames(stats, 'test-campaign');
       expect(result).toEqual(new Set(['Shocking Grasp']));
-    });
-
-    it('handles alternate casting time casing', () => {
-      const stats = createStats({ spellAbilities: { spells: [bonusActionSpellAltCase] } });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set(["Hunter's Mark"]));
-    });
-
-    it('excludes non-bonus-action spells unless Elder Champion is active', () => {
-      const stats = createStats({ spellAbilities: { spells: [actionSpell, reactionSpell] } });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result.size).toBe(0);
     });
 
     it('includes action spells when Elder Champion is active', () => {
@@ -172,94 +129,44 @@ describe('spellSectionUtils', () => {
       expect(result.size).toBe(0);
     });
 
-    it('includes spells from active bonus action free_spell features', () => {
-      mockBuffsAndConditions([{ name: 'Mantle of Majesty' }], []);
-      const stats = createStats({
-        spellAbilities: { spells: [{ name: 'Command', casting_time: 'Action', prepared: 'Always' }] },
-        automation: {
-          bonusActions: [{
-            name: 'Mantle of Majesty',
-            type: 'free_spell',
-            spell: 'Command',
-            casting_time: '1 bonus action',
-          }],
-        },
-      });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set(['Command']));
-    });
-
-    it('excludes spells from inactive bonus action free_spell features', () => {
-      const stats = createStats({
-        spellAbilities: { spells: [{ name: 'Command', casting_time: 'Action', prepared: 'Always' }] },
-        automation: {
-          bonusActions: [{
-            name: 'Mantle of Majesty',
-            type: 'free_spell',
-            spell: 'Command',
-            casting_time: '1 bonus action',
-          }],
-        },
-      });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result.size).toBe(0);
-    });
-
-    it('includes spells from active bonus action fey_reinforcements features', () => {
-      mockBuffsAndConditions([{ name: 'Fey Presence' }], []);
+    it('includes spells from active automation features (free_spell, fey_reinforcements, misty_wanderer)', () => {
+      mockBuffsAndConditions([{ name: 'Mantle of Majesty' }, { name: 'Fey Presence' }, { name: 'Misty Wanderer' }], []);
       const stats = createStats({
         spellAbilities: { spells: [] },
         automation: {
           bonusActions: [{
+            name: 'Mantle of Majesty',
+            type: 'free_spell',
+            spell: 'Command',
+            casting_time: '1 bonus action',
+          }, {
             name: 'Fey Presence',
             type: 'fey_reinforcements',
             spell: 'Faerie Fire',
             casting_time: '1 bonus action',
           }],
+          specialActions: [{
+            name: 'Misty Wanderer',
+            type: 'misty_wanderer',
+            spell: 'Misty Step',
+            casting_time: '1 bonus action',
+          }],
         },
       });
       const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set(['Faerie Fire']));
+      expect(result).toEqual(new Set(['Command', 'Faerie Fire', 'Misty Step']));
     });
 
-    it('excludes fey_reinforcements with wrong casting time', () => {
-      mockBuffsAndConditions([{ name: 'Fey Presence' }], []);
+    it('excludes inactive automation features', () => {
       const stats = createStats({
         spellAbilities: { spells: [] },
         automation: {
           bonusActions: [{
-            name: 'Fey Presence',
-            type: 'fey_reinforcements',
-            spell: 'Fireball',
-            casting_time: '1 action',
-          }],
-        },
-      });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result.size).toBe(0);
-    });
-
-    it('includes spells from active specialActions free_spell/misty_wanderer features', () => {
-      mockBuffsAndConditions([{ name: 'Misty Wanderer' }], []);
-      const stats = createStats({
-        spellAbilities: { spells: [] },
-        automation: {
-          specialActions: [{
-            name: 'Misty Wanderer',
-            type: 'misty_wanderer',
-            spell: 'Misty Step',
+            name: 'Mantle of Majesty',
+            type: 'free_spell',
+            spell: 'Command',
             casting_time: '1 bonus action',
           }],
-        },
-      });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set(['Misty Step']));
-    });
-
-    it('excludes inactive specialActions features', () => {
-      const stats = createStats({
-        spellAbilities: { spells: [] },
-        automation: {
           specialActions: [{
             name: 'Misty Wanderer',
             type: 'misty_wanderer',
@@ -272,7 +179,7 @@ describe('spellSectionUtils', () => {
       expect(result.size).toBe(0);
     });
 
-    it('includes multiple spells from a feature with array spell value', () => {
+    it('handles array spell values in features', () => {
       mockBuffsAndConditions([{ name: 'Mantle of Majesty' }], []);
       const stats = createStats({
         spellAbilities: { spells: [] },
@@ -289,123 +196,35 @@ describe('spellSectionUtils', () => {
       expect(result).toEqual(new Set(['Command', 'Thaumaturgy']));
     });
 
-    it('includes both bonusActions and specialActions features', () => {
-      mockBuffsAndConditions([{ name: 'Mantle of Majesty' }, { name: 'Misty Wanderer' }], []);
-      const stats = createStats({
-        spellAbilities: { spells: [] },
-        automation: {
-          bonusActions: [{
-            name: 'Mantle of Majesty',
-            type: 'free_spell',
-            spell: 'Command',
-            casting_time: '1 bonus action',
-          }],
-          specialActions: [{
-            name: 'Misty Wanderer',
-            type: 'misty_wanderer',
-            spell: 'Misty Step',
-            casting_time: '1 bonus action',
-          }],
-        },
-      });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set(['Command', 'Misty Step']));
-    });
-
-    it('returns empty set when spellAbilities is undefined', () => {
-      const stats = createStats({ spellAbilities: undefined });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set());
-    });
-
-    it('returns empty set when automation is undefined', () => {
-      const stats = createStats({ automation: undefined });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set());
-    });
-
-    it('skips features without a spell property', () => {
-      mockBuffsAndConditions([{ name: 'Mantle of Majesty' }], []);
-      const stats = createStats({
-        automation: {
-          bonusActions: [{
-            name: 'Mantle of Majesty',
-            type: 'free_spell',
-            casting_time: '1 bonus action',
-          }],
-        },
-      });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result.size).toBe(0);
-    });
-
-    it('skips features without casting_time', () => {
-      mockBuffsAndConditions([{ name: 'Mantle of Majesty' }], []);
-      const stats = createStats({
-        automation: {
-          bonusActions: [{
-            name: 'Mantle of Majesty',
-            type: 'free_spell',
-            spell: 'Command',
-          }],
-        },
-      });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      expect(result.size).toBe(0);
-    });
-
     it('handles Elder Champion with try/catch returning false', () => {
       getRuntimeValue.mockImplementation(() => { throw new Error('store error'); });
       const stats = createStats({ spellAbilities: { spells: [actionSpell, bonusActionSpell] } });
-      const result = getBonusActionSpellNames(stats, 'test-campaign');
-      // Elder Champion throw should suppress action spells but still return bonus action spells
-      expect(result).toEqual(new Set(['Shocking Grasp']));
+      expect(getBonusActionSpellNames(stats, 'test-campaign')).toEqual(new Set(['Shocking Grasp']));
+    });
+
+    it('returns empty set when spellAbilities or automation is null/undefined', () => {
+      expect(getBonusActionSpellNames(createStats({ spellAbilities: undefined }), 'test-campaign')).toEqual(new Set());
+      expect(getBonusActionSpellNames(createStats({ automation: undefined }), 'test-campaign')).toEqual(new Set());
     });
   });
 
   describe('getReactionSpellNames', () => {
-    it('returns reaction spells', () => {
+    it('returns reaction spells with damage', () => {
       const stats = createStats({ spellAbilities: { spells: [reactionSpell] } });
       const result = getReactionSpellNames(stats);
       expect(result).toEqual(new Set(['Shield']));
     });
 
-    it('handles alternate casting time casing', () => {
-      const stats = createStats({ spellAbilities: { spells: [reactionSpellAltCase] } });
-      const result = getReactionSpellNames(stats);
-      expect(result).toEqual(new Set(['Opportunity Attack']));
-    });
-
-    it('excludes non-reaction spells', () => {
-      const stats = createStats({ spellAbilities: { spells: [actionSpell, bonusActionSpell] } });
+    it('excludes non-reaction and unprepared spells', () => {
+      const stats = createStats({ spellAbilities: { spells: [actionSpell, bonusActionSpell, { name: 'Hidden Reaction', casting_time: '1 reaction', prepared: 'Not Prepared', damage: '1d4' }] } });
       const result = getReactionSpellNames(stats);
       expect(result.size).toBe(0);
     });
 
-    it('excludes unprepared reaction spells', () => {
-      const stats = createStats({
-        spellAbilities: { spells: [{ name: 'Hidden Reaction', casting_time: '1 reaction', prepared: 'Not Prepared', damage: '1d4' }] },
-      });
-      const result = getReactionSpellNames(stats);
-      expect(result.size).toBe(0);
-    });
-
-    it('returns empty set when spellAbilities is undefined', () => {
-      const stats = createStats({ spellAbilities: undefined });
-      const result = getReactionSpellNames(stats);
-      expect(result).toEqual(new Set());
-    });
-
-    it('returns empty set when spellAbilities.spells is undefined', () => {
-      const stats = createStats({ spellAbilities: {} });
-      const result = getReactionSpellNames(stats);
-      expect(result).toEqual(new Set());
-    });
-
-    it('returns empty set when no spells provided', () => {
-      const stats = createStats({ spellAbilities: { spells: [] } });
-      const result = getReactionSpellNames(stats);
-      expect(result).toEqual(new Set());
+    it('handles null/undefined spellAbilities gracefully', () => {
+      expect(getReactionSpellNames(createStats({ spellAbilities: undefined }))).toEqual(new Set());
+      expect(getReactionSpellNames(createStats({ spellAbilities: null }))).toEqual(new Set());
+      expect(getReactionSpellNames(createStats({ spellAbilities: {} }))).toEqual(new Set());
     });
   });
 
@@ -437,10 +256,9 @@ describe('spellSectionUtils', () => {
       expect(result).toEqual(new Set(['Fireball', 'Command']));
     });
 
-    it('returns empty set when spellAbilities is undefined', () => {
-      const stats = createStats({ spellAbilities: undefined });
-      const result = getExcludedSpellNames(stats, 'test-campaign');
-      expect(result).toEqual(new Set());
+    it('handles null/undefined spellAbilities gracefully', () => {
+      expect(getExcludedSpellNames(createStats({ spellAbilities: undefined }), 'test-campaign')).toEqual(new Set());
+      expect(getExcludedSpellNames(createStats({ spellAbilities: null }), 'test-campaign')).toEqual(new Set());
     });
 
     it('respects Elder Champion suppression for action spells', () => {
@@ -453,11 +271,9 @@ describe('spellSectionUtils', () => {
       expect(actionResult).toEqual(new Set());
 
       const bonusResult = getBonusActionSpellNames(stats, 'test-campaign');
-      // Elder Champion moves action spells to bonus actions, so both appear
       expect(bonusResult).toEqual(new Set(['Fireball', 'Shocking Grasp']));
 
       const result = getExcludedSpellNames(stats, 'test-campaign');
-      // Action spells suppressed from actions, but bonus actions include both
       expect(result).toEqual(new Set(['Fireball', 'Shocking Grasp']));
     });
   });

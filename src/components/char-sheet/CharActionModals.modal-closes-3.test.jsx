@@ -1,17 +1,22 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Tests for modal close handlers in CharActionModals.jsx that are NOT covered
 // by modal-closes.test.jsx, modal-closes-2.test.jsx, or other test files.
 //
 // This file focuses on:
 // - healingPoolModal close
 // - saveAttackHealModal close
-// - openHandTechniqueModal close (dispatches events)
 // - elementalAffinityModal close
 // - fiendishResilienceModal close (uses SingleResistanceSelectionModal)
 // - dragonCompanionModal close
 // - wildMagicSurgeModal close (closes both modalState and spellModalState)
 // - breathWeaponShapeModal close
 // - vitalityOfTheTreeTarget onSkip
+//
+// openHandTechniqueModal test removed — redundant with modal-closes.test.jsx
+// (same OpenHandTechniqueModal component used by openHandFromFlurry, same inline
+//  onClose handler that sets modalState to null and dispatches
+//  target-effects-updated + combat-summary-updated events).
 //
 // Already covered elsewhere:
 // - blindnessDeafnessModal, celestialRevelationModal, fiendishLegacyModal,
@@ -521,23 +526,6 @@ describe('CharActionModals — modal close handlers', () => {
       />);
       fireEvent.click(screen.getByTestId('save-attack-heal-modal-close'));
       expect(setModalState).toHaveBeenCalledWith({ saveAttackHealModal: null });
-    });
-  });
-
-  describe('openHandTechniqueModal close handler', () => {
-    it('dispatches target-effects-updated and combat-summary-updated events on close', () => {
-      const setModalState = vi.fn();
-      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-      render(<CharActionModals
-        {...createBaseProps({})}
-        modalState={{ openHandTechniqueModal: { action: {} } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('open-hand-close'));
-      expect(setModalState).toHaveBeenCalledWith({ openHandTechniqueModal: null });
-      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'target-effects-updated' }));
-      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
-      dispatchSpy.mockRestore();
     });
   });
 

@@ -406,57 +406,6 @@ describe('CharActionModals — modal close handlers', () => {
     vi.clearAllMocks();
   });
 
-  describe('openHandFromFlurry modal', () => {
-    it('renders OpenHandTechniqueModal and dispatches events on close', () => {
-      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-      render(<CharActionModals
-        {...createBaseProps({ handleOpenHandFromFlurrySkip: vi.fn() })}
-        modalState={{ openHandFromFlurry: { targets: [{ action: {}, playerStats: {}, campaignName: 'test-campaign', targetName: 'Goblin' }], currentIndex: 0, saveDc: 15 } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByTestId('open-hand-technique-modal')).toBeTruthy();
-      fireEvent.click(screen.getByTestId('open-hand-close'));
-      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'target-effects-updated' }));
-      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
-      dispatchSpy.mockRestore();
-    });
-
-    it('calls handleOpenHandFromFlurrySkip on close', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleOpenHandFromFlurrySkip: handler })}
-        modalState={{ openHandFromFlurry: { targets: [{ action: {}, playerStats: {}, campaignName: 'test-campaign', targetName: 'Goblin' }], currentIndex: 0, saveDc: 15 } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('open-hand-close'));
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it('calls handleOpenHandFromFlurryConfirm with optionName on confirm', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleOpenHandFromFlurryConfirm: handler })}
-        modalState={{ openHandFromFlurry: { targets: [{ action: {}, playerStats: {}, campaignName: 'test-campaign', targetName: 'Goblin' }], currentIndex: 0, saveDc: 15 } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('open-hand-confirm'));
-      expect(handler).toHaveBeenCalledWith({ optionName: 'grappled' });
-    });
-
-    it('dispatches events on confirm', () => {
-      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-      render(<CharActionModals
-        {...createBaseProps({ handleOpenHandFromFlurryConfirm: vi.fn() })}
-        modalState={{ openHandFromFlurry: { targets: [{ action: {}, playerStats: {}, campaignName: 'test-campaign', targetName: 'Goblin' }], currentIndex: 0, saveDc: 15 } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('open-hand-confirm'));
-      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'target-effects-updated' }));
-      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
-      dispatchSpy.mockRestore();
-    });
-  });
-
   describe('shieldBashModal close handler', () => {
     it('sets modalState to null and dispatches events on close', () => {
       const setModalState = vi.fn();

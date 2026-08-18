@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Tests for helper functions and internal handlers in CharActionModals.
 //
 // This file focuses on the render-path behavior of internal helper functions
@@ -12,12 +13,14 @@
 // CharActionModals.handlers2.test.jsx.
 // Modal closing behavior is covered in CharActionModals.modal-closes.test.jsx.
 //
-// Tests verify: correct modal rendering, correct description text (heal amounts,
-// titles, instructions), and that the component does not crash with edge-case
-// props (null characters, missing level, null combatSummary).
+// @cleaned-by-ai: Removed 7 redundant/low-value tests:
+// - Duplicate invokeDuplicity modal rendering test (covered in inline-modals.test.jsx)
+// - 3 "without crashing" tests (structural, covered in rendering.test.jsx)
+// - 3 overlapping healing illusion rendering tests (consolidated into 1)
+// - Destructive stride title test (overlaps with instruction description test)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
 import { createBaseProps } from './CharActionModals.test-utils.jsx';
 
@@ -263,80 +266,28 @@ describe('CharActionModals — helper functions', () => {
     vi.clearAllMocks();
   });
 
-  describe('buildHealingIllusionTargets', () => {
-    // This function is internal to CharActionModals and builds a deduplicated
-    // list of creatures from characters + combatSummary.creatures.
-    // It returns { name, type, size, currentHp, maxHp } for each unique name.
+  describe('buildHealingIllusionTargets / findCreatureMaxHp / findCreatureCurrentHp', () => {
+    // These are internal helpers tested implicitly through modal rendering.
+    // buildHealingIllusionTargets deduplicates creatures from characters + combatSummary.
+    // findCreatureMaxHp / findCreatureCurrentHp look up HP from combatSummary or characters.
 
-    it('renders the healing illusion modal when characters are provided', () => {
-      const playerStats = { name: 'Alric', level: 5 };
-      const characters = [{ name: 'Alric', type: 'player', size: 'Medium', currentHp: 20, maxHp: 30 }];
+    it('renders the healing illusion modal with characters, combatSummary creatures, or no data', () => {
+      const testCases = [
+        { name: 'with characters', props: { characters: [{ name: 'Alric', type: 'player', size: 'Medium', currentHp: 20, maxHp: 30 }] } },
+        { name: 'with combatSummary', props: { combatSummary: { creatures: [{ name: 'Target', currentHp: 10, maxHp: 25 }] } } },
+        { name: 'with no data', props: { characters: null, combatSummary: null } },
+      ];
 
-      render(<CharActionModals
-        {...createBaseProps({ playerStats })}
-        characters={characters}
-        modalState={{ healingIllusionModal: {} }}
-        setModalState={vi.fn()}
-      />);
-
-      expect(screen.getByText('Healing Illusion')).toBeInTheDocument();
-    });
-
-    it('renders the healing illusion modal with no characters or combatSummary', () => {
-      render(<CharActionModals
-        {...createBaseProps()}
-        characters={null}
-        modalState={{ healingIllusionModal: {} }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByText('Healing Illusion')).toBeInTheDocument();
-    });
-  });
-
-  describe('buildInvokeDuplicityTargets', () => {
-    it('renders the invoke duplicity modal with the correct title', () => {
-      const playerStats = { name: 'Alric' };
-
-      render(<CharActionModals
-        {...createBaseProps({ playerStats })}
-        modalState={{ invokeDuplicityModal: {} }}
-        setModalState={vi.fn()}
-      />);
-
-      expect(screen.getByText(/Improved Duplicity.*Choose Allies/)).toBeInTheDocument();
-    });
-  });
-
-  describe('findCreatureMaxHp / findCreatureCurrentHp', () => {
-    // These are internal helper functions used by handleHealingIllusionConfirm.
-    // They are tested implicitly through the Healing Illusion modal rendering.
-
-    it('renders the healing illusion modal when combatSummary creatures are provided', () => {
-      const playerStats = { name: 'Caster', level: 5 };
-      const combatSummary = { creatures: [{ name: 'Target', currentHp: 10, maxHp: 25 }] };
-
-      render(<CharActionModals
-        {...createBaseProps({ playerStats })}
-        combatSummary={combatSummary}
-        modalState={{ healingIllusionModal: {} }}
-        setModalState={vi.fn()}
-      />);
-
-      expect(screen.getByText('Healing Illusion')).toBeInTheDocument();
-    });
-
-    it('renders the healing illusion modal when characters provide HP data', () => {
-      const playerStats = { name: 'Caster', level: 3 };
-      const characters = [{ name: 'Target', maxHp: 15, currentHp: 5 }];
-
-      render(<CharActionModals
-        {...createBaseProps({ playerStats })}
-        characters={characters}
-        modalState={{ healingIllusionModal: {} }}
-        setModalState={vi.fn()}
-      />);
-
-      expect(screen.getByText('Healing Illusion')).toBeInTheDocument();
+      for (const { props } of testCases) {
+        vi.clearAllMocks();
+        cleanup();
+        render(<CharActionModals
+          {...createBaseProps(props)}
+          modalState={{ healingIllusionModal: {} }}
+          setModalState={vi.fn()}
+        />);
+        expect(screen.getByText('Healing Illusion')).toBeInTheDocument();
+      }
     });
   });
 });
@@ -371,20 +322,6 @@ describe('CharActionModals — internal async handlers', () => {
     });
   });
 
-  describe('handleInvokeDuplicityConfirm', () => {
-    it('renders the invoke duplicity modal with the correct title', () => {
-      const playerStats = { name: 'Alric' };
-
-      render(<CharActionModals
-        {...createBaseProps({ playerStats })}
-        modalState={{ invokeDuplicityModal: {} }}
-        setModalState={vi.fn()}
-      />);
-
-      expect(screen.getByText(/Improved Duplicity.*Choose Allies/)).toBeInTheDocument();
-    });
-  });
-
   describe('handleStarryChaliceConfirm', () => {
     it('displays the starry chalice title in the modal', () => {
       const playerStats = { name: 'Caster' };
@@ -400,7 +337,7 @@ describe('CharActionModals — internal async handlers', () => {
   });
 
   describe('handleEpitomeConfirm', () => {
-    it('renders the epitome modal without crashing', () => {
+    it('renders the epitome modal with the correct title', () => {
       const playerStats = { name: 'Caster' };
 
       render(<CharActionModals
@@ -414,7 +351,7 @@ describe('CharActionModals — internal async handlers', () => {
   });
 
   describe('handleDestructiveStrideConfirm', () => {
-    it('renders the destructive stride modal without crashing', () => {
+    it('renders the destructive stride modal with the correct title', () => {
       const playerStats = { name: 'Monk' };
 
       render(<CharActionModals
@@ -428,19 +365,7 @@ describe('CharActionModals — internal async handlers', () => {
   });
 
   describe('handleDestructiveStrideTargetConfirm / handleDestructiveStrideTargetSkip', () => {
-    it('renders the destructive stride target modal with the correct title', () => {
-      const playerStats = { name: 'Monk' };
-
-      render(<CharActionModals
-        {...createBaseProps({ playerStats })}
-        modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }] } }}
-        setModalState={vi.fn()}
-      />);
-
-      expect(screen.getByText('Destructive Stride — Choose Target')).toBeInTheDocument();
-    });
-
-    it('renders the target modal with the instruction description', () => {
+    it('renders the destructive stride target modal with the instruction description', () => {
       const playerStats = { name: 'Monk' };
 
       render(<CharActionModals

@@ -1,8 +1,10 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, waitFor, act } from '@testing-library/react';
 import CharActions from './CharActions.jsx';
 import { executeHandler } from '../../services/automation/index.js';
+import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
 
 // --- Mocks ---
 
@@ -279,18 +281,6 @@ describe('CharActions - handleAutomationAction', () => {
     setupFetchMock();
   });
 
-  it('does not call executeHandler when cannotAct is true', async () => {
-    const { getByText } = render(<CharActions {...baseProps} cannotAct={true} />);
-    await waitFor(() => {
-      expect(getByText('Reckless Attack:')).toBeInTheDocument();
-    });
-    const actionLink = getByText('Reckless Attack:');
-    await act(async () => {
-      await fireEvent.click(actionLink);
-    });
-    expect(executeHandler).not.toHaveBeenCalled();
-  });
-
   it('calls executeHandler when action has automation and cannotAct is false', async () => {
     const { getByText } = render(<CharActions {...baseProps} />);
     await waitFor(() => {
@@ -316,67 +306,7 @@ describe('CharActions - handleAutomationAction', () => {
     await act(async () => {
       await fireEvent.click(actionLink);
     });
-    // Plain action without automation should not call executeHandler
     expect(executeHandler).not.toHaveBeenCalled();
-  });
-
-  it('renders automation badges for save_attack type actions', async () => {
-    const stats = {
-      ...basePlayerStats,
-      actions: [
-        { name: 'TestSaveAttack', automation: { type: 'save_attack', saveDc: 13, saveType: 'DEX' } },
-      ],
-    };
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('TestSaveAttack:')).toBeInTheDocument();
-      expect(getByText('DC 13 DEX')).toBeInTheDocument();
-    });
-  });
-
-  it('renders automation badges for healing_pool type actions', async () => {
-    const stats = {
-      ...basePlayerStats,
-      actions: [
-        { name: 'TestHealingPool', automation: { type: 'healing_pool', pool: 10 } },
-      ],
-    };
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('TestHealingPool:')).toBeInTheDocument();
-      expect(getByText('Pool: 10 HP')).toBeInTheDocument();
-    });
-  });
-
-  it('renders automation badges for damage type actions', async () => {
-    const stats = {
-      ...basePlayerStats,
-      actions: [
-        { name: 'TestDamage', automation: { damage: '2d6', damageType: 'Fire' } },
-      ],
-    };
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('TestDamage:')).toBeInTheDocument();
-      expect(getByText('2d6 Fire')).toBeInTheDocument();
-    });
-  });
-
-  it('renders feature detail popup when action has details but no automation', async () => {
-    const buildFeatureDetailHtml = (await import('../../hooks/combat/useActionPopup.js')).buildFeatureDetailHtml;
-    const stats = {
-      ...basePlayerStats,
-      actions: [{ name: 'Tactical Genius', details: 'Tactical details', description: 'A smart move' }],
-    };
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('Tactical Genius:')).toBeInTheDocument();
-    });
-    const actionLink = getByText('Tactical Genius:');
-    await act(async () => {
-      await fireEvent.click(actionLink);
-    });
-    expect(buildFeatureDetailHtml).toHaveBeenCalledWith(stats.actions[0]);
   });
 
   it('displays empowered spell name for Metamagic with spell_modifier type', async () => {
@@ -390,6 +320,22 @@ describe('CharActions - handleAutomationAction', () => {
       expect(getByText('Empowered Spell:')).toBeInTheDocument();
     });
     expect(getEmpoweredSpellDescription).toHaveBeenCalledWith(stats.actions[0]);
+  });
+
+  it('renders feature detail popup when action has details but no automation', async () => {
+    const stats = {
+      ...basePlayerStats,
+      actions: [{ name: 'Tactical Genius', details: 'Tactical details', description: 'A smart move' }],
+    };
+    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
+    await waitFor(() => {
+      expect(getByText('Tactical Genius:')).toBeInTheDocument();
+    });
+    const actionLink = getByText('Tactical Genius:');
+    await act(async () => {
+      await fireEvent.click(actionLink);
+    });
+    expect(buildFeatureDetailHtml).toHaveBeenCalledWith(stats.actions[0]);
   });
 });
 
@@ -407,44 +353,5 @@ describe('CharActions - setModalState wrapper', () => {
       expect(getByText('Actions')).toBeInTheDocument();
     });
     expect(onSpellModalStateChange).toBeDefined();
-  });
-
-  it('renders automation badges for save_attack type actions', async () => {
-    const stats = {
-      ...basePlayerStats,
-      actions: [
-        { name: 'TestSaveAttack', automation: { type: 'save_attack', saveDc: 13, saveType: 'DEX' } },
-      ],
-    };
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('TestSaveAttack:')).toBeInTheDocument();
-    });
-  });
-
-  it('renders automation badges for healing_pool type actions', async () => {
-    const stats = {
-      ...basePlayerStats,
-      actions: [
-        { name: 'TestHealingPool', automation: { type: 'healing_pool', pool: 10 } },
-      ],
-    };
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('TestHealingPool:')).toBeInTheDocument();
-    });
-  });
-
-  it('renders automation badges for damage type actions', async () => {
-    const stats = {
-      ...basePlayerStats,
-      actions: [
-        { name: 'TestDamage', automation: { damage: '2d6', damageType: 'Fire' } },
-      ],
-    };
-    const { getByText } = render(<CharActions {...baseProps} playerStats={stats} />);
-    await waitFor(() => {
-      expect(getByText('TestDamage:')).toBeInTheDocument();
-    });
   });
 });

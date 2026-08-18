@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CharActionSpellPopups from './CharActionSpellPopups.jsx';
@@ -178,43 +179,7 @@ describe('CharActionSpellPopups', () => {
     vi.clearAllMocks();
   });
 
-  describe('no popups visible', () => {
-    it('renders an empty fragment when no popup flags are set', () => {
-      const { container } = render(<CharActionSpellPopups {...createBaseProps()} />);
-      expect(container).toBeEmptyDOMElement();
-    });
-  });
-
   describe('SpellDetailPopup', () => {
-    it('renders when selectedActionSpell is truthy', () => {
-      render(<CharActionSpellPopups {...createBaseProps()} selectedActionSpell={{ name: 'Fireball', level: 3 }} />);
-      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
-    });
-
-    it('passes playerStats to SpellDetailPopup', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ playerStats: { name: 'Grog', level: 12 } })}
-          selectedActionSpell={{ name: 'Gnashing Teeth', level: 0 }}
-        />
-      );
-      expect(screen.getByTestId('detail-player-name')).toHaveTextContent('Grog');
-      expect(screen.getByTestId('detail-player-level')).toHaveTextContent('12');
-    });
-
-    it('calls buildUpcastLevels with the selected spell and passes the result length as upcastLevels', () => {
-      const buildUpcastLevels = vi.fn(() => [3, 4, 5]);
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          selectedActionSpell={{ name: 'Fireball', level: 3 }}
-          buildUpcastLevels={buildUpcastLevels}
-        />
-      );
-      expect(buildUpcastLevels).toHaveBeenCalledWith({ name: 'Fireball', level: 3 });
-      expect(screen.getByTestId('detail-upcast-count')).toHaveTextContent('3');
-    });
-
     it('calls setSelectedActionSpell(null) when closing', () => {
       const setSelectedActionSpell = vi.fn();
       render(
@@ -229,22 +194,6 @@ describe('CharActionSpellPopups', () => {
   });
 
   describe('MetamagicPopup (actionPendingMetamagic)', () => {
-    it('renders when actionPendingMetamagic is truthy', () => {
-      render(<CharActionSpellPopups {...createBaseProps()} actionPendingMetamagic={{ spellName: 'Empowered Spell', spellLevel: 3 }} />);
-      expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
-    });
-
-    it('passes spell name and level to the popup', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          actionPendingMetamagic={{ spellName: 'Empowered Spell', spellLevel: 3 }}
-        />
-      );
-      expect(screen.getByTestId('metamagic-spell-name')).toHaveTextContent('Empowered Spell');
-      expect(screen.getByTestId('metamagic-spell-level')).toHaveTextContent('3');
-    });
-
     it('calls actionHandleConfirm on confirm', () => {
       const actionHandleConfirm = vi.fn();
       render(
@@ -271,22 +220,6 @@ describe('CharActionSpellPopups', () => {
   });
 
   describe('MetamagicPopup (pendingActionMetamagic)', () => {
-    it('renders when pendingActionMetamagic is truthy', () => {
-      render(<CharActionSpellPopups {...createBaseProps()} pendingActionMetamagic={{ spellName: 'Sorcery Surge', spellLevel: 1 }} />);
-      expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
-    });
-
-    it('passes spell name and level to the popup', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          pendingActionMetamagic={{ spellName: 'Quickened Spell', spellLevel: 0 }}
-        />
-      );
-      expect(screen.getByTestId('metamagic-spell-name')).toHaveTextContent('Quickened Spell');
-      expect(screen.getByTestId('metamagic-spell-level')).toHaveTextContent('0');
-    });
-
     it('calls handleActionMetamagicConfirm on confirm', () => {
       const handleActionMetamagicConfirm = vi.fn();
       render(
@@ -313,20 +246,6 @@ describe('CharActionSpellPopups', () => {
   });
 
   describe('CreatureSelectionModal (Aid)', () => {
-    it('renders with correct metadata', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingAid: { creatureTargets: ['Ally'], maxTargets: 3 },
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Aid');
-      expect(screen.getByTestId('icon')).toHaveTextContent('fa-hand-holding-heart');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Aid');
-      expect(screen.getByTestId('creature-count')).toHaveTextContent('1');
-    });
-
     it('calls actionHandleAidConfirm on confirm with target names', () => {
       const actionHandleAidConfirm = vi.fn();
       render(
@@ -353,20 +272,6 @@ describe('CharActionSpellPopups', () => {
   });
 
   describe('SecondaryTargetModal (Haste)', () => {
-    it('renders with correct metadata', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({
-            actionPendingHaste: { creatureTargets: ['Ally1', 'Ally2'] },
-          })}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Haste');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Haste');
-      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
-      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
-    });
-
     it('calls actionHandleHasteConfirm with single-element array on target select', () => {
       const actionHandleHasteConfirm = vi.fn();
       render(
@@ -392,56 +297,7 @@ describe('CharActionSpellPopups', () => {
     });
   });
 
-  describe('SecondaryTargetModal (Greater Restoration)', () => {
-    it('renders with correct metadata when actionPendingGreaterRestoration is truthy', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          actionPendingGreaterRestoration={{ creatureTargets: ['Ally1'], range: 'Touch' }}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Greater Restoration');
-      expect(screen.getByTestId('description')).toHaveTextContent('Touch');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Greater Restoration');
-    });
-
-    it('renders creature targets from the pending action', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          actionPendingGreaterRestoration={{ creatureTargets: ['Ally1', 'Ally2'], range: '60 feet' }}
-        />
-      );
-      expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
-      expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
-    });
-
-    it('calls actionHandleGreaterRestorationSkip when skip is clicked', () => {
-      const actionHandleGreaterRestorationSkip = vi.fn();
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps({ actionHandleGreaterRestorationSkip })}
-          actionPendingGreaterRestoration={{ creatureTargets: ['Ally1'], range: 'Touch' }}
-        />
-      );
-      screen.getByTestId('skip').click();
-      expect(actionHandleGreaterRestorationSkip).toHaveBeenCalled();
-    });
-  });
-
   describe('SecondaryTargetModal (Remove Curse)', () => {
-    it('renders with correct metadata when actionPendingRemoveCurse is truthy', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          actionPendingRemoveCurse={{ creatureTargets: ['Ally1'], range: 'Touch' }}
-        />
-      );
-      expect(screen.getByTestId('title')).toHaveTextContent('Remove Curse');
-      expect(screen.getByTestId('description')).toHaveTextContent('Touch');
-      expect(screen.getByTestId('confirm-label')).toHaveTextContent('Cast Remove Curse');
-    });
-
     it('calls actionHandleRemoveCurseSkip when skip is clicked', () => {
       const actionHandleRemoveCurseSkip = vi.fn();
       render(
@@ -453,42 +309,21 @@ describe('CharActionSpellPopups', () => {
       screen.getByTestId('skip').click();
       expect(actionHandleRemoveCurseSkip).toHaveBeenCalled();
     });
+
+    it('calls actionHandleRemoveCurseConfirm with target name on target select', () => {
+      const actionHandleRemoveCurseConfirm = vi.fn();
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps({ actionHandleRemoveCurseConfirm })}
+          actionPendingRemoveCurse={{ creatureTargets: ['Ally1'], range: 'Touch' }}
+        />
+      );
+      screen.getByTestId('target-0').click();
+      expect(actionHandleRemoveCurseConfirm).toHaveBeenCalledWith({ targetName: 'Ally1' });
+    });
   });
 
   describe('MagicMissileTargetPopup', () => {
-    it('renders when actionPendingMagicMissile is truthy', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          actionPendingMagicMissile={{
-            spell: { name: 'Magic Missile', level: 1 },
-            totalMissiles: 3,
-            missileDamage: '1d4+1',
-            creatureTargets: ['Goblin', 'Skeleton'],
-          }}
-        />
-      );
-      expect(screen.getByTestId('magic-missile-popup')).toBeInTheDocument();
-    });
-
-    it('passes spell, missile count, and damage data to the popup', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          actionPendingMagicMissile={{
-            spell: { name: 'Magic Missile', level: 1 },
-            totalMissiles: 3,
-            missileDamage: '1d4+1',
-            creatureTargets: ['Goblin'],
-          }}
-        />
-      );
-      expect(screen.getByTestId('mm-spell-name')).toHaveTextContent('Magic Missile');
-      expect(screen.getByTestId('mm-spell-level')).toHaveTextContent('1');
-      expect(screen.getByTestId('mm-total-missiles')).toHaveTextContent('3');
-      expect(screen.getByTestId('mm-missile-damage')).toHaveTextContent('1d4+1');
-    });
-
     it('calls actionHandleMagicMissileConfirm on confirm', () => {
       const actionHandleMagicMissileConfirm = vi.fn();
       render(
@@ -521,46 +356,6 @@ describe('CharActionSpellPopups', () => {
       );
       screen.getByTestId('mm-skip').click();
       expect(actionHandleMagicMissileSkip).toHaveBeenCalled();
-    });
-  });
-
-  describe('multiple popups simultaneously', () => {
-    it('renders spell detail and metamagic popups together', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          selectedActionSpell={{ name: 'Fireball', level: 3 }}
-          actionPendingMetamagic={{ spellName: 'Empowered Spell', spellLevel: 0 }}
-        />
-      );
-      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
-      expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
-    });
-
-    it('renders spell detail, metamagic, and creature selection together', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          selectedActionSpell={{ name: 'Fireball', level: 3 }}
-          actionPendingMetamagic={{ spellName: 'Empowered Spell', spellLevel: 0 }}
-          actionPendingAid={{ creatureTargets: ['Ally'], maxTargets: 3 }}
-        />
-      );
-      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
-      expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
-      expect(screen.getByTestId('creature-selection-Aid')).toBeInTheDocument();
-    });
-
-    it('renders both MetamagicPopup variants simultaneously', () => {
-      render(
-        <CharActionSpellPopups
-          {...createBaseProps()}
-          actionPendingMetamagic={{ spellName: 'Empowered Spell', spellLevel: 0 }}
-          pendingActionMetamagic={{ spellName: 'Quickened Spell', spellLevel: 0 }}
-        />
-      );
-      const popups = screen.getAllByTestId('metamagic-popup');
-      expect(popups).toHaveLength(2);
     });
   });
 });

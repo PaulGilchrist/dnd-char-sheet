@@ -1,4 +1,7 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Cleanup: Consolidated 2 redundant Cloak of Shadows skip tests into 1 parameterized test (same behavior, different action names).
+// Rewrote 2024 no-FP message test to assert key text content instead of brittle exact HTML string.
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
@@ -221,50 +224,12 @@ describe('CharActions monk ki focus point skip logic', () => {
   });
 
   describe('Flurry of Healing and Harm skip', () => {
-    it('skips focus point spend for Hand of Healing when Flurry of Healing and Harm is active', async () => {
-      mountAction('Hand of Healing', {
+    it.each(['Hand of Healing', 'Flurry of Blows', 'Heightened Flurry of Blows'])('skips focus point spend for %s when Flurry of Healing and Harm is active', async (actionName) => {
+      mountAction(actionName, {
         specialActions: ['Flurry of Healing and Harm'],
       });
 
-      const actionEl = screen.getByText(/Hand of Healing:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalled();
-      });
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        'TestCharacter',
-        'focusPoints',
-        expect.any(Number),
-        'test-campaign'
-      );
-    });
-
-    it('skips focus point spend for Flurry of Blows when Flurry of Healing and Harm is active', async () => {
-      mountAction('Flurry of Blows', {
-        specialActions: ['Flurry of Healing and Harm'],
-      });
-
-      const actionEl = screen.getByText(/Flurry of Blows:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalled();
-      });
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        'TestCharacter',
-        'focusPoints',
-        expect.any(Number),
-        'test-campaign'
-      );
-    });
-
-    it('skips focus point spend for Heightened Flurry of Blows when Flurry of Healing and Harm is active', async () => {
-      mountAction('Heightened Flurry of Blows', {
-        specialActions: ['Flurry of Healing and Harm'],
-      });
-
-      const actionEl = screen.getByText(/Heightened Flurry of Blows:/);
+      const actionEl = screen.getByText(new RegExp(`${actionName}:`));
       await act(async () => { fireEvent.click(actionEl); });
 
       await waitFor(() => {
@@ -280,31 +245,15 @@ describe('CharActions monk ki focus point skip logic', () => {
   });
 
   describe('Cloak of Shadows skip', () => {
-    it('skips focus point spend for Flurry of Blows when Cloak of Shadows is active', async () => {
-      mountAction('Flurry of Blows', {
+    it.each([
+      { actionName: 'Flurry of Blows', label: 'Flurry of Blows' },
+      { actionName: 'Heightened Flurry of Blows', label: 'Heightened Flurry of Blows' },
+    ])('skips focus point spend for $actionName when Cloak of Shadows is active', async ({ actionName }) => {
+      mountAction(actionName, {
         buffs: [{ effect: 'cloak_of_shadows' }],
       });
 
-      const actionEl = screen.getByText(/Flurry of Blows:/);
-      await act(async () => { fireEvent.click(actionEl); });
-
-      await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalled();
-      });
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        'TestCharacter',
-        'focusPoints',
-        expect.any(Number),
-        'test-campaign'
-      );
-    });
-
-    it('skips focus point spend for Heightened Flurry of Blows when Cloak of Shadows is active', async () => {
-      mountAction('Heightened Flurry of Blows', {
-        buffs: [{ effect: 'cloak_of_shadows' }],
-      });
-
-      const actionEl = screen.getByText(/Heightened Flurry of Blows:/);
+      const actionEl = screen.getByText(new RegExp(`${actionName}:`));
       await act(async () => { fireEvent.click(actionEl); });
 
       await waitFor(() => {
@@ -360,9 +309,7 @@ describe('CharActions monk ki focus point skip logic', () => {
       await act(async () => { fireEvent.click(actionEl); });
 
       await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(
-          '<b>Flurry of Blows</b><br/>No Focus Points remaining.'
-        );
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.stringContaining('No Focus Points'));
       });
     });
   });

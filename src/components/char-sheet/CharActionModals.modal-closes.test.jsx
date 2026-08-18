@@ -7,7 +7,6 @@
 //
 // Already covered elsewhere (NOT duplicated):
 // - shieldBashModal, quiveringPalmModal → modal-closes-2.test.jsx
-// - openHandFromFlurry event dispatching → modal-closes-2.test.jsx
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';

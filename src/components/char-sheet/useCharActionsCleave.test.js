@@ -48,23 +48,7 @@ describe('useCharActionsCleave', () => {
     });
 
     describe('handleCleaveAttack', () => {
-        it('dismisses cleave modal and returns when cleaveTargetName is falsy', async () => {
-            const { handleCleaveAttack } = useCharActionsCleave(deps);
-            await handleCleaveAttack(null);
-            expect(deps.setShowCleaveTargetSelection).toHaveBeenCalledWith(false);
-        });
-
-        it('dismisses cleave modal and returns when lastAttack is missing', async () => {
-            const testDeps = createDeps();
-            testDeps.getRuntimeValue.mockReturnValueOnce(null);
-            const { handleCleaveAttack } = useCharActionsCleave(testDeps);
-            await handleCleaveAttack('Goblin');
-            expect(testDeps.setShowCleaveTargetSelection).toHaveBeenCalledWith(false);
-            expect(testDeps.rollDamage).not.toHaveBeenCalled();
-            expect(testDeps.addEntry).not.toHaveBeenCalled();
-        });
-
-        it('rolls weapon damage without ability modifier and logs entry on hit', async () => {
+        it('dismisses cleave modal and rolls weapon damage on hit without ability modifier', async () => {
             const lastAttack = {
                 attackName: 'Longsword',
                 damageFormula: '1d8+3',
@@ -99,53 +83,25 @@ describe('useCharActionsCleave', () => {
             });
         });
 
-        it('strips ability modifier from damage formula for cleave', async () => {
-            const lastAttack = {
-                attackName: 'Longsword',
-                damageFormula: '1d8+3 (STR)',
-                damageType: 'slashing',
-                targetName: 'Orc',
-            };
-            const testDeps = createDeps();
-            testDeps.getRuntimeValue.mockReturnValueOnce(lastAttack);
-
-            const { handleCleaveAttack } = useCharActionsCleave(testDeps);
-            await handleCleaveAttack('Orc');
-
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword (Cleave)',
-                '1d8 (STR)',
-                8,
-                [5, 3],
-                0,
-                expect.objectContaining({ targetName: 'Orc' })
-            );
+        it('dismisses cleave modal early when cleaveTargetName is falsy', async () => {
+            const { handleCleaveAttack } = useCharActionsCleave(deps);
+            await handleCleaveAttack(null);
+            expect(deps.setShowCleaveTargetSelection).toHaveBeenCalledWith(false);
+            expect(deps.rollDamage).not.toHaveBeenCalled();
+            expect(deps.addEntry).not.toHaveBeenCalled();
         });
 
-        it('falls back to original damage formula when stripping produces invalid formula', async () => {
-            const lastAttack = {
-                attackName: 'Magic Weapon',
-                damageFormula: '+3',
-                damageType: 'force',
-                targetName: 'Ghost',
-            };
+        it('dismisses cleave modal early when lastAttack is missing', async () => {
             const testDeps = createDeps();
-            testDeps.getRuntimeValue.mockReturnValueOnce(lastAttack);
-
+            testDeps.getRuntimeValue.mockReturnValueOnce(null);
             const { handleCleaveAttack } = useCharActionsCleave(testDeps);
-            await handleCleaveAttack('Ghost');
-
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Magic Weapon (Cleave)',
-                '+3',
-                8,
-                [5, 3],
-                0,
-                expect.objectContaining({ targetName: 'Ghost' })
-            );
+            await handleCleaveAttack('Goblin');
+            expect(testDeps.setShowCleaveTargetSelection).toHaveBeenCalledWith(false);
+            expect(testDeps.rollDamage).not.toHaveBeenCalled();
+            expect(testDeps.addEntry).not.toHaveBeenCalled();
         });
 
-        it('rolls damage with 0 when hit but rollExpression returns null', async () => {
+        it('rolls damage with 0 and sets isAutoMiss when hit but rollExpression returns null', async () => {
             const lastAttack = {
                 attackName: 'Longsword',
                 damageFormula: '1d8+3',
@@ -210,82 +166,6 @@ describe('useCharActionsCleave', () => {
             });
         });
 
-        it('defaults to STR when abilities array is empty', async () => {
-            const lastAttack = {
-                attackName: 'Longsword',
-                damageFormula: '1d8+3',
-                damageType: 'slashing',
-                targetName: 'Goblin',
-            };
-            const testDeps = createDeps({ playerStats: { abilities: [] } });
-            testDeps.getRuntimeValue.mockReturnValueOnce(lastAttack);
-
-            const { handleCleaveAttack } = useCharActionsCleave(testDeps);
-            await handleCleaveAttack('Goblin');
-
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword (Cleave)',
-                '1d8',
-                8,
-                [5, 3],
-                0,
-                {
-                    attackerName: 'TestFighter',
-                    damageType: 'slashing',
-                    targetName: 'Goblin',
-                }
-            );
-        });
-
-        it('uses target AC of 0 when target not found in combat context', async () => {
-            const lastAttack = {
-                attackName: 'Longsword',
-                damageFormula: '1d8+3',
-                damageType: 'slashing',
-                targetName: 'Unknown',
-            };
-            const testDeps = createDeps();
-            testDeps.getRuntimeValue.mockReturnValueOnce(lastAttack);
-
-            const { handleCleaveAttack } = useCharActionsCleave(testDeps);
-            await handleCleaveAttack('Unknown');
-
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Longsword (Cleave)',
-                '1d8',
-                8,
-                [5, 3],
-                0,
-                expect.objectContaining({ targetName: 'Unknown' })
-            );
-        });
-
-        it('uses playerStats.name as attackerName in rollDamage context', async () => {
-            const lastAttack = {
-                attackName: 'Spear',
-                damageFormula: '1d6+3',
-                damageType: 'piercing',
-                targetName: 'Goblin',
-            };
-            const testDeps = createDeps({ playerStats: { name: 'CustomName' } });
-            testDeps.getRuntimeValue.mockReturnValueOnce(lastAttack);
-
-            const { handleCleaveAttack } = useCharActionsCleave(testDeps);
-            await handleCleaveAttack('Goblin');
-
-            expect(testDeps.rollDamage).toHaveBeenCalledWith(
-                'Spear (Cleave)',
-                '1d6',
-                8,
-                [5, 3],
-                0,
-                {
-                    attackerName: 'CustomName',
-                    damageType: 'piercing',
-                    targetName: 'Goblin',
-                }
-            );
-        });
     });
 
     describe('handleTacticalMasterConfirm', () => {

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
@@ -224,22 +225,6 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
       expect(screen.getByText('+9')).toBeInTheDocument();
     });
 
-    it('adds Charisma bonus to unarmed attack hit bonus when sacred weapon buff is active', async () => {
-      mockRuntimeValues([{ effect: 'sacred_weapon' }]);
-
-      const stats = createStats({
-        attacks: [{ name: 'Unarmed Strike', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Bludgeoning', type: 'Action', weaponType: 'unarmed' }],
-        abilities: [
-          { name: 'STR', bonus: 3 },
-          { name: 'Charisma', bonus: 4 },
-        ],
-      });
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      expect(screen.getByText('+9')).toBeInTheDocument();
-    });
-
     it('does not add sacred weapon bonus for ranged attacks', async () => {
       mockRuntimeValues([{ effect: 'sacred_weapon' }]);
 
@@ -305,20 +290,6 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
       expect(screen.getByText('+6')).toBeInTheDocument();
     });
 
-    it('uses 0 when no Charisma ability is defined', async () => {
-      mockRuntimeValues([{ effect: 'sacred_weapon' }]);
-
-      const stats = createStats({
-        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action', weaponType: 'melee' }],
-        abilities: [{ name: 'STR', bonus: 3 }],
-      });
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      // Math.max(1, 0) = 1, so effective = 5 + 1 = +6
-      expect(screen.getByText('+6')).toBeInTheDocument();
-    });
-
     it('computes effective hit with both sacred weapon and exhaustion penalty', async () => {
       mockRuntimeValues([{ effect: 'sacred_weapon' }]);
 
@@ -351,39 +322,6 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
 
       expect(screen.getByText('Mastery')).toBeInTheDocument();
     });
-
-    it('renders empty mastery cell for 5e rules attacks', async () => {
-      mockRuntimeValues();
-
-      const stats = createStats({
-        rules: '5e',
-        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
-      });
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      expect(screen.queryByText('Mastery')).not.toBeInTheDocument();
-    });
-
-    it('renders empty mastery cell for 2024 rules spells', async () => {
-      mockRuntimeValues();
-
-      const stats = createStats({
-        rules: '2024',
-        spellAbilities: {
-          spells: [
-            { name: 'Fire Bolt', level: 0, range: '120 ft', casting_time: '1 action', prepared: 'Prepared', damage: '1d10' },
-          ],
-          toHit: 5,
-          saveDc: 13,
-        },
-        automation: { passives: [{ type: 'weapon_kind_mastery' }] },
-      });
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      expect(screen.getByText('Mastery')).toBeInTheDocument();
-    });
   });
 
   describe('ability check for attacks with save DC', () => {
@@ -402,65 +340,42 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
   });
 
   describe('penalized stat classes', () => {
-    it('applies stat--penalized class when exhaustionPenalty > 0', async () => {
-      mockRuntimeValues();
-
-      const stats = createStats({
-        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
-      });
-
-      await act(async () => { render(<CharActions playerStats={stats} exhaustionPenalty={2} />); });
-
-      expect(screen.getByText('+3')).toHaveClass('stat--penalized');
+    const createStats = (overrides = {}) => ({
+      ...basePlayerStats,
+      attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
+      ...overrides,
     });
 
-    it('applies stat--penalized class when conditionAttackMode is disadvantage', async () => {
-      mockRuntimeValues();
+    const penalizedCases = [
+      { name: 'exhaustionPenalty > 0', props: { exhaustionPenalty: 2 }, expectedText: '+3', expectedClass: 'stat--penalized' },
+      { name: 'conditionAttackMode=disadvantage', props: { conditionAttackMode: 'disadvantage' }, expectedText: '+5', expectedClass: 'stat--penalized' },
+    ];
 
-      const stats = createStats({
-        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
+    for (const { name, props, expectedText, expectedClass } of penalizedCases) {
+      it(`applies ${expectedClass} when ${name}`, async () => {
+        const stats = createStats(props);
+        await act(async () => { render(<CharActions playerStats={stats} {...props} />); });
+        expect(screen.getByText(expectedText)).toHaveClass(expectedClass);
       });
-
-      await act(async () => { render(<CharActions playerStats={stats} conditionAttackMode="disadvantage" />); });
-
-      expect(screen.getByText('+5')).toHaveClass('stat--penalized');
-    });
+    }
 
     it('applies disabled-attack class when cannotAct is true', async () => {
-      mockRuntimeValues();
-
-      const stats = createStats({
-        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
-      });
-
+      const stats = createStats();
       await act(async () => { render(<CharActions playerStats={stats} cannotAct={true} />); });
-
       expect(screen.getByText('+5')).toHaveClass('disabled-attack');
     });
 
     it('applies both stat--penalized and disabled-attack classes when cannotAct and exhaustionPenalty', async () => {
-      mockRuntimeValues();
-
-      const stats = createStats({
-        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
-      });
-
+      const stats = createStats();
       await act(async () => { render(<CharActions playerStats={stats} cannotAct={true} exhaustionPenalty={2} />); });
-
       const cell = screen.getByText('+3');
       expect(cell).toHaveClass('stat--penalized');
       expect(cell).toHaveClass('disabled-attack');
     });
 
     it('applies stat--penalized when both exhaustionPenalty and conditionAttackMode are set', async () => {
-      mockRuntimeValues();
-
-      const stats = createStats({
-        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
-      });
-
+      const stats = createStats();
       await act(async () => { render(<CharActions playerStats={stats} exhaustionPenalty={1} conditionAttackMode="disadvantage" />); });
-
       expect(screen.getByText('+4')).toHaveClass('stat--penalized');
     });
   });

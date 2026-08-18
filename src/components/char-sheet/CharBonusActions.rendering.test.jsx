@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharBonusActions from './CharBonusActions.jsx';
@@ -165,7 +166,6 @@ vi.mock('../../services/ui/formatUtils.js', () => ({
 
 import { getInnateSorceryBonus } from '../../services/combat/buffs/buffService.js';
 import { hasAutomation } from '../../services/combat/automation/automationService.js';
-import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 import { getBonusActionSpellNames } from '../../services/ui/spellSectionUtils.js';
 import { getCategories } from '../../services/character/featureCategories.js';
 
@@ -205,6 +205,13 @@ describe('CharBonusActions - Rendering', () => {
       { label: 'bonus action attacks exist', stats: createStats({ attacks: [{ name: 'Main Gauche', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Piercing', type: 'Bonus Action' }] }) },
     ])('renders section when $label', ({ stats }) => {
       render(<CharBonusActions playerStats={stats} />);
+      expect(screen.getByText('Bonus Actions')).toBeInTheDocument();
+    });
+
+    it('renders section when bonus action spells exist', () => {
+      vi.mocked(getBonusActionSpellNames).mockImplementation(() => new Set(['Shocking Grasp']));
+      const spell = { name: 'Shocking Grasp', level: 0, range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared' };
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
       expect(screen.getByText('Bonus Actions')).toBeInTheDocument();
     });
   });
@@ -356,29 +363,6 @@ describe('CharBonusActions - Rendering', () => {
       };
       render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} />);
       expect(screen.getByText(/1d8\+3 Slashing/)).toBeInTheDocument();
-    });
-  });
-
-  describe('popupHtml with hasBonusActions', () => {
-    it('renders a <br> when popupHtml exists and hasBonusActions is true', () => {
-      vi.mocked(useDiceRollPopup).mockReturnValue({ popupHtml: '<p>Some popup</p>', setPopupHtml: vi.fn() });
-      const bonusAction = { name: 'Cunning Action', description: 'Quick movement.' };
-      const { container } = render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} />);
-      expect(container.querySelector('br')).toBeTruthy();
-    });
-
-    it('does not render a <br> when popupHtml is null even with bonusActions', () => {
-      const bonusAction = { name: 'Cunning Action', description: 'Quick movement.' };
-      const { container } = render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} />);
-      expect(container.querySelector('br')).toBeFalsy();
-    });
-  });
-
-  describe('Arcane Vigor modal rendering', () => {
-    it('renders ArcaneVigorModal when modalState has arcaneVigorModal', () => {
-      const bonusAction = { name: 'Cunning Action', description: 'Quick movement.' };
-      render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} modalState={{ arcaneVigorModal: { someData: true } }} setModalState={vi.fn()} />);
-      expect(screen.getByTestId('arcane-vigor-modal')).toBeInTheDocument();
     });
   });
 

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
@@ -193,6 +194,15 @@ function getBaseActionsText() {
   return label.parentElement?.textContent || '';
 }
 
+function mockRuntimeValuesForBaseActions() {
+  getRuntimeValue.mockImplementation((_name, key) => {
+    if (key === 'activeBuffs') return [];
+    if (key === 'hasteExtraActionUsed') return false;
+    if (key === 'activeConditions') return [];
+    return null;
+  });
+}
+
 describe('CharActions base actions rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -202,157 +212,27 @@ describe('CharActions base actions rendering', () => {
   });
 
   describe('base actions list display', () => {
-    it('renders the Base Actions label and all action names from actions.json', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
+    it.each([
+      { actions: ['Hide', 'Dash', 'Disengage', 'Dodge', 'Grapple'], expected: 'Base Actions: Hide, Dash, Disengage, Dodge, Grapple' },
+      { actions: ['Dash', 'Dodge'], expected: 'Base Actions: Dash, Dodge' },
+      { actions: ['Dash'], expected: 'Base Actions: Dash' },
+      { actions: [], expected: 'Base Actions: ' },
+    ])('renders $actions as "$expected"', async ({ actions, expected }) => {
+      mockRuntimeValuesForBaseActions();
+      globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve(actions) });
 
       const stats = createStats();
 
       await act(async () => { render(<CharActions playerStats={stats} />); });
 
       const text = getBaseActionsText();
-      expect(text).toContain('Base Actions:');
-      expect(text).toContain('Hide');
-      expect(text).toContain('Dash');
-      expect(text).toContain('Disengage');
-      expect(text).toContain('Dodge');
-      expect(text).toContain('Grapple');
-    });
-
-    it('renders actions returned from actions.json when the list is shorter', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve(['Dash', 'Dodge']) });
-
-      const stats = createStats();
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      const text = getBaseActionsText();
-      expect(text).toContain('Dash');
-      expect(text).toContain('Dodge');
-      expect(text).not.toContain('Hide');
-      expect(text).not.toContain('Grapple');
-    });
-
-    it('renders an empty actions list when actions.json returns an empty array', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
-
-      const stats = createStats();
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      const label = screen.getByText(/Base Actions:/);
-      expect(label.parentElement?.textContent.trim()).toBe('Base Actions:');
-    });
-
-    it('renders a single action without leading comma', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve(['Dash']) });
-
-      const stats = createStats();
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      const text = getBaseActionsText();
-      expect(text).toBe('Base Actions: Dash');
-    });
-
-    it('separates multiple actions with commas', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve(['Dash', 'Disengage']) });
-
-      const stats = createStats();
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      const text = getBaseActionsText();
-      expect(text).toBe('Base Actions: Dash, Disengage');
+      expect(text).toBe(expected);
     });
   });
 
   describe('special base action rendering', () => {
-    it('renders Hide with base-action-clickable class', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      const stats = createStats();
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      expect(screen.getByText('Hide')).toHaveClass('base-action-clickable');
-    });
-
-    it('renders Dodge with base-action-clickable class', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      const stats = createStats();
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      expect(screen.getByText('Dodge')).toHaveClass('base-action-clickable');
-    });
-
-    it('renders Grapple with base-action-clickable class', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
-      const stats = createStats();
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-
-      expect(screen.getByText('Grapple')).toHaveClass('base-action-clickable');
-    });
-
     it('renders non-special actions as plain text without base-action-clickable class', async () => {
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-
+      mockRuntimeValuesForBaseActions();
       globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve(['Dash', 'Disengage']) });
 
       const stats = createStats();
