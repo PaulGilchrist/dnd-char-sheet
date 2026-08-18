@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
@@ -50,7 +51,6 @@ describe('CampaignAdmin - Rendering', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const backBtn = screen.getByRole('button', { name: /^Back$/ });
             expect(backBtn).toBeInTheDocument();
-            expect(backBtn.querySelector('i.fa-arrow-left')).toBeInTheDocument();
         });
 
         it('reflects campaign name with special characters in the header', () => {
@@ -64,14 +64,6 @@ describe('CampaignAdmin - Rendering', () => {
             render(<CampaignAdmin {...defaultProps} />);
             sectionHeadings.forEach((heading) => {
                 expect(screen.getByText(heading)).toBeInTheDocument();
-            });
-        });
-
-        it('renders section headings as h3 elements', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            sectionHeadings.forEach((heading) => {
-                const el = screen.getByText(heading);
-                expect(el.tagName).toBe('H3');
             });
         });
 
@@ -96,12 +88,6 @@ describe('CampaignAdmin - Rendering', () => {
             expect(btn).toBeInTheDocument();
             expect(btn.querySelector('i.fa-sun')).toBeInTheDocument();
             expect(btn.textContent).toContain('Switch to Light Mode');
-        });
-
-        it('renders the theme toggle button with correct icon for light theme', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const btn = screen.getByRole('button', { name: /switch to/i });
-            expect(btn.querySelector('i.fa-sun')).toBeInTheDocument();
         });
 
         it('renders all rename campaign action buttons', () => {

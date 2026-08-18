@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import BarbarianFeatures from './CharClassFeatures.jsx';
@@ -75,16 +76,11 @@ describe('BarbarianFeatures', () => {
   });
 
   describe('5e ruleset', () => {
-    it('renders extra attacks as 0 for level 3', () => {
-      const stats = buildPlayerStats({ level: 3 });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Extra Attacks: 0');
-    });
-
-    it('renders extra attacks as 1 for level 5', () => {
-      const stats = buildPlayerStats({ level: 5 });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Extra Attacks: 1');
+    it('renders extra attacks based on level (0 for ≤4, 1 for ≥5)', () => {
+      const { container: c3 } = render(<BarbarianFeatures playerStats={buildPlayerStats({ level: 3 })} campaignName="test" />);
+      expect(c3.textContent).toContain('Extra Attacks: 0');
+      const { container: c5 } = render(<BarbarianFeatures playerStats={buildPlayerStats({ level: 5 })} campaignName="test" />);
+      expect(c5.textContent).toContain('Extra Attacks: 1');
     });
 
     it('renders rage points tracked resource at level 2', () => {
@@ -102,7 +98,7 @@ describe('BarbarianFeatures', () => {
       expect(screen.getByText('Rage Points:')).toBeInTheDocument();
     });
 
-    it('renders rage damage bonus from class_specific', () => {
+    it('renders rage damage bonus from class_specific rage_damage_bonus', () => {
       const stats = buildPlayerStats({
         level: 2,
         class: {
@@ -115,21 +111,6 @@ describe('BarbarianFeatures', () => {
       });
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Rage Damage Bonus: 2');
-    });
-
-    it('renders rage damage as 0 when class_specific lacks rage_damage_bonus', () => {
-      const stats = buildPlayerStats({
-        level: 2,
-        class: {
-          name: 'Barbarian',
-          major: {},
-          subclass: {},
-          class_levels: [null, { level: 2, class_specific: { rage_count: 2 } }],
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Rage Damage Bonus: 0');
     });
 
     it('renders weapon mastery as N/A for 5e regardless of class_level data', () => {
@@ -149,8 +130,8 @@ describe('BarbarianFeatures', () => {
   });
 
   describe('2024 ruleset', () => {
-    it('reads extra attacks from classLevel.extra_attacks', () => {
-      const stats = buildPlayerStats({
+    it('reads extra attacks from classLevel.extra_attacks or defaults to 0', () => {
+      const statsWithExtra = buildPlayerStats({
         level: 3,
         rules: '2024',
         class: {
@@ -161,12 +142,10 @@ describe('BarbarianFeatures', () => {
           fightingStyles: [],
         },
       });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Extra Attacks: 2');
-    });
+      const { container: cWith } = render(<BarbarianFeatures playerStats={statsWithExtra} campaignName="test" />);
+      expect(cWith.textContent).toContain('Extra Attacks: 2');
 
-    it('defaults extra attacks to 0 when class_level lacks extra_attacks', () => {
-      const stats = buildPlayerStats({
+      const statsWithout = buildPlayerStats({
         level: 3,
         rules: '2024',
         class: {
@@ -177,11 +156,11 @@ describe('BarbarianFeatures', () => {
           fightingStyles: [],
         },
       });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Extra Attacks: 0');
+      const { container: cWithout } = render(<BarbarianFeatures playerStats={statsWithout} campaignName="test" />);
+      expect(cWithout.textContent).toContain('Extra Attacks: 0');
     });
 
-    it('reads rage count from classLevel.rages', () => {
+    it('reads rage count from classLevel.rages and rage damage from classLevel.rage_damage', () => {
       const stats = buildPlayerStats({
         level: 2,
         rules: '2024',
@@ -189,32 +168,19 @@ describe('BarbarianFeatures', () => {
           name: 'Barbarian',
           major: {},
           subclass: {},
-          class_levels: [null, { level: 2, rages: 3 }],
+          class_levels: [null, { level: 2, rages: 3, rage_damage: 3 }],
           fightingStyles: [],
         },
       });
       render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(screen.getByText('Rage Points:')).toBeInTheDocument();
-    });
 
-    it('reads rage damage from classLevel.rage_damage', () => {
-      const stats = buildPlayerStats({
-        level: 2,
-        rules: '2024',
-        class: {
-          name: 'Barbarian',
-          major: {},
-          subclass: {},
-          class_levels: [null, { level: 2, rage_damage: 3 }],
-          fightingStyles: [],
-        },
-      });
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(container.textContent).toContain('Rage Damage Bonus: 3');
     });
 
-    it('reads weapon mastery from classLevel.weapon_mastery', () => {
-      const stats = buildPlayerStats({
+    it('reads weapon mastery from classLevel.weapon_mastery or shows N/A', () => {
+      const statsWith = buildPlayerStats({
         level: 3,
         rules: '2024',
         class: {
@@ -225,12 +191,10 @@ describe('BarbarianFeatures', () => {
           fightingStyles: [],
         },
       });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Weapon Mastery: Greatweapon Mastery');
-    });
+      const { container: cWith } = render(<BarbarianFeatures playerStats={statsWith} campaignName="test" />);
+      expect(cWith.textContent).toContain('Weapon Mastery: Greatweapon Mastery');
 
-    it('shows weapon mastery as N/A for 2024 when not set', () => {
-      const stats = buildPlayerStats({
+      const statsWithout = buildPlayerStats({
         level: 3,
         rules: '2024',
         class: {
@@ -241,13 +205,13 @@ describe('BarbarianFeatures', () => {
           fightingStyles: [],
         },
       });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('Weapon Mastery: N/A');
+      const { container: cWithout } = render(<BarbarianFeatures playerStats={statsWithout} campaignName="test" />);
+      expect(cWithout.textContent).toContain('Weapon Mastery: N/A');
     });
   });
 
   describe('rage active state', () => {
-    it('highlights rage damage with buffed styling when rage is active', () => {
+    it('highlights rage damage with buffed styling and shows automation badge when rage is active', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [{ name: 'Rage' }];
         return undefined;
@@ -263,46 +227,11 @@ describe('BarbarianFeatures', () => {
         },
       });
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      const buffedSpan = container.querySelector('.stat--buffed');
-      expect(buffedSpan).toBeTruthy();
-      expect(buffedSpan.textContent).toBe('2');
-    });
-
-    it('shows rage automation badge with details when rage is active', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Rage' }];
-        return undefined;
-      });
-      const stats = buildPlayerStats({
-        level: 2,
-        class: {
-          name: 'Barbarian',
-          major: {},
-          subclass: {},
-          class_levels: [null, { level: 2, class_specific: { rage_damage_bonus: 2 } }],
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
+      expect(container.querySelector('.stat--buffed')).toBeTruthy();
       expect(container.textContent).toContain('BPS Resist, STR Adv, +2 dmg');
     });
 
-    it('omits rage automation badge when rage is not active', () => {
-      const stats = buildPlayerStats({
-        level: 2,
-        class: {
-          name: 'Barbarian',
-          major: {},
-          subclass: {},
-          class_levels: [null, { level: 2, class_specific: { rage_damage_bonus: 2 } }],
-          fightingStyles: [],
-        },
-      });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).not.toContain('BPS Resist');
-    });
-
-    it('does not apply buffed styling when rage is not active', () => {
+    it('omits buffed styling and automation badge when rage is not active', () => {
       const stats = buildPlayerStats({
         level: 2,
         class: {
@@ -315,6 +244,7 @@ describe('BarbarianFeatures', () => {
       });
       const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
       expect(container.querySelector('.stat--buffed')).toBeFalsy();
+      expect(container.textContent).not.toContain('BPS Resist');
     });
   });
 
@@ -382,17 +312,13 @@ describe('BarbarianFeatures', () => {
   });
 
   describe('warrior of the gods', () => {
-    it('renders tracked resource when feature exists in bonusActions', () => {
-      const stats = buildPlayerStats({
-        bonusActions: [{ name: 'Warrior of the Gods' }],
-      });
-      render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
+    it('renders tracked resource when feature exists in bonusActions and omits when missing', () => {
+      const statsWith = buildPlayerStats({ bonusActions: [{ name: 'Warrior of the Gods' }] });
+      render(<BarbarianFeatures playerStats={statsWith} campaignName="test" />);
       expect(screen.getByText('Warrior of the Gods:')).toBeInTheDocument();
-    });
 
-    it('omits tracked resource when feature is missing', () => {
-      const stats = buildPlayerStats({ bonusActions: [] });
-      const { container } = render(<BarbarianFeatures playerStats={stats} campaignName="test" />);
+      const statsWithout = buildPlayerStats({ bonusActions: [] });
+      const { container } = render(<BarbarianFeatures playerStats={statsWithout} campaignName="test" />);
       expect(container.textContent).not.toContain('Warrior of the Gods');
     });
 

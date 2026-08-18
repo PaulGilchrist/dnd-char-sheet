@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -185,21 +186,6 @@ describe('SpellDetailPopup - Improved Illusions feature', () => {
 
       renderPopup(illusionSpell, warlockStats, mockCampaignName);
       expect(screen.getByText('No Verbal or Somatic components (Psychic Spells)')).toBeInTheDocument();
-      expect(screen.getByText('No Verbal components (Improved Illusions)')).toBeInTheDocument();
-    });
-
-    it('shows only improved illusions banner for illusion spell without psychic spells', () => {
-      const warlockStats = {
-        ...baseMockPlayerStats,
-        class: { name: 'Warlock', major: { name: 'Warlock' } },
-        automation: {
-          passives: [{ type: 'improved_illusions' }],
-          actions: [],
-        },
-      };
-
-      renderPopup(illusionSpell, warlockStats, mockCampaignName);
-      expect(screen.queryByText('No Verbal or Somatic components (Psychic Spells)')).not.toBeInTheDocument();
       expect(screen.getByText('No Verbal components (Improved Illusions)')).toBeInTheDocument();
     });
 

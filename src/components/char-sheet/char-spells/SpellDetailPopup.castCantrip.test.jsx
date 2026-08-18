@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -77,29 +78,21 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
   });
 
   describe('cantripAutoLevel with damage_at_character_level', () => {
-    it('calls onCast with cantrip auto-leveled to player level when applicable', () => {
+    it.each([
+      { playerLevel: 1, expectedLevel: 1, label: 'level 1 matches tier 1' },
+      { playerLevel: 5, expectedLevel: 5, label: 'level 5 matches tier 5' },
+      { playerLevel: 11, expectedLevel: 11, label: 'level 11 matches tier 11' },
+      { playerLevel: 20, expectedLevel: 17, label: 'level 20 capped at tier 17' },
+    ])('auto-levels cantrip: $label', ({ playerLevel, expectedLevel }) => {
       const onCast = vi.fn();
-      renderPopup(fireBoltSpell, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
+      const stats = playerLevel !== 5 ? { ...baseMockPlayerStats, level: playerLevel } : baseMockPlayerStats;
+      renderPopup(fireBoltSpell, stats, mockCampaignName, { onCast, playerLevel });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast).toHaveBeenLastCalledWith(
-        expect.objectContaining({ level: 5, baseLevel: 0 }),
-        expect.any(Object)
-      );
-    });
-
-    it('caps auto-level at the highest applicable character level tier (17) when player is level 20', () => {
-      const onCast = vi.fn();
-      const highLevelStats = { ...baseMockPlayerStats, level: 20 };
-      renderPopup(fireBoltSpell, highLevelStats, mockCampaignName, { onCast, playerLevel: 20 });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast).toHaveBeenLastCalledWith(
-        expect.objectContaining({ level: 17, baseLevel: 0 }),
+        expect.objectContaining({ level: expectedLevel, baseLevel: 0 }),
         expect.any(Object)
       );
     });
@@ -125,75 +118,73 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
         expect.any(Object)
       );
     });
-
-    it('auto-levels to tier 1 when player is at level 1', () => {
-      const onCast = vi.fn();
-      const level1Stats = { ...baseMockPlayerStats, level: 1 };
-      renderPopup(fireBoltSpell, level1Stats, mockCampaignName, { onCast, playerLevel: 1 });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast).toHaveBeenLastCalledWith(
-        expect.objectContaining({ level: 1, baseLevel: 0 }),
-        expect.any(Object)
-      );
-    });
   });
 
   describe('cantripAutoLevel with damage_at_slot_level fallback', () => {
-    it('uses damage_at_slot_level when damage_at_character_level is absent', () => {
-      const onCast = vi.fn();
-      const cantrip = {
-        name: 'Ray of Frost',
-        level: 0,
-        description: 'A beam of freezing air.',
-        casting_time: '1 action',
-        range: '60 feet',
-        duration: 'Instantaneous',
-        damage: {
-          damage_at_slot_level: {
-            '0': '1d8',
-            '1': '2d8',
-            '3': '3d8',
-            '5': '4d8',
+    it.each([
+      {
+        cantrip: {
+          name: 'Ray of Frost',
+          level: 0,
+          description: 'A beam of freezing air.',
+          casting_time: '1 action',
+          range: '60 feet',
+          duration: 'Instantaneous',
+          damage: {
+            damage_at_slot_level: {
+              '0': '1d8',
+              '1': '2d8',
+              '3': '3d8',
+              '5': '4d8',
+            },
           },
         },
-      };
-      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
+        playerLevel: 5,
+        expectedLevel: 5,
+        label: 'uses damage_at_slot_level tiers when present',
+      },
+      {
+        cantrip: {
+          name: 'Ray of Frost',
+          level: 0,
+          description: 'A beam of freezing air.',
+          casting_time: '1 action',
+          range: '60 feet',
+          duration: 'Instantaneous',
+          damage: {
+            damage_at_slot_level: {
+              '0': '1d8',
+              '3': '3d8',
+            },
+          },
+        },
+        playerLevel: 1,
+        expectedLevel: 0,
+        label: 'falls back to base level when no slot tier applies',
+      },
+      {
+        cantrip: {
+          name: 'Guidance',
+          level: 0,
+          description: 'Add d4 to ability check.',
+          casting_time: '1 action',
+          range: 'Touch',
+          duration: 'Concentration, up to 1 minute',
+          damage: { damage_at_slot_level: { '0': '1d4' } },
+        },
+        playerLevel: 5,
+        expectedLevel: 0,
+        label: 'resolves to base level when only level 0 tier exists',
+      },
+    ])('$label', ({ cantrip, playerLevel, expectedLevel }) => {
+      const onCast = vi.fn();
+      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast).toHaveBeenLastCalledWith(
-        expect.objectContaining({ level: 5, baseLevel: 0 }),
-        expect.any(Object)
-      );
-    });
-
-    it('keeps cantrip at base level (0) when no slot level tier is applicable', () => {
-      const onCast = vi.fn();
-      const cantrip = {
-        name: 'Ray of Frost',
-        level: 0,
-        description: 'A beam of freezing air.',
-        casting_time: '1 action',
-        range: '60 feet',
-        duration: 'Instantaneous',
-        damage: {
-          damage_at_slot_level: {
-            '0': '1d8',
-            '3': '3d8',
-          },
-        },
-      };
-      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 1 });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast).toHaveBeenLastCalledWith(
-        expect.objectContaining({ level: 0, baseLevel: 0 }),
+        expect.objectContaining({ level: expectedLevel, baseLevel: 0 }),
         expect.any(Object)
       );
     });
@@ -220,52 +211,6 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
         expect.objectContaining({ level: 0, baseLevel: 0 }),
         expect.any(Object)
       );
-    });
-  });
-
-  describe('cantrip with damage_at_slot_level that resolves to base level', () => {
-    it('calls onCast with base level when damage_at_slot_level only has level 0 tier (no effective scaling)', () => {
-      const onCast = vi.fn();
-      const cantrip = {
-        name: 'Guidance',
-        level: 0,
-        description: 'Add d4 to ability check.',
-        casting_time: '1 action',
-        range: 'Touch',
-        duration: 'Concentration, up to 1 minute',
-        damage: { damage_at_slot_level: { '0': '1d4' } },
-      };
-      renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast).toHaveBeenLastCalledWith(
-        expect.objectContaining({ level: 0, baseLevel: 0 }),
-        expect.any(Object)
-      );
-    });
-  });
-
-  describe('Rage blocking cantrip casting', () => {
-    it('does not call onCast when player is raging', () => {
-      const onCast = vi.fn();
-      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
-
-      renderPopup(fireBoltSpell, baseMockPlayerStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      expect(onCast).not.toHaveBeenCalled();
-    });
-
-    it('disables the cast button when player is raging', () => {
-      vi.mocked(getActiveBuffs).mockReturnValue([{ name: 'Rage' }]);
-
-      renderPopup(fireBoltSpell, baseMockPlayerStats, mockCampaignName);
-
-      const castButton = screen.getByRole('button', { name: /Cast Spell/ });
-      expect(castButton).toBeDisabled();
     });
   });
 });

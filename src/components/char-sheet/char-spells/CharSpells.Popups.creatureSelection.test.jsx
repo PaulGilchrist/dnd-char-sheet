@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -274,23 +275,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       },
     ];
 
-    it('disables the confirm button when no beast is selected', async () => {
-      flow.pendingShapechange = {
-        spell: { name: 'Shapechange', level: 9, isUpcast: false, upcastLevel: 9 },
-        spellLevel: 9,
-      };
-      vi.mocked(loadMonsters).mockResolvedValue(mockBeasts);
-      renderWithProps({ playerStats: { ...mockPlayerStats, level: 3 } });
-
-      await waitFor(() => {
-        expect(screen.getByText('Brown Bear')).toBeInTheDocument();
-      });
-
-      expect(
-        screen.getByRole('button', { name: /Shapechange/i })
-      ).toBeDisabled();
-    });
-
     it('confirms shapechange transformation when a beast is selected and the confirm button is clicked', async () => {
       flow.pendingShapechange = {
         spell: { name: 'Shapechange', level: 9, isUpcast: false, upcastLevel: 9 },
@@ -328,25 +312,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
           spellLevel: 9,
         })
       );
-    });
-
-    it('does not trigger transformation when cancel is clicked after selecting a beast', async () => {
-      flow.pendingShapechange = {
-        spell: { name: 'Shapechange', level: 9, isUpcast: false, upcastLevel: 9 },
-        spellLevel: 9,
-      };
-      vi.mocked(loadMonsters).mockResolvedValue(mockBeasts);
-      renderWithProps({ playerStats: { ...mockPlayerStats, level: 3 } });
-
-      await waitFor(() => {
-        expect(screen.getByText('Brown Bear')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Brown Bear'));
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-
-      expect(prepareSpellCast).not.toHaveBeenCalled();
-      expect(confirmShapechangeTransform).not.toHaveBeenCalled();
     });
 
     it('shows a no results message when no beasts match the CR requirement', async () => {

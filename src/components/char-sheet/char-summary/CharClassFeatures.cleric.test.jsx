@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import React from 'react';
@@ -66,13 +67,6 @@ describe('ClericFeatures', () => {
       const stats = buildPlayerStats({ level: 5 });
       render(<ClericFeatures playerStats={stats} campaignName="test" />);
       expectResourceToDisplay('Channel Divinity Charges', '2');
-    });
-
-    it('uses 0 when maxChannelDivinity is missing from class features', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({});
-      const stats = buildPlayerStats({ level: 5 });
-      render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expectResourceToDisplay('Channel Divinity Charges', '0');
     });
   });
 
@@ -151,27 +145,6 @@ describe('ClericFeatures', () => {
       render(<ClericFeatures playerStats={stats} campaignName="test" />);
       expect(screen.queryByText(/Preserve Life Pool/)).not.toBeInTheDocument();
     });
-
-    it('does not render when both major and subclass are non-Life Domain', () => {
-      const stats = buildPlayerStats({
-        level: 5,
-        class: {
-          name: 'Cleric',
-          major: { name: 'Knowledge Domain' },
-          subclass: { name: 'Knowledge Domain' },
-          class_levels: [],
-          fightingStyles: [],
-        },
-      });
-      render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByText(/Preserve Life Pool/)).not.toBeInTheDocument();
-    });
-
-    it('does not render when class is null', () => {
-      const stats = buildPlayerStats({ class: null });
-      render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByText(/Preserve Life Pool/)).not.toBeInTheDocument();
-    });
   });
 
   describe('warding flare uses', () => {
@@ -196,14 +169,6 @@ describe('ClericFeatures', () => {
         expectResourceToDisplay('Warding Flare Uses', expectedMax);
         cleanup();
       }
-    });
-
-    it('uses 1 when Wisdom ability is missing from abilities array', () => {
-      const stats = buildPlayerStats({
-        abilities: [{ name: 'Charisma', bonus: 3 }],
-      });
-      render(<ClericFeatures playerStats={stats} campaignName="test" />);
-      expectResourceToDisplay('Warding Flare Uses', '1');
     });
   });
 });

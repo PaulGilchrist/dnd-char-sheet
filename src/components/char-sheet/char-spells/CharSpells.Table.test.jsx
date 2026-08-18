@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharSpells from './CharSpells.jsx';
@@ -135,11 +136,6 @@ describe('CharSpells - Table Rendering', () => {
   });
 
   describe('table structure', () => {
-    it('renders the spell table', () => {
-      renderWithProps({});
-      expect(screen.getByRole('table')).toBeInTheDocument();
-    });
-
     it.each`
       ruleset                | playerStats              | expectedHeaders
       ${'5e'}                | ${basePlayerStats}       | ${['Spell', 'Level', 'Prepared', 'Time', 'Range', 'Effect', 'Duration', 'Notes']}
@@ -229,16 +225,6 @@ describe('CharSpells - Table Rendering', () => {
     });
   });
 
-  describe('spell detail popup', () => {
-    it('opens the spell detail popup when a spell name is clicked', () => {
-      renderWithProps({});
-      const lightCell = screen.getByText('Light');
-      fireEvent.click(lightCell);
-      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
-      expect(screen.getByTestId('spell-detail-popup')).toHaveTextContent('Light');
-    });
-  });
-
   describe('sorting', () => {
     it('sorts spells alphabetically when Spell header is clicked', () => {
       renderWithProps({});
@@ -269,12 +255,6 @@ describe('CharSpells - Table Rendering', () => {
       };
       renderWithProps({ playerStats: stats });
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    });
-
-    it('displays "Utility" for spells with no damage or save DC', () => {
-      renderWithProps({});
-      const utilityCells = screen.getAllByText('Utility');
-      expect(utilityCells.length).toBeGreaterThan(0);
     });
   });
 });

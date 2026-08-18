@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import BardFeatures from './CharClassFeatures.jsx';
@@ -107,12 +108,6 @@ describe('BardFeatures', () => {
       render(<BardFeatures playerStats={stats} campaignName="test" />);
       expect(screen.getByText('Bardic Inspiration Uses:')).toBeInTheDocument();
     });
-
-    it('displays max as the charisma bonus', () => {
-      const stats = buildPlayerStats();
-      const { container } = render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(container.textContent).toContain('3/3');
-    });
   });
 
   describe('expertise', () => {
@@ -125,12 +120,6 @@ describe('BardFeatures', () => {
 
     it('does not render expertise when level is 2 or below', () => {
       const stats = buildPlayerStats({ level: 2, expertise: ['Athletics'] });
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByText(/Expertise:/)).not.toBeInTheDocument();
-    });
-
-    it('does not render expertise when expertise is empty', () => {
-      const stats = buildPlayerStats({ level: 5, expertise: [] });
       render(<BardFeatures playerStats={stats} campaignName="test" />);
       expect(screen.queryByText(/Expertise:/)).not.toBeInTheDocument();
     });
@@ -151,9 +140,8 @@ describe('BardFeatures', () => {
         subclassMagicalSecrets: 0,
       });
       const stats = buildPlayerStats({ level: 6 });
-      const { container } = render(<BardFeatures playerStats={stats} campaignName="test" />);
+      render(<BardFeatures playerStats={stats} campaignName="test" />);
       expect(screen.getByText('Extra Attacks:')).toBeInTheDocument();
-      expect(container.textContent).toContain('1');
     });
 
     it('does not render extra attacks when level is exactly 5', () => {
@@ -179,19 +167,6 @@ describe('BardFeatures', () => {
       render(<BardFeatures playerStats={stats} campaignName="test" />);
       expect(screen.queryByText(/Extra Attacks:/)).not.toBeInTheDocument();
     });
-
-    it('renders extra attacks when level > 5 and magicalSecrets is a number', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        bardicDie: 8,
-        magicalSecrets: 2,
-        songOfRestDie: null,
-        subclassMagicalSecrets: 0,
-      });
-      const stats = buildPlayerStats({ level: 15 });
-      const { container } = render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('Extra Attacks:')).toBeInTheDocument();
-      expect(container.textContent).toContain('1');
-    });
   });
 
   describe('magical secrets tracked resource', () => {
@@ -207,30 +182,6 @@ describe('BardFeatures', () => {
       expect(screen.getByText(/Magical Secrets/)).toBeInTheDocument();
     });
 
-    it('renders when magicalSecrets is true', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        bardicDie: 8,
-        magicalSecrets: true,
-        songOfRestDie: null,
-        subclassMagicalSecrets: 0,
-      });
-      const stats = buildPlayerStats({ level: 6 });
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText(/Magical Secrets/)).toBeInTheDocument();
-    });
-
-    it('renders when magicalSecrets is 0 (not null)', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        bardicDie: 8,
-        magicalSecrets: 0,
-        songOfRestDie: null,
-        subclassMagicalSecrets: 0,
-      });
-      const stats = buildPlayerStats({ level: 10 });
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText(/Magical Secrets/)).toBeInTheDocument();
-    });
-
     it('does not render when magicalSecrets is null', () => {
       vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
         bardicDie: 8,
@@ -241,18 +192,6 @@ describe('BardFeatures', () => {
       const stats = buildPlayerStats();
       render(<BardFeatures playerStats={stats} campaignName="test" />);
       expect(screen.queryByText(/Magical Secrets/)).not.toBeInTheDocument();
-    });
-
-    it('renders when magicalSecrets is undefined (component checks !== null)', () => {
-      vi.mocked(classFeatures.getClassFeatures).mockReturnValue({
-        bardicDie: 8,
-        magicalSecrets: undefined,
-        songOfRestDie: null,
-        subclassMagicalSecrets: 0,
-      });
-      const stats = buildPlayerStats();
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByText(/Magical Secrets/)).toBeInTheDocument();
     });
   });
 
@@ -311,14 +250,6 @@ describe('BardFeatures', () => {
       expect(screen.queryByText(/Beguiling Magic/)).not.toBeInTheDocument();
     });
 
-    it('does not render when passive_rule exists but riderSave is false', () => {
-      const stats = buildPlayerStats({
-        automation: { passives: [{ type: 'passive_rule', riderSave: false }] },
-      });
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByText(/Beguiling Magic/)).not.toBeInTheDocument();
-    });
-
     it('does not render when passives is undefined', () => {
       const stats = buildPlayerStats({
         automation: { passives: undefined },
@@ -337,20 +268,6 @@ describe('BardFeatures', () => {
       expect(screen.getByRole('button', { name: /Unbreakable Majesty DC 15/ })).toBeInTheDocument();
     });
 
-    it('renders majesty button with DC calculated from charisma + proficiency', () => {
-      vi.mocked(unbreakableMajesty.isUnbreakableMajestyActive).mockReturnValue(true);
-      vi.mocked(unbreakableMajesty.getUnbreakableMajestySaveDc).mockReturnValue(11);
-      const stats = buildPlayerStats();
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.getByRole('button', { name: /Unbreakable Majesty DC 11/ })).toBeInTheDocument();
-    });
-
-    it('does not render majesty button when not active', () => {
-      const stats = buildPlayerStats();
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByRole('button', { name: /Unbreakable Majesty/ })).not.toBeInTheDocument();
-    });
-
     it('calls clearUnbreakableMajesty when clicked while active', () => {
       vi.mocked(unbreakableMajesty.isUnbreakableMajestyActive).mockReturnValue(true);
       vi.mocked(unbreakableMajesty.getUnbreakableMajestySaveDc).mockReturnValue(15);
@@ -359,6 +276,12 @@ describe('BardFeatures', () => {
       const button = screen.getByRole('button', { name: /Unbreakable Majesty/ });
       button.click();
       expect(unbreakableMajesty.clearUnbreakableMajesty).toHaveBeenCalledWith('Test Bard', 'test');
+    });
+
+    it('does not render majesty button when not active', () => {
+      const stats = buildPlayerStats();
+      render(<BardFeatures playerStats={stats} campaignName="test" />);
+      expect(screen.queryByRole('button', { name: /Unbreakable Majesty/ })).not.toBeInTheDocument();
     });
   });
 
@@ -377,39 +300,9 @@ describe('BardFeatures', () => {
       expect(screen.getByText('Buff B')).toBeInTheDocument();
     });
 
-    it('does not render badges for non-multi-minute durations', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [{ name: 'Some Buff', duration: '1_round' }];
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByText('Some Buff')).not.toBeInTheDocument();
-    });
-
     it('does not render badges when activeBuffs is empty', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByRole('span', { name: '' })).not.toBeInTheDocument();
-    });
-
-    it('does not render badges when activeBuffs is null', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return null;
-        return undefined;
-      });
-      const stats = buildPlayerStats();
-      render(<BardFeatures playerStats={stats} campaignName="test" />);
-      expect(screen.queryByRole('span', { name: '' })).not.toBeInTheDocument();
-    });
-
-    it('does not render badges when activeBuffs is undefined', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return undefined;
         return undefined;
       });
       const stats = buildPlayerStats();

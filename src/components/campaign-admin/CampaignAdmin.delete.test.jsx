@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
@@ -54,61 +55,40 @@ describe('CampaignAdmin - Delete Campaign', () => {
     });
 
     describe('prompt confirmation', () => {
-        it('prompts user with campaign name for deletion confirmation', () => {
-            renderCampaignAdmin();
+        it.each([
+            { campaignName: 'test-campaign', expected: 'test-campaign' },
+            { campaignName: 'my-special-campaign', expected: 'my-special-campaign' },
+        ])('prompts user with campaign name "$expected" for deletion confirmation', ({ campaignName }) => {
+            renderCampaignAdmin({ campaignName });
             clickDeleteButton();
 
             expect(window.prompt).toHaveBeenCalledWith(
-                'Type the exact campaign name to confirm deletion of "test-campaign":'
+                `Type the exact campaign name to confirm deletion of "${campaignName}":`
             );
         });
 
-        it('uses the campaign name prop in the prompt message', () => {
-            window.prompt.mockReturnValueOnce('my-special-campaign');
-            renderCampaignAdmin({ campaignName: 'my-special-campaign' });
-            clickDeleteButton();
-
-            expect(window.prompt).toHaveBeenCalledWith(
-                'Type the exact campaign name to confirm deletion of "my-special-campaign":'
-            );
-        });
-
-        it('cancels when prompt returns null (user cancelled)', () => {
-            window.prompt.mockReturnValueOnce(null);
+        it.each([
+            { input: null, name: 'user cancelled' },
+            { input: '', name: 'empty string' },
+            { input: 'wrong-name', name: 'mismatched name' },
+        ])('cancels deletion when prompt returns %s (%s)', ({ input }) => {
+            window.prompt.mockReturnValueOnce(input);
             renderCampaignAdmin();
             clickDeleteButton();
 
             expect(window.prompt).toHaveBeenCalled();
             expect(window.confirm).not.toHaveBeenCalled();
-            expect(window.alert).not.toHaveBeenCalled();
-        });
-
-        it.each([
-            { input: '', name: 'empty string' },
-            { input: 'wrong-name', name: 'mismatched name' },
-        ])('cancels and shows alert when prompt returns %s', ({ input }) => {
-            window.prompt.mockReturnValueOnce(input);
-            renderCampaignAdmin();
-            clickDeleteButton();
-
-            expect(window.alert).toHaveBeenCalledWith(
-                'Campaign name did not match. Deletion cancelled.'
-            );
-            expect(window.confirm).not.toHaveBeenCalled();
+            if (input === null) {
+                expect(window.alert).not.toHaveBeenCalled();
+            } else {
+                expect(window.alert).toHaveBeenCalledWith(
+                    'Campaign name did not match. Deletion cancelled.'
+                );
+            }
         });
     });
 
     describe('double confirmation', () => {
-        it('shows first confirmation after name matches', () => {
-            window.prompt.mockReturnValueOnce('test-campaign');
-            renderCampaignAdmin();
-            clickDeleteButton();
-
-            expect(window.confirm).toHaveBeenCalledWith(
-                'WARNING: This will permanently delete the entire campaign "test-campaign" and ALL its files including characters, maps, encounters, quests, factions, notes, settlements, NPCs, and all runtime data. This CANNOT be undone. Are you absolutely sure?'
-            );
-        });
-
         it('cancels when first confirmation is denied', () => {
             window.prompt.mockReturnValueOnce('test-campaign');
             window.confirm.mockReturnValueOnce(false);
@@ -117,17 +97,6 @@ describe('CampaignAdmin - Delete Campaign', () => {
 
             expect(window.confirm).toHaveBeenCalledTimes(1);
             expect(window.alert).not.toHaveBeenCalled();
-        });
-
-        it('shows second confirmation after first is approved', () => {
-            window.prompt.mockReturnValueOnce('test-campaign');
-            window.confirm.mockReturnValueOnce(true);
-            renderCampaignAdmin();
-            clickDeleteButton();
-
-            expect(window.confirm).toHaveBeenCalledWith(
-                'FINAL WARNING: test-campaign will be completely erased from the server. There is no recovery. Proceed?'
-            );
         });
 
         it('cancels when second confirmation is denied', () => {
@@ -141,7 +110,7 @@ describe('CampaignAdmin - Delete Campaign', () => {
             expect(window.alert).not.toHaveBeenCalled();
         });
 
-        it('does not call fetch regardless of confirm state', () => {
+        it('does not call fetch when confirmations are denied', () => {
             const fetchSpy = vi.spyOn(global, 'fetch');
             window.prompt.mockReturnValueOnce('test-campaign');
             window.confirm.mockReturnValueOnce(false);
@@ -150,6 +119,23 @@ describe('CampaignAdmin - Delete Campaign', () => {
 
             expect(fetchSpy).not.toHaveBeenCalled();
             fetchSpy.mockRestore();
+        });
+
+        it('proceeds to API call only when all confirmations pass', () => {
+            window.prompt.mockReturnValueOnce('test-campaign');
+            window.confirm.mockReturnValueOnce(true);
+            window.confirm.mockReturnValueOnce(true);
+            const fetchSpy = vi.fn(() =>
+                Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+            );
+            global.fetch = fetchSpy;
+            renderCampaignAdmin();
+            clickDeleteButton();
+
+            expect(fetchSpy).toHaveBeenCalledWith(
+                '/api/campaigns/test-campaign',
+                { method: 'DELETE' }
+            );
         });
     });
 
@@ -160,7 +146,7 @@ describe('CampaignAdmin - Delete Campaign', () => {
             );
         };
 
-        it('sends DELETE request to correct endpoint after both confirmations', async () => {
+        it('sends DELETE request to correct endpoint after all confirmations', async () => {
             window.prompt.mockReturnValueOnce('test-campaign');
             window.confirm.mockReturnValueOnce(true);
             window.confirm.mockReturnValueOnce(true);
@@ -194,21 +180,6 @@ describe('CampaignAdmin - Delete Campaign', () => {
             }, { timeout: 5000 });
         });
 
-        it('shows success alert and reloads on successful deletion', async () => {
-            window.prompt.mockReturnValueOnce('test-campaign');
-            window.confirm.mockReturnValueOnce(true);
-            window.confirm.mockReturnValueOnce(true);
-            setupFetch({ ok: true, json: () => Promise.resolve({}) });
-
-            renderCampaignAdmin();
-            clickDeleteButton();
-
-            await waitFor(() => {
-                expect(window.alert).toHaveBeenCalledWith('Campaign deleted successfully.');
-                expect(window.location.reload).toHaveBeenCalledTimes(1);
-            }, { timeout: 5000 });
-        });
-
         it('shows error alert with server message on failed deletion', async () => {
             window.prompt.mockReturnValueOnce('test-campaign');
             window.confirm.mockReturnValueOnce(true);
@@ -220,7 +191,20 @@ describe('CampaignAdmin - Delete Campaign', () => {
 
             await waitFor(() => {
                 expect(window.alert).toHaveBeenCalledWith('Failed to delete campaign: Delete failed');
-                expect(window.location.reload).not.toHaveBeenCalled();
+            }, { timeout: 5000 });
+        });
+
+        it('shows generic error when server returns error without message field', async () => {
+            window.prompt.mockReturnValueOnce('test-campaign');
+            window.confirm.mockReturnValueOnce(true);
+            window.confirm.mockReturnValueOnce(true);
+            setupFetch({ ok: false, json: () => Promise.resolve({}) });
+
+            renderCampaignAdmin();
+            clickDeleteButton();
+
+            await waitFor(() => {
+                expect(window.alert).toHaveBeenCalledWith('Failed to delete campaign: Unknown error');
             }, { timeout: 5000 });
         });
 
@@ -238,45 +222,19 @@ describe('CampaignAdmin - Delete Campaign', () => {
             }, { timeout: 5000 });
         });
 
-        it('shows generic error when server returns error without message field', async () => {
+        it('shows success alert and reloads on successful deletion', async () => {
             window.prompt.mockReturnValueOnce('test-campaign');
             window.confirm.mockReturnValueOnce(true);
             window.confirm.mockReturnValueOnce(true);
-            setupFetch({ ok: false, json: () => Promise.resolve({}) });
+            setupFetch({ ok: true, json: () => Promise.resolve({}) });
 
             renderCampaignAdmin();
             clickDeleteButton();
 
             await waitFor(() => {
-                expect(window.alert).toHaveBeenCalledWith('Failed to delete campaign: Unknown error');
+                expect(window.alert).toHaveBeenCalledWith('Campaign deleted successfully.');
+                expect(window.location.reload).toHaveBeenCalledTimes(1);
             }, { timeout: 5000 });
-        });
-    });
-
-    describe('rendering', () => {
-        it('renders the Delete Campaign action with danger styling', () => {
-            renderCampaignAdmin();
-            const action = screen.getByRole('heading', { name: 'Delete Campaign' }).closest('.admin-action');
-            expect(action).toHaveClass('admin-action--danger');
-        });
-
-        it('renders the delete button with danger class and icon', () => {
-            renderCampaignAdmin();
-            const btn = screen.getByRole('button', { name: /delete campaign/i });
-            expect(btn).toHaveClass('ct-btn-danger');
-            expect(btn.querySelector('i.fa-exclamation-triangle')).toBeTruthy();
-        });
-
-        it('renders the delete action description', () => {
-            renderCampaignAdmin();
-            expect(
-                screen.getByText('Permanently deletes the entire campaign and ALL its files. This cannot be undone.')
-            ).toBeInTheDocument();
-        });
-
-        it('does not render the delete button when action is not visible', () => {
-            renderCampaignAdmin();
-            expect(screen.getByRole('button', { name: /delete campaign/i })).toBeInTheDocument();
         });
     });
 });

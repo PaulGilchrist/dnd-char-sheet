@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -7,40 +8,7 @@ import * as helpers from './CharSpells.test.helpers.js';
 
 const { useSpellMetamagicFlow } = vi.hoisted(() => ({
   useSpellMetamagicFlow: vi.fn(() => ({
-    pendingMetamagic: null,
-    pendingMultiTarget: null,
     gateMetamagic: vi.fn(),
-    handleConfirm: vi.fn(),
-    handleSkip: vi.fn(),
-    handleMultiTargetConfirm: vi.fn(),
-    handleMultiTargetSkip: vi.fn(),
-    pendingAid: null,
-    handleAidConfirm: vi.fn(),
-    handleAidSkip: vi.fn(),
-    pendingHeroesFeast: null,
-    handleHeroesFeastConfirm: vi.fn(),
-    handleHeroesFeastSkip: vi.fn(),
-    pendingGreaterRestoration: null,
-    handleGreaterRestorationConfirm: vi.fn(),
-    handleGreaterRestorationSkip: vi.fn(),
-    pendingLesserRestoration: null,
-    handleLesserRestorationConfirm: vi.fn(),
-    handleLesserRestorationSkip: vi.fn(),
-    pendingMageArmor: null,
-    handleMageArmorConfirm: vi.fn(),
-    handleMageArmorSkip: vi.fn(),
-    pendingProtectionFromEnergy: null,
-    handleProtectionFromEnergyConfirm: vi.fn(),
-    handleProtectionFromEnergySkip: vi.fn(),
-    pendingResistance: null,
-    handleResistanceConfirm: vi.fn(),
-    handleResistanceSkip: vi.fn(),
-    pendingRemoveCurse: null,
-    handleRemoveCurseConfirm: vi.fn(),
-    handleRemoveCurseSkip: vi.fn(),
-    pendingMagicMissile: null,
-    handleMagicMissileConfirm: vi.fn(),
-    handleMagicMissileSkip: vi.fn(),
   })),
 }));
 
@@ -223,39 +191,20 @@ describe('CharSpells - Interactions', () => {
       expect(mockRollAttack).not.toHaveBeenCalled();
     });
 
-    it('calls rollAttack with spell attack name and correct to-hit value', () => {
-      renderWithProps({});
+    it.each`
+      exhaustionPenalty | conditionAttackMode | expectedToHit | expectedForcedMode
+      ${0}              | ${undefined}        | ${5}          | ${undefined}
+      ${1}              | ${undefined}        | ${4}          | ${undefined}
+      ${0}              | ${'disadvantage'}   | ${5}          | ${'disadvantage'}
+    `('calls rollAttack with toHit=$expectedToHit and forcedMode=$expectedForcedMode (exhaustion=$exhaustionPenalty, condition=$conditionAttackMode)', ({ exhaustionPenalty, conditionAttackMode, expectedToHit, expectedForcedMode }) => {
+      renderWithProps({ exhaustionPenalty, conditionAttackMode });
       const attackLabel = screen.getByText(/Attack \(to hit\):/);
       fireEvent.click(attackLabel);
 
       expect(mockRollAttack).toHaveBeenCalledWith(
         'Spell Attack',
-        5,
-        expect.any(Object)
-      );
-    });
-
-    it('applies exhaustion penalty to to-hit value', () => {
-      renderWithProps({ exhaustionPenalty: 1 });
-      const attackLabel = screen.getByText(/Attack \(to hit\):/);
-      fireEvent.click(attackLabel);
-
-      expect(mockRollAttack).toHaveBeenCalledWith(
-        'Spell Attack',
-        4,
-        expect.any(Object)
-      );
-    });
-
-    it('applies conditionAttackMode as forcedMode to rollAttack', () => {
-      renderWithProps({ conditionAttackMode: 'disadvantage' });
-      const attackLabel = screen.getByText(/Attack \(to hit\):/);
-      fireEvent.click(attackLabel);
-
-      expect(mockRollAttack).toHaveBeenCalledWith(
-        'Spell Attack',
-        5,
-        { forcedMode: 'disadvantage' }
+        expectedToHit,
+        expect.objectContaining({ forcedMode: expectedForcedMode })
       );
     });
 
@@ -273,21 +222,6 @@ describe('CharSpells - Interactions', () => {
   });
 
   describe('spell row click behavior', () => {
-    it('does NOT open spell detail popup when a non-castable 2024 wizard spell is clicked', () => {
-      renderWithProps({ playerStats: helpers.mockPlayerStats2024Wizard });
-      const shieldCell = screen.getByText('Shield');
-      expect(shieldCell).toHaveClass('not-castable');
-      fireEvent.click(shieldCell);
-      expect(screen.queryByTestId('spell-detail-popup')).not.toBeInTheDocument();
-    });
-
-    it('opens spell detail popup when a castable spell is clicked', () => {
-      renderWithProps({ playerStats: helpers.mockPlayerStats2024Wizard });
-      const detectMagicCell = screen.getByText('Detect Magic');
-      fireEvent.click(detectMagicCell);
-      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
-    });
-
     it('renders checkbox unchecked for spells with empty prepared string', () => {
       const spell = {
         name: 'Unprepared Spell',

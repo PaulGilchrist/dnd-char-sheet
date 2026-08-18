@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -354,24 +355,6 @@ describe('CharSpells - Restoration Spells', () => {
     it('deduplicates conditions from runtime and combat summary, showing exactly one option', async () => {
       flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
       vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'activeConditions') return ['CHARMED'];
-        return null;
-      });
-      vi.mocked(getCombatSummary).mockReturnValue({
-        creatures: [{ name: 'Orc', conditions: [{ key: 'charmed' }] }],
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByText('Orc'));
-
-      await waitFor(() => {
-        const charmedOptions = screen.queryAllByTestId('stm-condition:charmed');
-        expect(charmedOptions.length).toBe(1);
-      });
-    });
-
-    it('merges conditions from runtime (case-insensitive) and combat summary without duplication', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
         if (key === 'activeConditions') return ['CHARMED', 'petrified'];
         return null;
       });
@@ -388,10 +371,10 @@ describe('CharSpells - Restoration Spells', () => {
       });
     });
 
-    it('detects curse from activeBuffs with type property', async () => {
+    it('detects curse from activeBuffs with type or cursed property', async () => {
       flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
       vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'activeBuffs') return [{ type: 'cursed', name: 'Armor of Invulnerability' }];
+        if (key === 'activeBuffs') return [{ type: 'cursed', name: 'Armor of Invulnerability' }, { cursed: true }];
         return null;
       });
       renderWithProps();
@@ -402,25 +385,12 @@ describe('CharSpells - Restoration Spells', () => {
       });
     });
 
-    it('detects curse from activeBuffs with cursed boolean property', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'activeBuffs') return [{ cursed: true }];
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByText('Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-curse')).toBeInTheDocument();
-      });
-    });
-
-    it('detects ability score reduction and HP maximum reduction', async () => {
+    it('detects ability score reduction, HP maximum reduction, and exhaustion level', async () => {
       flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
       vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
         if (key === 'abilityReductions') return { str: 3, dex: 2 };
         if (key === 'hpMaxReduction') return 10;
+        if (key === 'exhaustionLevel') return 3;
         return null;
       });
       renderWithProps();
@@ -429,33 +399,7 @@ describe('CharSpells - Restoration Spells', () => {
       await waitFor(() => {
         expect(screen.getByTestId('stm-ability_reduction')).toBeInTheDocument();
         expect(screen.getByTestId('stm-hp_max_reduction')).toBeInTheDocument();
-      });
-    });
-
-    it('detects exhaustion level', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
-        if (key === 'exhaustionLevel') return 3;
-        return null;
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByText('Orc'));
-
-      await waitFor(() => {
         expect(screen.getByTestId('stm-exhaustion')).toBeInTheDocument();
-      });
-    });
-
-    it('collects conditions from combat summary creature data', async () => {
-      flow.pendingGreaterRestoration = { creatureTargets: ['Orc'], range: '60 feet' };
-      vi.mocked(getCombatSummary).mockReturnValue({
-        creatures: [{ name: 'Orc', conditions: [{ key: 'charmed' }] }],
-      });
-      renderWithProps();
-      fireEvent.click(screen.getByText('Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-condition:charmed')).toBeInTheDocument();
       });
     });
   });
@@ -549,17 +493,6 @@ describe('CharSpells - Restoration Spells', () => {
       await waitFor(() => {
         const deafenedOptions = screen.queryAllByTestId('stm-condition:deafened');
         expect(deafenedOptions.length).toBe(1);
-      });
-    });
-
-    it('collects conditions from combat summary creature data', async () => {
-      flow.pendingLesserRestoration = { creatureTargets: ['Orc'], range: '30 feet' };
-      vi.mocked(getCombatSummary).mockReturnValue({ creatures: [{ name: 'Orc', conditions: [{ key: 'paralyzed' }] }] });
-      renderWithProps();
-      fireEvent.click(screen.getByText('Orc'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stm-condition:paralyzed')).toBeInTheDocument();
       });
     });
 

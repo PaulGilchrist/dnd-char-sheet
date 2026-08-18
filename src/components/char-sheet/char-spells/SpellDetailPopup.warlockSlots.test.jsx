@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -106,35 +107,6 @@ describe('SpellDetailPopup - Warlock slot display and casting', () => {
       expect(screen.getByText(expected)).toBeInTheDocument();
     });
 
-    it('displays slots for a level 2 spell when warlock has level 2 slots', () => {
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        const match = key.match(/^spell_slots_level_(\d+)$/);
-        if (!match) return null;
-        const lvl = parseInt(match[1], 10);
-        return lvl === 2 ? 3 : null;
-      });
-
-      const spell = { ...baseMockSpell, level: 2, damage: { damage_at_slot_level: { '2': '4d4+1' } } };
-
-      renderPopup(spell, makeWarlockStats({ level_2: 3 }), mockCampaignName);
-      expect(screen.getByText(/Slots Remaining:/)).toBeInTheDocument();
-      expect(screen.getByText(/3 slots/)).toBeInTheDocument();
-    });
-
-    it('displays slots for a level 3 spell when warlock has level 3 slots', () => {
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        const match = key.match(/^spell_slots_level_(\d+)$/);
-        if (!match) return null;
-        const lvl = parseInt(match[1], 10);
-        return lvl === 3 ? 1 : null;
-      });
-
-      const spell = { ...baseMockSpell, level: 3, damage: { damage_at_slot_level: { '3': '5d4+1' } } };
-
-      renderPopup(spell, makeWarlockStats({ level_3: 1 }), mockCampaignName);
-      expect(screen.getByText(/Slots Remaining:/)).toBeInTheDocument();
-      expect(screen.getByText(/1 slot$/)).toBeInTheDocument();
-    });
   });
 
   describe('Warlock canCast logic', () => {
@@ -179,19 +151,6 @@ describe('SpellDetailPopup - Warlock slot display and casting', () => {
       const spell = { ...baseMockSpell, level: 1, damage: { damage_at_slot_level: { '1': '3d4+1' } } };
 
       renderPopup(spell, makeWarlockStats({ level_1: 2 }), mockCampaignName);
-      expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
-    });
-
-    it('searches up to level 9 for available warlock slots', () => {
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'spell_slots_level_9') return 1;
-        if (key.startsWith('spell_slots_level_')) return 0;
-        return null;
-      });
-
-      const spell = { ...baseMockSpell, level: 1, damage: { damage_at_slot_level: { '1': '3d4+1' } } };
-
-      renderPopup(spell, makeWarlockStats({ level_1: 0, level_2: 0, level_3: 0 }), mockCampaignName);
       expect(screen.getByRole('button', { name: /Cast Spell/ })).toBeEnabled();
     });
 

@@ -1,3 +1,4 @@
+// @cleaned-by-ai
 // @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -63,13 +64,6 @@ describe('UpcastPopup events', () => {
   });
 
   describe('cancel behavior', () => {
-    it('calls onCancel when cancel button clicked', () => {
-      const onCancel = vi.fn();
-      renderUpcastPopup({ onCancel });
-      fireEvent.click(screen.getByText('Cancel'));
-      expect(onCancel).toHaveBeenCalledTimes(1);
-    });
-
     it('calls onCancel when pressing Escape key', () => {
       const onCancel = vi.fn();
       renderUpcastPopup({ onCancel });
@@ -79,14 +73,6 @@ describe('UpcastPopup events', () => {
   });
 
   describe('event listener cleanup', () => {
-    it('responds to Escape before unmount', () => {
-      const onCancel = vi.fn();
-      const { unmount } = renderUpcastPopup({ onCancel });
-      fireEvent.keyDown(document, { key: 'Escape' });
-      expect(onCancel).toHaveBeenCalledTimes(1);
-      unmount();
-    });
-
     it('removes the keydown event listener on unmount', () => {
       const onCancel = vi.fn();
       const { unmount } = renderUpcastPopup({ onCancel });

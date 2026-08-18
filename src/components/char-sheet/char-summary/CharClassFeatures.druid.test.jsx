@@ -1,6 +1,7 @@
 // @improved-by-ai
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+// @cleaned-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import CharClassFeatures from './CharClassFeatures.jsx';
 import * as classFeatures from '../../../services/character/classFeatures.js';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
@@ -117,7 +118,7 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
     });
   });
 
-  afterEach(cleanup);
+  // @cleaned: removed afterEach(cleanup) — DOM is auto-cleaned by vitest setup
 
   describe('level gating', () => {
     it('returns null for level 1 druid', () => {
@@ -205,18 +206,23 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
       expect(screen.getByText(/Cosmic Omen: Bane \(Odd\)/)).toBeInTheDocument();
     });
 
-    it('does not render cosmic omen effect when effect is null, empty, or invalid JSON', () => {
-      const stats = starsDruidStats(6);
-
+    it('does not render cosmic omen effect when effect is null', () => {
       setCosmicOmenEffect(null);
+      const stats = starsDruidStats(6);
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText(/Cosmic Omen:/)).not.toBeInTheDocument();
+    });
 
+    it('does not render cosmic omen effect when effect is empty string', () => {
       setCosmicOmenEffect('');
+      const stats = starsDruidStats(6);
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText(/Cosmic Omen:/)).not.toBeInTheDocument();
+    });
 
+    it('does not render cosmic omen effect when effect is invalid JSON', () => {
       setCosmicOmenEffect('invalid json');
+      const stats = starsDruidStats(6);
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText(/Cosmic Omen:/)).not.toBeInTheDocument();
     });
@@ -236,8 +242,9 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
       });
       render(<CharClassFeatures playerStats={wisStats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText(/Cosmic Omen Uses:/).parentElement).toHaveTextContent(/5\/5/);
-      cleanup();
+    });
 
+    it('uses minimum 1 when wisdom bonus is 0', () => {
       const zeroWisStats = buildPlayerStats({
         level: 6,
         abilities: [{ name: 'Wisdom', bonus: 0 }],
@@ -252,7 +259,6 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
       });
       render(<CharClassFeatures playerStats={zeroWisStats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText(/Cosmic Omen Uses:/).parentElement).toHaveTextContent(/1\/1/);
-      cleanup();
     });
   });
 
@@ -295,8 +301,9 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
       const stats = moonDruidStats(10);
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText(/Moonlight Step Uses:/).parentElement).toHaveTextContent(/3\/3/);
-      cleanup();
+    });
 
+    it('uses minimum 1 when wisdom bonus is negative', () => {
       const negativeWisStats = buildPlayerStats({
         level: 10,
         abilities: [{ name: 'Wisdom', bonus: -2 }],
@@ -311,7 +318,6 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
       });
       render(<CharClassFeatures playerStats={negativeWisStats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText(/Moonlight Step Uses:/).parentElement).toHaveTextContent(/1\/1/);
-      cleanup();
     });
   });
 
@@ -335,14 +341,16 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
       expect(screen.getByText(/Circle of the Land: Forest/)).toBeInTheDocument();
     });
 
-    it('does not render circle of the land badge when type is null or empty', () => {
-      const stats = landDruidStats(3);
-
+    it('does not render circle of the land badge when type is null', () => {
       setCircleOfTheLandType(null);
+      const stats = landDruidStats(3);
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText(/Circle of the Land:/)).not.toBeInTheDocument();
+    });
 
+    it('does not render circle of the land badge when type is empty', () => {
       setCircleOfTheLandType('');
+      const stats = landDruidStats(3);
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText(/Circle of the Land:/)).not.toBeInTheDocument();
     });
@@ -370,12 +378,9 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
     });
 
     it('does not render elemental fury badges when choices are not set', () => {
-      const stats10 = stormDruidStats(10);
-      render(<CharClassFeatures playerStats={stats10} campaignName={MOCK_CAMPAIGN} />);
+      const stats = stormDruidStats(18);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText(/Elemental Fury/)).not.toBeInTheDocument();
-
-      const stats18 = stormDruidStats(18);
-      render(<CharClassFeatures playerStats={stats18} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText(/Improved Elemental Fury/)).not.toBeInTheDocument();
     });
   });
@@ -400,46 +405,52 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
       expect(screen.getByText('Wrath of the Sea Active')).toBeInTheDocument();
     });
 
-    it('does not render wrath of the sea badge when inactive or undefined', () => {
-      const stats = seaDruidStats();
-
+    it('does not render wrath of the sea badge when inactive', () => {
       setWrathOfTheSeaActive(false);
+      const stats = seaDruidStats();
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText('Wrath of the Sea Active')).not.toBeInTheDocument();
+    });
 
+    it('does not render wrath of the sea badge when undefined', () => {
       setWrathOfTheSeaActive(undefined);
+      const stats = seaDruidStats();
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText('Wrath of the Sea Active')).not.toBeInTheDocument();
     });
   });
 
   describe('multi-minute badges', () => {
-    it('renders multi-minute duration badges and suppresses non-multi-minute ones', () => {
+    it('renders multi-minute duration badges', () => {
       setBuffs([{ name: 'Some Buff', duration: '10_minutes' }]);
       const stats = buildPlayerStats({ level: 2 });
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText('Some Buff: 10_minutes')).toBeInTheDocument();
+    });
 
+    it('suppresses non-multi-minute duration badges', () => {
       setBuffs([{ name: 'Some Buff', duration: '1_round' }]);
+      const stats = buildPlayerStats({ level: 2 });
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.queryByText('Some Buff')).not.toBeInTheDocument();
     });
 
-    it('handles undefined or null activeBuffs gracefully', () => {
-      const stats = buildPlayerStats({ level: 2 });
-
+    it('handles undefined activeBuffs gracefully', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return undefined;
         return undefined;
       });
+      const stats = buildPlayerStats({ level: 2 });
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText(/Wild Shape Limitations:/)).toBeInTheDocument();
-      cleanup();
+    });
 
+    it('handles null activeBuffs gracefully', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return null;
         return undefined;
       });
+      const stats = buildPlayerStats({ level: 2 });
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText(/Wild Shape Limitations:/)).toBeInTheDocument();
     });

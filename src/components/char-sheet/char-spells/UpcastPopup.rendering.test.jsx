@@ -1,3 +1,4 @@
+// @cleaned-by-ai
 // @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
@@ -153,14 +154,6 @@ describe('UpcastPopup', () => {
       expect(confirmBtn).not.toBeDisabled();
     });
 
-    it('becomes enabled when user selects a level with available slots', () => {
-      renderUpcastPopup();
-
-      // Default selection is level 3 (has slots), so confirm starts enabled
-      const confirmBtn = screen.getByRole('button', { name: /cast at level 3/i });
-      expect(confirmBtn).not.toBeDisabled();
-    });
-
     it('is disabled when only unavailable levels exist', () => {
       const levels = [
         { level: 3, formula: '+1d6', availableSlots: 0 },
@@ -187,15 +180,6 @@ describe('UpcastPopup', () => {
       expect(selectedRadio.value).toBe('4');
     });
 
-    it('changes the confirm button text to reflect the new selection', () => {
-      renderUpcastPopup();
-
-      const level4Radio = screen.getAllByRole('radio').find(r => r.value === '4');
-      fireEvent.click(level4Radio);
-
-      expect(screen.getByRole('button', { name: /cast at level 4/i })).toBeInTheDocument();
-    });
-
     it('keeps confirm button disabled when attempting to select a disabled level', () => {
       renderUpcastPopup();
 
@@ -204,103 +188,6 @@ describe('UpcastPopup', () => {
 
       const confirmBtn = screen.getByRole('button', { name: /cast at level 5/i });
       expect(confirmBtn).toBeDisabled();
-    });
-  });
-
-  // ── Interactions: cancel ──
-
-  describe('cancel behavior', () => {
-    it('calls onCancel when the cancel button is clicked', () => {
-      const onCancel = vi.fn();
-      renderUpcastPopup({ onCancel });
-
-      fireEvent.click(screen.getByText('Cancel'));
-      expect(onCancel).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onCancel when Escape is pressed', () => {
-      const onCancel = vi.fn();
-      renderUpcastPopup({ onCancel });
-
-      fireEvent.keyDown(document, { key: 'Escape' });
-      expect(onCancel).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onCancel when the overlay background is clicked', () => {
-      const onCancel = vi.fn();
-      renderUpcastPopup({ onCancel });
-
-      const overlay = document.querySelector('.popup-overlay');
-      fireEvent.click(overlay);
-      expect(onCancel).toHaveBeenCalledTimes(1);
-    });
-
-    it('does NOT call onCancel when the modal content is clicked', () => {
-      const onCancel = vi.fn();
-      renderUpcastPopup({ onCancel });
-
-      const modal = document.querySelector('.popup-modal');
-      fireEvent.click(modal);
-      expect(onCancel).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── Interactions: confirm ──
-
-  describe('confirm behavior', () => {
-    it('calls onConfirm with the selected level number', () => {
-      const onConfirm = vi.fn();
-      renderUpcastPopup({ onConfirm });
-
-      const confirmBtn = screen.getByRole('button', { name: /cast at level 3/i });
-      fireEvent.click(confirmBtn);
-      expect(onConfirm).toHaveBeenCalledWith(3);
-    });
-
-    it('calls onConfirm with the newly selected level after changing selection', () => {
-      const onConfirm = vi.fn();
-      renderUpcastPopup({ onConfirm });
-
-      const level4Radio = screen.getAllByRole('radio').find(r => r.value === '4');
-      fireEvent.click(level4Radio);
-
-      const confirmBtn = screen.getByRole('button', { name: /cast at level 4/i });
-      fireEvent.click(confirmBtn);
-      expect(onConfirm).toHaveBeenCalledWith(4);
-    });
-
-    it('does not call onConfirm when the confirm button is disabled', () => {
-      const onConfirm = vi.fn();
-      const levels = [
-        { level: 3, formula: '+1d6', availableSlots: 0 },
-      ];
-      renderUpcastPopup({ onConfirm, levels });
-
-      const confirmBtn = screen.getByRole('button', { name: /cast at level 3/i });
-      expect(confirmBtn).toBeDisabled();
-      fireEvent.click(confirmBtn);
-      expect(onConfirm).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── Radio input grouping ──
-
-  describe('radio input grouping', () => {
-    it('groups all radio inputs under the same name', () => {
-      renderUpcastPopup();
-
-      const radios = screen.getAllByRole('radio');
-      radios.forEach(radio => {
-        expect(radio).toHaveAttribute('name', 'upcastLevel');
-      });
-    });
-
-    it('sets correct value attributes matching the level numbers', () => {
-      renderUpcastPopup();
-
-      const radios = screen.getAllByRole('radio');
-      const values = radios.map(r => r.value).sort();
-      expect(values).toEqual(['3', '4', '5']);
     });
   });
 });

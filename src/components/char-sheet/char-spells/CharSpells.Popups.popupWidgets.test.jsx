@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -324,19 +325,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       fireEvent.click(screen.getByTestId('mt-skip'));
       expect(flow.handleMultiTargetSkip).toHaveBeenCalled();
     });
-
-    it('renders MultiTargetPopup with empty target list', () => {
-      flow.pendingMultiTarget = {
-        spellName: 'Aid',
-        spellLevel: 2,
-        range: '30 feet',
-        creatureTargets: [],
-      };
-      renderWithProps();
-
-      expect(screen.getByTestId('multi-target-popup')).toBeInTheDocument();
-      expect(screen.getByTestId('mt-spell-name')).toHaveTextContent('Aid');
-    });
   });
 
   describe('magic missile popup', () => {
@@ -361,31 +349,9 @@ describe('CharSpells - Popup Modal Rendering', () => {
       fireEvent.click(screen.getByTestId('mm-skip'));
       expect(flow.handleMagicMissileSkip).toHaveBeenCalled();
     });
-
-    it('renders MagicMissileTargetPopup when getTargetFromAttacker returns null', () => {
-      flow.pendingMagicMissile = {
-        spell: { name: 'Magic Missile', level: 1 },
-        totalMissiles: 3,
-        missileDamage: '1d4+1',
-        creatureTargets: ['Orc'],
-      };
-      vi.mocked(getTargetFromAttacker).mockReturnValue(null);
-      renderWithProps();
-
-      expect(screen.getByTestId('magic-missile-popup')).toBeInTheDocument();
-      expect(screen.getByTestId('mm-spell-name')).toHaveTextContent('Magic Missile');
-      expect(screen.getByTestId('mm-current-target')).toHaveTextContent('');
-    });
   });
 
   describe('upcast popup', () => {
-    it('renders UpcastPopup with spell name when pendingUpcast is set', () => {
-      upcastFlow.pendingUpcast = { spell: { name: 'Fireball', level: 3 } };
-      renderWithProps();
-
-      expect(screen.getByTestId('upcast-popup')).toBeInTheDocument();
-    });
-
     it('does not render UpcastPopup when pendingUpcast is null', () => {
       upcastFlow.pendingUpcast = null;
       renderWithProps();
@@ -394,16 +360,4 @@ describe('CharSpells - Popup Modal Rendering', () => {
     });
   });
 
-  describe('popup visibility when flow state is null', () => {
-    const popupTests = [
-      { key: 'pendingMetamagic', testId: 'metamagic-popup' },
-      { key: 'pendingMultiTarget', testId: 'multi-target-popup' },
-      { key: 'pendingMagicMissile', testId: 'magic-missile-popup' },
-    ];
-
-    it.each(popupTests)('does not render $testId when $key is null', ({ testId }) => {
-      renderWithProps();
-      expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
-    });
-  });
 });

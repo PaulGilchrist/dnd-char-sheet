@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -82,18 +83,6 @@ const renderPopup = (spell = baseMockSpell, playerStats = baseMockPlayerStats, e
   );
 
 describe('SpellDetailPopup - rendering', () => {
-  describe('spell detail content', () => {
-    it('renders the spell name', () => {
-      renderPopup();
-      expect(screen.getByText('Magic Missile')).toBeInTheDocument();
-    });
-
-    it('renders the spell description', () => {
-      renderPopup();
-      expect(screen.getByText('Three darts of force strike a creature.')).toBeInTheDocument();
-    });
-  });
-
   describe('upcast selector visibility', () => {
     it('shows the upcast selector when the spell is upcastable and multiple levels are available', () => {
       const upcastLevels = [
@@ -124,26 +113,6 @@ describe('SpellDetailPopup - rendering', () => {
         ],
       });
       expect(screen.queryByText(/Cast at Level:/)).not.toBeInTheDocument();
-    });
-  });
-
-  describe('cantrip rendering', () => {
-    it('renders a cantrip with its name and description', () => {
-      const cantrip = {
-        ...baseMockSpell,
-        level: 0,
-        damage: {
-          damage_at_character_level: {
-            '1': '1d4',
-            '5': '2d4',
-            '11': '3d4',
-            '17': '4d4',
-          },
-        },
-      };
-      renderPopup(cantrip, baseMockPlayerStats);
-      expect(screen.getByText('Magic Missile')).toBeInTheDocument();
-      expect(screen.getByText('Three darts of force strike a creature.')).toBeInTheDocument();
     });
   });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -108,15 +109,17 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       });
     }
 
-    it('passes dispelAbilityCheckBonus in metaCtx when casting Dispel Magic with SpellBreaker', async () => {
+    it.each([
+      { spellName: 'Dispel Magic', spellLevel: 3, expectedBonus: 3, label: 'Dispel Magic receives dispelAbilityCheckBonus' },
+    ])('passes $label', ({ spellName, spellLevel, expectedBonus }) => {
       const onCast = vi.fn();
       const spellBreakerStats = makeSpellBreakerStats();
-      setupSpellSlots({ spell_slots_level_3: 2 });
+      setupSpellSlots({ [`spell_slots_level_${spellLevel}`]: 4 });
 
       const spell = {
         ...baseMockSpell,
-        name: 'Dispel Magic',
-        level: 3,
+        name: spellName,
+        level: spellLevel,
         casting_time: '1 action',
         damage: null,
       };
@@ -125,11 +128,14 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Dispel Magic');
-      expect(onCast.mock.calls[0][1].dispelAbilityCheckBonus).toBe(3);
+      expect(onCast.mock.calls[0][1]).toEqual(
+        expect.objectContaining({
+          dispelAbilityCheckBonus: expectedBonus,
+        }),
+      );
     });
 
-    it('does not pass dispelAbilityCheckBonus when casting a non-Dispel Magic spell with SpellBreaker', async () => {
+    it('does not pass dispelAbilityCheckBonus when casting a non-Dispel Magic spell with SpellBreaker', () => {
       const onCast = vi.fn();
       const spellBreakerStats = makeSpellBreakerStats();
       setupSpellSlots({ spell_slots_level_1: 4 });
@@ -145,8 +151,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Magic Missile');
-      expect(onCast.mock.calls[0][1].dispelAbilityCheckBonus).toBeUndefined();
+      expect(onCast.mock.calls[0][1]).not.toHaveProperty('dispelAbilityCheckBonus');
     });
   });
 
@@ -179,42 +184,26 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       });
     }
 
-    it('passes usePsychicDamage:true when the psychic damage toggle is checked before casting', async () => {
+    it.each([
+      { toggleOn: true, expectedPsychic: true, label: 'usePsychicDamage:true when toggle is checked' },
+      { toggleOn: false, expectedPsychic: false, label: 'usePsychicDamage:false when toggle is not checked' },
+    ])('passes $label', ({ toggleOn, expectedPsychic }) => {
       const onCast = vi.fn();
       setupWarlockSlots();
 
       renderPopup(makeBurningHands(), makeWarlockStats(), mockCampaignName, { onCast });
-      fireEvent.click(screen.getByText('Change damage type to Psychic'));
+
+      if (toggleOn) {
+        fireEvent.click(screen.getByText('Change damage type to Psychic'));
+      }
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Burning Hands');
-      expect(onCast.mock.calls[0][0].usePsychicDamage).toBe(true);
-    });
-
-    it('passes usePsychicDamage:false when the psychic damage toggle is not checked', async () => {
-      const onCast = vi.fn();
-      setupWarlockSlots();
-
-      renderPopup(makeBurningHands(), makeWarlockStats(), mockCampaignName, { onCast });
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      expect(onCast).toHaveBeenCalledTimes(1);
-      expect(onCast.mock.calls[0][0].name).toBe('Burning Hands');
-      expect(onCast.mock.calls[0][0].usePsychicDamage).toBe(false);
-    });
-
-    it('does not render the psychic damage toggle for spells without damage', () => {
-      const onCast = vi.fn();
-
-      renderPopup(
-        { ...baseMockSpell, name: 'Bane', level: 1, damage: null },
-        makeWarlockStats(),
-        mockCampaignName,
-        { onCast },
+      expect(onCast.mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          usePsychicDamage: expectedPsychic,
+        }),
       );
-
-      expect(screen.queryByText('Change damage type to Psychic')).not.toBeInTheDocument();
     });
   });
 });

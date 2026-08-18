@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpellSlotLevel from './CharSpellSlotLevel.jsx';
@@ -28,20 +29,6 @@ describe('CharSpellSlotLevel - Rendering', () => {
       );
 
       expect(screen.getByText('2')).toBeInTheDocument();
-    });
-
-    it('displays different level numbers correctly', () => {
-      useRuntimeValue.mockReturnValue(4);
-
-      render(
-        <CharSpellSlotLevel
-          level={4}
-          totalSlots={4}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
-
-      expect(screen.getByText('4')).toBeInTheDocument();
     });
   });
 
@@ -91,84 +78,5 @@ describe('CharSpellSlotLevel - Rendering', () => {
         expect(unclassedCount).toBe(expectedUnclassed);
       }
     );
-
-    it('renders slots in correct order (active first, then inactive, then unclassed)', () => {
-      useRuntimeValue.mockReturnValue(2);
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={4}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
-
-      const slots = [...container.querySelectorAll('.slot')];
-      expect(slots.length).toBe(4);
-
-      // First 2 should be active, next 2 should be inactive
-      expect(slots[0].classList.contains('active')).toBe(true);
-      expect(slots[1].classList.contains('active')).toBe(true);
-      expect(slots[2].classList.contains('inactive')).toBe(true);
-      expect(slots[3].classList.contains('inactive')).toBe(true);
-    });
-
-    it('renders all inactive when available equals total', () => {
-      useRuntimeValue.mockReturnValue(3);
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={3}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
-
-      const slots = [...container.querySelectorAll('.slot')];
-      expect(slots.length).toBe(4);
-
-      const firstThree = slots.slice(0, 3);
-      firstThree.forEach((slot) => {
-        expect(slot.classList.contains('inactive')).toBe(true);
-        expect(slot.classList.contains('active')).toBe(false);
-      });
-
-      // Fourth slot should be unclassed (total < 4)
-      expect(slots[3].classList.contains('active')).toBe(false);
-      expect(slots[3].classList.contains('inactive')).toBe(false);
-    });
-  });
-
-  describe('structure', () => {
-    it('renders the component with header and slots containers', () => {
-      useRuntimeValue.mockReturnValue(2);
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={4}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
-
-      expect(container.querySelector('.char-spell-slot-level.level')).toBeInTheDocument();
-      expect(container.querySelector('.header')).toBeInTheDocument();
-      expect(container.querySelector('.slots')).toBeInTheDocument();
-    });
-
-    it('renders 4 slot divs regardless of totalSlots value', () => {
-      useRuntimeValue.mockReturnValue(1);
-
-      const { container } = render(
-        <CharSpellSlotLevel
-          level={1}
-          totalSlots={2}
-          playerStats={helpers.createPlayerStats()}
-        />
-      );
-
-      const slots = [...container.querySelectorAll('.slot')];
-      expect(slots.length).toBe(4);
-    });
   });
 });

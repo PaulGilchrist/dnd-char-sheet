@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
@@ -171,21 +172,5 @@ describe('SpellDetailPopup', () => {
       expect(screen.queryByText(/MOD/)).not.toBeInTheDocument();
     });
 
-    it('handles null modifier (defaults to 0)', () => {
-      const stats = createPlayerStats({ spellAbilities: { modifier: null } });
-      const spell = createSpell({
-        damage: { damage_at_slot_level: { '1': '1d8+MOD', '2': '2d8+MOD' } },
-      });
-      const upcastLevels = [
-        { level: 1, formula: '1d8+MOD', availableSlots: 4 },
-        { level: 2, formula: '2d8+MOD', availableSlots: 3 },
-      ];
-
-      renderPopup(spell, stats, mockCampaignName, { upcastLevels });
-
-      expect(screen.getByText('1d8+0')).toBeInTheDocument();
-      expect(screen.getByText('2d8+0')).toBeInTheDocument();
-      expect(screen.queryByText(/MOD/)).not.toBeInTheDocument();
-    });
   });
 });

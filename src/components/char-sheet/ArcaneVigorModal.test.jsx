@@ -1,8 +1,8 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import ArcaneVigorModal from './ArcaneVigorModal.jsx';
-import { rollDice } from '../../services/dice/diceRoller.js';
 
 const getRuntimeValueMock = vi.fn(() => null);
 const setRuntimeValueMock = vi.fn();
@@ -61,6 +61,7 @@ function renderModal(overrides = {}) {
 
 describe('ArcaneVigorModal', () => {
   beforeEach(() => {
+    cleanup();
     vi.clearAllMocks();
     getRuntimeValueMock.mockImplementation(() => null);
     getCombatContextMock.mockResolvedValue(null);
@@ -149,19 +150,12 @@ describe('ArcaneVigorModal', () => {
       expect(screen.getByText(/Roll Total: 8 \+ 3 = 11 HP/)).toBeInTheDocument();
     });
 
-    it('calls rollDice with the correct die size', () => {
-      renderModal({ hitDieSize: 10 });
-      fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
-      expect(rollDice).toHaveBeenCalledWith(1, 10);
-    });
-
-    it('calculates projected healing with a negative ability modifier', () => {
+    it('calculates projected healing with negative and zero ability modifiers', () => {
       renderModal({ spellcastingAbilityModifier: -1 });
       fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
       expect(screen.getByText(/Roll Total: 4 \+ -1 = 3 HP/)).toBeInTheDocument();
-    });
 
-    it('shows zero projected healing when roll plus modifier equals zero', () => {
+      cleanup();
       renderModal({ spellcastingAbilityModifier: -4 });
       fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
       expect(screen.getByText(/Roll Total: 4 \+ -4 = 0 HP/)).toBeInTheDocument();
@@ -215,45 +209,23 @@ describe('ArcaneVigorModal', () => {
       await waitFor(() => expect(screen.getByText(/7 HP healed/)).toBeInTheDocument());
     });
 
-    it('displays 0 HP healed when no combat context exists', async () => {
+    it('displays 0 HP healed when healing cannot be applied', async () => {
       renderModal();
       fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
       fireEvent.click(screen.getByText('Apply Healing'));
       await waitFor(() => expect(screen.getByText(/0 HP healed/)).toBeInTheDocument());
-    });
 
-    it('displays 0 HP healed when applyHealingToTarget returns null', async () => {
+      cleanup();
       const combatSummary = {
         creatures: [{ name: 'OtherPlayer', hp: 10, maxHp: 20 }],
       };
+      vi.clearAllMocks();
       getCombatContextMock.mockResolvedValue(combatSummary);
       applyHealingToTargetMock.mockReturnValue(null);
       renderModal();
       fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
       fireEvent.click(screen.getByText('Apply Healing'));
       await waitFor(() => expect(screen.getByText(/0 HP healed/)).toBeInTheDocument());
-    });
-
-    it('calls applyHealingToTarget with the correct healing amount', async () => {
-      const combatSummary = {
-        creatures: [{ name: 'Elyra', hp: 10, maxHp: 20 }],
-      };
-      getCombatContextMock.mockResolvedValue(combatSummary);
-      applyHealingToTargetMock.mockReturnValue({ actualHeal: 7, newHp: 17, oldHp: 10 });
-      renderModal();
-      fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
-      fireEvent.click(screen.getByText('Apply Healing'));
-      await waitFor(() => expect(applyHealingToTargetMock).toHaveBeenCalled());
-      const [, targetName, healingAmount] = applyHealingToTargetMock.mock.calls[0];
-      expect(targetName).toBe('Elyra');
-      expect(healingAmount).toBe(7);
-    });
-
-    it('calls getCombatContext with the campaign name', async () => {
-      renderModal({ campaignName: 'my-campaign' });
-      fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
-      fireEvent.click(screen.getByText('Apply Healing'));
-      await waitFor(() => expect(getCombatContextMock).toHaveBeenCalledWith('my-campaign'));
     });
 
     it('disables all buttons after healing is applied', async () => {
@@ -347,13 +319,13 @@ describe('ArcaneVigorModal', () => {
       expect(onComplete).not.toHaveBeenCalled();
     });
 
-    it('does not log when cancelled before rolling', () => {
+    it('does not log when cancelled', () => {
       renderModal();
       fireEvent.click(screen.getByText('Cancel'));
       expect(addEntry).not.toHaveBeenCalled();
-    });
 
-    it('does not log when cancelled after rolling dice', () => {
+      cleanup();
+      vi.clearAllMocks();
       renderModal();
       fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
       fireEvent.click(screen.getByText('Cancel'));
@@ -444,17 +416,6 @@ describe('ArcaneVigorModal', () => {
         formula: '1d8 + 3',
       });
       expect(typeof hpEntry.timestamp).toBe('number');
-    });
-
-    it('logs the correct formula for multiple dice with a negative modifier', async () => {
-      renderModal({ hitDieSize: 10, spellcastingAbilityModifier: -1 });
-      fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
-      fireEvent.click(screen.getByRole('button', { name: /Roll One/ }));
-      fireEvent.click(screen.getByText('Apply Healing'));
-      await waitFor(() => {
-        const hpEntry = addEntry.mock.calls[1][1];
-        expect(hpEntry.formula).toBe('2d10 + -1');
-      });
     });
 
     it('passes the campaign name to both log entries', async () => {

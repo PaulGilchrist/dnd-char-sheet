@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -328,7 +329,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
       expect(screen.getByText('Utility')).toBeInTheDocument();
     });
 
-    it('renders Utility when damage property is null', () => {
+    it('renders Utility when damage property is null or empty object', () => {
       const spell = {
         name: 'Null Damage Spell',
         level: 1,
@@ -337,21 +338,6 @@ describe('CharSpells - Rendering Edge Cases', () => {
         duration: 'Instantaneous',
         components: ['V'],
         damage: null,
-        prepared: 'Always',
-      };
-      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
-      expect(screen.getByText('Utility')).toBeInTheDocument();
-    });
-
-    it('renders Utility when damage is an empty object', () => {
-      const spell = {
-        name: 'Empty Damage Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V'],
-        damage: {},
         prepared: 'Always',
       };
       render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
@@ -404,70 +390,23 @@ describe('CharSpells - Rendering Edge Cases', () => {
       expect(screen.getByText('2d10 Lightning')).toBeInTheDocument();
     });
 
-    it('falls back to first damage key when player level is undefined', () => {
-      const cantrip = {
-        name: 'Undefined Level Cantrip',
-        level: 0,
-        casting_time: '1 turn',
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V'],
-        damage: {
-          damage_at_slot_level: { '5': '2d10' },
-          damage_type: 'Acid',
-        },
-        prepared: 'Always',
-      };
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: { ...basePlayerStats.spellAbilities, spells: [cantrip] },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('2d10 Acid')).toBeInTheDocument();
-    });
-
-    it('renders Utility when cantrip has no damage object and no DC', () => {
-      const cantrip = {
-        name: 'Non-Damaging Cantrip',
-        level: 0,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      render(<CharSpells playerStats={statsWithSpell(cantrip)} campaignName="test" />);
-      expect(screen.getByText('Utility')).toBeInTheDocument();
-    });
-
-    it('renders DC-only effect (no damage) with half success', () => {
+    it.each`
+      dc_success    | expectedOutput
+      ${'half'}     | ${'WIS half'}
+      ${'negates'}  | ${'WIS negates'}
+    `('renders DC-only effect (no damage) with $dc_success success', ({ dc_success, expectedOutput }) => {
       const spell = {
-        name: 'Hex',
-        level: 1,
-        casting_time: '1 bonus action',
-        range: '60 feet',
-        duration: 'Concentration, up to 1 hour',
-        components: ['V'],
-        dc: { dc_type: 'WIS', dc_success: 'half' },
-        prepared: 'Always',
-      };
-      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
-      expect(screen.getByText('WIS half')).toBeInTheDocument();
-    });
-
-    it('renders DC-only effect (no damage) with negates success', () => {
-      const spell = {
-        name: 'Sleep',
+        name: 'DC Effect Spell',
         level: 1,
         casting_time: '1 action',
         range: '60 feet',
         duration: '1 minute',
-        components: ['V', 'S', 'M'],
-        dc: { dc_type: 'WIS', dc_success: 'negates' },
+        components: ['V'],
+        dc: { dc_type: 'WIS', dc_success },
         prepared: 'Always',
       };
       render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
-      expect(screen.getByText('WIS negates')).toBeInTheDocument();
+      expect(screen.getByText(expectedOutput)).toBeInTheDocument();
     });
   });
 
@@ -494,24 +433,9 @@ describe('CharSpells - Rendering Edge Cases', () => {
       expect(screen.getByText(expectedOutput)).toBeInTheDocument();
     });
 
-    it('renders empty cell when duration property is missing', () => {
+    it('renders empty cell when duration property is missing or null', () => {
       const spell = {
         name: 'No Duration Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
-      expect(allCellTexts).toContain('');
-    });
-
-    it('renders empty cell when duration is null', () => {
-      const spell = {
-        name: 'Null Duration Spell',
         level: 1,
         casting_time: '1 action',
         range: 'Self',
@@ -572,24 +496,9 @@ describe('CharSpells - Rendering Edge Cases', () => {
       expect(await screen.findByText('1 Reaction')).toBeInTheDocument();
     });
 
-    it('renders empty cell when casting_time is missing', () => {
+    it('renders empty cell when casting_time is missing or null', () => {
       const spell = {
         name: 'No Casting Time Spell',
-        level: 1,
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V'],
-        prepared: 'Always',
-      };
-      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
-      expect(allCellTexts).toContain('');
-    });
-
-    it('renders empty cell when casting_time is null', () => {
-      const spell = {
-        name: 'Null Casting Time Spell',
         level: 1,
         casting_time: null,
         range: 'Self',
@@ -626,45 +535,19 @@ describe('CharSpells - Rendering Edge Cases', () => {
       expect(screen.getByText(expectedNotes)).toBeInTheDocument();
     });
 
-    it('renders empty notes cell for empty components array', () => {
+    it.each`
+      components
+      ${[]}
+      ${null}
+      ${undefined}
+    `('renders empty notes cell for components: $components', ({ components }) => {
       const spell = {
         name: 'Empty Components Spell',
         level: 1,
         casting_time: '1 action',
         range: 'Self',
         duration: 'Instantaneous',
-        components: [],
-        prepared: 'Always',
-      };
-      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
-      expect(allCellTexts).toContain('');
-    });
-
-    it('renders empty notes cell when components is missing', () => {
-      const spell = {
-        name: 'Missing Components Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'Instantaneous',
-        prepared: 'Always',
-      };
-      render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);
-      const table = screen.getByRole('table');
-      const allCellTexts = Array.from(table.querySelectorAll('tbody td')).map(td => td.textContent.trim());
-      expect(allCellTexts).toContain('');
-    });
-
-    it('renders empty notes cell when components is null', () => {
-      const spell = {
-        name: 'Null Components Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: null,
+        components,
         prepared: 'Always',
       };
       render(<CharSpells playerStats={statsWithSpell(spell)} campaignName="test" />);

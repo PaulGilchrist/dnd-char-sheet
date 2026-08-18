@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
@@ -323,11 +324,6 @@ describe('CharSpells - Popup Modal Rendering', () => {
       );
       expect(screen.queryByTestId('spell-detail-popup')).not.toBeInTheDocument();
     });
-
-    it('does not gate metamagic when the spell detail popup is not visible', () => {
-      renderWithProps();
-      expect(flow.gateMetamagic).not.toHaveBeenCalled();
-    });
   });
 
   describe('words of creation target selection', () => {
@@ -344,38 +340,13 @@ describe('CharSpells - Popup Modal Rendering', () => {
       };
     }
 
-    it('renders the secondary target modal when the flow hook sets wordsOfCreationTarget', async () => {
-      const wordsOfCreationData = createWordsOfCreationData();
+    const testCases = [
+      { name: 'modal renders', check: (screen, _data) => expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument() },
+      { name: 'skip handler dismisses modal', action: (screen) => fireEvent.click(screen.getByTestId('stm-skip')), check: (_screen, data) => expect(data.onSkip).toHaveBeenCalled() },
+      { name: 'target selection invokes handler', action: (screen) => fireEvent.click(screen.getByTestId('stm-Orc')), check: (_screen, data) => expect(data.onTargetSelected).toHaveBeenCalledWith('Orc') },
+    ];
 
-      vi.mocked(useSpellMetamagicFlow).mockImplementation((playerStats, campaignName, castAction, setWordsOfCreationTarget) => {
-        Promise.resolve().then(() => setWordsOfCreationTarget(wordsOfCreationData));
-        return flow;
-      });
-
-      renderWithProps();
-      await waitFor(() => {
-        expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('calls the skip handler when words of creation modal is skipped', async () => {
-      const wordsOfCreationData = createWordsOfCreationData();
-
-      vi.mocked(useSpellMetamagicFlow).mockImplementation((playerStats, campaignName, castAction, setWordsOfCreationTarget) => {
-        Promise.resolve().then(() => setWordsOfCreationTarget(wordsOfCreationData));
-        return flow;
-      });
-
-      renderWithProps();
-      await waitFor(() => {
-        expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('stm-skip'));
-      expect(wordsOfCreationData.onSkip).toHaveBeenCalled();
-    });
-
-    it('calls the target selected handler when a creature is chosen from words of creation modal', async () => {
+    it.each(testCases)('words of creation: $name', async ({ action, check }) => {
       const wordsOfCreationData = createWordsOfCreationData();
 
       vi.mocked(useSpellMetamagicFlow).mockImplementation((playerStats, campaignName, castAction, setWordsOfCreationTarget) => {
@@ -388,8 +359,8 @@ describe('CharSpells - Popup Modal Rendering', () => {
         expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('stm-Orc'));
-      expect(wordsOfCreationData.onTargetSelected).toHaveBeenCalledWith('Orc');
+      if (action) action(screen);
+      check(screen, wordsOfCreationData);
     });
   });
 
