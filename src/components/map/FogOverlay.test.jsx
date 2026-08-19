@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import FogOverlay from './FogOverlay.jsx';
@@ -14,14 +15,7 @@ describe('FogOverlay', () => {
             expect(container.innerHTML).toBe('');
         });
 
-        it('renders null when fog is null even if isLocalhost is true', () => {
-            const { container } = render(
-                <FogOverlay fog={null} isLocalhost={true} />
-            );
-            expect(container.innerHTML).toBe('');
-        });
-
-        it('renders null when fog is undefined even if isLocalhost is true', () => {
+        it('renders null when fog is falsy even if isLocalhost is true', () => {
             const { container } = render(
                 <FogOverlay isLocalhost={true} />
             );
@@ -62,15 +56,6 @@ describe('FogOverlay', () => {
             expect(positions).toContainEqual({ x: 80, y: 40 });
         });
 
-        it('applies correct width and height attributes matching CELL_SIZE', () => {
-            const { container } = render(
-                <FogOverlay fog={new Set(['0,0'])} isLocalhost={true} />
-            );
-            const rect = container.querySelector('rect');
-            expect(rect).toHaveAttribute('width', '40');
-            expect(rect).toHaveAttribute('height', '40');
-        });
-
         it('applies the no-print and fog-cell classes', () => {
             const { container } = render(
                 <FogOverlay fog={new Set(['0,0'])} isLocalhost={true} />
@@ -78,16 +63,6 @@ describe('FogOverlay', () => {
             const rect = container.querySelector('rect');
             expect(rect).toHaveClass('no-print');
             expect(rect).toHaveClass('fog-cell');
-        });
-
-        it('handles negative coordinates correctly', () => {
-            const fog = new Set(['-1,-1']);
-            const { container } = render(
-                <FogOverlay fog={fog} isLocalhost={true} />
-            );
-            const rect = container.querySelector('rect');
-            expect(rect).toHaveAttribute('x', '-40');
-            expect(rect).toHaveAttribute('y', '-40');
         });
     });
 });

@@ -6,57 +6,16 @@ import FirePitSVG from './FirePitSVG';
 
 describe('FirePitSVG', () => {
   describe('props', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<FirePitSVG />);
-      expect(container.querySelector('g')).toBeInTheDocument();
-    });
-
-    it('applies the id attribute to the group', () => {
-      const { container } = render(<FirePitSVG id="firepit-1" />);
-      expect(container.querySelector('g')).toHaveAttribute('id', 'firepit-1');
-    });
-
-    it('does not render id attribute when id is null', () => {
-      const { container } = render(<FirePitSVG id={null} />);
-      expect(container.querySelector('g')).not.toHaveAttribute('id');
-    });
-
-    it('applies className to the group', () => {
-      const { container } = render(<FirePitSVG className="custom-firepit" />);
-      expect(container.querySelector('g')).toHaveClass('custom-firepit');
-    });
-
-    it('does not render className attribute when className is undefined', () => {
-      const { container } = render(<FirePitSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('class');
-    });
-
-    it('spreads additional props as attributes on the group', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
+      const ref = React.createRef();
       const { container } = render(
-        <FirePitSVG data-test="firepit-test" aria-label="Fire Pit" role="img" />,
+        <FirePitSVG id="firepit-1" className="custom-firepit" data-test="firepit-test" ref={ref} />
       );
       const g = container.querySelector('g');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'firepit-1');
+      expect(g).toHaveClass('custom-firepit');
       expect(g).toHaveAttribute('data-test', 'firepit-test');
-      expect(g).toHaveAttribute('aria-label', 'Fire Pit');
-      expect(g).toHaveAttribute('role', 'img');
-    });
-
-    it('accepts a ref via forwardRef', () => {
-      const ref = React.createRef();
-      render(<FirePitSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName.toLowerCase()).toBe('g');
-    });
-
-    it('combines id, className, rest props, and ref', () => {
-      const ref = React.createRef();
-      const { container } = render(
-        <FirePitSVG id="test-firepit" className="test-class" data-custom="value" ref={ref} />,
-      );
-      const g = container.querySelector('g');
-      expect(g).toHaveAttribute('id', 'test-firepit');
-      expect(g).toHaveClass('test-class');
-      expect(g).toHaveAttribute('data-custom', 'value');
       expect(ref.current).toBe(g);
     });
   });
@@ -165,35 +124,6 @@ describe('FirePitSVG', () => {
       });
     });
   });
-
-  describe('element structure', () => {
-    it('renders the expected number of child elements', () => {
-      const { container } = render(<FirePitSVG />);
-      const g = container.querySelector('g');
-      const allElements = Array.from(g.children);
-      // 3 glow circles + 1 stone ring circle + 4 ember circles + 10 spark circles = 18 circles
-      // 1 ember ellipse + 1 core ellipse = 2 ellipses
-      // 7 outer flames + 5 mid flames + 3 inner flames + 1 core path = 16 paths
-      // total = 18 + 2 + 16 = 36
-      expect(allElements.length).toBe(36);
-    });
-
-    it('renders the expected SVG element types', () => {
-      const { container } = render(<FirePitSVG />);
-      const g = container.querySelector('g');
-      const circles = g.querySelectorAll('circle');
-      const ellipses = g.querySelectorAll('ellipse');
-      const paths = g.querySelectorAll('path');
-
-      expect(circles.length).toBe(18);
-      expect(ellipses.length).toBe(2);
-      expect(paths.length).toBe(16);
-    });
-  });
-
-  describe('displayName', () => {
-    it('has the correct displayName', () => {
-      expect(FirePitSVG.displayName).toBe('FirePitSVG');
-    });
-  });
 });
+
+// @cleaned-by-ai

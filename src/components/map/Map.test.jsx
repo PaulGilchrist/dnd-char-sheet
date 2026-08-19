@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, act, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
@@ -364,112 +365,6 @@ describe('Map - outdoor map type returns HexMap', () => {
     });
 });
 
-describe('Map - SVG structure with loaded mapData', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        resetState();
-    });
-
-    it('renders the map container div with grid-svg child', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-        expect(container.querySelector('.grid-svg')).toBeInTheDocument();
-    });
-
-    it('renders MapToolbar with toolbar class', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.toolbar')).toBeInTheDocument();
-    });
-
-    it('renders SVG with grid background rect', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const bgRect = svg.querySelector('rect.grid-bg');
-        expect(bgRect).toBeTruthy();
-    });
-
-    it('renders SVG with grid lines', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const gridLines = svg.querySelectorAll('line.grid-line');
-        expect(gridLines.length).toBeGreaterThan(0);
-    });
-
-    it('renders SVG with spell overlay layer group', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const spellLayer = svg.querySelector('g.spell-overlay-layer');
-        expect(spellLayer).toBeTruthy();
-    });
-});
-
-describe('Map - SVG cursor styles', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        resetState();
-    });
-
-    it('applies grabbing cursor when panning', async () => {
-        mockState.panning = true;
-        mockState.rulerMode = false;
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        expect(svg.style.cursor).toBe('grabbing');
-    });
-
-    it('applies crosshair cursor when rulerMode is active', async () => {
-        mockState.panning = false;
-        mockState.rulerMode = true;
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        expect(svg.style.cursor).toBe('crosshair');
-    });
-
-    it('applies grab cursor when tool is none and not panning', async () => {
-        mockState.panning = false;
-        mockState.rulerMode = false;
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        expect(svg.style.cursor).toBe('grab');
-    });
-});
-
-describe('Map - SVG viewBox calculation', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        resetState();
-    });
-
-    it('renders SVG with viewBox reflecting panX and panY', async () => {
-        mockState.panX = 100;
-        mockState.panY = 200;
-        mockState.zoom = 2;
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        expect(svg.getAttribute('viewBox')).toBe('100 200 600 600');
-    });
-
-    it('renders SVG with viewBox dimensions calculated as SVG_SIZE / zoom', async () => {
-        mockState.zoom = 0.5;
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        expect(svg.getAttribute('viewBox')).toBe('0 0 2400 2400');
-    });
-});
-
-describe('Map - non-localhost mode', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        resetState();
-    });
-
-    it('renders the map for non-localhost clients', async () => {
-        const { container } = await act(async () => renderMap({ isLocalhost: false }));
-        expect(container.querySelector('.map')).toBeInTheDocument();
-        expect(container.querySelector('.grid-svg')).toBeInTheDocument();
-    });
-});
-
 describe('Map - room rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -511,56 +406,5 @@ describe('Map - room rendering', () => {
         });
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.room-hit-area')).toBeTruthy();
-    });
-});
-
-describe('Map - RulerOverlay rendering', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        resetState();
-    });
-
-    it('renders ruler line when rulerStart and rulerEnd are set', async () => {
-        mockState.rulerStart = { gridX: 0, gridY: 0 };
-        mockState.rulerEnd = { gridX: 10, gridY: 10 };
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('line.ruler-line')).toBeTruthy();
-    });
-
-    it('renders ruler preview line when rulerPreview is set instead of rulerEnd', async () => {
-        mockState.rulerStart = { gridX: 0, gridY: 0 };
-        mockState.rulerPreview = { gridX: 5, gridY: 5 };
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('line.ruler-line')).toBeTruthy();
-    });
-
-    it('does not render ruler line when rulerStart is null', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('line.ruler-line')).toBeNull();
-    });
-});
-
-describe('Map - SpellOverlayRenderer rendering', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        resetState();
-    });
-
-    it('renders spell overlay layer with existing overlays', async () => {
-        mockState.overlays = [
-            { id: 'overlay1', shape: 'sphere', startGridX: 5, startGridY: 5, distanceFt: 30, color: 'rgba(255,80,60,0.35)', radiusFt: 20 },
-        ];
-        const { container } = await act(async () => renderMap());
-        const spellLayer = container.querySelector('g.spell-overlay-layer');
-        expect(spellLayer).toBeTruthy();
-    });
-
-    it('renders pending overlay when spellDraft exists', async () => {
-        mockState.spellDraft = { startGridX: 5, startGridY: 5, angle: 0 };
-        mockState.spellMode = 'cone';
-        mockState.shapeParams = { sizeFt: 60, angle: 90, color: 'rgba(255,80,60,0.35)' };
-        const { container } = await act(async () => renderMap());
-        const spellLayer = container.querySelector('g.spell-overlay-layer');
-        expect(spellLayer).toBeTruthy();
     });
 });

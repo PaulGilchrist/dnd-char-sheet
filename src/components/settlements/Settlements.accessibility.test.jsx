@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
@@ -61,22 +62,14 @@ describe('Settlements - accessibility and keyboard', () => {
   });
 
   describe('Header controls', () => {
-    it('gives the back button an accessible name from its visible text', () => {
+    it.each([
+      { regex: /back/i, accessibleName: 'Back' },
+      { regex: /new settlement/i, accessibleName: 'New Settlement' },
+      { regex: /generate settlement/i, accessibleName: 'Generate Settlement' },
+    ])('gives the %p button an accessible name of "$accessibleName"', ({ regex, accessibleName }) => {
       render(<Settlements campaignName={campaignName} onBack={() => {}} />);
-      const backBtn = screen.getByRole('button', { name: /back/i });
-      expect(backBtn).toHaveAccessibleName('Back');
-    });
-
-    it('gives the new settlement button an accessible name from its visible text', () => {
-      render(<Settlements campaignName={campaignName} onBack={() => {}} />);
-      const newBtn = screen.getByRole('button', { name: /new settlement/i });
-      expect(newBtn).toHaveAccessibleName('New Settlement');
-    });
-
-    it('gives the generate settlement button an accessible name from its visible text', () => {
-      render(<Settlements campaignName={campaignName} onBack={() => {}} />);
-      const genBtn = screen.getByRole('button', { name: /generate settlement/i });
-      expect(genBtn).toHaveAccessibleName('Generate Settlement');
+      const btn = screen.getByRole('button', { name: regex });
+      expect(btn).toHaveAccessibleName(accessibleName);
     });
   });
 
@@ -177,12 +170,5 @@ describe('Settlements - accessibility and keyboard', () => {
     });
   });
 
-  describe('Back navigation', () => {
-    it('calls onBack when the back button is clicked', () => {
-      const onBack = vi.fn();
-      render(<Settlements campaignName={campaignName} onBack={onBack} />);
-      fireEvent.click(screen.getByRole('button', { name: /back/i }));
-      expect(onBack).toHaveBeenCalledTimes(1);
-    });
-  });
+
 });

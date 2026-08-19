@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NPCListItem from './NPCListItem.jsx';
@@ -78,22 +79,34 @@ describe('NPCListItem', () => {
     });
   });
 
-  // ── Stat Block Badge ──────────────────────────────────────────────
+  // ── Stat Block Badge and Initiative Button ────────────────────────
+  // Both the stat block badge and initiative button are controlled by
+  // the same npcHasStatBlock(npc) guard. Testing them together avoids
+  // duplicating the same condition checks.
 
-  describe('Stat block badge', () => {
-    it('does not render badge when npc has no stat block', () => {
+  describe('Stat block badge and initiative button', () => {
+    it('does not render badge or button when npc has no stat block', () => {
       renderListItem();
       expect(screen.queryByTitle('Has stat block')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Add to Initiative')).not.toBeInTheDocument();
     });
 
-    it('renders badge when armorClass is numeric', () => {
+    it('renders badge and button when armorClass is numeric', () => {
       renderListItem({ armorClass: 15 });
       expect(screen.getByTitle('Has stat block')).toBeInTheDocument();
+      expect(screen.getByTitle('Add to Initiative')).toBeInTheDocument();
     });
 
-    it('does not treat a string armorClass as a stat block', () => {
+    it('does not render badge or button for non-numeric armorClass', () => {
       renderListItem({ armorClass: '15' });
       expect(screen.queryByTitle('Has stat block')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Add to Initiative')).not.toBeInTheDocument();
+    });
+
+    it('calls onAddToInitiative with the npc when clicked', () => {
+      renderListItem({ armorClass: 15 });
+      fireEvent.click(screen.getByTitle('Add to Initiative'));
+      expect(mockOnAddToInitiative).toHaveBeenCalledWith({ ...baseNPC, armorClass: 15 });
     });
   });
 
@@ -110,12 +123,6 @@ describe('NPCListItem', () => {
       const badge = listItemFor().querySelector('.ct-list-attitude');
       expect(badge).toHaveTextContent('positive');
       expect(badge).toHaveAttribute('title', 'positive');
-    });
-
-    it('applies inline style for negative attitude', () => {
-      renderListItem({ attitude: 'negative' });
-      const badge = listItemFor().querySelector('.ct-list-attitude');
-      expect(badge.style.backgroundColor).toBeTruthy();
     });
   });
 
@@ -162,32 +169,6 @@ describe('NPCListItem', () => {
     });
   });
 
-  // ── Add to Initiative Button ──────────────────────────────────────
-
-  describe('Add to Initiative button', () => {
-    it('does not render button when npc has no stat block', () => {
-      renderListItem();
-      expect(screen.queryByTitle('Add to Initiative')).not.toBeInTheDocument();
-    });
-
-    it('renders button when npc has stat block', () => {
-      renderListItem({ armorClass: 15 });
-      expect(screen.getByTitle('Add to Initiative')).toBeInTheDocument();
-    });
-
-    it('calls onAddToInitiative with the npc when clicked', () => {
-      renderListItem({ armorClass: 15 });
-      fireEvent.click(screen.getByTitle('Add to Initiative'));
-      expect(mockOnAddToInitiative).toHaveBeenCalledWith({ ...baseNPC, armorClass: 15 });
-    });
-
-    it('does not trigger onEdit when Add to Initiative is clicked', () => {
-      renderListItem({ armorClass: 15 });
-      fireEvent.click(screen.getByTitle('Add to Initiative'));
-      expect(mockOnEdit).not.toHaveBeenCalled();
-    });
-  });
-
   // ── Edit Callback ─────────────────────────────────────────────────
 
   describe('Edit callback', () => {
@@ -215,35 +196,6 @@ describe('NPCListItem', () => {
       renderListItem();
       fireEvent.keyDown(listItemFor(), { key: 'Escape' });
       expect(mockOnEdit).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── Full Rendering ────────────────────────────────────────────────
-
-  describe('Full rendering', () => {
-    it('renders all sections when all fields are populated', () => {
-      const fullNPC = {
-        name: 'Elminster',
-        race: 'Human',
-        classRole: 'Wizard',
-        attitude: 'positive',
-        tags: 'mentor, archmage',
-        imagePath: '/images/elminster.png',
-        armorClass: 12,
-      };
-      renderListItem(fullNPC);
-
-      const name = 'Elminster';
-      expect(screen.getByText(name)).toBeInTheDocument();
-      expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
-      expect(screen.getByTitle('Has stat block')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: `Edit NPC: ${name}` }).querySelector('.ct-list-attitude')).toHaveTextContent('positive');
-      const subtitle = screen.getByRole('button', { name: `Edit NPC: ${name}` }).querySelector('.npcs-list-subtitle');
-      expect(subtitle).toHaveTextContent('Human');
-      expect(subtitle).toHaveTextContent('Wizard');
-      expect(subtitle.querySelector('.npcs-list-separator')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: `Edit NPC: ${name}` }).querySelector('.npcs-list-tags')).toHaveTextContent('mentor, archmage');
-      expect(screen.getByTitle('Add to Initiative')).toBeInTheDocument();
     });
   });
 });

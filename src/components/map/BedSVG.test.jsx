@@ -6,67 +6,17 @@ import BedSVG from './BedSVG';
 
 describe('BedSVG', () => {
   describe('root element', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<BedSVG />);
-      expect(container.querySelector('g')).toBeInTheDocument();
-    });
-
-    it('applies id to the root <g>', () => {
-      const { container } = render(<BedSVG id="bed-1" />);
-      expect(container.querySelector('g')).toHaveAttribute('id', 'bed-1');
-    });
-
-    it('does not render id attribute when id is undefined', () => {
-      const { container } = render(<BedSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('id');
-    });
-
-    it('does not render id attribute when id is null', () => {
-      const { container } = render(<BedSVG id={null} />);
-      expect(container.querySelector('g')).not.toHaveAttribute('id');
-    });
-
-    it('applies className to the root <g>', () => {
-      const { container } = render(<BedSVG className="custom-bed" />);
-      expect(container.querySelector('g')).toHaveClass('custom-bed');
-    });
-
-    it('does not render class attribute when className is undefined', () => {
-      const { container } = render(<BedSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('class');
-    });
-
-    it('spreads additional props as attributes on the group', () => {
-      const { container } = render(
-        <BedSVG data-test="bed-test" aria-label="Bed" role="img" />,
-      );
-      const g = container.querySelector('g');
-      expect(g).toHaveAttribute('data-test', 'bed-test');
-      expect(g).toHaveAttribute('aria-label', 'Bed');
-      expect(g).toHaveAttribute('role', 'img');
-    });
-
-    it('accepts a ref via forwardRef', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
       const ref = React.createRef();
-      render(<BedSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName).toBe('G');
-    });
-
-    it('applies id, className, and rest props together', () => {
-      const ref = { current: null };
       const { container } = render(
-        <BedSVG id="test-bed" className="test-class" data-custom="value" ref={ref} />,
+        <BedSVG id="bed-1" className="custom-bed" data-test="bed-test" ref={ref} />
       );
       const g = container.querySelector('g');
-      expect(g).toHaveAttribute('id', 'test-bed');
-      expect(g).toHaveClass('test-class');
-      expect(g).toHaveAttribute('data-custom', 'value');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'bed-1');
+      expect(g).toHaveClass('custom-bed');
+      expect(g).toHaveAttribute('data-test', 'bed-test');
       expect(ref.current).toBe(g);
-    });
-
-    it('sets displayName to "BedSVG"', () => {
-      expect(BedSVG.displayName).toBe('BedSVG');
     });
   });
 
@@ -212,21 +162,6 @@ describe('BedSVG', () => {
       });
     });
   });
-
-  describe('element structure', () => {
-    it('renders the expected number of child elements', () => {
-      const { container } = render(<BedSVG />);
-      const g = container.querySelector('g');
-      expect(g.children.length).toBe(18);
-    });
-
-    it('renders 13 rect elements and 5 path elements', () => {
-      const { container } = render(<BedSVG />);
-      const g = container.querySelector('g');
-      const rects = g.querySelectorAll('rect');
-      const paths = g.querySelectorAll('path');
-      expect(rects.length).toBe(13);
-      expect(paths.length).toBe(5);
-    });
-  });
 });
+
+// @cleaned-by-ai

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Threat-field form behavior while editing an existing settlement.
 // Intentionally NOT duplicated here (covered in sibling files):
 //   - size change auto-populates population/description/atmosphere/government/threat
@@ -90,19 +91,13 @@ describe('Settlements - form field changes (threat field)', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows the threat field with its current value when editing a settlement that has a threat', () => {
+  it('shows the threat field with its current value when editing a settlement that has a threat, and updates when typed', () => {
     renderEditingSettlement(makeSettlement('Threat Town', { threat: 'Bandits' }));
 
     expect(screen.getByText('Threats')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(THREAT_PLACEHOLDER)).toHaveValue('Bandits');
-  });
-
-  it('updates the threat value when typed into its field', () => {
-    renderEditingSettlement(makeSettlement('Threat Town', { threat: 'Bandits' }));
-
     const threatField = screen.getByPlaceholderText(THREAT_PLACEHOLDER);
+    expect(threatField).toHaveValue('Bandits');
     fireEvent.change(threatField, { target: { value: 'Dragon sightings' } });
-
     expect(threatField).toHaveValue('Dragon sightings');
   });
 

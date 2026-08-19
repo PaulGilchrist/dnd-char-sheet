@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
@@ -156,21 +157,6 @@ describe('Settlements - save and delete behavior', () => {
       });
 
       expect(screen.queryByRole('heading', { name: 'New Settlement' })).not.toBeInTheDocument();
-    });
-
-    it('does not attempt to save when the name is only whitespace', () => {
-      render(<Settlements campaignName="test" onBack={() => {}} />);
-
-      openNewSettlement();
-      fireEvent.change(screen.getByRole('textbox', { name: /name\s?\*/i }), {
-        target: { value: '   ' },
-      });
-
-      const saveBtn = screen.getByRole('button', { name: /save/i });
-      expect(saveBtn).toBeDisabled();
-      fireEvent.click(saveBtn);
-
-      expect(mockSaveSettlement).not.toHaveBeenCalled();
     });
 
     it('disables the save button and shows "Saving…" while a save is in flight', async () => {

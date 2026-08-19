@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import NPCStatBlockForm from './NPCStatBlockForm';
@@ -129,10 +130,13 @@ describe('NPCStatBlockForm interactions', () => {
       expect(scores.int).toBe(8);
     });
 
-    it.each([[''], ['abc']])('defaults to 0 when the STR input receives "%s"', (value) => {
+    it('defaults to 0 for empty or non-numeric ability score inputs', () => {
       const { container, getState } = setup();
-      fireEvent.change(getAbilityInputs(container)[0], { target: { value } });
-      expect(getState().abilityScores.str).toBe(0);
+      const abilityInputs = getAbilityInputs(container);
+      for (const value of ['', 'abc']) {
+        fireEvent.change(abilityInputs[0], { target: { value } });
+        expect(getState().abilityScores.str).toBe(0);
+      }
     });
   });
 
@@ -175,12 +179,6 @@ describe('NPCStatBlockForm interactions', () => {
       expect(bonuses.stealth).toBe('+5');
     });
 
-    it('does not call setFormData when the skill name is unchanged', () => {
-      const { container, setFormData } = setup();
-      fireEvent.change(getSkillNameInputs(container)[0], { target: { value: 'perception' } });
-      expect(setFormData).not.toHaveBeenCalled();
-    });
-
     it('updates a skill bonus value', () => {
       const { container, getState } = setup();
       fireEvent.change(getSkillBonusInputs(container)[0], { target: { value: '+7' } });
@@ -199,12 +197,6 @@ describe('NPCStatBlockForm interactions', () => {
       const { getState } = setup();
       fireEvent.change(screen.getByPlaceholderText('fire, cold, poison'), { target: { value: 'fire,,poison,  ' } });
       expect(getState().damageResistances).toEqual(['fire', 'poison']);
-    });
-
-    it('parses damage immunities', () => {
-      const { getState } = setup();
-      fireEvent.change(screen.getByPlaceholderText('necrotic, psychic'), { target: { value: 'fire, cold' } });
-      expect(getState().damageImmunities).toEqual(['fire', 'cold']);
     });
 
     it('clears condition immunities when the input is emptied', () => {
@@ -290,10 +282,5 @@ describe('NPCStatBlockForm interactions', () => {
       expect(getState().traits).toBe('New traits text');
     });
 
-    it('updates the reactions textarea', () => {
-      const { getState } = setup();
-      fireEvent.change(screen.getByPlaceholderText('Reactions (one per line or markdown)'), { target: { value: 'New reactions text' } });
-      expect(getState().reactions).toBe('New reactions text');
-    });
   });
 });

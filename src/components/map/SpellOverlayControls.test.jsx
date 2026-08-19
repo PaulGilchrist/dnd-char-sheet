@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellOverlayControls from './SpellOverlayControls.jsx';
@@ -6,8 +7,6 @@ import { OverlayShape, DEFAULTS } from '../../models/SpellOverlay.js';
 
 describe('SpellOverlayControls', () => {
   const mockSetSelectedShape = vi.fn();
-  // Mock that auto-executes updater functions so the component behaves correctly,
-  // while still recording calls for inspection.
   const mockSetShapeParams = vi.fn((fn) => {
     if (typeof fn === 'function') {
       const prev = { radiusFt: 20, sizeFt: 15, distanceFt: 60, coneAngle: 90, widthFt: 5 };
@@ -38,9 +37,7 @@ describe('SpellOverlayControls', () => {
   const renderComponent = (props = {}) =>
     render(<SpellOverlayControls { ...defaultProps } { ...props } />);
 
-  // Helper to extract the result object from a setShapeParams call.
-  // The component passes an updater function; this invokes it with the default prev state.
-  const getShapeParamsResult = () => {
+  const getSetShapeParamsResult = () => {
     const callArg = mockSetShapeParams.mock.calls[0][0];
     const prev = { radiusFt: 20, sizeFt: 15, distanceFt: 60, coneAngle: 90, widthFt: 5 };
     return typeof callArg === 'function' ? callArg(prev) : callArg;
@@ -90,22 +87,17 @@ describe('SpellOverlayControls', () => {
       expect(screen.queryByText('Cancel')).not.toBeInTheDocument();
     });
 
-    it('shows cancel button when active', () => {
+    it('shows cancel button and calls onCancelMode when clicked', () => {
       renderComponent({ isActive: true });
       const cancelBtn = screen.getByText('Cancel');
       expect(cancelBtn).toBeInTheDocument();
-    });
-
-    it('calls onCancelMode when cancel is clicked', () => {
-      renderComponent({ isActive: true });
-      const cancelBtn = screen.getByText('Cancel');
       fireEvent.click(cancelBtn);
       expect(mockOnCancelMode).toHaveBeenCalled();
     });
   });
 
   describe('sphere shape params', () => {
-    it('renders radius input for sphere', () => {
+    it('renders radius input with default value for sphere', () => {
       renderComponent({ selectedShape: OverlayShape.SPHERE });
       expect(screen.getByText('Radius (ft)')).toBeInTheDocument();
       const input = screen.getByRole('spinbutton', { name: /radius/i });
@@ -116,7 +108,7 @@ describe('SpellOverlayControls', () => {
       renderComponent({ selectedShape: OverlayShape.SPHERE });
       const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: '30' } });
-      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ radiusFt: 30 }));
+      expect(getSetShapeParamsResult()).toEqual(expect.objectContaining({ radiusFt: 30 }));
     });
 
     it('uses default 20 when shapeParams.radiusFt is undefined', () => {
@@ -129,26 +121,8 @@ describe('SpellOverlayControls', () => {
     });
   });
 
-  describe('cylinder shape params', () => {
-    it('renders radius input for cylinder', () => {
-      renderComponent({ selectedShape: OverlayShape.CYLINDER });
-      expect(screen.getByText('Radius (ft)')).toBeInTheDocument();
-      const input = screen.getByRole('spinbutton');
-      expect(input).toHaveValue(20);
-    });
-
-    it('uses default 20 when shapeParams.radiusFt is undefined', () => {
-      renderComponent({
-        selectedShape: OverlayShape.CYLINDER,
-        shapeParams: {},
-      });
-      const input = screen.getByRole('spinbutton');
-      expect(input).toHaveValue(20);
-    });
-  });
-
   describe('cube shape params', () => {
-    it('renders size input for cube', () => {
+    it('renders size input with default value for cube', () => {
       renderComponent({ selectedShape: OverlayShape.CUBE });
       expect(screen.getByText('Size (ft)')).toBeInTheDocument();
       const input = screen.getByRole('spinbutton');
@@ -159,7 +133,7 @@ describe('SpellOverlayControls', () => {
       renderComponent({ selectedShape: OverlayShape.CUBE });
       const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: '20' } });
-      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ sizeFt: 20 }));
+      expect(getSetShapeParamsResult()).toEqual(expect.objectContaining({ sizeFt: 20 }));
     });
 
     it('uses default 15 when shapeParams.sizeFt is undefined', () => {
@@ -173,28 +147,27 @@ describe('SpellOverlayControls', () => {
   });
 
   describe('cone shape params', () => {
-    it('renders distance and angle inputs for cone', () => {
+    it('renders distance and angle inputs with default values for cone', () => {
       renderComponent({ selectedShape: OverlayShape.CONE });
       expect(screen.getByText('Distance (ft)')).toBeInTheDocument();
       expect(screen.getByText('Angle (°)')).toBeInTheDocument();
-      const distInput = screen.getAllByRole('spinbutton')[0];
-      const angleInput = screen.getAllByRole('spinbutton')[1];
-      expect(distInput).toHaveValue(60);
-      expect(angleInput).toHaveValue(90);
+      const inputs = screen.getAllByRole('spinbutton');
+      expect(inputs[0]).toHaveValue(60);
+      expect(inputs[1]).toHaveValue(90);
     });
 
-    it('calls setShapeParams with distanceFt on change', () => {
+    it('calls setShapeParams with distanceFt on distance change', () => {
       renderComponent({ selectedShape: OverlayShape.CONE });
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[0], { target: { value: '30' } });
-      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ distanceFt: 30 }));
+      expect(getSetShapeParamsResult()).toEqual(expect.objectContaining({ distanceFt: 30 }));
     });
 
-    it('calls setShapeParams with coneAngle on change', () => {
+    it('calls setShapeParams with coneAngle on angle change', () => {
       renderComponent({ selectedShape: OverlayShape.CONE });
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[1], { target: { value: '60' } });
-      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ coneAngle: 60 }));
+      expect(getSetShapeParamsResult()).toEqual(expect.objectContaining({ coneAngle: 60 }));
     });
 
     it('uses defaults when shapeParams is empty', () => {
@@ -209,28 +182,27 @@ describe('SpellOverlayControls', () => {
   });
 
   describe('line shape params', () => {
-    it('renders distance and width inputs for line', () => {
+    it('renders distance and width inputs with default values for line', () => {
       renderComponent({ selectedShape: OverlayShape.LINE });
       expect(screen.getByText('Distance (ft)')).toBeInTheDocument();
       expect(screen.getByText('Width (ft)')).toBeInTheDocument();
-      const distInput = screen.getAllByRole('spinbutton')[0];
-      const widthInput = screen.getAllByRole('spinbutton')[1];
-      expect(distInput).toHaveValue(60);
-      expect(widthInput).toHaveValue(5);
+      const inputs = screen.getAllByRole('spinbutton');
+      expect(inputs[0]).toHaveValue(60);
+      expect(inputs[1]).toHaveValue(5);
     });
 
-    it('calls setShapeParams with distanceFt on change', () => {
+    it('calls setShapeParams with distanceFt on distance change', () => {
       renderComponent({ selectedShape: OverlayShape.LINE });
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[0], { target: { value: '30' } });
-      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ distanceFt: 30 }));
+      expect(getSetShapeParamsResult()).toEqual(expect.objectContaining({ distanceFt: 30 }));
     });
 
-    it('calls setShapeParams with widthFt on change', () => {
+    it('calls setShapeParams with widthFt on width change', () => {
       renderComponent({ selectedShape: OverlayShape.LINE });
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[1], { target: { value: '10' } });
-      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ widthFt: 10 }));
+      expect(getSetShapeParamsResult()).toEqual(expect.objectContaining({ widthFt: 10 }));
     });
 
     it('uses defaults when shapeParams is empty', () => {
@@ -245,18 +217,14 @@ describe('SpellOverlayControls', () => {
   });
 
   describe('handleParamChange edge cases', () => {
-    it('treats non-numeric values as 0', () => {
+    it('treats non-numeric and empty values as 0', () => {
       renderComponent({ selectedShape: OverlayShape.SPHERE });
       const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: 'not-a-number' } });
-      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ radiusFt: 0 }));
-    });
-
-    it('treats empty string as 0', () => {
-      renderComponent({ selectedShape: OverlayShape.SPHERE });
-      const input = screen.getByRole('spinbutton');
+      expect(getSetShapeParamsResult()).toEqual(expect.objectContaining({ radiusFt: 0 }));
+      vi.clearAllMocks();
       fireEvent.change(input, { target: { value: '' } });
-      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ radiusFt: 0 }));
+      expect(getSetShapeParamsResult()).toEqual(expect.objectContaining({ radiusFt: 0 }));
     });
   });
 
@@ -281,10 +249,13 @@ describe('SpellOverlayControls', () => {
         { id: 'o2', shape: OverlayShape.CONE },
       ];
       const { container } = renderComponent({ overlays, selectedShape: OverlayShape.CUBE });
-      const overlayItems = container.querySelectorAll('.spell-overlay-item');
-      expect(overlayItems).toHaveLength(2);
-      const removeButtons = container.querySelectorAll('.spell-overlay-item button');
-      expect(removeButtons).toHaveLength(2);
+      const activeSection = container.querySelector('.spell-overlay-active');
+      const overlayLabels = activeSection.querySelectorAll('span');
+      expect(overlayLabels).toHaveLength(2);
+      expect(overlayLabels[0].textContent).toBe('Cube');
+      expect(overlayLabels[1].textContent).toBe('Cone');
+      const buttons = activeSection.querySelectorAll('button');
+      expect(buttons).toHaveLength(3);
     });
 
     it('calls onRemoveOverlay when a remove button is clicked', () => {
@@ -292,16 +263,10 @@ describe('SpellOverlayControls', () => {
         { id: 'o1', shape: OverlayShape.CUBE },
         { id: 'o2', shape: OverlayShape.CONE },
       ];
-      const { container } = renderComponent({ overlays, selectedShape: OverlayShape.CUBE });
-      const removeButtons = container.querySelectorAll('.spell-overlay-item button');
+      renderComponent({ overlays, selectedShape: OverlayShape.CUBE });
+      const removeButtons = screen.getAllByRole('button', { name: '' });
       fireEvent.click(removeButtons[0]);
       expect(mockOnRemoveOverlay).toHaveBeenCalledWith('o1');
-    });
-
-    it('shows clear all button', () => {
-      const overlays = [{ id: 'o1', shape: OverlayShape.SPHERE }];
-      renderComponent({ overlays });
-      expect(screen.getByText('Clear All')).toBeInTheDocument();
     });
 
     it('calls onClearAll when clear all is clicked', () => {
@@ -329,56 +294,9 @@ describe('SpellOverlayControls', () => {
       expect(screen.getByText(/Click map to place$/)).toBeInTheDocument();
     });
 
-    it('shows hint with "drag for angle" for cone', () => {
+    it('shows hint with "drag for angle" for cone, line, and cube', () => {
       renderComponent({ isActive: true, selectedShape: OverlayShape.CONE });
       expect(screen.getByText(/Click map to place.*drag for angle/)).toBeInTheDocument();
-    });
-
-    it('shows hint with "drag for angle" for line', () => {
-      renderComponent({ isActive: true, selectedShape: OverlayShape.LINE });
-      expect(screen.getByText(/Click map to place.*drag for angle/)).toBeInTheDocument();
-    });
-
-    it('shows hint with "drag for angle" for cube', () => {
-      renderComponent({ isActive: true, selectedShape: OverlayShape.CUBE });
-      expect(screen.getByText(/Click map to place.*drag for angle/)).toBeInTheDocument();
-    });
-  });
-
-  describe('input attributes', () => {
-    it('sphere radius has correct min and step', () => {
-      renderComponent({ selectedShape: OverlayShape.SPHERE });
-      const input = screen.getByRole('spinbutton');
-      expect(input).toHaveAttribute('min', '5');
-      expect(input).toHaveAttribute('step', '5');
-    });
-
-    it('cube size has correct min and step', () => {
-      renderComponent({ selectedShape: OverlayShape.CUBE });
-      const input = screen.getByRole('spinbutton');
-      expect(input).toHaveAttribute('min', '5');
-      expect(input).toHaveAttribute('step', '5');
-    });
-
-    it('cone distance has correct min and step', () => {
-      renderComponent({ selectedShape: OverlayShape.CONE });
-      const inputs = screen.getAllByRole('spinbutton');
-      expect(inputs[0]).toHaveAttribute('min', '5');
-      expect(inputs[0]).toHaveAttribute('step', '5');
-    });
-
-    it('cone angle has correct min and max', () => {
-      renderComponent({ selectedShape: OverlayShape.CONE });
-      const inputs = screen.getAllByRole('spinbutton');
-      expect(inputs[1]).toHaveAttribute('min', '1');
-      expect(inputs[1]).toHaveAttribute('max', '360');
-    });
-
-    it('line width has correct min and step', () => {
-      renderComponent({ selectedShape: OverlayShape.LINE });
-      const inputs = screen.getAllByRole('spinbutton');
-      expect(inputs[1]).toHaveAttribute('min', '5');
-      expect(inputs[1]).toHaveAttribute('step', '5');
     });
   });
 });

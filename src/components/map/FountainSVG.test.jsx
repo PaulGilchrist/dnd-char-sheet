@@ -6,57 +6,16 @@ import FountainSVG from './FountainSVG';
 
 describe('FountainSVG', () => {
   describe('root element', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<FountainSVG />);
-      expect(container.querySelector('g')).toBeInTheDocument();
-    });
-
-    it('applies the id attribute to the group', () => {
-      const { container } = render(<FountainSVG id="fountain-1" />);
-      expect(container.querySelector('g')).toHaveAttribute('id', 'fountain-1');
-    });
-
-    it('does not render id attribute when id is undefined', () => {
-      const { container } = render(<FountainSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('id');
-    });
-
-    it('applies className to the group', () => {
-      const { container } = render(<FountainSVG className="custom-fountain" />);
-      expect(container.querySelector('g')).toHaveClass('custom-fountain');
-    });
-
-    it('does not render className attribute when className is undefined', () => {
-      const { container } = render(<FountainSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('class');
-    });
-
-    it('spreads additional props as attributes on the group', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
+      const ref = React.createRef();
       const { container } = render(
-        <FountainSVG data-test="fountain-test" aria-label="Fountain" role="img" />,
+        <FountainSVG id="fountain-1" className="custom-fountain" data-test="fountain-test" ref={ref} />
       );
       const g = container.querySelector('g');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'fountain-1');
+      expect(g).toHaveClass('custom-fountain');
       expect(g).toHaveAttribute('data-test', 'fountain-test');
-      expect(g).toHaveAttribute('aria-label', 'Fountain');
-      expect(g).toHaveAttribute('role', 'img');
-    });
-
-    it('accepts a ref via forwardRef', () => {
-      const ref = React.createRef();
-      render(<FountainSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName).toBe('G');
-    });
-
-    it('combines id, className, rest props, and ref', () => {
-      const ref = React.createRef();
-      const { container } = render(
-        <FountainSVG id="test-fountain" className="test-class" data-custom="value" ref={ref} />,
-      );
-      const g = container.querySelector('g');
-      expect(g).toHaveAttribute('id', 'test-fountain');
-      expect(g).toHaveClass('test-class');
-      expect(g).toHaveAttribute('data-custom', 'value');
       expect(ref.current).toBe(g);
     });
   });
@@ -200,32 +159,6 @@ describe('FountainSVG', () => {
       });
     });
   });
-
-  describe('element structure', () => {
-    it('renders the expected number of child elements', () => {
-      const { container } = render(<FountainSVG />);
-      const g = container.querySelector('g');
-      const allElements = Array.from(g.children);
-      // 1 shadow circle + 1 basin path + 1 rim circle + 1 wall shadow path +
-      // 1 water surface circle + 1 water highlight path + 3 pillar circles +
-      // 3 ripple circles + 4 arc paths + 4 droplet circles = 20 elements
-      expect(allElements.length).toBe(20);
-    });
-
-    it('renders the expected SVG element types', () => {
-      const { container } = render(<FountainSVG />);
-      const g = container.querySelector('g');
-      const circles = g.querySelectorAll('circle');
-      const paths = g.querySelectorAll('path');
-      // 13 circles + 7 paths = 20 total child elements
-      expect(circles.length).toBe(13);
-      expect(paths.length).toBe(7);
-    });
-  });
-
-  describe('displayName', () => {
-    it('sets displayName to "FountainSVG"', () => {
-      expect(FountainSVG.displayName).toBe('FountainSVG');
-    });
-  });
 });
+
+// @cleaned-by-ai

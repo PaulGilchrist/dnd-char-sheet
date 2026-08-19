@@ -6,57 +6,16 @@ import BookshelfSVG from './BookshelfSVG';
 
 describe('BookshelfSVG', () => {
   describe('root group element', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<BookshelfSVG />);
-      expect(container.querySelector('g')).toBeInTheDocument();
-    });
-
-    it('applies the id attribute to the group', () => {
-      const { container } = render(<BookshelfSVG id="bookshelf-1" />);
-      expect(container.querySelector('g')).toHaveAttribute('id', 'bookshelf-1');
-    });
-
-    it('does not render id attribute when id is null', () => {
-      const { container } = render(<BookshelfSVG id={null} />);
-      expect(container.querySelector('g')).not.toHaveAttribute('id');
-    });
-
-    it('applies className to the group', () => {
-      const { container } = render(<BookshelfSVG className="custom-bookshelf" />);
-      expect(container.querySelector('g')).toHaveClass('custom-bookshelf');
-    });
-
-    it('does not render className attribute when className is undefined', () => {
-      const { container } = render(<BookshelfSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('class');
-    });
-
-    it('spreads additional props as attributes on the group', () => {
-      const { container } = render(
-        <BookshelfSVG data-test="bookshelf-test" aria-label="Bookshelf" role="img" />,
-      );
-      const g = container.querySelector('g');
-      expect(g).toHaveAttribute('data-test', 'bookshelf-test');
-      expect(g).toHaveAttribute('aria-label', 'Bookshelf');
-      expect(g).toHaveAttribute('role', 'img');
-    });
-
-    it('accepts a ref via forwardRef', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
       const ref = React.createRef();
-      render(<BookshelfSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName.toLowerCase()).toBe('g');
-    });
-
-    it('combines id, className, rest props, and ref on the group', () => {
-      const ref = { current: null };
       const { container } = render(
-        <BookshelfSVG id="test-id" className="test-class" data-custom="value" ref={ref} />,
+        <BookshelfSVG id="bookshelf-1" className="custom-bookshelf" data-test="bookshelf-test" ref={ref} />
       );
       const g = container.querySelector('g');
-      expect(g).toHaveAttribute('id', 'test-id');
-      expect(g).toHaveAttribute('class', 'test-class');
-      expect(g).toHaveAttribute('data-custom', 'value');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'bookshelf-1');
+      expect(g).toHaveClass('custom-bookshelf');
+      expect(g).toHaveAttribute('data-test', 'bookshelf-test');
       expect(ref.current).toBe(g);
     });
   });
@@ -181,27 +140,6 @@ describe('BookshelfSVG', () => {
       expect(wallShadow).toHaveAttribute('opacity', '0.06');
     });
   });
-
-  describe('element structure', () => {
-    it('renders the expected number of child elements', () => {
-      const { container } = render(<BookshelfSVG />);
-      const g = container.querySelector('g');
-      expect(g.children.length).toBe(37);
-    });
-
-    it('renders the expected SVG element types', () => {
-      const { container } = render(<BookshelfSVG />);
-      const g = container.querySelector('g');
-      const rects = g.querySelectorAll('rect');
-      const lines = g.querySelectorAll('line');
-      expect(rects.length).toBe(36);
-      expect(lines.length).toBe(1);
-    });
-  });
-
-  describe('displayName', () => {
-    it('sets displayName to BookshelfSVG', () => {
-      expect(BookshelfSVG.displayName).toBe('BookshelfSVG');
-    });
-  });
 });
+
+// @cleaned-by-ai

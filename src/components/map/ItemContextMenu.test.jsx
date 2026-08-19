@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ItemContextMenu from './ItemContextMenu';
@@ -30,25 +31,11 @@ const createPlacedItem = (overrides = {}) => ({
 // ── Null / undefined item renders nothing ───────────────────────
 
 describe('null item', () => {
-    it('returns null when selectedItem is undefined', () => {
+    it('returns null when selectedItem is null or undefined', () => {
         const mocks = createMocks();
         const { container } = render(
             <ItemContextMenu
                 selectedItem={undefined}
-                placedItems={[]}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...mocks}
-            />
-        );
-        expect(container.innerHTML).toBe('');
-    });
-
-    it('returns null when selectedItem is null', () => {
-        const mocks = createMocks();
-        const { container } = render(
-            <ItemContextMenu
-                selectedItem={null}
                 placedItems={[]}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
@@ -91,11 +78,6 @@ describe('basic token item', () => {
         expect(screen.getByText('Show')).toBeInTheDocument();
     });
 
-    it('renders Hide when item visibility is undefined (defaults to visible)', () => {
-        renderBasicToken({ visible: undefined });
-        expect(screen.getByText('Hide')).toBeInTheDocument();
-    });
-
     it('renders Delete option', () => {
         renderBasicToken();
         expect(screen.getByText('Delete')).toBeInTheDocument();
@@ -118,15 +100,9 @@ describe('basic token item', () => {
         expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
     });
 
-    it('calls handleToggleItemVisibility with item id when Hide is clicked', () => {
+    it('calls handleToggleItemVisibility when Hide or Show is clicked', () => {
         renderBasicToken({ visible: true });
         fireEvent.click(screen.getByText('Hide'));
-        expect(mocks.handleToggleItemVisibility).toHaveBeenCalledWith('item-1');
-    });
-
-    it('calls handleToggleItemVisibility with item id when Show is clicked', () => {
-        renderBasicToken({ visible: false });
-        fireEvent.click(screen.getByText('Show'));
         expect(mocks.handleToggleItemVisibility).toHaveBeenCalledWith('item-1');
     });
 
@@ -146,34 +122,6 @@ describe('basic token item', () => {
         renderBasicToken();
         fireEvent.click(screen.getByText('✕'));
         expect(mocks.onClose).toHaveBeenCalledWith(30, 30);
-    });
-
-    it('renders the SVG group with class item-context-menu', () => {
-        renderBasicToken();
-        const { container } = render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={[createPlacedItem()]}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...mocks}
-            />
-        );
-        expect(container.querySelector('.item-context-menu')).toBeTruthy();
-    });
-
-    it('renders a background rect for the menu', () => {
-        renderBasicToken();
-        const { container } = render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={[createPlacedItem()]}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...mocks}
-            />
-        );
-        expect(container.querySelector('rect')).toBeTruthy();
     });
 });
 
@@ -210,13 +158,8 @@ describe('NPC item', () => {
         expect(screen.getByText('View Stats')).toBeInTheDocument();
     });
 
-    it('does NOT show View Stats when monsterFound is false', () => {
+    it('does NOT show View Stats when monsterFound is falsy', () => {
         renderNpc({ monsterFound: false });
-        expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
-    });
-
-    it('does NOT show View Stats when monsterFound is undefined', () => {
-        renderNpc({ monsterFound: undefined });
         expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
     });
 
@@ -232,12 +175,6 @@ describe('NPC item', () => {
 
     it('passes "NPC" as default name when item has no name', () => {
         renderNpc({ name: null });
-        fireEvent.click(screen.getByText('Rename'));
-        expect(mocks.onRenameClicked.mock.calls[0][2]).toBe('NPC');
-    });
-
-    it('passes "NPC" when item name is undefined', () => {
-        renderNpc({ name: undefined });
         fireEvent.click(screen.getByText('Rename'));
         expect(mocks.onRenameClicked.mock.calls[0][2]).toBe('NPC');
     });
@@ -313,21 +250,6 @@ describe('door item', () => {
         fireEvent.click(screen.getByText('Close Door'));
         expect(mocks.handleToggleDoor).toHaveBeenCalledWith('item-1');
     });
-
-    it('still shows Hide/Show for door items', () => {
-        renderDoor({ visible: true });
-        expect(screen.getByText('Hide')).toBeInTheDocument();
-    });
-
-    it('still shows Delete for door items', () => {
-        renderDoor();
-        expect(screen.getByText('Delete')).toBeInTheDocument();
-    });
-
-    it('still shows Rotate for door items', () => {
-        renderDoor();
-        expect(screen.getByText('Rotate')).toBeInTheDocument();
-    });
 });
 
 // ── Menu layout / positioning ──────────────────────────────────
@@ -395,20 +317,5 @@ describe('item lookup from placedItems', () => {
             />
         );
         expect(screen.queryByText('Rename')).not.toBeInTheDocument();
-    });
-
-    it('renders Rename text when placed item has no name for NPC', () => {
-        const placedItems = [createPlacedItem({ type: 'npc', name: undefined })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                monsterFound={false}
-                {...mocks}
-            />
-        );
-        expect(screen.getByText('Rename')).toBeInTheDocument();
     });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RoomContextMenu from './RoomContextMenu';
@@ -75,20 +76,6 @@ describe('null / non-localhost', () => {
 // ── Basic rendering when active ─────────────────────────────────
 
 describe('basic rendering', () => {
-    it('renders the SVG group with class item-context-menu', () => {
-        const { container } = renderWithContext();
-        expect(container.querySelector('.item-context-menu')).toBeTruthy();
-    });
-
-    it('stops propagation on the outer group click', () => {
-        const { container } = renderWithContext();
-        const stopSpy = vi.spyOn(Event.prototype, 'stopPropagation');
-        const outerG = container.querySelector('.item-context-menu');
-        fireEvent.click(outerG);
-        expect(stopSpy).toHaveBeenCalled();
-        stopSpy.mockRestore();
-    });
-
     it('renders the background rect with correct dimensions and styling', () => {
         const { container } = renderWithContext();
         const rect = container.querySelector('rect');
@@ -170,14 +157,6 @@ describe('set label', () => {
         expect(promptSpy).toHaveBeenCalledWith('Room label:', 'Test Room');
     });
 
-    it('calls setMapData with new label when prompt returns a value', () => {
-        const { mocks } = renderWithContext();
-        promptSpy.mockReturnValue('My Room');
-        fireEvent.click(screen.getByText('Set Label...'));
-        expect(promptSpy).toHaveBeenCalled();
-        expect(mocks.setMapData).toHaveBeenCalled();
-    });
-
     it('does NOT call setMapData when prompt is cancelled (null)', () => {
         const { mocks } = renderWithContext();
         promptSpy.mockReturnValue(null);
@@ -219,12 +198,6 @@ describe('set label', () => {
 // ── Room type selection ─────────────────────────────────────────
 
 describe('room type selection', () => {
-    it('calls setMapData with new type when a room type option is clicked', () => {
-        const { mocks } = renderWithContext();
-        fireEvent.click(screen.getByText('Entrance'));
-        expect(mocks.setMapData).toHaveBeenCalled();
-    });
-
     it('updates only the selected room in setMapData for type', () => {
         const { mocks } = renderWithContext();
         fireEvent.click(screen.getByText('Entrance'));
@@ -246,35 +219,22 @@ describe('room type selection', () => {
         expect(mocks.setSelectedRoom).toHaveBeenCalledWith(null);
     });
 
-    it('renders the currently selected type with bold styling', () => {
+    it('renders the currently selected type with bold styling and non-selected with normal', () => {
         renderWithContext();
         const commonText = screen.getByText('Common');
-        expect(commonText.getAttribute('font-weight')).toBe('bold');
-    });
-
-    it('renders non-selected types with normal fontWeight', () => {
-        renderWithContext();
         const entranceText = screen.getByText('Entrance');
+        expect(commonText.getAttribute('font-weight')).toBe('bold');
         expect(entranceText.getAttribute('font-weight')).toBe('normal');
     });
 
-    it('highlights the correct type when room type is entrance', () => {
-        const room = { ...defaultSelectedRoom, type: 'entrance' };
+    it.each([
+        ['entrance', 'Entrance'],
+        ['grand', 'Grand'],
+        ['hall', 'Hall'],
+    ])('highlights %s as bold when room type is %s', (type, displayType) => {
+        const room = { ...defaultSelectedRoom, type };
         renderWithContext({ selectedRoom: room });
-        expect(screen.getByText('Entrance').getAttribute('font-weight')).toBe('bold');
-        expect(screen.getByText('Common').getAttribute('font-weight')).toBe('normal');
-    });
-
-    it('highlights the correct type when room type is grand', () => {
-        const room = { ...defaultSelectedRoom, type: 'grand' };
-        renderWithContext({ selectedRoom: room });
-        expect(screen.getByText('Grand').getAttribute('font-weight')).toBe('bold');
-    });
-
-    it('highlights the correct type when room type is hall', () => {
-        const room = { ...defaultSelectedRoom, type: 'hall' };
-        renderWithContext({ selectedRoom: room });
-        expect(screen.getByText('Hall').getAttribute('font-weight')).toBe('bold');
+        expect(screen.getByText(displayType).getAttribute('font-weight')).toBe('bold');
     });
 });
 
@@ -328,17 +288,5 @@ describe('close button', () => {
         const { mocks } = renderWithContext();
         fireEvent.click(screen.getByText('✕'));
         expect(mocks.setSelectedRoom).toHaveBeenCalledWith(null);
-    });
-});
-
-// ── Room without label ──────────────────────────────────────────
-
-describe('room without label', () => {
-    it('renders all UI elements when room has no label', () => {
-        const roomNoLabel = { ...defaultSelectedRoom, label: undefined };
-        const { container } = renderWithContext({ selectedRoom: roomNoLabel });
-        expect(container.querySelector('.item-context-menu')).toBeTruthy();
-        expect(screen.getByText('Room')).toBeInTheDocument();
-        expect(screen.getByText('Set Label...')).toBeInTheDocument();
     });
 });

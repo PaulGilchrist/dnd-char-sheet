@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // List rendering details only: size badges, population, service counts, tags,
 // and description previews. Intentionally NOT duplicated here (covered in
 // sibling files):
@@ -11,7 +12,7 @@
 //   - row-level form CRUD and save/delete flows
 //       -> Settlements.crudOperations / serviceNPCRumor / saveDelete.test.jsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
 
 // Module-level mock store captured by the vi.mock factory. Tests mutate its
@@ -101,34 +102,18 @@ describe('Settlements - list rendering details', () => {
   });
 
   describe('Size badges', () => {
-    it('renders a badge showing each settlement size with its size-specific icon', () => {
-      settlementMockStore.items = [
-        makeSettlement('Fireport', { size: 'town' }),
-        makeSettlement('Iceholm', { size: 'village' }),
-        makeSettlement('Goldhaven', { size: 'city' }),
-      ];
+    it.each([
+      { name: 'Fireport', size: 'town', icon: 'fa-hotel' },
+      { name: 'Iceholm', size: 'village', icon: 'fa-house-chimney' },
+      { name: 'Goldhaven', size: 'city', icon: 'fa-city' },
+      { name: 'Capital City', size: 'metropolis', icon: 'fa-landmark-dome' },
+    ])('renders a $size badge ($name) with the $icon icon', ({ name, size, icon }) => {
+      settlementMockStore.items = [makeSettlement(name, { size })];
       renderSettlements();
 
-      const townBadge = withinSettlement('Fireport').getByTitle('town');
-      expect(townBadge).toHaveTextContent('town');
-      expect(townBadge.querySelector('i')).toHaveClass('fa-solid', 'fa-hotel');
-
-      const villageBadge = withinSettlement('Iceholm').getByTitle('village');
-      expect(villageBadge).toHaveTextContent('village');
-      expect(villageBadge.querySelector('i')).toHaveClass('fa-solid', 'fa-house-chimney');
-
-      const cityBadge = withinSettlement('Goldhaven').getByTitle('city');
-      expect(cityBadge).toHaveTextContent('city');
-      expect(cityBadge.querySelector('i')).toHaveClass('fa-solid', 'fa-city');
-    });
-
-    it('renders a metropolis badge with the landmark-dome icon', () => {
-      settlementMockStore.items = [makeSettlement('Capital City', { size: 'metropolis' })];
-      renderSettlements();
-
-      const badge = withinSettlement('Capital City').getByTitle('metropolis');
-      expect(badge).toHaveTextContent('metropolis');
-      expect(badge.querySelector('i')).toHaveClass('fa-solid', 'fa-landmark-dome');
+      const badge = withinSettlement(name).getByTitle(size);
+      expect(badge).toHaveTextContent(size);
+      expect(badge.querySelector('i')).toHaveClass('fa-solid', icon);
     });
 
     it('does not render a size badge for a settlement without a size', () => {
@@ -244,18 +229,5 @@ describe('Settlements - list rendering details', () => {
     });
   });
 
-  describe('Size filter buttons', () => {
-    it('toggles the active state of a size filter button', () => {
-      renderSettlements();
 
-      const villageFilter = screen.getByTitle('Filter: Village');
-      expect(villageFilter).not.toHaveClass('settlements-size-btn-active');
-
-      fireEvent.click(villageFilter);
-      expect(villageFilter).toHaveClass('settlements-size-btn-active');
-
-      fireEvent.click(villageFilter);
-      expect(villageFilter).not.toHaveClass('settlements-size-btn-active');
-    });
-  });
 });

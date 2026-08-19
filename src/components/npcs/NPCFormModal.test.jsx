@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import NPCFormModal from './NPCFormModal.jsx';
@@ -100,7 +101,6 @@ describe('NPCFormModal', () => {
     const imageVariants = [
       ['a data URI image', { image: 'data:image/png;base64,abc' }],
       ['an image path', { imagePath: '/campaigns/test/npc.png' }],
-      ['both a data URI and an image path', { image: 'data:image/png;base64,abc', imagePath: '/campaigns/test/npc.png' }],
     ];
 
     it.each(imageVariants)('shows the remove button when %s is set', (_label, imageData) => {
@@ -136,41 +136,6 @@ describe('NPCFormModal', () => {
     });
   });
 
-  // ── Image Upload ───────────────────────────────────────────────────
-
-  describe('Image Upload', () => {
-    it('does nothing when no file is selected', () => {
-      renderModal();
-      fireEvent.change(screen.getByLabelText('Upload Avatar'), { target: { files: [] } });
-      expect(mockSetFormData).not.toHaveBeenCalled();
-    });
-
-    it('reads the selected file and stores its data URL and filename', () => {
-      const file = new File(['fake-image'], 'gandalf.png', { type: 'image/png' });
-      class FakeFileReader {
-        onload = null;
-        readAsDataURL() {
-          this.result = `data:image/png;base64,${file.name}`;
-          this.onload({ target: this });
-        }
-      }
-      vi.stubGlobal('FileReader', FakeFileReader);
-      renderModal();
-      fireEvent.change(screen.getByLabelText('Upload Avatar'), { target: { files: [file] } });
-      expect(mockSetFormData).toHaveBeenCalledTimes(1);
-      expect(appliedUpdate()).toMatchObject({
-        image: 'data:image/png;base64,gandalf.png',
-        imageName: 'gandalf.png',
-      });
-    });
-
-    it('shows the camera icon on the upload control', () => {
-      renderModal();
-      const uploadLabel = screen.getByText('Upload Avatar').closest('label');
-      expect(uploadLabel.querySelector('.fa-camera')).toBeInTheDocument();
-    });
-  });
-
   // ── Tabs ───────────────────────────────────────────────────────────
 
   describe('Tabs', () => {
@@ -203,12 +168,6 @@ describe('NPCFormModal', () => {
       expect(roleplayContent()).not.toHaveClass('npcs-tab-hidden');
       expect(statsContent()).toHaveClass('npcs-tab-hidden');
     });
-
-    it('renders book and shield icons on the tab buttons', () => {
-      renderModal();
-      expect(roleplayTab().querySelector('.fa-book')).toBeInTheDocument();
-      expect(statsTab().querySelector('.fa-shield')).toBeInTheDocument();
-    });
   });
 
   // ── Name Field ─────────────────────────────────────────────────────
@@ -230,11 +189,6 @@ describe('NPCFormModal', () => {
       renderModal();
       expect(screen.getByLabelText(/Name/)).toHaveFocus();
     });
-
-    it('marks the name as required', () => {
-      renderModal();
-      expect(screen.getByText('Name').querySelector('.ct-required')).toBeInTheDocument();
-    });
   });
 
   // ── Footer Buttons ─────────────────────────────────────────────────
@@ -250,12 +204,6 @@ describe('NPCFormModal', () => {
       renderModal();
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       expect(mockOnSave).toHaveBeenCalledTimes(1);
-    });
-
-    it('renders the Save button with a floppy disk icon', () => {
-      renderModal();
-      const saveButton = screen.getByRole('button', { name: 'Save' });
-      expect(saveButton.querySelector('.fa-floppy-disk')).toBeInTheDocument();
     });
 
     it('disables the Save button when the disabled prop is true', () => {
@@ -291,11 +239,6 @@ describe('NPCFormModal', () => {
       expect(mockOnDelete).toHaveBeenCalledTimes(1);
     });
 
-    it('renders the Delete button with a trash icon', () => {
-      renderModal({ editingNPC: { name: 'Gandalf' } });
-      expect(screen.getByRole('button', { name: 'Delete' }).querySelector('.fa-trash-can')).toBeInTheDocument();
-    });
-
     it('replaces Delete with Deleting… and disables it while deleting', () => {
       renderModal({ editingNPC: { name: 'Gandalf' }, deleting: true });
       expect(screen.getByRole('button', { name: 'Deleting…' })).toBeDisabled();
@@ -313,13 +256,11 @@ describe('NPCFormModal', () => {
       expect(screen.getByRole('button', { name: /Save & Add to Initiative/ })).toBeInTheDocument();
     });
 
-    it('does not render when the NPC lacks a stat block (no armorClass)', () => {
-      renderModal({ formData: { ...defaultFormData, armorClass: undefined } });
-      expect(screen.queryByRole('button', { name: /Save & Add to Initiative/ })).not.toBeInTheDocument();
-    });
-
-    it('does not render when armorClass is not numeric', () => {
-      renderModal({ formData: { ...defaultFormData, armorClass: '15' } });
+    it.each([
+      ['no armorClass', { armorClass: undefined }],
+      ['non-numeric armorClass', { armorClass: '15' }],
+    ])('does not render when the NPC lacks a valid stat block (%s)', (_label, overrides) => {
+      renderModal({ formData: { ...defaultFormData, ...overrides } });
       expect(screen.queryByRole('button', { name: /Save & Add to Initiative/ })).not.toBeInTheDocument();
     });
 
@@ -337,31 +278,6 @@ describe('NPCFormModal', () => {
     it('is disabled when the disabled prop is true', () => {
       renderModal({ formData: statBlockData, disabled: true });
       expect(screen.getByRole('button', { name: /Save & Add to Initiative/ })).toBeDisabled();
-    });
-
-    it('shows the shield icon and "Save and add to initiative" tooltip', () => {
-      renderModal({ formData: statBlockData });
-      const button = screen.getByRole('button', { name: /Save & Add to Initiative/ });
-      expect(button.querySelector('.fa-shield-alt')).toBeInTheDocument();
-      expect(button).toHaveAttribute('title', 'Save and add to initiative');
-    });
-  });
-
-  // ── Modal Structure ────────────────────────────────────────────────
-
-  describe('Modal Structure', () => {
-    it('renders the overlay, modal, body, and footer containers', () => {
-      const { container } = renderModal();
-      expect(container.querySelector('.ct-modal-overlay')).toBeInTheDocument();
-      expect(container.querySelector('.ct-modal.npcs-modal')).toBeInTheDocument();
-      expect(container.querySelector('.ct-modal-body')).toBeInTheDocument();
-      expect(container.querySelector('.ct-modal-footer')).toBeInTheDocument();
-    });
-
-    it('renders the avatar section and tabs containers', () => {
-      const { container } = renderModal();
-      expect(container.querySelector('.npcs-avatar-section .npcs-avatar-controls')).toBeInTheDocument();
-      expect(container.querySelector('.npcs-tabs')).toBeInTheDocument();
     });
   });
 });

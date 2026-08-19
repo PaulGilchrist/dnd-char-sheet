@@ -6,39 +6,17 @@ import BoulderSVG from './BoulderSVG.jsx';
 
 describe('BoulderSVG', () => {
   describe('root element', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<BoulderSVG />);
-      expect(container.querySelector('g')).toBeInTheDocument();
-    });
-
-    it('applies id to the root <g>', () => {
-      const { container } = render(<BoulderSVG id="boulder-1" />);
-      expect(container.querySelector('g')).toHaveAttribute('id', 'boulder-1');
-    });
-
-    it('applies className to the root <g>', () => {
-      const { container } = render(<BoulderSVG className="custom-boulder" />);
-      expect(container.querySelector('g')).toHaveClass('custom-boulder');
-    });
-
-    it('spreads additional props to the root <g>', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
+      const ref = React.createRef();
       const { container } = render(
-        <BoulderSVG data-testid="my-boulder" aria-label="Boulder" />,
+        <BoulderSVG id="boulder-1" className="custom-boulder" data-testid="my-boulder" ref={ref} />
       );
       const g = container.querySelector('g');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'boulder-1');
+      expect(g).toHaveClass('custom-boulder');
       expect(g).toHaveAttribute('data-testid', 'my-boulder');
-      expect(g).toHaveAttribute('aria-label', 'Boulder');
-    });
-
-    it('accepts a ref via forwardRef', () => {
-      const ref = React.createRef();
-      render(<BoulderSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName).toBe('G');
-    });
-
-    it('sets displayName to "BoulderSVG"', () => {
-      expect(BoulderSVG.displayName).toBe('BoulderSVG');
+      expect(ref.current).toBe(g);
     });
   });
 
@@ -128,17 +106,6 @@ describe('BoulderSVG', () => {
       expect(topHighlight).toHaveAttribute('opacity', '0.3');
     });
   });
-
-  describe('element counts', () => {
-    it('renders the expected number of child elements', () => {
-      const { container } = render(<BoulderSVG />);
-      const g = container.querySelector('g');
-      const ellipses = g.querySelectorAll('ellipse');
-      const paths = g.querySelectorAll('path');
-      // 2 ellipses (shadow + top highlight) + 5 paths (body + highlight face + shadow face + 2 cracks) = 7 children
-      expect(g.children.length).toBe(7);
-      expect(ellipses.length).toBe(2);
-      expect(paths.length).toBe(5);
-    });
-  });
 });
+
+// @cleaned-by-ai

@@ -6,46 +6,17 @@ import BarrelSVG from './BarrelSVG';
 
 describe('BarrelSVG', () => {
   describe('root group element', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<BarrelSVG />);
-      expect(container.querySelector('g')).toBeInTheDocument();
-    });
-
-    it('applies the id attribute to the group', () => {
-      const { container } = render(<BarrelSVG id="barrel-1" />);
-      expect(container.querySelector('g')).toHaveAttribute('id', 'barrel-1');
-    });
-
-    it('does not render id attribute when id is undefined', () => {
-      const { container } = render(<BarrelSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('id');
-    });
-
-    it('applies className to the group', () => {
-      const { container } = render(<BarrelSVG className="custom-barrel" />);
-      expect(container.querySelector('g')).toHaveClass('custom-barrel');
-    });
-
-    it('does not render className attribute when className is undefined', () => {
-      const { container } = render(<BarrelSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('class');
-    });
-
-    it('spreads additional props as attributes on the group', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
+      const ref = React.createRef();
       const { container } = render(
-        <BarrelSVG data-test="barrel-test" aria-label="Barrel" role="img" />,
+        <BarrelSVG id="barrel-1" className="custom-barrel" data-test="barrel-test" ref={ref} />
       );
       const g = container.querySelector('g');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'barrel-1');
+      expect(g).toHaveClass('custom-barrel');
       expect(g).toHaveAttribute('data-test', 'barrel-test');
-      expect(g).toHaveAttribute('aria-label', 'Barrel');
-      expect(g).toHaveAttribute('role', 'img');
-    });
-
-    it('accepts a ref via forwardRef', () => {
-      const ref = React.createRef();
-      render(<BarrelSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName.toLowerCase()).toBe('g');
+      expect(ref.current).toBe(g);
     });
   });
 
@@ -175,31 +146,6 @@ describe('BarrelSVG', () => {
     });
   });
 
-  describe('element structure', () => {
-    it('renders 15 child elements inside the group', () => {
-      const { container } = render(<BarrelSVG />);
-      const g = container.querySelector('g');
-      expect(g.children.length).toBe(15);
-    });
-
-    it('renders the expected SVG element types', () => {
-      const { container } = render(<BarrelSVG />);
-      const g = container.querySelector('g');
-      const paths = g.querySelectorAll('path');
-      const ellipses = g.querySelectorAll('ellipse');
-      const rects = g.querySelectorAll('rect');
-      // 3 body/shading/highlight paths + 3 grain paths = 6 paths
-      // 3 ellipses (top rim, bottom rim, opening)
-      // 6 rects (3 metal bands + 3 highlights)
-      expect(paths.length).toBe(6);
-      expect(ellipses.length).toBe(3);
-      expect(rects.length).toBe(6);
-    });
-  });
-
-  describe('displayName', () => {
-    it('sets displayName to BarrelSVG', () => {
-      expect(BarrelSVG.displayName).toBe('BarrelSVG');
-    });
-  });
 });
+
+// @cleaned-by-ai

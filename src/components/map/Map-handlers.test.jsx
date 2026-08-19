@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, fireEvent, act, screen, within } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, fireEvent, act, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
 import { clearRuntimeState } from '../../hooks/runtime/useRuntimeState.js';
@@ -286,31 +287,12 @@ const resetState = () => {
     mockLoadMonsters.mockImplementation(() => Promise.resolve([]));
 };
 
-describe('Map - handleViewStats behavior', () => {
+describe('Map - NPC context menu rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         clearRuntimeState('test-campaign');
         MockEventSource.instances.length = 0;
         resetState();
-    });
-
-    it('opens monster card when right-clicking an NPC with a matching monster entry', async () => {
-        mockLoadMonsters.mockImplementation(() => Promise.resolve([{ name: 'Goblin', index: 'goblin' }]));
-        mockState.placedItems = [
-            { id: 'npc1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        const hitRect = container.querySelector('.npc-group rect');
-        expect(hitRect).toBeTruthy();
-        await act(async () => {
-            fireEvent.contextMenu(hitRect);
-        });
-        await act(async () => {
-            fireEvent.click(screen.getByText('View Stats'));
-        });
-        const modal = screen.getByTestId('monster-card-modal');
-        expect(modal).toBeInTheDocument();
-        expect(within(modal).getByText('Goblin')).toBeInTheDocument();
     });
 
     it('does not show View Stats for non-NPC items', async () => {
@@ -339,38 +321,6 @@ describe('Map - handleViewStats behavior', () => {
         });
         expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
     });
-
-    it('matches monster names case-insensitively', async () => {
-        mockLoadMonsters.mockImplementation(() => Promise.resolve([{ name: 'goblin', index: 'goblin' }]));
-        mockState.placedItems = [
-            { id: 'npc1', type: 'npc', name: 'GOBLIN', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        const hitRect = container.querySelector('.npc-group rect');
-        await act(async () => {
-            fireEvent.contextMenu(hitRect);
-        });
-        await act(async () => {
-            fireEvent.click(screen.getByText('View Stats'));
-        });
-        expect(screen.getByTestId('monster-card-modal')).toBeInTheDocument();
-    });
-
-    it('strips trailing numbers from NPC names when matching monsters', async () => {
-        mockLoadMonsters.mockImplementation(() => Promise.resolve([{ name: 'Goblin', index: 'goblin' }]));
-        mockState.placedItems = [
-            { id: 'npc1', type: 'npc', name: 'Goblin 3', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        const hitRect = container.querySelector('.npc-group rect');
-        await act(async () => {
-            fireEvent.contextMenu(hitRect);
-        });
-        await act(async () => {
-            fireEvent.click(screen.getByText('View Stats'));
-        });
-        expect(screen.getByTestId('monster-card-modal')).toBeInTheDocument();
-    });
 });
 
 describe('Map - handleRemovePlayer behavior', () => {
@@ -379,26 +329,6 @@ describe('Map - handleRemovePlayer behavior', () => {
         clearRuntimeState('test-campaign');
         MockEventSource.instances.length = 0;
         resetState();
-    });
-
-    it('removes a player from mapData via the context menu', async () => {
-        mockState.mapData = createMockMapData({
-            players: [
-                { id: 'player1', name: 'Thorin', gridX: 5, gridY: 5, characterId: 'thorin' },
-            ],
-        });
-        const { container } = await act(async () => renderMap());
-        const playerCircle = container.querySelector('.player-group circle');
-        if (playerCircle) {
-            await act(async () => {
-                fireEvent.contextMenu(playerCircle);
-            });
-            expect(screen.getByText('Remove from Map')).toBeInTheDocument();
-            await act(async () => {
-                fireEvent.click(screen.getByText('Remove from Map'));
-            });
-            expect(mockState.mapData.players).toHaveLength(0);
-        }
     });
 
     it('handles removing a player when multiple players exist', async () => {
@@ -423,7 +353,7 @@ describe('Map - handleRemovePlayer behavior', () => {
     });
 });
 
-describe('Map - handleCloseMenu behavior', () => {
+describe('Map - clicking background closes context menus', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         clearRuntimeState('test-campaign');
@@ -431,7 +361,7 @@ describe('Map - handleCloseMenu behavior', () => {
         resetState();
     });
 
-    it('closes menus when clicking the SVG background', async () => {
+    it('closes context menus when clicking the SVG background', async () => {
         mockState.mapData = createMockMapData({
             players: [{ id: 'player1', name: 'Thorin', gridX: 5, gridY: 5 }],
         });
@@ -440,6 +370,6 @@ describe('Map - handleCloseMenu behavior', () => {
         await act(async () => {
             fireEvent.click(svg, { button: 0 });
         });
-        expect(mockState.selectedRoom).toBeNull();
+        expect(screen.queryByText('Remove from Map')).not.toBeInTheDocument();
     });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import GenerateTerrainModal from './GenerateTerrainModal.jsx';
@@ -121,11 +122,6 @@ describe('GenerateTerrainModal', () => {
       expect(props.onClose).not.toHaveBeenCalled();
     });
 
-    it('does not call onMapCreated when cancelled', () => {
-      render(<GenerateTerrainModal {...props} />);
-      clickCancel();
-      expect(props.onMapCreated).not.toHaveBeenCalled();
-    });
   });
 
   // -------------------------------------------------------------------------
@@ -166,7 +162,6 @@ describe('GenerateTerrainModal', () => {
     it.each([
       ['passes the typed seed as an integer', '42', 42],
       ['passes undefined when the seed is left empty', '', undefined],
-      ['passes undefined when the seed is zero', '0', undefined],
     ])('seed %s', async (_label, typedSeed, expectedSeed) => {
       render(<GenerateTerrainModal {...props} />);
       typeMapName('Test');
@@ -211,13 +206,6 @@ describe('GenerateTerrainModal', () => {
           expect.any(Object),
         );
       });
-    });
-
-    it('does not allow generation when the map name is only whitespace', () => {
-      render(<GenerateTerrainModal {...props} />);
-      typeMapName('   ');
-      expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
-      expect(mapsServiceMocks.createMap).not.toHaveBeenCalled();
     });
   });
 

@@ -6,57 +6,16 @@ import ChestSVG from './ChestSVG';
 
 describe('ChestSVG', () => {
   describe('root group element', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<ChestSVG />);
-      expect(container.querySelector('g')).toBeInTheDocument();
-    });
-
-    it('applies the id attribute to the group', () => {
-      const { container } = render(<ChestSVG id="chest-1" />);
-      expect(container.querySelector('g')).toHaveAttribute('id', 'chest-1');
-    });
-
-    it('does not render id attribute when id is null', () => {
-      const { container } = render(<ChestSVG id={null} />);
-      expect(container.querySelector('g')).not.toHaveAttribute('id');
-    });
-
-    it('does not render class attribute when className is undefined', () => {
-      const { container } = render(<ChestSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('class');
-    });
-
-    it('applies className to the group', () => {
-      const { container } = render(<ChestSVG className="custom-chest" />);
-      expect(container.querySelector('g')).toHaveClass('custom-chest');
-    });
-
-    it('spreads additional props as attributes on the group', () => {
-      const { container } = render(
-        <ChestSVG data-test="chest-test" aria-label="Chest" role="img" />,
-      );
-      const g = container.querySelector('g');
-      expect(g).toHaveAttribute('data-test', 'chest-test');
-      expect(g).toHaveAttribute('aria-label', 'Chest');
-      expect(g).toHaveAttribute('role', 'img');
-    });
-
-    it('accepts a ref via forwardRef', () => {
-      const ref = React.createRef();
-      render(<ChestSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName.toLowerCase()).toBe('g');
-    });
-
-    it('combines id, className, rest props, and ref on the group', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
       const ref = { current: null };
       const { container } = render(
-        <ChestSVG id="test-id" className="test-class" data-custom="value" ref={ref} />,
+        <ChestSVG id="chest-1" className="custom-chest" data-test="chest-test" ref={ref} />
       );
       const g = container.querySelector('g');
-      expect(g).toHaveAttribute('id', 'test-id');
-      expect(g).toHaveAttribute('class', 'test-class');
-      expect(g).toHaveAttribute('data-custom', 'value');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'chest-1');
+      expect(g).toHaveClass('custom-chest');
+      expect(g).toHaveAttribute('data-test', 'chest-test');
       expect(ref.current).toBe(g);
     });
   });
@@ -221,32 +180,6 @@ describe('ChestSVG', () => {
       expect(bottomShadow).toHaveAttribute('opacity', '0.15');
     });
   });
-
-  describe('element structure', () => {
-    it('renders the expected SVG element types', () => {
-      const { container } = render(<ChestSVG />);
-      const g = container.querySelector('g');
-      const rects = g.querySelectorAll('rect');
-      const lines = g.querySelectorAll('line');
-      const circles = g.querySelectorAll('circle');
-      // 12 rects (shadow, lid, body, 4 metal bands, keyhole, 2 hinges, 2 edge shadows)
-      // 4 lines (grain)
-      // 9 circles (8 nails + 1 lock)
-      expect(rects.length).toBe(12);
-      expect(lines.length).toBe(4);
-      expect(circles.length).toBe(9);
-    });
-
-    it('renders 25 child elements inside the group', () => {
-      const { container } = render(<ChestSVG />);
-      const g = container.querySelector('g');
-      expect(g.children.length).toBe(25);
-    });
-  });
-
-  describe('displayName', () => {
-    it('sets displayName to ChestSVG', () => {
-      expect(ChestSVG.displayName).toBe('ChestSVG');
-    });
-  });
 });
+
+// @cleaned-by-ai

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Quests from './Quests.jsx';
@@ -134,30 +135,24 @@ describe('Quests', () => {
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
     });
 
-    it('closes the modal via Cancel button', () => {
+    it('closes the modal via Cancel, X (Close), or overlay click', () => {
       renderWithQuests([]);
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
-    });
 
-    it('closes the modal via the X (Close) button', () => {
-      renderWithQuests([]);
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+      fireEvent.click(screen.getByLabelText('Close'));
       expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
-    });
 
-    it('closes the modal when clicking the overlay', () => {
-      const { container } = renderWithQuests([]);
       fireEvent.click(screen.getByRole('button', { name: /New Quest/ }));
       expect(screen.getByRole('heading', { name: 'New Quest' })).toBeInTheDocument();
 
-      const overlay = container.querySelector('.ct-modal-overlay');
+      const overlay = document.querySelector('.ct-modal-overlay');
       fireEvent.click(overlay);
       expect(screen.queryByRole('heading', { name: 'New Quest' })).not.toBeInTheDocument();
     });
@@ -351,6 +346,25 @@ describe('Quests', () => {
       expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
     });
 
+    it('disables the delete button while a delete is in progress and re-enables it after', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      let deleteResolve;
+      renderWithQuests([quest({ name: 'Delete Test Quest' })], {
+        deleteItem: vi.fn().mockImplementation(() => new Promise((resolve) => { deleteResolve = resolve; })),
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Edit quest: Delete Test Quest' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Deleting/ })).toHaveAttribute('disabled');
+      });
+
+      await act(async () => deleteResolve());
+
+      expect(screen.getByRole('button', { name: 'Delete' })).not.toHaveAttribute('disabled');
+    });
+
     it('saves edited quest data while leaving other quests untouched', async () => {
       const { mockSave } = renderWithQuests([
         quest({ id: 'quest-1', name: 'Original Name', description: 'Original desc', rewards: '10 gold' }),
@@ -380,56 +394,26 @@ describe('Quests', () => {
       expect(updatedQuest.notes).toBe('Updated notes');
       expect(untouchedQuest.name).toBe('Untouched Quest');
     });
-
-    it('disables the delete button while a delete is in progress and re-enables it after', async () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
-      let deleteResolve;
-      renderWithQuests([quest({ name: 'Delete Test Quest' })], {
-        deleteItem: vi.fn().mockImplementation(() => new Promise((resolve) => { deleteResolve = resolve; })),
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Edit quest: Delete Test Quest' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Deleting/ })).toHaveAttribute('disabled');
-      });
-
-      await act(async () => deleteResolve());
-
-      expect(screen.getByRole('button', { name: 'Delete' })).not.toHaveAttribute('disabled');
-    });
   });
 
   describe('search', () => {
-    it('filters quests by name', () => {
+    it('filters quests by name (case-insensitive) and does not search descriptions', () => {
       renderWithQuests([
         quest({ id: 'quest-1', name: 'Find the Lost Sword', description: 'Search for the sword' }),
         quest({ id: 'quest-2', name: 'Defeat the Dragon', description: 'Slay the dragon' }),
       ]);
 
       const searchInput = screen.getByRole('textbox', { name: /Search Quests/ });
-      fireEvent.change(searchInput, { target: { value: 'dragon' } });
 
+      fireEvent.change(searchInput, { target: { value: 'dragon' } });
       expect(screen.queryByText('Defeat the Dragon')).toBeInTheDocument();
       expect(screen.queryByText('Find the Lost Sword')).not.toBeInTheDocument();
-    });
 
-    it('matches the search case-insensitively', () => {
-      renderWithQuests([quest({ name: 'Find the Lost Sword' })]);
-
-      const searchInput = screen.getByRole('textbox', { name: /Search Quests/ });
       fireEvent.change(searchInput, { target: { value: 'find the lost sword' } });
-
       expect(screen.getByText('Find the Lost Sword')).toBeInTheDocument();
-    });
+      expect(screen.queryByText('Defeat the Dragon')).not.toBeInTheDocument();
 
-    it('does not search the description field', () => {
-      renderWithQuests([quest({ name: 'Find the Lost Sword', description: 'Search in the dark dungeon' })]);
-
-      const searchInput = screen.getByRole('textbox', { name: /Search Quests/ });
       fireEvent.change(searchInput, { target: { value: 'dungeon' } });
-
       expect(screen.queryByText('Find the Lost Sword')).not.toBeInTheDocument();
     });
 

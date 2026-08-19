@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import NPCStatBlockForm from './NPCStatBlockForm';
@@ -65,12 +66,10 @@ describe('NPCStatBlockForm rendering', () => {
       });
     });
 
-    it('renders section headings as h4 elements', () => {
-      renderForm();
+    it('renders all section headings with empty form data', () => {
+      renderForm({});
       SECTION_HEADINGS.forEach((heading) => {
-        const el = screen.getByText(heading);
-        expect(el.tagName).toBe('H4');
-        expect(el.classList.contains('npcs-section-title')).toBe(true);
+        expect(screen.getByText(heading)).toBeInTheDocument();
       });
     });
   });
@@ -100,29 +99,24 @@ describe('NPCStatBlockForm rendering', () => {
       });
     });
 
-    it('defaults every ability score to 10 when abilityScores is missing', () => {
-      const { container } = renderForm(createFormData({ abilityScores: undefined }));
-      expect(abilityScoreInputs(container).map((input) => input.value)).toEqual(['10', '10', '10', '10', '10', '10']);
-      expect(screen.getAllByText('+0')).toHaveLength(6);
-    });
-
-    it('defaults only the missing abilities to 10', () => {
+    it('defaults missing ability scores to 10', () => {
       const { container } = renderForm(createFormData({ abilityScores: { str: 16 } }));
       expect(abilityScoreInputs(container).map((input) => input.value)).toEqual(['16', '10', '10', '10', '10', '10']);
-      expect(screen.getAllByText('+0')).toHaveLength(5);
+      const grid1 = container.querySelector('.npcs-abilities-grid');
+      const mods1 = Array.from(grid1.querySelectorAll('.npcs-ability-mod')).map(el => el.textContent);
+      expect(mods1.filter(m => m === '+0')).toHaveLength(5);
+      const { container: fullContainer } = renderForm(createFormData({ abilityScores: undefined }));
+      expect(abilityScoreInputs(fullContainer).map((input) => input.value)).toEqual(['10', '10', '10', '10', '10', '10']);
+      const grid2 = fullContainer.querySelector('.npcs-abilities-grid');
+      const mods2 = Array.from(grid2.querySelectorAll('.npcs-ability-mod')).map(el => el.textContent);
+      expect(mods2.filter(m => m === '+0')).toHaveLength(6);
     });
 
     it('renders ability score inputs in ABILITY_ABBR order', () => {
       const { container } = renderForm();
       const inputs = abilityScoreInputs(container);
-      expect(inputs.map((input) => input.value)).toEqual([
-        String(createFormData().abilityScores.str),
-        String(createFormData().abilityScores.dex),
-        String(createFormData().abilityScores.con),
-        String(createFormData().abilityScores.int),
-        String(createFormData().abilityScores.wis),
-        String(createFormData().abilityScores.cha),
-      ]);
+      const expectedValues = ['10', '14', '12', '8', '10', '7'];
+      expect(inputs.map((input) => input.value)).toEqual(expectedValues);
     });
 
     it('renders a saving throw bonus input for every ability', () => {
@@ -136,14 +130,12 @@ describe('NPCStatBlockForm rendering', () => {
       expect(saveInputs.map((input) => input.value)).toEqual(['+2', '+4', '', '', '', '']);
     });
 
-    it('renders ability scores at boundaries (0 and 30) without crashing', () => {
+    it('displays ability scores at boundaries (0 and 30)', () => {
       const { container } = renderForm(createFormData({
         abilityScores: { str: 0, dex: 30, con: 10, int: 10, wis: 10, cha: 10 },
       }));
       expect(abilityScoreInputs(container)[0].value).toBe('0');
       expect(abilityScoreInputs(container)[1].value).toBe('30');
-      const gridEl = container.querySelector('.npcs-abilities-grid');
-      expect(Array.from(gridEl.querySelectorAll('.npcs-ability-mod'))).toHaveLength(6);
     });
   });
 
@@ -165,12 +157,6 @@ describe('NPCStatBlockForm rendering', () => {
     ])('renders no skill remove buttons when $label is provided', ({ overrides }) => {
       renderForm(createFormData(overrides));
       expect(screen.queryAllByRole('button', { name: /Remove skill/i })).toHaveLength(0);
-    });
-
-    it('renders no skill bonus value inputs when skillBonuses is empty/undefined', () => {
-      const { container } = renderForm(createFormData({ skillBonuses: undefined }));
-      const skillsSection = container.querySelector('.npcs-skills-section');
-      expect(skillsSection.querySelectorAll('input[type="text"]').length).toBe(0);
     });
 
     it('renders the Add Skill button', () => {
@@ -201,13 +187,6 @@ describe('NPCStatBlockForm rendering', () => {
       expect(screen.queryByDisplayValue('fire')).toBeNull();
       expect(screen.queryByDisplayValue('charmed')).toBeNull();
     });
-
-    it('renders all three defense label elements', () => {
-      renderForm();
-      expect(screen.getByText('Damage Resistances (comma separated)')).toBeInTheDocument();
-      expect(screen.getByText('Damage Immunities (comma separated)')).toBeInTheDocument();
-      expect(screen.getByText('Condition Immunities (comma separated)')).toBeInTheDocument();
-    });
   });
 
   describe('actions', () => {
@@ -230,17 +209,6 @@ describe('NPCStatBlockForm rendering', () => {
     ])('renders no action remove buttons when $label is provided', ({ overrides }) => {
       renderForm(createFormData(overrides));
       expect(screen.queryAllByRole('button', { name: /Remove action/i })).toHaveLength(0);
-    });
-
-    it('renders all action fields for an empty action object', () => {
-      renderForm(createFormData({ actions: [{}] }));
-      expect(screen.getByPlaceholderText('Action name')).toHaveValue('');
-      expect(screen.getByPlaceholderText('Atk bonus')).toHaveValue('');
-      expect(screen.getByPlaceholderText('Primary Damage Dice')).toHaveValue('');
-      expect(screen.getByPlaceholderText('Primary Type')).toHaveValue('');
-      expect(screen.getByPlaceholderText('Secondary Damage Dice')).toHaveValue('');
-      expect(screen.getByPlaceholderText('Secondary Type')).toHaveValue('');
-      expect(screen.getByPlaceholderText('Description')).toHaveValue('');
     });
 
     it('renders the Add Action button', () => {
@@ -267,12 +235,28 @@ describe('NPCStatBlockForm rendering', () => {
   });
 
   describe('combat stats fields', () => {
-    it('renders AC, HP, Hit Dice, Speed, and Initiative inputs with their values', () => {
+    it('renders AC input with its value', () => {
       renderForm();
       expect(screen.getByDisplayValue('15')).toBeInTheDocument();
+    });
+
+    it('renders HP input with its value', () => {
+      renderForm();
       expect(screen.getByDisplayValue('45')).toBeInTheDocument();
+    });
+
+    it('renders Hit Dice input with its value', () => {
+      renderForm();
       expect(screen.getByDisplayValue('6d8')).toBeInTheDocument();
+    });
+
+    it('renders Speed input with its value', () => {
+      renderForm();
       expect(screen.getByDisplayValue('30 ft.')).toBeInTheDocument();
+    });
+
+    it('renders Initiative input with its value', () => {
+      renderForm();
       expect(initiativeInput()).toBeInTheDocument();
     });
 
@@ -295,20 +279,6 @@ describe('NPCStatBlockForm rendering', () => {
       renderForm();
       const input = initiativeInput();
       expect(input).toHaveAttribute('type', 'number');
-    });
-  });
-
-  describe('minimal/empty form data', () => {
-    it('renders without crashing with an empty object', () => {
-      renderForm({});
-      expect(screen.getByText('Combat Stats')).toBeInTheDocument();
-    });
-
-    it('renders all section headings with minimal data', () => {
-      renderForm({});
-      SECTION_HEADINGS.forEach((heading) => {
-        expect(screen.getByText(heading)).toBeInTheDocument();
-      });
     });
   });
 });

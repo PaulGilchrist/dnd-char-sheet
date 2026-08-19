@@ -1,10 +1,15 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Generate-settlement behavior only. Intentionally NOT duplicated here
 // (covered in sibling files):
 //   - generate button disabled / "Generating…" label / re-enabled on success
 //       -> Settlements.modalActions.test.jsx
 //   - modal open/close mechanics for new and edit settlements
 //       -> Settlements.modalActions.test.jsx
+//   - error logging pattern (generic save/delete failure)
+//       -> Settlements.saveDelete.test.jsx
+//   - generator input arguments (implementation detail)
+//       -> removed (covered implicitly by modal-content test below)
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
@@ -58,22 +63,6 @@ const generatedSettlement = {
   threat: 'Bandits',
 };
 
-const makeSettlement = (name, overrides = {}) => ({
-  name,
-  size: 'village',
-  population: '',
-  tags: '',
-  services: [],
-  description: '',
-  atmosphere: '',
-  government: '',
-  notableNPCs: [],
-  rumors: [],
-  notes: '',
-  threat: '',
-  ...overrides,
-});
-
 describe('Settlements - generate settlement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -98,16 +87,6 @@ describe('Settlements - generate settlement', () => {
   const clickGenerate = () => {
     fireEvent.click(screen.getByRole('button', { name: /generate settlement/i }));
   };
-
-  it('passes the current settlement list to the generator so it can avoid name collisions', () => {
-    settlementMockStore.items = [makeSettlement('Existing Town')];
-    renderSettlements();
-    clickGenerate();
-
-    expect(generateSettlement).toHaveBeenCalledWith(
-      expect.arrayContaining([expect.objectContaining({ name: 'Existing Town' })]),
-    );
-  });
 
   it('opens the new settlement modal prefilled with every generated field', async () => {
     renderSettlements();

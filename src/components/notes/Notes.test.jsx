@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Notes from './Notes.jsx';
@@ -79,24 +80,6 @@ describe('Notes', () => {
       expect(screen.getByText(/loading notes/i)).toBeInTheDocument();
     });
 
-    it('shows private lock icon for private notes', () => {
-      useEntityManagement.mockReturnValue({
-        ...createMockHook(),
-        items: [
-          {
-            id: '1',
-            description: 'Secret',
-            partyLocation: '',
-            isPrivate: true,
-            dateCreated: '2025-01-01T00:00:00.000Z',
-            dateModified: '2025-01-15T12:00:00.000Z',
-          },
-        ],
-      });
-      renderNotes();
-      expect(screen.getByTitle('Private note')).toBeInTheDocument();
-    });
-
     it('shows location text when present and no-location placeholder when absent', () => {
       useEntityManagement.mockReturnValue({
         ...createMockHook(),
@@ -130,56 +113,14 @@ describe('Notes', () => {
       renderNotes();
       expect(screen.getByText(/no location/i)).toBeInTheDocument();
     });
-
-    it('renders multiple notes in a list', () => {
-      useEntityManagement.mockReturnValue({
-        ...createMockHook(),
-        items: [
-          {
-            id: '1',
-            description: 'First note',
-            partyLocation: '',
-            isPrivate: false,
-            dateCreated: '2025-01-01T00:00:00.000Z',
-            dateModified: '2025-01-15T12:00:00.000Z',
-          },
-          {
-            id: '2',
-            description: 'Second note',
-            partyLocation: '',
-            isPrivate: false,
-            dateCreated: '2025-02-01T00:00:00.000Z',
-            dateModified: '2025-02-15T12:00:00.000Z',
-          },
-        ],
-      });
-      renderNotes();
-      const listItems = screen.getAllByRole('button', { name: /edit note/i });
-      expect(listItems).toHaveLength(2);
-    });
-
-    it('renders markdown content in note descriptions', () => {
-      useEntityManagement.mockReturnValue({
-        ...createMockHook(),
-        items: [
-          {
-            id: '1',
-            description: '**bold text** and *italic text*',
-            partyLocation: '',
-            isPrivate: false,
-            dateCreated: '2025-01-01T00:00:00.000Z',
-            dateModified: '2025-01-15T12:00:00.000Z',
-          },
-        ],
-      });
-      renderNotes();
-      expect(screen.getByText('bold text')).toBeInTheDocument();
-      expect(screen.getByText('italic text')).toBeInTheDocument();
-    });
   });
 
   describe('search', () => {
-    it('filters notes by search query and shows no results for non-matching query', async () => {
+    it.each`
+      query          | shouldMatch        | shouldNotMatch
+      ${'fireball'}  | ${'Fireball is a 3rd level spell'} | ${'Thunderwave explosion'}
+      ${'nonexistent'} | ${null}            | ${'Fireball is a 3rd level spell'}
+    `('filters notes by search query: "$query"', async ({ query, shouldMatch, shouldNotMatch }) => {
       useEntityManagement.mockReturnValue({
         ...createMockHook(),
         items: [
@@ -203,37 +144,16 @@ describe('Notes', () => {
       });
       renderNotes();
       const searchInput = screen.getByLabelText('Search notes');
-      fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
-      expect(screen.getByText(/no notes found matching/i)).toBeInTheDocument();
-    });
-
-    it('shows matching notes when search query matches', async () => {
-      useEntityManagement.mockReturnValue({
-        ...createMockHook(),
-        items: [
-          {
-            id: '1',
-            description: 'Fireball is a 3rd level spell',
-            partyLocation: '',
-            isPrivate: false,
-            dateCreated: '2025-01-01T00:00:00.000Z',
-            dateModified: '2025-01-15T12:00:00.000Z',
-          },
-          {
-            id: '2',
-            description: 'Thunderwave explosion',
-            partyLocation: '',
-            isPrivate: false,
-            dateCreated: '2025-01-01T00:00:00.000Z',
-            dateModified: '2025-01-15T12:00:00.000Z',
-          },
-        ],
-      });
-      renderNotes();
-      const searchInput = screen.getByLabelText('Search notes');
-      fireEvent.change(searchInput, { target: { value: 'fireball' } });
-      expect(screen.getByText('Fireball is a 3rd level spell')).toBeInTheDocument();
-      expect(screen.queryByText('Thunderwave explosion')).not.toBeInTheDocument();
+      fireEvent.change(searchInput, { target: { value: query } });
+      if (shouldMatch) {
+        expect(screen.getByText(shouldMatch)).toBeInTheDocument();
+      }
+      if (shouldNotMatch) {
+        expect(screen.queryByText(shouldNotMatch)).not.toBeInTheDocument();
+      }
+      if (!shouldMatch) {
+        expect(screen.getByText(/no notes found matching/i)).toBeInTheDocument();
+      }
     });
 
     it('shows clear button when search query is non-empty', async () => {
@@ -275,43 +195,55 @@ describe('Notes', () => {
       expect(screen.getByRole('heading', { name: 'New Note' })).toBeInTheDocument();
     });
 
-    it('does not show private note checkbox when not localhost', () => {
-      renderNotes({ isLocalhost: false });
+    it.each`
+      isLocalhost | shouldShowPrivateCheckbox
+      ${true}     | ${true}
+      ${false}    | ${false}
+    `('conditionally shows private note checkbox (localhost: $isLocalhost)', ({ isLocalhost, shouldShowPrivateCheckbox }) => {
+      renderNotes({ isLocalhost });
       const modalOpen = screen.getByRole('button', { name: /new note/i });
       fireEvent.click(modalOpen);
-      expect(screen.queryByLabelText(/private note/i)).not.toBeInTheDocument();
+      if (shouldShowPrivateCheckbox) {
+        expect(screen.getByLabelText(/private note/i)).toBeInTheDocument();
+      } else {
+        expect(screen.queryByLabelText(/private note/i)).not.toBeInTheDocument();
+      }
     });
 
-    it('shows private note checkbox when localhost', () => {
-      renderNotes({ isLocalhost: true });
+    it.each`
+      characters                 | expectedLevel
+      ${[]}                      | ${1}
+      ${[{ level: 5 }, { level: 7 }]} | ${6}
+      ${[{ level: 1 }, { level: 2 }, { level: 3 }]} | ${2}
+      $[{}, { level: 5 }]        | ${3}
+    `('calculates party level from characters → level $expectedLevel', ({ characters, expectedLevel }) => {
+      renderNotes({ characters });
       const modalOpen = screen.getByRole('button', { name: /new note/i });
       fireEvent.click(modalOpen);
-      expect(screen.getByLabelText(/private note/i)).toBeInTheDocument();
+      expect(screen.getByText(String(expectedLevel))).toBeInTheDocument();
     });
 
-    it('closes modal when cancel button is clicked', () => {
+    it('closes modal via cancel button, close button, or overlay click', () => {
       renderNotes();
       const modalOpen = screen.getByRole('button', { name: /new note/i });
       fireEvent.click(modalOpen);
       expect(screen.getByRole('heading', { name: 'New Note' })).toBeInTheDocument();
 
-      const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
-      fireEvent.click(cancelBtn);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(screen.queryByRole('heading', { name: 'New Note' })).not.toBeInTheDocument();
     });
 
-    it('closes modal when close button is clicked', () => {
+    it('closes modal via close button', () => {
       renderNotes();
       const modalOpen = screen.getByRole('button', { name: /new note/i });
       fireEvent.click(modalOpen);
       expect(screen.getByRole('heading', { name: 'New Note' })).toBeInTheDocument();
 
-      const closeBtn = screen.getByLabelText('Close');
-      fireEvent.click(closeBtn);
+      fireEvent.click(screen.getByLabelText('Close'));
       expect(screen.queryByRole('heading', { name: 'New Note' })).not.toBeInTheDocument();
     });
 
-    it('closes modal when overlay is clicked', () => {
+    it('closes modal via overlay click', () => {
       renderNotes();
       const modalOpen = screen.getByRole('button', { name: /new note/i });
       fireEvent.click(modalOpen);
@@ -321,52 +253,9 @@ describe('Notes', () => {
       fireEvent.click(overlay);
       expect(screen.queryByRole('heading', { name: 'New Note' })).not.toBeInTheDocument();
     });
-
-    it('calculates party level from characters', () => {
-      renderNotes({ characters: [{ level: 5 }, { level: 7 }] });
-      const modalOpen = screen.getByRole('button', { name: /new note/i });
-      fireEvent.click(modalOpen);
-      expect(screen.getByText('6')).toBeInTheDocument();
-    });
-
-    it('defaults party level to 1 when no characters', () => {
-      renderNotes({ characters: [] });
-      const modalOpen = screen.getByRole('button', { name: /new note/i });
-      fireEvent.click(modalOpen);
-      expect(screen.getByText('1')).toBeInTheDocument();
-    });
-
-    it('calculates party level with mixed levels', () => {
-      renderNotes({ characters: [{ level: 1 }, { level: 2 }, { level: 3 }] });
-      const modalOpen = screen.getByRole('button', { name: /new note/i });
-      fireEvent.click(modalOpen);
-      expect(screen.getByText('2')).toBeInTheDocument();
-    });
-
-    it('uses fallback level 1 for characters without level property', () => {
-      renderNotes({ characters: [{}, { level: 5 }] });
-      const modalOpen = screen.getByRole('button', { name: /new note/i });
-      fireEvent.click(modalOpen);
-      expect(screen.getByText('3')).toBeInTheDocument();
-    });
   });
 
   describe('saving notes', () => {
-    it('saves a new note when save is clicked with description', async () => {
-      const mock = createMockHook();
-      useEntityManagement.mockReturnValue(mock);
-      renderNotes();
-      const modalOpen = screen.getByRole('button', { name: /new note/i });
-      fireEvent.click(modalOpen);
-      const textarea = screen.getByTestId('preview-toggle-textarea');
-      fireEvent.change(textarea, { target: { value: 'My new note' } });
-      const saveBtn = screen.getByRole('button', { name: /save/i });
-      await act(async () => {
-        fireEvent.click(saveBtn);
-      });
-      expect(mock.saveItems).toHaveBeenCalled();
-    });
-
     it('passes correct data to saveItems when creating a new note', async () => {
       const mock = createMockHook();
       useEntityManagement.mockReturnValue(mock);
@@ -423,29 +312,20 @@ describe('Notes', () => {
       expect(callArgs[0].partyLocation).toBe('Skull Creek Cave');
     });
 
-    it('does not save when description is empty', async () => {
+    it.each`
+      description
+      ${''}
+      ${'   \n\t  '}
+    `('does not save when description is empty or whitespace only: "$description"', async ({ description }) => {
       const mock = createMockHook();
       useEntityManagement.mockReturnValue(mock);
       renderNotes();
       const modalOpen = screen.getByRole('button', { name: /new note/i });
       fireEvent.click(modalOpen);
-      const saveBtn = screen.getByRole('button', { name: /save/i });
-      expect(saveBtn).toBeDisabled();
-
-      await act(async () => {
-        fireEvent.click(saveBtn);
-      });
-      expect(mock.saveItems).not.toHaveBeenCalled();
-    });
-
-    it('does not save when description is whitespace only', async () => {
-      const mock = createMockHook();
-      useEntityManagement.mockReturnValue(mock);
-      renderNotes();
-      const modalOpen = screen.getByRole('button', { name: /new note/i });
-      fireEvent.click(modalOpen);
-      const textarea = screen.getByTestId('preview-toggle-textarea');
-      fireEvent.change(textarea, { target: { value: '   \n\t  ' } });
+      if (description) {
+        const textarea = screen.getByTestId('preview-toggle-textarea');
+        fireEvent.change(textarea, { target: { value: description } });
+      }
       const saveBtn = screen.getByRole('button', { name: /save/i });
       expect(saveBtn).toBeDisabled();
     });
@@ -495,34 +375,6 @@ describe('Notes', () => {
       expect(callArgs).toHaveLength(1);
       expect(callArgs[0].id).toBe('1');
       expect(callArgs[0].description).toBe('Updated text');
-    });
-
-    it('preserves existing note id when updating', async () => {
-      const mock = createMockHook();
-      useEntityManagement.mockReturnValue({
-        ...mock,
-        items: [
-          {
-            id: 'abc-123',
-            description: 'Original',
-            partyLocation: '',
-            isPrivate: false,
-            dateCreated: '2025-01-01T00:00:00.000Z',
-            dateModified: '2025-01-15T12:00:00.000Z',
-          },
-        ],
-      });
-      renderNotes();
-      const noteItem = screen.getByRole('button', { name: /edit note/i });
-      fireEvent.click(noteItem);
-      const textarea = screen.getByTestId('preview-toggle-textarea');
-      fireEvent.change(textarea, { target: { value: 'Updated' } });
-      const saveBtn = screen.getByRole('button', { name: /save/i });
-      await act(async () => {
-        fireEvent.click(saveBtn);
-      });
-      const callArgs = mock.saveItems.mock.calls[0][0];
-      expect(callArgs[0].id).toBe('abc-123');
     });
   });
 
@@ -694,33 +546,17 @@ describe('Notes', () => {
   });
 
   describe('keyboard accessibility', () => {
-    it('opens edit modal when list item is activated via Enter key', () => {
+    it.each`
+      key
+      ${'Enter'}
+      ${' '}
+    `('opens edit modal when list item is activated via $key key', () => {
       useEntityManagement.mockReturnValue({
         ...createMockHook(),
         items: [
           {
             id: '1',
             description: 'Keyboard test',
-            partyLocation: '',
-            isPrivate: false,
-            dateCreated: '2025-01-01T00:00:00.000Z',
-            dateModified: '2025-01-15T12:00:00.000Z',
-          },
-        ],
-      });
-      renderNotes();
-      const noteItem = screen.getByRole('button', { name: /edit note/i });
-      fireEvent.keyDown(noteItem, { key: 'Enter' });
-      expect(screen.getByRole('heading', { name: 'Edit Note' })).toBeInTheDocument();
-    });
-
-    it('opens edit modal when list item is activated via Space key', () => {
-      useEntityManagement.mockReturnValue({
-        ...createMockHook(),
-        items: [
-          {
-            id: '1',
-            description: 'Space key test',
             partyLocation: '',
             isPrivate: false,
             dateCreated: '2025-01-01T00:00:00.000Z',

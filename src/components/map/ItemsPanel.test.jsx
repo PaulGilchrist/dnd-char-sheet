@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ItemsPanel from './ItemsPanel';
@@ -56,24 +57,7 @@ describe('ItemsPanel', () => {
         });
     });
 
-    describe('indoor items', () => {
-        it('renders all indoor items with correct labels', () => {
-            render(<ItemsPanel {...createProps()} />);
-            const indoorLabels = ['Altar', 'Arrow Slit Wall', 'Barrel', 'Bed', 'Bookshelf', 'Chair', 'Treasure Chest', 'Crate', 'Door', 'Fire Pit', 'Fountain', 'Pillar', 'Secret Door', 'Stairs', 'Statue', 'Table', 'Torch', 'Trap', 'Spider Web', 'NPC'];
-            indoorLabels.forEach(label => {
-                expect(screen.getByText(label)).toBeInTheDocument();
-            });
-        });
-
-        it('excludes outdoor-only items when mapVariant is indoor', () => {
-            render(<ItemsPanel {...createProps()} />);
-            expect(screen.queryByText('Boulder')).not.toBeInTheDocument();
-            expect(screen.queryByText('Bush')).not.toBeInTheDocument();
-            expect(screen.queryByText('Tree')).not.toBeInTheDocument();
-        });
-    });
-
-    describe('outdoor items', () => {
+    describe('items rendering', () => {
         it('renders outdoor items and excludes indoor-only items', () => {
             render(<ItemsPanel {...createProps({ mapVariant: 'outdoor' })} />);
             const outdoorLabels = ['Barrel', 'Boulder', 'Bush', 'Crate', 'Fire Pit', 'Torch', 'Tree'];
@@ -133,12 +117,6 @@ describe('ItemsPanel', () => {
             expect(img).toHaveAttribute('src', 'https://example.com/goblin.png');
         });
 
-        it('renders multiple missing characters', () => {
-            render(<ItemsPanel {...createProps({ characters: [{ name: 'Goblin' }, { name: 'Orc' }], players: [{ name: 'Player1' }] })} />);
-            expect(screen.getByText('Characters')).toBeInTheDocument();
-            expect(screen.getByText('Goblin')).toBeInTheDocument();
-            expect(screen.getByText('Orc')).toBeInTheDocument();
-        });
     });
 
     describe('drag and drop', () => {

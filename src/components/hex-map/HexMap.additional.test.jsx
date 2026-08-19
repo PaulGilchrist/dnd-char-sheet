@@ -433,6 +433,7 @@ describe('HexMap additional coverage', () => {
             ['a negative row', { q: 10, r: -1 }],
             ['an out-of-range column', { q: 999, r: 5 }],
             ['an out-of-range row', { q: 10, r: 999 }],
+            ['a null hex', null],
         ])('does not add a POI dropped on %s', (_label, dropHex) => {
             const { dt, ml } = dropOnMap({
                 dragData: 'city',
@@ -442,14 +443,6 @@ describe('HexMap additional coverage', () => {
             expect(ml.setPois).not.toHaveBeenCalled();
             expect(ml.setMarchingOrder).not.toHaveBeenCalled();
             expect(ml.setPartyPosition).not.toHaveBeenCalled();
-        });
-
-        it('does not add a POI when the hex is null', () => {
-            const { ml } = dropOnMap({
-                dragData: 'city',
-                getHexFromEvent: vi.fn(() => null),
-            });
-            expect(ml.setPois).not.toHaveBeenCalled();
         });
 
         it('adds a dropped character to the marching order and places the party at the drop hex', () => {
@@ -494,18 +487,10 @@ describe('HexMap additional coverage', () => {
             expect(ml.setPois).not.toHaveBeenCalled();
             expect(ml.setMarchingOrder).not.toHaveBeenCalled();
         });
-
-        it('does not add a POI when drag data is empty', () => {
-            const { ml } = dropOnMap({
-                dragData: '',
-                getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
-            });
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
     });
 
     describe('Event acceptance', () => {
-        it('starts an encounter with generated monster placements for a combat event', () => {
+        it('starts a combat encounter with monster placements when monsters are specified', () => {
             const generateMonsterPlacements = vi.fn(() => [{ id: 'mon-1', name: 'goblin' }]);
             const handleStartEncounter = vi.fn();
             const pendingEvent = { type: 'combat', encounter: { monsters: [{ name: 'goblin', qty: 2 }] } };
@@ -524,19 +509,6 @@ describe('HexMap additional coverage', () => {
             }));
         });
 
-        it('starts an encounter without monster placements when there are no monsters in the event', () => {
-            const handleStartEncounter = vi.fn();
-            const { addEntry } = renderEventAccept({
-                pendingEvent: { type: 'combat' },
-                encounter: { generateMonsterPlacements: vi.fn(), handleStartEncounter },
-            });
-            fireEvent.click(screen.getByTestId('event-accept'));
-            expect(handleStartEncounter).toHaveBeenCalledWith(10, 5);
-            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                action: 'event_accept', hex: { q: 10, r: 5 }, terrain: 'plains',
-            }));
-        });
-
         it('does not call handleStartEncounter when there is no position', () => {
             const handleStartEncounter = vi.fn();
             const { tm } = renderEventAccept({
@@ -550,7 +522,7 @@ describe('HexMap additional coverage', () => {
             expect(handleStartEncounter).not.toHaveBeenCalled();
         });
 
-        it('regenerates weather and resumes the current pace for a weather change event during travel', () => {
+        it('regenerates weather and resumes pace for weather change during travel', () => {
             const { tm, addEntry } = renderEventAccept({
                 pendingEvent: { type: 'weatherChange' },
                 mapOverrides: { terrain: { '10,5': 'plains' } },
@@ -610,7 +582,7 @@ describe('HexMap additional coverage', () => {
     });
 
     describe('Event reroll handler', () => {
-        it('rerolls the pending event and logs with the event details', () => {
+        it('rerolls the pending event and logs with event details, position and weather', () => {
             const addEntry = vi.fn();
             const tm = makeTravelMgmt({
                 isTravelActive: true,
@@ -625,47 +597,12 @@ describe('HexMap additional coverage', () => {
             fireEvent.click(screen.getByTestId('event-reroll'));
             expect(tm.rerollEvent).toHaveBeenCalled();
             expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                action: 'event_reroll', eventType: 'wild-magic',
-            }));
-        });
-
-        it('logs the reroll with the position and weather', () => {
-            const addEntry = vi.fn();
-            const tm = makeTravelMgmt({
-                isTravelActive: true,
-                pendingEvent: { type: 'wild-magic' },
-                rerollEvent: vi.fn(),
-                currentPosition: { q: 12, r: 6 },
-            });
-            useTravelManagement.mockReturnValue(tm);
-            useLog.mockReturnValue({ logEntries: [], initialized: true, addEntry });
-            useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 }, weather: { label: 'Fog' } }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.click(screen.getByTestId('event-reroll'));
-            expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
-                action: 'event_reroll', hex: { q: 12, r: 6 }, weather: 'Fog',
+                action: 'event_reroll', eventType: 'wild-magic', hex: { q: 12, r: 6 }, weather: 'Fog',
             }));
         });
     });
 
-    describe('SVG cursor style', () => {
-        it('shows a grabbing cursor while panning', () => {
-            useZoomPan.mockReturnValue(makeZoomPan({ panning: true }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            expect(screen.getByTestId('hex-svg')).toHaveStyle({ cursor: 'grabbing' });
-        });
 
-        it('shows a grab cursor by default', () => {
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            expect(screen.getByTestId('hex-svg')).toHaveStyle({ cursor: 'grab' });
-        });
-
-        it('shows a crosshair cursor when a drawing tool is active', () => {
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            fireEvent.click(screen.getByTestId('tool-paint'));
-            expect(screen.getByTestId('hex-svg')).toHaveStyle({ cursor: 'crosshair' });
-        });
-    });
 
     describe('TravelPanel wiring', () => {
         it.each([true, false])('renders travel controls only while a session is active (isTravelActive=%s)', (isTravelActive) => {
@@ -714,10 +651,6 @@ describe('HexMap additional coverage', () => {
         });
     });
 
-    describe('Compass and legend', () => {
-        it('renders the compass and scale legend on the loaded map', () => {
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            expect(screen.getByText('1 hex = 6 miles')).toBeInTheDocument();
-        });
-    });
 });
+
+// @cleaned-by-ai

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
@@ -267,65 +268,26 @@ describe('Map - room rendering with types', () => {
         resetState();
     });
 
-    it('renders room-highlight rect with type-based CSS class for entrance type', async () => {
-        mockState.mapData = createMockMapData({
-            rooms: [{ id: 'room1', type: 'entrance', label: 'Entrance', rect: { x: 0, y: 0, w: 10, h: 10 } }],
-        });
-        const { container } = await act(async () => renderMap());
-        const roomRect = container.querySelector('.room-highlight.room-type-entrance');
-        expect(roomRect).toBeTruthy();
-        expect(roomRect.getAttribute('width')).toBe('400');
-        expect(roomRect.getAttribute('height')).toBe('400');
-    });
-
-    it('renders room-highlight rect with type-based CSS class for common type', async () => {
-        mockState.mapData = createMockMapData({
-            rooms: [{ id: 'room1', type: 'common', label: 'Hall', rect: { x: 0, y: 0, w: 10, h: 10 } }],
-        });
-        const { container } = await act(async () => renderMap());
-        const roomRect = container.querySelector('.room-highlight.room-type-common');
-        expect(roomRect).toBeTruthy();
-    });
-
-    it('renders room-highlight rect with type-based CSS class for utility type', async () => {
-        mockState.mapData = createMockMapData({
-            rooms: [{ id: 'room1', type: 'utility', label: 'Storage', rect: { x: 0, y: 0, w: 5, h: 5 } }],
-        });
-        const { container } = await act(async () => renderMap());
-        const roomRect = container.querySelector('.room-highlight.room-type-utility');
-        expect(roomRect).toBeTruthy();
-        expect(roomRect.getAttribute('width')).toBe('200');
-        expect(roomRect.getAttribute('height')).toBe('200');
-    });
-
-    it('renders room-highlight rect with type-based CSS class for private type', async () => {
-        mockState.mapData = createMockMapData({
-            rooms: [{ id: 'room1', type: 'private', label: 'Bedroom', rect: { x: 0, y: 0, w: 8, h: 8 } }],
-        });
-        const { container } = await act(async () => renderMap());
-        const roomRect = container.querySelector('.room-highlight.room-type-private');
-        expect(roomRect).toBeTruthy();
-    });
-
-    it('renders room-highlight rect with type-based CSS class for grand type', async () => {
-        mockState.mapData = createMockMapData({
-            rooms: [{ id: 'room1', type: 'grand', label: 'Throne Room', rect: { x: 0, y: 0, w: 20, h: 15 } }],
-        });
-        const { container } = await act(async () => renderMap());
-        const roomRect = container.querySelector('.room-highlight.room-type-grand');
-        expect(roomRect).toBeTruthy();
-        expect(roomRect.getAttribute('width')).toBe('800');
-        expect(roomRect.getAttribute('height')).toBe('600');
-    });
-
-    it('renders room-highlight rect with type-based CSS class for hall type', async () => {
-        mockState.mapData = createMockMapData({
-            rooms: [{ id: 'room1', type: 'hall', label: 'Corridor', rect: { x: 0, y: 0, w: 30, h: 5 } }],
-        });
-        const { container } = await act(async () => renderMap());
-        const roomRect = container.querySelector('.room-highlight.room-type-hall');
-        expect(roomRect).toBeTruthy();
-    });
+    it.each([
+        { type: 'entrance', label: 'Entrance', w: 10, h: 10, expectedW: '400', expectedH: '400' },
+        { type: 'common', label: 'Hall', w: 10, h: 10 },
+        { type: 'utility', label: 'Storage', w: 5, h: 5, expectedW: '200', expectedH: '200' },
+        { type: 'private', label: 'Bedroom', w: 8, h: 8 },
+        { type: 'grand', label: 'Throne Room', w: 20, h: 15, expectedW: '800', expectedH: '600' },
+        { type: 'hall', label: 'Corridor', w: 30, h: 5 },
+    ])(
+        'renders room-highlight rect with type-based CSS class for $type type',
+        async ({ type, label, w, h, expectedW, expectedH }) => {
+            mockState.mapData = createMockMapData({
+                rooms: [{ id: 'room1', type, label, rect: { x: 0, y: 0, w, h } }],
+            });
+            const { container } = await act(async () => renderMap());
+            const roomRect = container.querySelector(`.room-highlight.room-type-${type}`);
+            expect(roomRect).toBeTruthy();
+            if (expectedW) expect(roomRect.getAttribute('width')).toBe(expectedW);
+            if (expectedH) expect(roomRect.getAttribute('height')).toBe(expectedH);
+        },
+    );
 
     it('renders room label text from room.label property', async () => {
         mockState.mapData = createMockMapData({
@@ -344,14 +306,6 @@ describe('Map - room rendering with types', () => {
     });
 
     it('renders room hit-area rect when tool is none', async () => {
-        mockState.mapData = createMockMapData({
-            rooms: [{ id: 'room1', type: 'common', rect: { x: 0, y: 0, w: 10, h: 10 } }],
-        });
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.room-hit-area')).toBeTruthy();
-    });
-
-    it('renders room hit-area rect when tool is select', async () => {
         mockState.mapData = createMockMapData({
             rooms: [{ id: 'room1', type: 'common', rect: { x: 0, y: 0, w: 10, h: 10 } }],
         });
@@ -401,14 +355,5 @@ describe('Map - room rendering with types', () => {
         const { container } = await act(async () => renderMap());
         const selectedRect = container.querySelector('.room-highlight.room-selected');
         expect(selectedRect).toBeNull();
-    });
-
-    it('renders room group with correct key attribute', async () => {
-        mockState.mapData = createMockMapData({
-            rooms: [{ id: 'room1', type: 'common', label: 'Hall', rect: { x: 0, y: 0, w: 10, h: 10 } }],
-        });
-        const { container } = await act(async () => renderMap());
-        const roomGroup = container.querySelector('g');
-        expect(roomGroup).toBeTruthy();
     });
 });

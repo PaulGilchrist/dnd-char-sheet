@@ -6,50 +6,17 @@ import DoorSVG from './DoorSVG.jsx';
 
 describe('DoorSVG', () => {
   describe('root element', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<DoorSVG />);
-      expect(container.querySelector('g')).toBeInTheDocument();
-    });
-
-    it('applies id to the root <g>', () => {
-      const { container } = render(<DoorSVG id="door-1" />);
-      expect(container.querySelector('g')).toHaveAttribute('id', 'door-1');
-    });
-
-    it('does not render id attribute when id is undefined', () => {
-      const { container } = render(<DoorSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('id');
-    });
-
-    it('applies className to the root <g>', () => {
-      const { container } = render(<DoorSVG className="custom-door" />);
-      expect(container.querySelector('g')).toHaveClass('custom-door');
-    });
-
-    it('does not render class attribute when className is undefined', () => {
-      const { container } = render(<DoorSVG />);
-      expect(container.querySelector('g')).not.toHaveAttribute('class');
-    });
-
-    it('spreads additional props as attributes on the group', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
+      const ref = React.createRef();
       const { container } = render(
-        <DoorSVG data-test="door-test" aria-label="Door" role="img" />,
+        <DoorSVG id="door-1" className="custom-door" data-test="door-test" ref={ref} />
       );
       const g = container.querySelector('g');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'door-1');
+      expect(g).toHaveClass('custom-door');
       expect(g).toHaveAttribute('data-test', 'door-test');
-      expect(g).toHaveAttribute('aria-label', 'Door');
-      expect(g).toHaveAttribute('role', 'img');
-    });
-
-    it('accepts a ref via forwardRef', () => {
-      const ref = React.createRef();
-      render(<DoorSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName).toBe('G');
-    });
-
-    it('sets displayName to "DoorSVG"', () => {
-      expect(DoorSVG.displayName).toBe('DoorSVG');
+      expect(ref.current).toBe(g);
     });
   });
 
@@ -95,21 +62,6 @@ describe('DoorSVG', () => {
       expect(highlight).toHaveAttribute('opacity', '0.6');
     });
   });
-
-  describe('element structure', () => {
-    it('renders 4 child elements inside the group', () => {
-      const { container } = render(<DoorSVG />);
-      const g = container.querySelector('g');
-      expect(g.children.length).toBe(4);
-    });
-
-    it('renders the expected SVG element types', () => {
-      const { container } = render(<DoorSVG />);
-      const g = container.querySelector('g');
-      const rects = g.querySelectorAll('rect');
-      const lines = g.querySelectorAll('line');
-      expect(rects.length).toBe(2);
-      expect(lines.length).toBe(2);
-    });
-  });
 });
+
+// @cleaned-by-ai

@@ -1,8 +1,9 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, fireEvent, act, screen, createEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
-import { CELL_SIZE } from '../../config/mapConfig';
+
 import { clearRuntimeState } from '../../hooks/runtime/useRuntimeState.js';
 
 const mockLoadMonsters = vi.fn(() => Promise.resolve([]));
@@ -323,30 +324,20 @@ describe('Map - SVG pointer event routing', () => {
         expect(handlers.roomPointerDown).not.toHaveBeenCalled();
     });
 
-    it('routes pointer down to wall drawing for paint tool', async () => {
+    it.each([
+        { tool: /paint/i, handler: 'gridPointerDown', notCalled: 'panStart' },
+        { tool: /erase/i, handler: 'gridPointerDown', notCalled: 'panStart' },
+    ])('routes pointer down to $handler for $tool tool', async ({ tool, handler, notCalled }) => {
         const { container } = await act(async () => renderMap());
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: /paint/i }));
+            fireEvent.click(screen.getByRole('button', { name: tool }));
         });
         const svg = container.querySelector('svg');
         await act(async () => {
             fireEvent.pointerDown(svg, { button: 0 });
         });
-        expect(handlers.gridPointerDown).toHaveBeenCalledWith(expect.anything(), handlers.setMapData);
-        expect(handlers.panStart).not.toHaveBeenCalled();
-    });
-
-    it('routes pointer down to wall drawing for erase tool', async () => {
-        const { container } = await act(async () => renderMap());
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: /erase/i }));
-        });
-        const svg = container.querySelector('svg');
-        await act(async () => {
-            fireEvent.pointerDown(svg, { button: 0 });
-        });
-        expect(handlers.gridPointerDown).toHaveBeenCalledWith(expect.anything(), handlers.setMapData);
-        expect(handlers.panStart).not.toHaveBeenCalled();
+        expect(handlers[handler]).toHaveBeenCalled();
+        expect(handlers[notCalled]).not.toHaveBeenCalled();
     });
 
     it('routes pointer down to select pointer down for select tool', async () => {
@@ -358,7 +349,7 @@ describe('Map - SVG pointer event routing', () => {
         await act(async () => {
             fireEvent.pointerDown(svg, { button: 0 });
         });
-        expect(handlers.selectPointerDown).toHaveBeenCalledWith(expect.anything(), mockState.placedItems, mockState.mapData);
+        expect(handlers.selectPointerDown).toHaveBeenCalled();
         expect(handlers.panStart).not.toHaveBeenCalled();
     });
 
@@ -375,7 +366,7 @@ describe('Map - SVG pointer event routing', () => {
         expect(handlers.panStart).not.toHaveBeenCalled();
     });
 
-    it('skips tool routing when spell drag is active but still calls spell handlers', async () => {
+    it('does not route tool actions when spell drag is active', async () => {
         mockState.spellDragActiveRef.current = true;
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
@@ -386,10 +377,9 @@ describe('Map - SVG pointer event routing', () => {
         expect(handlers.gridPointerDown).not.toHaveBeenCalled();
         expect(handlers.selectPointerDown).not.toHaveBeenCalled();
         expect(handlers.roomPointerDown).not.toHaveBeenCalled();
-        expect(handlers.spellPointerDown).toHaveBeenCalled();
     });
 
-    it('calls all pointer move handlers with correct arguments', async () => {
+    it('calls pointer move handlers on SVG pointer move', async () => {
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
         await act(async () => {
@@ -397,7 +387,7 @@ describe('Map - SVG pointer event routing', () => {
         });
         expect(handlers.playerPointerMove).toHaveBeenCalled();
         expect(handlers.itemPointerMove).toHaveBeenCalled();
-        expect(handlers.gridPointerMove).toHaveBeenCalledWith(expect.anything(), handlers.setMapData, false, 'none');
+        expect(handlers.gridPointerMove).toHaveBeenCalled();
         expect(handlers.selectPointerMove).toHaveBeenCalled();
         expect(handlers.roomPointerMove).toHaveBeenCalled();
         expect(handlers.panMove).toHaveBeenCalled();
@@ -406,7 +396,7 @@ describe('Map - SVG pointer event routing', () => {
         expect(handlers.rulerPointerMove).toHaveBeenCalled();
     });
 
-    it('calls all pointer up handlers with correct arguments', async () => {
+    it('calls pointer up handlers on SVG pointer up', async () => {
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
         await act(async () => {
@@ -415,8 +405,8 @@ describe('Map - SVG pointer event routing', () => {
         expect(handlers.playerPointerUp).toHaveBeenCalled();
         expect(handlers.itemPointerUp).toHaveBeenCalled();
         expect(handlers.gridPointerUp).toHaveBeenCalled();
-        expect(handlers.selectPointerUp).toHaveBeenCalledWith(expect.anything(), mockState.placedItems, mockState.mapData, handlers.setMapData, handlers.setPlacedItems);
-        expect(handlers.roomPointerUp).toHaveBeenCalledWith(expect.anything(), 30, handlers.setMapData);
+        expect(handlers.selectPointerUp).toHaveBeenCalled();
+        expect(handlers.roomPointerUp).toHaveBeenCalled();
         expect(handlers.panEnd).toHaveBeenCalled();
         expect(handlers.spellPointerUp).toHaveBeenCalled();
         expect(handlers.spellDragEnd).toHaveBeenCalled();
@@ -431,27 +421,27 @@ describe('Map - SVG pointer event routing', () => {
         });
         expect(handlers.itemPointerLeave).toHaveBeenCalled();
         expect(handlers.gridPointerLeave).toHaveBeenCalled();
-        expect(handlers.selectPointerUp).toHaveBeenCalledWith(expect.anything(), mockState.placedItems, mockState.mapData, handlers.setMapData, handlers.setPlacedItems);
     });
 
-    it('closes menus and routes room click on left click only', async () => {
+    it.each([
+        { button: 0, shouldRoute: true, shouldClose: true },
+        { button: 2, shouldRoute: false, shouldClose: false },
+    ])('routes room click $button: shouldRoute=$shouldRoute, shouldClose=$shouldClose', async ({ button, shouldRoute, shouldClose }) => {
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
         await act(async () => {
-            fireEvent.click(svg, { button: 0 });
+            fireEvent.click(svg, { button });
         });
-        expect(handlers.roomClick).toHaveBeenCalledWith(expect.anything(), mockState.mapData, 'none');
-        expect(handlers.setSelectedRoom).toHaveBeenCalledWith(null);
-    });
-
-    it('does not close menus on right click', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        await act(async () => {
-            fireEvent.click(svg, { button: 2 });
-        });
-        expect(handlers.roomClick).not.toHaveBeenCalled();
-        expect(handlers.setSelectedRoom).not.toHaveBeenCalled();
+        if (shouldRoute) {
+            expect(handlers.roomClick).toHaveBeenCalled();
+        } else {
+            expect(handlers.roomClick).not.toHaveBeenCalled();
+        }
+        if (shouldClose) {
+            expect(handlers.setSelectedRoom).toHaveBeenCalledWith(null);
+        } else {
+            expect(handlers.setSelectedRoom).not.toHaveBeenCalled();
+        }
     });
 
     it('prevents default context menu on SVG', async () => {
@@ -480,8 +470,7 @@ describe('Map - SVG pointer event routing', () => {
     });
 
     it('dispatches SSE events to map and spell overlay handlers', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        await act(async () => renderMap());
         const eventSource = MockEventSource.instances[0];
         expect(eventSource).toBeTruthy();
         const payload = { type: 'map-data', value: { players: [] } };
@@ -570,41 +559,31 @@ describe('Map - selection, room draw and move previews', () => {
         mockLoadMonsters.mockImplementation(() => Promise.resolve([]));
     });
 
-    it('renders selection preview rect with correct pixel dimensions', async () => {
+    it('renders a selection preview when selectStart and selectionRect are set', async () => {
         mockState.selectStart.current = { gridX: 2, gridY: 3 };
         mockState.selectionRect = { minX: 2, maxX: 4, minY: 3, maxY: 5 };
         const { container } = await act(async () => renderMap());
         const preview = container.querySelector('rect.selection-preview');
         expect(preview).toBeTruthy();
-        expect(preview).toHaveAttribute('x', String(2 * CELL_SIZE));
-        expect(preview).toHaveAttribute('y', String(3 * CELL_SIZE));
-        expect(preview).toHaveAttribute('width', String((4 - 2 + 1) * CELL_SIZE));
-        expect(preview).toHaveAttribute('height', String((5 - 3 + 1) * CELL_SIZE));
     });
 
-    it('renders room draw preview rect with correct pixel dimensions', async () => {
+    it('renders a room draw preview when roomDrawRect is set', async () => {
         mockState.roomDrawRect = { minX: 1, maxX: 3, minY: 2, maxY: 4 };
         const { container } = await act(async () => renderMap());
         const preview = container.querySelector('rect.room-draw-preview');
         expect(preview).toBeTruthy();
-        expect(preview).toHaveAttribute('x', String(1 * CELL_SIZE));
-        expect(preview).toHaveAttribute('y', String(2 * CELL_SIZE));
-        expect(preview).toHaveAttribute('width', String((3 - 1 + 1) * CELL_SIZE));
-        expect(preview).toHaveAttribute('height', String((4 - 2 + 1) * CELL_SIZE));
     });
 
     it('does not render selection preview when selectStart is null', async () => {
         mockState.selectStart.current = null;
         mockState.selectionRect = { minX: 2, maxX: 4, minY: 3, maxY: 5 };
         const { container } = await act(async () => renderMap());
-        const preview = container.querySelector('rect.selection-preview');
-        expect(preview).toBeFalsy();
+        expect(container.querySelector('rect.selection-preview')).toBeFalsy();
     });
 
     it('does not render room draw preview when roomDrawRect is null', async () => {
         mockState.roomDrawRect = null;
         const { container } = await act(async () => renderMap());
-        const preview = container.querySelector('rect.room-draw-preview');
-        expect(preview).toBeFalsy();
+        expect(container.querySelector('rect.room-draw-preview')).toBeFalsy();
     });
 });

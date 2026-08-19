@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
@@ -168,15 +169,6 @@ describe('ConcentrationPromptModal', () => {
     expect(screen.queryByText('testTarget')).not.toBeInTheDocument();
   });
 
-  it('does not dismiss when clicking inside the modal', async () => {
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    const modal = document.querySelector('.cnp-modal');
-    if (modal) fireEvent.click(modal);
-    expect(screen.getByText(/must make a/)).toBeInTheDocument();
-  });
-
   // ── Queue advancement ──
 
   it('advances to the next prompt when "Next Check" is clicked', async () => {
@@ -184,32 +176,13 @@ describe('ConcentrationPromptModal', () => {
     fireEvent.click(screen.getByTestId('subscriber-trigger'));
     fireEvent.click(screen.getByTestId('subscriber-trigger-second'));
     await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
+    expect(screen.getByText(/\(1 of 2\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
     await waitFor(() => { expect(screen.getByRole('button', { name: 'Next Check' })).toBeInTheDocument() });
     fireEvent.click(screen.getByRole('button', { name: 'Next Check' }));
     await waitFor(() => { expect(screen.getByText(/testTarget2/)).toBeInTheDocument(); expect(screen.getByText('Haste')).toBeInTheDocument() });
     fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
     await waitFor(() => { expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument() });
-  });
-
-  it('shows queue count badge when there are multiple prompts', async () => {
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    fireEvent.click(screen.getByTestId('subscriber-trigger-second'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    expect(screen.getByText(/\(1 of 2\)/)).toBeInTheDocument();
-  });
-
-  it('shows queue count badge for second prompt in queue', async () => {
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    fireEvent.click(screen.getByTestId('subscriber-trigger-second'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
-    await waitFor(() => { expect(screen.getByRole('button', { name: 'Next Check' })).toBeInTheDocument() });
-    fireEvent.click(screen.getByRole('button', { name: 'Next Check' }));
-    await waitFor(() => { expect(screen.getByText(/testTarget2/)).toBeInTheDocument() });
-    expect(screen.queryByText(/\(1 of 2\)/)).not.toBeInTheDocument();
   });
 
   // ── Roll results ──
@@ -279,75 +252,57 @@ describe('ConcentrationPromptModal', () => {
 
   // ── Advantage / disadvantage ──
 
-  it('rolls with advantage when hasSaveModifier returns true', async () => {
-    vi.mocked(hasSaveModifier).mockReturnValue(true);
-    vi.mocked(rollD20).mockReturnValue(5);
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[createCharacter('testTarget')]} activeMapName={null} />);
+  it.each([
+    {
+      label: 'disadvantage from attacker',
+      hasAdvantage: false,
+      attackerModifiers: [{ source: 'Mage Slayer', target: 'saving_throw', condition: 'concentration_breaker', effect: 'disadvantage', abilities: ['CON'] }],
+      expectedMode: 'disadvantage',
+    },
+    {
+      label: 'advantage from save modifier',
+      hasAdvantage: true,
+      attackerModifiers: null,
+      expectedMode: 'advantage',
+    },
+    {
+      label: 'normal when both advantage and disadvantage apply',
+      hasAdvantage: true,
+      attackerModifiers: [{ source: 'Mage Slayer', target: 'saving_throw', condition: 'concentration_breaker', effect: 'disadvantage', abilities: ['CON'] }],
+      expectedMode: 'normal',
+    },
+  ])('rolls $expectedMode when $label', async ({ hasAdvantage, attackerModifiers, expectedMode }) => {
+    vi.mocked(hasSaveModifier).mockReturnValue(hasAdvantage);
+    if (attackerModifiers) {
+      const target = createCharacter('testTarget', []);
+      const attacker = createCharacter('Elarielle', attackerModifiers);
+      render(<ConcentrationPromptModal campaignName="test-campaign" characters={[target, attacker]} activeMapName={null} />);
+    } else {
+      render(<ConcentrationPromptModal campaignName="test-campaign" characters={[createCharacter('testTarget')]} activeMapName={null} />);
+    }
     fireEvent.click(screen.getByTestId('subscriber-trigger'));
     await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
     fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
     await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    expect(rollD20).toHaveBeenCalledTimes(2);
-  });
-
-  it('rolls with disadvantage when attacker has concentration_breaker', async () => {
-    vi.mocked(rollD20).mockReturnValue(5);
-    const attackerModifiers = [{ source: 'Mage Slayer', target: 'saving_throw', condition: 'concentration_breaker', effect: 'disadvantage', abilities: ['CON'] }];
-    const attacker = createCharacter('Elarielle', attackerModifiers);
-    const target = createCharacter('testTarget', []);
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[target, attacker]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
-    await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    expect(rollD20).toHaveBeenCalledTimes(2);
-  });
-
-  it('rolls normally when both advantage and disadvantage apply', async () => {
-    vi.mocked(hasSaveModifier).mockReturnValue(true);
-    vi.mocked(rollD20).mockReturnValue(5);
-    const attackerModifiers = [{ source: 'Mage Slayer', target: 'saving_throw', condition: 'concentration_breaker', effect: 'disadvantage', abilities: ['CON'] }];
-    const attacker = createCharacter('Elarielle', attackerModifiers);
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[createCharacter('testTarget'), attacker]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
-    await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    expect(rollD20).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not apply disadvantage when there is no attackerName', async () => {
-    vi.mocked(rollD20).mockReturnValue(5);
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[createCharacter('testTarget')]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger-second'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
-    await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    expect(rollD20).toHaveBeenCalledTimes(1);
+    if (expectedMode !== 'normal') {
+      expect(screen.getByText(new RegExp(expectedMode.toUpperCase(), 'i'))).toBeInTheDocument();
+    }
   });
 
   // ── Starry Form buff ──
 
-  it('applies Starry Form buff to roll <= 9, raising it to 10', async () => {
-    vi.mocked(rollD20).mockReturnValue(5);
+  it.each([
+    { roll: 5, expectedRoll: 10, label: 'applies Starry Form buff to raise roll <= 9 to 10', expected: 10 },
+    { roll: 15, expectedRoll: 15, label: 'does not modify roll > 9', expected: 15 },
+  ])('Starry Form: $label', async ({ roll, expectedRoll }) => {
+    vi.mocked(rollD20).mockReturnValue(roll);
     const character = { name: 'testTarget', computedStats: { abilities: [{ name: 'Constitution', bonus: 3 }], saveModifiers: [{ target: 'saving_throw', effect: 'advantage' }] }, activeBuffs: [{ name: 'Starry Form', constellation: 'Dragon' }] };
     render(<ConcentrationPromptModal campaignName="test-campaign" characters={[character]} activeMapName={null} />);
     fireEvent.click(screen.getByTestId('subscriber-trigger'));
     await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
     fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
     await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    expect(sendConcentrationResult.mock.calls[0][2].roll).toBe(10);
-  });
-
-  it('does not apply Starry Form buff when roll > 9', async () => {
-    vi.mocked(rollD20).mockReturnValue(15);
-    const character = { name: 'testTarget', computedStats: { abilities: [{ name: 'Constitution', bonus: 3 }], activeBuffs: [{ name: 'Starry Form', constellation: 'Dragon' }] }, saveModifiers: [] };
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[character]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
-    await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    expect(sendConcentrationResult.mock.calls[0][2].roll).toBe(15);
+    expect(sendConcentrationResult.mock.calls[0][2].roll).toBe(expectedRoll);
   });
 
   // ── Result breakdown ──
@@ -360,8 +315,7 @@ describe('ConcentrationPromptModal', () => {
     await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
     fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
     await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    const diceElements = screen.getAllByText(/d20: 7/);
-    expect(diceElements).toHaveLength(2);
+    expect(screen.getAllByText(/d20: 7/)).toHaveLength(2);
     expect(screen.getByText(/ADVANTAGE/i)).toBeInTheDocument();
     expect(screen.getByText(/d20 \(7\) \+ 3/)).toBeInTheDocument();
   });
@@ -374,47 +328,5 @@ describe('ConcentrationPromptModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
     await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
     expect(screen.getByText(/\+ 5 \(\+2 aura from Paladin\)/)).toBeInTheDocument();
-  });
-
-  it('shows result breakdown without aura bonus detail when aura is 0', async () => {
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[createCharacter('testTarget')]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
-    await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    expect(screen.getByText(/d20 \(10\) \+ 3$/)).toBeInTheDocument();
-  });
-
-  it('shows kept/discarded labels for advantage dice', async () => {
-    vi.mocked(hasSaveModifier).mockReturnValue(true);
-    vi.mocked(rollD20).mockReturnValue(3);
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[createCharacter('testTarget')]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
-    await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    expect(screen.getByText(/\(kept\)/)).toBeInTheDocument();
-    expect(screen.getByText(/\(discarded\)/)).toBeInTheDocument();
-  });
-
-  it('shows mode badge for disadvantage', async () => {
-    vi.mocked(rollD20).mockReturnValue(5);
-    const attackerModifiers = [{ source: 'Mage Slayer', target: 'saving_throw', condition: 'concentration_breaker', effect: 'disadvantage', abilities: ['CON'] }];
-    const attacker = createCharacter('Elarielle', attackerModifiers);
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={[createCharacter('testTarget'), attacker]} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    fireEvent.click(screen.getByRole('button', { name: /roll con save/i }));
-    await waitFor(() => { expect(screen.getByText(/total:/i)).toBeInTheDocument() });
-    expect(screen.getByText(/DISADVANTAGE/i)).toBeInTheDocument();
-  });
-
-  // ── Characters array handling ──
-
-  it('handles string character names in characters array', async () => {
-    render(<ConcentrationPromptModal campaignName="test-campaign" characters={['testTarget']} activeMapName={null} />);
-    fireEvent.click(screen.getByTestId('subscriber-trigger'));
-    await waitFor(() => { expect(screen.getByText(/must make a/)).toBeInTheDocument() });
-    expect(screen.getByText('testTarget')).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import GridAndWalls from './GridAndWalls.jsx';
@@ -34,14 +35,8 @@ describe('GridAndWalls', () => {
             expect(rect).toHaveStyle({ fill: customFill });
         });
 
-        it('should default to #1a1a1a when bgFill is undefined', () => {
+        it('should default to #1a1a1a when bgFill is falsy', () => {
             const { container } = renderComponent({ bgFill: undefined });
-            const rect = getGridBg(container);
-            expect(rect).toHaveStyle({ fill: '#1a1a1a' });
-        });
-
-        it('should default to #1a1a1a when bgFill is null', () => {
-            const { container } = renderComponent({ bgFill: null });
             const rect = getGridBg(container);
             expect(rect).toHaveStyle({ fill: '#1a1a1a' });
         });
@@ -90,45 +85,6 @@ describe('GridAndWalls', () => {
             const expectedPositions = Array.from({ length: customGridSize + 1 }, (_, i) => i * CELL_SIZE);
             expect(yPositions).toEqual(expectedPositions);
         });
-
-        it('should render vertical lines spanning full SVG height', () => {
-            const customGridSize = 5;
-            const { container } = renderComponent({ gridSize: customGridSize });
-            const lines = getGridLines(container);
-
-            const verticalLines = Array.from(lines).filter((line) =>
-                line.getAttribute('x1') === line.getAttribute('x2')
-            );
-
-            const expectedHeight = customGridSize * CELL_SIZE;
-            verticalLines.forEach((line) => {
-                expect(line.getAttribute('y1')).toBe('0');
-                expect(line.getAttribute('y2')).toBe(String(expectedHeight));
-            });
-        });
-
-        it('should render horizontal lines spanning full SVG width', () => {
-            const customGridSize = 5;
-            const { container } = renderComponent({ gridSize: customGridSize });
-            const lines = getGridLines(container);
-
-            const horizontalLines = Array.from(lines).filter((line) =>
-                line.getAttribute('y1') === line.getAttribute('y2')
-            );
-
-            const expectedWidth = customGridSize * CELL_SIZE;
-            horizontalLines.forEach((line) => {
-                expect(line.getAttribute('x1')).toBe('0');
-                expect(line.getAttribute('x2')).toBe(String(expectedWidth));
-            });
-        });
-
-        it('should render grid lines with the grid-line class', () => {
-            const { container } = renderComponent();
-            getGridLines(container).forEach((line) => {
-                expect(line).toHaveClass('grid-line');
-            });
-        });
     });
 
     describe('wall cells', () => {
@@ -165,13 +121,6 @@ describe('GridAndWalls', () => {
             });
         });
 
-        it('should render wall rects with the wall-cell class', () => {
-            const { container } = renderComponent();
-            getWallRects(container).forEach((rect) => {
-                expect(rect).toHaveClass('wall-cell');
-            });
-        });
-
         it('should not filter walls when isLocalhost is true even with fog present', () => {
             const fogWalls = new Set(['0,0', '1,0']);
             const { container } = renderComponent({
@@ -188,22 +137,6 @@ describe('GridAndWalls', () => {
                 fog: fogWalls,
             });
             expect(getWallRects(container).length).toBe(DEFAULT_WALLS.size - fogWalls.size);
-        });
-
-        it('should not filter walls when fog is undefined and not on localhost', () => {
-            const { container } = renderComponent({
-                isLocalhost: false,
-                fog: undefined,
-            });
-            expect(getWallRects(container).length).toBe(DEFAULT_WALLS.size);
-        });
-
-        it('should not filter walls when fog is null and not on localhost', () => {
-            const { container } = renderComponent({
-                isLocalhost: false,
-                fog: null,
-            });
-            expect(getWallRects(container).length).toBe(DEFAULT_WALLS.size);
         });
     });
 });

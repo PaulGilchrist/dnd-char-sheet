@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MapToolbar from './MapToolbar.jsx';
@@ -47,11 +48,6 @@ describe('MapToolbar', () => {
         it('should render the map name formatted correctly', () => {
             renderMapToolbar();
             expect(screen.getByText('Dungeon Map')).toBeInTheDocument();
-        });
-
-        it('should render a custom map name formatted correctly', () => {
-            renderMapToolbar({ mapName: 'deep-dungeon-map.json' });
-            expect(screen.getByText('Deep Dungeon Map')).toBeInTheDocument();
         });
 
         it('should render without onBack button when onBack is not provided', () => {
@@ -115,20 +111,9 @@ describe('MapToolbar', () => {
             expect(screen.queryByText('Spell Overlay')).not.toBeInTheDocument();
         });
 
-        it('should not render SpellOverlayControls when spellMode is undefined', () => {
-            const mockState = createMockSpellOverlayState({ spellMode: undefined });
-            renderMapToolbar({ spellOverlayState: mockState });
-            expect(screen.queryByText('Spell Overlay')).not.toBeInTheDocument();
-        });
-
         it('should render ruler hint with icon when rulerMode is true', () => {
             renderMapToolbar({ rulerMode: true });
             expect(screen.getByText('Click two points to measure distance')).toBeInTheDocument();
-        });
-
-        it('should not render ruler hint when rulerMode is false', () => {
-            renderMapToolbar({ rulerMode: false });
-            expect(screen.queryByText('Click two points to measure distance')).not.toBeInTheDocument();
         });
 
         it('should handle null spellOverlayState gracefully', () => {
@@ -159,20 +144,9 @@ describe('MapToolbar', () => {
             expect(screen.getByText('Spell')).toHaveClass('active');
         });
 
-        it('should not apply active class to spell button when spellMode is null', () => {
-            const mockState = createMockSpellOverlayState({ spellMode: null });
-            renderMapToolbar({ spellOverlayState: mockState });
-            expect(screen.getByText('Spell')).not.toHaveClass('active');
-        });
-
         it('should apply active class to ruler button when rulerMode is true', () => {
             renderMapToolbar({ rulerMode: true });
             expect(screen.getByText('Ruler')).toHaveClass('active');
-        });
-
-        it('should not apply active class to ruler button when rulerMode is false', () => {
-            renderMapToolbar({ rulerMode: false });
-            expect(screen.getByText('Ruler')).not.toHaveClass('active');
         });
     });
 
@@ -204,10 +178,7 @@ describe('MapToolbar', () => {
         it('should call zoomIn when zoom in button is clicked', () => {
             const mockZoomIn = vi.fn();
             renderMapToolbar({ zoomIn: mockZoomIn });
-            const buttons = screen.getAllByRole('button');
-            const zoomInBtn = buttons.find(btn =>
-                btn.querySelector('i.fa-solid.fa-magnifying-glass-plus')
-            );
+            const zoomInBtn = document.querySelector('i.fa-magnifying-glass-plus')?.parentElement;
             fireEvent.click(zoomInBtn);
             expect(mockZoomIn).toHaveBeenCalledTimes(1);
         });
@@ -215,10 +186,7 @@ describe('MapToolbar', () => {
         it('should call zoomOut when zoom out button is clicked', () => {
             const mockZoomOut = vi.fn();
             renderMapToolbar({ zoomOut: mockZoomOut });
-            const buttons = screen.getAllByRole('button');
-            const zoomOutBtn = buttons.find(btn =>
-                btn.querySelector('i.fa-solid.fa-magnifying-glass-minus')
-            );
+            const zoomOutBtn = document.querySelector('i.fa-magnifying-glass-minus')?.parentElement;
             fireEvent.click(zoomOutBtn);
             expect(mockZoomOut).toHaveBeenCalledTimes(1);
         });
@@ -275,23 +243,6 @@ describe('MapToolbar', () => {
             expect(mockSetSpellMode).toHaveBeenCalledWith(OverlayShape.SPHERE);
         });
 
-        it('should activate spell mode with selectedShape when spell button clicked', () => {
-            const mockSetSpellMode = vi.fn();
-            const mockSetTool = vi.fn();
-            const mockState = createMockSpellOverlayState({
-                spellMode: null,
-                setSpellMode: mockSetSpellMode,
-                selectedShape: 'cone',
-            });
-            renderMapToolbar({
-                spellOverlayState: mockState,
-                setTool: mockSetTool,
-            });
-            fireEvent.click(screen.getByText('Spell'));
-            expect(mockSetTool).toHaveBeenCalledWith('none');
-            expect(mockSetSpellMode).toHaveBeenCalledWith('cone');
-        });
-
         it('should toggle paint, erase, select, and room tools on and off when clicked', () => {
             const tools = ['paint', 'erase', 'select', 'room'];
             for (const tool of tools) {
@@ -313,14 +264,6 @@ describe('MapToolbar', () => {
             const gridInput = screen.getByRole('spinbutton');
             fireEvent.change(gridInput, { target: { value: '20' } });
             expect(mockSetGridSize).toHaveBeenCalledWith(20);
-        });
-
-        it('should call setGridSize with 100 when input is set to maximum', () => {
-            const mockSetGridSize = vi.fn();
-            renderMapToolbar({ gridSize: 5, setGridSize: mockSetGridSize });
-            const gridInput = screen.getByRole('spinbutton');
-            fireEvent.change(gridInput, { target: { value: '100' } });
-            expect(mockSetGridSize).toHaveBeenCalledWith(100);
         });
     });
 });

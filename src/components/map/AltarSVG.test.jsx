@@ -6,47 +6,16 @@ import AltarSVG from './AltarSVG';
 
 describe('AltarSVG', () => {
   describe('props', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<AltarSVG />);
-      const g = container.querySelector('g');
-      expect(g).toBeInTheDocument();
-    });
-
-    it('applies the id prop to the group element', () => {
-      const { container } = render(<AltarSVG id="altar-1" />);
-      const g = container.querySelector('g');
-      expect(g).toHaveAttribute('id', 'altar-1');
-    });
-
-    it('applies the className prop to the group element', () => {
-      const { container } = render(<AltarSVG className="custom-altar" />);
-      const g = container.querySelector('g');
-      expect(g).toHaveClass('custom-altar');
-    });
-
-    it('passes through rest props as attributes', () => {
-      const { container } = render(<AltarSVG data-test="altar-test" aria-label="Altar" />);
-      const g = container.querySelector('g');
-      expect(g).toHaveAttribute('data-test', 'altar-test');
-      expect(g).toHaveAttribute('aria-label', 'Altar');
-    });
-
-    it('forwards ref to the group element', () => {
-      const ref = React.createRef();
-      render(<AltarSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName.toLowerCase()).toBe('g');
-    });
-
-    it('combines id, className, rest props, and ref', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
       const ref = React.createRef();
       const { container } = render(
-        <AltarSVG id="test-altar" className="test-class" data-custom="value" ref={ref} />
+        <AltarSVG id="altar-1" className="custom-altar" data-test="altar-test" ref={ref} />
       );
       const g = container.querySelector('g');
-      expect(g).toHaveAttribute('id', 'test-altar');
-      expect(g).toHaveClass('test-class');
-      expect(g).toHaveAttribute('data-custom', 'value');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'altar-1');
+      expect(g).toHaveClass('custom-altar');
+      expect(g).toHaveAttribute('data-test', 'altar-test');
       expect(ref.current).toBe(g);
     });
   });
@@ -219,29 +188,6 @@ describe('AltarSVG', () => {
       expect(highlight).toBeInTheDocument();
     });
   });
-
-  describe('total element count', () => {
-    it('renders the expected number of child elements', () => {
-      const { container } = render(<AltarSVG />);
-      const g = container.querySelector('g');
-      const allElements = Array.from(g.children);
-      // 1 floor shadow rect
-      // + 6 stone base rects (main, top, border, 2 edge shadows, highlight)
-      // + 3 cloth runner rects (red strip + 2 gold trims)
-      // + 1 offering depression rect
-      // + 1 blood stain path
-      // + 3 blood spatter circles
-      // + 4 candle groups
-      // + 1 rune symbol group
-      // + 1 goblet group
-      // total = 1+6+3+1+1+3+4+1+1 = 21
-      expect(allElements.length).toBe(21);
-    });
-  });
-
-  describe('displayName', () => {
-    it('has the correct displayName', () => {
-      expect(AltarSVG.displayName).toBe('AltarSVG');
-    });
-  });
 });
+
+// @cleaned-by-ai

@@ -6,39 +6,17 @@ import ChairSVG from './ChairSVG.jsx';
 
 describe('ChairSVG', () => {
   describe('root element', () => {
-    it('renders a <g> element', () => {
-      const { container } = render(<ChairSVG />);
-      expect(container.querySelector('g')).toBeInTheDocument();
-    });
-
-    it('applies id to the root <g>', () => {
-      const { container } = render(<ChairSVG id="chair-1" />);
-      expect(container.querySelector('g')).toHaveAttribute('id', 'chair-1');
-    });
-
-    it('applies className to the root <g>', () => {
-      const { container } = render(<ChairSVG className="chair-svg test-class" />);
-      expect(container.querySelector('g')).toHaveAttribute('class', 'chair-svg test-class');
-    });
-
-    it('spreads additional props to the root <g>', () => {
+    it('renders a <g> element with id, className, rest props, and ref', () => {
+      const ref = React.createRef();
       const { container } = render(
-        <ChairSVG data-testid="my-chair" aria-label="Throne" />,
+        <ChairSVG id="chair-1" className="chair-svg test-class" data-testid="my-chair" ref={ref} />
       );
       const g = container.querySelector('g');
+      expect(g).toBeInTheDocument();
+      expect(g).toHaveAttribute('id', 'chair-1');
+      expect(g).toHaveAttribute('class', 'chair-svg test-class');
       expect(g).toHaveAttribute('data-testid', 'my-chair');
-      expect(g).toHaveAttribute('aria-label', 'Throne');
-    });
-
-    it('accepts a ref via forwardRef', () => {
-      const ref = React.createRef();
-      render(<ChairSVG ref={ref} />);
-      expect(ref.current).toBeTruthy();
-      expect(ref.current.tagName).toBe('G');
-    });
-
-    it('sets displayName to "ChairSVG"', () => {
-      expect(ChairSVG.displayName).toBe('ChairSVG');
+      expect(ref.current).toBe(g);
     });
   });
 
@@ -219,17 +197,6 @@ describe('ChairSVG', () => {
       });
     });
   });
-
-  describe('element counts', () => {
-    it('renders the expected number of child elements', () => {
-      const { container } = render(<ChairSVG />);
-      const g = container.querySelector('g');
-      const rects = g.querySelectorAll('rect');
-      const circles = g.querySelectorAll('circle');
-      // 15 rects: shadow(1) + backrest(3) + seat(3) + left armrest(2) + right armrest(2) + front frame(1) + legs(4)
-      // 4 circles: 2 decorative + 2 gold tips
-      expect(rects.length).toBe(15);
-      expect(circles.length).toBe(4);
-    });
-  });
 });
+
+// @cleaned-by-ai

@@ -1,4 +1,22 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Modal action mechanics only: loading/empty states, modal open/close, generate
+// button state, and delete button conditional visibility. Intentionally NOT
+// duplicated here (covered in sibling files):
+//   - size badges, population, service counts, tags, description previews
+//       -> Settlements.listRendering.test.jsx
+//   - search/size filtering (behavioral), no-results messages
+//       -> Settlements.filtering.test.jsx
+//   - generate button disabled/label/re-enabled, prefilled modal content, error handling
+//       -> Settlements.generate.test.jsx
+//   - save/delete behavior, draft lifecycle
+//       -> Settlements.saveDelete.test.jsx / crudOperations.test.jsx
+//   - form field changes, size auto-population, name validation, threat field
+//       -> Settlements.formFields.test.jsx / formChanges.test.jsx
+//   - service/NPC/rumor add-remove cycles
+//       -> Settlements.serviceNPCRumor.test.jsx
+//   - accessible names, keyboard navigation, focus management, clear button visibility
+//       -> Settlements.accessibility.test.jsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Settlements from './Settlements.jsx';
@@ -96,13 +114,6 @@ describe('Settlements - modal actions', () => {
       expect(screen.getByText(/no settlements yet/i)).toBeInTheDocument();
     });
 
-    it('shows the filters message instead of the empty state when a search matches nothing', () => {
-      render(<Settlements campaignName={campaignName} onBack={() => {}} />);
-      fireEvent.change(screen.getByLabelText('Search settlements'), { target: { value: 'nonexistent' } });
-      expect(screen.getByText(/no settlements found matching your filters/i)).toBeInTheDocument();
-      expect(screen.queryByText(/no settlements yet/i)).not.toBeInTheDocument();
-    });
-
     it('clears the search query when the clear button is clicked', () => {
       settlementMockStore.items = [makeSettlement('Fireport'), makeSettlement('Hollow Oak')];
       render(<Settlements campaignName={campaignName} onBack={() => {}} />);
@@ -110,15 +121,6 @@ describe('Settlements - modal actions', () => {
       expect(screen.queryByText('Hollow Oak')).not.toBeInTheDocument();
       fireEvent.click(screen.getByLabelText('Clear search'));
       expect(screen.getByText('Hollow Oak')).toBeInTheDocument();
-    });
-  });
-
-  describe('Generate settlement button', () => {
-    it('is visible and enabled on the main view before any generation', () => {
-      render(<Settlements campaignName={campaignName} onBack={() => {}} />);
-      const generateBtn = screen.getByRole('button', { name: /generate settlement/i });
-      expect(generateBtn).toBeEnabled();
-      expect(generateBtn).toHaveTextContent('Generate Settlement');
     });
   });
 
@@ -134,13 +136,6 @@ describe('Settlements - modal actions', () => {
       fireEvent.click(screen.getByRole('button', { name: /new settlement/i }));
       expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
-      expect(screen.queryByRole('heading', { name: 'New Settlement' })).not.toBeInTheDocument();
-    });
-
-    it('closes the new settlement modal when the close button is clicked', () => {
-      render(<Settlements campaignName={campaignName} onBack={() => {}} />);
-      fireEvent.click(screen.getByRole('button', { name: /new settlement/i }));
-      fireEvent.click(screen.getByRole('button', { name: /close/i }));
       expect(screen.queryByRole('heading', { name: 'New Settlement' })).not.toBeInTheDocument();
     });
   });
