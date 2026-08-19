@@ -1,5 +1,12 @@
-// @improved-by-ai
-// SavePromptModal — Special Handlers (Bane on attacker, HP restoration, CombatSummary, Storage)
+  // @improved-by-ai
+  // @cleaned-by-ai
+  // SavePromptModal — Special Handlers (Bane on attacker, HP restoration, CombatSummary, Storage)
+  //
+  // Cleanup: Consolidated 2 redundant lastAttack storage tests into 1:
+  //   - "updates combatSummary lastAttack when submitSaveResult is called with combatSummary" was
+  //     a near-duplicate of "stores lastAttack when rolling a save with combatSummary present" —
+  //     both test the same storage.set('lastAttack', ...) code path with different triggers but
+  //     identical assertion shapes. Merged into a single test that verifies the core behavior.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -138,54 +145,6 @@ describe('SavePromptModal — Special Handlers', () => {
     });
 
     expect(screen.getByText(/Bane/i)).toBeInTheDocument();
-  });
-
-  // ── submitSaveResult: updates combatSummary lastAttack ──
-
-  it('updates combatSummary lastAttack when submitSaveResult is called with combatSummary', async () => {
-    rollD20.mockReturnValue(20);
-    getRuntimeValue.mockImplementation((name, key, campaign) => {
-      if (name === 'campaign' && key === 'lastAttack' && campaign === 'test-campaign') return { finalDamage: 10 };
-      if (name === 'testTarget' && key === 'hitPoints' && campaign === 'test-campaign') return 5;
-      if (name === 'testTarget' && key === 'maxHitPoints' && campaign === 'test-campaign') return 20;
-      return null;
-    });
-    vi.mocked(getCombatSummary).mockReturnValue({
-      lastAttack: { d20: 10, total: 15 },
-      creatures: [],
-    });
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger-rawdamage');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
-    });
-
-    const doneBtn = screen.getByRole('button', { name: 'Done' });
-    fireEvent.click(doneBtn);
-
-    // handleRollSave stores lastAttack via storage.set (not submitSaveResult)
-    expect(storage.set).toHaveBeenCalledWith('lastAttack', expect.objectContaining({
-      saveType: 'con',
-      saveDc: 12,
-      saveResult: 'success',
-    }), 'test-campaign');
   });
 
   // ── Storage: lastAttack with secondary formula ──

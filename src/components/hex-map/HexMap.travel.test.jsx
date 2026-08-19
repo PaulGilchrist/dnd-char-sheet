@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -211,25 +212,21 @@ describe('HexMap travel', () => {
     });
 
     describe('Travel tool destination selection', () => {
-        it('starts planning and sets the destination when a valid hex is clicked', () => {
+        it.each([
+            { label: 'starts planning', isTravelActive: false, expectStartPlanning: true },
+            { label: 'does not start planning', isTravelActive: true, expectStartPlanning: false },
+        ])('sets destination $label when travel is $isTravelActive', ({ isTravelActive, expectStartPlanning }) => {
             const tm = renderWithTravelTool({
-                tmOverrides: { isTravelActive: false },
+                tmOverrides: { isTravelActive },
                 hoverOverrides: { getHexFromEvent: vi.fn(() => ({ q: 20, r: 10 })) },
                 mapOverrides: { partyPosition: { q: 15, r: 8 } },
             });
             fireEvent.click(mapSvg());
-            expect(tm.startPlanning).toHaveBeenCalledTimes(1);
-            expect(tm.setDestinationAndPath).toHaveBeenCalledWith({ q: 20, r: 10 });
-        });
-
-        it('sets the destination without calling startPlanning when travel is already active', () => {
-            const tm = renderWithTravelTool({
-                tmOverrides: { isTravelActive: true },
-                hoverOverrides: { getHexFromEvent: vi.fn(() => ({ q: 20, r: 10 })) },
-                mapOverrides: { partyPosition: { q: 15, r: 8 } },
-            });
-            fireEvent.click(mapSvg());
-            expect(tm.startPlanning).not.toHaveBeenCalled();
+            if (expectStartPlanning) {
+                expect(tm.startPlanning).toHaveBeenCalledTimes(1);
+            } else {
+                expect(tm.startPlanning).not.toHaveBeenCalled();
+            }
             expect(tm.setDestinationAndPath).toHaveBeenCalledWith({ q: 20, r: 10 });
         });
 
@@ -262,54 +259,57 @@ describe('HexMap travel', () => {
     });
 
     describe('Advance logging', () => {
-        it('logs a full advance entry with the target hex, terrain, and weather', () => {
-            const { tm, addEntry } = renderWithActiveTravel({
-                advanceOneHex: vi.fn(() => ({ moved: true, arrived: false, event: null })),
+        it.each([
+            {
+                label: 'a full advance entry',
+                advanceResult: { moved: true, arrived: false, event: null },
                 mapOverrides: {
                     terrain: { '11,5': 'forest' },
                     weather: { label: 'Overcast', icon: 'cloud' },
                 },
-            });
-            clickAdvance();
-            expect(tm.advanceOneHex).toHaveBeenCalledTimes(1);
-            expect(addEntry).toHaveBeenCalledTimes(1);
-            expect(addEntry).toHaveBeenCalledWith({
-                type: 'travel', action: 'advance',
-                hex: { q: 11, r: 5 }, terrain: 'forest',
-                weather: 'Overcast', weatherIcon: 'cloud',
-                eventType: null, eventTitle: null,
-            });
-        });
-
-        it('logs advance_with_event with the event details when an event triggers', () => {
-            const { addEntry } = renderWithActiveTravel({
-                advanceOneHex: vi.fn(() => ({ moved: true, arrived: false, event: { type: 'combat', title: 'Ambush' } })),
+                expected: {
+                    action: 'advance',
+                    hex: { q: 11, r: 5 }, terrain: 'forest',
+                    weather: 'Overcast', weatherIcon: 'cloud',
+                    eventType: null, eventTitle: null,
+                },
+            },
+            {
+                label: 'advance_with_event with event details when an event triggers',
+                advanceResult: { moved: true, arrived: false, event: { type: 'combat', title: 'Ambush' } },
                 mapOverrides: {
                     terrain: { '11,5': 'plains' },
                     weather: { label: 'Clear', icon: 'sun' },
                 },
-            });
-            clickAdvance();
-            expect(addEntry).toHaveBeenCalledWith({
-                type: 'travel', action: 'advance_with_event',
-                hex: { q: 11, r: 5 }, terrain: 'plains',
-                weather: 'Clear', weatherIcon: 'sun',
-                eventType: 'combat', eventTitle: 'Ambush',
-            });
-        });
-
-        it('logs arrived without a target hex when the path ends', () => {
-            const { addEntry } = renderWithActiveTravel({
-                pathIndex: 1,
-                advanceOneHex: vi.fn(() => ({ moved: true, arrived: true, event: null })),
+                expected: {
+                    action: 'advance_with_event',
+                    hex: { q: 11, r: 5 }, terrain: 'plains',
+                    weather: 'Clear', weatherIcon: 'sun',
+                    eventType: 'combat', eventTitle: 'Ambush',
+                },
+            },
+            {
+                label: 'arrived without a target hex when the path ends',
+                advanceResult: { moved: true, arrived: true, event: null },
                 mapOverrides: { weather: { label: 'Clear', icon: 'sun' } },
+                pathIndex: 1,
+                expected: {
+                    action: 'arrived',
+                    hex: null, terrain: null,
+                    weather: 'Clear', weatherIcon: 'sun',
+                    eventType: null, eventTitle: null,
+                },
+            },
+        ])('logs $label', ({ advanceResult, mapOverrides, pathIndex, expected }) => {
+            const { tm, addEntry } = renderWithActiveTravel({
+                pathIndex: pathIndex ?? 0,
+                advanceOneHex: vi.fn(() => advanceResult),
+                mapOverrides,
             });
             clickAdvance();
+            expect(tm.advanceOneHex).toHaveBeenCalledTimes(1);
             expect(addEntry).toHaveBeenCalledWith({
-                type: 'travel', action: 'arrived',
-                hex: null, terrain: null,
-                weather: 'Clear', weatherIcon: 'sun',
-                eventType: null, eventTitle: null,
+                type: 'travel', ...expected,
             });
         });
 

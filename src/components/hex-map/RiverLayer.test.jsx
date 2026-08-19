@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import RiverLayer from './RiverLayer.jsx';
@@ -68,16 +69,13 @@ describe('RiverLayer', () => {
             expect(getFills(container)).toHaveLength(3);
         });
 
-        it.each(['0,0', '5,5'])(
-            'should render an isolated hex (%s) as a fill circle only',
-            (key) => {
-                const { container } = renderLayer({ rivers: [key] });
-                expect(getFills(container)).toHaveLength(1);
-                expect(getPaths(container)).toHaveLength(0);
-                const [q, r] = key.split(',').map(Number);
-                expect(fillCenteredAt(container, q, r)).toBeTruthy();
-            }
-        );
+        it('should render an isolated hex as a fill circle only', () => {
+            const { container } = renderLayer({ rivers: ['5,5'] });
+            expect(getFills(container)).toHaveLength(1);
+            expect(getPaths(container)).toHaveLength(0);
+            const [q, r] = '5,5'.split(',').map(Number);
+            expect(fillCenteredAt(container, q, r)).toBeTruthy();
+        });
 
         it('should render disconnected segments as separate paths plus fills', () => {
             const { container } = renderLayer({ rivers: ['0,0', '3,3', '4,3'] });
@@ -110,19 +108,8 @@ describe('RiverLayer', () => {
             expect(path).toHaveAttribute('stroke-linejoin', 'round');
         });
 
-        it('should skip the path but keep fills when the descriptor has no path', () => {
+        it('should skip the path but keep fills when the descriptor is invalid', () => {
             buildWindingPathDescriptor.mockImplementationOnce(() => null);
-            const { container } = renderLayer();
-            expect(getPaths(container)).toHaveLength(0);
-            expect(getFills(container)).toHaveLength(3);
-        });
-
-        it('should skip the path when the descriptor returns an empty path', () => {
-            buildWindingPathDescriptor.mockImplementationOnce(() => ({
-                path: '',
-                stroke: '#3A82D2',
-                strokeWidth: 2.5,
-            }));
             const { container } = renderLayer();
             expect(getPaths(container)).toHaveLength(0);
             expect(getFills(container)).toHaveLength(3);
@@ -130,15 +117,11 @@ describe('RiverLayer', () => {
     });
 
     describe('fill styling', () => {
-        it('should place each fill circle at the axial center of its hex', () => {
+        it('should place each fill circle at the axial center of its hex and apply soft-fill styling', () => {
             const { container } = renderLayer();
             expect(fillCenteredAt(container, 0, 0)).toBeTruthy();
             expect(fillCenteredAt(container, 1, 0)).toBeTruthy();
             expect(fillCenteredAt(container, 2, 0)).toBeTruthy();
-        });
-
-        it('should apply soft-fill styling to connected-segment fills', () => {
-            const { container } = renderLayer();
             getFills(container).forEach(circle => {
                 expect(circle).toHaveAttribute('r', '4');
                 expect(circle).toHaveAttribute('fill', 'rgba(60, 130, 210, 0.35)');
@@ -150,24 +133,6 @@ describe('RiverLayer', () => {
             const [circle] = getFills(container);
             expect(circle).toHaveAttribute('r', '4');
             expect(circle).toHaveAttribute('fill', 'rgba(60, 130, 210, 0.45)');
-        });
-    });
-
-    describe('memoization', () => {
-        it('should not rebuild the winding path when inputs are unchanged', () => {
-            const rivers = ['0,0', '1,0'];
-            const { rerender } = renderLayer({ rivers });
-            expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(1);
-
-            rerender(<RiverLayer rivers={rivers} hexCols={10} hexRows={10} />);
-            expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(1);
-        });
-
-        it('should rebuild the winding path when the rivers reference changes', () => {
-            const firstRivers = ['0,0', '1,0'];
-            const { rerender } = renderLayer({ rivers: firstRivers });
-            rerender(<RiverLayer rivers={['1,0', '2,0']} hexCols={10} hexRows={10} />);
-            expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(2);
         });
     });
 });

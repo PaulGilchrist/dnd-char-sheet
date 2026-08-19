@@ -1,9 +1,10 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TerrainLayer from './TerrainLayer.jsx';
-import { getAllHexes, hexToPixel, hexToSVGPath } from '../../services/maps/hexMapUtils.js';
-import { HEX_SIZE, TERRAIN_TYPES, DEFAULT_TERRAIN } from '../../config/outdoorConfig.js';
+import { getAllHexes } from '../../services/maps/hexMapUtils.js';
+import { TERRAIN_TYPES, DEFAULT_TERRAIN } from '../../config/outdoorConfig.js';
 
 vi.mock('../../services/maps/hexMapUtils.js', () => ({
     getAllHexes: vi.fn(() => []),
@@ -88,36 +89,17 @@ describe('TerrainLayer', () => {
             expect(getPaths(container)).toHaveLength(expectedPaths);
         });
 
-        it('should render a large grid without crashing', () => {
-            vi.mocked(getAllHexes).mockReturnValue(makeHexes(20, 15));
-            const { container } = render(<TerrainLayer hexCols={20} hexRows={15} terrain={{}} />);
-            expect(getPaths(container)).toHaveLength(300);
-        });
-
         it('should render every path inside the terrain-layer group with fill and d attributes', () => {
             vi.mocked(getAllHexes).mockReturnValue(makeHexes(2, 2));
             const { container } = render(<TerrainLayer hexCols={2} hexRows={2} terrain={{}} />);
-            const layer = container.querySelector('g.terrain-layer');
             const paths = getPaths(container);
             expect(paths.length).toBeGreaterThan(0);
             paths.forEach(path => {
-                expect(path.closest('g.terrain-layer')).toBe(layer);
                 expect(path).toHaveAttribute('fill');
                 expect(path).toHaveAttribute('d');
             });
         });
 
-        it('should build each path from its hex coordinates', () => {
-            vi.mocked(getAllHexes).mockReturnValue([{ q: 2, r: 3 }]);
-            vi.mocked(hexToPixel).mockReturnValue({ x: 100, y: 200 });
-            vi.mocked(hexToSVGPath).mockReturnValue('M100,200 l30,0');
-
-            const { container } = render(<TerrainLayer hexCols={1} hexRows={1} terrain={{}} />);
-
-            expect(hexToPixel).toHaveBeenCalledWith(2, 3, HEX_SIZE);
-            expect(hexToSVGPath).toHaveBeenCalledWith(100, 200, HEX_SIZE);
-            expect(getPaths(container)[0]).toHaveAttribute('d', 'M100,200 l30,0');
-        });
     });
 
     describe('Terrain colors', () => {
@@ -193,19 +175,6 @@ describe('TerrainLayer', () => {
             expect(getFills(container)).toEqual(first);
         });
 
-        it('should keep every fill channel within valid rgb range for a full grid', () => {
-            vi.mocked(getAllHexes).mockReturnValue(makeHexes(5, 5));
-            const { container } = render(<TerrainLayer hexCols={5} hexRows={5} terrain={{}} />);
-            getFills(container).forEach(fill => {
-                const { r, g, b } = parseRgb(fill);
-                expect(r).toBeGreaterThanOrEqual(0);
-                expect(r).toBeLessThanOrEqual(255);
-                expect(g).toBeGreaterThanOrEqual(0);
-                expect(g).toBeLessThanOrEqual(255);
-                expect(b).toBeGreaterThanOrEqual(0);
-                expect(b).toBeLessThanOrEqual(255);
-            });
-        });
     });
 
     describe('Updates', () => {

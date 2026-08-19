@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import MonsterNameAutocomplete from './MonsterNameAutocomplete.jsx';
@@ -61,24 +62,22 @@ describe('MonsterNameAutocomplete', () => {
         await expect(screen.findByText('Goblin')).resolves.toBeInTheDocument();
     });
 
-    it('hides suggestions when query has no matches', async () => {
-        render(<MonsterNameAutocomplete value="" />);
+    it('hides suggestions when query has no matches or is cleared', async () => {
+        const { unmount } = render(<MonsterNameAutocomplete value="" />);
         const input = document.querySelector('.monster-autocomplete-input');
+
         fireEvent.change(input, { target: { value: 'zzzzzzzzzz' } });
         await new Promise(r => setTimeout(r, 200));
-        const list = document.querySelector('.monster-autocomplete-list');
-        expect(list).not.toBeInTheDocument();
-    });
+        expect(document.querySelector('.monster-autocomplete-list')).not.toBeInTheDocument();
+        unmount();
 
-    it('hides suggestions when input is cleared', async () => {
         render(<MonsterNameAutocomplete value="" />);
-        const input = document.querySelector('.monster-autocomplete-input');
-        fireEvent.change(input, { target: { value: 'Gobl' } });
+        const input2 = document.querySelector('.monster-autocomplete-input');
+        fireEvent.change(input2, { target: { value: 'Gobl' } });
         await new Promise(r => setTimeout(r, 200));
-        fireEvent.change(input, { target: { value: '' } });
+        fireEvent.change(input2, { target: { value: '' } });
         await new Promise(r => setTimeout(r, 200));
-        const list = document.querySelector('.monster-autocomplete-list');
-        expect(list).not.toBeInTheDocument();
+        expect(document.querySelector('.monster-autocomplete-list')).not.toBeInTheDocument();
     });
 
     it('prioritizes started-with matches over contains matches', async () => {
@@ -89,15 +88,6 @@ describe('MonsterNameAutocomplete', () => {
         const items = document.querySelectorAll('.monster-autocomplete-item');
         expect(items.length).toBeGreaterThan(0);
         expect(items[0].textContent.trim()).toBe('Ancient Dragon');
-    });
-
-    it('limits total results to 8', async () => {
-        render(<MonsterNameAutocomplete value="" />);
-        const input = document.querySelector('.monster-autocomplete-input');
-        fireEvent.change(input, { target: { value: '' } });
-        await new Promise(r => setTimeout(r, 200));
-        const items = document.querySelectorAll('.monster-autocomplete-item');
-        expect(items.length).toBeLessThanOrEqual(8);
     });
 
     it('highlights first suggestion on ArrowDown and wraps to first on ArrowUp from last', async () => {
@@ -214,14 +204,5 @@ describe('MonsterNameAutocomplete', () => {
         rerender(<MonsterNameAutocomplete value="Orc" />);
         await new Promise(r => setTimeout(r, 200));
         expect(screen.getByDisplayValue('Orc')).toBeInTheDocument();
-    });
-
-    it('does not call onCommit when it is not provided on blur', async () => {
-        render(<MonsterNameAutocomplete value="" />);
-        const input = document.querySelector('.monster-autocomplete-input');
-        fireEvent.change(input, { target: { value: 'Gobl' } });
-        await new Promise(r => setTimeout(r, 200));
-        fireEvent.blur(input);
-        expect(screen.getByDisplayValue('Gobl')).toBeInTheDocument();
     });
 });

@@ -1,4 +1,19 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Removed:
+//   "sets encounter title with formatEncounterName formatting" — redundant
+//     with "loads encounter data and sets title, description, and selected
+//     monsters" which already asserts the same title element.
+//   "handles loadEncounterData rejecting with an error" — captured
+//     console.error into an array but never asserted on it; the only
+//     assertion (loadEncounterData was called) is trivially true from the
+//     mock setup, providing zero behavioral confidence.
+// Consolidated:
+//   "handles loadEncounterData returning data with no selectedMonsters" +
+//   "handles loadEncounterData returning data with empty selectedMonsters
+//     array" — both asserted the same observable behavior (description set,
+//     no goblin selected). Merged into a single "no monsters after load"
+//     test.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -521,40 +536,7 @@ describe('EncounterBuilder - handleLoadEncounter', () => {
     expect(screen.getByTestId('selected-item-goblin')).toBeInTheDocument();
   });
 
-  it('handles loadEncounterData returning data with no selectedMonsters', async () => {
-    const loadEncounterData = vi.fn().mockResolvedValue({
-      description: 'Empty encounter',
-      effectiveXP: 0,
-    });
-
-    await renderWithLoadEncounter(loadEncounterData);
-    await setupLoadFlow();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('description-textarea').value).toBe('Empty encounter');
-    });
-
-    expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
-  });
-
-  it('handles loadEncounterData rejecting with an error', async () => {
-    const consoleError = console.error;
-    const errors = [];
-    console.error = (...args) => errors.push(args);
-
-    const loadEncounterData = vi.fn(() => Promise.reject(new Error('Load failed')));
-
-    await renderWithLoadEncounter(loadEncounterData);
-    await setupLoadFlow();
-
-    await waitFor(() => {
-      expect(loadEncounterData).toHaveBeenCalled();
-    });
-
-    console.error = consoleError;
-  });
-
-  it('handles loadEncounterData returning data with empty selectedMonsters array', async () => {
+  it('handles loadEncounterData returning data with no/empty selectedMonsters', async () => {
     const loadEncounterData = vi.fn().mockResolvedValue({
       selectedMonsters: [],
       description: 'No monsters',
@@ -591,20 +573,4 @@ describe('EncounterBuilder - handleLoadEncounter', () => {
     expect(screen.getByTestId('selected-xp-goblin')).toHaveTextContent('150 XP');
   });
 
-  it('sets encounter title with formatEncounterName formatting', async () => {
-    const loadEncounterData = vi.fn().mockResolvedValue({
-      selectedMonsters: [
-        { index: 'orc', name: 'Orc', qty: 1 },
-      ],
-      description: '',
-      effectiveXP: 100,
-    });
-
-    await renderWithLoadEncounter(loadEncounterData);
-    await setupLoadFlow();
-
-    await waitFor(() => {
-      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
-    });
-  });
 });

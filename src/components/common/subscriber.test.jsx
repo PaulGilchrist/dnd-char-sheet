@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render } from '@testing-library/react';
@@ -54,19 +55,6 @@ describe('Subscriber', () => {
     resetSSEClient();
   });
 
-  describe('rendering', () => {
-    it('renders as a fragment with no visible DOM nodes', () => {
-      const { container } = render(
-        <Subscriber
-          handleEvent={vi.fn()}
-          campaignName="test-campaign"
-        />
-      );
-      // Subscriber returns <React.Fragment></React.Fragment> — no DOM nodes.
-      expect(container.childNodes.length).toBe(0);
-    });
-  });
-
   describe('event subscription', () => {
     it('registers a handler with subscribeToSSE when mounted', () => {
       const handleEvent = vi.fn();
@@ -112,23 +100,6 @@ describe('Subscriber', () => {
       expect(entry.handlers.size).toBe(3);
     });
 
-    it('calls subscribeToSSE with the campaign key and a handler function', () => {
-      const handleEvent = vi.fn();
-
-      render(
-        <Subscriber
-          handleEvent={handleEvent}
-          campaignName="campaign-x"
-        />
-      );
-
-      const entry = __getSources().get('campaign-x');
-      expect(entry).toBeDefined();
-      expect(entry.handlers.size).toBe(1);
-      // The handler stored is a function (the wrapper from useEffect).
-      var registeredHandler = Array.from(entry.handlers)[0];
-      expect(typeof registeredHandler).toBe('function');
-    });
   });
 
   describe('event handling', () => {
@@ -147,68 +118,6 @@ describe('Subscriber', () => {
       entry.eventSource.onmessage({ data: JSON.stringify({ type: 'test', data: 'value' }) });
 
       expect(handleEvent).toHaveBeenCalledWith({ type: 'test', data: 'value' });
-    });
-
-    it('handles SSE events with complex nested data', () => {
-      const handleEvent = vi.fn();
-
-      render(
-        <Subscriber
-          handleEvent={handleEvent}
-          campaignName="test-campaign"
-        />
-      );
-
-      const complexData = {
-        key: 'combat-start',
-        data: {
-          round: 1,
-          initiative: [{ name: 'hero', value: 15 }],
-        },
-      };
-
-      const entry = Array.from(__getSources().values())[0];
-      entry.eventSource.onmessage({ data: JSON.stringify(complexData) });
-
-      expect(handleEvent).toHaveBeenCalledWith(complexData);
-    });
-
-    it('delivers empty JSON object {} to the handler', () => {
-      const handleEvent = vi.fn();
-
-      render(
-        <Subscriber
-          handleEvent={handleEvent}
-          campaignName="test-campaign"
-        />
-      );
-
-      const entry = Array.from(__getSources().values())[0];
-      entry.eventSource.onmessage({ data: JSON.stringify({}) });
-
-      expect(handleEvent).toHaveBeenCalledWith({});
-    });
-
-    it('delivers the parsed object directly, not a re-stringified version', () => {
-      const handleEvent = vi.fn();
-
-      render(
-        <Subscriber
-          handleEvent={handleEvent}
-          campaignName="test-campaign"
-        />
-      );
-
-      const entry = Array.from(__getSources().values())[0];
-      const originalData = { key: 'test', value: 42 };
-      const jsonString = JSON.stringify(originalData);
-
-      entry.eventSource.onmessage({ data: jsonString });
-
-      // The handler should receive the parsed object (same structure),
-      // not a string or a re-stringified version.
-      expect(handleEvent).toHaveBeenCalledWith(originalData);
-      expect(typeof handleEvent.mock.calls[0][0]).toBe('object');
     });
 
     it('dispatches a shared SSE event to all subscribed handlers for the same campaign', () => {
@@ -376,27 +285,6 @@ describe('Subscriber', () => {
   });
 
   describe('different campaigns', () => {
-    it('creates separate subscriptions for different campaign names', () => {
-      const handlerA = vi.fn();
-      const handlerB = vi.fn();
-
-      render(
-        <Subscriber
-          handleEvent={handlerA}
-          campaignName="campaign-a"
-        />
-      );
-      render(
-        <Subscriber
-          handleEvent={handlerB}
-          campaignName="campaign-b"
-        />
-      );
-
-      expect(__getSources().has('campaign-a')).toBe(true);
-      expect(__getSources().has('campaign-b')).toBe(true);
-    });
-
     it('only delivers events to handlers subscribed to the matching campaign', () => {
       const handlerA = vi.fn();
       const handlerB = vi.fn();

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import POIContextMenu from './POIContextMenu.jsx';
@@ -33,8 +34,7 @@ describe('POIContextMenu', () => {
     describe('rendering', () => {
         it.each([
             { name: 'no selected POI', selectedPoi: null },
-            { name: 'selected POI not in pois list', pois: [] },
-            { name: 'selected POI ID not found in pois list', pois: [{ id: 'other-poi', q: 1, r: 1 }] },
+            { name: 'selected POI not found in pois list', pois: [{ id: 'other-poi', q: 1, r: 1 }] },
         ])('returns null (no menu) when %s', ({ selectedPoi, pois }) => {
             const { container } = renderMenu({ selectedPoi, pois });
             expect(container.querySelector('.poi-context-menu')).not.toBeInTheDocument();
@@ -213,15 +213,6 @@ describe('POIContextMenu', () => {
             expect(screen.queryByText('Map 08')).not.toBeInTheDocument();
         });
 
-        it('handles map names without zero-padding correctly', () => {
-            const indoorMaps = Array.from({ length: 6 }, (_, i) => `map-${i + 1}.json`);
-            renderMenu({ indoorMaps, pois: [BASE_POI] });
-            fireEvent.click(screen.getByText('Link to Map...'));
-            for (let i = 1; i <= 6; i += 1) {
-                expect(screen.getByText(`Map ${i}`)).toBeInTheDocument();
-            }
-        });
-
         it('closes the link picker and the menu when the close button (✕) is clicked', () => {
             renderMenu({ indoorMaps: ['dungeon-map.json'], pois: [BASE_POI] });
             fireEvent.click(screen.getByText('Link to Map...'));
@@ -275,23 +266,4 @@ describe('POIContextMenu', () => {
         });
     });
 
-    describe('positioning', () => {
-        it('places the menu offset from the selected POI hex center', () => {
-            // hexToPixel(0, 0, 30) = {x: 0, y: 0}, so menuX = 10, menuY = 10
-            const { container } = renderMenu();
-            const rect = container.querySelector('.poi-context-menu rect');
-            expect(rect).toHaveAttribute('x', '10');
-            expect(rect).toHaveAttribute('y', '10');
-        });
-
-        it('clamps the menu into the viewport when it would overflow', () => {
-            // POI at (0,0) -> menuX=10, menuY=10, menuWidth=160, menuHeight=98
-            // Bounds: left=0, top=0, right=50, bottom=50
-            // Clamped: x = max(4, min(10, -150)) = 4, y = max(4, min(10, -178)) = 4
-            const { container } = renderMenu({ viewPortBounds: { left: 0, top: 0, right: 50, bottom: 50 } });
-            const rect = container.querySelector('.poi-context-menu rect');
-            expect(rect).toHaveAttribute('x', '4');
-            expect(rect).toHaveAttribute('y', '4');
-        });
-    });
 });

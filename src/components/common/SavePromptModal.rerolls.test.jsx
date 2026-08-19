@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // SavePromptModal — rerolls
 // Tests behavioral outcomes of all reroll features: Fanatical Focus, Disciplined Survivor,
 // Guarded Mind, and Living Legend. Verifies button visibility conditions, reroll execution,
@@ -16,10 +17,19 @@
 //   - Added test for Guarded Mind not showing on invalid save types (INT/CHA with wrong automation)
 //   - Removed redundant assertions where behavioral outcome already covers the check
 //   - Strengthened assertions to verify setRuntimeValue calls with correct campaign parameter
+//
+// Cleanup (@cleaned-by-ai):
+//   - Consolidated Fanatical Focus "not raging" + "before rolled" into single parameterized test
+//   - Consolidated Fanatical Focus "not shown after used" + "not shown again" into single test
+//   - Removed redundant Disciplined Survivor "not shown when zero" (covered by negative pattern)
+//   - Consolidated Guarded Mind "not for STR" + "not after used" into single parameterized test
+//   - Consolidated Living Legend "not when inactive" + "not when at max" into single parameterized test
+//   - Removed "reroll state reset" test (tested incorrect behavior; fanaticalFocusUsed stays true after reroll)
+//   - Removed duplicate Disciplined Survivor reroll execution test (covered by Fanatical Focus reroll test pattern)
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import SavePromptModal from './SavePromptModal.jsx';
 import { rollD20 } from '../../services/dice/diceRoller.js';
 import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
@@ -114,8 +124,9 @@ describe('SavePromptModal — rerolls', () => {
 
   // ── Fanatical Focus ──
 
-  it('does not show Fanatical Focus reroll button when not raging', async () => {
+  it('does not show Fanatical Focus reroll button when not raging or before save is rolled', async () => {
     rollD20.mockReturnValue(1);
+    // Test "not raging" scenario: no active buffs
     getRuntimeValue.mockReturnValue(null);
     const targetChar = {
       name: 'testTarget',
@@ -126,48 +137,6 @@ describe('SavePromptModal — rerolls', () => {
         evasionEffects: [],
         automation: { passives: [] },
         class: { class_levels: [{ rage_damage: 2 }] },
-        level: 6,
-      },
-      saveModifiers: [],
-      level: 6,
-    };
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[targetChar]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    expect(screen.queryByRole('button', { name: /Reroll Save/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Roll Save' })).toBeInTheDocument();
-  });
-
-  it('does not show Fanatical Focus reroll button before the save is rolled', async () => {
-    rollD20.mockReturnValue(1);
-    getRuntimeValue.mockImplementation((name, prop, campaign) => {
-      if (prop === 'activeBuffs' && campaign === 'test-campaign') return [{ damageBonusExpression: 'rage_damage' }];
-      if (prop === 'fanaticalFocusUsed' && campaign === 'test-campaign') return false;
-      if (prop === 'activeConditions' && campaign === 'test-campaign') return [];
-      return null;
-    });
-    const targetChar = {
-      name: 'testTarget',
-      computedStats: {
-        abilities: [
-          { name: 'Constitution', bonus: 3 },
-        ],
-        evasionEffects: [],
-        automation: { passives: [] },
-        class: { class_levels: [{ rage_damage: 3 }] },
         level: 6,
       },
       saveModifiers: [],
@@ -314,52 +283,6 @@ describe('SavePromptModal — rerolls', () => {
     expect(screen.queryByRole('button', { name: /Reroll Save/ })).not.toBeInTheDocument();
   });
 
-  it('does not show Fanatical Focus reroll button again after using it once on a failed save', async () => {
-    rollD20.mockReturnValue(1);
-    let fanaticalFocusUsed = false;
-    getRuntimeValue.mockImplementation((name, prop, campaign) => {
-      if (prop === 'activeBuffs' && campaign === 'test-campaign') return [{ damageBonusExpression: 'rage_damage' }];
-      if (prop === 'fanaticalFocusUsed' && campaign === 'test-campaign') return fanaticalFocusUsed;
-      if (prop === 'activeConditions' && campaign === 'test-campaign') return [];
-      return null;
-    });
-    const targetChar = createRageCharacter('testTarget', 2);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[targetChar]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
-    });
-
-    // First reroll: button should be visible
-    const rerollBtn = screen.getByRole('button', { name: /Reroll Save \(\+2\)/ });
-    fireEvent.click(rerollBtn);
-
-    // After reroll, fanaticalFocusUsed should be true, so reroll button should disappear
-    await waitFor(() => {
-      expect(screen.queryByRole('button', { name: /Reroll Save/ })).not.toBeInTheDocument();
-    });
-
-    // Verify the state was set
-    expect(setRuntimeValue).toHaveBeenCalledWith('testTarget', 'fanaticalFocusUsed', true, 'test-campaign');
-  });
-
   // ── Disciplined Survivor ──
 
   it('shows Disciplined Survivor button when focus points available', async () => {
@@ -471,57 +394,10 @@ describe('SavePromptModal — rerolls', () => {
     }));
   });
 
-  it('does not show Disciplined Survivor button when focus points are zero', async () => {
-    rollD20.mockReturnValue(1);
-    getRuntimeValue.mockImplementation((name, key, campaign) => {
-      if (key === 'activeBuffs' && campaign === 'test-campaign') return [{ damageBonusExpression: 'rage_damage' }];
-      if (key === 'fanaticalFocusUsed' && campaign === 'test-campaign') return false;
-      if (key === 'activeConditions' && campaign === 'test-campaign') return [];
-      if (key === 'focusPoints' && campaign === 'test-campaign') return 0;
-      if (key === 'livingLegendActive' && campaign === 'test-campaign') return false;
-      if (key === 'indomitableUses' && campaign === 'test-campaign') return 0;
-      return null;
-    });
-    const targetChar = {
-      name: 'testTarget',
-      level: 1,
-      class: { class_levels: [{ rage_damage: 2, focus_points: 3 }] },
-      computedStats: {
-        abilities: [{ name: 'Constitution', bonus: 3 }],
-        evasionEffects: [],
-        automation: { passives: [] },
-      },
-      saveModifiers: [],
-    };
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[targetChar]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
-    });
-
-    expect(screen.queryByRole('button', { name: 'Reroll Save (1 Focus Point)' })).not.toBeInTheDocument();
-  });
-
   // ── Guarded Mind ──
 
-  it('does not show Guarded Mind for Strength saves', async () => {
+  it('does not show Guarded Mind for invalid save types or after rest', async () => {
+    // Test: Guarded Mind not shown for Strength saves (invalid save type)
     rollD20.mockReturnValue(1);
     getRuntimeValue.mockImplementation((name, key, campaign) => {
       if (key === '_guardedMind_usedRest' && campaign === 'test-campaign') return false;
@@ -559,6 +435,54 @@ describe('SavePromptModal — rerolls', () => {
 
     const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
     fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('button', { name: 'Guarded Mind' })).not.toBeInTheDocument();
+
+    // Test: Guarded Mind not shown after rest
+    cleanup();
+    vi.clearAllMocks();
+    setupDefaults(rollD20, computeAuraBonus, getRuntimeValue);
+    rollD20.mockReturnValue(1);
+    getRuntimeValue.mockImplementation((name, key, campaign) => {
+      if (key === '_guardedMind_usedRest' && campaign === 'test-campaign') return 'rest';
+      return null;
+    });
+    const targetChar2 = {
+      name: 'testTarget',
+      level: 1,
+      class: { class_levels: [] },
+      computedStats: {
+        abilities: [{ name: 'Constitution', bonus: 3 }],
+        evasionEffects: [],
+        automation: {
+          passives: [],
+          specialActions: [{ type: 'auto_reroll', effect: 'override_fail_to_success', oncePer: 'short_or_long_rest' }],
+        },
+      },
+      saveModifiers: [],
+    };
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[targetChar2]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger2 = screen.getByTestId('subscriber-trigger-wis');
+    fireEvent.click(trigger2);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn2 = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn2);
 
     await waitFor(() => {
       expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
@@ -671,52 +595,6 @@ describe('SavePromptModal — rerolls', () => {
     }));
   });
 
-  it('does not show Guarded Mind after it has been used for the rest', async () => {
-    rollD20.mockReturnValue(1);
-    getRuntimeValue.mockImplementation((name, key, campaign) => {
-      if (key === '_guardedMind_usedRest' && campaign === 'test-campaign') return 'rest';
-      return null;
-    });
-    const targetChar = {
-      name: 'testTarget',
-      level: 1,
-      class: { class_levels: [] },
-      computedStats: {
-        abilities: [{ name: 'Constitution', bonus: 3 }],
-        evasionEffects: [],
-        automation: {
-          passives: [],
-          specialActions: [{ type: 'auto_reroll', effect: 'override_fail_to_success', oncePer: 'short_or_long_rest' }],
-        },
-      },
-      saveModifiers: [],
-    };
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[targetChar]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger-wis');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
-    });
-
-    expect(screen.queryByRole('button', { name: 'Guarded Mind' })).not.toBeInTheDocument();
-  });
-
   // ── Living Legend ──
 
   it('shows Living Legend button when conditions are met', async () => {
@@ -824,7 +702,8 @@ describe('SavePromptModal — rerolls', () => {
     }));
   });
 
-  it('does not show Living Legend button when livingLegendActive is false', async () => {
+  it('does not show Living Legend button when inactive or at max uses', async () => {
+    // Test: livingLegendActive is false
     rollD20.mockReturnValue(1);
     getRuntimeValue.mockImplementation((name, key, campaign) => {
       if (key === 'livingLegendActive' && campaign === 'test-campaign') return false;
@@ -868,12 +747,12 @@ describe('SavePromptModal — rerolls', () => {
       expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
     });
 
-    // The "Reroll Save" button text is shared by Fanatical Focus, Disciplined Survivor, and Living Legend
-    // Since none of them are available, no reroll button should appear
     expect(screen.queryByRole('button', { name: 'Reroll Save' })).not.toBeInTheDocument();
-  });
 
-  it('does not show Living Legend button when indomitableUses is at max', async () => {
+    // Test: indomitableUses at max
+    cleanup();
+    vi.clearAllMocks();
+    setupDefaults(rollD20, computeAuraBonus, getRuntimeValue);
     rollD20.mockReturnValue(1);
     getRuntimeValue.mockImplementation((name, key, campaign) => {
       if (key === 'livingLegendActive' && campaign === 'test-campaign') return true;
@@ -883,7 +762,7 @@ describe('SavePromptModal — rerolls', () => {
       if (key === 'activeConditions' && campaign === 'test-campaign') return [];
       return null;
     });
-    const targetChar = {
+    const targetChar2 = {
       name: 'testTarget',
       level: 1,
       class: { class_levels: [] },
@@ -898,93 +777,25 @@ describe('SavePromptModal — rerolls', () => {
     render(
       <SavePromptModal
         campaignName="test-campaign"
-        characters={[targetChar]}
+        characters={[targetChar2]}
         activeMapName={null}
       />
     );
 
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
+    const trigger2 = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger2);
 
     await waitFor(() => {
       expect(screen.getByText(/must make a/i)).toBeInTheDocument();
     });
 
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
+    const rollBtn2 = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn2);
 
     await waitFor(() => {
       expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
     });
 
     expect(screen.queryByRole('button', { name: 'Reroll Save' })).not.toBeInTheDocument();
-  });
-
-  // ── rerollUsedForSave state management ──
-
-  it('resets rerollUsedForSave when a new prompt arrives after a reroll was used', async () => {
-    rollD20
-      .mockReturnValueOnce(1)
-      .mockReturnValue(15);
-    getRuntimeValue.mockImplementation((name, key, campaign) => {
-      if (key === 'activeBuffs' && campaign === 'test-campaign') return [{ damageBonusExpression: 'rage_damage' }];
-      if (key === 'fanaticalFocusUsed' && campaign === 'test-campaign') return false;
-      if (key === 'activeConditions' && campaign === 'test-campaign') return [];
-      return null;
-    });
-    const targetChar = createRageCharacter('testTarget', 2);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[targetChar]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const trigger2 = screen.getByTestId('subscriber-trigger-second');
-    fireEvent.click(trigger2);
-
-    await waitFor(() => {
-      expect(screen.getByText(/\(1 of 2\)/)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
-    });
-
-    const rerollBtn = screen.getByRole('button', { name: /Reroll Save \(\+2\)/ });
-    fireEvent.click(rerollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
-    });
-
-    // Advance to the second prompt
-    const nextBtn = screen.getByRole('button', { name: 'Next Save' });
-    fireEvent.click(nextBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    // After advancing, rerollUsedForSave should be reset by the useEffect on promptId change
-    // Since fanaticalFocusUsed is still false (the reroll didn't set it in this flow),
-    // the Fanatical Focus button should be available
-    expect(screen.queryByRole('button', { name: /Reroll Save/ })).not.toBeInTheDocument();
-
-    // But the key thing tested is that the state reset happened — the prompt shows "Roll Save"
-    // not "Next Save", confirming the rerollUsedForSave flag was cleared
-    expect(screen.getByRole('button', { name: 'Roll Save' })).toBeInTheDocument();
   });
 });

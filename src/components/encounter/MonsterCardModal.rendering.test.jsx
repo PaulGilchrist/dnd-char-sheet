@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MonsterCardModal from './MonsterCardModal.jsx';
@@ -11,6 +12,11 @@ import { getStore } from '../../hooks/runtime/useRuntimeState.js';
 // other MonsterCardModal test files (MonsterCardModal.test.jsx,
 // MonsterCardModal.senses-and-fallback.test.jsx, etc.). Interaction, dice-roll,
 // and overlay/close behavior all live in those files.
+//
+// Cleanup applied (redundant test removal):
+//   - Removed "prefers creatureName when monster.name is empty" — fully covered
+//     by MonsterCardModal.test.jsx:146-152 which tests the same creatureName ||
+//     monster.name || 'Monster' fallback chain (default + override cases).
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
   rollExpression: vi.fn(() => ({ total: 5, rolls: [1, 2], modifier: 0 })),
@@ -74,11 +80,6 @@ describe('MonsterCardModal rendering', () => {
   // ════════════════════════════════════════════
 
   describe('monster name resolution', () => {
-    it('prefers creatureName when monster.name is empty', () => {
-      render(<MonsterCardModal {...makeProps(makeMonster({ name: '' }), { creatureName: 'Boss Goblin' })} />);
-      expect(screen.getByText('Boss Goblin')).toBeInTheDocument();
-    });
-
     it('falls back to "Monster" when neither creatureName nor monster.name is present', () => {
       render(<MonsterCardModal {...makeProps(makeMonster({ name: undefined }), { creatureName: '' })} />);
       expect(screen.getByText('Monster')).toBeInTheDocument();

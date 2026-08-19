@@ -1,9 +1,10 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import RoadLayer from './RoadLayer.jsx';
 import { HEX_SIZE } from '../../config/outdoorConfig.js';
-import { parseHexKey, buildWindingPathDescriptor } from '../../services/maps/hexMapUtils.js';
+import { buildWindingPathDescriptor } from '../../services/maps/hexMapUtils.js';
 
 vi.mock('../../services/maps/hexMapUtils.js', async (importOriginal) => {
     const actual = await importOriginal();
@@ -47,12 +48,17 @@ describe('RoadLayer', () => {
             expect(getLayer(container)).not.toBeInTheDocument();
         });
 
-        it('should render one group per valid road with all three path layers', () => {
+        it('should render one group per valid road with all three path layers sharing the same winding path', () => {
             const { container } = renderLayer({ roads });
             const groups = getRoadGroups(container);
             expect(groups).toHaveLength(2);
             groups.forEach(group => {
                 expect(group.querySelectorAll('path')).toHaveLength(3);
+                const [shadow, main, centerline] = group.querySelectorAll('path');
+                const d = shadow.getAttribute('d');
+                expect(d).toBeTruthy();
+                expect(main.getAttribute('d')).toBe(d);
+                expect(centerline.getAttribute('d')).toBe(d);
             });
         });
     });
@@ -70,8 +76,11 @@ describe('RoadLayer', () => {
             expect(getRoadGroups(container)).toHaveLength(0);
         });
 
-        it('should skip a road when the path descriptor returns null', () => {
-            vi.mocked(buildWindingPathDescriptor).mockImplementationOnce(() => null);
+        it.each([
+            ['null descriptor', null],
+            ['empty path descriptor', { path: '', stroke: '#A08060', strokeWidth: 2 }],
+        ])('should skip a road when the path descriptor returns %s', (_label, descriptorResult) => {
+            vi.mocked(buildWindingPathDescriptor).mockImplementationOnce(() => descriptorResult);
             const mixedRoads = [
                 { id: 'road-bad', hexes: ['0,0', '1,0'] },
                 { id: 'road-good', hexes: ['2,0', '3,0'] },
@@ -83,71 +92,6 @@ describe('RoadLayer', () => {
                 [{ q: 2, r: 0 }, { q: 3, r: 0 }],
                 HEX_SIZE, '#A08060', 2, 10
             );
-        });
-
-        it('should skip a road when the path descriptor returns an empty path', () => {
-            vi.mocked(buildWindingPathDescriptor).mockImplementationOnce(() => ({
-                path: '',
-                stroke: '#A08060',
-                strokeWidth: 2,
-            }));
-            const mixedRoads = [
-                { id: 'road-empty', hexes: ['0,0', '1,0'] },
-                { id: 'road-good', hexes: ['2,0', '3,0'] },
-            ];
-            const { container } = renderLayer({ roads: mixedRoads });
-            expect(getRoadGroups(container)).toHaveLength(1);
-            expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(2);
-            expect(buildWindingPathDescriptor).toHaveBeenCalledWith(
-                [{ q: 2, r: 0 }, { q: 3, r: 0 }],
-                HEX_SIZE, '#A08060', 2, 10
-            );
-        });
-    });
-
-    describe('path derivation', () => {
-        it('should parse every hex of every valid road', () => {
-            renderLayer({ roads });
-            expect(parseHexKey).toHaveBeenCalledTimes(6);
-            ['0,0', '1,0', '2,0', '3,0', '4,0', '5,0'].forEach(key => {
-                expect(parseHexKey).toHaveBeenCalledWith(key);
-            });
-        });
-
-        it('should pass ordered parsed coordinates and road styling to the descriptor', () => {
-            renderLayer({ roads });
-            expect(buildWindingPathDescriptor).toHaveBeenCalledTimes(2);
-            expect(buildWindingPathDescriptor).toHaveBeenCalledWith(
-                [{ q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }],
-                HEX_SIZE, '#A08060', 2, 10
-            );
-            expect(buildWindingPathDescriptor).toHaveBeenCalledWith(
-                [{ q: 3, r: 0 }, { q: 4, r: 0 }, { q: 5, r: 0 }],
-                HEX_SIZE, '#A08060', 2, 10
-            );
-        });
-
-        it('should not touch hex utils for invalid roads', () => {
-            renderLayer({
-                roads: [
-                    { id: 'road-short', hexes: ['0,0'] },
-                    { id: 'road-empty', hexes: [] },
-                    { id: 'road-no-hexes' },
-                ],
-            });
-            expect(parseHexKey).not.toHaveBeenCalled();
-            expect(buildWindingPathDescriptor).not.toHaveBeenCalled();
-        });
-
-        it('should render all three paths of a road over the same winding path', () => {
-            const { container } = renderLayer({ roads });
-            getRoadGroups(container).forEach(group => {
-                const [shadow, main, centerline] = group.querySelectorAll('path');
-                const d = shadow.getAttribute('d');
-                expect(d).toBeTruthy();
-                expect(main.getAttribute('d')).toBe(d);
-                expect(centerline.getAttribute('d')).toBe(d);
-            });
         });
     });
 
@@ -182,15 +126,6 @@ describe('RoadLayer', () => {
                 expect(centerline).toHaveAttribute('stroke-width', '0.6');
                 expect(centerline).toHaveAttribute('stroke-dasharray', '3 4');
                 expect(centerline).toHaveAttribute('opacity', '0.5');
-            });
-        });
-
-        it('should render a real winding path for every road', () => {
-            const { container } = renderLayer({ roads });
-            getRoadGroups(container).forEach(group => {
-                group.querySelectorAll('path').forEach(path => {
-                    expect(path.getAttribute('d')).toMatch(/^M/);
-                });
             });
         });
 

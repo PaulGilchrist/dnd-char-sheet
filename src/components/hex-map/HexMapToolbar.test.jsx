@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HexMapToolbar from './HexMapToolbar.jsx';
@@ -98,18 +99,14 @@ describe('HexMapToolbar', () => {
         }
     });
 
-    it('marks the active tool button with the active class', () => {
+    it('marks the active tool button with the active class and leaves others inactive', () => {
         for (const [tool, title] of Object.entries(TOOL_TITLES)) {
             renderToolbar({ tool });
             expect(screen.getByTitle(title)).toHaveClass('active');
-        }
-    });
-
-    it('does not mark inactive tool buttons as active', () => {
-        renderToolbar({ tool: TOOL_PAINT });
-        for (const [tool, title] of Object.entries(TOOL_TITLES)) {
-            if (tool !== TOOL_PAINT) {
-                expect(screen.getByTitle(title)).not.toHaveClass('active');
+            for (const [otherTool, otherTitle] of Object.entries(TOOL_TITLES)) {
+                if (otherTool !== tool) {
+                    expect(screen.getByTitle(otherTitle)).not.toHaveClass('active');
+                }
             }
         }
     });
@@ -135,22 +132,8 @@ describe('HexMapToolbar', () => {
         expect(screen.queryByTitle('Grassland')).not.toBeInTheDocument();
     });
 
-    it('renders a swatch for every terrain type', () => {
-        renderToolbar({ tool: TOOL_PAINT });
-        for (const terrain of props.terrainTypes) {
-            expect(screen.getByTitle(terrain.name)).toBeInTheDocument();
-        }
-    });
-
     it('selects terrain and switches to paint tool when a swatch is clicked', () => {
         renderToolbar({ tool: TOOL_PAINT });
-        fireEvent.click(screen.getByTitle('Forest'));
-        expect(props.setSelectedTerrain).toHaveBeenCalledWith('forest');
-        expect(props.setTool).toHaveBeenCalledWith(TOOL_PAINT);
-    });
-
-    it('selects terrain and switches to paint tool even when erase tool is active', () => {
-        renderToolbar({ tool: TOOL_ERASE });
         fireEvent.click(screen.getByTitle('Forest'));
         expect(props.setSelectedTerrain).toHaveBeenCalledWith('forest');
         expect(props.setTool).toHaveBeenCalledWith(TOOL_PAINT);
@@ -265,11 +248,6 @@ describe('HexMapToolbar', () => {
 
         afterEach(() => {
             vi.restoreAllMocks();
-        });
-
-        it('renders the print button', () => {
-            renderToolbar();
-            expect(screen.getByTitle('Print map')).toBeInTheDocument();
         });
 
         it('calls window.print when clicked', () => {

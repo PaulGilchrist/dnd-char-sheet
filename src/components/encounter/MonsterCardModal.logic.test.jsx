@@ -1,12 +1,16 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Removed redundant test: "renders the (Incapacitated) label and no attack dice link
+// when the attacker cannot act" — covered by interaction.test.jsx
+// ("does not render attack links when the attacker has an incapacitating condition"),
+// which asserts the same (Incapacitated) label + missing attack link behavior.
 // Behavioral tests for MonsterCardModal logic that is NOT covered by the
 // sibling MonsterCardModal test files. Every behavior below was checked
 // against ALL other MonsterCardModal test files before being added:
 //
-//   attacker cannot act (incapacitated)      — not covered anywhere. helpers.test.jsx
-//     only asserts effect badges; the "(Incapacitated)" label and missing attack
-//     dice link behavior is untested (interaction.test.jsx's claim of coverage is
-//     stale — those tests were removed from it).
+//   attacker cannot act (incapacitated)      — now covered by interaction.test.jsx
+//     ("does not render attack links when the attacker has an incapacitating condition").
+//     The redundant test was removed; only the non-blocking condition path remains here.
 //   riderAttackBonus added to attack bonus   — not covered. helpers.test.jsx only
 //     asserts the badge renders, never that rollAttack receives bonus + riderAttackBonus.
 //   resistanceNotice passthrough             — not covered. attack-advanced.test.jsx
@@ -181,21 +185,6 @@ function resetMocks() {
 
 describe('MonsterCardModal - handleAttack: attacker cannot act', () => {
   beforeEach(resetMocks);
-
-  it('renders the (Incapacitated) label and no attack dice link when the attacker cannot act', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [{ key: 'paralyzed', label: 'Paralyzed' }],
-    });
-
-    const m = makeMonster({
-      actions: [{ name: 'Club', attack_bonus: 4, description: 'Melee Attack.' }],
-    });
-    render(<MonsterCardModal {...makeProps(m)} />);
-
-    expect(screen.getByText('(Incapacitated)')).toBeInTheDocument();
-    expect(screen.queryByText('+4')).not.toBeInTheDocument();
-  });
 
   it('still renders the attack dice link when the attacker has a non-blocking condition', () => {
     damageUtils.__setFindCreatureReturn({

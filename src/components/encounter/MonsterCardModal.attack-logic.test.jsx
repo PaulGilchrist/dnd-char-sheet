@@ -1,20 +1,18 @@
 // @improved-by-ai
-// Tests removed (redundant with other test files):
+// @cleaned-by-ai
+// Consolidated (redundant negative tests merged into parameterized tests):
 //
-//   "passes autoDamageFormula from damage_dice_primary"
-//     → MonsterCardModal.auto-damage-roll.test.jsx "passes autoDamageFormula
-//       extracted from damage_dice_primary to rollAttack" covers identical
-//       behavior with the same assertion
+//   Bulwark of Force: 3 tests → 2 tests
+//     "does not apply cover when Bulwark of Force is inactive"
+//     "does not apply cover when the target is not in bulwarkTargets"
+//       → merged into single parameterized test covering both negative cases
+//         with identical assertions (coverAcBonus: 0, coverLevel: null, coverReason: null)
 //
-//   "passes autoDamageSecondaryFormula from damage_dice_secondary"
-//     → MonsterCardModal.auto-damage-roll.test.jsx "passes
-//       autoDamageSecondaryFormula from damage_dice_secondary to rollAttack"
-//       covers identical behavior
-//
-//   "passes saveDc and saveType when action has save_dc"
-//     → MonsterCardModal.auto-damage-roll.test.jsx "passes saveDc, saveType,
-//       and dcSuccess when action has save_dc on an attack" covers identical
-//       behavior
+//   Improved Duplicity: 3 tests → 2 tests
+//     "does not grant advantage when the monster is not in the cleric's advantage targets"
+//     "does not grant advantage when the cleric lacks an improved duplicity buff"
+//       → merged into single parameterized test covering both negative cases
+//         with identical assertions (forcedMode: undefined)
 //
 // Kept (unique behavioral coverage for handleAttack in this component):
 //   Bulwark of Force cover, Improved Duplicity advantage, Graze weapon
@@ -242,24 +240,13 @@ describe('MonsterCardModal - handleAttack: Bulwark of Force cover', () => {
     expect(ctx.coverReason).toBe('Bulwark of Force');
   });
 
-  it('does not apply cover when Bulwark of Force is inactive', () => {
+  it.each([
+    { bulwarkActive: false, bulwarkTargets: ['Player A'], desc: 'inactive' },
+    { bulwarkActive: true, bulwarkTargets: ['Player B'], desc: 'target not in bulwarkTargets' },
+  ])('does not apply cover when Bulwark of Force is $desc', ({ bulwarkActive, bulwarkTargets }) => {
     setAttackTarget();
-    useRuntimeState.__setBulwarkActive(false);
-    useRuntimeState.__setBulwarkTargets(['Player A']);
-
-    renderAttackAction(null, { characters: [{ name: 'Player A' }] });
-    clickAttackLink();
-
-    const ctx = getAttackContext();
-    expect(ctx.coverAcBonus).toBe(0);
-    expect(ctx.coverLevel).toBeNull();
-    expect(ctx.coverReason).toBeNull();
-  });
-
-  it('does not apply cover when the target is not in bulwarkTargets', () => {
-    setAttackTarget();
-    useRuntimeState.__setBulwarkActive(true);
-    useRuntimeState.__setBulwarkTargets(['Player B']);
+    useRuntimeState.__setBulwarkActive(bulwarkActive);
+    useRuntimeState.__setBulwarkTargets(bulwarkTargets);
 
     renderAttackAction(null, { characters: [{ name: 'Player A' }] });
     clickAttackLink();
@@ -296,21 +283,13 @@ describe('MonsterCardModal - handleAttack: Improved Duplicity advantage', () => 
     expect(getAttackContext().forcedMode).toBe('advantage');
   });
 
-  it('does not grant advantage when the monster is not in the cleric\'s advantage targets', () => {
+  it.each([
+    { advantageTargets: ['Other Monster'], buffs: [{ effect: 'create_illusion', isImprovedDuplicity: true }], desc: "the monster is not in the cleric's advantage targets" },
+    { advantageTargets: ['Goblin'], buffs: [], desc: "the cleric lacks an improved duplicity buff" },
+  ])('does not grant advantage when $desc', ({ advantageTargets, buffs }) => {
     setAttackTarget();
-    useRuntimeState.__setInvokeDuplicityAdvantageTargets(['Other Monster']);
-    useRuntimeState.__setActiveBuffs([{ effect: 'create_illusion', isImprovedDuplicity: true }]);
-
-    renderAttackAction(null, { characters: [makeCleric()] });
-    clickAttackLink();
-
-    expect(getAttackContext().forcedMode).toBeUndefined();
-  });
-
-  it('does not grant advantage when the cleric lacks an improved duplicity buff', () => {
-    setAttackTarget();
-    useRuntimeState.__setInvokeDuplicityAdvantageTargets(['Goblin']);
-    useRuntimeState.__setActiveBuffs([]);
+    useRuntimeState.__setInvokeDuplicityAdvantageTargets(advantageTargets);
+    useRuntimeState.__setActiveBuffs(buffs);
 
     renderAttackAction(null, { characters: [makeCleric()] });
     clickAttackLink();

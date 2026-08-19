@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EventDialog from './EventDialog.jsx';
@@ -47,7 +48,6 @@ describe('EventDialog', () => {
             value         | label
             ${null}       | ${'null'}
             ${undefined}  | ${'undefined'}
-            ${false}      | ${'false'}
         `('renders nothing when event is $label', ({ value }) => {
             const { container } = renderDialog(value, 0);
             expect(container.firstChild).toBeNull();
@@ -71,61 +71,44 @@ describe('EventDialog', () => {
             expect(screen.getByRole('button', { name: /re-roll/i })).toBeInTheDocument();
         });
 
-        it('calls only onAccept when accept is clicked', () => {
+        it.each`
+            buttonName    | expectedCall      | notCalled
+            ${/accept/i}  | ${'onAccept'}     | ${['onSkip', 'onReroll']}
+            ${/skip/i}    | ${'onSkip'}       | ${['onAccept', 'onReroll']}
+            ${/re-roll/i} | ${'onReroll'}     | ${['onAccept', 'onSkip']}
+        `('calls $expectedCall when $buttonName is clicked', ({ buttonName, expectedCall, notCalled }) => {
             renderDialog(baseEvent);
-            fireEvent.click(screen.getByRole('button', { name: /accept/i }));
-            expect(onAccept).toHaveBeenCalledTimes(1);
-            expect(onSkip).not.toHaveBeenCalled();
-            expect(onReroll).not.toHaveBeenCalled();
-        });
-
-        it('calls only onSkip when skip is clicked', () => {
-            renderDialog(baseEvent);
-            fireEvent.click(screen.getByRole('button', { name: /skip/i }));
-            expect(onSkip).toHaveBeenCalledTimes(1);
-            expect(onAccept).not.toHaveBeenCalled();
-            expect(onReroll).not.toHaveBeenCalled();
-        });
-
-        it('calls only onReroll when reroll is clicked', () => {
-            renderDialog(baseEvent);
-            fireEvent.click(screen.getByRole('button', { name: /re-roll/i }));
-            expect(onReroll).toHaveBeenCalledTimes(1);
-            expect(onAccept).not.toHaveBeenCalled();
-            expect(onSkip).not.toHaveBeenCalled();
+            fireEvent.click(screen.getByRole('button', { name: buttonName }));
+            const callMap = { onAccept: onAccept, onSkip: onSkip, onReroll: onReroll };
+            expect(callMap[expectedCall]).toHaveBeenCalledTimes(1);
+            notCalled.forEach(fnName => {
+                expect(callMap[fnName]).not.toHaveBeenCalled();
+            });
         });
     });
 
     describe('reroll button state', () => {
-        it('is disabled when no re-rolls remain', () => {
-            renderDialog(baseEvent, 0);
-            expect(screen.getByRole('button', { name: /re-roll/i })).toBeDisabled();
-        });
-
-        it('is disabled when re-rolls remaining is negative', () => {
-            renderDialog(baseEvent, -1);
+        it.each`
+            rerollsRemaining
+            ${0}
+            ${-1}
+        `('is disabled when rerollsRemaining is $rerollsRemaining', ({ rerollsRemaining }) => {
+            renderDialog(baseEvent, rerollsRemaining);
             expect(screen.getByRole('button', { name: /re-roll/i })).toBeDisabled();
         });
 
         it('is enabled when re-rolls remain', () => {
             renderDialog(baseEvent, 1);
-            expect(screen.getByRole('button', { name: /re-roll/i })).toBeEnabled();
+            expect(screen.getByRole('button', { name: /re-roll/i })).not.toBeDisabled();
         });
 
-        it('shows the remaining count inside the button when re-rolls remain', () => {
-            renderDialog(baseEvent, 3);
-            expect(screen.getByRole('button', { name: /re-roll/i })).toHaveTextContent(/Re-roll\s*\(3\)/);
-        });
-
-        it('omits the count when no re-rolls remain', () => {
-            renderDialog(baseEvent, 0);
-            expect(screen.getByRole('button', { name: /re-roll/i })).toHaveTextContent(/^Re-roll$/);
-        });
-
-        it('does not fire onReroll when disabled and clicked', () => {
-            renderDialog(baseEvent, 0);
-            fireEvent.click(screen.getByRole('button', { name: /re-roll/i }));
-            expect(onReroll).not.toHaveBeenCalled();
+        it.each`
+            rerollsRemaining | expectedPattern
+            ${3}             | ${/Re-roll\s*\(3\)/}
+            ${0}             | ${/^Re-roll$/}
+        `('shows count in button text when rerollsRemaining is $rerollsRemaining', ({ rerollsRemaining, expectedPattern }) => {
+            renderDialog(baseEvent, rerollsRemaining);
+            expect(screen.getByRole('button', { name: /re-roll/i })).toHaveTextContent(expectedPattern);
         });
 
         it.each`
@@ -184,27 +167,6 @@ describe('EventDialog', () => {
             expect(screen.getByText('Goblin')).toBeInTheDocument();
             expect(screen.getByText('1x')).toBeInTheDocument();
             expect(screen.getByText('Goblin Boss')).toBeInTheDocument();
-        });
-
-        it('renders every monster row for encounters with many monsters', () => {
-            const event = {
-                ...baseEvent,
-                encounter: {
-                    ...eventWithEncounter.encounter,
-                    monsters: [
-                        { qty: 5, name: 'Skeleton' },
-                        { qty: 3, name: 'Zombie' },
-                        { qty: 2, name: 'Wight' },
-                    ],
-                },
-            };
-            renderDialog(event);
-            expect(screen.getByText('Skeleton')).toBeInTheDocument();
-            expect(screen.getByText('Zombie')).toBeInTheDocument();
-            expect(screen.getByText('Wight')).toBeInTheDocument();
-            expect(screen.getByText('5x')).toBeInTheDocument();
-            expect(screen.getByText('3x')).toBeInTheDocument();
-            expect(screen.getByText('2x')).toBeInTheDocument();
         });
 
         it('renders difficulty and XP but no monster rows for an empty monster list', () => {

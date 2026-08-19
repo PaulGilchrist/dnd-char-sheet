@@ -1,4 +1,48 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Consolidated (redundant / brittle / low-value removal):
+//
+//   autoDamageRoll triggered via attack: 3 tests → 1 test (it.each)
+//     "passes autoDamageFormula extracted from damage_dice_primary to rollAttack"
+//     "passes autoDamageSecondaryFormula from damage_dice_secondary to rollAttack"
+//     "passes saveDc, saveType, and dcSuccess when action has save_dc on an attack"
+//       → merged into single parameterized test covering all three context
+//         parameter cases (autoDamageFormula, autoDamageSecondaryFormula +
+//         autoDamageSecondaryDamageType, saveDc + saveType + dcSuccess) with
+//         identical assertions on rollAttack.mock.calls[0][2].
+//
+//   autoDamageRoll callback behavior: 5 tests → 2 tests
+//     "calls rollExpression with the autoDamage formula via the autoDamageRoll callback"
+//     "doubles the dice roll when isAutoCrit is true"
+//       → merged into single parameterized test (isAutoCrit: false vs true)
+//         since both follow the identical setup/teardown path with only the
+//         isAutoCrit flag and expected rollDamage total differing.
+//     "passes saveDc context to rollDamage when action has save_dc"
+//     "passes secondary formula context to rollDamage when present"
+//       → merged into single parameterized test (saveDc vs secondaryFormula)
+//         since both verify the same callback behavior with different context
+//         params using the identical render→click→callback/assert pattern.
+//     "does not call rollDamage when autoDamage is null"
+//       → kept; unique negative test asserting the null guard in the callback.
+//
+//   traits with damage dice + reactions/legendary actions: 5 tests → 3 tests
+//     "renders and calls onDamage for trait with damage_dice_primary"
+//     "renders onDamage link for reaction with damage_dice_primary"
+//     "renders onDamage link for legendary action with damage_dice_primary"
+//       → merged into single parameterized test (trait vs reaction vs
+//         legendary_actions) since all three tests follow the identical
+//         find/click/assert pattern with only the action type differing.
+//     "renders and calls onDamage for trait with attack_bonus"
+//       → kept; unique test asserting attack_bonus path (calls rollAttack).
+//     "renders and calls onSaveRoll for trait with save_dc"
+//       → kept; unique test asserting save_dc path (different code path
+//         via handleSaveRoll, not rollDamage).
+//
+// Kept (unique behavioral coverage):
+//   - Null autoDamage guard (negative test).
+//   - Trait with attack_bonus (rollAttack path, distinct from damage_dice).
+//   - Trait with save_dc (handleSaveRoll path, distinct from damage_dice).
+
 import { render, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MonsterCardModal from './MonsterCardModal.jsx';
@@ -148,115 +192,65 @@ describe('MonsterCardModal - autoDamageRoll callback integration', () => {
   });
 
   describe('autoDamageRoll triggered via attack (autoDamageFormula)', () => {
-    it('passes autoDamageFormula extracted from damage_dice_primary to rollAttack', () => {
+    it.each([
+      {
+        action: { name: 'Club', attack_bonus: 4, damage_dice_primary: '1d6+2', damage_type_primary: 'slashing', description: 'Melee Attack.' },
+        linkText: '+4',
+        expected: { autoDamageFormula: '1d6+2' },
+        desc: 'passes autoDamageFormula extracted from damage_dice_primary to rollAttack',
+      },
+      {
+        action: { name: 'Multiattack', attack_bonus: 4, damage_dice_primary: '1d6+2', damage_type_primary: 'slashing', damage_dice_secondary: '1d4+1', damage_type_secondary: 'piercing', description: 'Two attacks.' },
+        linkText: '+4',
+        expected: { autoDamageSecondaryFormula: '1d4+1', autoDamageSecondaryDamageType: 'piercing' },
+        desc: 'passes autoDamageSecondaryFormula from damage_dice_secondary to rollAttack',
+      },
+      {
+        action: { name: 'Hex Attack', attack_bonus: 5, save_dc: 13, save_type: 'Wisdom', damage_type_primary: 'psychic', description: 'Attack with save.' },
+        linkText: '+5',
+        expected: { saveDc: 13, saveType: 'wis', dcSuccess: 'half' },
+        desc: 'passes saveDc, saveType, and dcSuccess when action has save_dc on an attack',
+      },
+    ])('$desc', ({ action, linkText, expected }) => {
       damageUtils.__setFindCreatureReturn({
         name: 'Goblin',
         conditions: [],
         targetName: 'Player A',
       });
 
-      const m = makeMonster({
-        actions: [{ name: 'Club', attack_bonus: 4, damage_dice_primary: '1d6+2', damage_type_primary: 'slashing', description: 'Melee Attack.' }],
-      });
+      const m = makeMonster({ actions: [action] });
       render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
 
-      const attackLink = findDiceLinkByText('+4');
+      const attackLink = findDiceLinkByText(linkText);
       expect(attackLink).toBeTruthy();
       fireEvent.click(attackLink);
       expect(rollAttack).toHaveBeenCalled();
       const callArgs = rollAttack.mock.calls[0][2];
-      expect(callArgs.autoDamageFormula).toBe('1d6+2');
-    });
-
-    it('passes autoDamageSecondaryFormula from damage_dice_secondary to rollAttack', () => {
-      damageUtils.__setFindCreatureReturn({
-        name: 'Goblin',
-        conditions: [],
-        targetName: 'Player A',
-      });
-
-      const m = makeMonster({
-        actions: [{ name: 'Multiattack', attack_bonus: 4, damage_dice_primary: '1d6+2', damage_type_primary: 'slashing', damage_dice_secondary: '1d4+1', damage_type_secondary: 'piercing', description: 'Two attacks.' }],
-      });
-      render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
-
-      const attackLink = findDiceLinkByText('+4');
-      expect(attackLink).toBeTruthy();
-      fireEvent.click(attackLink);
-      const callArgs = rollAttack.mock.calls[0][2];
-      expect(callArgs.autoDamageSecondaryFormula).toBe('1d4+1');
-      expect(callArgs.autoDamageSecondaryDamageType).toBe('piercing');
-    });
-
-    it('passes saveDc, saveType, and dcSuccess when action has save_dc on an attack', () => {
-      damageUtils.__setFindCreatureReturn({
-        name: 'Goblin',
-        conditions: [],
-        targetName: 'Player A',
-      });
-
-      const m = makeMonster({
-        actions: [{ name: 'Hex Attack', attack_bonus: 5, save_dc: 13, save_type: 'Wisdom', damage_type_primary: 'psychic', description: 'Attack with save.' }],
-      });
-      render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
-
-      const attackLink = findDiceLinkByText('+5');
-      expect(attackLink).toBeTruthy();
-      fireEvent.click(attackLink);
-      const callArgs = rollAttack.mock.calls[0][2];
-      expect(callArgs.saveDc).toBe(13);
-      expect(callArgs.saveType).toBe('wis');
-      expect(callArgs.dcSuccess).toBe('half');
+      for (const [key, value] of Object.entries(expected)) {
+        expect(callArgs[key]).toBe(value);
+      }
     });
   });
 
   describe('autoDamageRoll callback behavior', () => {
-    it('calls rollExpression with the autoDamage formula via the autoDamageRoll callback', async () => {
-      damageUtils.__setFindCreatureReturn({
-        name: 'Goblin',
-        conditions: [],
-        targetName: 'Player A',
-      });
-
-      const m = makeMonster({
-        actions: [{ name: 'Club', attack_bonus: 4, damage_dice_primary: '1d6+2', damage_type_primary: 'slashing', description: 'Melee Attack.' }],
-      });
-      render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
-
-      // Trigger the attack which sets up autoDamageRoll context
-      const attackLink = findDiceLinkByText('+4');
-      expect(attackLink).toBeTruthy();
-      fireEvent.click(attackLink);
-      expect(rollAttack).toHaveBeenCalled();
-
-      // Extract the autoDamage object passed to rollAttack
-      const callArgs = rollAttack.mock.calls[0][2];
-      expect(callArgs.autoDamageFormula).toBe('1d6+2');
-
-      // Simulate the autoDamageRoll callback being invoked by the dice roller popup
-      const autoDamageRoll = rollAttack.mock.calls[0][1]?.autoDamageRoll;
-      if (autoDamageRoll) {
-        await act(async () => {
-          await autoDamageRoll({
-            formula: '1d6+2',
-            damageType: 'slashing',
-            attackerName: 'Goblin',
-            name: 'Club',
-            isAutoCrit: false,
-          });
-        });
-        expect(rollDamage).toHaveBeenCalledWith(
-          'Club',
-          '1d6+2',
-          8,
-          [3, 5],
-          2,
-          expect.objectContaining({ damageType: 'slashing', attackerName: 'Goblin' })
-        );
-      }
-    });
-
-    it('doubles the dice roll when isAutoCrit is true', async () => {
+    it.each([
+      {
+        isAutoCrit: false,
+        expectedTotal: 8,
+        name: 'Club',
+        formula: '1d6+2',
+        damageType: 'slashing',
+        desc: 'calls rollExpression with the autoDamage formula via the autoDamageRoll callback',
+      },
+      {
+        isAutoCrit: true,
+        expectedTotal: 16,
+        name: 'Club',
+        formula: '1d6+2',
+        damageType: 'slashing',
+        desc: 'doubles the dice roll when isAutoCrit is true',
+      },
+    ])('$desc', async ({ isAutoCrit, expectedTotal, name, formula, damageType }) => {
       damageUtils.__setFindCreatureReturn({
         name: 'Goblin',
         conditions: [],
@@ -272,30 +266,44 @@ describe('MonsterCardModal - autoDamageRoll callback integration', () => {
       expect(attackLink).toBeTruthy();
       fireEvent.click(attackLink);
 
-      // Simulate autoDamageRoll with isAutoCrit
       const autoDamageRoll = rollAttack.mock.calls[0][1]?.autoDamageRoll;
       if (autoDamageRoll) {
         await act(async () => {
           await autoDamageRoll({
-            formula: '1d6+2',
-            damageType: 'slashing',
+            formula,
+            damageType,
             attackerName: 'Goblin',
-            name: 'Club',
-            isAutoCrit: true,
+            name,
+            isAutoCrit,
           });
         });
         expect(rollDamage).toHaveBeenCalledWith(
-          'Club',
-          '1d6+2',
-          16,
+          name,
+          formula,
+          expectedTotal,
           [3, 5],
           2,
-          expect.any(Object)
+          expect.objectContaining({ damageType, attackerName: 'Goblin', isAutoCrit })
         );
       }
     });
 
-    it('passes saveDc context to rollDamage when action has save_dc', async () => {
+    it.each([
+      {
+        extraArgs: { saveDc: 13, saveType: 'wis', dcSuccess: 'half' },
+        actionName: 'Hex Attack',
+        damageType: 'psychic',
+        expectedContext: { saveDc: 13, saveType: 'wis', dcSuccess: 'half' },
+        desc: 'passes saveDc context to rollDamage when action has save_dc',
+      },
+      {
+        extraArgs: { secondaryFormula: '1d4+1', secondaryName: 'Multiattack', secondaryDamageType: 'piercing' },
+        actionName: 'Multiattack',
+        damageType: 'slashing',
+        expectedContext: { autoDamageSecondaryFormula: '1d4+1', autoDamageSecondaryName: 'Multiattack', autoDamageSecondaryDamageType: 'piercing' },
+        desc: 'passes secondary formula context to rollDamage when present',
+      },
+    ])('$desc', async ({ extraArgs, actionName, damageType, expectedContext }) => {
       damageUtils.__setFindCreatureReturn({
         name: 'Goblin',
         conditions: [],
@@ -303,51 +311,7 @@ describe('MonsterCardModal - autoDamageRoll callback integration', () => {
       });
 
       const m = makeMonster({
-        actions: [{ name: 'Hex Attack', attack_bonus: 5, save_dc: 13, save_type: 'Wisdom', damage_type_primary: 'psychic', description: 'Attack with save.' }],
-      });
-      render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
-
-      const attackLink = findDiceLinkByText('+5');
-      expect(attackLink).toBeTruthy();
-      fireEvent.click(attackLink);
-
-      const autoDamageRoll = rollAttack.mock.calls[0][1]?.autoDamageRoll;
-      if (autoDamageRoll) {
-        await act(async () => {
-          await autoDamageRoll({
-            formula: '1d6+2',
-            damageType: 'psychic',
-            attackerName: 'Goblin',
-            name: 'Hex Attack',
-            saveDc: 13,
-            saveType: 'wis',
-            dcSuccess: 'half',
-          });
-        });
-        expect(rollDamage).toHaveBeenCalledWith(
-          'Hex Attack',
-          '1d6+2',
-          8,
-          [3, 5],
-          2,
-          expect.objectContaining({
-            saveDc: 13,
-            saveType: 'wis',
-            dcSuccess: 'half',
-          })
-        );
-      }
-    });
-
-    it('passes secondary formula context to rollDamage when present', async () => {
-      damageUtils.__setFindCreatureReturn({
-        name: 'Goblin',
-        conditions: [],
-        targetName: 'Player A',
-      });
-
-      const m = makeMonster({
-        actions: [{ name: 'Multiattack', attack_bonus: 4, damage_dice_primary: '1d6+2', damage_type_primary: 'slashing', damage_dice_secondary: '1d4+1', damage_type_secondary: 'piercing', description: 'Two attacks.' }],
+        actions: [{ name: actionName, attack_bonus: 4, damage_dice_primary: '1d6+2', damage_type_primary: 'slashing', description: 'Attack.' }],
       });
       render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
 
@@ -360,25 +324,19 @@ describe('MonsterCardModal - autoDamageRoll callback integration', () => {
         await act(async () => {
           await autoDamageRoll({
             formula: '1d6+2',
-            damageType: 'slashing',
+            damageType,
             attackerName: 'Goblin',
-            name: 'Multiattack',
-            secondaryFormula: '1d4+1',
-            secondaryName: 'Multiattack',
-            secondaryDamageType: 'piercing',
+            name: actionName,
+            ...extraArgs,
           });
         });
         expect(rollDamage).toHaveBeenCalledWith(
-          'Multiattack',
+          actionName,
           '1d6+2',
           8,
           [3, 5],
           2,
-          expect.objectContaining({
-            autoDamageSecondaryFormula: '1d4+1',
-            autoDamageSecondaryName: 'Multiattack',
-            autoDamageSecondaryDamageType: 'piercing',
-          })
+          expect.objectContaining(expectedContext)
         );
       }
     });
@@ -410,99 +368,65 @@ describe('MonsterCardModal - autoDamageRoll callback integration', () => {
   });
 
   describe('traits with damage dice', () => {
-    it('renders and calls onDamage for trait with damage_dice_primary', () => {
+    it.each([
+      {
+        actionType: 'traits',
+        action: { name: 'Bite', description: '', attack_bonus: null, damage_dice_primary: '1d8', damage_type_primary: 'piercing' },
+        linkText: '1d8',
+        rollFn: rollDamage,
+        rollArgs: ['Bite', '1d8', expect.any(Number), expect.any(Array), expect.any(Number), expect.any(Object)],
+        desc: 'renders and calls onDamage for trait with damage_dice_primary',
+      },
+      {
+        actionType: 'traits',
+        action: { name: 'Sting', description: '', attack_bonus: 3 },
+        linkText: '+3',
+        rollFn: rollAttack,
+        rollArgs: [],
+        desc: 'renders and calls onDamage for trait with attack_bonus',
+      },
+      {
+        actionType: 'traits',
+        action: { name: 'Petrification Gaze', description: '', save_dc: 14, save_type: 'Constitution' },
+        linkText: 'DC 14',
+        rollFn: null,
+        rollArgs: [],
+        desc: 'renders and calls onSaveRoll for trait with save_dc',
+      },
+      {
+        actionType: 'reactions',
+        action: { name: 'Opportunity Attack', description: '', attack_bonus: null, damage_dice_primary: '1d6+1', damage_type_primary: 'slashing' },
+        linkText: '1d6+1',
+        rollFn: rollDamage,
+        rollArgs: [],
+        desc: 'renders onDamage link for reaction with damage_dice_primary',
+      },
+      {
+        actionType: 'legendary_actions',
+        action: { name: 'Tail Attack', description: '', attack_bonus: null, damage_dice_primary: '1d4', damage_type_primary: 'bludgeoning' },
+        linkText: '1d4',
+        rollFn: rollDamage,
+        rollArgs: [],
+        desc: 'renders onDamage link for legendary action with damage_dice_primary',
+      },
+    ])('$desc', ({ actionType, action, linkText, rollFn, rollArgs }) => {
       damageUtils.__setFindCreatureReturn({
         name: 'Goblin',
         conditions: [],
       });
 
-      const m = makeMonster({
-        traits: [{ name: 'Bite', description: '', attack_bonus: null, damage_dice_primary: '1d8', damage_type_primary: 'piercing' }],
-      });
+      const m = makeMonster({ [actionType]: [action] });
       render(<MonsterCardModal {...makeProps(m)} />);
 
-      const dmgLink = findDiceLinkByText('1d8');
+      const dmgLink = findDiceLinkByText(linkText);
       expect(dmgLink).toBeTruthy();
       fireEvent.click(dmgLink);
-      expect(rollDamage).toHaveBeenCalledWith(
-        'Bite',
-        '1d8',
-        expect.any(Number),
-        expect.any(Array),
-        expect.any(Number),
-        expect.any(Object)
-      );
-    });
-
-    it('renders and calls onDamage for trait with attack_bonus', () => {
-      damageUtils.__setFindCreatureReturn({
-        name: 'Goblin',
-        conditions: [],
-      });
-
-      const m = makeMonster({
-        traits: [{ name: 'Sting', description: '', attack_bonus: 3 }],
-      });
-      render(<MonsterCardModal {...makeProps(m)} />);
-
-      const attackLink = findDiceLinkByText('+3');
-      expect(attackLink).toBeTruthy();
-      fireEvent.click(attackLink);
-      expect(rollAttack).toHaveBeenCalled();
-    });
-
-    it('renders and calls onSaveRoll for trait with save_dc', () => {
-      damageUtils.__setFindCreatureReturn({
-        name: 'Goblin',
-        conditions: [],
-      });
-
-      const m = makeMonster({
-        traits: [{ name: 'Petrification Gaze', description: '', save_dc: 14, save_type: 'Constitution' }],
-      });
-      render(<MonsterCardModal {...makeProps(m)} />);
-
-      const saveLink = findDiceLinkByText('DC 14');
-      expect(saveLink).toBeTruthy();
-      fireEvent.click(saveLink);
-      // onSaveRoll is called via the MonsterAction component's handleSaveRoll
-      // which is passed to MonsterCardBody as handleSaveRoll
-    });
-  });
-
-  describe('reactions and legendary actions with damage dice', () => {
-    it('renders onDamage link for reaction with damage_dice_primary', () => {
-      damageUtils.__setFindCreatureReturn({
-        name: 'Goblin',
-        conditions: [],
-      });
-
-      const m = makeMonster({
-        reactions: [{ name: 'Opportunity Attack', description: '', attack_bonus: null, damage_dice_primary: '1d6+1', damage_type_primary: 'slashing' }],
-      });
-      render(<MonsterCardModal {...makeProps(m)} />);
-
-      const dmgLink = findDiceLinkByText('1d6+1');
-      expect(dmgLink).toBeTruthy();
-      fireEvent.click(dmgLink);
-      expect(rollDamage).toHaveBeenCalled();
-    });
-
-    it('renders onDamage link for legendary action with damage_dice_primary', () => {
-      damageUtils.__setFindCreatureReturn({
-        name: 'Goblin',
-        conditions: [],
-      });
-
-      const m = makeMonster({
-        legendary_actions: [{ name: 'Tail Attack', description: '', attack_bonus: null, damage_dice_primary: '1d4', damage_type_primary: 'bludgeoning' }],
-      });
-      render(<MonsterCardModal {...makeProps(m)} />);
-
-      const dmgLink = findDiceLinkByText('1d4');
-      expect(dmgLink).toBeTruthy();
-      fireEvent.click(dmgLink);
-      expect(rollDamage).toHaveBeenCalled();
+      if (rollFn) {
+        expect(rollFn).toHaveBeenCalled();
+        if (rollArgs.length > 0) {
+          expect(rollFn).toHaveBeenCalledWith(...rollArgs);
+        }
+      }
     });
   });
 });

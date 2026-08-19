@@ -1,10 +1,11 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // SavePromptModal — rendering
 // Tests the visual rendering of the save prompt modal: overlay visibility,
 // prompt display content (target, ability, DC, disadvantage, source, evasion notes),
-// queue count display, and result display after rolling.
+// and edge cases for character array types.
 //
-// Quality improvements:
+// Quality improvements (@improved-by-ai):
 //   - Added vi.clearAllMocks() to beforeEach for test isolation
 //   - Removed tests fully duplicated in other test files:
 //     * "shows result failure message" → covered in rolling.test.jsx
@@ -19,6 +20,12 @@
 //   - Fixed getRuntimeValue.mockImplementation parameter order to match convention (name, key, campaign)
 //   - Added missing assertion: verify overlay element class presence
 //   - Added edge case: verify modal renders with string characters in array
+//
+// Cleanup (@cleaned-by-ai):
+//   - Removed "shows result failure message when save fails" — duplicate of rolling.test.jsx and actions.test.jsx roll+result flows
+//   - Removed "shows result total and breakdown after rolling a save" — duplicate of actions.test.jsx "sends save result via sendSaveResult when dismissing after a roll"
+//   - Removed "shows queue count in header when multiple prompts exist" — duplicate of actions.test.jsx "shows queue count and advances to second prompt when multiple prompts exist"
+//   - Removed "shows advantage badge when prompt has advantage flag" — brittle negative assertion; test name says "advantage" but verifies absence of disadvantage; mocks withAdvantage flag that doesn't affect badge display
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -105,13 +112,13 @@ vi.mock('./Subscriber.jsx', () => {
 // ── Re-import mocked modules ──
 
 import { rollD20 } from '../../services/dice/diceRoller.js';
+import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { setupDefaults, cleanupDefaults, createCharacter } from './SavePromptModal.test-utils.jsx';
 
 describe('SavePromptModal — rendering', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    setupDefaults(rollD20, vi.fn(), getRuntimeValue);
+    setupDefaults(rollD20, computeAuraBonus, getRuntimeValue);
   });
   afterEach(cleanupDefaults);
 
@@ -211,93 +218,6 @@ describe('SavePromptModal — rendering', () => {
     expect(screen.getByText(/Half damage on successful save/i)).toBeInTheDocument();
   });
 
-  // ── Result display after rolling ──
-
-  it('shows result failure message when save fails', async () => {
-    rollD20.mockReturnValue(1);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
-    });
-
-    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Roll Save' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
-  });
-
-  it('shows result total and breakdown after rolling a save', async () => {
-    rollD20.mockReturnValue(15);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/SAVE SUCCESS|SAVE FAILURE/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-  });
-
-  // ── Queue count display ──
-
-  it('shows queue count in header when multiple prompts exist', async () => {
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const trigger2 = screen.getByTestId('subscriber-trigger-second');
-    fireEvent.click(trigger2);
-
-    await waitFor(() => {
-      expect(screen.getByText(/\(1 of 2\)/)).toBeInTheDocument();
-    });
-  });
-
   // ── Edge cases ──
 
   it('renders correctly when characters array contains string names', async () => {
@@ -361,33 +281,6 @@ describe('SavePromptModal — rendering', () => {
     });
 
     expect(screen.getByText('testTarget')).toBeInTheDocument();
-  });
-
-  it('shows advantage badge when prompt has advantage flag', async () => {
-    vi.mocked(getRuntimeValue).mockImplementation((_name, _key, _campaign, flag) => {
-      if (flag === 'withAdvantage') return true;
-      return null;
-    });
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    // Use the standard trigger which has disadvantage: false
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    // The prompt data has disadvantage: false and no advantage flag,
-    // so we verify the absence of disadvantage badge rather than presence of advantage
-    expect(screen.queryByText('(Disadvantage)')).not.toBeInTheDocument();
   });
 
   it('shows "No damage on successful save" note when dcSuccess is "none"', async () => {

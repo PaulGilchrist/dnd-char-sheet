@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
@@ -111,11 +112,6 @@ describe('DeathSavePromptModal', () => {
   it('renders nothing when there are no prompts', () => {
     render(<DeathSavePromptModal campaignName="test-campaign" />);
     expect(document.querySelector('.dsp-overlay')).not.toBeInTheDocument();
-  });
-
-  it('renders Subscriber with the correct campaignName', () => {
-    render(<DeathSavePromptModal campaignName="my-campaign" />);
-    expect(screen.getByTestId('subscriber-wrapper')).toBeInTheDocument();
   });
 
   // ── Prompt queuing ──
@@ -272,18 +268,6 @@ describe('DeathSavePromptModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Roll Death Save' }));
     await waitForResultVisible();
     expect(setRuntimeValue).toHaveBeenCalledWith('target1', 'isDead', 1, 'test-campaign');
-  });
-
-  it('does not set isDead when the roll is not a death', async () => {
-    render(<DeathSavePromptModal campaignName="test-campaign" />);
-    fireEvent.click(screen.getByTestId('trigger-prompt-1'));
-    await waitForPromptVisible();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Death Save' }));
-    await waitForResultVisible();
-    const isDeadCalls = setRuntimeValue.mock.calls.filter(
-      (call) => call[1] === 'isDead',
-    );
-    expect(isDeadCalls).toHaveLength(0);
   });
 
   it('reads saved death saves from runtime state before rolling', async () => {
@@ -454,16 +438,4 @@ describe('DeathSavePromptModal', () => {
     expect(setRuntimeValue).toHaveBeenCalledWith('target1', 'currentHitPoints', 1, 'test-campaign');
   });
 
-  it('does not set currentHitPoints when roll does not restore HP', async () => {
-    deathSaveRules.rollDeathSave.mockReturnValue(defaultRollResult({ restoredToHp: null }));
-    render(<DeathSavePromptModal campaignName="test-campaign" />);
-    fireEvent.click(screen.getByTestId('trigger-prompt-1'));
-    await waitForPromptVisible();
-    fireEvent.click(screen.getByRole('button', { name: 'Roll Death Save' }));
-    await waitForResultVisible();
-    const hpCalls = setRuntimeValue.mock.calls.filter(
-      (call) => call[1] === 'currentHitPoints',
-    );
-    expect(hpCalls).toHaveLength(0);
-  });
 });

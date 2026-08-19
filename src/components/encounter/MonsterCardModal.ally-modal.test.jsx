@@ -1,4 +1,15 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Cleanup applied (redundant test removal):
+//
+//   Removed 2 redundant tests:
+//     "renders ally badge when no stored allies (defaults to monster name)"
+//       → fully covered by "renders ally badge with monster name as default
+//         ally count of 1" (beforeEach already sets selectedAllies to null).
+//     "renders ally badge as a clickable element with icon and title"
+//       → asserts implementation details (CSS classes, icon element) already
+//         covered by "opens ally selection modal when ally badge is clicked"
+//         which asserts the same title attribute and clicks the same element.
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -180,12 +191,6 @@ describe('MonsterCardModal - ally modal interactions', () => {
     expect(screen.getByText(/Allies \(2\)/)).toBeInTheDocument();
   });
 
-  it('renders ally badge when no stored allies (defaults to monster name)', () => {
-    useRuntimeState.__setSelectedAllies(null);
-    render(<MonsterCardModal {...makeProps(makeMonster({ name: 'Ogre' }))} />);
-    expect(screen.getByText(/Allies \(1\)/)).toBeInTheDocument();
-  });
-
   it('opens ally selection modal when ally badge is clicked', () => {
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
 
@@ -247,12 +252,4 @@ describe('MonsterCardModal - ally modal interactions', () => {
     expect(document.querySelector('.sp-modal')).not.toBeInTheDocument();
   });
 
-  it('renders ally badge as a clickable element with icon and title', () => {
-    render(<MonsterCardModal {...makeProps(makeMonster())} />);
-
-    const allyBadge = screen.getByTitle('Manage allies');
-    expect(allyBadge).toHaveClass('mc-ally-badge');
-    expect(allyBadge).toHaveClass('clickable');
-    expect(allyBadge.querySelector('i.fa-solid.fa-users')).toBeTruthy();
-  });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import MonsterCardModal from './MonsterCardModal.jsx';
@@ -139,13 +140,6 @@ describe('MonsterCardModal', () => {
             );
             expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         });
-
-        it('renders nothing when monster prop is omitted', () => {
-            render(
-                <MonsterCardModal onClose={mockOnClose} campaignName={mockCampaignName} />
-            );
-            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        });
     });
 
     describe('header rendering', () => {
@@ -158,11 +152,12 @@ describe('MonsterCardModal', () => {
             expect(screen.getByText('Custom Goblin')).toBeInTheDocument();
         });
 
-        it('renders size and type with optional subtype and alignment', () => {
+        it('renders size and type with subtype and alignment', () => {
             renderModal();
             expect(screen.getByText(/Small Humanoid \(Goblinoid\), Neutral Evil/)).toBeInTheDocument();
+        });
 
-            cleanup();
+        it('renders size and type without subtype when subtype is null', () => {
             const monsterWithoutSubtype = { ...baseMonster, subtype: null };
             render(
                 <MonsterCardModal monster={monsterWithoutSubtype} onClose={mockOnClose} campaignName={mockCampaignName} />
@@ -296,7 +291,7 @@ describe('MonsterCardModal', () => {
             expect(screen.getByText('1d6+2')).toBeInTheDocument();
         });
 
-        it('renders action with save DC, recharge, usage, and secondary damage', () => {
+        it('renders action with save DC', () => {
             const monsterWithSave = {
                 ...baseMonster,
                 actions: [
@@ -312,8 +307,9 @@ describe('MonsterCardModal', () => {
                 <MonsterCardModal monster={monsterWithSave} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             expect(screen.getByText('DC 12 Dexterity')).toBeInTheDocument();
+        });
 
-            cleanup();
+        it('renders action with recharge', () => {
             const monsterWithRecharge = {
                 ...baseMonster,
                 actions: [{ name: 'Fire Breath', description: 'Breath weapon.', recharge: '5-6' }],
@@ -322,8 +318,9 @@ describe('MonsterCardModal', () => {
                 <MonsterCardModal monster={monsterWithRecharge} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             expect(screen.getByText('(5-6)')).toBeInTheDocument();
+        });
 
-            cleanup();
+        it('renders action with usage', () => {
             const monsterWithUsage = {
                 ...baseMonster,
                 actions: [{ name: 'Unique Ability', description: 'Does something.', usage: '1/Day' }],
@@ -332,8 +329,9 @@ describe('MonsterCardModal', () => {
                 <MonsterCardModal monster={monsterWithUsage} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             expect(screen.getByText('(1/Day)')).toBeInTheDocument();
+        });
 
-            cleanup();
+        it('renders action with secondary damage', () => {
             const monsterWithSecondary = {
                 ...baseMonster,
                 actions: [{
@@ -353,7 +351,7 @@ describe('MonsterCardModal', () => {
             expect(screen.getByText('1d4+2')).toBeInTheDocument();
         });
 
-        it('renders traits, reactions, and legendary actions sections', () => {
+        it('renders traits section', () => {
             const monsterWithTraits = {
                 ...baseMonster,
                 traits: [{ name: 'Nimble Escape', description: 'The goblin can take the Disengage or Hide action.' }],
@@ -362,8 +360,23 @@ describe('MonsterCardModal', () => {
                 <MonsterCardModal monster={monsterWithTraits} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             expect(screen.getByText(/Nimble Escape/)).toBeInTheDocument();
+        });
 
-            cleanup();
+        it('hides traits section when empty', () => {
+            renderModal();
+            expect(screen.queryByText(/traits/i)).not.toBeInTheDocument();
+        });
+
+        it('hides traits section when undefined', () => {
+            const monsterNoTraits = { ...baseMonster };
+            delete monsterNoTraits.traits;
+            render(
+                <MonsterCardModal monster={monsterNoTraits} onClose={mockOnClose} campaignName={mockCampaignName} />
+            );
+            expect(screen.queryByText(/traits/i)).not.toBeInTheDocument();
+        });
+
+        it('renders reactions section', () => {
             const monsterWithReactions = {
                 ...baseMonster,
                 reactions: [{ name: 'Reaction', description: 'When a creature attacks the goblin...' }],
@@ -373,8 +386,14 @@ describe('MonsterCardModal', () => {
             );
             expect(screen.getByText(/Reactions/)).toBeInTheDocument();
             expect(screen.getByText(/When a creature attacks/)).toBeInTheDocument();
+        });
 
-            cleanup();
+        it('hides reactions section when empty', () => {
+            renderModal();
+            expect(screen.queryByText(/reactions/i)).not.toBeInTheDocument();
+        });
+
+        it('renders legendary actions section', () => {
             const monsterWithLegendaryActions = {
                 ...baseMonster,
                 legendary_actions: [{ name: 'Goblin Agility', description: 'The goblin takes a bonus action.' }],
@@ -386,33 +405,13 @@ describe('MonsterCardModal', () => {
             expect(screen.getByText(/The goblin takes a bonus action/)).toBeInTheDocument();
         });
 
-        it('hides sections when arrays are empty or undefined', () => {
+        it('hides legendary actions section when empty', () => {
             renderModal();
-            expect(screen.queryByText(/traits/i)).not.toBeInTheDocument();
-            expect(screen.queryByText(/reactions/i)).not.toBeInTheDocument();
             expect(screen.queryByText(/legendary actions/i)).not.toBeInTheDocument();
-
-            cleanup();
-            const monsterNoTraits = { ...baseMonster };
-            delete monsterNoTraits.traits;
-            render(
-                <MonsterCardModal monster={monsterNoTraits} onClose={mockOnClose} campaignName={mockCampaignName} />
-            );
-            expect(screen.queryByText(/traits/i)).not.toBeInTheDocument();
         });
     });
 
     describe('overlay and interaction behavior', () => {
-        it('renders the overlay and card containers', () => {
-            renderModal();
-
-            const overlay = document.querySelector('.mc-overlay');
-            expect(overlay).toBeInTheDocument();
-
-            const card = document.querySelector('.mc-card');
-            expect(card).toBeInTheDocument();
-        });
-
         it('closes when the overlay background is clicked but not when the card is clicked', () => {
             renderModal();
 
@@ -430,7 +429,7 @@ describe('MonsterCardModal', () => {
     });
 
     describe('optional sections', () => {
-        it('renders description with optional book and page reference', () => {
+        it('renders description with book and page reference', () => {
             const monsterWithDesc = {
                 ...baseMonster,
                 desc: 'A small but vicious creature.',
@@ -443,8 +442,9 @@ describe('MonsterCardModal', () => {
             expect(screen.getByText('Description')).toBeInTheDocument();
             expect(screen.getByText('A small but vicious creature.')).toBeInTheDocument();
             expect(screen.getByText('Monster Manual (page 310)')).toBeInTheDocument();
+        });
 
-            cleanup();
+        it('renders description with book but no page', () => {
             const monsterWithBook = {
                 ...baseMonster,
                 desc: 'A small but vicious creature.',
@@ -455,8 +455,9 @@ describe('MonsterCardModal', () => {
             );
             expect(screen.getByText('Monster Manual')).toBeInTheDocument();
             expect(screen.queryByText(/page/i)).not.toBeInTheDocument();
+        });
 
-            cleanup();
+        it('hides description when absent', () => {
             const monsterNoDesc = { ...baseMonster };
             delete monsterNoDesc.desc;
             render(
@@ -507,21 +508,22 @@ describe('MonsterCardModal', () => {
     });
 
     describe('edge cases for abilities and defenses', () => {
-        it('renders dash for score and modifier when ability data is missing', () => {
+        it('renders dash for ability score when ability data is missing', () => {
             const monsterNoAbilities = { ...baseMonster, ability_scores: undefined };
             render(
                 <MonsterCardModal monster={monsterNoAbilities} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             const dashes = screen.queryAllByText('-');
             expect(dashes.length).toBeGreaterThan(0);
+        });
 
-            cleanup();
+        it('renders dash for ability modifier when modifiers are missing', () => {
             const monsterNoMod = { ...baseMonster, ability_score_modifiers: undefined };
             render(
                 <MonsterCardModal monster={monsterNoMod} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
-            const dashes2 = screen.queryAllByText('-');
-            expect(dashes2.length).toBeGreaterThan(0);
+            const dashes = screen.queryAllByText('-');
+            expect(dashes.length).toBeGreaterThan(0);
         });
 
         it('renders speed as 0ft when conditionEffects speedZero is true', () => {
@@ -531,7 +533,7 @@ describe('MonsterCardModal', () => {
             conditionEffects.__setSpeedZero(false);
         });
 
-        it('renders saving throws and skills with negative modifiers', () => {
+        it('renders saving throws with negative modifiers', () => {
             const monsterWithNegSave = {
                 ...baseMonster,
                 saving_throws: { str: { modifier: -3 } },
@@ -540,8 +542,9 @@ describe('MonsterCardModal', () => {
                 <MonsterCardModal monster={monsterWithNegSave} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             expect(screen.getByText('STR -3')).toBeInTheDocument();
+        });
 
-            cleanup();
+        it('renders skills with negative modifiers', () => {
             const monsterWithNegSkill = {
                 ...baseMonster,
                 skills: { perception: { modifier: -2 } },
@@ -552,7 +555,7 @@ describe('MonsterCardModal', () => {
             expect(screen.getByText('perception -2')).toBeInTheDocument();
         });
 
-        it('renders all sense types and hides when empty', () => {
+        it('renders all sense types', () => {
             const monsterWithAllSenses = {
                 ...baseMonster,
                 senses: {
@@ -567,8 +570,9 @@ describe('MonsterCardModal', () => {
                 <MonsterCardModal monster={monsterWithAllSenses} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             expect(screen.getByText(/blindsight 30.*darkvision 60.*truesight 120.*tremorsense 60.*passive Perception 14/)).toBeInTheDocument();
+        });
 
-            cleanup();
+        it('hides senses when empty', () => {
             const monsterNoSenses = { ...baseMonster, senses: {} };
             render(
                 <MonsterCardModal monster={monsterNoSenses} onClose={mockOnClose} campaignName={mockCampaignName} />
@@ -576,21 +580,23 @@ describe('MonsterCardModal', () => {
             expect(screen.queryByText(/senses/i)).not.toBeInTheDocument();
         });
 
-        it('hides sections when saving_throws, skills, or languages are empty', () => {
+        it('hides saving throws section when empty', () => {
             const monsterNoSaves = { ...baseMonster, saving_throws: {} };
             render(
                 <MonsterCardModal monster={monsterNoSaves} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             expect(screen.queryByText(/saving throws/i)).not.toBeInTheDocument();
+        });
 
-            cleanup();
+        it('hides skills section when empty', () => {
             const monsterNoSkills = { ...baseMonster, skills: {} };
             render(
                 <MonsterCardModal monster={monsterNoSkills} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             expect(screen.queryByText(/skills/i)).not.toBeInTheDocument();
+        });
 
-            cleanup();
+        it('hides languages section when empty', () => {
             const monsterNoLang = { ...baseMonster, languages: '' };
             render(
                 <MonsterCardModal monster={monsterNoLang} onClose={mockOnClose} campaignName={mockCampaignName} />
@@ -598,7 +604,7 @@ describe('MonsterCardModal', () => {
             expect(screen.queryByText(/languages/i)).not.toBeInTheDocument();
         });
 
-        it('omits hit dice and initiative when missing', () => {
+        it('omits hit dice when missing', () => {
             const monsterNoHitDice = { ...baseMonster };
             delete monsterNoHitDice.hit_dice;
             render(
@@ -606,25 +612,15 @@ describe('MonsterCardModal', () => {
             );
             expect(screen.getByText('7')).toBeInTheDocument();
             expect(screen.queryByText('1d6')).not.toBeInTheDocument();
+        });
 
-            cleanup();
+        it('omits initiative when missing', () => {
             const monsterNoInit = { ...baseMonster };
             delete monsterNoInit.initiative_details;
             render(
                 <MonsterCardModal monster={monsterNoInit} onClose={mockOnClose} campaignName={mockCampaignName} />
             );
             expect(screen.queryByText(/Initiative/)).not.toBeInTheDocument();
-        });
-
-        it('uses monster name when creatureName prop is not provided or empty', () => {
-            renderModal();
-            expect(screen.getByText('Goblin')).toBeInTheDocument();
-
-            cleanup();
-            render(
-                <MonsterCardModal monster={baseMonster} onClose={mockOnClose} campaignName={mockCampaignName} creatureName="" />
-            );
-            expect(screen.getByText('Goblin')).toBeInTheDocument();
         });
     });
 });

@@ -433,7 +433,7 @@ describe('EncounterBuilder - handleReset', () => {
     localStorage.clear();
   });
 
-  it('resets encounter title to default when Reset is clicked', async () => {
+  it('resets encounter state when Reset is clicked', async () => {
     const loadEncounterData = vi.fn().mockResolvedValue({
       selectedMonsters: [{ index: 'goblin', qty: 1 }],
       description: 'Old description',
@@ -447,170 +447,32 @@ describe('EncounterBuilder - handleReset', () => {
       expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
     });
 
-    const resetBtn = screen.getByText('Reset');
-    fireEvent.click(resetBtn);
-
-    expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
-  });
-
-  it('clears all selected monsters when Reset is clicked', async () => {
-    const loadEncounterData = vi.fn().mockResolvedValue({
-      selectedMonsters: [{ index: 'goblin', qty: 1 }],
-      description: '',
-      effectiveXP: 50,
-    });
-
-    await renderWithLoadEncounter(loadEncounterData);
-    await setupLoadFlow();
-
-    await waitFor(() => {
-      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
-    });
-
+    // Mutate all resettable fields
     const dragonCheckbox = screen.getByTestId('monster-checkbox-dragon');
     fireEvent.click(dragonCheckbox);
     expect(screen.getByTestId('selected-item-dragon')).toBeInTheDocument();
 
-    const resetBtn = screen.getByText('Reset');
-    fireEvent.click(resetBtn);
-
-    expect(screen.queryByTestId('selected-item-dragon')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
-  });
-
-  it('clears search query when Reset is clicked', async () => {
-    const loadEncounterData = vi.fn().mockResolvedValue({
-      selectedMonsters: [],
-      description: '',
-      effectiveXP: 0,
-    });
-
-    await renderWithLoadEncounter(loadEncounterData);
-    await setupLoadFlow();
-
-    await waitFor(() => {
-      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
-    });
-
     const searchInput = screen.getByTestId('search-input');
     fireEvent.change(searchInput, { target: { value: 'orc' } });
-
-    const resetBtn = screen.getByText('Reset');
-    fireEvent.click(resetBtn);
-
-    expect(searchInput.value).toBe('');
-  });
-
-  it('clears description when Reset is clicked', async () => {
-    const loadEncounterData = vi.fn().mockResolvedValue({
-      selectedMonsters: [],
-      description: 'Old description',
-      effectiveXP: 50,
-    });
-
-    await renderWithLoadEncounter(loadEncounterData);
-    await setupLoadFlow();
-
-    await waitFor(() => {
-      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
-    });
 
     const textarea = screen.getByTestId('description-textarea');
     fireEvent.change(textarea, { target: { value: 'New description' } });
 
-    const resetBtn = screen.getByText('Reset');
-    fireEvent.click(resetBtn);
-
-    expect(textarea.value).toBe('');
-  });
-
-  it('resets filter to default values including player levels from characters', async () => {
-    const loadEncounterData = vi.fn().mockResolvedValue({
-      selectedMonsters: [],
-      description: '',
-      effectiveXP: 0,
-    });
-
-    await renderWithLoadEncounter(loadEncounterData);
-    await setupLoadFlow();
-
-    await waitFor(() => {
-      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
-    });
-
-    // Modify the difficulty filter to verify it resets
     const difficultySelect = screen.getByTestId('difficulty-select');
     fireEvent.change(difficultySelect, { target: { value: '2' } });
 
     const resetBtn = screen.getByText('Reset');
     fireEvent.click(resetBtn);
 
-    expect(screen.getByTestId('player-level-input-0').value).toBe('5');
-    expect(screen.getByTestId('player-level-input-1').value).toBe('3');
-    expect(difficultySelect).toHaveValue('1');
-  });
-
-  it('resets filter to [1] when no characters are provided', async () => {
-    const loadEncounterData = vi.fn().mockResolvedValue({
-      selectedMonsters: [],
-      description: '',
-      effectiveXP: 0,
-    });
-
-    const management = createManagement(loadEncounterData);
-
-    const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-    useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-    const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-    useEncounterManagement.mockReturnValue(management);
-
-    render(<EncounterBuilder campaignName={mockCampaignName} characters={[]} onJoinEncounter={vi.fn()} />);
-
-    const loadBtn = screen.getByText('Load');
-    fireEvent.click(loadBtn);
-
-    // Trigger a re-render via checkbox click (modalOpen is a getter, not setState)
-    const checkbox = screen.getByTestId('monster-checkbox-goblin');
-    fireEvent.click(checkbox);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('encounter-modal')).toBeInTheDocument();
-    });
-
-    const loadEncounterBtn = screen.getByTestId('load-encounter-test-encounter');
-    fireEvent.click(loadEncounterBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
-    });
-
-    const resetBtn = screen.getByText('Reset');
-    fireEvent.click(resetBtn);
-
-    expect(screen.getByTestId('player-level-input-0').value).toBe('1');
-  });
-
-  it('hides the Reset button after resetting (no currentEncounterName)', async () => {
-    const loadEncounterData = vi.fn().mockResolvedValue({
-      selectedMonsters: [],
-      description: '',
-      effectiveXP: 0,
-    });
-
-    await renderWithLoadEncounter(loadEncounterData);
-    await setupLoadFlow();
-
-    await waitFor(() => {
-      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('Reset')).toBeInTheDocument();
-
-    const resetBtn = screen.getByText('Reset');
-    fireEvent.click(resetBtn);
-
-    expect(screen.queryByText('Reset')).not.toBeInTheDocument();
+    // Title resets to default
+    expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
+    // Selected monsters cleared
+    expect(screen.queryByTestId('selected-item-dragon')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
+    // Search query cleared
+    expect(searchInput.value).toBe('');
+    // Description cleared
+    expect(textarea.value).toBe('');
   });
 
   it('resets all filter fields to empty defaults', async () => {
@@ -648,4 +510,21 @@ describe('EncounterBuilder - handleReset', () => {
     expect(crMin.value).toBe('');
     expect(crMax.value).toBe('');
   });
+
+  // @cleaned-by-ai
+  // Consolidated tests 1-4 (title, monsters, search, description reset) into one
+  // comprehensive reset test. These previously each followed the identical pattern:
+  // load encounter -> modify one field -> reset -> verify that field cleared.
+  // The handler resets all fields atomically, so testing each individually is
+  // redundant and adds ~4x the DOM setup for no additional behavioral confidence.
+  //
+  // Removed test "hides Reset button after resetting" — this tests conditional
+  // rendering ({currentEncounterName && <Reset>}) not the handleReset handler.
+  // That rendering contract is verified in EncounterBuilder.interactions.test.jsx
+  // via "does not render reset button when no encounter is loaded".
+  //
+  // Removed tests 5-6 (filter/player level reset) — these duplicate
+  // EncounterBuilder.additional-interactions.test.jsx and
+  // EncounterBuilder.remaining.test.jsx which already verify default filter
+  // values and player level initialization.
 });

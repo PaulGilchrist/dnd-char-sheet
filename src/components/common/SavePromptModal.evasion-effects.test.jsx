@@ -1,6 +1,12 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // SavePromptModal — Evasion Effects (Beacon of Hope, Cosmic Omen, Disadvantage, Force Roll)
 // Tests behavioral outcomes of evasion effects on save resolution.
+//
+// Cleanup (@cleaned-by-ai):
+//   - Removed "dispatches save-result custom event with evasion details" — duplicate of actions.test.jsx
+//   - Removed "applies disadvantage for DEX saves when target is charmed" — duplicate of rolling.test.jsx
+//   - Removed "applies disadvantage for DEX saves when target has Otto's Irresistible Dance" — duplicate of rolling.test.jsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -79,7 +85,6 @@ vi.mock('./Subscriber.jsx', () => {
       React.createElement('button', { 'data-testid': 'subscriber-trigger', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-1', targetName: 'testTarget', saveType: 'con', saveDc: 12, disadvantage: false } }) }),
       React.createElement('button', { 'data-testid': 'subscriber-trigger-wis', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-wis', targetName: 'testTarget', saveType: 'WIS', saveDc: 13, disadvantage: false, dcSuccess: 'half' } }) }),
       React.createElement('button', { 'data-testid': 'subscriber-trigger-dex', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-dex', targetName: 'testTarget', saveType: 'dex', saveDc: 17, disadvantage: false, dcSuccess: 'half', sourceName: 'Sacred Flame' } }) }),
-      React.createElement('button', { 'data-testid': 'subscriber-trigger-otto', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-otto', targetName: 'testTarget', saveType: 'dex', saveDc: 15, disadvantage: false, dcSuccess: 'half' } }) }),
     );
   }
   return { default: MockSubscriber };
@@ -173,76 +178,6 @@ describe('SavePromptModal — Evasion Effects', () => {
     expect(rollD20).toHaveBeenCalledTimes(1);
   });
 
-  // ── Disadvantage: charmed condition ──
-
-  it('applies disadvantage for DEX saves when target is charmed', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'testTarget' && key === 'activeConditions') return ['charmed'];
-      return null;
-    });
-    rollD20.mockReturnValueOnce(18).mockReturnValueOnce(5);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger-dex');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Disadvantage/i)).toBeInTheDocument();
-    });
-
-    // Disadvantage = two d20s rolled, minimum taken
-    expect(rollD20).toHaveBeenCalledTimes(2);
-  });
-
-  // ── Disadvantage: Otto's Irresistible Dance ──
-
-  it('applies disadvantage for DEX saves when target has Otto\'s Irresistible Dance', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [{ target: 'testTarget', effect: 'ottos_irresistible_dance' }];
-      return null;
-    });
-    rollD20.mockReturnValueOnce(18).mockReturnValueOnce(5);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger-otto');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Disadvantage/i)).toBeInTheDocument();
-    });
-
-    // Disadvantage = two d20s rolled, minimum taken
-    expect(rollD20).toHaveBeenCalledTimes(2);
-  });
-
   // ── Beacon of Hope does NOT grant advantage on non-WIS saves ──
 
   it('does not grant beacon_of_hope advantage on non-WIS saves', async () => {
@@ -321,49 +256,4 @@ describe('SavePromptModal — Evasion Effects', () => {
     expect(setRuntimeValue).toHaveBeenCalledWith('cosmicOmen', 'cosmicOmenPendingBonus', null, 'test-campaign', true);
   });
 
-  // ── save-result event dispatched ──
-
-  it('dispatches save-result custom event with evasion details after rolling', async () => {
-    rollD20.mockReturnValue(15);
-
-    const eventHandler = vi.fn();
-    window.addEventListener('save-result', eventHandler);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
-    });
-
-    const doneBtn = screen.getByRole('button', { name: 'Done' });
-    fireEvent.click(doneBtn);
-
-    await waitFor(() => {
-      expect(eventHandler).toHaveBeenCalled();
-    });
-
-    const eventDetail = eventHandler.mock.calls[0][0].detail;
-    expect(eventDetail).toHaveProperty('promptId', 'test-prompt-1');
-    expect(eventDetail).toHaveProperty('rawDamage');
-    expect(eventDetail).toHaveProperty('dcSuccess');
-    expect(eventDetail).toHaveProperty('evasionActive');
-
-    window.removeEventListener('save-result', eventHandler);
-  });
 });

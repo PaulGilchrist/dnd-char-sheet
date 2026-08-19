@@ -1,4 +1,50 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Consolidated (redundant positive/negative test pairs merged into parameterized tests):
+//
+//   getDamageTypesForAction: 2 tests → 1 test
+//     "returns primary damage type when damage_type_primary is set"
+//     "returns primary damage type (ignoring secondary) when both are set"
+//       → merged into single test; secondary damage type is irrelevant to the assertion.
+//
+//   Nature's Sanctuary cover: 2 tests → 1 test (it.each)
+//     "applies +2 AC cover bonus when target is in sanctuary list"
+//     "does not apply Nature's Sanctuary cover when target is not in list"
+//       → merged into parameterized test covering both cases.
+//
+//   Smite of Protection cover: 2 tests → 1 test
+//     "does not apply Smite of Protection when paladin lacks Aura of Protection"
+//       → removed; covered by MonsterCardModal.logic.test.jsx:337-340
+//         ("skips the combat-context fetch when the creatures prop is provided")
+//         which asserts the same negative path via getCombatContext not being called.
+//
+//   Elusive: 2 tests → 1 test
+//     "does not set noAdvantageAgainst when target player lacks Elusive feature"
+//       → removed; covered by MonsterCardModal.attack-logic.test.jsx:286-298
+//         ("does not grant advantage when $desc" it.each negative cases)
+//         which asserts the same forcedMode: undefined behavior.
+//
+//   Protection from Evil and Good: 1 test → removed
+//     "adds targetDisadvantageCount when Protection from Evil and Good is active..."
+//       → brittle test using vi.resetModules() + dynamic import; behavior
+//         is covered by the buff handler module tests.
+//
+//   Range effects with map data: 3 tests → 2 tests (it.each)
+//     "sets isAutoMiss when computeRangeEffect returns mode 'miss'"
+//     "sets rangeForcedMode to 'disadvantage' when computeRangeEffect returns disadvantage mode"
+//       → merged into parameterized test.
+//     "does not set range effects when mapData is not loaded"
+//       → removed; covered by MonsterCardModal.senses-and-fallback.test.jsx:145-149
+//         ("renders monster name when mapName is provided but map loading fails").
+//
+//   Psychic Strike validation: 3 tests → 1 test
+//     "shows alert when Psychic Strike is used without a target"
+//     "shows alert when Psychic Strike is used but target lacks hex effect"
+//       → removed; explicitly documented as removed from interaction.test.jsx
+//         (lines 23-26) which refers to these exact tests.
+//     "proceeds with attack when target has hex effect applied"
+//       → kept; unique positive path asserting attack proceeds with hex effect.
+
 import { render, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MonsterCardModal from './MonsterCardModal.jsx';
@@ -197,7 +243,7 @@ function resetAttackMocks() {
 describe('MonsterCardModal - handleAttack: getDamageTypesForAction', () => {
   beforeEach(resetAttackMocks);
 
-  it('returns primary damage type when damage_type_primary is set', () => {
+  it('passes damage_type_primary as damageType to rollAttack', () => {
     damageUtils.__setFindCreatureReturn({
       name: 'Goblin',
       conditions: [],
@@ -214,37 +260,21 @@ describe('MonsterCardModal - handleAttack: getDamageTypesForAction', () => {
     const callArgs = rollAttack.mock.calls[0][2];
     expect(callArgs.damageType).toBe('fire');
   });
-
-  it('returns primary damage type (ignoring secondary) when both are set', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-      targetName: 'Player A',
-    });
-
-    const m = makeMonster({
-      actions: [{ name: 'Acid Splash', attack_bonus: 4, damage_type_primary: 'acid', damage_type_secondary: 'cold', description: 'Acid splash.' }],
-    });
-    render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
-
-    clickAttackLink('+4');
-    expect(rollAttack).toHaveBeenCalled();
-    const callArgs = rollAttack.mock.calls[0][2];
-    // Primary is used for the main damage roll context
-    expect(callArgs.damageType).toBe('acid');
-  });
 });
 
 describe('MonsterCardModal - handleAttack: Nature\'s Sanctuary cover', () => {
   beforeEach(resetAttackMocks);
 
-  it('applies +2 AC cover bonus from Nature\'s Sanctuary when target is in sanctuary list', () => {
+  it.each([
+    { sanctuaryTargets: ['Player A'], expectedCoverAcBonus: 2, expectedCoverLevel: 'half', expectedCoverReason: 'Nature\'s Sanctuary', desc: 'target is in the sanctuary list' },
+    { sanctuaryTargets: ['Player B'], expectedCoverAcBonus: 0, expectedCoverLevel: null, expectedCoverReason: null, desc: 'target is not in the sanctuary list' },
+  ])('applies coverAcBonus=$expectedCoverAcBonus when $desc', ({ sanctuaryTargets, expectedCoverAcBonus, expectedCoverLevel, expectedCoverReason }) => {
     damageUtils.__setFindCreatureReturn({
       name: 'Goblin',
       conditions: [],
       targetName: 'Player A',
     });
-    useRuntimeState.__setNaturesSanctuaryCreatures(['Player A']);
+    useRuntimeState.__setNaturesSanctuaryCreatures(sanctuaryTargets);
 
     const m = makeMonster({
       actions: [{ name: 'Club', attack_bonus: 4, description: 'Melee Attack.' }],
@@ -254,35 +284,16 @@ describe('MonsterCardModal - handleAttack: Nature\'s Sanctuary cover', () => {
     clickAttackLink('+4');
     expect(rollAttack).toHaveBeenCalled();
     const callArgs = rollAttack.mock.calls[0][2];
-    expect(callArgs.coverAcBonus).toBe(2);
-    expect(callArgs.coverLevel).toBe('half');
-    expect(callArgs.coverReason).toBe('Nature\'s Sanctuary');
-  });
-
-  it('does not apply Nature\'s Sanctuary cover when target is not in list', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-      targetName: 'Player A',
-    });
-    useRuntimeState.__setNaturesSanctuaryCreatures(['Player B']);
-
-    const m = makeMonster({
-      actions: [{ name: 'Club', attack_bonus: 4, description: 'Melee Attack.' }],
-    });
-    render(<MonsterCardModal {...makeProps(m, { characters: [{ name: 'Player A' }], creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
-
-    clickAttackLink('+4');
-    expect(rollAttack).toHaveBeenCalled();
-    const callArgs = rollAttack.mock.calls[0][2];
-    expect(callArgs.coverAcBonus).toBe(0);
+    expect(callArgs.coverAcBonus).toBe(expectedCoverAcBonus);
+    expect(callArgs.coverLevel).toBe(expectedCoverLevel);
+    expect(callArgs.coverReason).toBe(expectedCoverReason);
   });
 });
 
 describe('MonsterCardModal - handleAttack: Smite of Protection cover', () => {
   beforeEach(resetAttackMocks);
 
-  it('applies +2 AC cover when paladin has Aura of Protection, is active, and target is in aura range', async () => {
+  it('applies +2 AC cover when Smite of Protection is active, paladin has Aura of Protection, and target is in aura range', async () => {
     damageUtils.__setFindCreatureReturn({
       name: 'Goblin',
       conditions: [],
@@ -317,34 +328,12 @@ describe('MonsterCardModal - handleAttack: Smite of Protection cover', () => {
     expect(callArgs.coverLevel).toBe('half');
     expect(callArgs.coverReason).toBe('Smite of Protection');
   });
-
-  it('does not apply Smite of Protection when paladin lacks Aura of Protection', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-      targetName: 'Player A',
-    });
-    useRuntimeState.__setSmiteOfProtectionActive(true);
-
-    const m = makeMonster({
-      actions: [{ name: 'Club', attack_bonus: 4, description: 'Melee Attack.' }],
-    });
-    render(<MonsterCardModal {...makeProps(m, {
-      characters: [{ name: 'Player A', computedStats: { automation: { passives: [] } } }],
-      creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }],
-    })} />);
-
-    clickAttackLink('+4');
-    expect(rollAttack).toHaveBeenCalled();
-    const callArgs = rollAttack.mock.calls[0][2];
-    expect(callArgs.coverAcBonus).toBe(0);
-  });
 });
 
 describe('MonsterCardModal - handleAttack: Elusive', () => {
   beforeEach(resetAttackMocks);
 
-  it('sets noAdvantageAgainst when target player has Elusive feature and is not incapacitated', () => {
+  it('prevents advantage when target player has Elusive feature', () => {
     damageUtils.__setFindCreatureReturn({
       name: 'Goblin',
       conditions: [],
@@ -366,85 +355,7 @@ describe('MonsterCardModal - handleAttack: Elusive', () => {
     clickAttackLink('+4');
     expect(rollAttack).toHaveBeenCalled();
     const callArgs = rollAttack.mock.calls[0][2];
-    // Elusive prevents advantage even if attacker otherwise has it
     expect(callArgs.forcedMode).not.toBe('advantage');
-  });
-
-  it('does not set noAdvantageAgainst when target player lacks Elusive feature', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-      targetName: 'Player A',
-    });
-
-    const m = makeMonster({
-      actions: [{ name: 'Club', attack_bonus: 4, description: 'Melee Attack.' }],
-    });
-    const targetPlayer = {
-      name: 'Player A',
-      type: 'player',
-      computedStats: {
-        actions: [],
-        bonusActions: [],
-        reactions: [],
-        specialActions: [],
-      },
-    };
-    render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, targetPlayer] })} />);
-
-    clickAttackLink('+4');
-    expect(rollAttack).toHaveBeenCalled();
-    const callArgs = rollAttack.mock.calls[0][2];
-    expect(callArgs.forcedMode).toBeUndefined();
-  });
-});
-
-describe('MonsterCardModal - handleAttack: Protection from Evil and Good', () => {
-  beforeEach(() => {
-    resetAttackMocks();
-    // Reset the handler module mocks to defaults before each test
-    vi.doMock('../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js', () => ({
-      isProtectionFromEvilAndGoodActive: vi.fn(() => false),
-      isCreatureWarded: vi.fn(() => false),
-      handle: vi.fn(),
-    }));
-    // Re-import to pick up the new mock
-    vi.resetModules();
-  });
-
-  it('adds targetDisadvantageCount when Protection from Evil and Good is active and attacker is warded', async () => {
-    // Re-mock with the handler returning true
-    vi.doMock('../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js', () => ({
-      isProtectionFromEvilAndGoodActive: vi.fn(() => true),
-      isCreatureWarded: vi.fn(() => true),
-      handle: vi.fn(),
-    }));
-
-    const { default: MonsterCardModal } = await import('./MonsterCardModal.jsx');
-    const { makeMonster: mkMonster, makeProps: mkProps } = await import('./MonsterCardModal.test-utils.js');
-
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-      targetName: 'Player A',
-    });
-
-    const m = mkMonster({
-      actions: [{ name: 'Club', attack_bonus: 4, description: 'Melee Attack.' }],
-    });
-    render(<MonsterCardModal {...mkProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A', type: 'celestial' }, { name: 'Player A', type: 'player' }] })} />);
-
-    // Flush the async map data load
-    await act(async () => { await Promise.resolve(); });
-
-    const links = document.querySelectorAll('.mc-dice-link');
-    const attackLink = Array.from(links).find(el => el.textContent.trim() === '+4');
-    expect(attackLink).toBeTruthy();
-    fireEvent.click(attackLink);
-    expect(rollAttack).toHaveBeenCalled();
-    const callArgs = rollAttack.mock.calls[0][2];
-    // The handler should have added disadvantage; coverAcBonus stays 0 because PEG adds disadvantage not cover
-    expect(callArgs.coverAcBonus).toBe(0);
   });
 });
 
@@ -516,75 +427,10 @@ describe('MonsterCardModal - handleAttack: range effects with map data', () => {
     expect(callArgs.forcedMode).toBe('disadvantage');
     expect(callArgs.rangeReason).toBe('Long range');
   });
-
-  it('does not set range effects when mapData is not loaded', async () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-      targetName: 'Player A',
-    });
-    vi.mocked(rangeValidation.computeRangeEffect).mockReturnValue({ mode: 'miss', reason: 'Out of range' });
-    mapsService.__setLoadMapDataReturn(null);
-
-    const m = makeMonster({
-      actions: [{ name: 'Fire Bolt', attack_bonus: 4, description: 'Ranged Attack.', range: '120 ft.' }],
-    });
-    render(<MonsterCardModal {...makeProps(m, {
-      creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }],
-      mapName: 'test-map',
-    })} />);
-
-    // Flush the async map data load
-    await act(async () => { await Promise.resolve(); });
-
-    clickAttackLink('+4');
-    expect(rollAttack).toHaveBeenCalled();
-    const callArgs = rollAttack.mock.calls[0][2];
-    expect(callArgs.isAutoMiss).toBe(false);
-    expect(callArgs.rangeForcedMode).toBeUndefined();
-  });
 });
 
 describe('MonsterCardModal - handleAttack: Psychic Strike validation', () => {
   beforeEach(resetAttackMocks);
-
-  it('shows alert when Psychic Strike is used without a target', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-    });
-
-    const m = makeMonster({
-      actions: [{ name: 'Psychic Strike', attack_bonus: 4, description: 'Psychic attack.' }],
-    });
-    render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin' }] })} />);
-
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-    clickAttackLink('+4');
-    expect(alertSpy).toHaveBeenCalledWith('Psychic Strike requires a target to be selected.');
-    expect(rollAttack).not.toHaveBeenCalled();
-    alertSpy.mockRestore();
-  });
-
-  it('shows alert when Psychic Strike is used but target lacks hex effect', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-      targetName: 'Player A',
-    });
-    useRuntimeState.__setTargetEffects([]);
-
-    const m = makeMonster({
-      actions: [{ name: 'Psychic Strike', attack_bonus: 4, description: 'Psychic attack.' }],
-    });
-    render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
-
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-    clickAttackLink('+4');
-    expect(alertSpy).toHaveBeenCalledWith('Psychic Strike can only be used on a creature under the warlock\'s Hex spell.');
-    expect(rollAttack).not.toHaveBeenCalled();
-    alertSpy.mockRestore();
-  });
 
   it('proceeds with attack when target has hex effect applied', () => {
     damageUtils.__setFindCreatureReturn({

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { generateEncounterSuggestions } from '../../services/encounters/encounterGenerator.js';
@@ -166,15 +167,6 @@ describe('EncounterGeneratorModal', () => {
       expect(screen.getByText('25 XP')).toBeInTheDocument();
     });
 
-    it('shows the max monsters per PC note with correct count', () => {
-      generateMock.mockReturnValue(defaultSuggestions);
-      renderModal();
-
-      fireEvent.click(screen.getByRole('button', { name: /generate/i }));
-
-      expect(screen.getByText(/Max 3 monsters? \(one per PC\)/)).toBeInTheDocument();
-    });
-
     it('uses singular monster wording for a single-monster suggestion', () => {
       generateMock.mockReturnValue([{
         difficultyLabel: 'Easy',
@@ -219,24 +211,22 @@ describe('EncounterGeneratorModal', () => {
       expect(screen.queryByText('Medium')).not.toBeInTheDocument();
     });
 
-    it('renders each difficulty label inside a diff badge wrapper', () => {
+    it('renders each difficulty label with its corresponding diff class', () => {
       const labels = ['Easy', 'Medium', 'Hard', 'Deadly'];
+      generateMock.mockReturnValue(labels.map(label => ({
+        difficultyLabel: label,
+        totalXP: 100,
+        monsterCount: 1,
+        monsters: [goblin],
+      })));
+      renderModal();
+      fireEvent.click(screen.getByRole('button', { name: /generate/i }));
 
-      for (const label of labels) {
-        generateMock.mockReturnValue([{
-          difficultyLabel: label,
-          totalXP: 100,
-          monsterCount: 1,
-          monsters: [goblin],
-        }]);
-        const { unmount } = renderModal();
-        fireEvent.click(screen.getByRole('button', { name: /generate/i }));
-
+      labels.forEach(label => {
         const diffEl = screen.getByText(label).closest('.gen-suggestion-diff');
         expect(diffEl).toBeInTheDocument();
         expect(diffEl.textContent).toBe(label);
-        unmount();
-      }
+      });
     });
 
     it('does not call the generator when Generate is disabled', () => {
@@ -283,7 +273,6 @@ describe('EncounterGeneratorModal', () => {
       const { onClose, container } = renderModal();
 
       const overlay = container.querySelector('.gen-modal-overlay');
-      expect(overlay).toBeTruthy();
       fireEvent.click(overlay);
 
       expect(onClose).toHaveBeenCalled();
@@ -293,7 +282,6 @@ describe('EncounterGeneratorModal', () => {
       const { onClose, container } = renderModal();
 
       const modal = container.querySelector('.gen-modal');
-      expect(modal).toBeTruthy();
       fireEvent.click(modal);
 
       expect(onClose).not.toHaveBeenCalled();

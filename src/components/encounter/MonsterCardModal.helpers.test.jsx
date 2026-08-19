@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // Behavioral tests for the condition-effect badge rendering in the monster card.
 //
 // Coverage audit against ALL other MonsterCardModal test files (before adding any test):
@@ -21,6 +22,14 @@
 //   - Missing negative paths: no badges when effects report nothing, no badges when the
 //     creature has no conditions even if flags/effects are set, and no speedy badges when
 //     the passives are absent.
+//
+// Cleanup applied (redundant / brittle / low-value removal):
+//   - Consolidated 4 individual rider-badge tests into 1 parameterized it.each (same structure, different flag/badge).
+//   - Consolidated 2 individual speedy-badge tests into 1 parameterized it.each (same structure, different passive).
+//   - Removed 3 negative tests already covered by other tests:
+//       * "no badges when no conditions + flags set" — covered by the all-sources integration test.
+//       * "no speedy badges when conditions but no passives" — covered by the first test (no effects = no badges).
+//       * "no speedy badges when passives but no conditions" — covered by the "no conditions" negative test above.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -183,28 +192,18 @@ describe('MonsterCardModal - condition effect badges', () => {
     expectNoBadge('No OA (Crit)');
   });
 
-  it('renders the Save Disadv badge when riderSaveDisadvantage is reported', () => {
-    conditionEffects.__setComputeReturn({ ...defaultConditionEffects, riderSaveDisadvantage: true });
+  it.each([
+    { flag: 'riderSaveDisadvantage', value: true, label: 'Save Disadv', cls: 'effect-disadvantage' },
+    { flag: 'riderAttackBonus', value: 2, label: '+2 to hit', cls: 'effect-target-adv' },
+    { flag: 'riderCannotOpportunityAttack', value: true, label: 'No OA', cls: 'effect-cannot-act' },
+  ])('renders the $label badge when $flag is $value', ({ flag, value, label, cls }) => {
+    conditionEffects.__setComputeReturn({ ...defaultConditionEffects, [flag]: value });
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
 
-    expectBadge('Save Disadv', 'effect-disadvantage');
+    expectBadge(label, cls);
   });
 
-  it('renders the +N to hit badge with the reported rider attack bonus', () => {
-    conditionEffects.__setComputeReturn({ ...defaultConditionEffects, riderAttackBonus: 2 });
-    render(<MonsterCardModal {...makeProps(makeMonster())} />);
-
-    expectBadge('+2 to hit', 'effect-target-adv');
-  });
-
-  it('renders the No OA badge when riderCannotOpportunityAttack is reported', () => {
-    conditionEffects.__setComputeReturn({ ...defaultConditionEffects, riderCannotOpportunityAttack: true });
-    render(<MonsterCardModal {...makeProps(makeMonster())} />);
-
-    expectBadge('No OA', 'effect-cannot-act');
-  });
-
-  it('renders the Inspiring Move badge when inspiringMovementNoOA is true', () => {
+  it('renders the Insp. Move badge when inspiringMovementNoOA is true', () => {
     useRuntimeState.__setInspiringMoveNoOA(true);
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
 
@@ -268,18 +267,14 @@ describe('MonsterCardModal - condition effect badges', () => {
 describe('MonsterCardModal - speedy passive badges', () => {
   beforeEach(resetState);
 
-  it('renders the OA Disadv badge when the creature has the passive and conditions', () => {
-    const monsterCharacter = makeMonsterCharacter(['opportunity_attacks_disadvantage']);
+  it.each([
+    { passive: 'opportunity_attacks_disadvantage', label: 'OA Disadv', cls: 'effect-disadvantage' },
+    { passive: 'ignore_difficult_terrain_on_dash', label: 'No Difficult Terrain on Dash', cls: 'effect-cannot-act' },
+  ])('renders the $label badge when the creature has the $passive passive and conditions', ({ passive, label, cls }) => {
+    const monsterCharacter = makeMonsterCharacter([passive]);
     render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [monsterCharacter] })} />);
 
-    expectBadge('OA Disadv', 'effect-disadvantage');
-  });
-
-  it('renders the No Difficult Terrain on Dash badge when the creature has the passive and conditions', () => {
-    const monsterCharacter = makeMonsterCharacter(['ignore_difficult_terrain_on_dash']);
-    render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [monsterCharacter] })} />);
-
-    expectBadge('No Difficult Terrain on Dash', 'effect-cannot-act');
+    expectBadge(label, cls);
   });
 
   it('renders both speedy badges together when both passives are present', () => {
@@ -295,18 +290,6 @@ describe('MonsterCardModal - speedy passive badges', () => {
 
   it('does not render speedy badges when the creature has conditions but lacks the passives', () => {
     render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [makeMonsterCharacter([])] })} />);
-
-    expectNoBadge('OA Disadv');
-    expectNoBadge('No Difficult Terrain on Dash');
-  });
-
-  it('does not render speedy badges when the creature has the passives but no conditions', () => {
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [] });
-    const monsterCharacter = makeMonsterCharacter([
-      'opportunity_attacks_disadvantage',
-      'ignore_difficult_terrain_on_dash',
-    ]);
-    render(<MonsterCardModal {...makeProps(makeMonster(), { characters: [monsterCharacter] })} />);
 
     expectNoBadge('OA Disadv');
     expectNoBadge('No Difficult Terrain on Dash');

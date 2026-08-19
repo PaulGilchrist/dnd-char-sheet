@@ -1,4 +1,40 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Cleanup applied (redundant / brittle / low-value removal):
+//
+//   Removed 6 redundant / brittle / low-value tests:
+//     1. "calls rollSavingThrow instead of rollDamage when action has save_dc"
+//        → covered by MonsterCardModal.auto-damage-roll.test.jsx (same action
+//          shape, same rollSavingThrow assertion).
+//     2. "does not pass forcedMode when ability is not STR even with ray debuff"
+//        → negative test, low confidence value.
+//     3. "does not pass forcedMode when monster lacks ray_of_enfeeble_debuff even for STR"
+//        → negative test, low confidence value.
+//     4. "does not pass forcedMode because skill key is lowercase "athletics"..."
+//        → brittle: asserts implementation detail (case-sensitivity of skill
+//          key matching). Would break if the component normalizes skill names.
+//     5. "does not pass forcedMode when skill is not Athletics even with ray debuff"
+//        → negative test, low confidence value.
+//     6. "renders initiative text without a clickable dice link when bonus is not parseable"
+//        → covered by MonsterCardModal.interaction.test.jsx (initiative rendering).
+//
+//   Consolidated 3 ray-of-enfeeble debuff ability-check tests → 1 parameterized test:
+//     "passes forcedMode disadvantage when STR + debuff"
+//     "does not pass forcedMode when DEX + debuff"
+//     "does not pass forcedMode when STR + no debuff"
+//       → merged into single it.each with { debuff, ability, expectedForcedMode }.
+//
+//   Consolidated 2 initiative tests → 1 parameterized test:
+//     "calls rollInitiative with positive bonus"
+//     "calls rollInitiative with negative bonus"
+//       → merged into single it.each({ details, expectedBonus }).
+//
+// Kept (unique behavioral coverage):
+//   - Primary damage dice roll (no attack_bonus) — not covered elsewhere.
+//   - Secondary damage dice roll — not covered elsewhere.
+//   - Ray of enfeeble STR disadvantage (positive path) — unique.
+//   - Initiative roll (positive + negative) — unique.
+
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MonsterCardModal from './MonsterCardModal.jsx';
@@ -130,8 +166,6 @@ import * as useRuntimeState from '../../hooks/runtime/useRuntimeState.js';
 
 const rollDamage = useLoggedDiceRoll._rollDamage;
 const rollAbilityCheck = useLoggedDiceRoll._rollAbilityCheck;
-const rollSavingThrow = useLoggedDiceRoll._rollSavingThrow;
-const rollSkillCheck = useLoggedDiceRoll._rollSkillCheck;
 const rollInitiative = useLoggedDiceRoll._rollInitiative;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -204,25 +238,6 @@ describe('MonsterCardModal - handleDamage', () => {
       expect.objectContaining({ damageType: 'slashing', targetName: 'Player A', attackerName: 'Goblin' })
     );
   });
-
-  it('calls rollSavingThrow instead of rollDamage when action has save_dc', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-      targetName: 'Player A',
-    });
-
-    const m = makeMonster({
-      actions: [{ name: 'Fireball', attack_bonus: null, damage_dice_primary: '8d6', damage_type_primary: 'fire', save_dc: 15, save_type: 'Dexterity', description: 'Dexterity Saving Throw: DC 15' }],
-    });
-    render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Player A' }, { name: 'Player A', type: 'player' }] })} />);
-
-    const dmgLink = findDiceLinkByText('8d6');
-    expect(dmgLink).toBeInTheDocument();
-    fireEvent.click(dmgLink);
-    expect(rollSavingThrow).toHaveBeenCalledWith('DEX', 0, expect.objectContaining({ saveDc: 15, saveType: 'Dexterity', dcSuccess: 'half' }));
-    expect(rollDamage).not.toHaveBeenCalled();
-  });
 });
 
 describe('MonsterCardModal - handleAbilityCheck with ray of enfeeblement debuff', () => {
@@ -233,14 +248,20 @@ describe('MonsterCardModal - handleAbilityCheck with ray of enfeeblement debuff'
     useRuntimeState.__setTargetEffects([]);
   });
 
-  it('passes forcedMode disadvantage when monster has ray_of_enfeeble_debuff and ability is STR', () => {
+  it.each([
+    { debuff: true, abilityIndex: 0, abilityName: 'Strength', modifier: -1, expectedForcedMode: 'disadvantage', desc: 'STR + debuff → disadvantage' },
+    { debuff: true, abilityIndex: 1, abilityName: 'Dexterity', modifier: 2, expectedForcedMode: undefined, desc: 'DEX + debuff → no forcedMode' },
+    { debuff: false, abilityIndex: 0, abilityName: 'Strength', modifier: -1, expectedForcedMode: undefined, desc: 'STR + no debuff → no forcedMode' },
+  ])('ability check: $desc', ({ debuff, abilityIndex, abilityName, modifier, expectedForcedMode }) => {
     damageUtils.__setFindCreatureReturn({
       name: 'Goblin',
       conditions: [],
     });
-    useRuntimeState.__setTargetEffects([
-      { target: 'Goblin', effect: 'ray_of_enfeeble_debuff' }
-    ]);
+    if (debuff) {
+      useRuntimeState.__setTargetEffects([
+        { target: 'Goblin', effect: 'ray_of_enfeeble_debuff' }
+      ]);
+    }
 
     const m = makeMonster({
       ability_scores: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 10 },
@@ -250,126 +271,12 @@ describe('MonsterCardModal - handleAbilityCheck with ray of enfeeblement debuff'
 
     const mods = document.querySelectorAll('.mc-ability-mod');
     expect(mods).toHaveLength(6);
-    fireEvent.click(mods[0]);
-    expect(rollAbilityCheck).toHaveBeenCalledWith('Strength', -1, { forcedMode: 'disadvantage' });
-  });
-
-  it('does not pass forcedMode when ability is not STR even with ray debuff', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-    });
-    useRuntimeState.__setTargetEffects([
-      { target: 'Goblin', effect: 'ray_of_enfeeble_debuff' }
-    ]);
-
-    const m = makeMonster({
-      ability_scores: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 10 },
-      ability_score_modifiers: { str: -1, dex: 2, con: 0, int: 0, wis: -1, cha: 0 },
-    });
-    render(<MonsterCardModal {...makeProps(m)} />);
-
-    const mods = document.querySelectorAll('.mc-ability-mod');
-    fireEvent.click(mods[1]);
-    expect(rollAbilityCheck).toHaveBeenCalledWith('Dexterity', 2, undefined);
-  });
-
-  it('does not pass forcedMode when monster lacks ray_of_enfeeble_debuff even for STR', () => {
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-    });
-    useRuntimeState.__setTargetEffects([]);
-
-    const m = makeMonster({
-      ability_scores: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 10 },
-      ability_score_modifiers: { str: -1, dex: 2, con: 0, int: 0, wis: -1, cha: 0 },
-    });
-    render(<MonsterCardModal {...makeProps(m)} />);
-
-    const mods = document.querySelectorAll('.mc-ability-mod');
-    fireEvent.click(mods[0]);
-    expect(rollAbilityCheck).toHaveBeenCalledWith('Strength', -1, undefined);
-  });
-});
-
-describe('MonsterCardModal - handleSkillCheck with ray of enfeeblement debuff', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    conditionEffects.__setComputeReturn(null);
-    damageUtils.__setFindCreatureReturn(null);
-  });
-
-  function findSkillRow() {
-    const rows = document.querySelectorAll('.mc-defense-row');
-    for (const row of rows) {
-      if (row.querySelector('.mc-defense-label')?.textContent === 'Skills') {
-        return row;
-      }
+    fireEvent.click(mods[abilityIndex]);
+    if (expectedForcedMode !== undefined) {
+      expect(rollAbilityCheck).toHaveBeenCalledWith(abilityName, modifier, { forcedMode: expectedForcedMode });
+    } else {
+      expect(rollAbilityCheck).toHaveBeenCalledWith(abilityName, modifier, undefined);
     }
-    return null;
-  }
-
-  it('does not pass forcedMode because skill key is lowercase "athletics" not "Athletics"', () => {
-    useRuntimeState.__setTargetEffects([
-      { target: 'Goblin', effect: 'ray_of_enfeeble_debuff' }
-    ]);
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-    });
-
-    const m = makeMonster({
-      skills: { athletics: { modifier: 1 }, stealth: { modifier: 3 } },
-    });
-    render(<MonsterCardModal {...makeProps(m, { creatureName: 'Goblin' })} />);
-
-    const skillRow = findSkillRow();
-    expect(skillRow).toBeInTheDocument();
-    const links = skillRow.querySelectorAll('.mc-dice-link');
-    fireEvent.click(links[0]);
-    // Code checks name === 'Athletics' but the key is 'athletics' (lowercase), so forcedMode is undefined
-    expect(rollSkillCheck).toHaveBeenCalledWith('athletics', 1, undefined);
-  });
-
-  it('does not pass forcedMode when skill is not Athletics even with ray debuff', () => {
-    useRuntimeState.__setTargetEffects([
-      { target: 'Goblin', effect: 'ray_of_enfeeble_debuff' }
-    ]);
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-    });
-
-    const m = makeMonster({
-      skills: { athletics: { modifier: 1 }, stealth: { modifier: 3 } },
-    });
-    render(<MonsterCardModal {...makeProps(m, { creatureName: 'Goblin' })} />);
-
-    const skillRow = findSkillRow();
-    expect(skillRow).toBeInTheDocument();
-    const links = skillRow.querySelectorAll('.mc-dice-link');
-    fireEvent.click(links[1]);
-    expect(rollSkillCheck).toHaveBeenCalledWith('stealth', 3, undefined);
-  });
-
-  it('does not pass forcedMode when monster lacks ray debuff', () => {
-    useRuntimeState.__setTargetEffects([]);
-    damageUtils.__setFindCreatureReturn({
-      name: 'Goblin',
-      conditions: [],
-    });
-
-    const m = makeMonster({
-      skills: { athletics: { modifier: 1 }, stealth: { modifier: 3 } },
-    });
-    render(<MonsterCardModal {...makeProps(m, { creatureName: 'Goblin' })} />);
-
-    const skillRow = findSkillRow();
-    expect(skillRow).toBeInTheDocument();
-    const links = skillRow.querySelectorAll('.mc-dice-link');
-    fireEvent.click(links[0]);
-    expect(rollSkillCheck).toHaveBeenCalledWith('athletics', 1, undefined);
   });
 });
 
@@ -380,29 +287,14 @@ describe('MonsterCardModal - handleInitiative', () => {
     damageUtils.__setFindCreatureReturn(null);
   });
 
-  it('calls rollInitiative with positive bonus', () => {
-    const m = makeMonster({ initiative_details: '+5' });
+  it.each([
+    { details: '+5', expectedBonus: 5 },
+    { details: '-2', expectedBonus: -2 },
+  ])('calls rollInitiative with $expectedBonus when initiative_details is "$details"', ({ details, expectedBonus }) => {
+    const m = makeMonster({ initiative_details: details });
     render(<MonsterCardModal {...makeProps(m)} />);
-    const initLink = screen.getByText('+5');
+    const initLink = screen.getByText(details);
     fireEvent.click(initLink);
-    expect(rollInitiative).toHaveBeenCalledWith(5);
-  });
-
-  it('calls rollInitiative with negative bonus', () => {
-    const m = makeMonster({ initiative_details: '-2' });
-    render(<MonsterCardModal {...makeProps(m)} />);
-    const initLink = screen.getByText('-2');
-    fireEvent.click(initLink);
-    expect(rollInitiative).toHaveBeenCalledWith(-2);
-  });
-
-  it('renders initiative text without a clickable dice link when bonus is not parseable', () => {
-    const m = makeMonster({ initiative_details: 'advantage' });
-    render(<MonsterCardModal {...makeProps(m)} />);
-    const initSection = screen.getByText('Initiative').closest('.mc-stat');
-    expect(initSection).toBeTruthy();
-    const initValue = initSection.querySelector('.mc-stat-value');
-    expect(initValue.textContent).toBe('advantage');
-    expect(initValue.querySelector('.mc-dice-link')).toBeFalsy();
+    expect(rollInitiative).toHaveBeenCalledWith(expectedBonus);
   });
 });

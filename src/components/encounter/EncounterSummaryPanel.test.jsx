@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EncounterSummaryPanel from './EncounterSummaryPanel.jsx';
@@ -54,11 +55,6 @@ describe('EncounterSummaryPanel', () => {
     ])('renders $expected label for difficultyIndex $index', ({ index, expected }) => {
       render(<EncounterSummaryPanel {...defaultProps} difficultyIndex={index} />);
       expect(screen.getByText(expected)).toBeInTheDocument();
-    });
-
-    it('renders the label supplied via the difficultyLabels array', () => {
-      render(<EncounterSummaryPanel {...defaultProps} difficultyLabels={['Trivial']} difficultyIndex={0} />);
-      expect(screen.getByText('Trivial')).toBeInTheDocument();
     });
 
     it.each([

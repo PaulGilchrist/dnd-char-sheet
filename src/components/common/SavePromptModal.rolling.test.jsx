@@ -1,7 +1,14 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // SavePromptModal — Rolling Mechanics
 // Tests behavioral outcomes of the d20 rolling system: disadvantage, advantage,
 // normal rolls, and save resolution with different bonus sources.
+//
+// Cleanup (@cleaned-by-ai):
+//   - Removed "rolls two d20s and takes the minimum for DEX saves when target is charmed"
+//     (fully covered by evasion-effects.test.jsx "applies disadvantage for DEX saves when target is charmed")
+//   - Removed "rolls two d20s and takes the minimum for DEX saves when target has Otto's Irresistible Dance"
+//     (fully covered by evasion-effects.test.jsx "applies disadvantage for DEX saves when target has Otto's Irresistible Dance")
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -127,76 +134,6 @@ describe('SavePromptModal — rolling', () => {
     // Minimum of 18 and 5 is 5; no character found so bonus is 0; 5 < 14 DC = failure
     expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
     expectSaveTotal(5, 14);
-  });
-
-  // ── Disadvantage: charmed condition on DEX save ──
-
-  it('rolls two d20s and takes the minimum for DEX saves when target is charmed', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'testTarget' && key === 'activeConditions') return ['charmed', 'speed_zero'];
-      return null;
-    });
-    rollD20.mockReturnValueOnce(18).mockReturnValueOnce(5);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger-dex');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Disadvantage/i)).toBeInTheDocument();
-    });
-
-    expect(rollD20).toHaveBeenCalledTimes(2);
-    expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
-  });
-
-  // ── Disadvantage: Otto's Irresistible Dance on DEX save ──
-
-  it('rolls two d20s and takes the minimum for DEX saves when target has Otto\'s Irresistible Dance', async () => {
-    getRuntimeValue.mockImplementation((name, key) => {
-      if (name === 'campaign' && key === 'targetEffects') return [{ target: 'testTarget', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }];
-      return null;
-    });
-    rollD20.mockReturnValueOnce(18).mockReturnValueOnce(5);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger-dex');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Disadvantage/i)).toBeInTheDocument();
-    });
-
-    expect(rollD20).toHaveBeenCalledTimes(2);
-    expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
   });
 
   // ── No disadvantage: non-DEX save with charmed condition ──

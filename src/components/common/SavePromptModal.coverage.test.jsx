@@ -1,5 +1,6 @@
 // @improved-by-ai
-// SavePromptModal — Additional coverage for rerolls, evasion overlay, and dismiss behavior
+// @cleaned-by-ai
+// SavePromptModal — Additional coverage for evasion overlay and prompt queue advancement
 // These tests provide deeper coverage of edge cases already tested in other files.
 //
 // Quality improvements:
@@ -10,6 +11,10 @@
 //   - Added missing tests: prompt queue advancement after clear, Guarded Mind reroll with proper state verification
 //   - Fixed evasion overlay tests to verify exact DOM state changes
 //   - Removed redundant mocking in beforeEach for circleOfPowerHandler
+//
+// Cleanup (@cleaned-by-ai):
+//   - Removed duplicate Guarded Mind reroll test (covered by rerolls.test.jsx "overrides failed save to success when Guarded Mind is used")
+//   - Removed duplicate Disciplined Survivor reroll test (covered by rerolls.test.jsx "rerolls save and decrements focus points when Disciplined Survivor is used")
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
@@ -17,9 +22,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SavePromptModal from './SavePromptModal.jsx';
 import { rollD20 } from '../../services/dice/diceRoller.js';
 import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
-import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import * as circleOfPowerHandler from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
-import * as savePromptService from '../../services/combat/conditions/savePromptService.js';
 import { setupDefaults, cleanupDefaults } from './SavePromptModal.test-utils.jsx';
 
 // ── Mocks ──
@@ -104,135 +108,6 @@ vi.mock('./Subscriber.jsx', () => {
 describe('SavePromptModal — Additional Coverage', () => {
   beforeEach(() => setupDefaults(rollD20, computeAuraBonus, getRuntimeValue));
   afterEach(cleanupDefaults);
-
-  // ── Guarded Mind reroll — positive path with state verification ──
-
-  it('uses Guarded Mind to override failed save and marks it as used', async () => {
-    rollD20.mockReturnValue(1);
-    getRuntimeValue.mockImplementation((name, key, campaign) => {
-      if (key === '_guardedMind_usedRest' && campaign === 'test-campaign') return false;
-      if (key === 'activeConditions' && campaign === 'test-campaign') return [];
-      return null;
-    });
-
-    const targetChar = {
-      name: 'testTarget',
-      level: 1,
-      class: { class_levels: [] },
-      computedStats: {
-        abilities: [{ name: 'Constitution', bonus: 3 }],
-        evasionEffects: [],
-        automation: {
-          passives: [],
-          specialActions: [{ type: 'auto_reroll', effect: 'override_fail_to_success', oncePer: 'short_or_long_rest' }],
-        },
-      },
-      saveModifiers: [],
-    };
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[targetChar]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger-wis');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
-    });
-
-    expect(screen.getByRole('button', { name: 'Guarded Mind' })).toBeInTheDocument();
-
-    const guardedMindBtn = screen.getByRole('button', { name: 'Guarded Mind' });
-    fireEvent.click(guardedMindBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
-    });
-
-    // Verify the reroll state was set
-    expect(setRuntimeValue).toHaveBeenCalledWith('testTarget', '_guardedMind_usedRest', 'rest', 'test-campaign');
-    // Verify sendSaveResult was called with the Guarded Mind detail
-    expect(savePromptService.sendSaveResult).toHaveBeenCalledWith('test-campaign', 'testTarget', expect.objectContaining({
-      bonusDetail: expect.stringContaining('Guarded Mind'),
-    }));
-    // Verify the reroll button is no longer shown after use
-    expect(screen.queryByRole('button', { name: 'Guarded Mind' })).not.toBeInTheDocument();
-  });
-
-  // ── Disciplined Survivor reroll — verify focus points consumed ──
-
-  it('consumes focus points when Disciplined Survivor reroll is used', async () => {
-    rollD20
-      .mockReturnValueOnce(1)
-      .mockReturnValue(15);
-    getRuntimeValue.mockImplementation((name, key, campaign) => {
-      if (key === 'activeBuffs' && campaign === 'test-campaign') return [{ damageBonusExpression: 'rage_damage' }];
-      if (key === 'fanaticalFocusUsed' && campaign === 'test-campaign') return false;
-      if (key === 'activeConditions' && campaign === 'test-campaign') return [];
-      if (key === 'focusPoints' && campaign === 'test-campaign') return 2;
-      if (key === 'livingLegendActive' && campaign === 'test-campaign') return false;
-      if (key === 'indomitableUses' && campaign === 'test-campaign') return 0;
-      return null;
-    });
-    const targetChar = {
-      name: 'testTarget',
-      level: 1,
-      class: { class_levels: [{ rage_damage: 2, focus_points: 3 }] },
-      computedStats: {
-        abilities: [{ name: 'Constitution', bonus: 3 }],
-        evasionEffects: [],
-        automation: { passives: [] },
-      },
-      saveModifiers: [],
-    };
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[targetChar]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger-rawdamage-reroll');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE FAILURE/)).toBeInTheDocument();
-    });
-
-    expect(screen.getByRole('button', { name: 'Reroll Save (1 Focus Point)' })).toBeInTheDocument();
-
-    const dsBtn = screen.getByRole('button', { name: 'Reroll Save (1 Focus Point)' });
-    fireEvent.click(dsBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
-    });
-
-    // Verify focus points were decremented from 2 to 1
-    expect(setRuntimeValue).toHaveBeenCalledWith('testTarget', 'focusPoints', 1, 'test-campaign');
-    expect(savePromptService.sendSaveResult).toHaveBeenCalled();
-  });
 
   // ── Evasion overlay: confirm selection ──
 

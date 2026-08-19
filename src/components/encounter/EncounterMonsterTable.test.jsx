@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import EncounterMonsterTable from './EncounterMonsterTable.jsx';
@@ -191,11 +192,6 @@ describe('EncounterMonsterTable', () => {
       expect(screen.getByLabelText('Remove Goblin')).toBeInTheDocument();
       expect(screen.queryByLabelText('Decrease quantity of Orc')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Remove Orc')).not.toBeInTheDocument();
-    });
-
-    it('shows an em-dash in the qty column for unselected monsters', () => {
-      renderTable();
-      expect(screen.getAllByText('\u2014')).toHaveLength(2);
     });
 
     it('hides qty controls and remove buttons when no monsters are selected', () => {

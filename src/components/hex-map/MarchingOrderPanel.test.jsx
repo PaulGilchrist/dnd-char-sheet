@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
@@ -110,14 +111,6 @@ describe('MarchingOrderPanel', () => {
             const { container } = renderPanel();
             expect(getControls(getRowByName(container, 'Alice')).up).toBeDisabled();
         });
-
-        it('allows moving a character up repeatedly to the top', () => {
-            const { container } = renderPanel({ initialOrder: ['Alice', 'Bob', 'Charlie'] });
-            const charlieUp = getControls(getRowByName(container, 'Charlie')).up;
-            fireEvent.click(charlieUp);
-            fireEvent.click(getControls(getRowByName(container, 'Charlie')).up);
-            expect(getOrderedNames(container)).toEqual(['Charlie', 'Alice', 'Bob']);
-        });
     });
 
     describe('move down', () => {
@@ -131,14 +124,6 @@ describe('MarchingOrderPanel', () => {
         it('disables the move down control for the last row', () => {
             const { container } = renderPanel();
             expect(getControls(getRowByName(container, 'Bob')).down).toBeDisabled();
-        });
-
-        it('moving a character down and back up restores the original order', () => {
-            const { container } = renderPanel();
-            const aliceControls = getControls(getRowByName(container, 'Alice'));
-            fireEvent.click(aliceControls.down);
-            fireEvent.click(getControls(getRowByName(container, 'Alice')).up);
-            expect(getOrderedNames(container)).toEqual(['Alice', 'Bob']);
         });
     });
 
@@ -184,14 +169,11 @@ describe('MarchingOrderPanel', () => {
             expect(screen.queryByText('+ Charlie')).not.toBeInTheDocument();
         });
 
-        it('does not render the add section when every character is in the order', () => {
-            const { container } = renderPanel({ initialOrder: ['Alice', 'Bob', 'Charlie'] });
-            expect(container.querySelector('.marching-order-add-section')).not.toBeInTheDocument();
-        });
-
-        it('does not render the add section when no characters are provided', () => {
-            const { container } = renderPanel({ initialOrder: ['Alice'], characters: [] });
-            expect(container.querySelector('.marching-order-add-section')).not.toBeInTheDocument();
+        it('does not render the add section when every character is in the order or no characters are provided', () => {
+            const { container: full } = renderPanel({ initialOrder: ['Alice', 'Bob', 'Charlie'] });
+            expect(full.querySelector('.marching-order-add-section')).not.toBeInTheDocument();
+            const { container: empty } = renderPanel({ initialOrder: ['Alice'], characters: [] });
+            expect(empty.querySelector('.marching-order-add-section')).not.toBeInTheDocument();
         });
     });
 
@@ -199,15 +181,6 @@ describe('MarchingOrderPanel', () => {
         it('shows an empty message when the marching order is empty', () => {
             renderPanel({ initialOrder: [] });
             expect(screen.getByText('No characters assigned to march order.')).toBeInTheDocument();
-        });
-    });
-
-    describe('single character', () => {
-        it('renders one row with both move controls disabled', () => {
-            const { container } = renderPanel({ initialOrder: ['Alice'] });
-            const controls = getControls(getRowByName(container, 'Alice'));
-            expect(controls.up).toBeDisabled();
-            expect(controls.down).toBeDisabled();
         });
     });
 

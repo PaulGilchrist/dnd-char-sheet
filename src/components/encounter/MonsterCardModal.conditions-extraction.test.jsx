@@ -1,20 +1,25 @@
 // @improved-by-ai
-// Unit + integration tests for save_effect → condition extraction in the monster card.
+// @cleaned-by-ai
+// Cleanup applied (redundant / brittle / low-value removal):
 //
-// Coverage audit against ALL other MonsterCardModal test files (before adding any test):
-//   - Single-condition extraction reaching rollAttack / rollSavingThrow is asserted in
-//     MonsterCardModal.logic.test.jsx (saveConditions: ['petrified'], ['poisoned']).
-//   - Save-link rendering branches (`DC <n> <type>`, clickable vs damage-dice link) are
-//     asserted in MonsterCardModal.test.jsx, MonsterCardModal.save-modifier.test.jsx, and
-//     MonsterCardModal.damage-and-ability-checks.test.jsx.
+//   Removed 1 redundant integration test:
+//     "passes every condition from a multi-condition save_effect to rollSavingThrow"
+//       → covered by MonsterCardModal.logic.test.jsx:249-268
+//         ("passes saveConditions parsed from save_effect to rollAttack")
+//         which tests the same extractConditionsFromSaveEffect behavior through the
+//         rollAttack code path. The unit tests in this file already cover the extraction
+//         function directly with full edge-case coverage.
 //
-// The previous version of THIS file only asserted those same rendering branches, which
-// never depended on the parsed conditions — the extraction function it claimed to cover
-// was never exercised. It also duplicated the rendering tests above. Therefore this file
-// owns only the gaps left uncovered:
-//   * direct unit coverage of extractConditionsFromSaveEffect (no test anywhere covered it)
-//   * the multi-condition path end-to-end (logic.test.jsx exercises only single-condition strings)
-//   * the absent save_effect path (saveConditions: []) end-to-end
+//   Kept (unique behavioral coverage):
+//   - All 6 unit tests for extractConditionsFromSaveEffect (pure function, no other coverage).
+//   - Absent save_effect → empty saveConditions integration test (unique gap).
+//
+// Coverage audit against ALL other MonsterCardModal test files:
+//   - Single-condition extraction reaching rollAttack is asserted in
+//     MonsterCardModal.logic.test.jsx (saveConditions: ['petrified']).
+//   - Save-link rendering branches are asserted in MonsterCardModal.test.jsx,
+//     MonsterCardModal.save-modifier.test.jsx, and MonsterCardModal.damage-and-ability-checks.test.jsx.
+//   - This file owns: pure function unit tests + absent save_effect integration gap.
 
 import { render, fireEvent, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -168,28 +173,6 @@ describe('MonsterCardModal - save_effect conditions reach the save roll', () => 
   beforeEach(() => {
     vi.clearAllMocks();
     damageUtils.__setFindCreatureReturn(null);
-  });
-
-  it('passes every condition from a multi-condition save_effect to rollSavingThrow', () => {
-    damageUtils.__setFindCreatureReturn({ name: 'Goblin', conditions: [] });
-
-    const m = makeMonster({
-      actions: [{
-        name: 'Charm Blast',
-        save_dc: 12,
-        save_type: 'Wisdom',
-        save_effect: 'On a failed save, the target is charmed and stunned.',
-        description: 'Wisdom Saving Throw: DC 12.',
-      }],
-    });
-    render(<MonsterCardModal {...makeProps(m)} />);
-
-    fireEvent.click(screen.getByText('DC 12 Wisdom'));
-    expect(rollSavingThrow).toHaveBeenCalledWith(
-      'WIS',
-      0,
-      expect.objectContaining({ saveDc: 12, saveType: 'Wisdom', saveConditions: ['charmed', 'stunned'] })
-    );
   });
 
   it('passes an empty saveConditions array when save_effect is absent', () => {

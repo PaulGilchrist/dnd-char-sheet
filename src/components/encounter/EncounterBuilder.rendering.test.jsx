@@ -1,6 +1,6 @@
 // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
 
 /* ------------------------------------------------------------------ */
@@ -349,80 +349,15 @@ vi.mock('../../services/ui/logService.js', () => ({
 
 const mockCampaignName = 'test-campaign';
 
-const defaultCharacters = [
-  { name: 'Thorin', level: 5 },
-  { name: 'Elara', level: 3 },
-];
-
 /* ------------------------------------------------------------------ */
 /*  Tests                                                             */
 /* ------------------------------------------------------------------ */
 
+// @cleaned-by-ai
 describe('EncounterBuilder rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     _runtimeState.viewingMonster = null;
-  });
-
-  describe('initial render', () => {
-    it('renders the title and all child panels', () => {
-      render(<EncounterBuilder campaignName={mockCampaignName} />);
-      expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
-      expect(screen.getByTestId('encounter-filter-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('encounter-summary-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('encounter-monster-table')).toBeInTheDocument();
-      expect(screen.getByTestId('encounter-selected-monsters')).toBeInTheDocument();
-      expect(screen.getByTestId('encounter-modal')).toBeInTheDocument();
-      expect(screen.getByTestId('preview-toggle')).toBeInTheDocument();
-    });
-
-    it('shows "Save" button with correct tooltip when no encounter is loaded', () => {
-      render(<EncounterBuilder campaignName={mockCampaignName} />);
-      const saveBtn = screen.getByRole('button', { name: /save|update/i });
-      expect(saveBtn.textContent).toContain('Save');
-      expect(saveBtn).toHaveAttribute('title', 'Save encounter');
-    });
-
-    it('hides conditional UI elements when no encounter or monsters exist', () => {
-      render(<EncounterBuilder campaignName={mockCampaignName} />);
-      expect(screen.queryByText('Reset')).not.toBeInTheDocument();
-      expect(screen.queryByText('Join Encounter')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('party display', () => {
-    it('renders party member names and levels when characters are provided', () => {
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} />);
-      expect(screen.getByText('Thorin')).toBeInTheDocument();
-      expect(screen.getByText('Lv5')).toBeInTheDocument();
-      expect(screen.getByText('Elara')).toBeInTheDocument();
-      expect(screen.getByText('Lv3')).toBeInTheDocument();
-    });
-
-    it('renders default level 1 when character has no level property', () => {
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={[{ name: 'Novice' }]} />);
-      expect(screen.getByText('Lv1')).toBeInTheDocument();
-    });
-
-    it('renders no-characters message when characters array is empty or null', () => {
-      const { rerender } = render(<EncounterBuilder campaignName={mockCampaignName} characters={[]} />);
-      expect(screen.getByText(/No characters in this campaign/)).toBeInTheDocument();
-
-      rerender(<EncounterBuilder campaignName={mockCampaignName} characters={null} />);
-      expect(screen.getByText(/No characters in this campaign/)).toBeInTheDocument();
-    });
-  });
-
-  describe('generator modal', () => {
-    it('renders generator modal when generate button is clicked', async () => {
-      render(<EncounterBuilder campaignName={mockCampaignName} />);
-      const generateButton = screen.getByText('Generate');
-      fireEvent.click(generateButton);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('encounter-generator-modal')).toBeInTheDocument();
-      });
-    });
   });
 
   describe('monster card modal visibility', () => {

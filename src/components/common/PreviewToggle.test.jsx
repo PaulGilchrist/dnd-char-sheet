@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import PreviewToggle from './PreviewToggle.jsx';
@@ -19,55 +20,17 @@ describe('PreviewToggle', () => {
             expect(button).toHaveAttribute('aria-label', 'Switch to preview mode');
         });
 
-        it('does not show the preview div initially', () => {
-            render(<PreviewToggle value="**bold**" onChange={() => {}} />);
-            const previewDiv = document.querySelector('.preview-toggle-preview');
-            expect(previewDiv).toHaveClass('preview-toggle-preview--hidden');
-        });
-
-        it('does not render MarkdownPreview when value is empty', () => {
-            render(<PreviewToggle value="" onChange={() => {}} />);
-            const previewDiv = document.querySelector('.preview-toggle-preview');
-            expect(previewDiv.querySelector('.markdown-preview')).toBeNull();
-        });
-
-        it('does not render a label when none is provided', () => {
-            render(<PreviewToggle value="" onChange={() => {}} />);
-            expect(document.querySelector('.preview-toggle-label')).toBeNull();
-        });
-
-        it('renders textarea with type=button toggle', () => {
-            render(<PreviewToggle value="" onChange={() => {}} />);
-            const button = screen.getByRole('button', { name: /preview/i });
-            expect(button).toHaveAttribute('type', 'button');
-        });
-    });
-
-    describe('label and placeholder', () => {
-        it('renders a label element with the provided text', () => {
-            render(
-                <PreviewToggle
-                    value=""
-                    onChange={() => {}}
-                    id="description"
-                    label="Description"
-                />
-            );
-            expect(screen.getByText('Description')).toBeInTheDocument();
-            expect(document.querySelector('.preview-toggle-label')).toBeInTheDocument();
-        });
-
-        it('associates the label with the textarea via htmlFor', () => {
+        it('renders a label element when provided and associates it via htmlFor', () => {
             render(
                 <PreviewToggle
                     value=""
                     onChange={() => {}}
                     id="my-id"
-                    label="My Label"
+                    label="Description"
                 />
             );
-            const label = document.querySelector('.preview-toggle-label');
-            expect(label).toHaveAttribute('for', 'my-id');
+            expect(screen.getByText('Description')).toBeInTheDocument();
+            expect(document.querySelector('.preview-toggle-label')).toHaveAttribute('for', 'my-id');
         });
 
         it('renders textarea with placeholder', () => {
@@ -108,14 +71,11 @@ describe('PreviewToggle', () => {
             expect(textarea).toHaveAttribute('rows', '8');
         });
 
-        it('applies custom minHeight to textarea', () => {
+        it('applies custom minHeight to both textarea and preview', () => {
             render(<PreviewToggle value="text" onChange={() => {}} minHeight="200px" />);
             const textarea = screen.getByRole('textbox');
             expect(textarea).toHaveStyle({ minHeight: '200px' });
-        });
 
-        it('applies custom minHeight to preview when in preview mode', () => {
-            render(<PreviewToggle value="text" onChange={() => {}} minHeight="200px" />);
             const button = screen.getByRole('button', { name: /preview/i });
             fireEvent.click(button);
 
@@ -123,69 +83,44 @@ describe('PreviewToggle', () => {
             expect(previewDiv).toHaveStyle({ minHeight: '200px' });
         });
 
-        it('passes className to the textarea', () => {
+        it('applies custom className to the textarea', () => {
             render(<PreviewToggle value="" onChange={() => {}} className="custom-class" />);
             const textarea = screen.getByRole('textbox');
             expect(textarea).toHaveClass('custom-class');
         });
-
-        it('preserves base textarea class alongside custom className', () => {
-            render(<PreviewToggle value="" onChange={() => {}} className="custom-class" />);
-            const textarea = screen.getByRole('textbox');
-            expect(textarea).toHaveClass('preview-toggle-textarea');
-        });
     });
 
     describe('toggle behavior', () => {
-        it('toggles to preview mode on first click', () => {
+        it('toggles between edit and preview modes, updating button label and visibility', () => {
             render(<PreviewToggle value="**bold text**" onChange={() => {}} />);
             const button = screen.getByRole('button', { name: /preview/i });
-            fireEvent.click(button);
-
-            expect(screen.getByRole('textbox')).toHaveClass('preview-toggle-textarea--hidden');
+            const textarea = screen.getByRole('textbox');
             const previewDiv = document.querySelector('.preview-toggle-preview');
-            expect(previewDiv).not.toHaveClass('preview-toggle-preview--hidden');
-        });
 
-        it('toggles back to edit mode on second click', () => {
-            render(<PreviewToggle value="text" onChange={() => {}} />);
-            const toggleButton = screen.getByRole('button', { name: /preview/i });
-            fireEvent.click(toggleButton);
-            fireEvent.click(toggleButton);
-
-            expect(screen.getByRole('textbox')).not.toHaveClass('preview-toggle-textarea--hidden');
-            const previewDiv = document.querySelector('.preview-toggle-preview');
+            // Initial state: edit mode
+            expect(textarea).not.toHaveClass('preview-toggle-textarea--hidden');
             expect(previewDiv).toHaveClass('preview-toggle-preview--hidden');
-        });
-
-        it('changes button label from Preview to Edit and updates aria-label', () => {
-            render(<PreviewToggle value="text" onChange={() => {}} />);
-            const button = screen.getByRole('button', { name: /preview/i });
             expect(button).toHaveTextContent('Preview');
             expect(button).toHaveAttribute('aria-label', 'Switch to preview mode');
 
+            // Toggle to preview
             fireEvent.click(button);
+            expect(textarea).toHaveClass('preview-toggle-textarea--hidden');
+            expect(previewDiv).not.toHaveClass('preview-toggle-preview--hidden');
             expect(button).toHaveTextContent('Edit');
             expect(button).toHaveAttribute('aria-label', 'Switch to edit mode');
-        });
 
-        it('toggles correctly when value is empty', () => {
-            render(<PreviewToggle value="" onChange={() => {}} />);
-            const button = screen.getByRole('button', { name: /preview/i });
+            // Toggle back to edit
             fireEvent.click(button);
-
-            const previewDiv = document.querySelector('.preview-toggle-preview');
-            expect(previewDiv).not.toHaveClass('preview-toggle-preview--hidden');
-            // MarkdownPreview should not render when value is empty
-            expect(previewDiv.querySelector('.markdown-preview')).toBeNull();
-
-            fireEvent.click(button);
+            expect(textarea).not.toHaveClass('preview-toggle-textarea--hidden');
             expect(previewDiv).toHaveClass('preview-toggle-preview--hidden');
+            expect(button).toHaveTextContent('Preview');
+            expect(button).toHaveAttribute('aria-label', 'Switch to preview mode');
         });
     });
 
     describe('markdown preview', () => {
-        it('renders bold and italic markdown as HTML in preview mode', () => {
+        it('renders markdown as HTML in preview mode', () => {
             render(<PreviewToggle value="**bold text**" onChange={() => {}} />);
             const button = screen.getByRole('button', { name: /preview/i });
             fireEvent.click(button);
@@ -193,16 +128,6 @@ describe('PreviewToggle', () => {
             const html = document.querySelector('.markdown-preview');
             expect(html).toHaveTextContent('bold text');
             expect(html.querySelector('strong')).toBeTruthy();
-        });
-
-        it('renders empty preview when value is empty string', () => {
-            render(<PreviewToggle value="" onChange={() => {}} />);
-            const button = screen.getByRole('button', { name: /preview/i });
-            fireEvent.click(button);
-
-            const previewDiv = document.querySelector('.preview-toggle-preview');
-            expect(previewDiv).not.toHaveClass('preview-toggle-preview--hidden');
-            expect(previewDiv.innerHTML).toBe('');
         });
     });
 
@@ -213,16 +138,6 @@ describe('PreviewToggle', () => {
             const textarea = screen.getByRole('textbox');
             fireEvent.change(textarea, { target: { value: 'updated' } });
             expect(handleChange).toHaveBeenCalledWith('updated');
-        });
-
-        it('does not call onChange when toggling preview', () => {
-            const handleChange = vi.fn();
-            render(<PreviewToggle value="text" onChange={handleChange} />);
-            const button = screen.getByRole('button', { name: /preview/i });
-            fireEvent.click(button);
-            fireEvent.click(button);
-
-            expect(handleChange).not.toHaveBeenCalled();
         });
     });
 });

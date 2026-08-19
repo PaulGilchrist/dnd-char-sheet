@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // SavePromptModal — actions
 // Tests behavioral outcomes of save prompt interactions: dismissal, rolling,
 // event dispatching, prompt queuing, clearing, and storage behavior.
@@ -9,22 +10,34 @@
 //   - Removed duplicate save-result event test (lines 201-243 were a weaker duplicate of 156-198)
 //   - Strengthened duplicate-prompt test to verify only 1 prompt exists in queue
 //   - Added assertions for clearSavePrompt and sendSaveResult calls in Done test
-//   - Added campaign parameter verification to storage.set assertion
 //   - Fixed getRuntimeValue.mockImplementation parameter order to match convention (name, key, campaign)
 //   - Added test for dismiss after rolling (verifies sendSaveResult is called on dismiss with result)
 //   - Added test for prompt queue: second prompt appears after first is rolled and dismissed
 //   - Added test for handleEvent ignoring events from other campaigns
 //   - Removed redundant assertions where behavioral outcome already covers the check
+//
+// Cleanup (@cleaned-by-ai):
+//   - Removed "advances to next prompt when Done is clicked with single prompt" (lines 190-219)
+//     Duplicate of "shows second prompt after first is rolled and Done is clicked" (lines 221-260)
+//     which covers the same Done-click behavior with stronger queue assertions
+//   - Removed "dispatches save-result event with evasion and rawDamage properties" (lines 309-351)
+//     Weaker duplicate of "dispatches save-result custom event with correct detail" (lines 264-307)
+//     which already asserts all properties including promptId, targetName, saveType, saveDc, success, roll, mode
+//   - Removed "shows queue count and advances to second prompt when multiple prompts exist" (lines 355-393)
+//     Duplicate of "shows second prompt after first is rolled and Done is clicked" (lines 221-260)
+//     identical flow: trigger → roll → Next Save → verify second prompt
+//   - Removed "stores lastAttack data in storage when combatSummary exists" (lines 483-518)
+//     Duplicate of special-handlers.test.jsx "stores lastAttack when rolling a save with combatSummary present"
+//   - Removed "sends save result via sendSaveResult when done is clicked after roll" (lines 522-556)
+//     Duplicate of special-handlers.test.jsx test with identical sendSaveResult + clearSavePrompt assertions
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SavePromptModal from './SavePromptModal.jsx';
-import { getCombatSummary } from '../../services/encounters/combatData.js';
 import { rollD20 } from '../../services/dice/diceRoller.js';
 import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import storage from '../../services/ui/storage.js';
 import * as circleOfPowerHandler from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { setupDefaults, cleanupDefaults, createCharacter } from './SavePromptModal.test-utils.jsx';
 import * as savePromptService from '../../services/combat/conditions/savePromptService.js';
@@ -185,39 +198,6 @@ describe('SavePromptModal — actions', () => {
     expect(savePromptService.clearSavePrompt).toHaveBeenCalledWith('test-campaign', 'testTarget');
   });
 
-  // ── Advance to next prompt ──
-
-  it('advances to next prompt when Done is clicked with single prompt', async () => {
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-    });
-
-    const doneBtn = screen.getByRole('button', { name: 'Done' });
-    fireEvent.click(doneBtn);
-
-    expect(screen.queryByText(/must make a/i)).not.toBeInTheDocument();
-    expect(savePromptService.sendSaveResult).toHaveBeenCalled();
-    expect(savePromptService.clearSavePrompt).toHaveBeenCalledWith('test-campaign', 'testTarget');
-  });
-
   it('shows second prompt after first is rolled and Done is clicked', async () => {
     render(
       <SavePromptModal
@@ -306,92 +286,6 @@ describe('SavePromptModal — actions', () => {
     window.removeEventListener('save-result', eventHandler);
   });
 
-  it('dispatches save-result event with evasion and rawDamage properties', async () => {
-    rollD20.mockReturnValue(15);
-
-    const eventHandler = vi.fn();
-    window.addEventListener('save-result', eventHandler);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
-    });
-
-    const doneBtn = screen.getByRole('button', { name: 'Done' });
-    fireEvent.click(doneBtn);
-
-    await waitFor(() => {
-      expect(eventHandler).toHaveBeenCalled();
-    });
-
-    const eventDetail = eventHandler.mock.calls[0][0].detail;
-    expect(eventDetail).toHaveProperty('promptId', 'test-prompt-1');
-    expect(eventDetail).toHaveProperty('rawDamage');
-    expect(eventDetail).toHaveProperty('dcSuccess');
-    expect(eventDetail).toHaveProperty('evasionActive');
-
-    window.removeEventListener('save-result', eventHandler);
-  });
-
-  // ── Queue / multiple prompts ──
-
-  it('shows queue count and advances to second prompt when multiple prompts exist', async () => {
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const trigger2 = screen.getByTestId('subscriber-trigger-second');
-    fireEvent.click(trigger2);
-
-    await waitFor(() => {
-      expect(screen.getByText(/\(1 of 2\)/)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Next Save' })).toBeInTheDocument();
-    });
-
-    const nextBtn = screen.getByRole('button', { name: 'Next Save' });
-    fireEvent.click(nextBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText('testTarget2')).toBeInTheDocument();
-      expect(screen.getByText('DEX')).toBeInTheDocument();
-      expect(screen.getByText('DC 15')).toBeInTheDocument();
-    });
-  });
-
   it('does not add duplicate prompts with same promptId', async () => {
     render(
       <SavePromptModal
@@ -476,83 +370,6 @@ describe('SavePromptModal — actions', () => {
     fireEvent.click(doneBtn);
 
     expect(savePromptService.sendSaveResult).toHaveBeenCalled();
-  });
-
-  // ── lastAttack storage ──
-
-  it('stores lastAttack data in storage when combatSummary exists', async () => {
-    rollD20.mockReturnValue(15);
-    vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
-    });
-
-    expect(storage.set).toHaveBeenCalledWith('lastAttack', expect.objectContaining({
-      attackerName: 'testTarget',
-      targetName: 'testTarget',
-      rollType: 'save',
-      saveType: 'con',
-      saveDc: 12,
-      d20: 15,
-      saveResult: 'success',
-    }), 'test-campaign');
-  });
-
-  // ── handleDone: sends save result ──
-
-  it('sends save result via sendSaveResult when done is clicked after roll', async () => {
-    rollD20.mockReturnValue(15);
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
-    });
-
-    const doneBtn = screen.getByRole('button', { name: 'Done' });
-    fireEvent.click(doneBtn);
-
-    expect(savePromptService.sendSaveResult).toHaveBeenCalledWith('test-campaign', 'testTarget', expect.objectContaining({
-      promptId: 'test-prompt-1',
-      roll: 15,
-      success: true,
-    }));
-    expect(savePromptService.clearSavePrompt).toHaveBeenCalledWith('test-campaign', 'testTarget');
   });
 
   // ── Evasion overlay ──

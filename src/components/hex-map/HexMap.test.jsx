@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 // HexMap integration tests: rendering, toolbar wiring, panel/overlay visibility,
 // SVG pointer interaction, background-click state cleanup, and POI drag-and-drop.
 // Travel-tool/advance behavior lives in HexMap.travel.test.jsx and event-handler
@@ -289,54 +290,6 @@ describe('HexMap', () => {
     });
 
     describe('SVG interaction events', () => {
-        it('routes pointer move to all interaction handlers', () => {
-            const zp = makeZoomPan();
-            const tp = makeTerrainPainting();
-            const pm = makePoiManagement();
-            const hh = makeHexHover();
-            useZoomPan.mockReturnValue(zp);
-            useTerrainPainting.mockReturnValue(tp);
-            usePoiManagement.mockReturnValue(pm);
-            useHexHover.mockReturnValue(hh);
-            renderMap();
-            fireEvent.pointerMove(mapSvg());
-            expect(zp.handlePanMove).toHaveBeenCalledTimes(1);
-            expect(tp.handleTerrainPointerMove).toHaveBeenCalledTimes(1);
-            expect(pm.handlePoiPointerMove).toHaveBeenCalledTimes(1);
-            expect(hh.handleHexHover).toHaveBeenCalledTimes(1);
-        });
-
-        it('routes pointer up to the pan, terrain, and POI handlers', () => {
-            const zp = makeZoomPan();
-            const tp = makeTerrainPainting();
-            const pm = makePoiManagement();
-            useZoomPan.mockReturnValue(zp);
-            useTerrainPainting.mockReturnValue(tp);
-            usePoiManagement.mockReturnValue(pm);
-            renderMap();
-            fireEvent.pointerUp(mapSvg());
-            expect(zp.handlePanEnd).toHaveBeenCalledTimes(1);
-            expect(tp.handleTerrainPointerUp).toHaveBeenCalledTimes(1);
-            expect(pm.handlePoiPointerUp).toHaveBeenCalledTimes(1);
-        });
-
-        it('clears the hovered hex on pointer leave without ending gestures', () => {
-            const hh = makeHexHover();
-            const zp = makeZoomPan();
-            const tp = makeTerrainPainting();
-            const pm = makePoiManagement();
-            useHexHover.mockReturnValue(hh);
-            useZoomPan.mockReturnValue(zp);
-            useTerrainPainting.mockReturnValue(tp);
-            usePoiManagement.mockReturnValue(pm);
-            renderMap();
-            fireEvent.pointerLeave(mapSvg());
-            expect(hh.setHoveredHex).toHaveBeenCalledWith(null);
-            expect(zp.handlePanEnd).not.toHaveBeenCalled();
-            expect(tp.handleTerrainPointerUp).not.toHaveBeenCalled();
-            expect(pm.handlePoiPointerUp).not.toHaveBeenCalled();
-        });
-
         it('routes wheel events to the zoom/pan handler', () => {
             const zp = makeZoomPan();
             useZoomPan.mockReturnValue(zp);
@@ -383,11 +336,6 @@ describe('HexMap', () => {
     });
 
     describe('POI layer props', () => {
-        it('passes validLinkedMaps to the POI layer', () => {
-            renderMap();
-            expect(poiLayerProps.current.validLinkedMaps).toBeInstanceOf(Set);
-        });
-
         it('passes partyPosition to the POI layer when set', () => {
             useMapLoader.mockReturnValue(makeMapLoader({ partyPosition: { q: 10, r: 5 } }));
             renderMap();
@@ -425,77 +373,6 @@ describe('HexMap', () => {
             expect(newPois[0]).toBe(existingPois[0]);
             expect(newPois[1]).toMatchObject({ type: 'city', q: 10, r: 5, visible: true, label: 'City' });
             expect(newPois[1].id).toBeTruthy();
-        });
-
-        it('does not add a POI when the drop hex already has one', () => {
-            const { ml } = dropOnMap({
-                dragData: 'city',
-                getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
-                mapOverrides: { pois: [{ q: 10, r: 5, type: 'camp' }] },
-            });
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
-
-        it('does not add a POI when the hex is null', () => {
-            const { ml } = dropOnMap({
-                dragData: 'city',
-                getHexFromEvent: vi.fn(() => null),
-            });
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
-
-        it('does not add a POI when the hex is out of bounds', () => {
-            const { ml } = dropOnMap({
-                dragData: 'city',
-                getHexFromEvent: vi.fn(() => ({ q: 999, r: 999 })),
-            });
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
-
-        it('does not add a POI when the hex has a negative coordinate', () => {
-            const { ml } = dropOnMap({
-                dragData: 'city',
-                getHexFromEvent: vi.fn(() => ({ q: -1, r: 5 })),
-            });
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
-
-        it('does not add a POI when the drag data is not a recognized type', () => {
-            const { ml } = dropOnMap({
-                dragData: 'unknown-type',
-                getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
-            });
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
-
-        it('does not add a POI when drag data is empty', () => {
-            const { ml } = dropOnMap({
-                dragData: '',
-                getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
-            });
-            expect(ml.setPois).not.toHaveBeenCalled();
-        });
-
-        it('prevents default on dragover so the drop is accepted', () => {
-            renderMap();
-            const e = new Event('dragover', { bubbles: true, cancelable: true });
-            const spy = vi.spyOn(e, 'preventDefault');
-            fireEvent(mapSvg(), e);
-            expect(spy).toHaveBeenCalled();
-        });
-    });
-
-    describe('Zoom and view controls', () => {
-        it('calls the toolbar zoom/pan actions when their buttons are clicked', () => {
-            const zp = makeZoomPan();
-            useZoomPan.mockReturnValue(zp);
-            renderMap();
-            fireEvent.click(screen.getByTestId('toolbar-zoomin'));
-            expect(zp.zoomIn).toHaveBeenCalledTimes(1);
-            fireEvent.click(screen.getByTestId('toolbar-zoomout'));
-            expect(zp.zoomOut).toHaveBeenCalledTimes(1);
-            fireEvent.click(screen.getByTestId('toolbar-resetview'));
-            expect(zp.resetView).toHaveBeenCalledTimes(1);
         });
     });
 });

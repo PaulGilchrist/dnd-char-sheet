@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MonsterCardModal from './MonsterCardModal.jsx';
@@ -123,32 +124,6 @@ import * as useRuntimeState from '../../hooks/runtime/useRuntimeState.js';
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-describe('MonsterCardModal - getTarget fallback path', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    damageUtils.__setFindCreatureReturn(null);
-    useRuntimeState.__setTargetEffects([]);
-  });
-
-  it('renders monster name when creatures prop is undefined (uses getCombatContext fallback)', () => {
-    const m = makeMonster();
-    render(<MonsterCardModal {...makeProps(m, { creatures: undefined, mapName: null })} />);
-    expect(screen.getByText('Goblin')).toBeInTheDocument();
-  });
-
-  it('calls getCombatContext when creatures prop is undefined', () => {
-    const m = makeMonster();
-    render(<MonsterCardModal {...makeProps(m, { creatures: undefined, mapName: null })} />);
-    expect(damageUtils.getCombatContext).toHaveBeenCalledWith('test-campaign');
-  });
-
-  it('renders monster name when mapName is provided but map loading fails (catches error gracefully)', () => {
-    const m = makeMonster();
-    render(<MonsterCardModal {...makeProps(m, { creatures: undefined, mapName: 'test-map' })} />);
-    expect(screen.getByText('Goblin')).toBeInTheDocument();
-  });
-});
-
 describe('MonsterCardModal - monsterSensesArray useMemo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -180,16 +155,6 @@ describe('MonsterCardModal - monsterSensesArray useMemo', () => {
     expect(screen.getByText('darkvision 60')).toBeInTheDocument();
   });
 
-  it('renders multiple sense types together with correct formatting', () => {
-    const m = makeMonster({ senses: { blindsight: 60, darkvision: '120 ft.', tremorsense: 30 } });
-    render(<MonsterCardModal {...makeProps(m)} />);
-    const sensesRow = screen.getByText(/Senses/).closest('.mc-defense-row');
-    expect(sensesRow).toBeTruthy();
-    expect(sensesRow.textContent).toContain('blindsight 60');
-    expect(sensesRow.textContent).toContain('darkvision 120 ft.');
-    expect(sensesRow.textContent).toContain('tremorsense 30');
-  });
-
   it('skips null/undefined sense values without rendering them', () => {
     const m = makeMonster({ senses: { blindsight: 60, darkvision: null, truesight: undefined, tremorsense: 30 } });
     render(<MonsterCardModal {...makeProps(m)} />);
@@ -200,36 +165,24 @@ describe('MonsterCardModal - monsterSensesArray useMemo', () => {
     expect(sensesRow.textContent).not.toContain('truesight');
   });
 
-  it('does not render senses section when senses is null', () => {
-    const m = makeMonster({ senses: null });
+  it.each([
+    { label: 'null', senses: null },
+    { label: 'undefined', senses: undefined },
+    { label: 'empty object', senses: {} },
+    { label: 'all null values', senses: { blindsight: null, darkvision: null, truesight: null, tremorsense: null, passive_perception: null } },
+  ])('does not render senses section when senses is $label', ({ senses }) => {
+    const m = makeMonster({ senses });
+    if (senses === undefined) {
+      delete m.senses;
+    }
     render(<MonsterCardModal {...makeProps(m)} />);
     expect(screen.queryByText('Senses')).not.toBeInTheDocument();
   });
 
-  it('does not render senses section when senses is undefined', () => {
-    const m = makeMonster({});
-    delete m.senses;
-    render(<MonsterCardModal {...makeProps(m)} />);
-    expect(screen.queryByText('Senses')).not.toBeInTheDocument();
-  });
-
-  it('does not render senses section when senses is an empty object', () => {
-    const m = makeMonster({ senses: {} });
-    render(<MonsterCardModal {...makeProps(m)} />);
-    expect(screen.queryByText('Senses')).not.toBeInTheDocument();
-  });
-
-  it('does not render senses section when all sense values are null', () => {
-    const m = makeMonster({ senses: { blindsight: null, darkvision: null, truesight: null, tremorsense: null, passive_perception: null } });
-    render(<MonsterCardModal {...makeProps(m)} />);
-    expect(screen.queryByText('Senses')).not.toBeInTheDocument();
-  });
-
-  it('does not render senses section when only passive_perception is set', () => {
+  it('renders senses section when only passive_perception is set', () => {
     const m = makeMonster({ senses: { passive_perception: 18 } });
     render(<MonsterCardModal {...makeProps(m)} />);
-    const sensesRow = screen.getByText(/Senses/).closest('.mc-defense-row');
-    expect(sensesRow.textContent).toContain('passive Perception 18');
+    expect(screen.getByText('passive Perception 18')).toBeInTheDocument();
   });
 });
 
@@ -241,13 +194,7 @@ describe('MonsterCardModal - shieldOfFaithBonus', () => {
     useRuntimeState.__setActiveBuffs(null);
   });
 
-  it('displays base AC when activeBuffs is null', () => {
-    const m = makeMonster({ armor_class: 15 });
-    render(<MonsterCardModal {...makeProps(m)} />);
-    expect(screen.getByText('15')).toBeInTheDocument();
-  });
-
-  it('displays base AC when activeBuffs is empty array (no shield_of_faith)', () => {
+  it('displays base AC when activeBuffs is empty (no shield_of_faith)', () => {
     useRuntimeState.__setActiveBuffs([]);
     const m = makeMonster({ armor_class: 15 });
     render(<MonsterCardModal {...makeProps(m)} />);
@@ -269,5 +216,6 @@ describe('MonsterCardModal - shieldOfFaithBonus', () => {
     const m = makeMonster({ armor_class: 15 });
     render(<MonsterCardModal {...makeProps(m)} />);
     expect(screen.getByText('15')).toBeInTheDocument();
+    expect(screen.queryByText(/Shield of Faith/)).not.toBeInTheDocument();
   });
 });

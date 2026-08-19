@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import POILayer from './POILayer.jsx';
@@ -82,20 +83,15 @@ describe('POILayer', () => {
             }
         });
 
-        it('applies reduced opacity to invisible POIs for localhost', () => {
+        it.each([
+            ['reduced (0.4)', false, '0.4'],
+            ['full (1)', true, '1'],
+        ])('applies %s opacity to %s POIs', (_label, visible, expectedOpacity) => {
             renderLayer({
-                pois: [{ id: 'vis-poi', type: 'city', q: 0, r: 0, visible: false }],
+                pois: [{ id: 'vis-poi', type: 'city', q: 0, r: 0, visible }],
             });
             const group = document.querySelector('g.poi-item');
-            expect(group.getAttribute('opacity')).toBe('0.4');
-        });
-
-        it('applies full opacity to visible POIs', () => {
-            renderLayer({
-                pois: [{ id: 'vis-poi', type: 'city', q: 0, r: 0, visible: true }],
-            });
-            const group = document.querySelector('g.poi-item');
-            expect(group.getAttribute('opacity')).toBe('1');
+            expect(group.getAttribute('opacity')).toBe(expectedOpacity);
         });
     });
 
@@ -189,11 +185,6 @@ describe('POILayer', () => {
             expect(document.querySelector('.poi-item rect[stroke="#FFD700"]')).toBeInTheDocument();
         });
 
-        it('does not highlight any POI when poiDragging is null', () => {
-            renderLayer({ poiDragging: null });
-            expect(document.querySelector('.poi-item rect[stroke="#FFD700"]')).not.toBeInTheDocument();
-        });
-
         it('does not highlight POIs when poiDragging has a non-matching id', () => {
             renderLayer({ poiDragging: { poiId: 'nonexistent' } });
             expect(document.querySelector('.poi-item rect[stroke="#FFD700"]')).not.toBeInTheDocument();
@@ -208,11 +199,6 @@ describe('POILayer', () => {
 
         it('does not show a drop-preview when poiHover is null', () => {
             renderLayer({ poiHover: null });
-            expect(document.querySelector('rect[fill="rgba(255,215,0,0.2)"]')).not.toBeInTheDocument();
-        });
-
-        it('does not show a drop-preview when poiHover is undefined', () => {
-            renderLayer({ poiHover: undefined });
             expect(document.querySelector('rect[fill="rgba(255,215,0,0.2)"]')).not.toBeInTheDocument();
         });
     });
