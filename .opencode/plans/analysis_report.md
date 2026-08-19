@@ -86,7 +86,6 @@
 | `src/hooks/useAllySelection.js:18` | `setAllyList` | Exported but never imported; companion `getAllyList` is used in 20+ files |
 | `src/hooks/combat/useActionPopup.js:45` | `loadBackgrounds` | Exported async function never imported; companion `showBackgroundPopup` IS imported |
 | `src/components/char-sheet/CharSpecialActions.helpers.js:18` | `createPlayerStats` | Exported but never imported |
-| `src/components/char-sheet/char-summary/CharConditions.jsx:40` | `loadActiveConditions` | Exported but never imported |
 | `src/components/char-sheet/modals/shared/AreaEffectTargetModalBase.utils.jsx:45` | `renderResultsSection` | Exported but never imported; sibling exports ARE used |
 
 ### 2.4 Duplicate `sanctuarySave` Exports
@@ -187,10 +186,6 @@ Monolithic registry importing every automation handler in the system. 269 unique
 ---
 
 ## 4. Coding Inconsistencies
-
-### 4.1 ~~High: Silent Error Swallowing~~ — RESOLVED
-
-**Fixed:** 278 instances of `.catch(() => {})` across 122 production files have been converted to `.catch((e) => { console.error("[context]", e); })` with contextual prefixes matching the codebase convention.
 
 ### 4.2 High: Inline Styles Despite Convention
 

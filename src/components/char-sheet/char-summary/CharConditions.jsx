@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import React from 'react'
 import { getRuntimeValue, setRuntimeValue, addStorageChangeListener } from '../../../hooks/runtime/useRuntimeState.js'
 import { rollD20 } from '../../../services/dice/diceRoller.js'
@@ -36,10 +35,6 @@ function saveConditions(name, campaignName, conditions) {
 }
 
 export { EXHAUSTION_LEVELS }
-
-export function loadActiveConditions(name, campaignName) {
-  return loadConditions(name, campaignName)
-}
 
 function CharConditions({ playerStats, campaignName, activeMapName, characters, exhaustionLevel, onConditionsChange, conditionEffects }) {
   const [activeConditions, setActiveConditions] = React.useState(() =>
