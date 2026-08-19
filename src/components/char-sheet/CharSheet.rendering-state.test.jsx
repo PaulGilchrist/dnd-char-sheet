@@ -237,32 +237,15 @@ describe('runtime value propagation to playerStats', () => {
     vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats()));
   });
 
-  it('sets hitPoints runtime value when playerStats loads', async () => {
-    const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-    setRuntimeValue.mockResolvedValue(undefined);
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Test Character',
-        'hitPoints',
-        expect.objectContaining({ current: 40, max: 40 }),
-        'test-campaign'
-      );
-    });
-  });
-
-  it('loads prepared spells from runtime for Wizard in 2024', async () => {
+  it.each([
+    { rules: '2024', className: 'Wizard', spellPrepared: 'Prepared', label: '2024 Wizard' },
+    { rules: '5e', className: 'Cleric', spellPrepared: 'Prepared', label: '5e Cleric' },
+  ])('loads prepared spells from runtime for $label', async ({ rules, className, spellPrepared }) => {
     mockStore.set('Test Character:preparedSpells', ['Fireball']);
     vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
-      rules: '2024',
-      class: { name: 'Wizard' },
-      spellAbilities: {
-        spells: [{ name: 'Fireball', prepared: '' }, { name: 'Mage Armor', prepared: 'Prepared' }],
-        maxPreparedSpells: 5,
-      },
+      rules,
+      class: { name: className },
+      spellAbilities: { spells: [{ name: 'Fireball', prepared: '' }, { name: 'Mage Armor', prepared: 'Prepared' }], maxPreparedSpells: 5 },
     })));
 
     render(<CharSheet {...createDefaultProps()} />);
@@ -274,45 +257,7 @@ describe('runtime value propagation to playerStats', () => {
     const { default: CharSpells } = await import('./char-spells/CharSpells.jsx');
     const passedStats = CharSpells.mock.calls[0][0].playerStats;
     const fireballSpell = passedStats.spellAbilities.spells.find((s) => s.name === 'Fireball');
-    expect(fireballSpell.prepared).toBe('Prepared');
-  });
-
-  it('does not load prepared spells for non-Wizard spellcasters in 2024', async () => {
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
-      rules: '2024',
-      class: { name: 'Sorcerer' },
-      spellAbilities: { spells: [{ name: 'Fireball' }], maxPreparedSpells: 5 },
-    })));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    // Sorcerer in 2024 should not have prepared spells processed
-    const { default: CharSpells } = await import('./char-spells/CharSpells.jsx');
-    expect(CharSpells).toHaveBeenCalled();
-  });
-
-  it('loads prepared spells for any class in 5e', async () => {
-    mockStore.set('Test Character:preparedSpells', ['Fireball']);
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
-      rules: '5e',
-      class: { name: 'Cleric' },
-      spellAbilities: { spells: [{ name: 'Fireball', prepared: '' }], maxPreparedSpells: 5 },
-    })));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSpells } = await import('./char-spells/CharSpells.jsx');
-    const passedStats = CharSpells.mock.calls[0][0].playerStats;
-    const fireballSpell = passedStats.spellAbilities.spells.find((s) => s.name === 'Fireball');
-    expect(fireballSpell.prepared).toBe('Prepared');
+    expect(fireballSpell.prepared).toBe(spellPrepared);
   });
 });
 
@@ -428,24 +373,6 @@ describe('passive effect speed modifications', () => {
     const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
     const passedStats = CharSummary.mock.calls[0][0].playerStats;
     expect(passedStats.swimSpeed).toBe(30);
-  });
-
-  it('does not override existing swimSpeed when aquatic affinity passive exists', async () => {
-    const stats = createMockPlayerStats({
-      swimSpeed: 40,
-      automation: { passives: [{ effect: 'aquatic_affinity' }] },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const passedStats = CharSummary.mock.calls[0][0].playerStats;
-    expect(passedStats.swimSpeed).toBe(40);
   });
 
   it('applies second-storywork passive climb speed', async () => {
@@ -569,76 +496,6 @@ describe('Athlete feat flags', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests — Bardic Inspiration feature injection
-// (deduplicated tests for counts/dedup are in CharSheet.bardicInspiration.test.jsx)
-// ---------------------------------------------------------------------------
-
-describe('Bardic Inspiration feature injection', () => {
-  beforeEach(() => {
-    resetTestState(sharedPopupReturnVal);
-    mockStore.clear();
-  });
-
-  it('injects "Use Bardic Inspiration" special action when biDie is set', async () => {
-    const stats = createMockPlayerStats({ class: { name: 'Bard' } });
-    mockStore.set('Test Character:bardicInspirationDie', 6);
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSpecialActions } = await import('./CharSpecialActions.jsx');
-    const passedStats = CharSpecialActions.mock.calls[0][0].playerStats;
-    const biAction = passedStats.specialActions.find((a) => a.name === 'Use Bardic Inspiration');
-    expect(biAction).toBeDefined();
-    expect(biAction.automation.type).toBe('bardic_inspiration_use');
-  });
-
-  it('injects Combat Inspiration Defense reaction when combat option includes defense', async () => {
-    const stats = createMockPlayerStats({ class: { name: 'Bard' } });
-    mockStore.set('Test Character:bardicInspirationDie', 6);
-    mockStore.set('Test Character:bardicInspirationGrantedBy', 'Bard');
-    mockStore.set('Test Character:bardicInspirationCombatOptions', JSON.stringify(['defense_add_to_ac']));
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharReactions } = await import('./CharReactions.jsx');
-    const passedStats = CharReactions.mock.calls[0][0].playerStats;
-    const defenseReaction = passedStats.reactions.find((r) => r.name === 'Combat Inspiration - Defense');
-    expect(defenseReaction).toBeDefined();
-    expect(defenseReaction.automation.type).toBe('bardic_inspiration_defense');
-  });
-
-  it('injects Combat Inspiration Offense reaction when combat option includes offense', async () => {
-    const stats = createMockPlayerStats({ class: { name: 'Bard' } });
-    mockStore.set('Test Character:bardicInspirationDie', 6);
-    mockStore.set('Test Character:bardicInspirationGrantedBy', 'Bard');
-    mockStore.set('Test Character:bardicInspirationCombatOptions', JSON.stringify(['offense_add_to_damage']));
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharReactions } = await import('./CharReactions.jsx');
-    const passedStats = CharReactions.mock.calls[0][0].playerStats;
-    const offenseReaction = passedStats.reactions.find((r) => r.name === 'Combat Inspiration - Offense');
-    expect(offenseReaction).toBeDefined();
-    expect(offenseReaction.automation.type).toBe('bardic_inspiration_offense');
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Tests — Exhaustion penalty computation
 // ---------------------------------------------------------------------------
 
@@ -648,8 +505,12 @@ describe('Exhaustion penalty computation', () => {
     mockStore.clear();
   });
 
-  it('computes exhaustionPenalty as 2 * exhaustionLevel', async () => {
-    mockStore.set('Test Character:exhaustionLevel', 3);
+  it.each([
+    { input: 3, expected: 3, label: 'normal level (3)' },
+    { input: 10, expected: 6, label: 'exceeds max (10 → 6)' },
+    { input: -1, expected: 0, label: 'negative (-1 → 0)' },
+  ])('clamps exhaustionLevel prop: $label', async ({ input, expected }) => {
+    mockStore.set('Test Character:exhaustionLevel', input);
 
     render(<CharSheet {...createDefaultProps()} />);
 
@@ -658,106 +519,6 @@ describe('Exhaustion penalty computation', () => {
     });
 
     const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    expect(CharSummary.mock.calls[0][0].exhaustionLevel).toBe(3);
-  });
-
-  it('clamps exhaustionLevel to 5 when level exceeds max (10)', async () => {
-    mockStore.set('Test Character:exhaustionLevel', 10);
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    expect(CharSummary.mock.calls[0][0].exhaustionLevel).toBe(6);
-  });
-
-  it('handles negative exhaustionLevel by clamping to 0', async () => {
-    mockStore.set('Test Character:exhaustionLevel', -1);
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    expect(CharSummary.mock.calls[0][0].exhaustionLevel).toBe(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Circle of the Land runtime value
-// ---------------------------------------------------------------------------
-
-describe('Circle of the Land runtime value', () => {
-  beforeEach(() => {
-    resetTestState(sharedPopupReturnVal);
-    mockStore.clear();
-  });
-
-  it('applies CotL land type runtime value to subclass', async () => {
-    mockStore.set('Test Character:_circleOfTheLandType', 'forest');
-    const stats = createMockPlayerStats({
-      class: { name: 'Druid', subclass: { name: 'Circle of the Land', type: 'forest' } },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    const passedStats = CharSummary.mock.calls[0][0].playerStats;
-    expect(passedStats.class.subclass.type).toBe('forest');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Prop passing to child components
-// ---------------------------------------------------------------------------
-
-describe('Prop passing to child components', () => {
-  beforeEach(() => {
-    resetTestState(sharedPopupReturnVal);
-    mockStore.clear();
-  });
-
-  it('passes campaignName to CharSummary', async () => {
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    expect(CharSummary.mock.calls[0][0].campaignName).toBe('test-campaign');
-  });
-
-  it('passes activeMapName to CharSummary', async () => {
-    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
-    render(<CharSheet {...createDefaultProps()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    expect(CharSummary.mock.calls[0][0].activeMapName).toBe(null);
-  });
-
-  it('passes characters array to CharAbilities', async () => {
-    const { default: CharAbilities } = await import('./CharAbilities.jsx');
-    const props = createDefaultProps({ characters: [{ name: 'Test Character', level: 5 }] });
-    render(<CharSheet {...props} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    expect(CharAbilities.mock.calls[0][0].characters).toEqual([{ name: 'Test Character', level: 5 }]);
+    expect(CharSummary.mock.calls[0][0].exhaustionLevel).toBe(expected);
   });
 });

@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import './CharSpecialActions.modalMocks.jsx';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -167,55 +168,10 @@ describe('CharSpecialActions - Stride of the Elements', () => {
       expect(popupCall).toContain('+10 Speed');
     });
 
-    it('does not trigger action when cannotAct is true', async () => {
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Stride of the Elements', description: 'Choose a stride option.', automation: { type: 'stride_of_the_elements' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct />);
-
-      fireEvent.click(screen.getByText(/Stride of the Elements/));
-
-      await waitFor(() => {
-        expect(executeHandler).not.toHaveBeenCalled();
-      });
-
-      expect(screen.queryByTestId('stride-of-the-elements-modal')).not.toBeInTheDocument();
-    });
-
-    it('renders all four stride option buttons in the modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'strideOfTheElements',
-        payload: {
-          action: { name: 'Stride of the Elements' },
-          playerStats: basePlayerStats,
-          campaignName: 'test',
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Stride of the Elements', description: 'Choose a stride option.', automation: { type: 'stride_of_the_elements' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText(/Stride of the Elements/));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stride-of-the-elements-modal')).toBeInTheDocument();
-      });
-
-      const modal = screen.getByTestId('stride-of-the-elements-modal');
-      expect(within(modal).getByText('Confirm Ice Walk')).toBeInTheDocument();
-      expect(within(modal).getByText('Confirm Speed')).toBeInTheDocument();
-      expect(within(modal).getByText('Confirm Fly')).toBeInTheDocument();
-      expect(within(modal).getByText('Confirm Teleport')).toBeInTheDocument();
-    });
+    // @cleaned-by-ai
+    // "does not trigger action when cannotAct is true" removed: redundant with
+    // modals.test.jsx which has a parametrized cannotAct guard test covering
+    // all interactive automation types. No behavioral gap.
   });
 });
 

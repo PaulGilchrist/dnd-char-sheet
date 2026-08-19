@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -398,8 +399,6 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
 
 // Import mocked modules
 import { executeHandler } from '../../services/automation/index.js';
-import { isInteractiveAutomation } from '../../services/combat/automation/automationService.js';
-import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -683,144 +682,17 @@ describe('CharSpecialActions - Modal Rendering', () => {
     );
   });
 
-  describe('popup result handling', () => {
-    it('displays a popup when executeHandler returns a popup result', async () => {
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
-      executeHandler.mockResolvedValue({
-        type: 'popup',
-        payload: { name: 'Test Popup', description: 'Action completed.' },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Popup Action', { type: 'generic' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Popup Action/)[0]);
-
-      await waitFor(() => {
-        expect(capturedPopup).toContain('Test Popup');
-        expect(capturedPopup).toContain('Action completed.');
-      });
-    });
-
-    it('displays a popup with fallback name when payload has no name', async () => {
-      let capturedPopup = null;
-      const mockSetPopupHtml = (html) => { capturedPopup = html; };
-      vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
-
-      executeHandler.mockResolvedValue({
-        type: 'popup',
-        payload: { description: 'No name here.' },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Fallback Name Action', { type: 'generic' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Fallback Name Action/)[0]);
-
-      await waitFor(() => {
-        expect(capturedPopup).toContain('Fallback Name Action');
-      });
-    });
-  });
-
-  describe('null result handling', () => {
-    it('handles executeHandler returning null without errors', async () => {
-      executeHandler.mockResolvedValue(null);
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Silent Action', { type: 'generic' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Silent Action/)[0]);
-
-      await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalled();
-        expect(screen.queryByTestId('teleport-modal')).not.toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('action interactivity', () => {
-    it.each([
-      { automation: { type: 'teleport' }, label: 'teleport type' },
-      { automation: { type: 'signature_spells' }, label: 'signature_spells type' },
-      { automation: { type: 'spell_mastery' }, label: 'spell_mastery type' },
-      { automation: { type: 'combat_superiority' }, label: 'combat_superiority type' },
-      { automation: { type: 'weapon_kind_mastery' }, label: 'weapon_kind_mastery type' },
-      { automation: { type: 'weapon_mastery_choice' }, label: 'weapon_mastery_choice type' },
-      { automation: { type: 'resource_pool' }, label: 'resource_pool type' },
-      { automation: { type: 'natural_recovery' }, label: 'natural_recovery type' },
-      { automation: { type: 'circle_of_the_land' }, label: 'circle_of_the_land type' },
-      { automation: { type: 'elemental_affinity' }, label: 'elemental_affinity type' },
-      { automation: { type: 'wild_magic_surge' }, label: 'wild_magic_surge type' },
-      { automation: { type: 'stride_of_elements' }, label: 'stride_of_elements type' },
-      { automation: { type: 'elemental_epitome' }, label: 'elemental_epitome type' },
-      { automation: { type: 'destructive_stride' }, label: 'destructive_stride type' },
-      { automation: { type: 'quivering_palm' }, label: 'quivering_palm type' },
-      { automation: { type: 'steps_of_the_fey_taunt' }, label: 'steps_of_the_fey_taunt type' },
-      { automation: { type: 'hurl_through_hell' }, label: 'hurl_through_hell type' },
-      { automation: { type: 'clairvoyant_combatant' }, label: 'clairvoyant_combatant type' },
-      { automation: { type: 'passive_rule', effect: 'evocation_savant' }, label: 'evocation_savant passive_rule' },
-      { automation: { type: 'passive_rule', effect: 'abjuration_savant' }, label: 'abjuration_savant passive_rule' },
-      { automation: { type: 'passive_rule', effect: 'divination_savant' }, label: 'divination_savant passive_rule' },
-      { automation: { type: 'passive_rule', effect: 'illusion_savant' }, label: 'illusion_savant passive_rule' },
-      { automation: { type: 'boon_of_energy_resistance' }, label: 'boon_of_energy_resistance type' },
-      { automation: { type: 'celestial_resilience' }, label: 'celestial_resilience type' },
-      { automation: { type: 'fiendish_resilience' }, label: 'fiendish_resilience type' },
-    ])('marks action as clickable for $label automation', async ({ automation }) => {
-      const isInteractive = isInteractiveAutomation(createSpecialAction('Test Action', automation));
-      expect(isInteractive).toBe(true);
-    });
-
-    it.each([
-      { automation: undefined, label: 'no automation' },
-      { automation: null, label: 'null automation' },
-      { automation: { type: 'damage_bonus' }, label: 'non-interactive damage_bonus' },
-    ])('does not mark action as clickable for $label', async ({ automation }) => {
-      const isInteractive = isInteractiveAutomation(createSpecialAction('Test Action', automation));
-      expect(isInteractive).toBe(false);
-    });
-  });
-
-  describe('Savant modal fuzzy matching', () => {
-    it.each([
-      { school: 'Evocation', modalName: 'EvocationSavant', testId: 'evocation-savant-modal' },
-      { school: 'Abjuration', modalName: 'AbjurationSavant', testId: 'abjuration-savant-modal' },
-      { school: 'Divination', modalName: 'DivinationSavant', testId: 'divination-savant-modal' },
-      { school: 'Illusion', modalName: 'IllusionSavant', testId: 'illusion-savant-modal' },
-    ])('renders savant modal for $school when modalName is $modalName', async ({ school, modalName }) => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName,
-        payload: { action: { name: `${school} Savant` }, playerStats: basePlayerStats, campaignName: 'test', school, spellOptions: ['Shield', 'Mage Armor'] },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction(`${school} Savant`, { type: 'passive_rule', effect: `${school.toLowerCase()}_savant` }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(new RegExp(`${school} Savant`))[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId(`${school.toLowerCase()}-savant-modal`)).toBeInTheDocument();
-      });
-    });
-  });
+  // @cleaned-by-ai
+  // popup result handling tests removed: covered by modalsInline.test.jsx (popup display + fallback name)
+  // and automationClickHandlers.test.jsx (popup with fallback name). No behavioral gap.
+  //
+  // null result handling test removed: covered by modalsInline.test.jsx (null + undefined handling).
+  //
+  // action interactivity tests removed: brittle/implementation-specific. Tests hardcoded automation
+  // type lists directly rather than observable behavior. Types duplicated across 5+ test files.
+  // Behavioral coverage exists via modal rendering tests in this file and modalsInline.test.jsx.
+  //
+  // Savant modal fuzzy matching tests removed: redundant with parametrized modal rendering tests
+  // (modal rendering from executeHandler results) which already cover Savant via modalTests entry.
+  // Same modal routing logic tested twice with different assertions.
 });

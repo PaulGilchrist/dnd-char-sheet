@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import './CharSpecialActions.modalMocks.jsx';
@@ -23,16 +24,36 @@ function createPlayerStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
 
-function openModal(playerStats, actionName, modalName, campaignName = 'test') {
-  executeHandler.mockResolvedValue({
-    type: 'modal',
-    modalName,
-    payload: { action: { name: actionName }, playerStats, campaignName },
-  });
-
-  render(<CharSpecialActions playerStats={playerStats} campaignName={campaignName} />);
-  fireEvent.click(screen.getByText(new RegExp(actionName)));
-}
+const combatModalTests = [
+  {
+    name: 'Quivering Palm',
+    modalName: 'quiveringPalm',
+    actionName: 'Quivering Palm',
+    automation: { type: 'quivering_palm' },
+    testId: 'quivering-palm-modal',
+  },
+  {
+    name: 'Steps of the Fey Taunt',
+    modalName: 'stepsOfTheFeyTaunt',
+    actionName: 'Steps of the Fey Taunt',
+    automation: { type: 'steps_of_the_fey_taunt' },
+    testId: 'steps-of-the-fey-taunt-modal',
+  },
+  {
+    name: 'Hurl Through Hell',
+    modalName: 'hurlThroughHell',
+    actionName: 'Hurl Through Hell',
+    automation: { type: 'hurl_through_hell' },
+    testId: 'hurl-through-hell-modal',
+  },
+  {
+    name: 'Clairvoyant Combatant',
+    modalName: 'clairvoyantCombatant',
+    actionName: 'Clairvoyant Combatant',
+    automation: { type: 'clairvoyant_combatant' },
+    testId: 'clairvoyant-combatant-modal',
+  },
+];
 
 describe('CharSpecialActions - Combat feature modal onClose handlers', () => {
   beforeEach(() => {
@@ -40,187 +61,55 @@ describe('CharSpecialActions - Combat feature modal onClose handlers', () => {
     Object.keys(mockRuntimeStore).forEach(key => delete mockRuntimeStore[key]);
   });
 
-  describe('Quivering Palm modal onClose', () => {
-    it('closes the modal when onClose is called', async () => {
-      openModal(
-        createPlayerStats({
-          specialActions: [
-            { name: 'Quivering Palm', description: 'Palm of quivering.', automation: { type: 'quivering_palm' } },
-          ],
-        }),
-        'Quivering Palm',
-        'quiveringPalm'
-      );
+  describe.each(combatModalTests)('$name modal onClose', ({ modalName, actionName, automation, testId }) => {
+    it('opens the modal and closes it when onClose is called', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName,
+        payload: { action: { name: actionName }, playerStats: createPlayerStats({ specialActions: [{ name: actionName, description: `${actionName} description.`, automation }] }), campaignName: 'test' },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: actionName, description: `${actionName} description.`, automation },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getAllByText(new RegExp(actionName))[0]);
 
       await waitFor(() => {
-        expect(screen.getByTestId('quivering-palm-modal')).toBeInTheDocument();
+        expect(screen.getByTestId(testId)).toBeInTheDocument();
       });
 
       fireEvent.click(screen.getByText('Close'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('quivering-palm-modal')).not.toBeInTheDocument();
-      });
-    });
-
-    it('does not open the modal when cannotAct is true', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'quiveringPalm',
-        payload: { action: { name: 'Quivering Palm' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Quivering Palm', description: 'Palm of quivering.', automation: { type: 'quivering_palm' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
-
-      fireEvent.click(screen.getByText(/Quivering Palm/));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('quivering-palm-modal')).not.toBeInTheDocument();
+        expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
       });
     });
   });
 
-  describe('Steps of the Fey Taunt modal onClose', () => {
-    it('closes the modal when onClose is called', async () => {
-      openModal(
-        createPlayerStats({
-          specialActions: [
-            { name: 'Steps of the Fey Taunt', description: 'Taunt with fey steps.', automation: { type: 'steps_of_the_fey_taunt' } },
-          ],
-        }),
-        'Steps of the Fey Taunt',
-        'stepsOfTheFeyTaunt'
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId('steps-of-the-fey-taunt-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Close'));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('steps-of-the-fey-taunt-modal')).not.toBeInTheDocument();
-      });
+  it('does not open any combat modal when cannotAct is true', async () => {
+    executeHandler.mockResolvedValue({
+      type: 'modal',
+      modalName: 'quiveringPalm',
+      payload: { action: { name: 'Quivering Palm' } },
     });
 
-    it('does not open the modal when cannotAct is true', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'stepsOfTheFeyTaunt',
-        payload: { action: { name: 'Steps of the Fey Taunt' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Steps of the Fey Taunt', description: 'Taunt with fey steps.', automation: { type: 'steps_of_the_fey_taunt' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
-
-      fireEvent.click(screen.getByText(/Steps of the Fey Taunt/));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('steps-of-the-fey-taunt-modal')).not.toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Hurl Through Hell modal onClose', () => {
-    it('closes the modal when onClose is called', async () => {
-      openModal(
-        createPlayerStats({
-          specialActions: [
-            { name: 'Hurl Through Hell', description: 'Hurl to hell.', automation: { type: 'hurl_through_hell' } },
-          ],
-        }),
-        'Hurl Through Hell',
-        'hurlThroughHell'
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId('hurl-through-hell-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Close'));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('hurl-through-hell-modal')).not.toBeInTheDocument();
-      });
+    const playerStats = createPlayerStats({
+      specialActions: [
+        { name: 'Quivering Palm', description: 'Palm of quivering.', automation: { type: 'quivering_palm' } },
+      ],
     });
 
-    it('does not open the modal when cannotAct is true', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'hurlThroughHell',
-        payload: { action: { name: 'Hurl Through Hell' } },
-      });
+    render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
 
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Hurl Through Hell', description: 'Hurl to hell.', automation: { type: 'hurl_through_hell' } },
-        ],
-      });
+    fireEvent.click(screen.getByText(/Quivering Palm/));
 
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
-
-      fireEvent.click(screen.getByText(/Hurl Through Hell/));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('hurl-through-hell-modal')).not.toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Clairvoyant Combatant modal onClose', () => {
-    it('closes the modal when onClose is called', async () => {
-      openModal(
-        createPlayerStats({
-          specialActions: [
-            { name: 'Clairvoyant Combatant', description: 'Combat clairvoyantly.', automation: { type: 'clairvoyant_combatant' } },
-          ],
-        }),
-        'Clairvoyant Combatant',
-        'clairvoyantCombatant'
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId('clairvoyant-combatant-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Close'));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('clairvoyant-combatant-modal')).not.toBeInTheDocument();
-      });
-    });
-
-    it('does not open the modal when cannotAct is true', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'clairvoyantCombatant',
-        payload: { action: { name: 'Clairvoyant Combatant' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Clairvoyant Combatant', description: 'Combat clairvoyantly.', automation: { type: 'clairvoyant_combatant' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
-
-      fireEvent.click(screen.getByText(/Clairvoyant Combatant/));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('clairvoyant-combatant-modal')).not.toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.queryByTestId('quivering-palm-modal')).not.toBeInTheDocument();
     });
   });
 });

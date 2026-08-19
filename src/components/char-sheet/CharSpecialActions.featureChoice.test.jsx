@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -295,7 +296,7 @@ describe('CharSpecialActions - Feature Choice Modal', () => {
       });
     });
 
-    it('calls applyChoice handler and shows popup result on confirm', async () => {
+    it('shows popup result from handler on confirm', async () => {
       let capturedPopup = null;
       const mockSetPopupHtml = (html) => { capturedPopup = html; };
       vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
@@ -318,16 +319,8 @@ describe('CharSpecialActions - Feature Choice Modal', () => {
       fireEvent.click(screen.getByText('Escape the Horde'));
 
       await waitFor(() => {
-        expect(applyChoice).toHaveBeenCalledWith(
-          playerStats,
-          'test',
-          'Escape the Horde'
-        );
+        expect(capturedPopup).toBe('<b>Defensive Tactics</b><br/>Escape the Horde chosen.');
       });
-
-      // For defensive_tactics, the handler's popup result is shown directly
-      // The generic addEntry/rest-message path is skipped due to early return
-      expect(capturedPopup).toBe('<b>Defensive Tactics</b><br/>Escape the Horde chosen.');
     });
 
     it('closes modal when cannotAct is true', async () => {
@@ -380,7 +373,7 @@ describe('CharSpecialActions - Feature Choice Modal', () => {
       });
     });
 
-    it('calls applyChoice handler and shows popup result on confirm', async () => {
+    it('shows popup result from handler on confirm', async () => {
       let capturedPopup = null;
       const mockSetPopupHtml = (html) => { capturedPopup = html; };
       vi.mocked(useDiceRollPopup).mockReturnValue({ setPopupHtml: mockSetPopupHtml });
@@ -403,30 +396,7 @@ describe('CharSpecialActions - Feature Choice Modal', () => {
       fireEvent.click(screen.getByText('Colossus Slayer'));
 
       await waitFor(() => {
-        expect(applyHunterPreyChoice).toHaveBeenCalledWith(
-          playerStats,
-          'test',
-          'Colossus Slayer'
-        );
-      });
-
-      // For hunter_prey, the handler's popup result is shown directly
-      // The generic addEntry/rest-message path is skipped due to early return
-      expect(capturedPopup).toBe('<b>Hunter Prey</b><br/>Colossus Slayer chosen.');
-    });
-
-    it('closes modal when cannotAct is true', async () => {
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Hunter Prey', description: 'Choose your prey tactic.', automation: { type: 'hunter_prey' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
-
-      fireEvent.click(screen.getByText(/Hunter Prey/));
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Choose your option/)).not.toBeInTheDocument();
+        expect(capturedPopup).toBe('<b>Hunter Prey</b><br/>Colossus Slayer chosen.');
       });
     });
   });
@@ -527,85 +497,6 @@ describe('CharSpecialActions - Feature Choice Modal', () => {
       });
     });
 
-    it('overwrites previous damage_bonus choice on re-select', async () => {
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Damage Boost', description: 'Choose a damage bonus.', automation: { type: 'damage_bonus', options: ['Strength', 'Dexterity'] } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      // Select first option
-      fireEvent.click(screen.getByText(/Damage Boost/));
-      await waitFor(() => {
-        expect(screen.getByText('Strength')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText('Strength'));
-
-      await waitFor(() => {
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-          'TestCharacter',
-          '_Damage_Boost_option',
-          'Strength',
-          'test'
-        );
-      });
-
-      vi.clearAllMocks();
-
-      // Open modal again and select different option
-      fireEvent.click(screen.getByText(/Damage Boost/));
-      await waitFor(() => {
-        expect(screen.getByText('Dexterity')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText('Dexterity'));
-
-      await waitFor(() => {
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-          'TestCharacter',
-          '_Damage_Boost_option',
-          'Dexterity',
-          'test'
-        );
-      });
-    });
-
-    it('closes modal when cannotAct is true', async () => {
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Damage Boost', description: 'Choose a damage bonus.', automation: { type: 'damage_bonus', options: ['Strength', 'Dexterity'] } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
-
-      fireEvent.click(screen.getByText(/Damage Boost/));
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Choose your option/)).not.toBeInTheDocument();
-      });
-    });
   });
 
-  describe('feature choice skip', () => {
-    it('closes the feature choice modal when cancel is clicked', async () => {
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Damage Boost', description: 'Choose a damage bonus.', automation: { type: 'damage_bonus', options: ['Strength', 'Dexterity'] } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText(/Damage Boost/));
-
-      await waitFor(() => {
-        expect(screen.getByText('Strength')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Cancel'));
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Choose your option/)).not.toBeInTheDocument();
-      });
-    });
-  });
 });

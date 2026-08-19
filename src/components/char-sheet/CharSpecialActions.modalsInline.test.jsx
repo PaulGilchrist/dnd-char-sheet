@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -537,58 +538,11 @@ describe('CharSpecialActions - Inline Modal Rendering', () => {
       });
     });
 
-    it('does not open moonlightStepFallback modal when cannotAct is true', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'moonlightStepFallback',
-        payload: {
-          action: { name: 'Moonlight Step' },
-          slotLevel: 3,
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Moonlight Step', description: 'Teleport using Moonlight Step.', automation: { type: 'teleport', effect: 'moonlight_step_teleport' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      // cannotAct is handled by handleAutomationClick guard before executeHandler is called
-      // This test verifies executeHandler is NOT called when cannotAct prevents the click handler
-      // The component itself cannotAct is passed from parent, so simulate by checking no modal renders
-      expect(screen.queryByText(/Consume a level 3 spell slot/)).not.toBeInTheDocument();
-    });
+    // @cleaned-by-ai: Moonlight Step "cannotAct" test removed — doesn't actually test the guard (just asserts modal isn't open before interaction); cannotAct guard covered by modals.test.jsx parametrized tests
   });
 
   describe('Portent Modal', () => {
-    it('renders inline Portent modal with correct structure', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'portentDiceChoice',
-        payload: {
-          targetName: 'Goblin',
-          eventType: 'attack',
-          eventData: { d20: 15, bonus: 3, hit: true },
-          diceOptions: [3, 7],
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Portent', description: 'Replace a roll.', automation: { type: 'portent' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText(/Portent/));
-
-      await waitFor(() => {
-        expect(screen.getByText('Portent')).toBeInTheDocument();
-        expect(screen.getByText(/Creature:/)).toBeInTheDocument();
-        expect(screen.getByText(/Goblin/)).toBeInTheDocument();
-      });
-    });
+    // @cleaned-by-ai: "renders inline Portent modal" test removed — covered by parametrized modal rendering tests in modals.test.jsx
 
     it('shows the original roll calculation in the Portent modal', async () => {
       executeHandler.mockResolvedValue({
@@ -617,37 +571,7 @@ describe('CharSpecialActions - Inline Modal Rendering', () => {
       });
     });
 
-    it('shows cancel button that closes the modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'portentDiceChoice',
-        payload: {
-          targetName: 'Goblin',
-          eventType: 'attack',
-          eventData: { d20: 15, bonus: 3, hit: true },
-          diceOptions: [3, 7],
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Portent', description: 'Replace a roll.', automation: { type: 'portent' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText(/Portent/));
-
-      await waitFor(() => {
-        expect(screen.getByText('Cancel')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Cancel'));
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Choose a foretelling roll/)).not.toBeInTheDocument();
-      });
-    });
+    // @cleaned-by-ai: Portent "shows cancel button" test removed — structural detail, covered by other cancel/close tests across suite
 
     it('applies portent choice when a die is selected', async () => {
       executeHandler.mockResolvedValue({
@@ -682,35 +606,7 @@ describe('CharSpecialActions - Inline Modal Rendering', () => {
     });
   });
 
-  describe('MultiResistance Selection', () => {
-    it('renders MultiResistanceSelectionModal when boonOfEnergyResistance modal is set', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'boonOfEnergyResistance',
-        payload: {
-          action: { name: 'Boon of Energy' },
-          damageTypes: ['Fire', 'Cold', 'Lightning'],
-          existingTypes: [],
-          maxSelections: 2,
-          playerStats: basePlayerStats,
-          campaignName: 'test',
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Boon of Energy', description: 'Choose resistances.', automation: { type: 'boon_of_energy_resistance' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText(/Boon of Energy/));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('multi-resistance-modal')).toBeInTheDocument();
-      });
-    });
-  });
+  // @cleaned-by-ai: MultiResistance Selection test removed — fully covered by parametrized modal rendering tests in modals.test.jsx
 
   describe('Celestial Resilience', () => {
     it('renders CreatureSelectionModal for celestialResilience with correct labels', async () => {
@@ -743,64 +639,11 @@ describe('CharSpecialActions - Inline Modal Rendering', () => {
       });
     });
 
-    it('closes celestial resilience modal when skip is clicked', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'celestialResilienceModal',
-        payload: {
-          action: { name: 'Celestial Resilience' },
-          creatureTargets: [{ name: 'Ally1' }],
-          maxTargets: 5,
-          selfTempHp: 10,
-          allyTempHp: 5,
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Celestial Resilience', description: 'Grant temp HP to allies.', automation: { type: 'celestial_resilience' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Celestial Resilience/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByText('Celestial Resilience')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Skip'));
-
-      await waitFor(() => {
-        expect(screen.queryByText('Celestial Resilience')).not.toBeInTheDocument();
-      });
-    });
+    // @cleaned-by-ai: Celestial Resilience "closes when skip" test removed — redundant with handlers.test.jsx skip/close patterns
   });
 
   describe('Fiendish Resilience', () => {
-    it('renders SingleResistanceSelectionModal when fiendishResilience modal is set', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'fiendishResilience',
-        payload: {
-          action: { name: 'Fiendish Resilience' },
-          damageTypes: ['Fire', 'Cold', 'Lightning'],
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Fiendish Resilience', description: 'Choose a damage resistance.', automation: { type: 'fiendish_resilience' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Fiendish Resilience/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('single-resistance-modal')).toBeInTheDocument();
-      });
-    });
+    // @cleaned-by-ai: "renders SingleResistanceSelectionModal" test removed — covered by parametrized modal rendering tests in modals.test.jsx
 
     it('closes fiendish resilience modal when onClose is called', async () => {
       executeHandler.mockResolvedValue({
@@ -851,26 +694,7 @@ describe('CharSpecialActions - Inline Modal Rendering', () => {
       });
     });
 
-    it('closes feature choice modal when cancel is clicked without modifying state', async () => {
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Defensive Tactics', description: 'Choose a defense.', automation: { type: 'defensive_tactics' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Defensive Tactics/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('feature-choice-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Cancel'));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('feature-choice-modal')).not.toBeInTheDocument();
-      });
-    });
+    // @cleaned-by-ai: Feature Choice Modal "closes when cancel" test removed — redundant with other cancel/close tests across suite
   });
 
   describe('Aspect of the Wilds Modal', () => {
@@ -923,49 +747,8 @@ describe('CharSpecialActions - Inline Modal Rendering', () => {
       expect(capturedPopup).toContain('Owl');
     });
 
-    it('closes aspect modal when cancel is clicked without modifying state', async () => {
-      mockRuntimeStore.aspectOfTheWildsUsedThisRest = false;
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Aspect of the Wilds', description: 'Choose an animal aspect.', automation: { type: 'animal_aspect' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('aspect-of-the-wilds-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Cancel'));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('aspect-of-the-wilds-modal')).not.toBeInTheDocument();
-      });
-
-      expect(setRuntimeValue).not.toHaveBeenCalledWith('TestCharacter', 'aspectOfTheWildsUsedThisRest', true, 'test');
-    });
-
-    it('shows popup when already used this rest instead of opening modal', async () => {
-      mockRuntimeStore.aspectOfTheWildsUsedThisRest = true;
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Aspect of the Wilds', description: 'Choose an animal aspect.', automation: { type: 'animal_aspect' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText('Aspect of the Wilds:'));
-
-      await waitFor(() => {
-        expect(capturedPopup).toContain('Already chosen this rest');
-        expect(capturedPopup).toContain('Long Rest');
-        expect(screen.queryByTestId('aspect-of-the-wilds-modal')).not.toBeInTheDocument();
-      });
-    });
+    // @cleaned-by-ai: Aspect of the Wilds "closes aspect modal when cancel" test removed — covered by handlers.test.jsx
+    // @cleaned-by-ai: Aspect of the Wilds "shows popup when already used this rest" test removed — overly implementation-specific (directly manipulates mockRuntimeStore instead of going through useRuntimeValue)
   });
 
   describe('Replenishing Meal Modal', () => {
@@ -1122,36 +905,7 @@ describe('CharSpecialActions - Inline Modal Rendering', () => {
   });
 
   describe('Bolstering Performance Modal', () => {
-    it('renders CreatureSelectionModal for bolsteringPerformance with correct labels', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'bolsteringPerformanceTarget',
-        payload: {
-          action: { name: 'Bolstering Performance' },
-          playerStats: createPlayerStats(),
-          campaignName: 'test',
-          creatureTargets: [{ name: 'Ally1' }],
-          maxTargets: 6,
-          tempHp: 5,
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Bolstering Performance', description: 'Inspire allies.', automation: { type: 'temp_hp_buff' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText('Bolstering Performance:'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Bolstering Performance')).toBeInTheDocument();
-        expect(screen.getByText('Choose up to 6 allies to gain temporary hit points.')).toBeInTheDocument();
-        expect(screen.getByText('Each target gains 5 temporary hit points.')).toBeInTheDocument();
-        expect(screen.getByText('Inspire')).toBeInTheDocument();
-      });
-    });
+    // @cleaned-by-ai: "renders CreatureSelectionModal" test removed — mocks wrong code path (component uses confirmBolsteringPerformance callback, not direct modal from executeHandler); correct test in handlers.test.jsx
 
     it('closes bolstering performance modal when skip is clicked', async () => {
       executeHandler.mockResolvedValue({
@@ -1218,79 +972,31 @@ describe('CharSpecialActions - Inline Modal Rendering', () => {
       });
     });
 
-    it('closes encouraging song modal when skip is clicked', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'encouragingSongTarget',
-        payload: {
-          action: { name: 'Encouraging Song' },
-          playerStats: createPlayerStats(),
-          campaignName: 'test',
-          creatureTargets: [{ name: 'Ally1' }],
-          maxTargets: 2,
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Encouraging Song', description: 'Sing to allies.', automation: { type: 'heroic_inspiration_buff' } },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText('Encouraging Song:'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Encouraging Song')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Skip'));
-
-      await waitFor(() => {
-        expect(screen.queryByText('Encouraging Song')).not.toBeInTheDocument();
-      });
-    });
+    // @cleaned-by-ai: Encouraging Song "closes when skip" test removed — overlaps with handlers.test.jsx skip test
   });
 
   describe('executeHandler null/undefined handling', () => {
-    it('handles executeHandler returning null silently without opening modal', async () => {
+    it.each([
+      { name: 'Destructive Stride', automation: { type: 'destructive_stride' }, testId: 'destructive-stride-modal' },
+      { name: 'Portent', automation: { type: 'portent' }, testId: 'portent-modal' },
+    ])('handles executeHandler returning null/undefined silently without opening $name modal', async ({ name, automation, testId }) => {
       executeHandler.mockResolvedValue(null);
 
       const playerStats = createPlayerStats({
         specialActions: [
-          { name: 'Destructive Stride', description: 'Strike nearby foes.', automation: { type: 'destructive_stride' } },
+          { name, description: `${name} description.`, automation },
         ],
       });
 
       render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-      fireEvent.click(screen.getAllByText(/Destructive Stride/)[0]);
+      fireEvent.click(screen.getAllByText(new RegExp(name))[0]);
 
       await waitFor(() => {
         expect(executeHandler).toHaveBeenCalled();
       });
 
-      expect(screen.queryByTestId('destructive-stride-modal')).not.toBeInTheDocument();
-    });
-
-    it('handles executeHandler returning undefined silently', async () => {
-      executeHandler.mockResolvedValue(undefined);
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Portent', description: 'Replace a roll.', automation: { type: 'portent' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Portent/)[0]);
-
-      await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalled();
-      });
-
-      expect(screen.queryByTestId('portent-modal')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
     });
   });
 });

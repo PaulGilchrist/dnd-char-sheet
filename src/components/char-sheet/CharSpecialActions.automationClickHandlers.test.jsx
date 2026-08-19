@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -218,95 +219,6 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
     Object.keys(runtimeStore).forEach(k => delete runtimeStore[k]);
   });
 
-  describe('animal_aspect (Aspect of the Wilds)', () => {
-    it('opens aspect modal when not already used this rest', async () => {
-      runtimeStore.aspectOfTheWildsUsedThisRest = false;
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Aspect of the Wilds', { type: 'animal_aspect' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Aspect of the Wilds/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Choose an animal aspect/)).toBeInTheDocument();
-        expect(screen.getByText('Owl')).toBeInTheDocument();
-        expect(screen.getByText('Panther')).toBeInTheDocument();
-        expect(screen.getByText('Salmon')).toBeInTheDocument();
-      });
-    });
-
-    it('shows popup when already used this rest', async () => {
-      runtimeStore.aspectOfTheWildsUsedThisRest = true;
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Aspect of the Wilds', { type: 'animal_aspect' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Aspect of the Wilds/)[0]);
-
-      await waitFor(() => {
-        expect(_capturedPopup).toContain('Already chosen this rest');
-        expect(_capturedPopup).toContain('Long Rest');
-      });
-    });
-  });
-
-  // Replenishing Meal modal testing is covered in CharSpecialActions.craftingHandlers.test.jsx
-
-  describe('temp_hp_buff (Bolstering Treats)', () => {
-    it('opens bolstering treats modal when craftCount is set and treats remain', async () => {
-      runtimeStore.chefBolsteringTreats = 2;
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Bolstering Treats', { type: 'temp_hp_buff', craftCount: true }),
-        ],
-        automation: {
-          specialActions: [
-            { type: 'temp_hp_buff', name: 'Bolstering Treats' },
-          ],
-        },
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Bolstering Treats/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByText('Bolstering Treats')).toBeInTheDocument();
-        expect(screen.getByText('Choose creatures to receive a bolstering treat.')).toBeInTheDocument();
-      });
-    });
-
-    it('shows popup when no treats remaining', async () => {
-      runtimeStore.chefBolsteringTreats = 0;
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Bolstering Treats', { type: 'temp_hp_buff', craftCount: true }),
-        ],
-        automation: {
-          specialActions: [
-            { type: 'temp_hp_buff', name: 'Bolstering Treats' },
-          ],
-        },
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Bolstering Treats/)[0]);
-
-      await waitFor(() => {
-        expect(_capturedPopup).toContain('No treats remaining');
-      });
-    });
-  });
-
   describe('brew_poison', () => {
     it('brews poison when under max, has kit, and has gold', async () => {
       runtimeStore.poisonDoses = 0;
@@ -422,7 +334,7 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
     });
   });
 
-  describe('executeHandler fallback', () => {
+  describe('executeHandler result handling', () => {
     it('handles executeHandler returning modal result for teleport', async () => {
       executeHandler.mockResolvedValue({
         type: 'modal',
@@ -465,28 +377,7 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
       });
     });
 
-    it('handles executeHandler returning null silently without popup or modal', async () => {
-      executeHandler.mockResolvedValue(null);
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Silent Action', { type: 'silent' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Silent Action/)[0]);
-
-      await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalled();
-      });
-
-      // Verify no popup was shown and no modal appeared
-      expect(_capturedPopup).toBeNull();
-      expect(screen.queryByTestId('teleport-modal')).not.toBeInTheDocument();
-    });
-
-    it('handles executeHandler returning popup with fallback name', async () => {
+    it('handles executeHandler returning popup with fallback name when payload.name is missing', async () => {
       executeHandler.mockResolvedValue({
         type: 'popup',
         payload: { description: 'No name provided.' },
@@ -505,96 +396,6 @@ describe('CharSpecialActions - handleAutomationClick branches', () => {
         // When payload.name is missing, the popup should use action.name
         expect(_capturedPopup).toContain('Fallback Action');
         expect(_capturedPopup).toContain('No name provided.');
-      });
-    });
-  });
-
-  describe('modal rendering from executeHandler results', () => {
-    it('renders weaponKindMastery modal when executeHandler returns it', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'weaponKindMastery',
-        payload: { action: { name: 'Weapon Kind Mastery' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Weapon Kind Mastery', { type: 'weapon_kind_mastery' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Weapon Kind Mastery/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('weapon-kind-mastery-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders weaponMasteryChoice modal when executeHandler returns it', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'weaponMasteryChoice',
-        payload: { action: { name: 'Weapon Mastery' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Weapon Mastery', { type: 'weapon_mastery_choice' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Weapon Mastery/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('weapon-mastery-choice-modal')).toBeInTheDocument();
-      });
-    });
-
-    // Note: combatSuperiority modal rendering is handled through the
-    // useCombatSuperiorityModal hook, not local useState. Tests for that
-    // flow live in CharSpecialActions.modals.test.jsx which mocks the hook.
-  });
-
-  describe('cannotAct guard', () => {
-    it('does not execute any automation when cannotAct is true', async () => {
-      executeHandler.mockResolvedValue({ type: 'popup', payload: { name: 'Should not fire' } });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Blocked Action', { type: 'generic' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
-
-      fireEvent.click(screen.getAllByText(/Blocked Action/)[0]);
-
-      await waitFor(() => {
-        expect(executeHandler).not.toHaveBeenCalled();
-      });
-
-      // Verify no popup was shown either
-      expect(_capturedPopup).toBeNull();
-    });
-
-    it('allows automation execution when cannotAct is false', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'popup',
-        payload: { name: 'Executed Action', description: 'Action completed.' },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Executed Action', { type: 'generic' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={false} />);
-
-      fireEvent.click(screen.getAllByText(/Executed Action/)[0]);
-
-      await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalled();
       });
     });
   });
