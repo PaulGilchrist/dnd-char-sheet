@@ -55,7 +55,7 @@ export async function handle(action, playerStats, campaignName, _mapName, _chara
         abilityName: action.name,
         description: `${playerStats.name} fired a Starry Form Luminous Arrow at ${targetName || 'a target'}.`,
         timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[starryFormArrowHandler:log-error]", e); });
 
     return {
         type: 'attack_roll',

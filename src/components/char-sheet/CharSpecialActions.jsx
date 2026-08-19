@@ -115,7 +115,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             abilityName: 'Replenishing Meal',
             description: `${playerStats.name} distributed ${count} replenishing meal${count > 1 ? 's' : ''} to ${selectedNames.slice(0, count).join(', ')}.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[charSpecialActions:log-error]", e); });
         const html = `<b>Replenishing Meal</b><br/>Granted ${count} meal${count > 1 ? 's' : ''} to: ${selectedNames.slice(0, count).join(', ')}.<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
         setReplenishingMealModal(null);
@@ -157,7 +157,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             abilityName: 'Bolstering Treats',
             description: `${playerStats.name} distributed ${count} bolstering treat${count > 1 ? 's' : ''} to ${selectedNames.slice(0, count).join(', ')}.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[charSpecialActions:log-error]", e); });
         const html = `<b>Bolstering Treats</b><br/>Granted ${count} treat${count > 1 ? 's' : ''} to: ${selectedNames.slice(0, count).join(', ')}.<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
         setBolsteringTreatsModal(null);
@@ -204,7 +204,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             abilityName: 'Brew Poison',
             description: `${playerStats.name} brewed poison doses using a Poisoner's Kit, expending 50 GP and 1 hour. Doses: ${max}/${max}.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[charSpecialActions:log-error]", e); });
         const html = `<b>Brew Poison</b><br/>Brewed ${max - current} poison dose${max - current !== 1 ? 's' : ''} using a Poisoner's Kit (50 GP, 1 hour). Poison Doses: ${max}/${max}.<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
     }, [cannotAct, hasPoisonerFeat, poisonDoses, poisonDosesMax, campaignName, setPopupHtml, playerStats.inventory, playerStats.name]);
@@ -286,7 +286,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             characterName: playerStats.name,
             abilityName: action.name,
             description: `Chose option: ${choice}`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[charSpecialActions:log-error]", e); });
         const restMessage = (action.automation?.type === 'defensive_tactics' || action.automation?.type === 'hunter_prey')
             ? 'This choice can be changed on a Short Rest or Long Rest.'
             : 'This choice can be changed by clicking the feature again.';
@@ -324,7 +324,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             characterName: playerStats.name,
             abilityName: 'Aspect of the Wilds',
             description: `Chose ${choice} aspect`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[charSpecialActions:log-error]", e); });
         const effects = {
             Owl: 'Darkvision 60 ft.',
             Panther: 'Climb speed equal to walking speed',

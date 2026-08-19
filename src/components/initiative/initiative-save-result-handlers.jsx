@@ -38,7 +38,7 @@ export function createFleshToStoneHandler(campaignName, combatSummary, setCombat
                     saveType: 'CON',
                     success: true,
                     description: `${targetName} collected 3 successful saves against Flesh to Stone. The spell ends.`,
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
                 await logService.addEntry(campaignName, {
                     type: 'condition',
                     action: 'removed',
@@ -47,7 +47,7 @@ export function createFleshToStoneHandler(campaignName, combatSummary, setCombat
                     reason: 'Flesh to Stone (3 successes)',
                     note: `${targetName} collected 3 successful saves; Restrained condition removed.`,
                     timestamp: Date.now(),
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             } else {
                 setRuntimeValue('campaign', saveTrackingKey, {
                     ...saveData,
@@ -62,7 +62,7 @@ export function createFleshToStoneHandler(campaignName, combatSummary, setCombat
                     saveType: 'CON',
                     success: true,
                     description: `${targetName} succeeded on CON save against Flesh to Stone (${newSuccesses}/3 successes needed).`,
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             }
         } else {
             const newFailures = saveData.failures + 1
@@ -84,7 +84,7 @@ export function createFleshToStoneHandler(campaignName, combatSummary, setCombat
                     saveType: 'CON',
                     success: false,
                     description: `${targetName} failed 3 CON saves against Flesh to Stone and is turned to stone (Petrified).`,
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
                 await logService.addEntry(campaignName, {
                     type: 'condition',
                     action: 'removed',
@@ -93,7 +93,7 @@ export function createFleshToStoneHandler(campaignName, combatSummary, setCombat
                     reason: 'Flesh to Stone (3 failures)',
                     note: `${targetName} collected 3 failed saves; Restrained removed, Petrified applied.`,
                     timestamp: Date.now(),
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
                 await logService.addEntry(campaignName, {
                     type: 'condition',
                     action: 'applied',
@@ -102,7 +102,7 @@ export function createFleshToStoneHandler(campaignName, combatSummary, setCombat
                     reason: 'Flesh to Stone',
                     note: `${targetName} is Petrified by Flesh to Stone after failing 3 saves.`,
                     timestamp: Date.now(),
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             } else {
                 setRuntimeValue('campaign', saveTrackingKey, {
                     ...saveData,
@@ -117,7 +117,7 @@ export function createFleshToStoneHandler(campaignName, combatSummary, setCombat
                     saveType: 'CON',
                     success: false,
                     description: `${targetName} failed CON save against Flesh to Stone (${newFailures}/3 failures needed).`,
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             }
         }
 
@@ -159,7 +159,7 @@ export function createPrismaticSprayIndigoHandler(campaignName, combatSummary, s
                     saveType: 'CON',
                     success: true,
                     description: `${targetName} collected 3 successful CON saves against Prismatic Spray (Indigo ray). Restrained ends.`,
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
                 await logService.addEntry(campaignName, {
                     type: 'condition',
                     action: 'removed',
@@ -168,7 +168,7 @@ export function createPrismaticSprayIndigoHandler(campaignName, combatSummary, s
                     reason: 'Prismatic Spray Indigo (3 successes)',
                     note: `${targetName} collected 3 successful saves; Restrained condition removed.`,
                     timestamp: Date.now(),
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             } else {
                 setRuntimeValue('campaign', saveTrackingKey, {
                     ...saveData,
@@ -183,7 +183,7 @@ export function createPrismaticSprayIndigoHandler(campaignName, combatSummary, s
                     saveType: 'CON',
                     success: true,
                     description: `${targetName} succeeded on CON save against Prismatic Spray Indigo ray (${newSuccesses}/3 successes needed).`,
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             }
         } else {
             const newFailures = saveData.failures + 1
@@ -204,7 +204,7 @@ export function createPrismaticSprayIndigoHandler(campaignName, combatSummary, s
                     saveType: 'CON',
                     success: false,
                     description: `${targetName} failed 3 CON saves against Prismatic Spray (Indigo ray) and is turned to stone (Petrified).`,
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
                 await logService.addEntry(campaignName, {
                     type: 'condition',
                     action: 'removed',
@@ -213,7 +213,7 @@ export function createPrismaticSprayIndigoHandler(campaignName, combatSummary, s
                     reason: 'Prismatic Spray Indigo (3 failures)',
                     note: `${targetName} collected 3 failed saves; Restrained removed, Petrified applied.`,
                     timestamp: Date.now(),
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
                 await logService.addEntry(campaignName, {
                     type: 'condition',
                     action: 'applied',
@@ -222,7 +222,7 @@ export function createPrismaticSprayIndigoHandler(campaignName, combatSummary, s
                     reason: 'Prismatic Spray Indigo',
                     note: `${targetName} is Petrified by Prismatic Spray after failing 3 saves.`,
                     timestamp: Date.now(),
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             } else {
                 setRuntimeValue('campaign', saveTrackingKey, {
                     ...saveData,
@@ -237,7 +237,7 @@ export function createPrismaticSprayIndigoHandler(campaignName, combatSummary, s
                     saveType: 'CON',
                     success: false,
                     description: `${targetName} failed CON save against Prismatic Spray Indigo ray (${newFailures}/3 failures needed).`,
-                }).catch(() => {})
+                }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             }
         }
 
@@ -277,7 +277,7 @@ export function createPrismaticSprayVioletHandler(campaignName, combatSummary, s
                 saveType: 'WIS',
                 success: true,
                 description: `${targetName} succeeded on WIS save against Prismatic Spray (Violet ray). Blindness ends.`,
-            }).catch(() => {})
+            }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             await logService.addEntry(campaignName, {
                 type: 'condition',
                 action: 'removed',
@@ -286,7 +286,7 @@ export function createPrismaticSprayVioletHandler(campaignName, combatSummary, s
                 reason: 'Prismatic Spray Violet (WIS save success)',
                 note: `${targetName} succeeded on WIS save; Blinded condition removed.`,
                 timestamp: Date.now(),
-            }).catch(() => {})
+            }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
         } else {
             // Banish the creature
             const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || []
@@ -318,7 +318,7 @@ export function createPrismaticSprayVioletHandler(campaignName, combatSummary, s
                 saveType: 'WIS',
                 success: false,
                 description: `${targetName} failed WIS save against Prismatic Spray (Violet ray) and is banished to another plane of existence.`,
-            }).catch(() => {})
+            }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             await logService.addEntry(campaignName, {
                 type: 'condition',
                 action: 'removed',
@@ -327,7 +327,7 @@ export function createPrismaticSprayVioletHandler(campaignName, combatSummary, s
                 reason: 'Prismatic Spray Violet (banishment)',
                 note: `${targetName} failed WIS save; Blinded removed, banished to another plane.`,
                 timestamp: Date.now(),
-            }).catch(() => {})
+            }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             await logService.addEntry(campaignName, {
                 type: 'condition',
                 action: 'applied',
@@ -336,7 +336,7 @@ export function createPrismaticSprayVioletHandler(campaignName, combatSummary, s
                 reason: 'Prismatic Spray Violet (banishment)',
                 note: `${targetName} is Incapacitated by banishment.`,
                 timestamp: Date.now(),
-            }).catch(() => {})
+            }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
             await logService.addEntry(campaignName, {
                 type: 'ability_use',
                 characterName: saveData.casterName,
@@ -344,7 +344,7 @@ export function createPrismaticSprayVioletHandler(campaignName, combatSummary, s
                 description: `${targetName} was banished to another plane of existence by the Violet ray of Prismatic Spray.`,
                 targetName,
                 timestamp: Date.now(),
-            }).catch(() => {})
+            }).catch((e) => { console.error("[initiativeSaveResultHandlers:log-error]", e); })
         }
 
         setCombatSummary(cloneDeep(combatSummary))

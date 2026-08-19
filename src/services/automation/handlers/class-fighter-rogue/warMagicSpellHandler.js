@@ -75,7 +75,7 @@ export async function confirmWarMagicSpell(action, playerStats, campaignName, se
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${action.name}: Replaced attack with spell "${selectedSpellName}"`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[warMagicSpellHandler:log-error]", e); });
 
     return {
         type: 'popup',

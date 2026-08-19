@@ -24,7 +24,7 @@ export function useCombatSuperiorityModal(playerStats, campaignName, rollAttack,
             result = await executeManeuver(combatSuperiorityModal.action, playerStats, campaignName, singleUseManeuverName);
             if (result?.logEntries) {
                 for (const entry of result.logEntries) {
-                    await addEntry(campaignName, entry).catch(() => {});
+                    await addEntry(campaignName, entry).catch((e) => { console.error("[useCombatSuperiorityModal:log-error]", e); });
                 }
             }
             if (result?.type === 'modal' && result.modalName === 'baitAndSwitchChoice') {
@@ -69,7 +69,7 @@ export function useCombatSuperiorityModal(playerStats, campaignName, rollAttack,
                         characterName: playerStats.name,
                         abilityName: 'Precision Attack',
                         description: desc,
-                    }).catch(() => {});
+                    }).catch((e) => { console.error("[useCombatSuperiorityModal:log-error]", e); });
 
                     if (newHit && rollDamage) {
                         const la = await getRuntimeValue('campaign', 'lastAttack', campaignName);
@@ -124,7 +124,7 @@ export function useCombatSuperiorityModal(playerStats, campaignName, rollAttack,
         result = await onCombatSuperioritySelected(combatSuperiorityModal.action, playerStats, campaignName, selectedManeuverNames, singleUseManeuverName);
         if (result?.logEntries) {
             for (const entry of result.logEntries) {
-                await addEntry(campaignName, entry).catch(() => {});
+                await addEntry(campaignName, entry).catch((e) => { console.error("[useCombatSuperiorityModal:log-error]", e); });
             }
         }
         if (result?.type === 'modal' && result.modalName === 'rallyChoice') {

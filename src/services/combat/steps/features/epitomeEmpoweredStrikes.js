@@ -36,7 +36,7 @@ export const epitomeEmpoweredStrikes = {
                     description: `${ctx.playerStats.name}'s Unarmed Strike deals +1d${martialArtsDie} damage (Empowered Strikes) against ${ctx.targetName || 'target'}.`,
                     targetName: ctx.targetName,
                     timestamp: Date.now(),
-                }).catch(() => {});
+                }).catch((e) => { console.error("[epitomeEmpoweredStrikes:log-error]", e); });
             },
         };
     },

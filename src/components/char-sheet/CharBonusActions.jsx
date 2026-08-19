@@ -71,7 +71,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
             abilityName: 'Apply Poison',
             description: `${playerStats.name} applied a poison dose to a weapon. Doses remaining: ${currentDoses - 1}. Poisoned weapons active until initiative roll, short rest, or long rest.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[charBonusActions:log-error]", e); });
         const html = `<b>Apply Poison</b><br/>Poison applied to weapons. Doses Remaining ${currentDoses - 1}.<br/>When a creature takes damage from a poisoned weapon, it must succeed on a CON save (DC ${saveDc}) or take 2d8 Poison damage and have the Poisoned condition until the end of your next turn.<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
     }, [cannotAct, campaignName, setPopupHtml, playerStats.abilities, playerStats.name, playerStats.proficiency]);
@@ -91,7 +91,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
             abilityName: 'Bolstering Treat',
             description: `${playerStats.name} ate a bolstering treat, gaining ${tempHpAmount} temporary hit points.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[charBonusActions:log-error]", e); });
         const html = `<b>Bolstering Treat</b><br/>Gained ${tempHpAmount} temporary hit points. (${current - 1} treat${current - 1 !== 1 ? 's' : ''} remaining)<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
     }, [cannotAct, hasChefBolsteringTreats, playerStats, campaignName, setPopupHtml]);

@@ -52,7 +52,7 @@ export function createRollConditionSaveHandler({
                         saveType: 'WIS',
                         success: true,
                         description: `${creatureName} succeeded on WIS save against Otto's Irresistible Dance. The spell ends; Charmed and Speed 0 removed.`,
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                     await logService.addEntry(campaignName, {
                         type: 'condition',
                         action: 'removed',
@@ -61,7 +61,7 @@ export function createRollConditionSaveHandler({
                         reason: "Otto's Irresistible Dance (successful reroll)",
                         note: `${creatureName} succeeded on the WIS reroll; Otto's Irresistible Dance ends.`,
                         timestamp: Date.now(),
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                 }
             }
 
@@ -86,7 +86,7 @@ export function createRollConditionSaveHandler({
                         saveType: 'WIS',
                         success: true,
                         description: `${creatureName} succeeded on WIS save against Tasha's Hideous Laughter. The spell ends; Prone and Incapacitated removed.`,
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                     await logService.addEntry(campaignName, {
                         type: 'condition',
                         action: 'removed',
@@ -95,7 +95,7 @@ export function createRollConditionSaveHandler({
                         reason: "Tasha's Hideous Laughter (successful reroll)",
                         note: `${creatureName} succeeded on the WIS reroll; Tasha's Hideous Laughter ends.`,
                         timestamp: Date.now(),
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                 }
             }
 
@@ -120,7 +120,7 @@ export function createRollConditionSaveHandler({
                         saveType: 'WIS',
                         success: true,
                         description: `${creatureName} succeeded on WIS save against Confusion. The spell ends; Charmed and Speed 0 removed.`,
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                     await logService.addEntry(campaignName, {
                         type: 'condition',
                         action: 'removed',
@@ -129,7 +129,7 @@ export function createRollConditionSaveHandler({
                         reason: 'Confusion (successful reroll)',
                         note: `${creatureName} succeeded on the WIS reroll; Confusion ends.`,
                         timestamp: Date.now(),
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                 }
             }
 
@@ -149,7 +149,7 @@ export function createRollConditionSaveHandler({
                         saveType: 'CHA',
                         success: true,
                         description: `${creatureName} succeeded on CHA save against Forcecage and escaped the prison using teleportation or interplanar travel.`,
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                     await logService.addEntry(campaignName, {
                         type: 'condition',
                         action: 'removed',
@@ -158,7 +158,7 @@ export function createRollConditionSaveHandler({
                         reason: 'Forcecage escape (successful CHA save)',
                         note: `${creatureName} succeeded on the CHA reroll; the Forcecage no longer traps them.`,
                         timestamp: Date.now(),
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                 }
             }
 
@@ -183,7 +183,7 @@ export function createRollConditionSaveHandler({
                         saveType: 'INT',
                         success: true,
                         description: `${creatureName} succeeded on INT (Investigation) check (${r1} + ${bonus} = ${r1 + bonus} vs DC ${condition.dc}) and escaped the Maze.`,
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                     await logService.addEntry(campaignName, {
                         type: 'condition',
                         action: 'removed',
@@ -192,7 +192,7 @@ export function createRollConditionSaveHandler({
                         reason: 'Maze escape (successful INT Investigation check)',
                         note: `${creatureName} escaped the Maze and is no longer Incapacitated.`,
                         timestamp: Date.now(),
-                    }).catch(() => {})
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                 }
             }
         }

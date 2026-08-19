@@ -124,7 +124,7 @@ export async function confirmAnimalShapesTransform({ targetName, beast, casterNa
         saveType: 'WIS',
         success: false,
         description: `${targetName} is transformed into ${beast.name} (CR ${beast.challenge_rating}) by ${casterName}'s ${spell?.name || 'Animal Shapes'}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[animalShapesService:log-error]", e); });
 
     return { ok: true };
 }
@@ -192,7 +192,7 @@ export function revertAnimalShapes(targetName, campaignName) {
         characterName: targetName,
         abilityName: 'Animal Shapes',
         description: `${targetName} reverts to their normal form.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[animalShapesService:log-error]", e); });
 
     return changed;
 }

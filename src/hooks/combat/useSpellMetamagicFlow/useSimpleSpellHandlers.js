@@ -338,7 +338,7 @@ export function useSimpleSpellHandlers(createConfirmHandler, createSkipHandler, 
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useSimpleSpellHandlers:log-error]", e); })
   }
 
   const handleLesserRestorationConfirm = createConfirmHandler('lesserRestoration', async (pending, result) => {

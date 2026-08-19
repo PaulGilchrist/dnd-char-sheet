@@ -362,7 +362,7 @@ async function applySaveDamage(context, characterName, campaignName, attackerNam
                 sourceName: attackerName,
                 sourceAbility: context?.actionName || context.name,
                 timestamp: Date.now(),
-            }).catch(() => { });
+            }).catch((e) => { console.error("[saveProcessing:log-error]", e); });
         }
     }
 }

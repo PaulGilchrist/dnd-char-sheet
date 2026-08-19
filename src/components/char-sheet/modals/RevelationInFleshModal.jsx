@@ -23,7 +23,7 @@ function RevelationInFleshModal({ action, playerStats, campaignName, onClose }) 
         const res = await applyRevelationOptions(action, playerStats, campaignName, selected);
         if (res?.logEntries) {
             for (const entry of res.logEntries) {
-                await addEntry(campaignName, entry).catch(() => {});
+                await addEntry(campaignName, entry).catch((e) => { console.error("[revelationInFleshModal:log-error]", e); });
             }
         }
         setResult(res);

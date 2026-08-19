@@ -152,7 +152,7 @@ function logGenericSpellCast(spell, playerStats, campaignName, getTargetInfo, fu
                 concentration: !!spell.concentration,
                 description: spellDescription || null,
                 timestamp: Date.now(),
-            }).catch(() => {});
+            }).catch((e) => { console.error("[spellResolution:log-error]", e); });
         })();
     }
     return Promise.resolve();

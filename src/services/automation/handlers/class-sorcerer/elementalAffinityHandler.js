@@ -22,7 +22,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             characterName: playerStats.name,
             abilityName: name,
             description: `${name} — damage type is ${chosenType}`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[elementalAffinityHandler:log-error]", e); });
 
         return {
             type: 'modal',
@@ -73,7 +73,7 @@ export async function applyTypeChoice(action, playerStats, campaignName, chosenT
         characterName: playerStats.name,
         abilityName: name,
         description: `${name} — damage type ${isChange ? 'changed to' : 'set to'} ${chosenType}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[elementalAffinityHandler:log-error]", e); });
 
     const isElementalAdept = action.effect === 'elemental_adept';
     const popupDescription = isElementalAdept

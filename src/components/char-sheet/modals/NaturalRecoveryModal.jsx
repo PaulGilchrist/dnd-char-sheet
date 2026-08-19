@@ -32,7 +32,7 @@ function NaturalRecoveryModal({ playerStats, campaignName, onClose }) {
             characterName: name,
             abilityName: 'Natural Recovery',
             description: `Granted free cast: ${spellName}`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[naturalRecoveryModal:log-error]", e); });
         onClose();
     };
 

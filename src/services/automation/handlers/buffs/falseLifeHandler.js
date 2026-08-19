@@ -41,7 +41,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         sourceName: playerName,
         note: `False Life (${tempHpExpression})`,
         timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[falseLifeHandler:log-error]", e); });
 
     return {
         type: 'popup',

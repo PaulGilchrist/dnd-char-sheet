@@ -62,7 +62,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${action.name} activated — ${saveType} save DC ${saveDc}, all targets within ${rangeFeet} ft.`,
-     }).catch(() => {});
+     }).catch((e) => { console.error("[conditionHandler:log-error]", e); });
 
     return {
         type: 'modal',

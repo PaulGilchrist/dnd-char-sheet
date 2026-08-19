@@ -61,7 +61,7 @@ export async function applyBonusActionChoice(action, playerStats, campaignName, 
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${chosenOption} selected`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[bonusActionChoiceHandler:log-error]", e); });
 
     // Apply the chosen effect
     let description;

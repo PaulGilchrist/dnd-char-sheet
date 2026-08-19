@@ -143,7 +143,7 @@ export function buildBardicInspirationOffenseStep() {
               description: `${ctx.playerStats.name} used Combat Inspiration - Offense, rolling ${biRoll} (d${dieSize}) bonus damage against ${targetName}.`,
               biDieRoll: biRoll,
               timestamp: Date.now(),
-            }).catch(() => {});
+            }).catch((e) => { console.error("[attackRollRiders:log-error]", e); });
           }
           resolve();
         };

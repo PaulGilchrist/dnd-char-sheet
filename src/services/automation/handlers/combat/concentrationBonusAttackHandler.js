@@ -26,7 +26,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${playerName} activated ${action.name}, concentrating on ${concentrationSpell}. Each turn while concentrating, can make a weapon attack as a Bonus Action.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[concentrationBonusAttackHandler:log-error]", e); });
     }
 
     return {

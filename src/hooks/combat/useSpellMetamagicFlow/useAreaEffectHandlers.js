@@ -19,7 +19,7 @@ export function useAreaEffectHandlers(createSkipHandler, playerStats, campaignNa
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useAreaEffectHandlers:log-error]", e); })
 
     const action = {
       name: pending.spellName,
@@ -50,7 +50,7 @@ export function useAreaEffectHandlers(createSkipHandler, playerStats, campaignNa
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useAreaEffectHandlers:log-error]", e); })
 
     const action = {
       name: pending.spellName,
@@ -88,7 +88,7 @@ export function useAreaEffectHandlers(createSkipHandler, playerStats, campaignNa
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useAreaEffectHandlers:log-error]", e); })
 
     const action = {
       name: pending.spellName,

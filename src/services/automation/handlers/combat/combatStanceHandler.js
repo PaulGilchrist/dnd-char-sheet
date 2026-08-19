@@ -244,7 +244,7 @@ async function activateStance(action, playerStats, campaignName, chosenOption) {
             automationType: 'Rage of the Wilds',
             creatureName: playerName,
             description: `Selected ${chosenOption.name} wild form`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[combatStanceHandler:log-error]", e); });
     }
 
     if (action.name === 'Rage') {

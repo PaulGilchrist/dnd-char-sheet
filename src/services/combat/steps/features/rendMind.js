@@ -36,7 +36,7 @@ export const rendMind = {
         const conditionDef = { key: 'stunned', label: 'Stunned' };
         addCondition(cs, ctx.targetName, conditionDef, dc, 'WIS', getRuntimeValue, setRuntimeValue, ctx.campaignName, ps);
       }
-      addEntry(ctx.campaignName, { type: 'ability_use', characterName: ps.name, abilityName: 'Rend Mind', description: `Rend Mind triggered on ${ctx.targetName} — ${sr?.success ? 'succeeded' : 'failed'} WIS save (DC ${dc})${sr?.success ? '' : ' — Stunned condition applied'}`, targetName: ctx.targetName }).catch(() => {});
+      addEntry(ctx.campaignName, { type: 'ability_use', characterName: ps.name, abilityName: 'Rend Mind', description: `Rend Mind triggered on ${ctx.targetName} — ${sr?.success ? 'succeeded' : 'failed'} WIS save (DC ${dc})${sr?.success ? '' : ' — Stunned condition applied'}`, targetName: ctx.targetName }).catch((e) => { console.error("[rendMind:log-error]", e); });
     }
     return { data: prevData };
   },

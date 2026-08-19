@@ -41,7 +41,7 @@ export async function handle(action, playerStats, campaignName) {
         characterName: playerName,
         abilityName: action.name,
         description: logDesc,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[stepOfTheWindHandler:log-error]", e); });
 
     const epitomeActive = getRuntimeValue(playerName, 'elementalEpitomeActive', campaignName);
     if (epitomeActive) {

@@ -53,7 +53,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         abilityName: action.name,
         description: `${playerStats.name} used ${action.name} to restore all rage points (${currentRage} -> ${rageCount}). This feature requires a Long Rest to reset.`,
     };
-    await addEntry(campaignName, logEntry).catch(() => {});
+    await addEntry(campaignName, logEntry).catch((e) => { console.error("[persistentRageHandler:log-error]", e); });
 
     return {
         type: 'popup',

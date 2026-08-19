@@ -321,7 +321,7 @@ export default function useCharActionsModalHandlers({
             characterName: playerName,
             abilityName: action.name,
             description: `${playerName} used ${action.name} (${totalDistributed} temp HP). Distribution: ${targetNames.map(n => `${n}=${distribution[n]}`).join(', ')}`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[useCharActionsModalHandlers:log-error]", e); });
 
         const distributionStr = targetNames.map(n => `${n} (${distribution[n]} HP)`).join(', ');
         const html = `<b>${action.name}</b><br/>Granted ${totalDistributed} temporary hit points: ${distributionStr}.`;

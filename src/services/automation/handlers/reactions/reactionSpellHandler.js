@@ -72,7 +72,7 @@ export function applyWarCasterReaction(targetName, spellName, spellData, playerS
         characterName: playerStats.name,
         abilityName: 'War Caster - Reactive Spell',
         description: `War Caster Reactive Spell: Casting ${spellName} as a reaction on ${targetName}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[reactionSpellHandler:log-error]", e); });
 
     return { ok: true };
 }

@@ -173,7 +173,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             saveType: 'STR',
             description: `${action.name}: ${targetName} must make a STR saving throw (DC ${saveDc}).`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
 
         const saveResult = await promise;
         const success = saveResult.success;
@@ -193,7 +193,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             formula: `1d20${saveResult.saveBonus !== 0 ? '+' + saveResult.saveBonus : ''}`,
             description: `${targetName} ${success ? 'succeeded' : 'failed'} the STR save (DC ${saveDc}).${!success ? ' Shield Bash effect applied.' : ''}`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
 
         if (success) {
             return {
@@ -234,7 +234,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${action.name} used${targetName ? ` against ${targetName}` : ''}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
 
     if (auto.oncePerTurn) {
         const isCsFeature = ['Cunning Strike', 'Improved Cunning Strike', 'Devious Strikes'].includes(action.name);
@@ -497,7 +497,7 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
             abilityName: action.name,
             description: `${playerStats.name} pushed ${targetName} ${pushDistance} feet away.`,
             targetName: targetName,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
         return {
             type: 'popup',
             payload: {
@@ -548,7 +548,7 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
             abilityName: action.name,
             description: `${playerStats.name} used Hamstring on ${targetName}: target's Speed reduced by ${speedValue} ft until the start of ${playerStats.name}'s next turn`,
             targetName: targetName,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
     }
 
     if (option.saveType) {
@@ -600,7 +600,7 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
                             characterName: playerStats.name,
                             abilityName: 'Envenom Weapons',
                             description: `2d6 Poison damage (${poisonDamage}) applied to ${targetName} on failed Cunning Strike poison save`,
-                        }).catch(() => {});
+                        }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
                     }
                 }
             }
@@ -611,7 +611,7 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
             characterName: playerStats.name,
             abilityName: action.name,
             description: `${option.name} applied to ${targetName} — ${targetName} rolled ${saveResult.roll} on ${option.saveType} save (DC ${saveDc}), ${saveResult.success ? 'succeeded' : 'failed'} — ${saveResult.success ? 'no effect' : `${option.condition} condition applied`}`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
 
         // Handle Psychic Veil interaction
         const attackerBuffs = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName);
@@ -645,7 +645,7 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
             characterName: playerStats.name,
             abilityName: 'Cunning Strike',
             description: `${option.name} — ${playerStats.name} can move up to half Speed without provoking Opportunity Attacks.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
     } else if (option.effect === 'ally_movement' && option.movement) {
         desc += ' — ally moves up to half Speed without provoking Opportunity Attacks';
     } else if (option.effect === 'daze') {

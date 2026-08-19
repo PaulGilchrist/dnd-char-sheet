@@ -26,7 +26,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${action.name} used against ${targetName}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[sentinelGuardianHandler:log-error]", e); });
 
     const meleeAttacks = (playerStats.attacks || []).filter(
         a => a.type === 'Action' && a.range === 'melee'

@@ -151,7 +151,7 @@ export async function processManeuverSaveResult(maneuver, targetName, saveDc, su
                 abilityName: maneuver.name,
                 description: `${playerStats.name} pushed ${targetName} ${pushDistance} feet away.`,
                 targetName: targetName,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[combatSuperiorityUtils:log-error]", e); });
         } else if (maneuver.effect === 'goad') {
             description += ` ${targetName} has Disadvantage on attacks against targets other than you.`;
             const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
@@ -379,7 +379,7 @@ export async function executeSweepingAttack(action, playerStats, campaignName, s
     }
 
     await setRuntimeValue(playerStats.name, 'pendingSweepingAttack', null, campaignName);
-    await addEntry(campaignName, logEntry).catch(() => {});
+    await addEntry(campaignName, logEntry).catch((e) => { console.error("[combatSuperiorityUtils:log-error]", e); });
 
     const description = `<b>Sweeping Attack</b><br/>${secondaryTargetName} takes ${actualDamage} ${damageType} damage (same type as the original attack).`;
 

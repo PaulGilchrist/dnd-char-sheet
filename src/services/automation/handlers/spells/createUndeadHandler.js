@@ -171,7 +171,7 @@ export async function confirmCreateUndead(action, playerStats, campaignName, { g
         description: `${casterName} casts Create Undead (slot level ${slotLevel}), creating ${count} ghoul${plural}.`,
         summonedCreatures: creatureNames,
         timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[createUndeadHandler:log-error]", e); });
 
     action.metadata = { ...action.metadata, [MAX_TARGETS_KEY]: maxTargets };
 

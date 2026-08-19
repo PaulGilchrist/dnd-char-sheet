@@ -132,7 +132,7 @@ export async function processAttackAfterResult(hit, isAutoMiss, targetName, char
                         abilityName: effect.name,
                         description: `${characterName}'s ${effect.name} grants advantage on the next attack roll against ${targetName}`,
                         targetName: targetName,
-                    }).catch(() => { });
+                    }).catch((e) => { console.error("[attackPostProcessing:log-error]", e); });
                 }
             }
         }
@@ -199,7 +199,7 @@ async function processGrazeDamage(context, targetName, characterName, campaignNa
             abilityName: 'Graze',
             description: `${characterName} used Graze on ${context.name} against ${targetName}`,
             targetName: targetName,
-        }).catch(() => { });
+        }).catch((e) => { console.error("[attackPostProcessing:log-error]", e); });
         setPopupHtml({
             type: 'graze-damage',
             name: `${context.name} (Graze)`,

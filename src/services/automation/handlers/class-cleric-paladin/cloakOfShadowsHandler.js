@@ -31,7 +31,7 @@ export async function handle(action, playerStats, campaignName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${playerName} ended ${action.name}.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[cloakOfShadowsHandler:log-error]", e); });
 
         return {
             type: 'popup',
@@ -85,7 +85,7 @@ export async function handle(action, playerStats, campaignName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} activated ${action.name}. You gain Invisibility, can move through occupied spaces, and Flurry of Blows costs no Focus Points.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[cloakOfShadowsHandler:log-error]", e); });
 
     const buff = {
         name: action.name,

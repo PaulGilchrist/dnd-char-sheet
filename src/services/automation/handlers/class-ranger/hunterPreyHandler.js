@@ -47,7 +47,7 @@ export async function applyChoice(playerStats, campaignName, choice) {
         characterName: playerStats.name,
         abilityName: "Hunter's Prey",
         description: `Hunter's Prey choice: ${choice}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[hunterPreyHandler:log-error]", e); });
 
     return {
         type: 'popup',

@@ -76,7 +76,7 @@ export function buildDamageTypeModifiersStep() {
                 abilityName: mod.name,
                 description: `${mod.name} — auto-selected ${chosenType} damage (${target.name} ${reason} ${normalOption.damageType})`,
                 targetName: target.name,
-              }).catch(() => {});
+              }).catch((e) => { console.error("[attackRollPostDamage:log-error]", e); });
 
               ctx.attack.damageType = chosenType;
               return {
@@ -181,7 +181,7 @@ export function buildProceedToDamageStep() {
             saveDc: saveDc,
             description: `Poisoned weapon: ${targetName} must make a DC ${saveDc} CON save or take ${lastAttack.damageType || 'weapon'} damage plus 2d8 Poison damage and gain the Poisoned condition until the end of your next turn.`,
             success: null,
-          }).catch(() => {});
+          }).catch((e) => { console.error("[attackRollPostDamage:log-error]", e); });
 
           saveResult = await promise;
 
@@ -264,7 +264,7 @@ export function buildProceedToDamageStep() {
             abilityName: 'Poisoned Weapons',
             description: `Poison dose triggered on ${targetName} — target failed CON save (DC ${saveDc}), took ${actualPoisonDamage || poisonDamage} Poison damage (plus ${primaryDmg} ${primaryType} damage) and gained Poisoned condition.`,
             targetName: targetName,
-          }).catch(() => {});
+          }).catch((e) => { console.error("[attackRollPostDamage:log-error]", e); });
         }
       }
 
@@ -293,7 +293,7 @@ export function buildStalkersFlurryPostDamageStep() {
           characterName: ctx.playerStats.name,
           abilityName: "Stalker's Flurry - Sudden Strike",
           description: `Sudden Strike: ${ctx.total} damage to ${secondaryTarget} (same as primary attack).`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRollPostDamage:log-error]", e); });
         setRuntimeValue(ctx.playerStats.name, 'pendingSuddenStrike', null, ctx.campaignName);
         setRuntimeValue(ctx.playerStats.name, 'pendingSuddenStrikeTarget', null, ctx.campaignName);
       }
@@ -401,7 +401,7 @@ export function buildCleaveMasteryStep() {
               abilityName: 'Cleave',
               description: `${ctx.playerStats.name} used Cleave on ${ctx._cleaveAttackInfo.attackName} against ${cleaveTargetName}`,
               targetName: cleaveTargetName,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[attackRollPostDamage:log-error]", e); });
           } else {
             const context = {
               targetName: cleaveTargetName,
@@ -416,7 +416,7 @@ export function buildCleaveMasteryStep() {
               abilityName: 'Cleave',
               description: `${ctx.playerStats.name} used Cleave on ${ctx._cleaveAttackInfo.attackName} against ${cleaveTargetName} — Miss`,
               targetName: cleaveTargetName,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[attackRollPostDamage:log-error]", e); });
           }
         },
         onSkip: () => {},
@@ -522,7 +522,7 @@ export function buildToppleMasteryStep() {
         saveDc,
         description: `Topple: ${toppleTargetName} must make a DC ${saveDc} CON save (weapon ${abilityName}) or fall Prone.`,
         success: null,
-      }).catch(() => {});
+      }).catch((e) => { console.error("[attackRollPostDamage:log-error]", e); });
 
       const result = await promise;
 
@@ -540,7 +540,7 @@ export function buildToppleMasteryStep() {
           saveType: 'CON',
           success: false,
           description: `${toppleTargetName} failed CON save vs Topple. Gains Prone condition.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRollPostDamage:log-error]", e); });
 
         addEntry(ctx.campaignName, {
           type: 'ability_use',
@@ -548,7 +548,7 @@ export function buildToppleMasteryStep() {
           abilityName: 'Topple',
           description: `${ctx.playerStats.name} used Topple on ${toppleTargetName} — target failed CON save (DC ${saveDc}, weapon ${abilityName}), fell Prone.`,
           targetName: toppleTargetName,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRollPostDamage:log-error]", e); });
       }
 
       return { data: {} };

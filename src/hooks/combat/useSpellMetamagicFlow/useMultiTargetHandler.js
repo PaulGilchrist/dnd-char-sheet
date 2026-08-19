@@ -17,7 +17,7 @@ export function useMultiTargetHandler(playerStats, campaignName, cfClearPending,
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useMultiTargetHandler:log-error]", e); })
 
     const metaCtx = {}
     if (result?.secondTarget) {
@@ -43,7 +43,7 @@ export function useMultiTargetHandler(playerStats, campaignName, cfClearPending,
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useMultiTargetHandler:log-error]", e); })
 
     onExecute(pending.spell, {})
   }

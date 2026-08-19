@@ -92,7 +92,7 @@ async function applyAntimagicField(creatures, casterName, campaignName) {
             name: AMF_BUFF_NAME,
             description: `${creatureName} is affected by Antimagic Field.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[antimagicFieldHandler:log-error]", e); });
         affectedCount++;
     }
 
@@ -103,7 +103,7 @@ async function applyAntimagicField(creatures, casterName, campaignName) {
         characterName: casterName,
         abilityName: AMF_BUFF_NAME,
         description: `${casterName} casts Antimagic Field! ${affectedCount} creature(s) affected. Only weapon attacks allowed.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[antimagicFieldHandler:log-error]", e); });
 }
 
 async function removeAntimagicField(casterName, campaignName) {
@@ -124,7 +124,7 @@ async function removeAntimagicField(casterName, campaignName) {
             name: AMF_BUFF_NAME,
             description: `Antimagic Field ended. Affected creatures: ${affectedCreatures.join(', ')}.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[antimagicFieldHandler:log-error]", e); });
     }
 }
 

@@ -298,11 +298,6 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 **Risk:** Low (mechanical transformation) | **Impact:** Major readability improvement
 - `src/components/char-sheet/useCharActionsAutomation.js:95` — Replace 87-case switch with `const modalMap = { ... }; const handler = modalMap[result.modalName];`
 
-### Priority 10: Normalize `.catch(() => {})` to Logged Errors
-**Risk:** Low (adds logging, no behavior change) | **Impact:** Dramatically improves debuggability
-- Convert 264 silent `.catch(() => {})` to `.catch((e) => { console.error('Context:', e); })` in production handler files
-- Prioritize automation handlers (combat-critical code)
-
 ### Priority 13: Normalize Component File Naming to PascalCase
 **Risk:** Low (requires import path updates) | **Impact:** Consistency with 200+ other components
 - Rename 14 kebab-case `.jsx` files to PascalCase

@@ -106,5 +106,5 @@ export async function applyCunningStrikeCost(playerStats, campaignName, costD6, 
         characterName: playerStats.name,
         abilityName: 'Cunning Strike',
         description: `Forgoing ${costD6}d6 Sneak Attack damage dice for Cunning Strike cost.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[cunningStrikeUtils:log-error]", e); });
 }

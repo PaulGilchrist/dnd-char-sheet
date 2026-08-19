@@ -41,7 +41,7 @@ export async function handle(action, playerStats, campaignName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} used ${action.name} to end ${removedList} conditions. Psionic Energy: ${currentUses - 1}/${defaultMax}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[guardedMindHandler:log-error]", e); });
 
     return {
         type: 'popup',

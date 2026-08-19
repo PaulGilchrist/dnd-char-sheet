@@ -72,7 +72,7 @@ export function useConfirmableFlow(playerStats, campaignName) {
         spellLevel: pending.spellLevel || 0,
         castingTime: pending.castingTime,
         timestamp: Date.now(),
-      }).catch(() => {});
+      }).catch((e) => { console.error("[useConfirmableFlow:log-error]", e); });
 
       const isCantrip = (pending.spell?.level === 0);
       if (!isCantrip && pending.spell) {
@@ -116,7 +116,7 @@ export function useConfirmableFlow(playerStats, campaignName) {
         spellLevel: pending.spellLevel || 0,
         castingTime: pending.castingTime,
         timestamp: Date.now(),
-      }).catch(() => {});
+      }).catch((e) => { console.error("[useConfirmableFlow:log-error]", e); });
 
       rollbackSpellSlot(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName);
     };

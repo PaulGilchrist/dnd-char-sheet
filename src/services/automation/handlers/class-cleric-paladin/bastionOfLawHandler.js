@@ -112,7 +112,7 @@ export async function handleApply(action, playerStats, campaignName, spAmount, t
         characterName: playerName,
         abilityName: featureName,
         description: `${playerName} activated ${featureName} on ${targetName}, spending ${sp} Sorcery Points to create a ward with ${sp}d8 dice.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[bastionOfLawHandler:log-error]", e); });
 
     return {
         type: 'popup',
@@ -228,7 +228,7 @@ export async function handleSpendDice(action, playerStats, campaignName, _mapNam
         characterName: playerName,
         abilityName: featureName,
         description: `${playerName} spent ${diceToSpend}d8 from ${featureName} ward, reducing damage by ${healedAmount}. ${remainingDice.length} dice remaining.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[bastionOfLawHandler:log-error]", e); });
 
     return {
         type: 'popup',

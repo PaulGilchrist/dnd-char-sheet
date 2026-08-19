@@ -45,7 +45,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${action.name} activated — ${saveType} save DC ${saveDc}, ${rangeFeet}ft square area.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[greaseAreaSaveHandler:log-error]", e); });
 
     // Store grease area tracking for recurring saves
     const trackingKey = getGreaseTrackingKey(playerStats.name);

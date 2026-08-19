@@ -212,7 +212,7 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
                     characterName: activeName,
                     abilityName: 'Cloak of Shadows',
                     description: `${activeName}'s Cloak of Shadows ended due to the Incapacitated condition.`,
-                }).catch(() => {});
+                }).catch((e) => { console.error("[turnStartEffects:log-error]", e); });
             }
         }
     }
@@ -427,7 +427,7 @@ async function applySurvivorTurnStartHeal(activeName, playerStats, effect, campa
         characterName: activeName,
         abilityName: 'Survivor',
         description: `${activeName} uses Survivor to heal ${healAmount} HP (bloodied)`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[turnStartEffects:log-error]", e); });
 }
 
 async function applyVitalityOfTheTreeTurnStart(activeName, playerStats, effect, campaignName) {

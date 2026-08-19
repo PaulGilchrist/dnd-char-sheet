@@ -42,7 +42,7 @@ export function useMetamagicHandler(playerStats, campaignName, cfClearPending, g
       metamagic: metamagicOptions,
       spCost: totalCost,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useMetamagicHandler:log-error]", e); })
 
     const metaCtx = { ...pending._metaCtx }
     if (result?.options) {
@@ -89,7 +89,7 @@ export function useMetamagicHandler(playerStats, campaignName, cfClearPending, g
       metamagic: [],
       spCost: 0,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useMetamagicHandler:log-error]", e); })
 
     const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel, playerStats, campaignName)
     const result = await prepareSpellCast(pending.spell, {}, {

@@ -37,7 +37,7 @@ export function endInvisibility(targetName, campaignName, reason) {
         characterName: targetName,
         abilityName: 'Invisibility',
         description: `Invisibility ends for ${targetName}: ${reason}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[invisibilityService:log-error]", e); });
 }
 
 /**
@@ -80,7 +80,7 @@ export function endGreaterInvisibility(targetName, campaignName, reason) {
         characterName: targetName,
         abilityName: 'Greater Invisibility',
         description: `Greater Invisibility ends for ${targetName}: ${reason}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[invisibilityService:log-error]", e); });
 }
 
 /**

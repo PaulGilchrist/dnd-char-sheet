@@ -65,7 +65,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${action.name} available${targetName ? ` against ${targetName}` : ''}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[weaponMasteryHandler:log-error]", e); });
 
     return {
         type: 'modal',
@@ -99,7 +99,7 @@ export async function applyPostDamageMasteryEffects(attackName, playerStats, cam
                 abilityName: masteryName,
                 description: `${playerStats.name} used ${masteryName} on ${targetName} — Light weapon extra attack available as part of Attack action.`,
                 targetName: targetName,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[weaponMasteryHandler:log-error]", e); });
             continue;
         }
         if (masteryName !== 'Slow') {
@@ -207,7 +207,7 @@ export async function applyMasteryEffect(masteryName, playerStats, campaignName,
         abilityName: masteryName,
         description: `${playerStats.name} applied ${masteryName} to ${targetName}`,
         targetName: targetName,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[weaponMasteryHandler:log-error]", e); });
 
     return {
         type: 'popup',

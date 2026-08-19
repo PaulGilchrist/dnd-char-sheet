@@ -58,7 +58,7 @@ export async function applyFastHands(action, playerStats, campaignName, chosenOp
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${chosenOption} selected`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[fastHandsHandler:log-error]", e); });
 
     let description;
     switch (chosenOption) {

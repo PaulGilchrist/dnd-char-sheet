@@ -42,7 +42,7 @@ export async function executeBonusActionManeuver(action, playerStats, campaignNa
         abilityName: maneuver.name,
         description: `Used ${maneuver.name} as a bonus action. ${dieDescription} ${maneuver.description}`,
     };
-    await addEntry(campaignName, logEntry).catch(() => {});
+    await addEntry(campaignName, logEntry).catch((e) => { console.error("[executeActionManeuvers:log-error]", e); });
 
     let description = `<b>${maneuver.name}</b> (Bonus Action)<br/>${dieDescription}`;
 
@@ -182,7 +182,7 @@ export async function executeGrantAttackManeuver(action, playerStats, campaignNa
         abilityName: maneuver.name,
         description: `Used ${maneuver.name}. ${dieDescription} Choose an ally to add this to their next attack.`,
     };
-    await addEntry(campaignName, logEntry).catch(() => {});
+    await addEntry(campaignName, logEntry).catch((e) => { console.error("[executeActionManeuvers:log-error]", e); });
 
     const description = `<b>${maneuver.name}</b><br/>${dieDescription} Choose a willing ally to add ${dieValue} to their next attack's damage roll.`;
 
@@ -225,7 +225,7 @@ export async function executeMovementManeuver(action, playerStats, campaignName,
         abilityName: maneuver.name,
         description: `Used ${maneuver.name}. ${dieDescription} You or the ally gains +${dieValue} AC until the start of your next turn.`,
     };
-    await addEntry(campaignName, logEntry).catch(() => {});
+    await addEntry(campaignName, logEntry).catch((e) => { console.error("[executeActionManeuvers:log-error]", e); });
 
     const description = `<b>${maneuver.name}</b><br/>${dieDescription} You or the ally gains +${dieValue} AC until the start of your next turn.`;
 
@@ -274,7 +274,7 @@ export async function executeSkillCheckManeuver(action, playerStats, campaignNam
         abilityName: maneuver.name,
         description: `Used ${maneuver.name}. ${dieDescription} Added ${dieValue} to the next ${skillList || 'skill'} check.`,
     };
-    await addEntry(campaignName, logEntry).catch(() => {});
+    await addEntry(campaignName, logEntry).catch((e) => { console.error("[executeActionManeuvers:log-error]", e); });
 
     let description = `<b>${maneuver.name}</b><br/>${dieDescription}`;
 
@@ -323,7 +323,7 @@ export async function executeReactionManeuver(action, playerStats, campaignName,
         abilityName: maneuver.name,
         description: `Used ${maneuver.name} as a reaction. ${dieDescription} ${maneuver.description}`,
     };
-    await addEntry(campaignName, logEntry).catch(() => {});
+    await addEntry(campaignName, logEntry).catch((e) => { console.error("[executeActionManeuvers:log-error]", e); });
 
     let description = `<b>${maneuver.name}</b> (Reaction)<br/>${dieDescription}`;
 
@@ -411,7 +411,7 @@ export async function executeCommandingPresenceReaction(action, playerStats, cam
         abilityName: maneuver.name,
         description: `Used ${maneuver.name} as a reaction. ${dieDescription}`,
     };
-    await addEntry(campaignName, logEntry).catch(() => {});
+    await addEntry(campaignName, logEntry).catch((e) => { console.error("[executeActionManeuvers:log-error]", e); });
 
     const auto = action.automation || {};
     const targetName = auto.targetName;

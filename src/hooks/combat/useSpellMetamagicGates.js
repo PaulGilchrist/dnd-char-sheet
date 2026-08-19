@@ -57,7 +57,7 @@ export async function gateMetamagic(spell, metaCtx, {
               spellLevel: spell.level || 0,
               castingTime: spell.casting_time,
               timestamp: Date.now(),
-            }).catch(() => {});
+            }).catch((e) => { console.error("[useSpellMetamagicGates:log-error]", e); });
             const mCtx = { multiTarget: secondTargetName };
             onExecute(spell, mCtx);
             setSecondaryTargetModal(null);
@@ -70,7 +70,7 @@ export async function gateMetamagic(spell, metaCtx, {
               spellLevel: spell.level || 0,
               castingTime: spell.casting_time,
               timestamp: Date.now(),
-            }).catch(() => {});
+            }).catch((e) => { console.error("[useSpellMetamagicGates:log-error]", e); });
             onExecute(spell, {});
             setSecondaryTargetModal(null);
           },

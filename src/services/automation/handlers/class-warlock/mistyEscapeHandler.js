@@ -41,7 +41,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: featureName,
         description: `${playerName} used ${featureName} — Reaction Misty Step cast. Choose Disappearing Step (Invisible) or Dreadful Step (2d10 Psychic damage) for nearby creatures.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[mistyEscapeHandler:log-error]", e); });
 
     return {
         type: 'modal',

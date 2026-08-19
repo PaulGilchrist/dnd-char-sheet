@@ -210,7 +210,7 @@ async function performSummon(action, playerStats, campaignName, variant) {
         description: logDescription,
         summonedCreatures: [creature.name],
         timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[summonSpiritHandler:log-error]", e); });
 
     return {
         type: 'popup',

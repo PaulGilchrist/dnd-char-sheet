@@ -80,7 +80,7 @@ export async function triggerFriends(spell, metaCtx, playerStats, campaignName, 
             characterName: playerStats.name,
             abilityName: 'Friends',
             description: `${playerStats.name} casts Friends on ${targetName} but it has no effect — ${targetName} is not a Humanoid.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[friendsService:log-error]", e); });
         return { type: 'popup', payload: { type: 'automation_info', name: 'Friends', description: `No effect. ${targetName} is not a Humanoid.` } };
     }
 
@@ -91,7 +91,7 @@ export async function triggerFriends(spell, metaCtx, playerStats, campaignName, 
             characterName: playerStats.name,
             abilityName: 'Friends',
             description: `${playerStats.name} casts Friends on ${targetName} but it has no effect — already cast within the past 24 hours.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[friendsService:log-error]", e); });
         return { type: 'popup', payload: { type: 'automation_info', name: 'Friends', description: `No effect. You have already cast Friends on ${targetName} within the past 24 hours.` } };
     }
 
@@ -115,7 +115,7 @@ export async function triggerFriends(spell, metaCtx, playerStats, campaignName, 
             characterName: playerStats.name,
             abilityName: 'Friends',
             description: `${playerStats.name} casts Friends on ${targetName} but it has no effect — ${targetName} is not at full health and is immunized to the effect.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[friendsService:log-error]", e); });
         return { type: 'popup', payload: { type: 'automation_info', name: 'Friends', description: `No effect. ${targetName} is not at full health and is immunized to the effect.` } };
     }
 
@@ -181,5 +181,5 @@ export function endFriendsOnHostileAction(casterName, campaignName) {
         characterName: casterName,
         abilityName: 'Friends',
         description: `${activeTarget} knows it was Charmed by ${casterName} as the Friends spell ends early.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[friendsService:log-error]", e); });
 }

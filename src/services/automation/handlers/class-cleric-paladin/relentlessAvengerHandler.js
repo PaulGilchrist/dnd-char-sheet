@@ -15,7 +15,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${action.name} used${targetName ? ` against ${targetName}` : ''}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[relentlessAvengerHandler:log-error]", e); });
 
     if (!targetName) {
         return {

@@ -23,7 +23,7 @@ export async function handle(action, playerStats, campaignName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${playerName} ended ${action.name}.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[superiorDefenseHandler:log-error]", e); });
         return {
             type: 'popup',
             payload: {
@@ -70,7 +70,7 @@ export async function handle(action, playerStats, campaignName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} activated ${action.name}. Resistance to all damage except Force for 1 minute or until Incapacitated.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[superiorDefenseHandler:log-error]", e); });
 
     return {
         type: 'popup',

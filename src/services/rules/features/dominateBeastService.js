@@ -53,7 +53,7 @@ export async function triggerDominateBeast(spell, metaCtx, playerStats, campaign
             characterName: playerStats.name,
             abilityName: 'Dominate Beast',
             description: `${playerStats.name} casts Dominate Beast on ${targetName} but it has no effect — ${targetName} is not a Beast.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[dominateBeastService:log-error]", e); });
         const refundLevel = metaCtx?.slotLevel || spell.level || 4;
         const slotKey = `spell_slots_level_${refundLevel}`;
         const currentSlots = getRuntimeValue(playerStats.name, slotKey);

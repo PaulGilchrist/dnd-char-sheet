@@ -24,7 +24,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${action.name} — Vibrations already active against ${existingTarget}. Use again to release or trigger shockwave.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[quiveringPalmHandler:log-error]", e); });
 
         return {
             type: 'modal',
@@ -50,7 +50,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${action.name} — Last attack was not made by ${playerName}.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[quiveringPalmHandler:log-error]", e); });
 
         return {
             type: 'popup',
@@ -70,7 +70,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${action.name} — Last attack was not an Unarmed Strike.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[quiveringPalmHandler:log-error]", e); });
 
         return {
             type: 'popup',
@@ -90,7 +90,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${action.name} — Last Unarmed Strike did not hit.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[quiveringPalmHandler:log-error]", e); });
 
         return {
             type: 'popup',
@@ -110,7 +110,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${action.name} — No target selected.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[quiveringPalmHandler:log-error]", e); });
 
         return {
             type: 'popup',
@@ -135,7 +135,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${action.name} — Not enough ${resource === 'focusPoints' ? 'Focus Points' : 'Ki Points'}. ${currentResource}/${cost} required.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[quiveringPalmHandler:log-error]", e); });
 
         return {
             type: 'popup',
@@ -172,7 +172,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} set lethal vibrations in ${targetName}'s body. Use the feature again to release the vibrations or trigger a shockwave.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[quiveringPalmHandler:log-error]", e); });
 
     return {
         type: 'popup',
@@ -293,7 +293,7 @@ export async function applyRelease(action, playerStats, campaignName, targetName
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} released the vibrations harmlessly against ${targetName}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[quiveringPalmHandler:log-error]", e); });
 
     return {
         type: 'popup',

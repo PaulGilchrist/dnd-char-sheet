@@ -66,7 +66,7 @@ export async function confirmOceanicGift(action, playerStats, campaignName, sele
             abilityName: action.name,
             description: `${playerName} used ${action.name} to grant Wrath of the Sea to ${selectedAllyName}.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[oceanicGiftHandler:log-error]", e); });
     }
 
     if (doubleEmanation) {
@@ -78,7 +78,7 @@ export async function confirmOceanicGift(action, playerStats, campaignName, sele
             abilityName: action.name,
             description: `${playerName} manifested Wrath of the Sea around both themselves and ${selectedAllyName}.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[oceanicGiftHandler:log-error]", e); });
     }
 
     return {

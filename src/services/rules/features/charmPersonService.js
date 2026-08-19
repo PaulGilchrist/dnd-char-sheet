@@ -77,7 +77,7 @@ export async function triggerCharmPerson(spell, metaCtx, playerStats, campaignNa
                 characterName: playerStats.name,
                 abilityName: 'Charm Person',
                 description: `${playerStats.name} casts Charm Person on ${targetName} but it has no effect — ${targetName} is not a Humanoid.`,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[charmPersonService:log-error]", e); });
         }
 
         if (humanoidTargets.length === 0) {
@@ -135,7 +135,7 @@ export async function triggerCharmPerson(spell, metaCtx, playerStats, campaignNa
             characterName: playerStats.name,
             abilityName: 'Charm Person',
             description: `${playerStats.name} casts Charm Person on ${targetName} but it has no effect — ${targetName} is not a Humanoid.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[charmPersonService:log-error]", e); });
         return { type: 'popup', payload: { type: 'automation_info', name: 'Charm Person', description: `No effect. ${targetName} is not a Humanoid.` } };
     }
 

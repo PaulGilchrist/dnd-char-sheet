@@ -130,7 +130,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerStats.name,
         abilityName: action.name,
         description: logDescription,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[knowEnemyHandler:log-error]", e); });
 
     return {
         type: 'popup',

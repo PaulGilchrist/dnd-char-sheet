@@ -207,7 +207,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerStats.name,
         abilityName: action.name,
         description: `Rolled ${rollResult.total} (1d${martialArtsDie}) + ${monkLevel} (Monk level) = <strong>${healAmount}</strong> HP. Regained all Focus Points.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[initiativeHandler:log-error]", e); });
 
     return {
         type: 'popup',

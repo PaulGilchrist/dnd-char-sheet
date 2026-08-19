@@ -10,7 +10,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} used ${action.name} to move an object or willing creature up to ${range} feet.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[telekineticMovementHandler:log-error]", e); });
 
     return {
         type: 'popup',

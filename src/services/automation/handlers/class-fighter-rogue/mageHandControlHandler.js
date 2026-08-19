@@ -10,7 +10,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} used ${action.name} to move the spectral hand up to ${range} feet.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[mageHandControlHandler:log-error]", e); });
 
     return {
         type: 'popup',

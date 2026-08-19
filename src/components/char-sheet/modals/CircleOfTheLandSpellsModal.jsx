@@ -25,7 +25,7 @@ function CircleOfTheLandSpellsModal({ playerStats, campaignName, onClose }) {
             characterName: name,
             abilityName: 'Circle of the Land Spells',
             description: `Chose land type: ${landType.name}`,
-        }).catch(() => {})
+        }).catch((e) => { console.error("[circleOfTheLandSpellsModal:log-error]", e); })
         onClose()
     }
 

@@ -107,7 +107,7 @@ export function clearAllExpirationEffects(characterName, campaignName) {
         characterName: characterName,
         abilityName: 'Flesh to Stone',
         description: 'Rest; Flesh to Stone ends.',
-    }).catch(() => {});
+    }).catch((e) => { console.error("[clearAllExpirationEffects:log-error]", e); });
 
     // Clean up Prismatic Spray recurring save tracking on rest.
     const psAllKeys = getAllStoreKeys();
@@ -147,7 +147,7 @@ export function clearAllExpirationEffects(characterName, campaignName) {
         characterName: characterName,
         abilityName: 'Prismatic Spray',
         description: 'Rest; Prismatic Spray Indigo/Violet effects end.',
-    }).catch(() => {});
+    }).catch((e) => { console.error("[clearAllExpirationEffects:log-error]", e); });
 
     // Clean up Otto's Irresistible Dance spell badges on rest / initiative roll.
     // Conditions (Charmed, Speed 0) are already removed by the expiration scan above.

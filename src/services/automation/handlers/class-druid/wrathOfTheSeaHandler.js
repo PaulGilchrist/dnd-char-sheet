@@ -43,7 +43,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 abilityName: action.name,
                 description: `${playerName} activated Wrath of the Sea. Ocean spray emanation active.`,
                 timestamp: Date.now(),
-            }).catch(() => {});
+            }).catch((e) => { console.error("[wrathOfTheSeaHandler:log-error]", e); });
 
             return {
                 type: 'popup',

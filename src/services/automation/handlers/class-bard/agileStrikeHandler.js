@@ -63,7 +63,7 @@ export async function handle(action, playerStats, campaignName, _mapName, _chara
         abilityName: action.name,
         description: `${playerStats.name} used ${action.name} on ${targetName}: d20(${d20}) + ${hitBonus} = ${total} vs AC ${targetAc} → ${hitText}. BI die (${dieStr}) + ${dexMod} = ${damageTotal}.${damageText}`,
         timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[agileStrikeHandler:log-error]", e); });
 
     return {
         type: 'popup',

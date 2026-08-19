@@ -54,7 +54,7 @@ export function useActionSpellMetamagic({
             metamagic: metamagicOptions,
             spCost: totalCost,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[useActionSpellMetamagic:log-error]", e); });
 
         const metaCtx = {};
         if (result?.options) {
@@ -129,7 +129,7 @@ export function useActionSpellMetamagic({
                     metamagic: [],
                     spCost: 0,
                     timestamp: Date.now(),
-                }).catch(() => {});
+                }).catch((e) => { console.error("[useActionSpellMetamagic:log-error]", e); });
                 const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, attack.name, attack.spellLevel || 0, playerStats, campaignName);
                 const metaCtx = {};
                 const result = await prepareSpellCast({ name: attack.name, level: attack.spellLevel || 0, baseLevel: 0 }, metaCtx, {

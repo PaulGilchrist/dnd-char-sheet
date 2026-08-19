@@ -23,7 +23,7 @@ export const eldritchStrikes = {
         const effs = getRuntimeValue('campaign', 'targetEffects') || [];
         setRuntimeValue('campaign', 'targetEffects', [...effs, { target: t.name, source: rider.name, option: rider.options[0].name, effect: rider.options[0].effect, value: rider.options[0].value || null, noOpportunityAttacks: rider.options[0].noOpportunityAttacks || false, duration: 'until_start_of_next_turn' }], ctx.campaignName);
         if (rider.oncePerTurn) setRuntimeValue(ctx.playerStats.name, key, round, ctx.campaignName);
-        addEntry(ctx.campaignName, { type: 'ability_use', characterName: ctx.playerStats.name, abilityName: rider.name, description: `${ctx.playerStats.name} used ${rider.name} on ${t.name}, imposing Disadvantage on the target's next saving throw.`, targetName: t.name }).catch(() => {});
+        addEntry(ctx.campaignName, { type: 'ability_use', characterName: ctx.playerStats.name, abilityName: rider.name, description: `${ctx.playerStats.name} used ${rider.name} on ${t.name}, imposing Disadvantage on the target's next saving throw.`, targetName: t.name }).catch((e) => { console.error("[eldritchStrikes:log-error]", e); });
       }
     }
     return { data: prevData };

@@ -118,7 +118,7 @@ function DivineSparkModal({ featureName, attackerName, targetName, campaignName,
             characterName: attackerName,
             abilityName: featureName,
             description: `${featureName} (Harm) — targeting ${targetName}, ${damageType} damage, ${saveType} save DC ${saveDc}.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[divineSparkModal:log-error]", e); });
     };
 
     return (

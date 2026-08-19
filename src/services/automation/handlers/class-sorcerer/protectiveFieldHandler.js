@@ -49,7 +49,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: featureName,
         description: `${playerName} used ${featureName} to reduce damage by ${reduction} (Rolled ${psionicDieSize} for ${dieValue} + INT ${intMod}).${defenderName ? ` Damage reduced to ${defenderName}.` : ''}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[protectiveFieldHandler:log-error]", e); });
 
     return {
         type: 'popup',

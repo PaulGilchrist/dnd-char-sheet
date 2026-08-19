@@ -48,7 +48,7 @@ const storage = {
                     mode: 'cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ value })
-                }).catch(() => {});
+                }).catch((e) => { console.error("[storage:error]", e); });
             });
             return queue.pending;
         }
@@ -58,7 +58,7 @@ const storage = {
             mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ value })
-          }).catch(() => {});
+          }).catch((e) => { console.error("[storage:error]", e); });
       },
     getProperty: async (name, propertyName, campaignName) => {
         // Campaign-level keys are stored at the top level, not under a "campaign" wrapper.

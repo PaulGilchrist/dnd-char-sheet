@@ -123,7 +123,7 @@ export async function confirmShapechangeTransform({ targetName, form, casterName
         saveType: 'WIS',
         success: false,
         description: `${targetName} uses Shapechange to transform into ${form.name} (CR ${form.challenge_rating}) cast by ${casterName}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[shapechangeService:log-error]", e); });
 
     return { ok: true };
 }
@@ -196,7 +196,7 @@ export function revertShapechange(targetName, campaignName) {
         characterName: targetName,
         abilityName: 'Shapechange',
         description: `${targetName} reverts to their normal form.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[shapechangeService:log-error]", e); });
 
     return changed;
 }

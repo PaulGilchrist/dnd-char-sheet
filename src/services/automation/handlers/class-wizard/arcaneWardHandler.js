@@ -105,7 +105,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} used ${action.name} on ${targetName}. Arcane Ward absorbed ${absorbed} of ${damageAmount} damage (${wardHp} → ${newWardHp} HP). ${remainingDamage > 0 ? `${targetName} takes ${remainingDamage} remaining damage.` : 'All damage absorbed.'}`,
-    }).catch(() => { });
+    }).catch((e) => { console.error("[arcaneWardHandler:log-error]", e); });
 
     // Log ward absorption
     await addEntry(campaignName, {
@@ -115,7 +115,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         wizardName: playerName,
         remainingWardHp: newWardHp,
         timestamp: Date.now(),
-    }).catch(() => { });
+    }).catch((e) => { console.error("[arcaneWardHandler:log-error]", e); });
 
     let description = `${action.name}: ${targetName} took ${damageAmount} damage. Arcane Ward absorbed ${absorbed} (${wardHp} → ${newWardHp} HP).`;
     if (remainingDamage > 0) {
@@ -224,7 +224,7 @@ export async function onArcaneWardBonusActionRestore(action, playerStats, campai
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} used Arcane Ward (Bonus Action) to restore ${restoreAmount} HP to the ward (${currentHp} → ${newHp}/${maxHp}). Expend spell slot level ${lowestSlotLevel}.`,
-    }).catch(() => { });
+    }).catch((e) => { console.error("[arcaneWardHandler:log-error]", e); });
 
     return {
         type: 'popup',

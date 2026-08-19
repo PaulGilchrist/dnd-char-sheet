@@ -184,7 +184,7 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, _map
                 hit,
                 isCrit,
                 timestamp: Date.now(),
-            }).catch(() => {});
+            }).catch((e) => { console.error("[bonusAttacksHandler:roll]", e); });
 
             if (hit && damageResult) {
                 const displayFormula = damageFormula;
@@ -202,7 +202,7 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, _map
                     finalDamage: damageResult.finalDamage,
                     isCrit: damageResult.isCrit,
                     timestamp: Date.now(),
-                }).catch(() => {});
+                }).catch((e) => { console.error("[bonusAttacksHandler:log-error]", e); });
 
                 addEntry(campaignName, {
                     type: 'hp_change',
@@ -213,7 +213,7 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, _map
                     isHealing: false,
                     sourceName: playerName,
                     note: `${featureName} attack`,
-                }).catch(() => {});
+                }).catch((e) => { console.error("[bonusAttacksHandler:log-error]", e); });
             }
         }
     }
@@ -224,7 +224,7 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, _map
         abilityName: featureName,
         description: `${playerName} used ${featureName}, making ${numAttacks} unarmed strikes. Total damage dealt: ${totalDamage}.`,
         timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[bonusAttacksHandler:log-error]", e); });
 
     const hitCount = attackResults.filter(r => r.hit).length;
     const critCount = attackResults.filter(r => r.isCrit).length;

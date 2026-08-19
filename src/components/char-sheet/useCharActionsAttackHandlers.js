@@ -82,7 +82,7 @@ export default function useCharActionsAttackHandlers({
             characterName: playerName,
             abilityName: 'Reckless Attack',
             description: `${playerName} uses Reckless Attack, granting advantage on the first attack roll on this turn`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[useCharActionsAttackHandlers:log-error]", e); });
         addExpiration(playerName, playerName, [
             { type: 'remove_active_buff', buffName: 'Reckless Attack' }
         ], campaignName, undefined, playerName);
@@ -106,7 +106,7 @@ export default function useCharActionsAttackHandlers({
                 characterName: playerName,
                 abilityName: 'Brutal Strike',
                 description: `${playerName} uses Brutal Strike on ${attack.name} — ${effectNames}`,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[useCharActionsAttackHandlers:log-error]", e); });
         }
 
         setModalState({ recklessAttackModal: null });
@@ -141,7 +141,7 @@ export default function useCharActionsAttackHandlers({
                 characterName: playerName,
                 abilityName: 'Brutal Strike',
                 description: `${playerName} uses Brutal Strike on ${attack?.name || 'attack'} — ${effectNames}`,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[useCharActionsAttackHandlers:log-error]", e); });
         }
         setModalState({ recklessAttackModal: null });
         if (attack) {

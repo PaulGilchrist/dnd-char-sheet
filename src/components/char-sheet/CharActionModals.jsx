@@ -250,7 +250,7 @@ function CharActionModals({
             characterName: playerStats.name,
             abilityName: 'Improved Duplicity',
             description: `${playerStats.name} used Improved Duplicity, granting Advantage to ${selectedAllyNames.join(', ')}.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[charActionModals:log-error]", e); });
         window.dispatchEvent(new CustomEvent('buffs-updated'));
         onClose();
     };

@@ -19,7 +19,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${action.name} used${targetName ? ` against ${targetName}` : ''}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[telekineticThrustHandler:log-error]", e); });
 
     const saveDc = buildSaveDc(auto, playerStats);
 
@@ -135,5 +135,5 @@ async function applyThrustEffect(action, playerStats, campaignName, targetName, 
         abilityName: action.name,
         description: `${playerStats.name} knocked ${targetName} Prone and pushed ${pushValue} feet away.`,
         targetName: targetName,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[telekineticThrustHandler:log-error]", e); });
 }

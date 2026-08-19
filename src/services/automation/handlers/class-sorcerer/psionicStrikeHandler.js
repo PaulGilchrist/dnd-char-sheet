@@ -98,7 +98,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             saveDc,
             saveType,
             description: `Telekinetic Adept — ${targetName} must make a ${saveType} saving throw (DC ${saveDc}).`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
 
         const saveResult = await promise;
         const success = saveResult.success;
@@ -125,7 +125,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 abilityName: 'Telekinetic Thrust',
                 description: `${playerName} pushed ${targetName} 10 feet away.`,
                 targetName: targetName,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
         }
     }
 
@@ -134,7 +134,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} used ${action.name} to deal ${totalDamage} Force damage to ${targetName} (Rolled ${psionicDieSize} for ${dieValue} + INT ${intMod}).`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
 
     await addEntry(campaignName, {
         type: 'roll',
@@ -146,7 +146,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         total: totalDamage,
         formula: `${psionicDieSize} + ${intMod}`,
         rolls: [dieValue, intMod],
-    }).catch(() => {});
+    }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
 
     let description = `${action.name}: Dealt <strong>${totalDamage}</strong> Force damage to ${targetName}. (Rolled ${psionicDieSize} for ${dieValue} + INT ${intMod}). Psionic Energy: ${currentUses - 1}/${defaultMax}.`;
     if (thrustResult) {

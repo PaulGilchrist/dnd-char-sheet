@@ -175,7 +175,7 @@ export async function confirmBolsteringPerformance(action, playerStats, campaign
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${playerStats.name} used ${action.name}, granting ${tempHp} temporary hit points to ${targetList}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[tempHpBuffHandler:log-error]", e); });
 
     return {
         type: 'popup',
@@ -265,7 +265,7 @@ export async function confirmMantleOfInspiration(action, playerStats, campaignNa
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} used ${action.name} (rolled ${dieRoll} on 1d${bardicDieSize} = ${tempHp} temp HP). Targets: ${targetList}.${targetDetail}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[tempHpBuffHandler:log-error]", e); });
 
     return {
         type: 'popup',

@@ -53,7 +53,7 @@ export async function triggerDominatePerson(spell, metaCtx, playerStats, campaig
             characterName: playerStats.name,
             abilityName: 'Dominate Person',
             description: `${playerStats.name} casts Dominate Person on ${targetName} but it has no effect — ${targetName} is not a Humanoid.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[dominatePersonService:log-error]", e); });
         const refundLevel = metaCtx?.slotLevel || spell.level || 5;
         const slotKey = `spell_slots_level_${refundLevel}`;
         const currentSlots = getRuntimeValue(playerStats.name, slotKey);

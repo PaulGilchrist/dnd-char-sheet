@@ -270,7 +270,7 @@ export async function confirmPrimalCompanionSummon(action, playerStats, campaign
         description: `${casterName} summons a Primal Companion (${selectedType}).`,
         summonedCreatures: [creature.name],
         timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[primalCompanionHandler:log-error]", e); });
 
     return {
         type: 'popup',

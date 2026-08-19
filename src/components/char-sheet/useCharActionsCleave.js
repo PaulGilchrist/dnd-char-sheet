@@ -62,7 +62,7 @@ export default function useCharActionsCleave({
                 abilityName: 'Cleave',
                 description: `${playerStats.name} used Cleave on ${lastAttack.attackName} against ${cleaveTargetName}`,
                 targetName: cleaveTargetName,
-            }).catch(() => { });
+            }).catch((e) => { console.error("[useCharActionsCleave:log-error]", e); });
         } else {
             const context = {
                 targetName: cleaveTargetName,
@@ -77,7 +77,7 @@ export default function useCharActionsCleave({
                 abilityName: 'Cleave',
                 description: `${playerStats.name} used Cleave on ${lastAttack.attackName} against ${cleaveTargetName} — Miss`,
                 targetName: cleaveTargetName,
-            }).catch(() => { });
+            }).catch((e) => { console.error("[useCharActionsCleave:log-error]", e); });
         }
     }
 
@@ -94,7 +94,7 @@ export default function useCharActionsCleave({
                 abilityName: 'Tactical Master',
                 description: `${playerStats.name} used Tactical Master on ${attackName} against ${targetName} — changed mastery from ${oldMastery} to ${chosenMastery}`,
                 targetName: targetName,
-            }).catch(() => { });
+            }).catch((e) => { console.error("[useCharActionsCleave:log-error]", e); });
         }
         const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
         const actualTargetName = lastAttack?.targetName;
@@ -119,7 +119,7 @@ export default function useCharActionsCleave({
                 saveDc,
                 description: `Topple: ${actualTargetName} must make a DC ${saveDc} CON save (weapon ${abilityName}) or fall Prone.`,
                 success: null,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[useCharActionsCleave:log-error]", e); });
             const result = await promise;
             if (result && !result.success) {
                 const storedConditions = getRuntimeValue(actualTargetName, 'activeConditions') || [];
@@ -136,14 +136,14 @@ export default function useCharActionsCleave({
                     saveType: 'CON',
                     success: false,
                     description: `${actualTargetName} failed CON save vs Topple. Gains Prone condition.`,
-                }).catch(() => {});
+                }).catch((e) => { console.error("[useCharActionsCleave:log-error]", e); });
                 await addEntry(campaignName, {
                     type: 'ability_use',
                     characterName: playerStats.name,
                     abilityName: 'Topple',
                     description: `${playerStats.name} used Topple on ${actualTargetName} — target failed CON save (DC ${saveDc}, weapon ${abilityName}), fell Prone.`,
                     targetName: actualTargetName,
-                }).catch(() => {});
+                }).catch((e) => { console.error("[useCharActionsCleave:log-error]", e); });
             }
         } else {
             await applyMasteryEffect(chosenMastery, playerStats, campaignName, actualTargetName);

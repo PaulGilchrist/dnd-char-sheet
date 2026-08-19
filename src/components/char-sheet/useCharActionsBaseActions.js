@@ -92,7 +92,7 @@ export default function useCharActionsBaseActions({
                 characterName: playerStats.name,
                 abilityName: 'Hide',
                 description: successLog,
-            }).catch(() => { });
+            }).catch((e) => { console.error("[useCharActionsBaseActions:log-error]", e); });
         } else {
             const d20Val = lastAttackData?.d20 ?? '?';
             let failDesc = `Hide failed! (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You remain visible.`;
@@ -107,7 +107,7 @@ export default function useCharActionsBaseActions({
                 characterName: playerStats.name,
                 abilityName: 'Hide',
                 description: failLog,
-            }).catch(() => { });
+            }).catch((e) => { console.error("[useCharActionsBaseActions:log-error]", e); });
         }
     }
 
@@ -129,7 +129,7 @@ export default function useCharActionsBaseActions({
                 characterName: playerStats.name,
                 abilityName: 'Dodge',
                 description: `${playerStats.name} takes the Dodge action. Attackers have disadvantage on attacks against you until the start of your next turn. You have advantage on Dexterity saving throws.`,
-            }).catch(() => { });
+            }).catch((e) => { console.error("[useCharActionsBaseActions:log-error]", e); });
         }
         setPopupHtml({
             type: 'automation_info',
@@ -218,7 +218,7 @@ export default function useCharActionsBaseActions({
                 characterName: playerStats.name,
                 abilityName: 'Grapple',
                 description: `${useAbility} check: ${rollTotal} (d20: ${d20Val} + ${checkBonus}) vs target STR (${targetStrBonus >= 0 ? '+' : ''}${targetStrBonus}) — Success. Target is now grappled.`,
-            }).catch(() => { });
+            }).catch((e) => { console.error("[useCharActionsBaseActions:log-error]", e); });
         } else {
             setPopupHtml({ type: 'automation_info', name: 'Grapple', description: `Grapple failed! (d20: ${d20Val} + ${checkBonus} = ${rollTotal}) vs target STR (${targetStrBonus >= 0 ? '+' : ''}${targetStrBonus}). Target is not grappled.` });
             await addEntry(campaignName, {
@@ -226,7 +226,7 @@ export default function useCharActionsBaseActions({
                 characterName: playerStats.name,
                 abilityName: 'Grapple',
                 description: `${useAbility} check: ${rollTotal} (d20: ${d20Val} + ${checkBonus}) vs target STR (${targetStrBonus >= 0 ? '+' : ''}${targetStrBonus}) — Failure. Target is not grappled.`,
-            }).catch(() => { });
+            }).catch((e) => { console.error("[useCharActionsBaseActions:log-error]", e); });
         }
     }
 

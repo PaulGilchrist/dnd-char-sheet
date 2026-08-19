@@ -73,7 +73,7 @@ export async function confirmWarMagicCantrip(action, playerStats, campaignName, 
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${action.name}: Replaced attack with cantrip "${selectedSpellName}"`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[warMagicCantripHandler:log-error]", e); });
 
     return {
         type: 'popup',

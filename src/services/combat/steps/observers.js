@@ -40,7 +40,7 @@ export function createObservers() {
             description: `${ctx.playerStats?.name} applied Sneak Attack (${data.effectiveSneakDice}d6)`,
             targetName: ctx.targetName || null,
             timestamp: Date.now(),
-          }).catch(() => {});
+          }).catch((e) => { console.error("[observers:log-error]", e); });
         }
       },
     },
@@ -58,7 +58,7 @@ export function createObservers() {
             total: ctx.total || 0,
             targetName: ctx.targetName || null,
             timestamp: Date.now(),
-          }).catch(() => {});
+          }).catch((e) => { console.error("[observers:log-error]", e); });
         }
       },
     },

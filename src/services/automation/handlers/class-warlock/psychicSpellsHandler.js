@@ -17,7 +17,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerStats.name,
         abilityName: name,
         description: `${name}: Damage type can be changed to ${auto.damageType || 'Psychic'} for Warlock spells that deal damage. Enchantment and Illusion Warlock spells require no Verbal or Somatic components.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[psychicSpellsHandler:log-error]", e); });
 
     return {
         type: 'popup',

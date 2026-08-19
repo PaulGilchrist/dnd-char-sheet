@@ -126,7 +126,7 @@ export async function activateWildShape(druidName, baseMonster, druidStats, camp
         characterName: druidName,
         abilityName: 'Wild Shape',
         description: `${druidName} activated Wild Shape as ${baseMonster.name} (CR ${baseMonster.challenge_rating}).`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[wildShapeCreatureBuilder:log-error]", e); });
 
     return { name: baseMonster.name, index: baseMonster.index };
 }

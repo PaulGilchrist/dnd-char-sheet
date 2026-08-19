@@ -194,7 +194,7 @@ export async function confirmAnimateDead(action, playerStats, campaignName, { zo
         description: `${casterName} casts Animate Dead (slot level ${slotLevel}), creating ${total} undead creature(s).`,
         summonedCreatures: creatureNames,
         timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[animateDeadHandler:log-error]", e); });
 
     action.metadata = { ...action.metadata, [MAX_TARGETS_KEY]: maxTargets };
 

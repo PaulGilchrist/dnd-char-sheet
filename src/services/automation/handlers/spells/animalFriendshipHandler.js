@@ -79,7 +79,7 @@ export function endAnimalFriendshipEarly(casterName, targetName, campaignName) {
         characterName: casterName,
         abilityName: 'Animal Friendship',
         description: `${targetName} knows it was Charmed by ${casterName} as Animal Friendship ends early due to damage.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[animalFriendshipHandler:log-error]", e); });
 }
 
 export async function handle(action, playerStats, campaignName, _mapName) {

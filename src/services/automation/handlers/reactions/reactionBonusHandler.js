@@ -400,7 +400,7 @@ async function handleUnbreakableMajesty(action, playerStats, campaignName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${playerName} ended ${action.name}.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[reactionBonusHandler:log-error]", e); });
         return {
             type: 'popup',
             payload: {
@@ -429,7 +429,7 @@ async function handleUnbreakableMajesty(action, playerStats, campaignName) {
         characterName: playerName,
         abilityName: action.name,
         description: `${playerName} activated ${action.name}. Attacks against them may miss on a failed CHA save (DC ${saveDc}).`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[reactionBonusHandler:log-error]", e); });
 
     return {
         type: 'popup',
@@ -675,7 +675,7 @@ export async function applyInspiringMovement(action, playerStats, campaignName, 
         characterName: playerStats.name,
         abilityName: action.name,
         description: `${playerStats.name} used ${action.name}.` + (allyName ? ` Ally: ${allyName}. Movement does not provoke Opportunity Attacks.` : ' Movement does not provoke Opportunity Attacks.'),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[reactionBonusHandler:log-error]", e); });
 
     const hasAgileStrikes = (playerStats.automation?.passives || []).some(
         p => p.type === 'passive_rule' && p.effect === 'agile_strike'

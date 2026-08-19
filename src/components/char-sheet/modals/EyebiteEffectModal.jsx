@@ -49,7 +49,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
             abilityName: featureName,
             description: `${attackerName} casts Eyebite (${effectLabel})! ${targetName} must make a WIS save (DC ${saveDc}) or gain the ${conditionLabel} condition.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
 
         if (isNpc) {
             const saveRoll = rollD20();
@@ -103,7 +103,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
                     saveType: 'WIS',
                     success: false,
                     description: `${targetName} failed WIS save against Eyebite (${effectLabel}).`,
-                }).catch(() => {});
+                }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
 
                 await addEntry(campaignName, {
                     type: 'condition',
@@ -113,7 +113,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
                     reason: 'Eyebite spell',
                     note: `${targetName} gains the ${conditionLabel} condition from Eyebite.`,
                     timestamp: Date.now(),
-                }).catch(() => {});
+                }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
 
                 setPopup({
                     type: 'popup',
@@ -142,7 +142,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
                     saveType: 'WIS',
                     success: true,
                     description: `${targetName} succeeded on WIS save against Eyebite (${effectLabel}).`,
-                }).catch(() => {});
+                }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
 
                 setPopup({
                     type: 'popup',
@@ -174,7 +174,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
                 saveType: 'WIS',
                 success: false,
                 description: `${targetName} must make a WIS save (DC ${saveDc}) against Eyebite (${effectLabel})...`,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
         }
     }, [attackerName, campaignName, saveDc, featureName]);
 
@@ -210,7 +210,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
                 abilityName: featureName,
                 description: `${attackerName} casts Eyebite (${effect.label})! ${targetName} must make a WIS save (DC ${saveDc}) or gain the ${conditionLabel} condition.`,
                 timestamp: Date.now(),
-            }).catch(() => {});
+            }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
 
             await addEntry(campaignName, {
                 type: 'save_result',
@@ -221,7 +221,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
                 saveType: 'WIS',
                 success: true,
                 description: `${targetName} is immune to ${effect.condition} and automatically succeeds on the save against Eyebite (${effect.label}).`,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
 
             addTargetResult(campaignName, {
                 targetName,
@@ -313,7 +313,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
                 saveType: 'WIS',
                 success: false,
                 description: `${targetName} failed WIS save against Eyebite (${effect.label}).`,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
 
             await addEntry(campaignName, {
                 type: 'condition',
@@ -323,7 +323,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
                 reason: 'Eyebite spell',
                 note: `${targetName} gains the ${conditionLabel} condition from Eyebite.`,
                 timestamp: Date.now(),
-            }).catch(() => {});
+            }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
 
             setPopup({
                 type: 'popup',
@@ -352,7 +352,7 @@ function EyebiteEffectModal({ combatSummary, attackerName, saveDc, campaignName,
                 saveType: 'WIS',
                 success: true,
                 description: `${targetName} succeeded on WIS save against Eyebite (${effect.label}).`,
-            }).catch(() => {});
+            }).catch((e) => { console.error("[eyebiteEffectModal:log-error]", e); });
 
             setPopup({
                 type: 'popup',

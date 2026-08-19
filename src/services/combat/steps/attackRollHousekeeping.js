@@ -21,7 +21,7 @@ export function buildHousekeepingStep() {
           name: 'Forcecage',
           description,
           timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRollHousekeeping:log-error]", e); });
         ctx.setPopupHtml?.({
           type: 'automation_info',
           name: 'Forcecage',
@@ -38,7 +38,7 @@ export function buildHousekeepingStep() {
           name: 'Maze',
           description,
           timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRollHousekeeping:log-error]", e); });
         ctx.setPopupHtml?.({
           type: 'automation_info',
           name: 'Maze',
@@ -55,7 +55,7 @@ export function buildHousekeepingStep() {
           name: 'Banishment',
           description,
           timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRollHousekeeping:log-error]", e); });
         ctx.setPopupHtml?.({
           type: 'automation_info',
           name: 'Banishment',
@@ -72,7 +72,7 @@ export function buildHousekeepingStep() {
           name: 'Imprisonment',
           description,
           timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[attackRollHousekeeping:log-error]", e); });
         ctx.setPopupHtml?.({
           type: 'automation_info',
           name: 'Imprisonment',

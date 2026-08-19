@@ -163,7 +163,7 @@ export async function confirmTruePolymorphTransform({ targetName, creature, cast
         saveType: 'WIS',
         success: false,
         description: `${targetName} is transformed into ${creature.name} (CR ${creature.challenge_rating}) by ${casterName}'s True Polymorph.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[truePolymorphService:log-error]", e); });
 
     return { ok: true };
 }
@@ -243,7 +243,7 @@ export async function applyObjectTransform(targetName, objectType, casterName, s
         saveType: 'WIS',
         success: false,
         description: `${targetName} is transformed into an ${objectType} by ${casterName}'s True Polymorph.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[truePolymorphService:log-error]", e); });
 
     return { ok: true };
 }
@@ -309,7 +309,7 @@ export async function summonCreatureFromObject(monsterIndex, casterName, initiat
         characterName: casterName,
         abilityName: 'True Polymorph',
         description: `${casterName} transforms an object into ${creature.name}. The creature is friendly to you and your companions.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[truePolymorphService:log-error]", e); });
 
     return { ok: true, creatureName: creature.name };
 }
@@ -365,7 +365,7 @@ export function revertTruePolymorph(targetName, campaignName) {
             characterName: targetName,
             abilityName: 'True Polymorph',
             description: `${targetName} fades away as the True Polymorph spell ends.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[truePolymorphService:log-error]", e); });
 
         return true;
     }
@@ -404,7 +404,7 @@ export function revertTruePolymorph(targetName, campaignName) {
             characterName: targetName,
             abilityName: 'True Polymorph',
             description: `${targetName} reverts to their normal form.`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[truePolymorphService:log-error]", e); });
 
         return true;
     }

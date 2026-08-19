@@ -325,7 +325,7 @@ export default function useCharActionsAutomation({
         }
 
         if (result.logEntries) {
-            result.logEntries.forEach(entry => addEntry(campaignName, entry).catch(() => { }));
+            result.logEntries.forEach(entry => addEntry(campaignName, entry).catch((e) => { console.error("[useCharActionsAutomation:log-error]", e); }));
         }
 
         if (result.type === 'popup' && (auto?.type === 'temp_buff' || auto?.type === 'combat_stance')) {

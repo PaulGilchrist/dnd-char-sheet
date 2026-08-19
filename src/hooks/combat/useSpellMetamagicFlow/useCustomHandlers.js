@@ -24,7 +24,7 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
 
     const popup = await applyBarkskinEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'barkskin', range: pending.range } },
@@ -61,7 +61,7 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
 
     const popup = await applyPassWithoutTraceEffect(
       { name: pending.spellName, spell: pending.spell },
@@ -100,7 +100,7 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
 
     const popup = await applyProtectionFromPoisonHandler(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'protection_from_poison', range: pending.range } },
@@ -128,7 +128,7 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
         spellLevel: pending.spellLevel || 0,
         castingTime: pending.castingTime,
         timestamp: Date.now(),
-      }).catch(() => {})
+      }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
       rollbackSpellSlot(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName)
     }
     cfClearPending('protectionFromPoison')
@@ -150,7 +150,7 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
 
     const popup = await applyStoneSkinHandler(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'protection_from_energy', damageTypes: ['Bludgeoning', 'Piercing', 'Slashing'], duration: 'Concentration, up to 1 hour', target: 'willing_creature' } },
@@ -177,7 +177,7 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
         spellLevel: pending.spellLevel || 0,
         castingTime: pending.castingTime,
         timestamp: Date.now(),
-      }).catch(() => {})
+      }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
       rollbackSpellSlot(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName)
     }
     cfClearPending('stoneSkin')

@@ -86,7 +86,7 @@ export async function applySoulstitchSelection(action, playerStats, campaignName
         characterName: playerName,
         abilityName: featureName,
         description: `${featureName}: ${selectedNames.length} creature(s) chosen for automatic save success: ${selectedNames.join(', ')}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[soulstitchSpellsHandler:log-error]", e); });
 
     return {
         type: 'popup',

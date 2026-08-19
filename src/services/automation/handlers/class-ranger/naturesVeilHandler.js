@@ -60,7 +60,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: featureName,
         description: `${playerName} used ${featureName} — Bonus Action, gained Invisible condition until end of next turn. Uses remaining: ${currentUses - 1}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[naturesVeilHandler:log-error]", e); });
 
     return {
         type: 'popup',

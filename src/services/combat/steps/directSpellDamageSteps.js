@@ -199,7 +199,7 @@ export function buildDirectSpellDamageSteps() {
             targetName: ctx.playerStats?.name,
             finalDamage: r.total,
             note: 'Overchannel self-damage (ignores resistance/immunity)',
-          }).catch(() => {});
+          }).catch((e) => { console.error("[directSpellDamageSteps:log-error]", e); });
         }
         return { data: {} };
       },

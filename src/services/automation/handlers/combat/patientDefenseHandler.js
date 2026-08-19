@@ -50,7 +50,7 @@ export async function handle(action, playerStats, campaignName) {
             characterName: playerName,
             abilityName: action.name,
             description: logDesc,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[patientDefenseHandler:log-error]", e); });
 
         return {
             type: 'popup',
@@ -68,7 +68,7 @@ export async function handle(action, playerStats, campaignName) {
             characterName: playerName,
             abilityName: action.name,
             description: `${playerName} used ${action.name} to Disengage as a bonus action (no Focus Points available for Dodge).`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[patientDefenseHandler:log-error]", e); });
 
         return {
             type: 'popup',

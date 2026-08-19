@@ -37,7 +37,7 @@ export async function applyMasterySelection(masteryName, playerStats, campaignNa
         characterName: playerStats.name,
         abilityName: 'Weapon Master - Mastery Property',
         description: `Selected mastery property: ${masteryName}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[weaponMasteryChoiceHandler:log-error]", e); });
 
     return {
         type: 'popup',
@@ -57,7 +57,7 @@ async function handleMasterySelection(action, playerStats, campaignName, chosenM
         characterName: playerStats.name,
         abilityName: 'Weapon Master - Mastery Property',
         description: `Mastery property: ${chosenMastery} (previously selected)`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[weaponMasteryChoiceHandler:log-error]", e); });
 
     return {
         type: 'popup',

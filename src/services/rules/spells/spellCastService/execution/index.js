@@ -57,7 +57,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         await addEntry(campaignName, {
             type: 'automation', creatureName: playerStats.name, name: 'Antimagic Field',
             description: `${spell.name} blocked — caster is within Antimagic Field.`, timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[index:log-error]", e); });
         return { automationPopup: { type: 'popup', payload: { type: 'automation_info', name: 'Antimagic Field', description: `${spell.name} is blocked by Antimagic Field affecting ${playerStats.name}.` } } };
     }
 
@@ -65,7 +65,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         await addEntry(campaignName, {
             type: 'automation', creatureName: playerStats.name, name: 'Antimagic Field',
             description: `${spell.name} blocked — ${globeTargetName} is within Antimagic Field.`, timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[index:log-error]", e); });
         return { automationPopup: { type: 'popup', payload: { type: 'automation_info', name: 'Antimagic Field', description: `${spell.name} is blocked by Antimagic Field protecting ${globeTargetName}.` } } };
     }
 
@@ -181,7 +181,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             damageType: damageType || null, damageFormula: formula || null,
             saveDC: spell.dc ? spellSaveDc : null, concentration: !!spell.concentration,
             description: spellDescription || null, timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[index:log-error]", e); });
     }
 
     // --- Power Word Heal/Kill ---
@@ -524,7 +524,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         applyHexEffects(spell, playerStats, campaignName, hexTarget, ability);
         const hasEldritchHex = playerStats.automation?.passives?.some(p => p.name === 'Eldritch Hex' && p.type === 'conditional_disadvantage');
         const effects = hasEldritchHex ? 'ability check disadvantage + saving throw disadvantage' : 'ability check disadvantage';
-        addEntry(campaignName, { type: 'spell', characterName: playerStats.name, targetName: hexTarget, spellName: 'Hex', spellLevel: 1, castingTime: '1 bonus action', hexAbility: ability, effectsApplied: effects }).catch(() => {});
+        addEntry(campaignName, { type: 'spell', characterName: playerStats.name, targetName: hexTarget, spellName: 'Hex', spellLevel: 1, castingTime: '1 bonus action', hexAbility: ability, effectsApplied: effects }).catch((e) => { console.error("[index:log-error]", e); });
         return;
     }
 

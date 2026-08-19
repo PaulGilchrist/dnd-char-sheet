@@ -23,7 +23,7 @@ export async function checkGlobeOfInvulnerability(spell, targetName, playerStats
                     name: 'Globe of Invulnerability',
                     description: `${spell.name} (level ${effectiveSpellLevel}) from ${playerStats.name} blocked — target is protected by Globe of Invulnerability.`,
                     timestamp: Date.now(),
-                }).catch(() => {});
+                }).catch((e) => { console.error("[blockChecks:log-error]", e); });
 
                 return {
                     automationPopup: {
@@ -54,7 +54,7 @@ export async function checkForcecageBlocked(spell, targetName, playerStats, camp
             name: 'Forcecage',
             description: `${spell.name} from ${casterName} blocked by Forcecage — ${casterName} and ${targetName} are on opposite sides of the prison.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[blockChecks:log-error]", e); });
 
         return {
             automationPopup: {
@@ -76,7 +76,7 @@ export async function checkForcecageBlocked(spell, targetName, playerStats, camp
             name: 'Maze',
             description: `${spell.name} from ${casterName} blocked by Maze — ${casterName} and ${targetName} are on opposite sides of the demiplane.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[blockChecks:log-error]", e); });
 
         return {
             automationPopup: {
@@ -98,7 +98,7 @@ export async function checkForcecageBlocked(spell, targetName, playerStats, camp
             name: 'Banishment',
             description: `${spell.name} from ${casterName} blocked by Banishment — ${casterName} and ${targetName} are on opposite sides of the demiplane.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[blockChecks:log-error]", e); });
 
         return {
             automationPopup: {
@@ -120,7 +120,7 @@ export async function checkForcecageBlocked(spell, targetName, playerStats, camp
             name: 'Imprisonment',
             description: `${spell.name} from ${casterName} blocked by Imprisonment — ${casterName} and ${targetName} are on opposite sides of the prison.`,
             timestamp: Date.now(),
-        }).catch(() => {});
+        }).catch((e) => { console.error("[blockChecks:log-error]", e); });
 
         return {
             automationPopup: {

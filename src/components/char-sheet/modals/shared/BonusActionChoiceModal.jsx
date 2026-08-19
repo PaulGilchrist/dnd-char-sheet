@@ -21,7 +21,7 @@ function BonusActionChoiceModal({ action, options: optionsProp, playerStats, cam
             characterName: playerStats.name,
             abilityName: action.name,
             description: `${selected} selected — ${selected === 'Sleight of Hand' ? 'Dexterity (Sleight of Hand) check initiated' : selected === 'Thieves\' Tools' ? 'Thieves\' Tools check initiated' : 'Object use'}`,
-        }).catch(() => {});
+        }).catch((e) => { console.error("[bonusActionChoiceModal:log-error]", e); });
 
         if (selected === 'Sleight of Hand') {
             window.dispatchEvent(new CustomEvent(INTERNAL_SKILL_CHECK_EVENT, {

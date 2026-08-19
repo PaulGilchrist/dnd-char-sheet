@@ -369,7 +369,7 @@ async function handleBonusActionDash(action, playerStats, campaignName, _mapName
         characterName: playerName,
         abilityName: featureName,
         description: `${featureName}: Dash as a Bonus Action.${tempHpDesc} (${newUses} use${newUses !== 1 ? 's' : ''} remaining).`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[buffHandler:log-error]", e); });
 
     return {
         type: 'popup',

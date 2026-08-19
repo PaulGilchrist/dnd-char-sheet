@@ -74,7 +74,7 @@ export const shieldBash = {
       saveType: 'STR',
       description: `Shield Bash: ${targetName} must make a STR saving throw (DC ${saveDc}).`,
       timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[shieldBash:log-error]", e); });
 
     const saveResult = await promise;
     const success = saveResult.success;
@@ -94,7 +94,7 @@ export const shieldBash = {
       formula: `1d20${saveResult.saveBonus !== 0 ? '+' + saveResult.saveBonus : ''}`,
       description: `${targetName} ${success ? 'succeeded' : 'failed'} the STR save (DC ${saveDc}).${!success ? ' Shield Bash effect applied.' : ''}`,
       timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[shieldBash:log-error]", e); });
 
     if (success) {
       return { data: prevData };
@@ -134,7 +134,7 @@ export async function applyShieldBashEffect(action, playerStats, campaignName, t
       characterName: playerStats.name,
       abilityName: 'Shield Bash',
       description: `Shield Bash: skipped (no effect, use not consumed).`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[shieldBash:log-error]", e); });
     return null;
   }
 
@@ -154,7 +154,7 @@ export async function applyShieldBashEffect(action, playerStats, campaignName, t
       characterName: playerStats.name,
       abilityName: 'Shield Bash',
       description: `Shield Bash used against ${targetName}: pushed 5 ft.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[shieldBash:log-error]", e); });
   } else if (chosenOption === 'Prone') {
     const newEffect = {
       target: targetName,
@@ -178,7 +178,7 @@ export async function applyShieldBashEffect(action, playerStats, campaignName, t
       characterName: playerStats.name,
       abilityName: 'Shield Bash',
       description: `Shield Bash used against ${targetName}: target has Prone condition.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[shieldBash:log-error]", e); });
   }
 
   // Mark oncePerTurn as used

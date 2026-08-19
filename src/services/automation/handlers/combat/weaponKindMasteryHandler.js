@@ -36,7 +36,7 @@ export async function applySelections(weaponNames, playerStats, campaignName) {
         characterName: playerStats.name,
         abilityName: 'Weapon Mastery - Weapon Kinds',
         description: `Selected weapon kinds: ${weaponNames.join(', ')}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[weaponKindMasteryHandler:log-error]", e); });
 
     return {
         type: 'popup',

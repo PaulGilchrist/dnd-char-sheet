@@ -154,7 +154,7 @@ export function buildAutomationBonusesStep() {
             setRuntimeValue('campaign', 'targetEffects', storedEffects, ctx.campaignName);
           }
 
-          addEntry(ctx.campaignName, { type: 'ability_use', characterName: ctx.playerStats.name, abilityName: rider.name, description: `${ctx.playerStats.name} used ${rider.name} on ${targetName}`, targetName }).catch(() => {});
+          addEntry(ctx.campaignName, { type: 'ability_use', characterName: ctx.playerStats.name, abilityName: rider.name, description: `${ctx.playerStats.name} used ${rider.name} on ${targetName}`, targetName }).catch((e) => { console.error("[attackRollBonuses:log-error]", e); });
 
           setRuntimeValue(ctx.playerStats.name, '_brutalStrikeActive', null, ctx.campaignName);
           setRuntimeValue(ctx.playerStats.name, '_brutalStrikeEffects', null, ctx.campaignName);

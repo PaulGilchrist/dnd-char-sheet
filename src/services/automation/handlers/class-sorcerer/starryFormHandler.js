@@ -136,7 +136,7 @@ export async function applyConstellationOption(action, playerStats, campaignName
         abilityName: action.name,
         description: `${playerName} assumed Starry Form with the ${optionName} constellation. ${optionEffects.join('. ')}. Wild Shape use consumed.`,
         timestamp: Date.now(),
-    }).catch(() => {});
+    }).catch((e) => { console.error("[starryFormHandler:log-error]", e); });
 
     return {
         type: 'popup',

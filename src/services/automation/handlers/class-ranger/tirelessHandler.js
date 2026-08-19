@@ -53,7 +53,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerName,
         abilityName: featureName,
         description: `${playerName} used ${featureName} — gained ${amount} temporary hit points. Uses remaining: ${currentUses - 1}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[tirelessHandler:log-error]", e); });
 
     return {
         type: 'popup',

@@ -54,7 +54,7 @@ export function useTwoStageHandlers(playerStats, campaignName, cfClearPending, g
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useTwoStageHandlers:log-error]", e); })
 
     for (const target of targets) {
       await applyResistanceEffect(
@@ -84,7 +84,7 @@ export function useTwoStageHandlers(playerStats, campaignName, cfClearPending, g
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useTwoStageHandlers:log-error]", e); })
   }, [playerStats, campaignName, cfClearPending, getPending])
 
   const handleProtectionFromEnergyTargetSelect = React.useCallback(async (targetName) => {
@@ -109,7 +109,7 @@ export function useTwoStageHandlers(playerStats, campaignName, cfClearPending, g
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useTwoStageHandlers:log-error]", e); })
 
     await applyProtectionFromEnergyHandler(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'protection_from_energy', damageTypes: pending.damageTypes } },
@@ -133,7 +133,7 @@ export function useTwoStageHandlers(playerStats, campaignName, cfClearPending, g
         spellLevel: pending.spellLevel || 0,
         castingTime: pending.castingTime,
         timestamp: Date.now(),
-      }).catch(() => {})
+      }).catch((e) => { console.error("[useTwoStageHandlers:log-error]", e); })
       rollbackSpellSlot(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName)
     }
     cfClearPending('protectionFromEnergy')
@@ -167,7 +167,7 @@ export function useTwoStageHandlers(playerStats, campaignName, cfClearPending, g
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
-    }).catch(() => {})
+    }).catch((e) => { console.error("[useTwoStageHandlers:log-error]", e); })
 
     const popup = await applyEnhanceAbilityEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'enhance_ability', range: pending.range } },

@@ -400,7 +400,7 @@ function cleanupFleshToStoneEffects(casterName, campaignName) {
         characterName: casterName,
         abilityName: 'Flesh to Stone',
         description: 'Concentration broken; Flesh to Stone ends.',
-    }).catch(() => {});
+    }).catch((e) => { console.error("[concentrationService:log-error]", e); });
 }
 
 function cleanupBuffsByName(casterName, buffName, campaignName) {

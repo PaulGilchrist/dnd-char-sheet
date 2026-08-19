@@ -41,7 +41,7 @@ export async function applyChoice(playerStats, campaignName, choice) {
         characterName: playerStats.name,
         abilityName: "Defensive Tactics",
         description: `Defensive Tactics choice: ${choice}`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[defensiveTacticsHandler:log-error]", e); });
 
     return {
         type: 'popup',

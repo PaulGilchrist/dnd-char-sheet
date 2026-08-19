@@ -37,7 +37,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: playerStats.name,
         abilityName: action.name,
         description: `Divine Spark activated — targeting ${targetName}.`,
-    }).catch(() => {});
+    }).catch((e) => { console.error("[divineSparkHandler:log-error]", e); });
 
     return {
         type: 'modal',
