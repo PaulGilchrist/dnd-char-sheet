@@ -85,7 +85,6 @@
 | `src/config/outdoorConfig.js:36` | `TOOL_POI` | Exported constant never imported; all sibling `TOOL_*` constants are used |
 | `src/hooks/useAllySelection.js:18` | `setAllyList` | Exported but never imported; companion `getAllyList` is used in 20+ files |
 | `src/hooks/combat/useActionPopup.js:45` | `loadBackgrounds` | Exported async function never imported; companion `showBackgroundPopup` IS imported |
-| `src/components/char-sheet/CharSpecialActions.helpers.js:18` | `createPlayerStats` | Exported but never imported |
 | `src/components/char-sheet/modals/shared/AreaEffectTargetModalBase.utils.jsx:45` | `renderResultsSection` | Exported but never imported; sibling exports ARE used |
 
 ### 2.4 Duplicate `sanctuarySave` Exports
@@ -276,7 +275,7 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 | Category | Count |
 |----------|-------|
 | Duplicate code instances | 2 remaining patterns (~885+ lines, down from 8/~2,200+) |
-| Dead/unused code | 1 orphaned module remaining (4 backup files + 1 orphan removed, unused CSS cleaned) |
+| Dead/unused code | 0 orphaned modules remaining (4 backup files + 2 orphans removed, unused CSS cleaned) |
 | Complexity hotspots | 5 critical/high findings (243-case switch, 269-import registry, 40% branch density, 11-level nesting, 497 importers) |
 | Inconsistencies | 10 categories remaining (error handling normalized, inline styles, naming, organization, async patterns) |
 | Low-risk improvements identified | 3 remaining items (12 completed) |
