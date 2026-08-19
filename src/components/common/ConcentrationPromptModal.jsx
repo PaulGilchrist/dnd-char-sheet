@@ -7,7 +7,7 @@ import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.j
 import { getAbilitySaveBonus } from '../../services/combat/conditions/conditionUtils.js';
 import { hasSaveModifier } from '../../services/combat/conditions/conditionEffects.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
-import './concentrationPromptModal.css';
+import './ConcentrationPromptModal.css';
 
 function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
   const [prompts, setPrompts] = useState([]);

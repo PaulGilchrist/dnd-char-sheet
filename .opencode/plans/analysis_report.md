@@ -266,10 +266,6 @@ The stated architecture places hooks in `src/hooks/`.
 
 **100+ production files** use 3-4 level deep relative imports (e.g., `'../../../../hooks/runtime/useRuntimeState.js'`). No path aliases are configured.
 
-### 4.8 Medium: CSS File Naming
-
-6 CSS files use camelCase (`concentrationPromptModal.css`, `diceRollResult.css`, etc.) while 80+ use PascalCase.
-
 ### 4.9 Low: JSDoc Coverage
 
 Only **137 of ~1,120 production files** (~12%) have JSDoc documentation. Critical utility files in `services/automation/common/` and `services/ui/` are well-documented, but the majority has zero documentation.
@@ -307,10 +303,6 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 - Convert 264 silent `.catch(() => {})` to `.catch((e) => { console.error('Context:', e); })` in production handler files
 - Prioritize automation handlers (combat-critical code)
 
-### Priority 12: Normalize CSS File Naming to PascalCase
-**Risk:** Zero (import paths may need updating) | **Impact:** Consistency
-- Rename 6 camelCase CSS files to PascalCase to match their co-located components
-
 ### Priority 13: Normalize Component File Naming to PascalCase
 **Risk:** Low (requires import path updates) | **Impact:** Consistency with 200+ other components
 - Rename 14 kebab-case `.jsx` files to PascalCase
@@ -336,4 +328,4 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 | Dead/unused code | 1 orphaned module remaining (4 backup files + 1 orphan removed, unused CSS cleaned) |
 | Complexity hotspots | 6 critical/high findings (243-case switch, 269-import registry, 87-case switch, 40% branch density, 11-level nesting, 497 importers) |
 | Inconsistencies | 11 categories (error handling, inline styles, naming, organization, async patterns) |
-| Low-risk improvements identified | 8 remaining items (7 completed) |
+| Low-risk improvements identified | 7 remaining items (8 completed) |

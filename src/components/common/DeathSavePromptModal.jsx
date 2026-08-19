@@ -4,7 +4,7 @@ import { sendDeathSaveResult, clearDeathSavePrompt } from '../../services/combat
 import * as deathSaveRules from '../../services/combat/conditions/deathSaveRules.js';
 import Subscriber from './Subscriber.jsx';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import './deathSavePromptModal.css';
+import './DeathSavePromptModal.css';
 
 function DeathSavePromptModal({ campaignName }) {
   const [prompts, setPrompts] = useState([]);

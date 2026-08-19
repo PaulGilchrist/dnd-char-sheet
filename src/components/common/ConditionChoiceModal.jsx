@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import './conditionChoiceModal.css';
+import './ConditionChoiceModal.css';
 
 function ConditionChoiceModal() {
     const [current, setCurrent] = useState(null);

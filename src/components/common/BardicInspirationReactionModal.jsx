@@ -3,7 +3,7 @@ import { rollExpression } from '../../services/dice/diceRoller.js';
 import Subscriber from './Subscriber.jsx';
 import { clearBardicInspiration } from '../../services/combat/auras/bardicInspirationState.js';
 import { clearBardicInspirationPrompt } from '../../services/combat/prompts/bardicInspirationPromptUtils.js';
-import './savePromptModal.css';
+import './SavePromptModal.css';
 
 function BardicInspirationReactionModal({ campaignName }) {
     const [prompts, setPrompts] = useState([]);

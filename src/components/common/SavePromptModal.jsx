@@ -13,7 +13,7 @@ import { getAllyList } from '../../hooks/useAllySelection.js';
 import { normalizeSaveType } from '../../services/rules/combat/applyDamage.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import storage from '../../services/ui/storage.js';
-import './savePromptModal.css';
+import './SavePromptModal.css';
 import { getPendingPopupSetter } from '../../services/combat/auras/pendingPopupRegistry.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { createFanaticalFocusHandler, createDisciplinedSurvivorHandler, createGuardedMindHandler, createLivingLegendHandler } from './savePromptHandlers.js';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { applyBoonFateChoice } from '../../../services/automation/handlers/reactions/boonOfFateHandler.js';
-import '../../common/savePromptModal.css';
+import '../../common/SavePromptModal.css';
 
 function BoonFateModal({ action, playerStats, campaignName, roll2d4, lastAttack, attackerName: _attackerName, eventLabel, hitStatus, saveStatus, isAttack, isSave, isCheck: _isCheck, onClose }) {
     const [result, setResult] = useState(null);

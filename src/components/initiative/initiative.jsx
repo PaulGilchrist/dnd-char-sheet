@@ -22,7 +22,7 @@ import Popup from '../common/popup.jsx'
 import DiceRollResult from '../char-sheet/DiceRollResult.jsx'
 import CreatureCard from './CreatureCard.jsx'
 import EffectAdder from './EffectAdder.jsx'
-import './initiative.css'
+import './Initiative.css'
 
 // Extracted modules
 import { createOverlayHandler, createSseEventHandler } from './initiative-sse-handlers.jsx'

@@ -1,4 +1,4 @@
-import './diceRollResult.css';
+import './DiceRollResult.css';
 import { useDiceRollState } from './DiceRollResult.computed.js';
 import { createDiceRollHandlers } from './DiceRollResult.handlers.js';
 

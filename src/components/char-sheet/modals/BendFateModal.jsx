@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { applyBendFateChoice } from '../../../services/automation/handlers/reactions/reactionBonusHandler.js';
-import '../../common/savePromptModal.css';
+import '../../common/SavePromptModal.css';
 
 function BendFateModal({ action, playerStats, campaignName, d4Roll, lastAttack, attackerName: _attackerName, eventLabel, hitStatus, saveStatus, isAttack, isSave, isCheck: _isCheck, onClose }) {
     const [result, setResult] = useState(null);
