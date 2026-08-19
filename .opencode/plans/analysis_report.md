@@ -336,10 +336,6 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 - Convert 264 silent `.catch(() => {})` to `.catch((e) => { console.error('Context:', e); })` in production handler files
 - Prioritize automation handlers (combat-critical code)
 
-### Priority 11: Consolidate Duplicate Import Lines
-**Risk:** Zero | **Impact:** Minor cleanup
-- `src/services/rules/effects/clearExpirationEffects.js:1-2` — Merge two import lines from the same module
-
 ### Priority 12: Normalize CSS File Naming to PascalCase
 **Risk:** Zero (import paths may need updating) | **Impact:** Consistency
 - Rename 6 camelCase CSS files to PascalCase to match their co-located components
@@ -369,4 +365,4 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 | Dead/unused code | 1 orphaned module remaining, ~50+ unused CSS classes (4 backup files + 1 orphan removed) |
 | Complexity hotspots | 6 critical/high findings (243-case switch, 269-import registry, 87-case switch, 40% branch density, 11-level nesting, 497 importers) |
 | Inconsistencies | 11 categories (error handling, inline styles, naming, organization, async patterns) |
-| Low-risk improvements identified | 11 remaining items (4 completed) |
+| Low-risk improvements identified | 10 remaining items (5 completed) |

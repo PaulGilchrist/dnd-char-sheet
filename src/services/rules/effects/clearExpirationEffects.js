@@ -1,5 +1,4 @@
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import utils from '../../ui/utils.js';
 import { getCombatSummary } from '../../encounters/combatData.js';
 import storage from '../../ui/storage.js';

@@ -1,5 +1,4 @@
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { setTempHp } from '../../automation/handlers/buffs/tempHpService.js';
 import { evaluateAutoExpression } from '../../combat/automation/automationExpressions.js';
 import { getCombatSummary } from '../../encounters/combatData.js';
