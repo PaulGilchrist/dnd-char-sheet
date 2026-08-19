@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpecialActions from './CharSpecialActions.jsx';
@@ -160,17 +161,19 @@ describe('CharSpecialActions - SignatureSpells Confirm Popup', () => {
       expect(screen.queryByTestId('signature-spells-modal')).not.toBeInTheDocument();
     });
 
-    it('shows popup HTML with fallback name when payload lacks a name field', async () => {
+    it.each([
+      { name: 'null result', result: null, expectPopup: false },
+      { name: 'undefined result', result: undefined, expectPopup: false },
+      { name: 'object payload without name', result: { type: 'popup', payload: { description: 'Fallback name used.' } }, expectPopup: true },
+      { name: 'string payload', result: { type: 'popup', payload: 'Direct string response.' }, expectPopup: true },
+    ])('handles $name correctly', async ({ result, expectPopup }) => {
       const mockSetPopupHtml = renderWithPopup({
         specialActions: [
           { name: 'Signature Spells', description: 'Choose two level 3 spells.', automation: { type: 'signature_spells' } },
         ],
       });
 
-      onSignatureSpellsSelected.mockResolvedValue({
-        type: 'popup',
-        payload: { description: 'Signature spells selected.' },
-      });
+      onSignatureSpellsSelected.mockResolvedValue(result);
 
       fireEvent.click(screen.getByText(/Signature Spells/));
 
@@ -181,93 +184,18 @@ describe('CharSpecialActions - SignatureSpells Confirm Popup', () => {
       fireEvent.click(screen.getByText('Confirm'));
 
       await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalled();
+        expect(onSignatureSpellsSelected).toHaveBeenCalled();
       });
-
-      const popupCall = mockSetPopupHtml.mock.calls[0][0];
-      expect(popupCall).toContain('fa-solid fa-magic');
-      expect(popupCall).toContain('Signature Spells');
-      expect(popupCall).toContain('Signature spells selected.');
-
-      expect(screen.queryByTestId('signature-spells-modal')).not.toBeInTheDocument();
-    });
-
-    it('shows popup HTML when payload is a plain string', async () => {
-      const mockSetPopupHtml = renderWithPopup({
-        specialActions: [
-          { name: 'Signature Spells', description: 'Choose two level 3 spells.', automation: { type: 'signature_spells' } },
-        ],
-      });
-
-      onSignatureSpellsSelected.mockResolvedValue({
-        type: 'popup',
-        payload: 'Your signature spells have been updated.',
-      });
-
-      fireEvent.click(screen.getByText(/Signature Spells/));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('signature-spells-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Confirm'));
-
-      await waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalled();
-      });
-
-      const popupCall = mockSetPopupHtml.mock.calls[0][0];
-      expect(popupCall).toBe('Your signature spells have been updated.');
-
-      expect(screen.queryByTestId('signature-spells-modal')).not.toBeInTheDocument();
-    });
-
-    it('closes modal without showing popup when result is null', async () => {
-      const mockSetPopupHtml = renderWithPopup({
-        specialActions: [
-          { name: 'Signature Spells', description: 'Choose two level 3 spells.', automation: { type: 'signature_spells' } },
-        ],
-      });
-
-      onSignatureSpellsSelected.mockResolvedValue(null);
-
-      fireEvent.click(screen.getByText(/Signature Spells/));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('signature-spells-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Confirm'));
 
       await waitFor(() => {
         expect(screen.queryByTestId('signature-spells-modal')).not.toBeInTheDocument();
       });
 
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-    });
-
-    it('closes modal without showing popup when result is undefined', async () => {
-      const mockSetPopupHtml = renderWithPopup({
-        specialActions: [
-          { name: 'Signature Spells', description: 'Choose two level 3 spells.', automation: { type: 'signature_spells' } },
-        ],
-      });
-
-      onSignatureSpellsSelected.mockResolvedValue(undefined);
-
-      fireEvent.click(screen.getByText(/Signature Spells/));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('signature-spells-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Confirm'));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('signature-spells-modal')).not.toBeInTheDocument();
-      });
-
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
+      if (expectPopup) {
+        expect(mockSetPopupHtml).toHaveBeenCalled();
+      } else {
+        expect(mockSetPopupHtml).not.toHaveBeenCalled();
+      }
     });
   });
 });

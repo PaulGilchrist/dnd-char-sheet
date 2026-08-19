@@ -9,13 +9,10 @@ import {
   logSpecialActions,
   logAutomationBadges,
   verifyCharacterSummary,
-  findCreatureCard,
   getAllCreatures,
   takeScreenshot,
   getActiveCreature,
 } from './helpers.js';
-
-const TEST_CAMPAIGN = 'test-campaign';
 
 test.describe('E2E Class Automation Tests', () => {
   test.beforeEach(async ({ page }) => {

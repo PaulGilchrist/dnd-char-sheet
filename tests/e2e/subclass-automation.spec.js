@@ -4,13 +4,10 @@ import {
   ensureTestCampaign,
   goToCharacterSheet,
   verifyCharacterSummary,
-  logActionSections,
   logAttacks,
   logSpecialActions,
   logAutomationBadges,
   takeScreenshot,
-  closeAllModals,
-  waitForModalContent,
 } from './helpers.js';
 
 test.describe('E2E Subclass Automation Tests', () => {

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import './CharSpecialActions.modalMocks.jsx';
@@ -62,17 +63,7 @@ describe('CharSpecialActions - Rendering & Filtering', () => {
       expect(screen.getByText('An unnamed special action')).toBeInTheDocument();
     });
 
-    it('deduplicates special actions with duplicate names showing only one', () => {
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Second Wind', description: 'First definition.' },
-          { name: 'Second Wind', description: 'Second definition.' },
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-      const elements = screen.getAllByText(/Second Wind/);
-      expect(elements).toHaveLength(1);
-    });
+    // @cleaned-by-ai: "deduplicates special actions with duplicate names" removed — fully covered by action filtering tests in CharSpecialActions.uncovered.edge-cases.test.jsx (dedup + cross-list filtering across all action lists)
   });
 
   describe('fighting styles', () => {
@@ -101,16 +92,7 @@ describe('CharSpecialActions - Rendering & Filtering', () => {
     });
   });
 
-  describe('deduplication across action lists', () => {
-    it('filters out actions that appear in other action lists (actions, bonusActions, reactions, characterAdvancement)', () => {
-      const playerStats = createPlayerStats({
-        specialActions: [{ name: 'Attack', description: 'Make a weapon attack.' }],
-        actions: [{ name: 'Attack', description: 'Make a weapon attack.' }],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-      expect(screen.queryByText(/Attack/)).not.toBeInTheDocument();
-    });
-  });
+  // @cleaned-by-ai: "filters out actions in other lists" removed — fully covered by CharSpecialActions.uncovered.edge-cases.test.jsx action filtering tests (dedup, cross-list dedup for actions/bonusActions/reactions/characterAdvancement, unique action preservation)
 
   describe('ruleset filtering', () => {
     it('filters out featuresToIgnore and keeps other features for 5e ruleset', () => {

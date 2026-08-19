@@ -5,16 +5,12 @@ import {
   startCombat,
   goToCharacterSheet,
   findCreatureCard,
-  setCreatureTarget,
   getAllCreatures,
   getActiveCreature,
   takeScreenshot,
-  logActionSections,
   logAttacks,
   logSpecialActions,
-  closeAllModals,
   nextTurn,
-  prevTurn,
 } from './helpers.js';
 
 test.describe('E2E Combat Scenarios - Full Automation Validation', () => {
@@ -414,8 +410,4 @@ test.describe('E2E Combat Scenarios - Full Automation Validation', () => {
   // UTILITY: Get all creature names
   // =========================================================================
 
-  async function getAllCreatureNames(page) {
-    const creatures = await getAllCreatures(page);
-    return creatures.map(c => c.name);
-  }
 });

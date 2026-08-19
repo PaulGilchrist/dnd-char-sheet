@@ -3,7 +3,6 @@ import { test, expect } from '@playwright/test';
 import {
   ensureTestCampaign,
   navigateToInitiative,
-  rollInitiative,
   getAllCreatures,
   goToCharacterSheet,
   takeScreenshot,

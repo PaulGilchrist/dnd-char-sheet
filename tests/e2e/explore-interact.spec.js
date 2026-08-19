@@ -1,5 +1,5 @@
 // @ts-check
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test.describe('Interactive UI Exploration', () => {
   test('explore full app flow - campaign, character sheet, initiative, combat', async ({ page }) => {

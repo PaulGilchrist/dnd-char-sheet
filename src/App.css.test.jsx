@@ -1,3 +1,4 @@
+// @improved-by-ai
 // @cleaned-by-ai
 
 import { readFileSync } from 'node:fs';

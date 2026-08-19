@@ -7,7 +7,6 @@ import {
   logActionSections,
   logAttacks,
   logSpecialActions,
-  logAutomationBadges,
   takeScreenshot,
 } from './helpers.js';
 

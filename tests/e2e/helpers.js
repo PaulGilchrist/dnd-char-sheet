@@ -621,7 +621,7 @@ export async function closeAllModals(page) {
 /**
  * Wait for a popup/info message to appear.
  */
-export async function waitForInfoPopup(page, timeout = 5000) {
+export async function waitForInfoPopup(page) {
   const popup = page.locator('.info-popup, .automation-info, [data-testid="automation-info"]').first();
   if (await popup.count() > 0) {
     return (await popup.textContent())?.trim() || '';

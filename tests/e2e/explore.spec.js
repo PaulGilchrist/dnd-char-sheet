@@ -1,6 +1,6 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
-import { createCampaign, selectCampaign, openCharacterWizard, setCharacterName, setCharacterLevel, selectRace, selectSubrace, selectClass, selectSubclass, clickWizardNext, clickWizardSave, navigateToWizardStep, setAbilityScore, selectSpell, selectFeat, setGoldPieces, clickCreateCharacter, navigateToInitiative, addNPC } from './helpers.js';
+import { createCampaign, setCharacterName, setCharacterLevel, selectRace, selectSubrace, selectClass, selectSubclass, clickWizardNext, clickWizardSave, navigateToWizardStep, setGoldPieces, navigateToInitiative, addNPC } from './helpers.js';
 
 test.describe('E2E Exploration - Step by Step', () => {
   test('explore campaign creation and wizard flow', async ({ page }) => {

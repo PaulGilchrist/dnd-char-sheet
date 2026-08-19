@@ -22,8 +22,6 @@ const alwaysNoDamageSpell = { name: 'Prestidigitation', casting_time: '1 action'
 const notPreparedSpell = { name: 'Unknown Spell', casting_time: '1 action', prepared: 'Not Prepared', damage: '4d6' };
 const healSpell = { name: 'Cure Wounds', casting_time: '1 action', prepared: 'Prepared', heal_at_slot_level: true };
 const actionSpellAltCase = { name: 'Lightning Bolt', casting_time: 'Action', prepared: 'Prepared', damage: '8d6' };
-const bonusActionSpellAltCase = { name: 'Hunter\'s Mark', casting_time: 'Bonus Action', prepared: 'Prepared', damage: '1d6' };
-const reactionSpellAltCase = { name: 'Opportunity Attack', casting_time: 'reaction', prepared: 'Prepared', damage: '1d6' };
 
 function createStats(overrides = {}) {
   return {

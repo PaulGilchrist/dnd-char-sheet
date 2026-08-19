@@ -4,8 +4,6 @@ import {
   ensureTestCampaign,
   goToCharacterSheet,
   verifyCharacterSummary,
-  logActionSections,
-  logAttacks,
   logSpecialActions,
   logAutomationBadges,
   takeScreenshot,

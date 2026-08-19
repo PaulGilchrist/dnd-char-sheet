@@ -3,15 +3,11 @@ import { test, expect } from '@playwright/test';
 import {
   ensureTestCampaign,
   goToCharacterSheet,
-  verifyCharacterSummary,
-  logActionSections,
   logAttacks,
   logSpecialActions,
   logAutomationBadges,
   takeScreenshot,
-  clickSpecialAction,
   waitForModalContent,
-  closeModal,
   closeAllModals,
 } from './helpers.js';
 

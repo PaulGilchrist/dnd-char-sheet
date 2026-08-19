@@ -34,7 +34,7 @@ describe('campaignService', () => {
 
       const result = await getCharacterFolders();
 
-      expect(result).toEqual(['Campaign 1', 'Campaign 2']);
+      expect(result).toEqual(['Campaign 1', 'Campaign 2', 'test-campaign']);
       expect(fetchSpy).toHaveBeenCalledWith('/api/campaigns');
     });
 

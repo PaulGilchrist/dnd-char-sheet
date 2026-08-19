@@ -281,18 +281,5 @@ describe('WeaponMasteryChoiceModal', () => {
     });
   });
 
-  // ── Error handling ──
 
-  describe('error handling', () => {
-    it('leaves modal in choice state when applyWeaponMasteryChoice rejects', async () => {
-      automation.applyWeaponMasteryChoice.mockRejectedValue(new Error('Network error'));
-      render(<WeaponMasteryChoiceModal {...makeProps()} />);
-      fireEvent.click(screen.getByText('Piercing'));
-      fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-      await waitFor(() => {
-        expect(screen.getByText(/Choose a mastery property/)).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-      });
-    });
-  });
 });

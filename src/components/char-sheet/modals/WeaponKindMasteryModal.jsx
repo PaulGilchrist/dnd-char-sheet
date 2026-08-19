@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react';
 import { applyWeaponKindMastery } from '../../../services/automation/index.js';
 import '../CharSheet.css';
-
-let weaponsCache = null;
-
-export function resetWeaponsCache() {
-    weaponsCache = null;
-}
-
-async function loadWeapons() {
-    if (weaponsCache === null) {
-        weaponsCache = await (await fetch('/data/equipment.json')).json();
-    }
-    return weaponsCache;
-}
+import { loadWeapons } from './weapon-kind-mastery-cache.js';
 
 function WeaponKindMasteryModal({ action, playerStats, campaignName, meleeOnly, onClose, existing }) {
     const [selected, setSelected] = useState(existing || []);
