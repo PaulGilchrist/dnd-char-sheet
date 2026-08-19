@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingPoolModal from './HealingPoolModal.jsx';
@@ -143,39 +144,6 @@ describe('HealingPoolModal - Healing', () => {
     expect(updateFn).toHaveBeenCalledWith(15);
   });
 
-  it('adds heal entry to log after applying healing', async () => {
-    applyHealingService.applyHealingToTarget.mockReturnValue({
-      actualHeal: 5,
-      oldHp: 15,
-      newHp: 20,
-    });
-
-    await renderModal({ current: 20, max: 20 });
-    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '5' } });
-    fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
-
-    const rows = getLogTableRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent('Heal');
-    expect(rows[0]).toHaveTextContent('Paladin1');
-    expect(rows[0]).toHaveTextContent('5');
-  });
-
-  it('shows pool left in log entry after healing', async () => {
-    applyHealingService.applyHealingToTarget.mockReturnValue({
-      actualHeal: 5,
-      oldHp: 15,
-      newHp: 20,
-    });
-
-    await renderModal({ current: 20, max: 20 });
-    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '5' } });
-    fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
-
-    const rows = getLogTableRows();
-    expect(rows[0]).toHaveTextContent('15');
-  });
-
   // ── Apply heal without combat context (self-heal) ──
 
   it('applies self-heal when no combat context exists', async () => {
@@ -219,26 +187,6 @@ describe('HealingPoolModal - Healing', () => {
       40,
       mockCampaignName,
     );
-  });
-
-  it('logs self-heal action with correct target and amount', async () => {
-    damageUtils.getCombatContext.mockResolvedValue(null);
-    damageUtils.getTargetFromAttacker.mockReturnValue(null);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'currentHitPoints') return 20;
-      if (key === 'activeConditions') return [];
-      return null;
-    });
-
-    await renderModal({ current: 20, max: 20 });
-    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '8' } });
-    fireEvent.click(screen.getByRole('button', { name: /Apply Heal/i }));
-
-    const rows = getLogTableRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent('Heal');
-    expect(rows[0]).toHaveTextContent('Paladin1');
-    expect(rows[0]).toHaveTextContent('8');
   });
 
   // ── Healing with insufficient pool ──

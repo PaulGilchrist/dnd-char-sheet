@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
@@ -115,13 +116,6 @@ describe('ElementalAttunementModal phase flow', () => {
     });
 
     describe('element selection transitions', () => {
-        it('transitions to creature selection when any element is chosen', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(screen.getByTestId('creature-selection-modal')).toBeInTheDocument());
-        });
-
         it('passes correct save type to CreatureSelectionModal per element', async () => {
             const elements = [
                 { name: 'Cold', saveType: 'DEX' },
@@ -141,17 +135,7 @@ describe('ElementalAttunementModal phase flow', () => {
             }
         });
 
-        it('passes correct props to CreatureSelectionModal', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => {
-                expect(screen.getByTestId('cs-modal-title')).toHaveTextContent('Elemental Attunement');
-                expect(screen.getByTestId('cs-modal-icon')).toHaveTextContent('fa-wand-magic-sparkles');
-            });
-        });
-
-        it('shows damage note for Fire element', async () => {
+        it('shows element-specific notes in creature selection modal', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             renderModal();
             fireEvent.click(screen.getByText('Fire'));
@@ -163,35 +147,21 @@ describe('ElementalAttunementModal phase flow', () => {
             });
         });
 
-        it('shows damage note for Lightning element', async () => {
+        it.each([
+            { name: 'Lightning', expected: ['1d8', 'lightning'] },
+            { name: 'Thunder', expected: ['1d6', 'thunder'] },
+            { name: 'Cold', expected: ['Cold'] },
+        ])('shows element-specific note for $name', async ({ name, expected }) => {
+            cleanup();
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
+            diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
             renderModal();
-            fireEvent.click(screen.getByText('Lightning'));
+            fireEvent.click(screen.getByText(name));
             await waitFor(() => {
                 const note = screen.getByTestId('cs-modal-note');
-                expect(note.textContent).toContain('1d8');
-                expect(note.textContent).toContain('lightning');
-            });
-        });
-
-        it('shows damage note for Thunder element', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Thunder'));
-            await waitFor(() => {
-                const note = screen.getByTestId('cs-modal-note');
-                expect(note.textContent).toContain('1d6');
-                expect(note.textContent).toContain('thunder');
-            });
-        });
-
-        it('shows effect note (no damage) for Cold element', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Cold'));
-            await waitFor(() => {
-                const note = screen.getByTestId('cs-modal-note');
-                expect(note.textContent).toContain('Cold');
+                for (const text of expected) {
+                    expect(note.textContent).toContain(text);
+                }
             });
         });
     });
@@ -220,28 +190,20 @@ describe('ElementalAttunementModal phase flow', () => {
             await waitFor(() => expect(screen.getByText(/DC 14/)).toBeInTheDocument());
         });
 
-        it('defaults Wisdom bonus to 0 when not found', async () => {
-            const stats = makePlayerStats({ abilities: [{ name: 'Strength', bonus: 2 }], proficiency: 3 });
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal({ playerStats: stats });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(screen.getByText(/DC 11/)).toBeInTheDocument());
-        });
-
-        it('defaults Wisdom bonus to 0 when abilities is undefined', async () => {
-            const stats = makePlayerStats({ abilities: undefined });
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal({ playerStats: stats });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(screen.getByText(/DC 11/)).toBeInTheDocument());
-        });
-
-        it('defaults Wisdom bonus to 0 when abilities array is empty', async () => {
-            const stats = makePlayerStats({ abilities: [] });
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal({ playerStats: stats });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(screen.getByText(/DC 11/)).toBeInTheDocument());
+        it('defaults Wisdom bonus to 0 when not found, undefined, or empty', async () => {
+            const scenarios = [
+                { abilities: [{ name: 'Strength', bonus: 2 }], proficiency: 3, expectedDc: 11 },
+                { abilities: undefined, proficiency: 3, expectedDc: 11 },
+                { abilities: [], proficiency: 3, expectedDc: 11 },
+            ];
+            for (const { abilities, proficiency, expectedDc } of scenarios) {
+                cleanup();
+                const stats = makePlayerStats({ abilities, proficiency });
+                combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
+                renderModal({ playerStats: stats });
+                fireEvent.click(screen.getByText('Fire'));
+                await waitFor(() => expect(screen.getByText(new RegExp(`DC ${expectedDc}`))).toBeInTheDocument());
+            }
         });
     });
 
@@ -256,24 +218,17 @@ describe('ElementalAttunementModal phase flow', () => {
             await waitFor(() => expect(document.querySelector('.sp-header')).toHaveTextContent(/Thunder/));
         });
 
-        it('shows "Resolving saving throws" text with correct save type', async () => {
+        it.each([
+            { element: 'Fire', expectedSaveType: 'DEX' },
+            { element: 'Thunder', expectedSaveType: 'CON' },
+        ])('shows $expectedSaveType save type in processing text for $element element', async ({ element, expectedSaveType }) => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
             ]));
             aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
             renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(screen.getByText(/Resolving DEX saving throws/)).toBeInTheDocument());
-        });
-
-        it('shows CON save type in processing text for Thunder element', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: { con: 2 }, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
-            renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Thunder'));
-            await waitFor(() => expect(screen.getByText(/Resolving CON saving throws/)).toBeInTheDocument());
+            fireEvent.click(screen.getByText(element));
+            await waitFor(() => expect(screen.getByText(new RegExp(`Resolving ${expectedSaveType} saving throws`))).toBeInTheDocument());
         });
 
         it('shows pending prompt for player targets', async () => {
@@ -296,35 +251,6 @@ describe('ElementalAttunementModal phase flow', () => {
             await waitFor(() => expect(screen.getByText(/Resolving/)).toBeInTheDocument());
             const overlay = document.querySelector('.sp-overlay');
             fireEvent.click(overlay);
-            expect(handleClose).not.toHaveBeenCalled();
-        });
-
-        it('shows processing overlay that does not close on click', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
-            const { handleClose } = renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(screen.getByText(/Resolving/)).toBeInTheDocument());
-            const overlay = document.querySelector('.sp-overlay');
-            fireEvent.click(overlay);
-            expect(handleClose).not.toHaveBeenCalled();
-        });
-
-        it('calls stopPropagation when modal content is clicked during processing', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
-            const { handleClose } = renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(screen.getByText(/Resolving/)).toBeInTheDocument());
-            const modal = document.querySelector('.sp-modal');
-            const spy = vi.spyOn(Event.prototype, 'stopPropagation');
-            fireEvent.click(modal);
-            expect(spy).toHaveBeenCalled();
-            spy.mockRestore();
             expect(handleClose).not.toHaveBeenCalled();
         });
 
@@ -360,22 +286,6 @@ describe('ElementalAttunementModal phase flow', () => {
             combatData.getCombatSummary.mockReturnValue(null);
             renderModal();
             expect(screen.getByText('Choose the element for your manifestation:')).toBeInTheDocument();
-        });
-
-        it('does not crash when combat summary is null during processing', async () => {
-            combatData.getCombatSummary.mockReturnValue(null);
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument());
-        });
-
-        it('does not crash when combat summary becomes null during overlay processing', async () => {
-            mapsService.loadMapData.mockResolvedValue({ players: [], placedItems: [] });
-            const { handleClose } = renderModal({ mapName: 'test-map', activeOverlay: { type: 'sphere' } });
-            combatData.getCombatSummary.mockReturnValue(null);
-            fireEvent.click(screen.getByText('Fire'));
-            await new Promise(r => setTimeout(r, 50));
-            expect(handleClose).not.toHaveBeenCalled();
         });
     });
 

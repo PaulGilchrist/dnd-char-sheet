@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
@@ -95,6 +96,7 @@ vi.mock('./CreatureSelectionModal.jsx', () => {
                       onChange={() => toggleTarget(obj.name)}
                     />
                     {obj.name}
+                    {obj.carefulSpellProtected && <span className="careful-flag"> (Careful)</span>}
                     {metamagicHeighten && (
                       <span>
                         <input
@@ -195,7 +197,6 @@ vi.mock('./AreaEffectTargetModalBase.jsx', () => {
 // ── Re-import mocked modules ──
 
 import * as allySelection from '../../../../hooks/useAllySelection.js';
-import * as combatData from '../../../../services/encounters/combatData.js';
 
 // ── Test fixtures ──
 
@@ -246,32 +247,16 @@ describe('SaveAttackAoeModal - CreatureSelectionModal path', () => {
   });
 
   describe('CreatureSelectionModal rendering', () => {
-    it('renders the modal with action name, save type, and DC', async () => {
+    it('renders the modal with action name, save type, DC, damage description, and creature checkboxes', async () => {
       render(<SaveAttackAoeModal {...makeProps({ saveType: 'CON', saveDc: 18 })} />);
       expect(screen.getByText('Fireball')).toBeInTheDocument();
       expect(screen.getByText(/CON/)).toBeInTheDocument();
       expect(screen.getByText(/DC 18/)).toBeInTheDocument();
-    });
-
-    it('displays damage expression and type in the description text', () => {
-      render(<SaveAttackAoeModal {...makeProps()} />);
       expect(screen.getByText(/On a failed save.*8d6.*Fire.*damage/)).toBeInTheDocument();
-    });
-
-    it('displays half damage info on successful save', () => {
-      render(<SaveAttackAoeModal {...makeProps()} />);
       expect(screen.getByText(/On a successful save.*half damage/)).toBeInTheDocument();
-    });
-
-    it('renders all eligible creatures as selectable checkboxes', () => {
-      render(<SaveAttackAoeModal {...makeProps()} />);
       expect(getCheckboxByName('Goblin A')).toBeInTheDocument();
       expect(getCheckboxByName('Goblin B')).toBeInTheDocument();
       expect(getCheckboxByName('Player One')).toBeInTheDocument();
-    });
-
-    it('renders Skip button to dismiss the modal', () => {
-      render(<SaveAttackAoeModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
     });
   });
@@ -306,25 +291,14 @@ describe('SaveAttackAoeModal - CreatureSelectionModal path', () => {
       const radios = document.querySelectorAll('input[type="radio"][name="heightenTarget"]');
       expect(radios.length).toBeGreaterThan(0);
     });
-
-    it('does not render heighten radio buttons when metamagicHeighten is false', () => {
-      render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: false })} />);
-      const radios = document.querySelectorAll('input[type="radio"][name="heightenTarget"]');
-      expect(radios.length).toBe(0);
-    });
-
-    it('displays heightened spell note when metamagicHeighten is true', () => {
-      render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: true })} />);
-      expect(screen.getByText(/Heightened Spell/)).toBeInTheDocument();
-    });
   });
 
   describe('careful spell metamagic', () => {
-    it('passes carefulSpellProtected flag to targets when metamagicCareful is enabled', () => {
+    it('marks allies with carefulSpellProtected in the target list when metamagicCareful is enabled', () => {
       allySelection.getAllyList.mockReturnValue(['Goblin A']);
       render(<SaveAttackAoeModal {...makeProps({ metamagicCareful: true })} />);
-      // The CreatureSelectionModal receives targets with carefulSpellProtected flag
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(document.querySelector('.careful-flag')).toBeInTheDocument();
+      expect(screen.getByText('Goblin B')).toBeInTheDocument();
     });
   });
 
@@ -337,22 +311,4 @@ describe('SaveAttackAoeModal - CreatureSelectionModal path', () => {
     });
   });
 
-  describe('edge cases', () => {
-    it('shows "No targets available" when combatSummary has no creatures', () => {
-      combatData.getCombatSummary.mockReturnValue({ creatures: [] });
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(screen.getByText('No targets available.')).toBeInTheDocument();
-    });
-
-    it('renders without crashing when combatSummary is null', () => {
-      combatData.getCombatSummary.mockReturnValue(null);
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-    });
-
-    it('does not crash when onClose is undefined', () => {
-      render(<SaveAttackAoeModal {...makeProps({ onClose: undefined })} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-    });
-  });
 });

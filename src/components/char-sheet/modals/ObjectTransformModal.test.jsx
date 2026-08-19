@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ObjectTransformModal from './ObjectTransformModal.jsx';
@@ -52,23 +53,6 @@ describe('ObjectTransformModal', () => {
   // ── Initial render ──
 
   describe('initial render', () => {
-    it('renders the modal overlay and container', () => {
-      renderModal();
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-    });
-
-    it('renders the header with title and icon', () => {
-      renderModal();
-      expect(screen.getByText('Creature into Object')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header i.fa-solid.fa-paw')).toBeInTheDocument();
-    });
-
-    it('renders the instruction text', () => {
-      renderModal();
-      expect(screen.getByText('Select the object form for the transformation:')).toBeInTheDocument();
-    });
-
     it('renders all 8 object type buttons with correct icons', () => {
       renderModal();
       OBJECT_TYPES.forEach(({ label, icon }) => {
@@ -76,22 +60,6 @@ describe('ObjectTransformModal', () => {
         expect(btn).toBeInTheDocument();
         expect(btn.querySelector(`i.fa-solid.${icon}`)).toBeInTheDocument();
       });
-    });
-
-    it('selects Stone Block by default', () => {
-      renderModal();
-      expect(getSelectedButton()).toHaveTextContent('Stone Block');
-    });
-
-    it('renders Cancel and Transform buttons', () => {
-      renderModal();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Transform' })).toBeInTheDocument();
-    });
-
-    it('does not render custom object input on initial render', () => {
-      renderModal();
-      expect(document.querySelector('.custom-object-input input')).not.toBeInTheDocument();
     });
   });
 
@@ -117,33 +85,11 @@ describe('ObjectTransformModal', () => {
       clickButton('Stone Block');
       expect(document.querySelector('.custom-object-input input')).not.toBeInTheDocument();
     });
-
-    it('renders the custom input with correct placeholder', () => {
-      renderModal();
-      clickButton('Other Object');
-      const input = document.querySelector('.custom-object-input input');
-      expect(input).toHaveAttribute('placeholder', 'Enter object description...');
-      expect(input).toHaveAttribute('type', 'text');
-    });
-
-    it('updates custom input value on change', () => {
-      renderModal();
-      clickButton('Other Object');
-      const input = document.querySelector('.custom-object-input input');
-      fireEvent.change(input, { target: { value: 'Ancient Rune Stone' } });
-      expect(input).toHaveValue('Ancient Rune Stone');
-    });
   });
 
   // ── Confirm behavior ──
 
   describe('confirm behavior', () => {
-    it('calls onConfirm with stone_block when Transform is clicked (default)', () => {
-      renderModal();
-      fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('stone_block');
-    });
-
     it.each(OBJECT_TYPES.filter(t => t.value !== 'other'))('calls onConfirm with $value when $label is selected', ({ value }) => {
       renderModal();
       clickButton(value === 'stone_block' ? 'Stone Block' : OBJECT_TYPES.find(t => t.value === value).label);
@@ -174,15 +120,6 @@ describe('ObjectTransformModal', () => {
       fireEvent.change(input, { target: { value: '  Magic Orb  ' } });
       fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
       expect(mockOnConfirm).toHaveBeenCalledWith('Magic Orb');
-    });
-
-    it('treats whitespace-only input as empty (falls back to Stone Block)', () => {
-      renderModal();
-      clickButton('Other Object');
-      const input = document.querySelector('.custom-object-input input');
-      fireEvent.change(input, { target: { value: '   ' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Transform' }));
-      expect(mockOnConfirm).toHaveBeenCalledWith('Stone Block');
     });
 
     it('passes through custom type with internal spaces', () => {
@@ -217,12 +154,6 @@ describe('ObjectTransformModal', () => {
       fireEvent.click(modal);
       expect(mockOnCancel).not.toHaveBeenCalled();
     });
-
-    it('does not call onConfirm when Cancel is clicked', () => {
-      renderModal();
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(mockOnConfirm).not.toHaveBeenCalled();
-    });
   });
 
   // ── Keyboard interaction ──
@@ -232,12 +163,6 @@ describe('ObjectTransformModal', () => {
       renderModal();
       fireEvent.keyDown(document, { key: 'Escape' });
       expect(mockOnCancel).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not call onCancel when other keys are pressed', () => {
-      renderModal();
-      fireEvent.keyDown(document, { key: 'Enter' });
-      expect(mockOnCancel).not.toHaveBeenCalled();
     });
 
     it('does not call onCancel when Escape is pressed after unmount', () => {

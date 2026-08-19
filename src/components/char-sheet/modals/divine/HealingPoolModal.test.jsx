@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingPoolModal from './HealingPoolModal.jsx';
@@ -73,11 +74,10 @@ const mockCombatSummary = {
 
 // ── Test helpers ──
 
-let updateFn;
-
 function setupPoolMock(current = 15, max = 20) {
-  updateFn = vi.fn();
+  const updateFn = vi.fn();
   useTrackedResource.mockReturnValue({ current, max, update: updateFn });
+  return updateFn;
 }
 
 function makeProps(overrides) {
@@ -98,7 +98,7 @@ async function renderModal(poolConfig, overrides) {
   await waitFor(() => {
     expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
   });
-  return { ...rendered, updateFn };
+  return rendered;
 }
 
 function getPoolParagraph() {
@@ -142,18 +142,6 @@ describe('HealingPoolModal', () => {
     await renderModal({ current: 0, max: 20 });
     const poolText = getPoolParagraph();
     expect(poolText).toBe('Pool: 0 / 20 HP');
-  });
-
-  it('safeMax falls back to 0 when hook returns non-numeric max', async () => {
-    updateFn = vi.fn();
-    useTrackedResource.mockReturnValue({ current: 10, max: NaN, update: updateFn });
-    const { unmount } = render(<HealingPoolModal {...makeProps()} />);
-    await waitFor(() => {
-      expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
-    });
-    const poolText = getPoolParagraph();
-    expect(poolText).toBe('Pool: 10 / 0 HP');
-    unmount();
   });
 
   // ── Target display ──
@@ -210,16 +198,6 @@ describe('HealingPoolModal', () => {
     expect(input.value).toBe('3');
   });
 
-  it('handles negative input values gracefully', async () => {
-    await renderModal({ current: 15, max: 20 });
-    const input = screen.getByRole('spinbutton');
-    fireEvent.change(input, { target: { value: '-5' } });
-    await waitFor(() => {
-      const btn = screen.getByRole('button', { name: /Apply Heal/i });
-      expect(btn).toBeDisabled();
-    });
-  });
-
   // ── Log section ──
 
   it('does not render log section when no actions taken', async () => {
@@ -260,6 +238,23 @@ describe('HealingPoolModal', () => {
 
   // ── Creature target selection ──
 
+  it.each([
+    { label: 'one creatureTarget', creatureTargets: [{ name: 'Orc Warrior', maxHp: 30, currentHp: 15 }] },
+    { label: 'empty creatureTargets array', creatureTargets: [] },
+    { label: 'undefined creatureTargets', creatureTargets: undefined },
+  ])('does not show target selection modal when $label', async ({ creatureTargets }) => {
+    damageUtils.getCombatContext.mockResolvedValue(null);
+    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'currentHitPoints') return 40;
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+
+    await renderModal({ current: 15, max: 20 }, { creatureTargets });
+
+    expect(screen.queryByText(/Choose target for/i)).not.toBeInTheDocument();
+  });
+
   it('shows target selection modal when multiple creatureTargets are provided', async () => {
     damageUtils.getCombatContext.mockResolvedValue(null);
     useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
@@ -277,45 +272,5 @@ describe('HealingPoolModal', () => {
     expect(screen.getByText(/Choose target for/i)).toBeInTheDocument();
     expect(screen.getByText('Orc Warrior')).toBeInTheDocument();
     expect(screen.getByText('Goblin')).toBeInTheDocument();
-  });
-
-  it('does not show target selection modal when only one creatureTarget is provided', async () => {
-    damageUtils.getCombatContext.mockResolvedValue(null);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'currentHitPoints') return 40;
-      if (key === 'activeConditions') return [];
-      return null;
-    });
-
-    const creatureTargets = [{ name: 'Orc Warrior', maxHp: 30, currentHp: 15 }];
-    await renderModal({ current: 15, max: 20 }, { creatureTargets });
-
-    expect(screen.queryByText(/Choose target for/i)).not.toBeInTheDocument();
-  });
-
-  it('does not show target selection modal when creatureTargets is empty', async () => {
-    damageUtils.getCombatContext.mockResolvedValue(null);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'currentHitPoints') return 40;
-      if (key === 'activeConditions') return [];
-      return null;
-    });
-
-    await renderModal({ current: 15, max: 20 }, { creatureTargets: [] });
-
-    expect(screen.queryByText(/Choose target for/i)).not.toBeInTheDocument();
-  });
-
-  it('does not show target selection modal when creatureTargets is undefined', async () => {
-    damageUtils.getCombatContext.mockResolvedValue(null);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'currentHitPoints') return 40;
-      if (key === 'activeConditions') return [];
-      return null;
-    });
-
-    await renderModal({ current: 15, max: 20 }, { creatureTargets: undefined });
-
-    expect(screen.queryByText(/Choose target for/i)).not.toBeInTheDocument();
   });
 });

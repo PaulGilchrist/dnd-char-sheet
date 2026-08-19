@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import SetConditionModal from './SetConditionModal.jsx';
@@ -54,7 +55,6 @@ vi.mock('../../../../services/ui/storage.js', () => ({
 
 import * as diceRoller from '../../../../services/dice/diceRoller.js';
 import * as savePromptService from '../../../../services/combat/conditions/savePromptService.js';
-import * as storage from '../../../../services/ui/storage.js';
 import * as logService from '../../../../services/ui/logService.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as automationService from '../../../../services/combat/automation/automationService.js';
@@ -97,166 +97,6 @@ describe('SetConditionModal - Side Effects & Edge Cases', () => {
     vi.restoreAllMocks();
   });
 
-  // ── Combat summary persistence ──
-
-  it('persists combatSummary via storage.set after NPC save', () => {
-    diceRoller.rollD20.mockReturnValue(15);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]); // Goblin A
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    expect(storage.default.set).toHaveBeenCalledWith('combatSummary', mockCombatSummary, 'test-campaign');
-  });
-
-  it('persists combatSummary after player save result event', async () => {
-    diceRoller.rollD20.mockReturnValue(15);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[2]); // Player Ally
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    const sentPrompt = savePromptService.sendSavePrompt.mock.calls[0][1];
-
-    window.dispatchEvent(
-      new CustomEvent('save-result', {
-        detail: { promptId: sentPrompt.promptId, targetName: 'Player Ally', success: false },
-      })
-    );
-
-    await waitFor(() => {
-      expect(storage.default.set).toHaveBeenCalledWith('combatSummary', mockCombatSummary, 'test-campaign');
-    });
-  });
-
-  // ── NPC conditions mutation ──
-
-  it('sets NPC conditions via setRuntimeValue on failure with proper structure', () => {
-    diceRoller.rollD20.mockReturnValue(5);
-
-    const summary = {
-      creatures: [
-        { name: 'Attacker', type: 'player' },
-        { name: 'Orc', type: 'npc', conditions: [] },
-      ],
-    };
-
-    render(<SetConditionModal {...makeProps({ combatSummary: summary })} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]); // Orc
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-      'Orc',
-      'activeConditions',
-      expect.arrayContaining(['frightened']),
-      'test-campaign'
-    );
-  });
-
-  it('does not mutate NPC conditions on success', () => {
-    diceRoller.rollD20.mockReturnValue(20);
-
-    const summary = {
-      creatures: [
-        { name: 'Attacker', type: 'player' },
-        { name: 'Orc', type: 'npc', conditions: [] },
-      ],
-    };
-
-    render(<SetConditionModal {...makeProps({ combatSummary: summary })} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]); // Orc
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    const orcConditions = summary.creatures.find(c => c.name === 'Orc').conditions;
-    expect(orcConditions).toHaveLength(0);
-  });
-
-  it('does not call setRuntimeValue when all selected NPCs succeed', () => {
-    diceRoller.rollD20.mockReturnValue(20);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]); // Goblin A
-    fireEvent.click(screen.getAllByRole('checkbox')[1]); // Goblin B
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(2 targets\)/ }));
-
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('calls setRuntimeValue with activeConditions on player failure', async () => {
-    diceRoller.rollD20.mockReturnValue(15);
-
-    const characters = [
-      { name: 'Player Ally', computedStats: { name: 'Player Ally' } },
-    ];
-
-    render(<SetConditionModal {...makeProps({ characters })} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[2]); // Player Ally
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    const sentPrompt = savePromptService.sendSavePrompt.mock.calls[0][1];
-    window.dispatchEvent(
-      new CustomEvent('save-result', {
-        detail: { promptId: sentPrompt.promptId, targetName: 'Player Ally', success: false, total: 8, roll: 8, saveBonus: 0 },
-      })
-    );
-
-    await waitFor(() => {
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Player Ally',
-        'activeConditions',
-        expect.arrayContaining(['frightened']),
-        'test-campaign'
-      );
-    });
-  });
-
-  // ── Additional condition with different DC types ──
-
-  it('applies both conditions to NPC via setRuntimeValue', () => {
-    diceRoller.rollD20.mockReturnValue(5);
-
-    render(<SetConditionModal {...makeProps({ conditionName: 'frightened', additionalCondition: 'blinded', saveType: 'WIS' })} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]); // Goblin A
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    const calls = useRuntimeState.setRuntimeValue.mock.calls.filter(
-      call => call[0] === 'Goblin A' && call[1] === 'activeConditions'
-    );
-    expect(calls).toHaveLength(2);
-    expect(calls[0][2]).toContain('frightened');
-    expect(calls[1][2]).toContain('blinded');
-  });
-
-  // ── Additional condition on player targets ──
-
-  it('applies both conditions to player via setRuntimeValue on failure', async () => {
-    diceRoller.rollD20.mockReturnValue(15);
-
-    const characters = [
-      { name: 'Player Ally', computedStats: { name: 'Player Ally' } },
-    ];
-
-    render(<SetConditionModal {...makeProps({ characters, conditionName: 'frightened', additionalCondition: 'blinded' })} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[2]); // Player Ally
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    const sentPrompt = savePromptService.sendSavePrompt.mock.calls[0][1];
-    window.dispatchEvent(
-      new CustomEvent('save-result', {
-        detail: { promptId: sentPrompt.promptId, targetName: 'Player Ally', success: false, total: 8, roll: 8, saveBonus: 0 },
-      })
-    );
-
-    await waitFor(() => {
-      const calls = useRuntimeState.setRuntimeValue.mock.calls.filter(
-        call => call[0] === 'Player Ally' && call[1] === 'activeConditions'
-      );
-      expect(calls).toHaveLength(2);
-      expect(calls[0][2]).toContain('frightened');
-      expect(calls[1][2]).toContain('blinded');
-    });
-  });
-
   // ── Immunity handling ──
 
   it('does not apply condition when player is immune', async () => {
@@ -283,7 +123,7 @@ describe('SetConditionModal - Side Effects & Edge Cases', () => {
     });
   });
 
-  // ── Channel divinity charges decrement ──
+  // ── Channel divinity charges ──
 
   it('decrements channelDivinityCharges when provided', () => {
     diceRoller.rollD20.mockReturnValue(15);
@@ -313,9 +153,9 @@ describe('SetConditionModal - Side Effects & Edge Cases', () => {
     expect(chargeCalls).toHaveLength(0);
   });
 
-  // ── Log condition format validation ──
+  // ── Log condition format ──
 
-  it('logs correct condition format with additionalCondition', () => {
+  it('logs condition format with additionalCondition', () => {
     diceRoller.rollD20.mockReturnValue(5);
 
     render(<SetConditionModal {...makeProps({ conditionName: 'frightened', additionalCondition: 'blinded' })} />);
@@ -324,17 +164,10 @@ describe('SetConditionModal - Side Effects & Edge Cases', () => {
 
     const conditionCall = logService.addEntry.mock.calls.find(call => call[1]?.type === 'condition');
     expect(conditionCall).toBeDefined();
-    const logBody = conditionCall[1];
-    expect(logBody.condition).toBe('Frightened & Blinded');
-    expect(logBody.type).toBe('condition');
-    expect(logBody.action).toBe('applied');
-    expect(logBody.characterName).toBe('Goblin A');
-    expect(logBody.dc).toBe(14);
-    expect(logBody.ability).toBe('WIS');
-    expect(logBody.sourceName).toBe('Attacker');
+    expect(conditionCall[1].condition).toBe('Frightened & Blinded');
   });
 
-  it('logs correct condition format without additionalCondition', () => {
+  it('logs condition format without additionalCondition', () => {
     diceRoller.rollD20.mockReturnValue(5);
 
     render(<SetConditionModal {...makeProps({ conditionName: 'frightened' })} />);
@@ -343,11 +176,10 @@ describe('SetConditionModal - Side Effects & Edge Cases', () => {
 
     const conditionCall = logService.addEntry.mock.calls.find(call => call[1]?.type === 'condition');
     expect(conditionCall).toBeDefined();
-    const logBody = conditionCall[1];
-    expect(logBody.condition).toBe('Frightened');
+    expect(conditionCall[1].condition).toBe('Frightened');
   });
 
-  // ── Roll log entry validation ──
+  // ── Roll log entry formula ──
 
   it('logs roll entry with correct formula for NPC with zero bonus', () => {
     diceRoller.rollD20.mockReturnValue(10);

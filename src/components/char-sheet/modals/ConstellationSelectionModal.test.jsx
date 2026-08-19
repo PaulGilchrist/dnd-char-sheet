@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConstellationSelectionModal from './ConstellationSelectionModal.jsx';
@@ -57,10 +58,6 @@ describe('ConstellationSelectionModal', () => {
       expect(screen.getByRole('button', { name: 'Choose' })).toBeDisabled();
     });
 
-    it('hides result-specific elements before selection', () => {
-      render(<ConstellationSelectionModal {...makeProps()} />);
-      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-    });
   });
 
   describe('constellation option descriptions', () => {
@@ -80,12 +77,6 @@ describe('ConstellationSelectionModal', () => {
   });
 
   describe('selection behavior', () => {
-    it('enables Choose button after selecting a constellation', () => {
-      render(<ConstellationSelectionModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
-      expect(screen.getByRole('button', { name: 'Choose' })).toBeEnabled();
-    });
-
     it.each(['Archer', 'Chalice', 'Dragon'])('selects %s when clicked', () => {
       render(<ConstellationSelectionModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: /^Archer/ }));
@@ -124,13 +115,6 @@ describe('ConstellationSelectionModal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
-
-    it('calls onClose when clicking the overlay in selection state', () => {
-      const onClose = vi.fn();
-      render(<ConstellationSelectionModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }).closest('.sp-overlay'));
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe('result state', () => {
@@ -159,17 +143,6 @@ describe('ConstellationSelectionModal', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClose when clicking the overlay in result state', async () => {
-      const onClose = vi.fn();
-      render(<ConstellationSelectionModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
-      fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      await vi.waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }).closest('.sp-overlay'));
-      });
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
     it('displays custom action name in result header', async () => {
       render(<ConstellationSelectionModal {...makeProps({ action: { name: 'My Custom Starry Form', automation: { type: 'constellation_selection' } } })} />);
       fireEvent.click(screen.getByRole('button', { name: /Archer/ }));
@@ -187,14 +160,6 @@ describe('ConstellationSelectionModal', () => {
       ]);
       render(<ConstellationSelectionModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: 'Choose' })).toBeEnabled();
-    });
-
-    it('does not restore selection when activeBuffs has no matching buff', () => {
-      useRuntimeState.getRuntimeValue.mockReturnValue([
-        { name: 'Other Feature', constellation: 'Archer' },
-      ]);
-      render(<ConstellationSelectionModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Choose' })).toBeDisabled();
     });
 
     it('does not restore selection when activeBuffs is empty', () => {

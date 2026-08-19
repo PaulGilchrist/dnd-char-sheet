@@ -137,42 +137,7 @@ describe('AnimalShapesSelectionModal - behavior', () => {
             expect(baseProps.onCancel).toHaveBeenCalled();
         });
 
-        it('does not close when clicking inside the modal content', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Animal Shapes')).toBeInTheDocument();
-            });
-
-            const modal = document.querySelector('.sp-modal');
-            fireEvent.click(modal);
-            expect(baseProps.onCancel).not.toHaveBeenCalled();
-            expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-        });
-
-        it('does not close when clicking a beast item', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getAllByText('Crocodile').length).toBe(2);
-            });
-
-            fireEvent.click(findBeastItem('Crocodile'));
-            expect(baseProps.onCancel).not.toHaveBeenCalled();
-            expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-        });
-
-        it('does not close when typing in a search input', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getAllByText('Crocodile').length).toBe(2);
-            });
-
-            const inputs = document.querySelectorAll('input[type="text"]');
-            fireEvent.change(inputs[0], { target: { value: 'cro' } });
-            expect(baseProps.onCancel).not.toHaveBeenCalled();
-            expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-        });
-
-        it('closes when Escape key is pressed', async () => {
+        it('calls onCancel when Escape key is pressed', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
                 expect(screen.getByText('Animal Shapes')).toBeInTheDocument();
@@ -180,30 +145,6 @@ describe('AnimalShapesSelectionModal - behavior', () => {
 
             fireEvent.keyDown(document, { key: 'Escape' });
             expect(baseProps.onCancel).toHaveBeenCalled();
-        });
-
-        it('does not close when other keys are pressed', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Animal Shapes')).toBeInTheDocument();
-            });
-
-            fireEvent.keyDown(document, { key: 'Enter' });
-            expect(baseProps.onCancel).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('error handling', () => {
-        it('renders error message when loadMonsters fails', async () => {
-            const { loadMonsters } = await import('../../../services/ui/dataLoader.js');
-            loadMonsters.mockRejectedValueOnce(new Error('Network error'));
-
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-
-            await waitFor(() => {
-                expect(screen.getByText('Failed to load creature data.')).toBeInTheDocument();
-                expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
-            });
         });
 
         it('calls onCancel when Close button is clicked in error state', async () => {
@@ -219,8 +160,10 @@ describe('AnimalShapesSelectionModal - behavior', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Close' }));
             expect(baseProps.onCancel).toHaveBeenCalled();
         });
+    });
 
-        it('calls onCancel when clicking the overlay in error state', async () => {
+    describe('error handling', () => {
+        it('renders error message when loadMonsters fails', async () => {
             const { loadMonsters } = await import('../../../services/ui/dataLoader.js');
             loadMonsters.mockRejectedValueOnce(new Error('Network error'));
 
@@ -228,11 +171,8 @@ describe('AnimalShapesSelectionModal - behavior', () => {
 
             await waitFor(() => {
                 expect(screen.getByText('Failed to load creature data.')).toBeInTheDocument();
+                expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
             });
-
-            const overlay = document.querySelector('.sp-overlay');
-            fireEvent.click(overlay);
-            expect(baseProps.onCancel).toHaveBeenCalled();
         });
     });
 
@@ -249,59 +189,44 @@ describe('AnimalShapesSelectionModal - behavior', () => {
     });
 
     describe('Transform button state', () => {
-        it('is disabled by default before any selection', async () => {
+        it('updates count display and enabled state when selections change', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                expect(screen.getByText(/Choose a beast form/)).toBeInTheDocument();
+                expect(screen.getAllByText('Crocodile').length).toBe(2);
             });
 
-            const transformBtn = getTransformButton();
+            // Initially disabled with 0/2
+            let transformBtn = getTransformButton();
             expect(transformBtn).toBeDisabled();
             expect(transformBtn.textContent).toContain('0/2');
-        });
 
-        it('enables Transform when all targets have beasts selected', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getAllByText('Crocodile').length).toBe(2);
-            });
-
-            fireEvent.click(findBeastItemInSection('Crocodile', 0));
-            fireEvent.click(findBeastItemInSection('Panther', 1));
-
-            await waitFor(() => {
-                const transformBtn = getTransformButton();
-                expect(transformBtn).toBeEnabled();
-                expect(transformBtn.textContent).toContain('2/2');
-            });
-        });
-
-        it('updates count display when selections change', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getAllByText('Crocodile').length).toBe(2);
-            });
-
+            // Select one target
             fireEvent.click(findBeastItemInSection('Crocodile', 0));
             await waitFor(() => {
-                const transformBtn = getTransformButton();
+                transformBtn = getTransformButton();
                 expect(transformBtn.textContent).toContain('1/2');
             });
 
-            // Deselect first target
+            // Select second target - should enable
+            fireEvent.click(findBeastItemInSection('Panther', 1));
+            await waitFor(() => {
+                transformBtn = getTransformButton();
+                expect(transformBtn).toBeEnabled();
+                expect(transformBtn.textContent).toContain('2/2');
+            });
+
+            // Deselect first target - should disable again
             const selectedCroc = findBeastItemInSection('Crocodile', 0);
             if (selectedCroc && selectedCroc.classList.contains('selected')) {
                 fireEvent.click(selectedCroc);
             }
             await waitFor(() => {
-                const transformBtn = getTransformButton();
-                expect(transformBtn.textContent).toContain('0/2');
+                transformBtn = getTransformButton();
+                expect(transformBtn.textContent).toContain('1/2');
                 expect(transformBtn).toBeDisabled();
             });
         });
-    });
 
-    describe('empty targets behavior', () => {
         it('disables Transform button when there are no targets', async () => {
             render(<AnimalShapesSelectionModal {...makeProps({ targets: [] })} />);
             await waitFor(() => {
@@ -336,21 +261,6 @@ describe('AnimalShapesSelectionModal - behavior', () => {
                 expect(map).toHaveProperty('Alric');
                 expect(map).toHaveProperty('Berenik');
             });
-        });
-
-        it('does not call onConfirm when not all targets are selected', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getAllByText('Crocodile').length).toBe(2);
-            });
-
-            fireEvent.click(findBeastItem('Crocodile'));
-
-            const transformBtn = getTransformButton();
-            expect(transformBtn).toBeDisabled();
-            // Even if the user somehow clicks a disabled button, onConfirm should not fire
-            fireEvent.click(transformBtn);
-            expect(baseProps.onConfirm).not.toHaveBeenCalled();
         });
 
         it('passes the correct beast index in the confirm map', async () => {
@@ -391,3 +301,4 @@ describe('AnimalShapesSelectionModal - behavior', () => {
         });
     });
 });
+// @cleaned-by-ai

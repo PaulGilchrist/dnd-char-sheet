@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BlindnessDeafnessModal from './BlindnessDeafnessModal.jsx';
@@ -179,27 +180,21 @@ describe('BlindnessDeafnessModal handlers', () => {
         mockState.pendingPrompts = [];
     });
 
-    // ── Initiative-rolled event: no-op guards ──
+    // ── Initiative-rolled event ──
 
     describe('initiative-rolled event handling', () => {
         function renderModal() {
             render(<BlindnessDeafnessModal {...makeProps()} />);
         }
 
-        it('does nothing when event detail is missing', () => {
+        it('is a no-op when detail is missing, lacks characterName, or rolling character is not the caster', () => {
             renderModal();
             window.dispatchEvent(new CustomEvent('initiative-rolled', { detail: null }));
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
 
-        it('does nothing when event detail lacks characterName', () => {
-            renderModal();
             window.dispatchEvent(new CustomEvent('initiative-rolled', { detail: {} }));
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
 
-        it('does nothing when the rolling character is not the caster', () => {
-            renderModal();
             window.dispatchEvent(new CustomEvent('initiative-rolled', {
                 detail: { characterName: 'OtherCharacter' },
             }));
@@ -210,9 +205,11 @@ describe('BlindnessDeafnessModal handlers', () => {
     // ── HandleApplyOverride (NPC resolution) ──
 
     describe('handleApplyOverride - NPC resolution', () => {
-        it('sets processing to true before resolving', () => {
+        it('sets processing to true, rolls saves, and applies condition on failure', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             const applyFn = getApplyFn();
+
+            diceRoller.rollD20.mockReturnValue(1);
 
             const setProcessing = vi.fn();
             const ctx = makeCtx({ setProcessing });
@@ -222,45 +219,12 @@ describe('BlindnessDeafnessModal handlers', () => {
             });
 
             expect(setProcessing).toHaveBeenCalledWith(true);
-        });
-
-        it('does nothing when no effect is selected', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const applyFn = getApplyFn();
-
-            act(() => {
-                applyFn(makeCtx({ selectedEffect: null }));
-            });
-
-            expect(diceRoller.rollD20).not.toHaveBeenCalled();
-        });
-
-        it('does nothing when no targets are selected', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const applyFn = getApplyFn();
-
-            act(() => {
-                applyFn(makeCtx({ selected: new Set() }));
-            });
-
-            expect(diceRoller.rollD20).not.toHaveBeenCalled();
-        });
-
-        it('applies condition when NPC fails save', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const applyFn = getApplyFn();
-
-            diceRoller.rollD20.mockReturnValue(1);
-
-            act(() => {
-                applyFn(makeCtx());
-            });
 
             const sendSaveResultCall = savePromptService.sendSaveResult.mock.calls[0];
             expect(sendSaveResultCall[0]).toBe('test-campaign');
             expect(sendSaveResultCall[1]).toBe('Goblin1');
             expect(sendSaveResultCall[2]).toEqual(
-                expect.objectContaining({ success: false })
+                expect.objectContaining({ success: false, roll: 1, total: 3, saveBonus: 2, rawRolls: [1, 1] })
             );
 
             expect(expirations.addExpiration).toHaveBeenCalled();
@@ -272,9 +236,33 @@ describe('BlindnessDeafnessModal handlers', () => {
                     condition: 'Blinded',
                 })
             );
+            expect(logService.addEntry).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    type: 'roll',
+                    targetName: 'Goblin1',
+                    saveDc: 14,
+                    saveType: 'CON',
+                })
+            );
         });
 
-        it('does not apply condition when NPC succeeds save', () => {
+        it('does nothing when no effect or no targets are selected', () => {
+            render(<BlindnessDeafnessModal {...makeProps()} />);
+            const applyFn = getApplyFn();
+
+            act(() => {
+                applyFn(makeCtx({ selectedEffect: null }));
+            });
+            expect(diceRoller.rollD20).not.toHaveBeenCalled();
+
+            act(() => {
+                applyFn(makeCtx({ selected: new Set() }));
+            });
+            expect(diceRoller.rollD20).not.toHaveBeenCalled();
+        });
+
+        it('sends save result and skips condition when NPC succeeds save', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             const applyFn = getApplyFn();
 
@@ -290,49 +278,6 @@ describe('BlindnessDeafnessModal handlers', () => {
                 expect.objectContaining({ success: true })
             );
             expect(expirations.addExpiration).not.toHaveBeenCalled();
-        });
-
-        it('sends save result with correct roll details for NPC', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const applyFn = getApplyFn();
-
-            diceRoller.rollD20.mockReturnValue(7);
-
-            act(() => {
-                applyFn(makeCtx());
-            });
-
-            expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
-                'test-campaign',
-                'Goblin1',
-                expect.objectContaining({
-                    roll: 7,
-                    total: 9,
-                    saveBonus: 2,
-                    rawRolls: [7, 7],
-                })
-            );
-        });
-
-        it('logs save entry for NPC resolution', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const applyFn = getApplyFn();
-
-            diceRoller.rollD20.mockReturnValue(5);
-
-            act(() => {
-                applyFn(makeCtx());
-            });
-
-            expect(logService.addEntry).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.objectContaining({
-                    type: 'roll',
-                    targetName: 'Goblin1',
-                    saveDc: 14,
-                    saveType: 'CON',
-                })
-            );
         });
 
         it('treats missing creature as NPC with zero save bonus', () => {
@@ -351,68 +296,12 @@ describe('BlindnessDeafnessModal handlers', () => {
                 expect.objectContaining({ saveBonus: 0 })
             );
         });
-
-        it('works with deafened effect for NPC', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const applyFn = getApplyFn();
-
-            diceRoller.rollD20.mockReturnValue(1);
-
-            act(() => {
-                applyFn(makeCtx({
-                    selectedEffect: { key: 'deafened', label: 'Deafened', condition: 'deafened' },
-                    selected: new Set(['Orc Warrior']),
-                }));
-            });
-
-            expect(savePromptService.sendSaveResult).toHaveBeenCalledWith(
-                'test-campaign',
-                'Orc Warrior',
-                expect.objectContaining({ success: false })
-            );
-            expect(expirations.addExpiration).toHaveBeenCalled();
-        });
     });
 
     // ── HandleApplyOverride (Player save prompt) ──
 
     describe('handleApplyOverride - player save prompt', () => {
-        it('sends save prompt for player targets', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const applyFn = getApplyFn();
-
-            act(() => {
-                applyFn(makeCtx({ selected: new Set(['Elf Mage']) }));
-            });
-
-            expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            const promptCall = savePromptService.sendSavePrompt.mock.calls[0][1];
-            expect(promptCall.targetName).toBe('Elf Mage');
-            expect(promptCall.saveType).toBe('CON');
-            expect(promptCall.saveDc).toBe(14);
-            expect(promptCall.sourceName).toBe('Witch1');
-        });
-
-        it('logs save entry for pending player prompts', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const applyFn = getApplyFn();
-
-            act(() => {
-                applyFn(makeCtx({ selected: new Set(['Elf Mage']) }));
-            });
-
-            expect(logService.addEntry).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.objectContaining({
-                    type: 'roll',
-                    targetName: 'Elf Mage',
-                    saveResult: 'failure',
-                    formula: '1d20 (waiting)',
-                })
-            );
-        });
-
-        it('sets pending prompts for player targets', () => {
+        it('sends save prompt, logs, and sets pending prompts for player targets', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             const applyFn = getApplyFn();
 
@@ -424,6 +313,23 @@ describe('BlindnessDeafnessModal handlers', () => {
                     setPendingPrompts,
                 }));
             });
+
+            expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
+            const promptCall = savePromptService.sendSavePrompt.mock.calls[0][1];
+            expect(promptCall.targetName).toBe('Elf Mage');
+            expect(promptCall.saveType).toBe('CON');
+            expect(promptCall.saveDc).toBe(14);
+            expect(promptCall.sourceName).toBe('Witch1');
+
+            expect(logService.addEntry).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    type: 'roll',
+                    targetName: 'Elf Mage',
+                    saveResult: 'failure',
+                    formula: '1d20 (waiting)',
+                })
+            );
 
             expect(setPendingPrompts).toHaveBeenCalled();
             const pendingCalls = setPendingPrompts.mock.calls;

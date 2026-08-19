@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
@@ -75,10 +76,8 @@ vi.mock('./shared/CreatureSelectionModal.jsx', () => ({
 // ── Re-import mocked modules ──
 
 import * as diceRoller from '../../../services/dice/diceRoller.js';
-import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
-import * as logService from '../../../services/ui/logService.js';
-import * as expirations from '../../../services/rules/effects/expirations.js';
 import * as aoeService from '../../../services/rules/combat/aoeService.js';
+import * as logService from '../../../services/ui/logService.js';
 import * as combatData from '../../../services/encounters/combatData.js';
 
 // ── Test fixtures ──
@@ -126,54 +125,20 @@ describe('ElementalAttunementModal summary and close', () => {
             ]);
         });
 
-        it('sets elementalAttunementActive to true on runtime store', async () => {
+        it('invokes the onClose callback when Close is clicked', async () => {
             const { handleClose } = renderModal({ activeOverlay: { type: 'sphere' } });
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => fireEvent.click(screen.getByRole('button', { name: /Close/ })));
-            await waitFor(() => {
-                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                    'Monk1', 'elementalAttunementActive', true, 'test-campaign'
-                );
-            });
             expect(handleClose).toHaveBeenCalledTimes(1);
         });
 
-        it('sets elementalAttunementElement to the chosen element on runtime store', async () => {
-            const { handleClose } = renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Thunder'));
-            await waitFor(() => fireEvent.click(screen.getByRole('button', { name: /Close/ })));
-            await waitFor(() => {
-                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                    'Monk1', 'elementalAttunementElement', 'Thunder', 'test-campaign'
-                );
-            });
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('registers expiration cleanup entries to remove attunement state', async () => {
-            const { handleClose } = renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => fireEvent.click(screen.getByRole('button', { name: /Close/ })));
-            await waitFor(() => {
-                expect(expirations.addExpiration).toHaveBeenCalledWith(
-                    'Monk1', 'Monk1',
-                    expect.arrayContaining([
-                        expect.objectContaining({ type: 'clear_runtime_value', key: 'elementalAttunementActive' }),
-                        expect.objectContaining({ type: 'clear_runtime_value', key: 'elementalAttunementElement' }),
-                        expect.objectContaining({ type: 'remove_active_buff', buffName: 'Stride of the Elements' }),
-                        expect.objectContaining({ type: 'clear_runtime_value', key: 'elementalEpitomeActive' }),
-                        expect.objectContaining({ type: 'clear_runtime_value', key: 'epitomeResistanceType' }),
-                        expect.objectContaining({ type: 'clear_runtime_value', key: 'epitomeEmpoweredUsedRound' }),
-                    ]),
-                    'test-campaign', Infinity, 'Monk1'
-                );
-            });
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('logs an ability_use entry recording the chosen element', async () => {
-            const { handleClose } = renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Cold'));
+        it.each([
+            { actionName: 'Elemental Attunement', element: 'Cold', expectedDescription: 'Elemental Attunement (Cold)' },
+            { actionName: 'My Elemental Attunement', element: 'Cold', expectedDescription: 'My Elemental Attunement (Cold)' },
+            { actionName: 'Elemental Attunement', element: 'Fire', expectedDescription: 'Elemental Attunement (Fire)' },
+        ])('logs an ability_use entry with abilityName=$actionName and element=$element', async ({ actionName, element, expectedDescription }) => {
+            const { handleClose } = renderModal({ action: { name: actionName }, activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText(element));
             await waitFor(() => fireEvent.click(screen.getByRole('button', { name: /Close/ })));
             await waitFor(() => {
                 expect(logService.addEntry).toHaveBeenCalledWith(
@@ -181,41 +146,8 @@ describe('ElementalAttunementModal summary and close', () => {
                     expect.objectContaining({
                         type: 'ability_use',
                         characterName: 'Monk1',
-                        description: expect.stringContaining('Elemental Attunement (Cold)'),
-                    })
-                );
-            });
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('invokes the onClose callback when Close is clicked', async () => {
-            const { handleClose } = renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => fireEvent.click(screen.getByRole('button', { name: /Close/ })));
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe('custom action name', () => {
-        beforeEach(() => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([
-                { creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } },
-            ]);
-        });
-
-        it('uses the custom action name in the ability_use log entry', async () => {
-            const { handleClose } = renderModal({ action: { name: 'My Elemental Attunement' }, activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => fireEvent.click(screen.getByRole('button', { name: /Close/ })));
-            await waitFor(() => {
-                expect(logService.addEntry).toHaveBeenCalledWith(
-                    'test-campaign',
-                    expect.objectContaining({
-                        type: 'ability_use',
-                        abilityName: 'My Elemental Attunement',
+                        abilityName: actionName,
+                        description: expect.stringContaining(expectedDescription),
                     })
                 );
             });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
@@ -27,67 +28,36 @@ describe('DiceRollResult', () => {
             expect(weaponLine.textContent).toContain('0');
         });
 
-        it('renders no type buttons when types is null', () => {
+        it.each`
+            types
+            ${null}
+            ${undefined}
+            ${[]}
+        `('renders no type buttons and shows skip when types is $types', ({ types }) => {
             const { container } = render(
                 <DiceRollResult
                     name="Test"
                     type="damage_type_choice"
                     rolls={[10]}
                     bonus={0}
-                    types={null}
+                    types={types}
                 />
             );
             expect(container.querySelector('.dice-roll-damage-type-choice')).toBeInTheDocument();
             expect(screen.queryByText(/Skip/)).toBeInTheDocument();
         });
 
-        it('renders no type buttons when types is undefined', () => {
+        it.each`
+            type
+            ${'damage'}
+            ${'d20'}
+        `('does not render the damage type choice container when type is $type', ({ type }) => {
             const { container } = render(
                 <DiceRollResult
-                    name="Test"
-                    type="damage_type_choice"
-                    rolls={[10]}
-                    bonus={0}
-                />
-            );
-            expect(container.querySelector('.dice-roll-damage-type-choice')).toBeInTheDocument();
-            expect(screen.queryByText(/Skip/)).toBeInTheDocument();
-        });
-
-        it('renders no type buttons when types is empty array', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Test"
-                    type="damage_type_choice"
-                    rolls={[10]}
-                    bonus={0}
-                    types={[]}
-                />
-            );
-            expect(container.querySelector('.dice-roll-damage-type-choice')).toBeInTheDocument();
-            expect(screen.queryByText(/Skip/)).toBeInTheDocument();
-        });
-
-        it('renders the damage type choice container when type is NOT damage_type_choice', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Fireball"
-                    type="damage"
-                    rolls={[6, 5, 4]}
-                    bonus={0}
-                    types={['Fire']}
-                />
-            );
-            expect(container.querySelector('.dice-roll-damage-type-choice')).not.toBeInTheDocument();
-        });
-
-        it('renders the damage type choice container when type is d20', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Attack"
-                    type="d20"
-                    rolls={[15]}
-                    bonus={3}
+                    name={type === 'damage' ? 'Fireball' : 'Attack'}
+                    type={type}
+                    rolls={type === 'damage' ? [6, 5, 4] : [15]}
+                    bonus={type === 'damage' ? 0 : 3}
                     types={['Fire']}
                 />
             );

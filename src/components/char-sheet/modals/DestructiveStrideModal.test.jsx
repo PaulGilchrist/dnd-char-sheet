@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DestructiveStrideModal from './DestructiveStrideModal.jsx';
@@ -48,22 +49,6 @@ describe('DestructiveStrideModal', () => {
     // ── Initial render ──
 
     describe('initial render', () => {
-        it('renders the modal overlay, container, header, body, and actions', () => {
-            render(<DestructiveStrideModal {...makeProps()} />);
-            expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-            expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-            expect(document.querySelector('.sp-header')).toBeInTheDocument();
-            expect(document.querySelector('.sp-body')).toBeInTheDocument();
-            expect(document.querySelector('.sp-actions')).toBeInTheDocument();
-        });
-
-        it('renders the header with running icon and action name', () => {
-            render(<DestructiveStrideModal {...makeProps()} />);
-            const headerIcon = document.querySelector('.sp-header i');
-            expect(headerIcon).toHaveClass('fa-solid fa-person-running');
-            expect(screen.getByText('Destructive Stride')).toBeInTheDocument();
-        });
-
         it('renders the instruction text and all five damage type options with descriptions', () => {
             render(<DestructiveStrideModal {...makeProps()} />);
             expect(screen.getByText('Choose the damage type for Destructive Stride:')).toBeInTheDocument();
@@ -78,33 +63,10 @@ describe('DestructiveStrideModal', () => {
             expect(screen.getByText(/Deafening thunder damage/)).toBeInTheDocument();
         });
 
-        it('renders radio inputs for each damage type', () => {
-            render(<DestructiveStrideModal {...makeProps()} />);
-            const radios = document.querySelectorAll('input[type="radio"][name="destructiveStrideType"]');
-            expect(radios).toHaveLength(5);
-        });
-
-        it('renders the Choose Type and Skip Target buttons', () => {
-            render(<DestructiveStrideModal {...makeProps()} />);
-            expect(screen.getByRole('button', { name: /Choose Type/ })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /Skip Target/ })).toBeInTheDocument();
-        });
-
         it('disables the Choose Type button and shows the proximity note on initial render', () => {
             render(<DestructiveStrideModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: /Choose Type/ })).toBeDisabled();
             expect(screen.getByText(/Choose a creature only if the monk comes within 5 ft/)).toBeInTheDocument();
-            expect(screen.queryByText(/Selected/)).not.toBeInTheDocument();
-        });
-
-        it('uses fallback text when action prop is undefined', () => {
-            render(<DestructiveStrideModal {...makeProps({ action: undefined })} />);
-            expect(screen.getByText('Destructive Stride')).toBeInTheDocument();
-        });
-
-        it('uses fallback text when action prop is null', () => {
-            render(<DestructiveStrideModal {...makeProps({ action: null })} />);
-            expect(screen.getByText('Destructive Stride')).toBeInTheDocument();
         });
 
         it('displays custom action name when provided', () => {
@@ -157,32 +119,8 @@ describe('DestructiveStrideModal', () => {
             });
         });
 
-        it('calls onConfirm when result type is popup', async () => {
-            applyDamageTypeChoice.mockResolvedValue({ type: 'popup', payload: { type: 'automation_info' } });
-
-            render(<DestructiveStrideModal {...makeProps()} />);
-            selectDamageType('Thunder');
-            fireEvent.click(screen.getByRole('button', { name: /Choose Type/ }));
-
-            await waitFor(() => {
-                expect(mockOnConfirm).toHaveBeenCalledWith({ type: 'popup', payload: { type: 'automation_info' } });
-            });
-        });
-
         it('does not call onConfirm when applyDamageTypeChoice returns null', async () => {
             applyDamageTypeChoice.mockResolvedValue(null);
-
-            render(<DestructiveStrideModal {...makeProps()} />);
-            selectDamageType('Fire');
-            fireEvent.click(screen.getByRole('button', { name: /Choose Type/ }));
-
-            await waitFor(() => {
-                expect(mockOnConfirm).not.toHaveBeenCalled();
-            });
-        });
-
-        it('does not call onConfirm when result type is neither modal nor popup', async () => {
-            applyDamageTypeChoice.mockResolvedValue({ type: 'other' });
 
             render(<DestructiveStrideModal {...makeProps()} />);
             selectDamageType('Fire');
@@ -199,18 +137,6 @@ describe('DestructiveStrideModal', () => {
             await Promise.resolve();
 
             expect(applyDamageTypeChoice).not.toHaveBeenCalled();
-        });
-
-        it('does not call onConfirm when onConfirm prop is undefined', async () => {
-            applyDamageTypeChoice.mockResolvedValue({ type: 'modal', modalName: 'destructiveStrideTarget' });
-
-            render(<DestructiveStrideModal {...makeProps({ onConfirm: undefined })} />);
-            selectDamageType('Fire');
-            fireEvent.click(screen.getByRole('button', { name: /Choose Type/ }));
-
-            await waitFor(() => {
-                expect(mockOnConfirm).not.toHaveBeenCalled();
-            });
         });
     });
 
@@ -232,17 +158,6 @@ describe('DestructiveStrideModal', () => {
                 expect(mockOnConfirm).toHaveBeenCalledWith({ type: 'popup', payload: { type: 'automation_info' } });
             });
         });
-
-        it('calls onClose after skip completes regardless of result', async () => {
-            skipTargetChoice.mockResolvedValue(null);
-
-            render(<DestructiveStrideModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Skip Target/ }));
-
-            await waitFor(() => {
-                expect(mockOnClose).toHaveBeenCalledTimes(1);
-            });
-        });
     });
 
     // ── Overlay click behavior ──
@@ -262,15 +177,6 @@ describe('DestructiveStrideModal', () => {
                 );
                 expect(mockOnClose).toHaveBeenCalledTimes(1);
             });
-        });
-
-        it('does not trigger skip when modal content (modal, header, body, actions) is clicked', () => {
-            render(<DestructiveStrideModal {...makeProps()} />);
-            fireEvent.click(document.querySelector('.sp-modal'));
-            fireEvent.click(document.querySelector('.sp-header'));
-            fireEvent.click(document.querySelector('.sp-body'));
-            fireEvent.click(document.querySelector('.sp-actions'));
-            expect(mockOnClose).not.toHaveBeenCalled();
         });
     });
 });

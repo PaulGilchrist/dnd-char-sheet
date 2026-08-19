@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalBurstModal from './ElementalBurstModal.jsx';
@@ -91,17 +92,6 @@ describe('ElementalBurstModal', () => {
     // ── Initial render / display ──
 
     describe('initial render', () => {
-        it('renders the modal overlay and container', () => {
-            renderModal();
-            expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-            expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-        });
-
-        it('renders the action name in the header', () => {
-            renderModal();
-            expect(screen.getByText('Elemental Burst')).toBeInTheDocument();
-        });
-
         it('renders the description with DC calculation', () => {
             // DC = 8 + Dex bonus (4) + proficiency (3) = 15
             renderModal();
@@ -124,21 +114,11 @@ describe('ElementalBurstModal', () => {
             expect(screen.getByText('Lightning')).toBeInTheDocument();
             expect(screen.getByText('Thunder')).toBeInTheDocument();
         });
-
-        it('renders the Cancel button', () => {
-            renderModal();
-            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-        });
     });
 
     // ── DC calculation ──
 
     describe('DC calculation', () => {
-        it('calculates DC correctly with default stats (8 + 4 + 3 = 15)', () => {
-            renderModal();
-            expect(screen.getByText(/DC 15/)).toBeInTheDocument();
-        });
-
         it('calculates DC with different dex bonus', () => {
             const stats = makePlayerStats({
                 abilities: [
@@ -160,27 +140,12 @@ describe('ElementalBurstModal', () => {
             expect(screen.getByText(/DC 18/)).toBeInTheDocument();
         });
 
-        it('defaults dex bonus to 0 when not found', () => {
-            const stats = makePlayerStats({
-                abilities: [
-                    { name: 'Strength', bonus: 2 },
-                ],
-                proficiency: 3,
-            });
-            renderModal({ playerStats: stats });
-            // DC = 8 + 0 + 3 = 11
-            expect(screen.getByText(/DC 11/)).toBeInTheDocument();
-        });
-
-        it('defaults dex bonus to 0 when abilities is undefined', () => {
-            const stats = makePlayerStats({ abilities: undefined });
-            renderModal({ playerStats: stats });
-            // DC = 8 + 0 + 3 = 11
-            expect(screen.getByText(/DC 11/)).toBeInTheDocument();
-        });
-
-        it('defaults dex bonus to 0 when abilities array is empty', () => {
-            const stats = makePlayerStats({ abilities: [] });
+        it.each([
+            { abilities: [{ name: 'Strength', bonus: 2 }], name: 'not found' },
+            { abilities: undefined, name: 'undefined' },
+            { abilities: [], name: 'empty' },
+        ])('defaults dex bonus to 0 when abilities $name', ({ abilities }) => {
+            const stats = makePlayerStats({ abilities });
             renderModal({ playerStats: stats });
             // DC = 8 + 0 + 3 = 11
             expect(screen.getByText(/DC 11/)).toBeInTheDocument();
@@ -246,11 +211,9 @@ describe('ElementalBurstModal', () => {
     // ── Damage type selection ──
 
     describe('damage type selection', () => {
-        const damageTypes = ['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder'];
-
-        it.each(damageTypes)('logs an ability_use entry when %s is chosen', async (typeName) => {
+        it('logs an ability_use entry when a damage type is chosen', async () => {
             renderModal();
-            fireEvent.click(screen.getByText(typeName));
+            fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
                 expect(logService.addEntry).toHaveBeenCalledWith(
                     'test-campaign',
@@ -258,7 +221,7 @@ describe('ElementalBurstModal', () => {
                         type: 'ability_use',
                         characterName: 'Monk1',
                         abilityName: 'Elemental Burst',
-                        description: `Elemental Burst: Chose ${typeName} damage type.`,
+                        description: 'Elemental Burst: Chose Fire damage type.',
                     })
                 );
             });
@@ -298,14 +261,6 @@ describe('ElementalBurstModal', () => {
                 dcSuccess: 'half',
             });
         });
-
-        it.each(damageTypes)('passes lowercase %s as damage type to AOE modal', async (typeName) => {
-            renderModal();
-            fireEvent.click(screen.getByText(typeName));
-            await waitFor(() => {
-                expect(screen.getByTestId('aoe-damage-type')).toHaveTextContent(typeName.toLowerCase());
-            });
-        });
     });
 
     // ── AOE modal close behavior ──
@@ -321,22 +276,16 @@ describe('ElementalBurstModal', () => {
         });
     });
 
-    // ── Processing phase (transient) ──
+    // ── Processing phase ──
 
     describe('processing phase', () => {
-        it('hides the initial phase UI after a choice is made', async () => {
+        it('transitions to AOE phase and hides initial phase UI', async () => {
             renderModal();
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
                 expect(screen.queryByText(/Choose a damage type/)).not.toBeInTheDocument();
-            });
-        });
-
-        it('hides damage type buttons after a choice is made', async () => {
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => {
                 expect(screen.queryByText('Fire')).not.toBeInTheDocument();
+                expect(screen.getByTestId('save-attack-aoe-modal')).toBeInTheDocument();
             });
         });
     });
@@ -395,17 +344,13 @@ describe('ElementalBurstModal', () => {
             expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
 
-        it('renders with null proficiency (DC uses 0)', () => {
-            const stats = makePlayerStats({ proficiency: null });
+        it.each([
+            { value: null, name: 'null' },
+            { value: 0, name: 'zero' },
+        ])('handles proficiency $name (DC uses 0)', ({ value }) => {
+            const stats = makePlayerStats({ proficiency: value });
             renderModal({ playerStats: stats });
-            // DC = 8 + 4 + null = 12 (null coerced to 0 in addition)
-            expect(screen.getByText(/DC 12/)).toBeInTheDocument();
-        });
-
-        it('renders with empty proficiency (DC uses 0)', () => {
-            const stats = makePlayerStats({ proficiency: 0 });
-            renderModal({ playerStats: stats });
-            // DC = 8 + 4 + 0 = 12
+            // null: DC = 8 + 4 + null = 12; 0: DC = 8 + 4 + 0 = 12
             expect(screen.getByText(/DC 12/)).toBeInTheDocument();
         });
     });

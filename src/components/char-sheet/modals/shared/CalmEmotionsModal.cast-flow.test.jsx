@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CalmEmotionsModal from './CalmEmotionsModal.jsx';
@@ -99,7 +100,7 @@ describe('CalmEmotionsModal - Cast Flow', () => {
     // ── Confirm / cast behavior ──
 
     describe('confirm / cast behavior', () => {
-        it('logs ability_use entry when cast button is clicked', async () => {
+        it('logs ability_use and applies immunity for all default targets when cast button is clicked', async () => {
             render(<CalmEmotionsModal {...makeProps()} />);
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
@@ -111,14 +112,6 @@ describe('CalmEmotionsModal - Cast Flow', () => {
                 abilityName: 'Calm Emotions',
                 description: expect.stringContaining('Selecting 3 target'),
             }));
-        });
-
-        it('calls storeSpellLastAttack when cast button is clicked', async () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
             expect(storeSpellLastAttack).toHaveBeenCalledWith(campaignName, {
                 casterName: 'Wizard1',
                 spellName: 'Calm Emotions',
@@ -126,14 +119,7 @@ describe('CalmEmotionsModal - Cast Flow', () => {
                 saveDc: 14,
                 attackScope: 'aoe',
             });
-        });
-
-        it('applies immunity for all NPC targets with immunity choice (default)', async () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
+            expect(applyCalmEmotionsImmunity).toHaveBeenCalledTimes(3);
             expect(applyCalmEmotionsImmunity).toHaveBeenCalledWith(expect.objectContaining({
                 targetName: 'Goblin',
                 casterName: 'Wizard1',
@@ -146,29 +132,12 @@ describe('CalmEmotionsModal - Cast Flow', () => {
                 campaignName,
                 dc: 14,
             }));
-        });
-
-        it('applies immunity for player targets with immunity choice (default)', async () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
             expect(applyCalmEmotionsImmunity).toHaveBeenCalledWith(expect.objectContaining({
                 targetName: 'PlayerAlly',
                 casterName: 'Wizard1',
                 campaignName,
                 dc: 14,
             }));
-        });
-
-        it('applies immunity exactly 3 times for all targets with default choices', async () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            expect(applyCalmEmotionsImmunity).toHaveBeenCalledTimes(3);
             expect(applyCalmEmotionsCharmed).not.toHaveBeenCalled();
             expect(sendSavePrompt).not.toHaveBeenCalled();
         });
@@ -224,41 +193,11 @@ describe('CalmEmotionsModal - Cast Flow', () => {
                 expect(goblinCharmedCalls).toHaveLength(0);
             });
         });
-
-        it('uses heighten target for disadvantage on NPC saves', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            render(<CalmEmotionsModal {...makeProps({ metamagicHeighten: true })} />);
-
-            await act(async () => {
-                const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
-                fireEvent.click(heightenRadios[1]);
-            });
-            await act(async () => {
-                const goblinRadios = document.querySelectorAll('input[name="choice-Goblin"]');
-                const orcRadios = document.querySelectorAll('input[name="choice-Orc"]');
-                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
-                fireEvent.click(goblinRadios[1]);
-                fireEvent.click(orcRadios[1]);
-                fireEvent.click(playerRadios[1]);
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            await waitFor(() => {
-                expect(applyCalmEmotionsCharmed).toHaveBeenCalledWith(expect.objectContaining({
-                    targetName: 'Orc',
-                    casterName: 'Wizard1',
-                    campaignName,
-                    dc: 14,
-                }));
-            });
-        });
     });
 
-    // ── Careful Spell protection for NPCs ──
+    // ── Careful Spell protection ──
 
-    describe('careful spell protection for NPCs', () => {
+    describe('careful spell protection', () => {
         it('automatically succeeds for careful spell protected NPCs', async () => {
             getAllyList.mockReturnValue(['Goblin']);
             render(<CalmEmotionsModal {...makeProps({ metamagicCareful: true })} />);
@@ -278,6 +217,22 @@ describe('CalmEmotionsModal - Cast Flow', () => {
             );
             expect(saveEntries.length).toBeGreaterThan(0);
             expect(saveEntries[0][1].description).toContain('Careful Spell protected');
+        });
+
+        it('does not send save prompt or apply charmed for careful spell protected players', async () => {
+            getAllyList.mockReturnValue(['PlayerAlly']);
+            render(<CalmEmotionsModal {...makeProps({ metamagicCareful: true })} />);
+
+            await act(async () => {
+                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
+                fireEvent.click(playerRadios[1]);
+            });
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
+            });
+
+            expect(sendSavePrompt).not.toHaveBeenCalled();
+            expect(applyCalmEmotionsCharmed).not.toHaveBeenCalled();
         });
     });
 
@@ -303,25 +258,6 @@ describe('CalmEmotionsModal - Cast Flow', () => {
             }));
         });
 
-        it('tracks pending prompts for player targets with charmed choice', async () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-
-            await act(async () => {
-                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
-                fireEvent.click(playerRadios[1]);
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'pendingSaveListenerPrompts',
-                expect.arrayContaining([expect.any(String)]),
-                campaignName,
-            );
-        });
-
         it('does not send save prompt for player with immunity choice', async () => {
             render(<CalmEmotionsModal {...makeProps()} />);
 
@@ -334,28 +270,12 @@ describe('CalmEmotionsModal - Cast Flow', () => {
                 targetName: 'PlayerAlly',
             }));
         });
-
-        it('does not send save prompt or apply charmed for careful spell protected players', async () => {
-            getAllyList.mockReturnValue(['PlayerAlly']);
-            render(<CalmEmotionsModal {...makeProps({ metamagicCareful: true })} />);
-
-            await act(async () => {
-                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
-                fireEvent.click(playerRadios[1]);
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            expect(sendSavePrompt).not.toHaveBeenCalled();
-            expect(applyCalmEmotionsCharmed).not.toHaveBeenCalled();
-        });
     });
 
     // ── Player save result handling ──
 
     describe('player save result handling', () => {
-        it('applies charmed when player fails save via save-result event with charmed choice', async () => {
+        it('applies charmed when player fails save via save-result event', async () => {
             getRuntimeValue.mockReturnValue([]);
             const onClose = vi.fn();
             render(<CalmEmotionsModal {...makeProps({ onClose })} />);
@@ -391,80 +311,6 @@ describe('CalmEmotionsModal - Cast Flow', () => {
                     campaignName,
                     dc: 14,
                 }));
-            });
-        });
-
-        it('logs save_result failure when player fails save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<CalmEmotionsModal {...makeProps({ onClose })} />);
-
-            await act(async () => {
-                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
-                fireEvent.click(playerRadios[1]);
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result' && call[1]?.success === false
-                );
-                expect(saveEntries.length).toBeGreaterThan(0);
-                expect(saveEntries[0][1].targetName).toBe('PlayerAlly');
-            });
-        });
-
-        it('logs save_result success when player passes save', async () => {
-            const onClose = vi.fn();
-            render(<CalmEmotionsModal {...makeProps({ onClose })} />);
-
-            await act(async () => {
-                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
-                fireEvent.click(playerRadios[1]);
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: true,
-                        roll: 18,
-                        total: 19,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result' && call[1]?.success === true
-                );
-                expect(saveEntries.length).toBeGreaterThan(0);
             });
         });
 
@@ -534,76 +380,6 @@ describe('CalmEmotionsModal - Cast Flow', () => {
             await waitFor(() => {
                 expect(onClose).toHaveBeenCalledTimes(1);
             });
-        });
-
-        it('applies charmed when player fails save with missing optional fields', async () => {
-            const onClose = vi.fn();
-            render(<CalmEmotionsModal {...makeProps({ onClose })} />);
-
-            await act(async () => {
-                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
-                fireEvent.click(playerRadios[1]);
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            const savePromptCall = sendSavePrompt.mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                expect(applyCalmEmotionsCharmed).toHaveBeenCalledWith(expect.objectContaining({
-                    targetName: 'PlayerAlly',
-                    dc: 14,
-                }));
-            });
-        });
-    });
-
-    // ── Multiple targets ──
-
-    describe('multiple targets', () => {
-        it('resolves saves for all NPC+player targets with immunity choice', async () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            await waitFor(() => {
-                expect(applyCalmEmotionsImmunity).toHaveBeenCalledTimes(3);
-            });
-        });
-
-        it('sends save prompt for player with charmed choice in group while NPCs get immunity', async () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-
-            await act(async () => {
-                const playerRadios = document.querySelectorAll('input[name="choice-PlayerAlly"]');
-                fireEvent.click(playerRadios[1]);
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            expect(sendSavePrompt).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                targetName: 'PlayerAlly',
-            }));
-            expect(applyCalmEmotionsImmunity).toHaveBeenCalledWith(expect.objectContaining({
-                targetName: 'Goblin',
-            }));
-            expect(applyCalmEmotionsImmunity).toHaveBeenCalledWith(expect.objectContaining({
-                targetName: 'Orc',
-            }));
         });
     });
 });

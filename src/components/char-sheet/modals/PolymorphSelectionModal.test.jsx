@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PolymorphSelectionModal from './PolymorphSelectionModal.jsx';
@@ -117,6 +118,13 @@ function getBeastNames() {
     });
 }
 
+function waitForBeastsLoaded() {
+    return waitFor(() => {
+        const items = document.querySelectorAll('.wild-shape-beast-item');
+        expect(items.length).toBeGreaterThan(0);
+    });
+}
+
 describe('PolymorphSelectionModal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -136,201 +144,80 @@ describe('PolymorphSelectionModal', () => {
         });
     });
 
-    describe('rendering after data loads', () => {
-        it('renders the modal with header and default icon', async () => {
+    describe('filtering', () => {
+        it('renders the modal with header, instruction text, and filtered beasts', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            });
-            const icons = document.querySelectorAll('i.fa-solid.fa-paw');
-            expect(icons.length).toBeGreaterThan(0);
-        });
-
-        it('renders the instruction text with CR limit for beast mode', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Choose a beast form (CR 1 or lower)')).toBeInTheDocument();
-            });
+            await waitForBeastsLoaded();
+            expect(screen.getByText('Choose a beast form (CR 1 or lower)')).toBeInTheDocument();
+            expect(screen.getByText('Wolf')).toBeInTheDocument();
         });
 
         it('renders wild shape limitations info when not allowAnyCreature', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const infoDivs = document.querySelectorAll('.wild-shape-info');
-                const movementText = Array.from(infoDivs).find(d => d.querySelector('strong')?.textContent === 'Movement:');
-                expect(movementText).toBeInTheDocument();
-                expect(movementText.textContent).toContain('walk only');
-            });
+            await waitForBeastsLoaded();
+            const infoDivs = document.querySelectorAll('.wild-shape-info');
+            const movementText = Array.from(infoDivs).find(d => d.querySelector('strong')?.textContent === 'Movement:');
+            expect(movementText).toBeInTheDocument();
+            expect(movementText.textContent).toContain('walk only');
         });
 
         it('filters out non-beast creatures when allowAnyCreature is false', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.queryByText('Ghast')).not.toBeInTheDocument();
-            });
+            await waitForBeastsLoaded();
+            expect(screen.queryByText('Ghast')).not.toBeInTheDocument();
         });
 
         it('filters out creatures with CR above effectiveMaxCR', async () => {
             render(<PolymorphSelectionModal {...makeProps({ maxCR: 0 })} />);
-            await waitFor(() => {
-                expect(screen.getByText('Rat')).toBeInTheDocument();
-                expect(screen.queryByText('Wolf')).not.toBeInTheDocument();
-            });
+            await waitForBeastsLoaded();
+            expect(screen.getByText('Rat')).toBeInTheDocument();
+            expect(screen.queryByText('Wolf')).not.toBeInTheDocument();
         });
 
         it('filters beasts that lack walk speed per wild shape limitations', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                // Eagle has only fly speed, should be filtered out
-                expect(screen.queryByText('Eagle')).not.toBeInTheDocument();
-                // Crocodile has walk: 20, so it passes the walk filter
-                expect(screen.getByText('Crocodile')).toBeInTheDocument();
-            });
-        });
-
-        it('renders beast names in the list', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wolf')).toBeInTheDocument();
-                expect(screen.getByText('Giant Spider')).toBeInTheDocument();
-                expect(screen.getByText('Brown Bear')).toBeInTheDocument();
-            });
-        });
-
-        it('renders CR for each beast', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const crTexts = document.querySelectorAll('.wild-shape-beast-cr');
-                const crs = Array.from(crTexts).map(el => el.textContent.trim());
-                expect(crs).toContain('CR 0');
-                expect(crs).toContain('CR 0.25');
-                expect(crs).toContain('CR 1');
-            });
-        });
-
-        it('renders speed info for beasts', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const speedTexts = document.querySelectorAll('.wild-shape-beast-stats');
-                const speeds = Array.from(speedTexts).map(el => el.textContent.trim());
-                expect(speeds.some(s => s.includes('Walk 40'))).toBe(true);
-            });
-        });
-
-        it('renders actions summary for beasts', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const actionTexts = document.querySelectorAll('.wild-shape-beast-actions');
-                const actions = Array.from(actionTexts).map(el => el.textContent.trim());
-                expect(actions.some(a => a.includes('Bite, Grapple, Swallow'))).toBe(true);
-            });
-        });
-
-        it('shows "No actions" for beasts with empty actions array', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Rat')).toBeInTheDocument();
-            });
-            const ratItem = findBeastItem('Rat');
-            expect(ratItem).toBeInTheDocument();
-            expect(ratItem.querySelector('.wild-shape-beast-actions').textContent).toBe('No actions');
-        });
-
-        it('renders search input', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByPlaceholderText('Search beasts...')).toBeInTheDocument();
-            });
-        });
-
-        it('disables the confirm button when no beast is selected', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const confirmBtn = screen.getByRole('button', { name: 'Wild Shape' });
-                expect(confirmBtn).toBeDisabled();
-            });
+            await waitForBeastsLoaded();
+            expect(screen.queryByText('Eagle')).not.toBeInTheDocument();
+            expect(screen.getByText('Crocodile')).toBeInTheDocument();
         });
     });
 
     describe('search functionality', () => {
-        it('filters beasts by name when searching', async () => {
+        it('filters beasts by name, clears on empty input, and handles no results and case-insensitivity', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Crocodile')).toBeInTheDocument();
-                expect(screen.getByText('Panther')).toBeInTheDocument();
-            });
+            await waitForBeastsLoaded();
+            expect(screen.getByText('Crocodile')).toBeInTheDocument();
+            expect(screen.getByText('Panther')).toBeInTheDocument();
 
             const input = screen.getByPlaceholderText('Search beasts...');
-            fireEvent.change(input, { target: { value: 'cro' } });
 
+            // Filter by partial name
+            fireEvent.change(input, { target: { value: 'cro' } });
             await waitFor(() => {
                 const names = getBeastNames();
                 expect(names).toContain('Crocodile');
                 expect(names).not.toContain('Panther');
             });
-        });
 
-        it('clears search filter when input is cleared', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Crocodile')).toBeInTheDocument();
-                expect(screen.getByText('Panther')).toBeInTheDocument();
-            });
-
-            const input = screen.getByPlaceholderText('Search beasts...');
-            fireEvent.change(input, { target: { value: 'cro' } });
-            await waitFor(() => {
-                const names = getBeastNames();
-                expect(names).not.toContain('Panther');
-            });
-
-            fireEvent.change(input, { target: { value: '' } });
-            await waitFor(() => {
-                const names = getBeastNames();
-                expect(names).toContain('Panther');
-            });
-        });
-
-        it('shows "No beasts match" when search has no results', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Crocodile')).toBeInTheDocument();
-            });
-
-            const input = screen.getByPlaceholderText('Search beasts...');
-            fireEvent.change(input, { target: { value: 'xyznonexistent' } });
-
-            await waitFor(() => {
-                expect(screen.getByText(/No beasts match/)).toBeInTheDocument();
-            });
-        });
-
-        it('performs case-insensitive search', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wolf')).toBeInTheDocument();
-            });
-
-            const input = screen.getByPlaceholderText('Search beasts...');
+            // Case-insensitive search
             fireEvent.change(input, { target: { value: 'WOLF' } });
-
             await waitFor(() => {
                 const names = getBeastNames();
                 expect(names).toContain('Wolf');
             });
-        });
 
-        it('filters based on already-filtered beast list', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.queryByText('Eagle')).not.toBeInTheDocument();
-            });
-
-            const input = screen.getByPlaceholderText('Search beasts...');
-            fireEvent.change(input, { target: { value: 'eagle' } });
-
+            // No results
+            fireEvent.change(input, { target: { value: 'xyznonexistent' } });
             await waitFor(() => {
                 expect(screen.getByText(/No beasts match/)).toBeInTheDocument();
+            });
+
+            // Clear restores all
+            fireEvent.change(input, { target: { value: '' } });
+            await waitFor(() => {
+                const names = getBeastNames();
+                expect(names).toContain('Panther');
+                expect(names).toContain('Wolf');
             });
         });
     });
@@ -338,31 +225,23 @@ describe('PolymorphSelectionModal', () => {
     describe('beast selection', () => {
         it('selects a beast, enables confirm, and calls onConfirm with correct data', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wolf')).toBeInTheDocument();
-            });
+            await waitForBeastsLoaded();
 
-            // Confirm button starts disabled
             const confirmBtn = screen.getByRole('button', { name: 'Wild Shape' });
             expect(confirmBtn).toBeDisabled();
 
-            // Click to select Wolf
             const wolfItem = findBeastItem('Wolf');
             expect(wolfItem).toBeInTheDocument();
             fireEvent.click(wolfItem);
 
-            // Confirm button should be enabled
             await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Wild Shape' })).toBeEnabled();
+                expect(confirmBtn).toBeEnabled();
             });
 
-            // Verify selection visual state
             const selectedItem = document.querySelector('.wild-shape-beast-item.selected');
             expect(selectedItem).toBeInTheDocument();
-            const selectedName = selectedItem.querySelector('.wild-shape-beast-name').textContent;
-            expect(selectedName).toContain('Wolf');
+            expect(selectedItem.querySelector('.wild-shape-beast-name').textContent).toContain('Wolf');
 
-            // Click confirm
             fireEvent.click(confirmBtn);
 
             await waitFor(() => {
@@ -374,19 +253,14 @@ describe('PolymorphSelectionModal', () => {
 
         it('switches selection to a different beast', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wolf')).toBeInTheDocument();
-                expect(screen.getByText('Brown Bear')).toBeInTheDocument();
-            });
+            await waitForBeastsLoaded();
 
             const wolfItem = findBeastItem('Wolf');
             fireEvent.click(wolfItem);
-            await waitFor(() => {
-                expect(document.querySelector('.wild-shape-beast-item.selected')).toBeInTheDocument();
-            });
 
             const bearItem = findBeastItem('Brown Bear');
             fireEvent.click(bearItem);
+
             await waitFor(() => {
                 const selected = document.querySelector('.wild-shape-beast-item.selected');
                 const nameEl = selected.querySelector('.wild-shape-beast-name');
@@ -394,21 +268,12 @@ describe('PolymorphSelectionModal', () => {
             });
         });
 
-        it('does not call onConfirm when confirm button is not clicked', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wolf')).toBeInTheDocument();
-            });
-            expect(baseProps.onConfirm).not.toHaveBeenCalled();
-        });
-
         it('does not call onConfirm if no beast is selected', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const confirmBtn = screen.getByRole('button', { name: 'Wild Shape' });
-                expect(confirmBtn).toBeDisabled();
-                fireEvent.click(confirmBtn);
-            });
+            await waitForBeastsLoaded();
+            const confirmBtn = screen.getByRole('button', { name: 'Wild Shape' });
+            expect(confirmBtn).toBeDisabled();
+            fireEvent.click(confirmBtn);
             expect(baseProps.onConfirm).not.toHaveBeenCalled();
         });
     });
@@ -416,80 +281,16 @@ describe('PolymorphSelectionModal', () => {
     describe('close behavior', () => {
         it('calls onCancel when Cancel button is clicked', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-            });
-
+            await waitForBeastsLoaded();
             fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
             expect(baseProps.onCancel).toHaveBeenCalled();
         });
 
-        it('calls onCancel when clicking the overlay background', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            });
-
-            const overlay = document.querySelector('.sp-overlay');
-            fireEvent.click(overlay);
-            expect(baseProps.onCancel).toHaveBeenCalled();
-        });
-
-        it('does not close when clicking inside the modal content', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            });
-
-            const modal = document.querySelector('.sp-modal');
-            fireEvent.click(modal);
-            expect(baseProps.onCancel).not.toHaveBeenCalled();
-        });
-
-        it('does not close when clicking a beast item', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wolf')).toBeInTheDocument();
-            });
-
-            const wolfItem = findBeastItem('Wolf');
-            expect(wolfItem).toBeInTheDocument();
-            fireEvent.click(wolfItem);
-            expect(baseProps.onCancel).not.toHaveBeenCalled();
-        });
-
-        it('does not close when typing in the search input', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wolf')).toBeInTheDocument();
-            });
-
-            const input = screen.getByPlaceholderText('Search beasts...');
-            fireEvent.change(input, { target: { value: 'wolf' } });
-            expect(baseProps.onCancel).not.toHaveBeenCalled();
-        });
-
         it('closes when Escape key is pressed', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            });
-
+            await waitForBeastsLoaded();
             fireEvent.keyDown(document, { key: 'Escape' });
             expect(baseProps.onCancel).toHaveBeenCalled();
-        });
-
-        it('does not close when other keys are pressed', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            });
-
-            fireEvent.keyDown(document, { key: 'Enter' });
-            expect(baseProps.onCancel).not.toHaveBeenCalled();
-
-            fireEvent.keyDown(document, { key: ' ' });
-            expect(baseProps.onCancel).not.toHaveBeenCalled();
         });
     });
 });

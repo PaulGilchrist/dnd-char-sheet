@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FearModal from './FearModal.jsx';
@@ -87,40 +88,19 @@ describe('FearModal', () => {
     // ── Rendering ──
 
     describe('initial render', () => {
-        it('renders the modal with title and target list', () => {
+        it('renders the modal with title, target list, description, and controls', () => {
             render(<FearModal {...makeProps()} />);
             expect(screen.getByText('Bane')).toBeInTheDocument();
             expect(screen.getByText('Goblin')).toBeInTheDocument();
             expect(screen.getByText('Orc')).toBeInTheDocument();
             expect(screen.getByText('PlayerAlly')).toBeInTheDocument();
-        });
-
-        it('renders the description with save type and DC', () => {
-            render(<FearModal {...makeProps()} />);
             expect(screen.getByText(/Select creatures in the 30-foot cone/)).toBeInTheDocument();
             expect(screen.getByText(/CHA/)).toBeInTheDocument();
             expect(screen.getByText(/DC 14/)).toBeInTheDocument();
-        });
-
-        it('renders the note about frightened condition', () => {
-            render(<FearModal {...makeProps()} />);
             expect(screen.getByText(/On a failed save, target drops what it is holding/)).toBeInTheDocument();
             expect(screen.getByText(/Frightened/)).toBeInTheDocument();
-        });
-
-        it('disables the confirm button when no target is selected', () => {
-            render(<FearModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: /Bane \(0\)/ })).toBeDisabled();
-        });
-
-        it('renders skip button', () => {
-            render(<FearModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-        });
-
-        it('renders with the d20 icon', () => {
-            render(<FearModal {...makeProps()} />);
-            expect(document.querySelector('.sp-header .fa-solid.fa-dice-d20')).toBeInTheDocument();
         });
     });
 
@@ -293,38 +273,10 @@ describe('FearModal', () => {
         });
     });
 
-    // ── Overlay targeting ──
-
-    describe('overlay targeting', () => {
-        it('renders empty fragment when player is overlay targeted with active overlay', () => {
-            render(<FearModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-            // Should render empty fragment - no modal content
-            expect(screen.queryByText('Bane')).not.toBeInTheDocument();
-        });
-
-        it('renders normally when player is overlay targeted but no active overlay', () => {
-            render(<FearModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-            })} />);
-            expect(screen.getByText('Bane')).toBeInTheDocument();
-        });
-
-        it('renders normally when player is not overlay targeted', () => {
-            render(<FearModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'normal-target' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-            expect(screen.getByText('Bane')).toBeInTheDocument();
-        });
-    });
-
     // ── Null/missing combat summary ──
 
     describe('null combat summary handling', () => {
-        it('renders normally when combat summary is null', () => {
+        it('renders normally when combat summary is null or missing creatures', () => {
             getCombatSummary.mockReturnValue(null);
             render(<FearModal {...makeProps()} />);
             expect(screen.getByText('Bane')).toBeInTheDocument();

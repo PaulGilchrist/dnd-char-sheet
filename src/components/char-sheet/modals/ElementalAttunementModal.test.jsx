@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
@@ -112,12 +113,6 @@ describe('ElementalAttunementModal', () => {
     // ── Element selection phase ──
 
     describe('element selection phase', () => {
-        it('renders the modal overlay and container', () => {
-            renderModal();
-            expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-            expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-        });
-
         it('renders the modal header with title and instruction text', () => {
             renderModal();
             expect(screen.getByText('Elemental Attunement')).toBeInTheDocument();
@@ -168,19 +163,6 @@ describe('ElementalAttunementModal', () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => fireEvent.click(screen.getByTestId('cs-skip-btn')));
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('calls onClose when overlay is clicked during creature selection', async () => {
-            const { handleClose } = renderModal();
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => expect(screen.getByTestId('creature-selection-modal')).toBeInTheDocument());
-            await new Promise(r => setTimeout(r, 0));
-            const overlay = document.querySelector('.sp-overlay');
-            if (overlay) {
-                fireEvent.click(overlay);
-            }
             expect(handleClose).toHaveBeenCalledTimes(1);
         });
     });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
@@ -71,12 +72,6 @@ describe('StepsOfTheFeyTauntModal - Render', () => {
     });
 
     describe('initial render', () => {
-        it('renders the modal overlay and container', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-            expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-        });
-
         it('renders the feature name in the header with wand icon', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const header = document.querySelector('.sp-header');
@@ -105,33 +100,16 @@ describe('StepsOfTheFeyTauntModal - Render', () => {
             expect(screen.getByText(/2d10 Psychic damage/)).toBeInTheDocument();
         });
 
-        it('renders the correct icon for each step option via data-testid', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByTestId('step-option-refreshing');
-            expect(refreshingOption.querySelector('.fa-solid.fa-heart-pulse')).toBeInTheDocument();
-
-            const tauntingOption = screen.getByTestId('step-option-taunting');
-            expect(tauntingOption.querySelector('.fa-solid.fa-wand-sparkles')).toBeInTheDocument();
-
-            const disappearingOption = screen.getByTestId('step-option-disappearing');
-            expect(disappearingOption.querySelector('.fa-solid.fa-eye-slash')).toBeInTheDocument();
-
-            const dreadfulOption = screen.getByTestId('step-option-dreadful');
-            expect(dreadfulOption.querySelector('.fa-solid.fa-brain')).toBeInTheDocument();
-        });
-
         it('renders the Skip button', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
         });
 
-        it('renders the skip button with Misty Step only text when mode is mistyEscape', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ mode: 'mistyEscape' })} />);
+        it('renders the skip button with conditional text based on mode or title', async () => {
+            const { rerender } = render(<StepsOfTheFeyTauntModal {...makeProps({ mode: 'mistyEscape' })} />);
             expect(screen.getByRole('button', { name: 'Misty Step only (free cast)' })).toBeInTheDocument();
-        });
 
-        it('renders the skip button with Misty Step only text when title is Bewitching Magic', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ title: 'Bewitching Magic' })} />);
+            rerender(<StepsOfTheFeyTauntModal {...makeProps({ title: 'Bewitching Magic' })} />);
             expect(screen.getByRole('button', { name: 'Misty Step only (free cast)' })).toBeInTheDocument();
         });
 

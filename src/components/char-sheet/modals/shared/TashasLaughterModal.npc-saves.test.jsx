@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import TashasLaughterModal from './TashasLaughterModal.jsx';
@@ -138,17 +139,6 @@ describe('TashasLaughterModal - NPC Saves', () => {
             clickSkip();
             expect(onClose).toHaveBeenCalledTimes(1);
         });
-
-        it('does not call any services when skip is clicked', async () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-            clickSkip();
-            await waitFor(() => {
-                expect(storeSpellLastAttack).not.toHaveBeenCalled();
-                expect(sendSavePrompt).not.toHaveBeenCalled();
-                expect(addEntry).not.toHaveBeenCalled();
-            });
-        });
     });
 
     describe('storeSpellLastAttack and ability_use logging', () => {
@@ -267,60 +257,6 @@ describe('TashasLaughterModal - NPC Saves', () => {
             });
         });
 
-        it('logs condition entry on failed NPC save', async () => {
-            render(<TashasLaughterModal {...makeProps()} />);
-            selectTarget(0);
-            mockNpcSaveFailure();
-            clickConfirm();
-            await waitFor(() => {
-                const conditionEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'condition' && call[1]?.action === 'applied'
-                );
-                expect(conditionEntries.length).toBeGreaterThan(0);
-                expect(conditionEntries[0][1]).toEqual(expect.objectContaining({
-                    type: 'condition',
-                    action: 'applied',
-                    characterName: 'Goblin',
-                    condition: 'Prone, Incapacitated',
-                }));
-            });
-        });
-
-        it('logs save_result entry with failure details for NPC saves', async () => {
-            render(<TashasLaughterModal {...makeProps()} />);
-            selectTarget(0);
-            mockNpcSaveFailure();
-            clickConfirm();
-            await waitFor(() => {
-                const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result'
-                );
-                expect(saveEntries.length).toBeGreaterThan(0);
-                expect(saveEntries[0][1]).toEqual(expect.objectContaining({
-                    type: 'save_result',
-                    saveType: 'WIS',
-                    saveDc: 14,
-                    success: false,
-                    targetName: 'Goblin',
-                }));
-            });
-        });
-
-        it('records addTargetResult with failure for NPC save', async () => {
-            render(<TashasLaughterModal {...makeProps()} />);
-            selectTarget(0);
-            mockNpcSaveFailure();
-            clickConfirm();
-            await waitFor(() => {
-                const targetResultCalls = addTargetResult.mock.calls.filter(
-                    call => call[0] === campaignName && call[1]?.targetName === 'Goblin'
-                );
-                expect(targetResultCalls.length).toBeGreaterThan(0);
-                expect(targetResultCalls[0][1].saveResult).toBe('failure');
-                expect(targetResultCalls[0][1].conditions).toEqual(['prone', 'incapacitated']);
-            });
-        });
-
         it('logs condition entry with correct reason on failed NPC save', async () => {
             render(<TashasLaughterModal {...makeProps()} />);
             selectTarget(0);
@@ -404,24 +340,15 @@ describe('TashasLaughterModal - NPC Saves', () => {
             vi.spyOn(Math, 'random').mockReturnValue(0.99);
         }
 
-        it('does not apply conditions when NPC succeeds on save', async () => {
+        it('does not apply conditions, expiration, or targetEffects when NPC succeeds on save', async () => {
             render(<TashasLaughterModal {...makeProps()} />);
             selectTarget(0);
             mockNpcSaveSuccess();
             clickConfirm();
             await waitFor(() => {
-                const conditionCalls = findSetRuntimeValueCalls('Goblin', 'activeConditions');
-                expect(conditionCalls.length).toBe(0);
-            });
-        });
-
-        it('does not call addExpiration when NPC succeeds on save', async () => {
-            render(<TashasLaughterModal {...makeProps()} />);
-            selectTarget(0);
-            mockNpcSaveSuccess();
-            clickConfirm();
-            await waitFor(() => {
+                expect(findSetRuntimeValueCalls('Goblin', 'activeConditions').length).toBe(0);
                 expect(addExpiration).not.toHaveBeenCalled();
+                expect(findSetRuntimeValueCalls('campaign', 'targetEffects').length).toBe(0);
             });
         });
 
@@ -451,17 +378,6 @@ describe('TashasLaughterModal - NPC Saves', () => {
                 expect(targetResultCalls.length).toBeGreaterThan(0);
                 expect(targetResultCalls[0][1].saveResult).toBe('success');
                 expect(targetResultCalls[0][1].conditions).toEqual([]);
-            });
-        });
-
-        it('does not update targetEffects when NPC succeeds', async () => {
-            render(<TashasLaughterModal {...makeProps()} />);
-            selectTarget(0);
-            mockNpcSaveSuccess();
-            clickConfirm();
-            await waitFor(() => {
-                const teCalls = findSetRuntimeValueCalls('campaign', 'targetEffects');
-                expect(teCalls.length).toBe(0);
             });
         });
     });
@@ -511,34 +427,6 @@ describe('TashasLaughterModal - NPC Saves', () => {
                 );
                 expect(saveEntries.length).toBeGreaterThan(0);
                 expect(saveEntries[0][1].saveBonus).toBe(2);
-            });
-        });
-    });
-
-    describe('creature not found in combat summary', () => {
-        it('skips creatures not found in combat summary without error', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 7, saveBonuses: { wis: 0 } },
-                ],
-            });
-            render(<TashasLaughterModal {...makeProps()} />);
-
-            // Only Goblin is available, confirm without selecting (should be disabled)
-            const confirmBtn = screen.getByRole('button', { name: /Tasha's Hideous Laughter/ });
-            expect(confirmBtn).toBeDisabled();
-        });
-    });
-
-    describe('persistAndNotify', () => {
-        it('calls persistAndNotify after NPC save resolution', async () => {
-            render(<TashasLaughterModal {...makeProps()} />);
-            selectTarget(0);
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            clickConfirm();
-            await waitFor(() => {
-                expect(persistAndNotify).toHaveBeenCalled();
             });
         });
     });

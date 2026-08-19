@@ -453,16 +453,8 @@ describe('FontOfMagicModal', () => {
     expect(mockOnClose).not.toHaveBeenCalled();
   });
 
-  it('calls onClose when Apply is clicked', () => {
-    vi.mocked(getRuntimeValue).mockImplementation((name, prop) =>
-      prop === 'sorceryPoints' ? '5' : null
-    );
-    render(<FontOfMagicModal {...makeProps()} />);
-    const rows = document.querySelectorAll('.font-of-magic-table tbody tr');
-    fireEvent.change(rows[0].querySelector('input'), { target: { value: '1' } });
-    fireEvent.click(screen.getByText('Apply Conversion'));
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
-  });
+  // @cleaned-by-ai
+  // Removed: "calls onClose when Apply is clicked" — redundant with "calls setRuntimeBatch with correct data when Apply is clicked (slot-to-SP)" which already exercises the full Apply flow including onClose.
 
   // ── Cancel / Escape ──
 
@@ -523,19 +515,10 @@ describe('FontOfMagicModal', () => {
     rows.forEach(row => expect(row.textContent).toContain('0 / 0'));
   });
 
-  // ── netSPChange computation ──
+  // @cleaned-by-ai
+  // Removed: "computes finalSP correctly when converting slots to SP only" — redundant with "calculates SP gained per level and total across levels" which already validates the SP gained column and total (which directly determines finalSP via finalSP = currentSP + totalSPGained).
 
-  it('computes finalSP correctly when converting slots to SP only', () => {
-    vi.mocked(getRuntimeValue).mockImplementation((name, prop) =>
-      prop === 'sorceryPoints' ? '5' : null
-    );
-    render(<FontOfMagicModal {...makeProps()} />);
-    const tables = document.querySelectorAll('.font-of-magic-table');
-    const firstRows = tables[0].querySelectorAll('tbody tr');
-    fireEvent.change(firstRows[2].querySelector('input'), { target: { value: '1' } });
-    // 1 level-3 slot → +3 SP, currentSP=5, finalSP=8
-    expect(document.querySelector('.font-of-magic-summary').textContent).toContain('8');
-  });
+  // ── netSPChange computation ──
 
   it('computes finalSP correctly when creating slots from SP only', () => {
     vi.mocked(getRuntimeValue).mockImplementation((name, prop) =>

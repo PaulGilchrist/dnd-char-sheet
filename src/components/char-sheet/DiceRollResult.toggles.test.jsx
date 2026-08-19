@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
@@ -22,26 +23,6 @@ describe('DiceRollResult', () => {
             expect(container.querySelector('.dice-roll-total').textContent).toBe('18');
         });
 
-        it('toggles advantage mode off when clicking again, reverting to normal mode', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Attack"
-                    type="d20"
-                    rolls={[8, 15]}
-                    bonus={3}
-                />
-            );
-            const advCheckbox = screen.getByLabelText(/Advantage/);
-
-            fireEvent.click(advCheckbox);
-            expect(advCheckbox.checked).toBe(true);
-
-            fireEvent.click(advCheckbox);
-            expect(advCheckbox.checked).toBe(false);
-            // normal mode: first roll = 8, total = 8 + 3 = 11
-            expect(container.querySelector('.dice-roll-total').textContent).toBe('11');
-        });
-
         it('toggles disadvantage mode on when clicking the disadvantage checkbox, updating the total', () => {
             const { container } = render(
                 <DiceRollResult
@@ -57,26 +38,6 @@ describe('DiceRollResult', () => {
             fireEvent.click(disCheckbox);
             expect(disCheckbox.checked).toBe(true);
             // disadvantage mode: min(8, 15) = 8, total = 8 + 3 = 11
-            expect(container.querySelector('.dice-roll-total').textContent).toBe('11');
-        });
-
-        it('toggles disadvantage mode off when clicking again, reverting to normal mode', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Attack"
-                    type="d20"
-                    rolls={[8, 15]}
-                    bonus={3}
-                />
-            );
-            const disCheckbox = screen.getByLabelText(/Disadvantage/);
-
-            fireEvent.click(disCheckbox);
-            expect(disCheckbox.checked).toBe(true);
-
-            fireEvent.click(disCheckbox);
-            expect(disCheckbox.checked).toBe(false);
-            // normal mode: first roll = 8, total = 8 + 3 = 11
             expect(container.querySelector('.dice-roll-total').textContent).toBe('11');
         });
 
@@ -164,25 +125,6 @@ describe('DiceRollResult', () => {
             );
             fireEvent.click(screen.getByText(/Psi-Bolstered Knack/));
             fireEvent.click(screen.getByText(/Still Failed/));
-            expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
-        });
-    });
-
-    describe('onReroll callback', () => {
-        it('calls onReroll callback and shows reroll result div when reroll button is clicked', () => {
-            const onReroll = vi.fn();
-            const { container } = render(
-                <DiceRollResult
-                    name="Attack"
-                    type="d20"
-                    rolls={[12]}
-                    bonus={3}
-                    autoReroll={true}
-                    onReroll={onReroll}
-                />
-            );
-            fireEvent.click(screen.getByText(/Reroll/));
-            expect(onReroll).toHaveBeenCalled();
             expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
         });
     });

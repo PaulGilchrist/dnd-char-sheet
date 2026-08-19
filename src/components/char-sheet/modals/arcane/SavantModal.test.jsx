@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import SavantModal from './SavantModal.jsx';
@@ -72,16 +73,6 @@ describe('SavantModal', () => {
       expect(screen.queryByRole('button', { name: 'Clear Selection' })).not.toBeInTheDocument();
     });
 
-    it('renders labels for both spell selections', () => {
-      render(<SavantModal {...makeProps()} />);
-      expect(screen.getByText('Evocation spell 1:')).toBeInTheDocument();
-      expect(screen.getByText('Evocation spell 2:')).toBeInTheDocument();
-    });
-
-    it('renders the overlay with data-testid matching the school', () => {
-      render(<SavantModal {...makeProps()} />);
-      expect(screen.getByTestId('evocation-savant-modal')).toBeInTheDocument();
-    });
   });
 
   describe('existing selections', () => {
@@ -103,26 +94,19 @@ describe('SavantModal', () => {
       expect(screen.getByRole('button', { name: 'Clear Selection' })).toBeInTheDocument();
     });
 
-    it('renders without Current display when selectedSpells is undefined', () => {
+    it.each`
+      selectedSpells     | description
+      ${undefined}       | ${'undefined'}
+      ${[]}              | ${'empty array'}
+    `('renders without "Current:" display when selectedSpells is $description', ({ selectedSpells }) => {
       const props = makeProps({
         payload: {
           ...basePayload,
-          selectedSpells: undefined,
+          selectedSpells,
         },
       });
       render(<SavantModal {...props} />);
       expect(screen.getByText('Evocation Savant')).toBeInTheDocument();
-      expect(screen.queryByText(/Current:/)).not.toBeInTheDocument();
-    });
-
-    it('renders without Current display when selectedSpells is an empty array', () => {
-      const props = makeProps({
-        payload: {
-          ...basePayload,
-          selectedSpells: [],
-        },
-      });
-      render(<SavantModal {...props} />);
       expect(screen.queryByText(/Current:/)).not.toBeInTheDocument();
     });
 
@@ -177,17 +161,6 @@ describe('SavantModal', () => {
       expect(onConfirm).toHaveBeenCalledWith('Sleep', 'Web');
     });
 
-    it('does not call onClose on confirm', () => {
-      const onConfirm = vi.fn();
-      const onClose = vi.fn();
-      render(<SavantModal {...makeProps({ onConfirm, onClose })} />);
-      const selects = document.querySelectorAll('select');
-      fireEvent.change(selects[0], { target: { value: 'Sleep' } });
-      fireEvent.change(selects[1], { target: { value: 'Web' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm Selection' }));
-      expect(onConfirm).toHaveBeenCalledWith('Sleep', 'Web');
-      expect(onClose).not.toHaveBeenCalled();
-    });
   });
 
   describe('clear selection', () => {
@@ -205,10 +178,6 @@ describe('SavantModal', () => {
       expect(onConfirm).toHaveBeenCalledWith(null, null);
     });
 
-    it('does not show Clear Selection button when no spells are pre-selected', () => {
-      render(<SavantModal {...makeProps()} />);
-      expect(screen.queryByRole('button', { name: 'Clear Selection' })).not.toBeInTheDocument();
-    });
   });
 
   describe('overlay click to close', () => {

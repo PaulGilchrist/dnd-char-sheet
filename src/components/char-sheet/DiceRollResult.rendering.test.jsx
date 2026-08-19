@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
@@ -73,23 +74,14 @@ describe('DiceRollResult', () => {
     });
 
     describe('critical hit display', () => {
-        it('shows "Critical Hit!" when isCrit is true for attack rolls', () => {
+        it.each`
+            isCrit     | isAutoCrit | name       | type       | rolls       | rollType
+            ${true}    | ${false}   | ${'Attack'}| ${'d20'}   | ${[20, 5]}  | ${'attack'}
+            ${false}   | ${true}    | ${'Attack'}| ${'d20'}   | ${[5, 3]}   | ${'attack'}
+            ${true}    | ${false}   | ${'Fireball'}| ${'damage'}| ${[6, 5, 4]}| ${undefined}
+        `('shows "Critical Hit!" when isCrit=$isCrit isAutoCrit=$isAutoCrit for $name ($type)', ({ isCrit, isAutoCrit, name, type, rolls, rollType }) => {
             render(
-                <DiceRollResult name="Attack" type="d20" rolls={[20, 5]} bonus={3} isCrit={true} rollType="attack" />
-            );
-            expect(screen.getByText(/Critical Hit!/)).toBeInTheDocument();
-        });
-
-        it('shows "Critical Hit!" when isAutoCrit is true for attack rolls', () => {
-            render(
-                <DiceRollResult name="Attack" type="d20" rolls={[5, 3]} bonus={3} isAutoCrit={true} rollType="attack" />
-            );
-            expect(screen.getByText(/Critical Hit!/)).toBeInTheDocument();
-        });
-
-        it('shows "Critical Hit!" for damage type when isCrit is true', () => {
-            render(
-                <DiceRollResult name="Fireball" type="damage" rolls={[6, 5, 4]} bonus={0} isCrit={true} />
+                <DiceRollResult name={name} type={type} rolls={rolls} bonus={type === 'damage' ? 0 : 3} isCrit={isCrit} isAutoCrit={isAutoCrit} rollType={rollType} />
             );
             expect(screen.getByText(/Critical Hit!/)).toBeInTheDocument();
         });

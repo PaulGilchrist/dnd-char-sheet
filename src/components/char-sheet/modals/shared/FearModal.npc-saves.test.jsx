@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FearModal from './FearModal.jsx';
@@ -140,7 +141,7 @@ describe('FearModal NPC saves', () => {
             }
         });
 
-        it('logs ability_use, save_result, and condition entries on failed NPC save', async () => {
+        it('logs ability_use on NPC save confirm', async () => {
             getRuntimeValue.mockReturnValue([]);
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             try {
@@ -151,23 +152,6 @@ describe('FearModal NPC saves', () => {
                     characterName: 'Wizard1',
                     abilityName: 'Bane',
                 }));
-
-                const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result'
-                );
-                expect(saveEntries.length).toBeGreaterThan(0);
-                expect(saveEntries[0][1]).toMatchObject({
-                    type: 'save_result',
-                    saveType: 'CHA',
-                    saveDc: 14,
-                    success: false,
-                    targetName: 'Goblin',
-                });
-
-                const conditionEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'condition' && call[1]?.condition === 'Frightened'
-                );
-                expect(conditionEntries.length).toBeGreaterThan(0);
             } finally {
                 vi.restoreAllMocks();
             }

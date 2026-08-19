@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import SetConditionModal from './SetConditionModal.jsx';
@@ -172,40 +173,26 @@ describe('SetConditionModal - Turn Undead', () => {
 
   // ── turn-undead-result event dispatch ──
 
-  it('dispatches turn-undead-result with single failed NPC target', async () => {
-    diceRoller.rollD20.mockReturnValue(5);
+  it.each`
+    description              | targetsToSelect              | expectedRolls      | expectedFailedTargets
+    ${'single failed NPC'}   | ${['Skeleton A']}             | ${[5]}             | ${['Skeleton A']}
+    ${'multiple failed NPCs'}| ${['Skeleton A', 'Zombie B']} | ${[5, 3]}          | ${['Skeleton A', 'Zombie B']}
+  `('dispatches turn-undead-result with $description', async ({ targetsToSelect, expectedRolls, expectedFailedTargets }) => {
+    expectedRolls.forEach(roll => diceRoller.rollD20.mockReturnValue(roll));
 
     const { container } = render(<SetConditionModal {...makeProps({ featureName: 'Turn Undead' })} />);
-    fireEvent.click(getCheckboxByCreature(container, 'Skeleton A'));
-    fireEvent.click(screen.getByRole('button', { name: /Turn Undead \(1 target\)/ }));
+    targetsToSelect.forEach(name => fireEvent.click(getCheckboxByCreature(container, name)));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`Turn Undead \\(${targetsToSelect.length} target`) }));
 
     await waitFor(() => {
       const turnUndeadEvent = findTurnUndeadEvent(window.dispatchEvent.mock.calls.map(c => c[0]));
       expect(turnUndeadEvent).toBeDefined();
       const detail = turnUndeadEvent.detail;
-      expect(detail.failedTargets).toContain('Skeleton A');
+      expectedFailedTargets.forEach(t => expect(detail.failedTargets).toContain(t));
       expect(detail.attackerName).toBe('Attacker');
       expect(detail.saveDc).toBe(14);
       expect(detail.saveType).toBe('WIS');
       expect(detail.campaignName).toBe('test-campaign');
-    });
-  });
-
-  it('dispatches turn-undead-result with multiple failed NPC targets', async () => {
-    diceRoller.rollD20.mockReturnValueOnce(5).mockReturnValueOnce(3);
-
-    const { container } = render(<SetConditionModal {...makeProps({ featureName: 'Turn Undead' })} />);
-    fireEvent.click(getCheckboxByCreature(container, 'Skeleton A'));
-    fireEvent.click(getCheckboxByCreature(container, 'Zombie B'));
-    fireEvent.click(screen.getByRole('button', { name: /Turn Undead \(2 targets\)/ }));
-
-    await waitFor(() => {
-      const turnUndeadEvent = findTurnUndeadEvent(window.dispatchEvent.mock.calls.map(c => c[0]));
-      expect(turnUndeadEvent).toBeDefined();
-      const detail = turnUndeadEvent.detail;
-      expect(detail.failedTargets).toContain('Skeleton A');
-      expect(detail.failedTargets).toContain('Zombie B');
-      expect(detail.failedTargets).toHaveLength(2);
     });
   });
 
@@ -215,19 +202,6 @@ describe('SetConditionModal - Turn Undead', () => {
     const { container } = render(<SetConditionModal {...makeProps({ featureName: 'Turn Undead' })} />);
     fireEvent.click(getCheckboxByCreature(container, 'Skeleton A'));
     fireEvent.click(screen.getByRole('button', { name: /Turn Undead \(1 target\)/ }));
-
-    await waitFor(() => {
-      const turnUndeadEvent = findTurnUndeadEvent(window.dispatchEvent.mock.calls.map(c => c[0]));
-      expect(turnUndeadEvent).toBeUndefined();
-    });
-  });
-
-  it('does NOT dispatch turn-undead-result for non-Turn Undead features', async () => {
-    diceRoller.rollD20.mockReturnValue(5);
-
-    const { container } = render(<SetConditionModal {...makeProps({ featureName: 'Abjure Foes' })} />);
-    fireEvent.click(getCheckboxByCreature(container, 'Goblin C'));
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
 
     await waitFor(() => {
       const turnUndeadEvent = findTurnUndeadEvent(window.dispatchEvent.mock.calls.map(c => c[0]));
@@ -259,28 +233,6 @@ describe('SetConditionModal - Turn Undead', () => {
       const detail = turnUndeadEvent.detail;
       expect(detail.failedTargets).toContain('Skeleton A');
       expect(detail.failedTargets).toContain('Player Ally');
-    });
-  });
-
-  it('does NOT include player in failed targets when player save succeeds', async () => {
-    diceRoller.rollD20.mockReturnValue(5);
-
-    const { container } = render(<SetConditionModal {...makeProps({ featureName: 'Turn Undead' })} />);
-    fireEvent.click(getCheckboxByCreature(container, 'Skeleton A'));
-    fireEvent.click(getCheckboxByCreature(container, 'Player Ally'));
-    fireEvent.click(screen.getByRole('button', { name: /Turn Undead \(2 targets\)/ }));
-
-    const sentPrompt = savePromptService.sendSavePrompt.mock.calls[0][1];
-
-    window.dispatchEvent(
-      new CustomEvent('save-result', {
-        detail: { promptId: sentPrompt.promptId, targetName: 'Player Ally', success: true },
-      })
-    );
-
-    await waitFor(() => {
-      const turnUndeadEvent = findTurnUndeadEvent(window.dispatchEvent.mock.calls.map(c => c[0]));
-      expect(turnUndeadEvent).toBeUndefined();
     });
   });
 

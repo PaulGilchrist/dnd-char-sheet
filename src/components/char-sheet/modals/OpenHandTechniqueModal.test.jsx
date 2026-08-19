@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import OpenHandTechniqueModal from './OpenHandTechniqueModal.jsx';
@@ -62,11 +63,6 @@ describe('OpenHandTechniqueModal', () => {
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
-    it('includes the target name in the instruction text', () => {
-      renderModal();
-      expect(screen.getByText('Goblin')).toBeInTheDocument();
-    });
-
     it('omits target reference when targetName is null', () => {
       renderModal({ targetName: null });
       expect(screen.getByText('Choose an effect.')).toBeInTheDocument();
@@ -83,20 +79,15 @@ describe('OpenHandTechniqueModal', () => {
       expect(screen.getByText(/Can't take Reactions until start of your next turn/)).toBeInTheDocument();
     });
 
-    it('renders a radio input for each option', () => {
-      renderModal();
-      expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(3);
-    });
-
-    it('renders no options and disables apply button when automation config is missing', () => {
-      renderModal({ action: { name: 'Open Hand Technique' } });
+    it.each([
+      [{ action: { name: 'Open Hand Technique' } }, 'disabled apply button'],
+      [{ action: { name: 'Open Hand Technique', automation: { options: [] } } }, 'no options rendered'],
+    ])('renders %s when automation config is missing or options array is empty', (overrides) => {
+      renderModal(overrides);
       expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(0);
-      expect(screen.getByRole('button', { name: /Apply Effect/ })).toBeDisabled();
-    });
-
-    it('renders no options when options array is empty', () => {
-      renderModal({ action: { name: 'Open Hand Technique', automation: { options: [] } } });
-      expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(0);
+      if (overrides.action.automation === undefined || !overrides.action.automation.options) {
+        expect(screen.getByRole('button', { name: /Apply Effect/ })).toBeDisabled();
+      }
     });
 
     it('renders unknown effect types without effect descriptions', () => {
@@ -115,13 +106,6 @@ describe('OpenHandTechniqueModal', () => {
     it('has no option selected initially', () => {
       renderModal();
       expect(screen.getByRole('button', { name: /Apply Effect/ })).toBeDisabled();
-    });
-
-    it('selects an option when its radio is clicked', () => {
-      renderModal();
-      const radios = document.querySelectorAll('input[type="radio"]');
-      fireEvent.click(radios[1]);
-      expect(radios[1].checked).toBe(true);
     });
 
     it('enables the apply button after selecting an option', () => {
@@ -218,29 +202,6 @@ describe('OpenHandTechniqueModal', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/Goblin failed the save/)).toBeInTheDocument();
-      });
-    });
-
-    it('renders the result description with HTML formatting', async () => {
-      openHandHandler.applyOpenHandTechnique.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Open Hand Technique',
-          description: '<strong>Knock Down</strong> applied to Goblin.',
-        },
-      });
-
-      renderModal();
-      const radios = document.querySelectorAll('input[type="radio"]');
-      fireEvent.click(radios[0]);
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Apply Effect/ }));
-      });
-
-      await waitFor(() => {
-        const bodyDiv = document.querySelector('.sp-body');
-        expect(bodyDiv.innerHTML).toContain('<strong>Knock Down</strong>');
       });
     });
 

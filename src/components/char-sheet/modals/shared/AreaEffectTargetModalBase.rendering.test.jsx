@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent, act } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -57,28 +58,24 @@ describe('AreaEffectTargetModalBase - Rendering & Context', () => {
       expect(document.querySelector('.sp-header .fa-solid.fa-dice-d20')).toBeInTheDocument();
     });
 
-    it('renders with custom icon', () => {
-      getRuntimeValue.mockReturnValue([]);
-      render(<AreaEffectTargetModalBase {...baseProps} icon="fa-solid fa-fire" />);
-      expect(document.querySelector('.sp-header .fa-solid.fa-fire')).toBeInTheDocument();
-    });
-
-    it('renders empty body when no renderBody provided', () => {
+    it('renders the modal shell (overlay, modal, body, actions)', () => {
       getRuntimeValue.mockReturnValue([]);
       const { container } = render(<AreaEffectTargetModalBase {...baseProps} />);
+      expect(container.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(container.querySelector('.sp-modal')).toBeInTheDocument();
       expect(container.querySelector('.sp-body')).toBeInTheDocument();
-    });
-
-    it('renders empty actions when no renderActions provided', () => {
-      getRuntimeValue.mockReturnValue([]);
-      const { container } = render(<AreaEffectTargetModalBase {...baseProps} />);
       expect(container.querySelector('.sp-actions')).toBeInTheDocument();
     });
 
-    it('renders with empty feature name', () => {
+    it('closes on overlay click but not on modal content click', () => {
       getRuntimeValue.mockReturnValue([]);
-      const { container } = render(<AreaEffectTargetModalBase {...baseProps} featureName="" />);
-      expect(container.querySelector('.sp-header')).toBeInTheDocument();
+      const onClose = vi.fn();
+      render(<AreaEffectTargetModalBase {...baseProps} onClose={onClose} />);
+      fireEvent.click(document.querySelector('.sp-overlay'));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      onClose.mockClear();
+      fireEvent.click(document.querySelector('.sp-modal'));
+      expect(onClose).not.toHaveBeenCalled();
     });
 
     it('calls renderBody with context when provided', () => {
@@ -114,22 +111,6 @@ describe('AreaEffectTargetModalBase - Rendering & Context', () => {
       }));
       expect(screen.getByText('Custom Actions')).toBeInTheDocument();
     });
-
-    it('closes when overlay background is clicked', () => {
-      getRuntimeValue.mockReturnValue([]);
-      const onClose = vi.fn();
-      render(<AreaEffectTargetModalBase {...baseProps} onClose={onClose} />);
-      fireEvent.click(document.querySelector('.sp-overlay'));
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not close when modal content is clicked', () => {
-      getRuntimeValue.mockReturnValue([]);
-      const onClose = vi.fn();
-      render(<AreaEffectTargetModalBase {...baseProps} onClose={onClose} />);
-      fireEvent.click(document.querySelector('.sp-modal'));
-      expect(onClose).not.toHaveBeenCalled();
-    });
   });
 
   describe('context object', () => {
@@ -159,37 +140,6 @@ describe('AreaEffectTargetModalBase - Rendering & Context', () => {
       expect(screen.getByText('test-campaign')).toBeInTheDocument();
     });
 
-    it('context contains setSelected, setProcessing, setResults, setPendingPrompts', () => {
-      getRuntimeValue.mockReturnValue([]);
-
-      let latestCtx = null;
-      const renderBody = vi.fn(() => {
-        latestCtx = renderBody.mock.calls.at(-1)[0];
-        return (
-          <div>
-            <button onClick={() => latestCtx.setSelected(new Set(['Goblin']))}>Set Selected</button>
-            <button onClick={() => latestCtx.setProcessing(true)}>Set Processing</button>
-            <button onClick={() => latestCtx.setResults([{ targetName: 'Goblin' }])}>Set Results</button>
-            <button onClick={() => latestCtx.setPendingPrompts([{ promptId: '1' }])}>Set Prompts</button>
-          </div>
-        );
-      });
-
-      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-
-      act(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Set Selected' }));
-        fireEvent.click(screen.getByRole('button', { name: 'Set Processing' }));
-        fireEvent.click(screen.getByRole('button', { name: 'Set Results' }));
-        fireEvent.click(screen.getByRole('button', { name: 'Set Prompts' }));
-      });
-
-      expect(latestCtx.selected.has('Goblin')).toBe(true);
-      expect(latestCtx.processing).toBe(true);
-      expect(latestCtx.results).toEqual([{ targetName: 'Goblin' }]);
-      expect(latestCtx.pendingPrompts).toEqual([{ promptId: '1' }]);
-    });
-
     it('context contains characters prop', () => {
       getRuntimeValue.mockReturnValue([]);
       const characters = [{ name: 'Player1' }, { name: 'Player2' }];
@@ -212,27 +162,9 @@ describe('AreaEffectTargetModalBase - Rendering & Context', () => {
 
       const renderBody = vi.fn(() => {
         const ctx = renderBody.mock.calls[0][0];
-        return <div>{ctx.customField || 'missing'}</div>;
-      });
-
-      render(
-        <AreaEffectTargetModalBase
-          {...baseProps}
-          extraState={{ customField: 'customValue' }}
-          renderBody={renderBody}
-        />
-      );
-
-      expect(screen.getByText('customValue')).toBeInTheDocument();
-    });
-
-    it('spreads multiple extraState properties into context', () => {
-      getRuntimeValue.mockReturnValue([]);
-
-      const renderBody = vi.fn(() => {
-        const ctx = renderBody.mock.calls[0][0];
         return (
           <div>
+            <span id="single">{ctx.customField}</span>
             <span id="a">{ctx.fieldA}</span>
             <span id="b">{ctx.fieldB}</span>
           </div>
@@ -242,11 +174,12 @@ describe('AreaEffectTargetModalBase - Rendering & Context', () => {
       render(
         <AreaEffectTargetModalBase
           {...baseProps}
-          extraState={{ fieldA: 'alpha', fieldB: 'beta' }}
+          extraState={{ customField: 'customValue', fieldA: 'alpha', fieldB: 'beta' }}
           renderBody={renderBody}
         />
       );
 
+      expect(screen.getByText('customValue')).toBeInTheDocument();
       expect(screen.getByText('alpha')).toBeInTheDocument();
       expect(screen.getByText('beta')).toBeInTheDocument();
     });

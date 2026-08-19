@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import QuiveringPalmModal from './QuiveringPalmModal.jsx';
@@ -45,10 +46,6 @@ vi.mock('../../../services/ui/utils.js', () => ({
         guid: vi.fn(() => 'test-guid-123'),
     },
 }));
-
-// ── Re-import mocked modules ──
-
-import * as quiveringPalmHandler from '../../../services/automation/handlers/class-monk/quiveringPalmHandler.js';
 
 // ── Test fixtures ──
 
@@ -115,96 +112,60 @@ describe('QuiveringPalmModal', () => {
         vi.clearAllMocks();
     });
 
-    // ── Initial render (default mode, no isRelease) ──
-
-    describe('initial render - default mode', () => {
-        it('renders the modal with action name in header', () => {
+    describe('initial render', () => {
+        it('renders the modal with action name and target in both modes', () => {
             renderModal();
             expect(screen.getByText('Quivering Palm')).toBeInTheDocument();
-        });
-
-        it('displays the target name in the body text', () => {
-            renderModal({ targetName: 'Orc Warrior' });
             expect(screen.getByText(/Vibrations are set in/)).toBeInTheDocument();
-            expect(screen.getByText('Orc Warrior')).toBeInTheDocument();
+            expect(screen.getByText('Goblin1')).toBeInTheDocument();
         });
 
-        it('renders both shockwave and release action buttons', () => {
-            renderModal();
-            expect(
-                screen.getByRole('button', { name: /Trigger the Lethal Shockwave/ })
-            ).toBeInTheDocument();
-            expect(
-                screen.getByRole('button', { name: /Release the Harmless Vibrations/ })
-            ).toBeInTheDocument();
-        });
-
-        it('does not show a Cancel button in default mode', () => {
-            renderModal();
-            expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-        });
-
-        it('does not call any handler functions on render', () => {
-            renderModal();
-            expect(quiveringPalmHandler.applyShockwave).not.toHaveBeenCalled();
-            expect(quiveringPalmHandler.applyRelease).not.toHaveBeenCalled();
+        it('renders the modal with action name and target in release-only mode', () => {
+            renderModal({ isRelease: true, targetName: 'Dragon' });
+            expect(screen.getByText('Quivering Palm')).toBeInTheDocument();
+            expect(screen.getByText(/Vibrations are set in/)).toBeInTheDocument();
+            expect(screen.getByText('Dragon')).toBeInTheDocument();
         });
 
         it('renders with custom action name', () => {
             renderModal({ action: makeAction({ name: 'My Quivering Palm' }) });
             expect(screen.getByText('My Quivering Palm')).toBeInTheDocument();
         });
-    });
 
-    // ── Initial render (release-only mode, isRelease=true) ──
-
-    describe('initial render - release-only mode', () => {
-        it('renders the modal with action name in header', () => {
-            renderModal({ isRelease: true });
-            expect(screen.getByText('Quivering Palm')).toBeInTheDocument();
+        it('shows both action buttons and no Cancel in default mode', () => {
+            renderModal();
+            expect(screen.getByRole('button', { name: /Trigger the Lethal Shockwave/ })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Release the Harmless Vibrations/ })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
         });
 
-        it('renders only the release button and Cancel button', () => {
+        it('shows only release and Cancel buttons in release-only mode', () => {
             renderModal({ isRelease: true });
-            expect(
-                screen.getByRole('button', { name: /Release the Harmless Vibrations/ })
-            ).toBeInTheDocument();
-            expect(
-                screen.queryByRole('button', { name: /Trigger the Lethal Shockwave/ })
-            ).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Release the Harmless Vibrations/ })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-        });
-
-        it('displays the target name in the body text', () => {
-            renderModal({ isRelease: true, targetName: 'Dragon' });
-            expect(screen.getByText(/Vibrations are set in/)).toBeInTheDocument();
-            expect(screen.getByText('Dragon')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Trigger the Lethal Shockwave/ })).not.toBeInTheDocument();
         });
     });
-
-    // ── Overlay click behavior ──
 
     describe('overlay click behavior', () => {
-        it('calls onClose when overlay background is clicked (default mode)', () => {
+        it('calls onClose when overlay background is clicked in both modes', () => {
+            document.body.innerHTML = '';
             const { handleClose } = renderModal();
             fireEvent.click(document.querySelector('.sp-overlay'));
             expect(handleClose).toHaveBeenCalledTimes(1);
-        });
 
-        it('calls onClose when overlay background is clicked (release-only mode)', () => {
-            const { handleClose } = renderModal({ isRelease: true });
+            document.body.innerHTML = '';
+            const { handleClose: handleCloseRelease } = renderModal({ isRelease: true });
             fireEvent.click(document.querySelector('.sp-overlay'));
-            expect(handleClose).toHaveBeenCalledTimes(1);
+            expect(handleCloseRelease).toHaveBeenCalledTimes(1);
         });
 
-        it('does not call onClose when modal content or header is clicked', () => {
+        it('does not call onClose when modal content is clicked', () => {
             const { handleClose } = renderModal();
             fireEvent.click(document.querySelector('.sp-modal'));
             expect(handleClose).not.toHaveBeenCalled();
         });
     });
-
-    // ── Release-only mode close behaviors ──
 
     describe('release-only mode close behaviors', () => {
         it('calls onClose when Cancel button is clicked', () => {
@@ -212,15 +173,7 @@ describe('QuiveringPalmModal', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
             expect(handleClose).toHaveBeenCalledTimes(1);
         });
-
-        it('does not call onClose when release button is clicked without waiting', async () => {
-            const { handleClose } = renderModal({ isRelease: true });
-            fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
-            expect(handleClose).not.toHaveBeenCalled();
-        });
     });
-
-    // ── Result screen accessibility ──
 
     describe('result screen', () => {
         it('renders a Done button that closes the modal', async () => {

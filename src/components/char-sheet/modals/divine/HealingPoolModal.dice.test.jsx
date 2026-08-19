@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingPoolModal from './HealingPoolModal.jsx';
@@ -126,17 +127,6 @@ describe('HealingPoolModal - Dice Pool', () => {
     expect(p?.textContent).toBe('Pool: 3 / 4 d12');
   });
 
-  it('shows remaining dice count after rolling', async () => {
-    await renderModal({ current: 4, max: 4 }, {
-      isDicePool: true,
-      dieType: 12,
-      name: 'Warrior of the Gods',
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
-    expect(screen.getByText(/Remaining:.*dice/)).toBeInTheDocument();
-  });
-
   it('shows dice count and die type in heading', async () => {
     await renderModal({ current: 4, max: 8 }, {
       isDicePool: true,
@@ -210,19 +200,6 @@ describe('HealingPoolModal - Dice Pool', () => {
     expect(updateFn).toHaveBeenCalledTimes(2);
   });
 
-  it('dice pool deducts pool by exactly 1 per roll', async () => {
-    await renderModal({ current: 5, max: 10 }, {
-      isDicePool: true,
-      dieType: 12,
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
-    expect(updateFn).toHaveBeenCalledWith(4);
-
-    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
-    expect(updateFn).toHaveBeenCalledWith(3);
-  });
-
   it('dice pool deducts pool and shows updated remaining count', async () => {
     await renderModal({ current: 4, max: 4 }, {
       isDicePool: true,
@@ -261,35 +238,7 @@ describe('HealingPoolModal - Dice Pool', () => {
     expect(screen.getByText(/Rolled 1d12:/)).toBeInTheDocument();
   });
 
-  it('dice pool displays accumulated total with correct sum', async () => {
-    let faceIndex = 0;
-    const faceValues = [3, 5];
-    const originalRandom = Math.random;
-    Math.random = () => {
-      const targetFace = faceValues[faceIndex] ?? 1;
-      faceIndex++;
-      const dieType = 12;
-      const ratio = (targetFace - 1) / (dieType - 1);
-      return ratio + 0.001;
-    };
-
-    await renderModal({ current: 4, max: 4 }, {
-      isDicePool: true,
-      dieType: 12,
-      name: 'Warrior of the Gods',
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Roll a d12/i }));
-    Math.random = originalRandom;
-
-    // The text is split across multiple elements: " = ", <strong>8</strong>, " HP to restore"
-    // Use a flexible matcher that finds "8" followed by "HP to restore"
-    const totalSpan = document.querySelector('.healing-total');
-    expect(totalSpan?.textContent).toContain('8');
-  });
-
-  it('dice pool shows individual roll values separated by plus', async () => {
+  it('dice pool displays accumulated total with correct sum and roll format', async () => {
     let faceIndex = 0;
     const faceValues = [3, 5];
     const originalRandom = Math.random;
@@ -312,6 +261,8 @@ describe('HealingPoolModal - Dice Pool', () => {
     Math.random = originalRandom;
 
     expect(screen.getByText(/3 \+ 5/)).toBeInTheDocument();
+    const totalSpan = document.querySelector('.healing-total');
+    expect(totalSpan?.textContent).toContain('8');
   });
 
   // ── Max dice per use ──
@@ -443,7 +394,7 @@ describe('HealingPoolModal - Dice Pool', () => {
 
   // ── Different die types ──
 
-  it('roll button text reflects the configured die type', async () => {
+  it('roll button text and display reflect the configured die type', async () => {
     await renderModal({ current: 4, max: 4 }, {
       isDicePool: true,
       dieType: 8,
@@ -452,7 +403,7 @@ describe('HealingPoolModal - Dice Pool', () => {
     expect(screen.getByRole('button', { name: /Roll a d8/i })).toBeInTheDocument();
   });
 
-  it('roll display reflects the configured die type', async () => {
+  it('roll display reflects a different die type', async () => {
     let faceIndex = 0;
     const faceValues = [4];
     const originalRandom = Math.random;

@@ -1,4 +1,43 @@
 // @improved-by-ai
+// @cleaned-by-ai
+//
+// CLEANING SUMMARY:
+//
+// Removed:
+//   - "shows popup when no targets selected" — redundant with
+//     CharSpecialActions.handlers.test.jsx (Encouraging Song skip popup test
+//     uses identical skip→popup assertion pattern) and
+//     CharSpecialActions.modalsInline.test.jsx (Celestial Resilience skip
+//     modal-close test). No unique behavioral gap.
+//
+//   - "shows popup and closes modal when skip is clicked" — exact duplicate of
+//     CharSpecialActions.modalsInline.test.jsx Celestial Resilience skip test
+//     (same setup: executeHandler mock → click skip → assert popup + modal
+//     closed). No behavioral gap.
+//
+//   - "does not call setTempHp or addEntry when no targets selected" —
+//     negative assertion duplicate consolidated into the skip test below.
+//
+//   - "does not call setTempHp or addEntry on skip" — negative assertion
+//     duplicate consolidated into the skip test below.
+//
+// Consolidated:
+//   - The two skip tests (popup + close + negative assertions) merged into a
+//     single "skipping selects no allies" test covering: popup shown, modal
+//     closed, setTempHp not called, addEntry not called.
+//
+// Kept:
+//   - "grants temp HP to selected targets and shows popup" — full happy-path
+//     coverage (modal open → confirm → setTempHp calls → log entry → popup).
+//     Critical behavioral coverage.
+//
+//   - "cannotAct guard" — unique behavioral coverage for the cannotAct early
+//     return path. No other test verifies this guard.
+//
+//   - "shows popup with single target name" — tests specific popup content
+//     variation (single target, different HP amount). Validates the popup
+//     formatting path with different parameters.
+
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import './CharSpecialActions.modalMocks.jsx';
@@ -89,202 +128,6 @@ describe('CharSpecialActions - Celestial Resilience', () => {
       expect(capturedPopup).toContain('Ally2');
     });
 
-    it('shows popup when no targets selected', async () => {
-      let capturedPopup = null;
-      vi.mocked(useDiceRollPopup).mockReturnValue({
-        setPopupHtml: (html) => { capturedPopup = html; },
-      });
-
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'celestialResilienceModal',
-        payload: {
-          action: { name: 'Celestial Resilience' },
-          playerStats: basePlayerStats,
-          campaignName: 'test',
-          creatureTargets: [{ name: 'Ally1' }],
-          maxTargets: 5,
-          selfTempHp: 5,
-          allyTempHp: 3,
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Celestial Resilience', description: 'Gain temp HP.', automation: { type: 'generic' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText(/Celestial Resilience/));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('creature-selection-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Skip'));
-
-      await waitFor(() => {
-        expect(capturedPopup).toContain('No allies selected');
-      });
-    });
-
-    it('does not call setTempHp or addEntry when no targets are selected', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'celestialResilienceModal',
-        payload: {
-          action: { name: 'Celestial Resilience' },
-          playerStats: basePlayerStats,
-          campaignName: 'test',
-          creatureTargets: [{ name: 'Ally1' }],
-          maxTargets: 5,
-          selfTempHp: 5,
-          allyTempHp: 3,
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Celestial Resilience', description: 'Gain temp HP.', automation: { type: 'generic' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText(/Celestial Resilience/));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('creature-selection-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Skip'));
-
-      await waitFor(() => {
-        expect(setTempHp).not.toHaveBeenCalled();
-        expect(addEntry).not.toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('handleCelestialResilienceSkip', () => {
-    it('shows popup and closes modal when skip is clicked', async () => {
-      let capturedPopup = null;
-      vi.mocked(useDiceRollPopup).mockReturnValue({
-        setPopupHtml: (html) => { capturedPopup = html; },
-      });
-
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'celestialResilienceModal',
-        payload: {
-          action: { name: 'Celestial Resilience' },
-          playerStats: basePlayerStats,
-          campaignName: 'test',
-          creatureTargets: [{ name: 'Ally1' }],
-          maxTargets: 5,
-          selfTempHp: 5,
-          allyTempHp: 3,
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Celestial Resilience', description: 'Gain temp HP.', automation: { type: 'generic' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText(/Celestial Resilience/));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('creature-selection-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Skip'));
-
-      await waitFor(() => {
-        expect(capturedPopup).toContain('No allies selected');
-      });
-
-      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
-    });
-
-    it('does not call setTempHp or addEntry on skip', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'celestialResilienceModal',
-        payload: {
-          action: { name: 'Celestial Resilience' },
-          playerStats: basePlayerStats,
-          campaignName: 'test',
-          creatureTargets: [{ name: 'Ally1' }],
-          maxTargets: 5,
-          selfTempHp: 5,
-          allyTempHp: 3,
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Celestial Resilience', description: 'Gain temp HP.', automation: { type: 'generic' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getByText(/Celestial Resilience/));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('creature-selection-modal')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Skip'));
-
-      await waitFor(() => {
-        expect(setTempHp).not.toHaveBeenCalled();
-        expect(addEntry).not.toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('cannotAct guard for Celestial Resilience', () => {
-    it('does not open celestial resilience modal when cannotAct is true', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'celestialResilienceModal',
-        payload: {
-          action: { name: 'Celestial Resilience' },
-          playerStats: basePlayerStats,
-          campaignName: 'test',
-          creatureTargets: [{ name: 'Ally1' }],
-          maxTargets: 5,
-          selfTempHp: 5,
-          allyTempHp: 3,
-        },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          { name: 'Celestial Resilience', description: 'Gain temp HP.', automation: { type: 'generic' } },
-        ],
-      });
-
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" cannotAct={true} />);
-
-      fireEvent.click(screen.getByText(/Celestial Resilience/));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
-      });
-
-      expect(setTempHp).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('popup content variations', () => {
     it('shows popup with single target name', async () => {
       let capturedPopup = null;
       vi.mocked(useDiceRollPopup).mockReturnValue({
@@ -327,6 +170,86 @@ describe('CharSpecialActions - Celestial Resilience', () => {
 
       expect(capturedPopup).toContain('SoloAlly');
       expect(capturedPopup).toContain('7 temporary hit points');
+    });
+  });
+
+  describe('handleCelestialResilienceSkip', () => {
+    it('skipping selects no allies shows popup, closes modal, and calls no side effects', async () => {
+      let capturedPopup = null;
+      vi.mocked(useDiceRollPopup).mockReturnValue({
+        setPopupHtml: (html) => { capturedPopup = html; },
+      });
+
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'celestialResilienceModal',
+        payload: {
+          action: { name: 'Celestial Resilience' },
+          playerStats: basePlayerStats,
+          campaignName: 'test',
+          creatureTargets: [{ name: 'Ally1' }],
+          maxTargets: 5,
+          selfTempHp: 5,
+          allyTempHp: 3,
+        },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Celestial Resilience', description: 'Gain temp HP.', automation: { type: 'generic' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Celestial Resilience/));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('creature-selection-modal')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Skip'));
+
+      await waitFor(() => {
+        expect(capturedPopup).toContain('No allies selected');
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+        expect(setTempHp).not.toHaveBeenCalled();
+        expect(addEntry).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('cannotAct guard for Celestial Resilience', () => {
+    it('does not open celestial resilience modal when cannotAct is true', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'celestialResilienceModal',
+        payload: {
+          action: { name: 'Celestial Resilience' },
+          playerStats: basePlayerStats,
+          campaignName: 'test',
+          creatureTargets: [{ name: 'Ally1' }],
+          maxTargets: 5,
+          selfTempHp: 5,
+          allyTempHp: 3,
+        },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Celestial Resilience', description: 'Gain temp HP.', automation: { type: 'generic' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Celestial Resilience/));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+      });
+
+      expect(setTempHp).not.toHaveBeenCalled();
     });
   });
 });

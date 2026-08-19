@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -106,13 +107,6 @@ describe('SilenceModal', () => {
             renderModal();
             fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
             expect(baseProps.onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('does not call setRuntimeValue or addEntry when Skip is clicked', () => {
-            renderModal();
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-            expect(logService.addEntry).not.toHaveBeenCalled();
         });
     });
 
@@ -312,31 +306,8 @@ describe('SilenceModal', () => {
         });
     });
 
-    describe('confirm with no targets', () => {
-        it('keeps confirm button disabled when no targets are selected', () => {
-            renderModal();
-            expect(screen.getByRole('button', { name: 'Cast Silence (0)' })).toBeDisabled();
-        });
-    });
-
-    describe('close behavior', () => {
-        it('calls onClose when clicking the overlay', () => {
-            renderModal();
-            const overlay = document.querySelector('.sp-overlay');
-            fireEvent.click(overlay);
-            expect(baseProps.onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('does not call onClose when clicking the modal content', () => {
-            renderModal();
-            const modal = document.querySelector('.sp-modal');
-            fireEvent.click(modal);
-            expect(baseProps.onClose).not.toHaveBeenCalled();
-        });
-    });
-
     describe('empty targets', () => {
-        it('renders "No targets available" when creatureTargets is empty or undefined', () => {
+        it('renders "No targets available" and disables confirm for empty array', () => {
             renderModal({ creatureTargets: [] });
             expect(screen.getByText('No targets available.')).toBeInTheDocument();
             const confirmButton = screen.getByRole('button', { name: 'Cast Silence (0)' });

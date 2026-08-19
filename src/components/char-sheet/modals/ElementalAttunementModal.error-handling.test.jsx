@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
@@ -113,56 +114,46 @@ describe('ElementalAttunementModal error handling', () => {
         vi.clearAllMocks();
     });
 
-    describe('NPC save logging failures', () => {
-        it('does not throw when addEntry rejects for speed_reduction on NPC', async () => {
-            logService.addEntry.mockRejectedValue(new Error('network error'));
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-            runtimeState.getRuntimeValue.mockReturnValue([]);
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: -10 }, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
-            renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Cold'));
-            await waitFor(() => {
-                expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging speed reduction:', expect.any(Error));
-            });
-            consoleSpy.mockRestore();
-        });
-    });
+    it('handles logging, map loading, and expiration errors without crashing', async () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    describe('map data loading failures', () => {
-        it('logs error and does not crash when map data loading fails', async () => {
-            mapsService.loadMapData.mockRejectedValue(new Error('map load failed'));
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 },
-            ]));
-            renderModal({ mapName: 'test-map', activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => {
-                expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error loading map data:', expect.any(Error));
-            });
-            consoleSpy.mockRestore();
+        // NPC speed_reduction logging failure (Cold element, failed save)
+        logService.addEntry.mockRejectedValue(new Error('network error'));
+        runtimeState.getRuntimeValue.mockReturnValue([]);
+        combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+            { name: 'Goblin1', type: 'npc', saveBonuses: { dex: -10 }, resistances: [], immunities: [] },
+        ]));
+        aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
+        renderModal({ activeOverlay: { type: 'sphere' } });
+        fireEvent.click(screen.getByText('Cold'));
+        await waitFor(() => {
+            expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging speed reduction:', expect.any(Error));
         });
-    });
 
-    describe('expiration logging failures', () => {
-        it('does not throw when addEntry rejects for expiration logging', async () => {
-            logService.addEntry.mockRejectedValue(new Error('network error'));
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-            runtimeState.getRuntimeValue.mockReturnValue([]);
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
-            renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
-            await waitFor(() => fireEvent.click(screen.getByRole('button', { name: /Close/ })));
-            await waitFor(() => {
-                expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging expiration:', expect.any(Error));
-            });
-            consoleSpy.mockRestore();
+        // Map data loading failure (mapName provided, overlay triggers map loading)
+        mapsService.loadMapData.mockRejectedValue(new Error('map load failed'));
+        combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+            { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 },
+        ]));
+        renderModal({ mapName: 'test-map', activeOverlay: { type: 'sphere' } });
+        fireEvent.click(screen.getByText('Fire'));
+        await waitFor(() => {
+            expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error loading map data:', expect.any(Error));
         });
+
+        // Expiration logging failure (Fire element, closed from summary)
+        logService.addEntry.mockRejectedValue(new Error('network error'));
+        combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+            { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
+        ]));
+        aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
+        renderModal({ activeOverlay: { type: 'sphere' } });
+        fireEvent.click(screen.getByText('Fire'));
+        await waitFor(() => fireEvent.click(screen.getByRole('button', { name: /Close/ })));
+        await waitFor(() => {
+            expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging expiration:', expect.any(Error));
+        });
+
+        consoleSpy.mockRestore();
     });
 });

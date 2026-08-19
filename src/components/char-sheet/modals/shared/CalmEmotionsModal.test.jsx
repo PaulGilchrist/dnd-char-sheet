@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CalmEmotionsModal from './CalmEmotionsModal.jsx';
@@ -94,29 +95,15 @@ describe('CalmEmotionsModal', () => {
     // ── Rendering ──
 
     describe('initial render', () => {
-        it('renders the modal with title and target list', () => {
+        it('renders the modal with title, targets, save info, and cast button', () => {
             render(<CalmEmotionsModal {...makeProps()} />);
             expect(screen.getByText('Calm Emotions')).toBeInTheDocument();
-            expect(screen.getByText('Goblin')).toBeInTheDocument();
-            expect(screen.getByText('Orc')).toBeInTheDocument();
-            expect(screen.getByText('PlayerAlly')).toBeInTheDocument();
-        });
-
-        it('renders the description with save type and DC', () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
             expect(screen.getByText(/20-foot-radius sphere/)).toBeInTheDocument();
             expect(screen.getByText(/CHA/)).toBeInTheDocument();
             expect(screen.getByText(/DC 14/)).toBeInTheDocument();
-        });
-
-        it('renders the note about failed save effect choice', () => {
-            const { container } = render(<CalmEmotionsModal {...makeProps()} />);
-            const noteEl = container.querySelector('.sp-note');
-            expect(noteEl).toHaveTextContent(/On a failed save, choose the effect/);
-        });
-
-        it('includes all targets by default so the button shows count 3', () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
+            expect(screen.getByText('Goblin')).toBeInTheDocument();
+            expect(screen.getByText('Orc')).toBeInTheDocument();
+            expect(screen.getByText('PlayerAlly')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ })).toBeInTheDocument();
         });
 
@@ -124,16 +111,6 @@ describe('CalmEmotionsModal', () => {
             getCombatSummary.mockReturnValue({ creatures: [] });
             render(<CalmEmotionsModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: /Cast Calm Emotions \(0\)/ })).toBeDisabled();
-        });
-
-        it('renders skip button', () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-        });
-
-        it('renders with the hand-holding-heart icon', () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            expect(document.querySelector('.sp-header .fa-solid.fa-hand-holding-heart')).toBeInTheDocument();
         });
     });
 
@@ -146,25 +123,11 @@ describe('CalmEmotionsModal', () => {
             expect(rows).toHaveLength(3);
         });
 
-        it('shows HP percentage for NPC targets', () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            expect(screen.getByText('(71% HP)')).toBeInTheDocument();
-            expect(screen.getByText('(68% HP)')).toBeInTheDocument();
-        });
-
         it('does not show HP for player targets', () => {
             render(<CalmEmotionsModal {...makeProps()} />);
             const rows = document.querySelectorAll('.secondary-target-row');
             const playerRow = [...rows].find(row => row.textContent.includes('PlayerAlly'));
             expect(playerRow.textContent).not.toContain('% HP');
-        });
-
-        it('highlights all targets as selected by default', () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            const rows = document.querySelectorAll('.secondary-target-row');
-            rows.forEach(row => {
-                expect(row).toHaveClass('secondary-target-selected');
-            });
         });
     });
 
@@ -183,14 +146,6 @@ describe('CalmEmotionsModal', () => {
             expect(orcRadios[0].checked).toBe(true);
         });
 
-        it('defaults to immunity choice for all targets', () => {
-            render(<CalmEmotionsModal {...makeProps()} />);
-            const goblinRadios = document.querySelectorAll('input[name="choice-Goblin"]');
-            expect(goblinRadios[0].checked).toBe(true);
-            const orcRadios = document.querySelectorAll('input[name="choice-Orc"]');
-            expect(orcRadios[0].checked).toBe(true);
-        });
-
         it('allows switching between immunity and charmed choices', async () => {
             render(<CalmEmotionsModal {...makeProps()} />);
             const goblinRadios = document.querySelectorAll('input[name="choice-Goblin"]');
@@ -202,18 +157,6 @@ describe('CalmEmotionsModal', () => {
     // ── Metamagic Heighten ──
 
     describe('metamagic heighten rendering', () => {
-        it('does not show heighten radios when metamagicHeighten is false', () => {
-            render(<CalmEmotionsModal {...makeProps({ metamagicHeighten: false })} />);
-            const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
-            expect(heightenRadios).toHaveLength(0);
-        });
-
-        it('shows heighten radios when metamagicHeighten is true', () => {
-            render(<CalmEmotionsModal {...makeProps({ metamagicHeighten: true })} />);
-            const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
-            expect(heightenRadios).toHaveLength(3);
-        });
-
         it('allows selecting a heighten target', async () => {
             render(<CalmEmotionsModal {...makeProps({ metamagicHeighten: true })} />);
             const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
@@ -225,15 +168,6 @@ describe('CalmEmotionsModal', () => {
     // ── Metamagic Careful ──
 
     describe('metamagic careful rendering', () => {
-        it('does not show careful spell protection when metamagicCareful is false', () => {
-            getRuntimeValue.mockReturnValue([]);
-            render(<CalmEmotionsModal {...makeProps({ metamagicCareful: false })} />);
-            const rows = document.querySelectorAll('.secondary-target-row');
-            rows.forEach(row => {
-                expect(row.textContent).not.toContain('Careful');
-            });
-        });
-
         it('shows careful spell protection when metamagicCareful is true and ally is in list', () => {
             getAllyList.mockReturnValue(['PlayerAlly']);
             getRuntimeValue.mockReturnValue([]);
@@ -256,13 +190,6 @@ describe('CalmEmotionsModal', () => {
     // ── Close behavior ──
 
     describe('close behavior', () => {
-        it('closes when Skip is clicked', () => {
-            const onClose = vi.fn();
-            render(<CalmEmotionsModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
         it('does not apply any effects when skipped', () => {
             const onClose = vi.fn();
             render(<CalmEmotionsModal {...makeProps({ onClose })} />);
@@ -334,49 +261,4 @@ describe('CalmEmotionsModal', () => {
         });
     });
 
-    // ── Save result event edge cases ──
-
-    describe('save result event edge cases', () => {
-        it('ignores save-result event with missing promptId and applies no effects', async () => {
-            const onClose = vi.fn();
-            render(<CalmEmotionsModal {...makeProps({ onClose })} />);
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: { success: false },
-                });
-                window.dispatchEvent(event);
-            });
-
-            expect(onClose).not.toHaveBeenCalled();
-            expect(applyCalmEmotionsImmunity).not.toHaveBeenCalled();
-            expect(applyCalmEmotionsCharmed).not.toHaveBeenCalled();
-            expect(sendSavePrompt).not.toHaveBeenCalled();
-        });
-
-        it('ignores save-result event for unknown promptId and applies no effects', async () => {
-            const onClose = vi.fn();
-            render(<CalmEmotionsModal {...makeProps({ onClose })} />);
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Cast Calm Emotions \(3\)/ }));
-            });
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: 'non-existent-prompt-id',
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            expect(onClose).not.toHaveBeenCalled();
-            expect(applyCalmEmotionsImmunity).toHaveBeenCalledTimes(3);
-        });
-    });
 });

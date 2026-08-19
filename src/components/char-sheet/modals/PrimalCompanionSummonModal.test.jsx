@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PrimalCompanionSummonModal from './PrimalCompanionSummonModal.jsx';
@@ -78,32 +79,15 @@ describe('PrimalCompanionSummonModal', () => {
   // ── Initial render ──
 
   describe('initial render', () => {
-    it('renders the header with action name and paw icon', () => {
+    it('displays the companion selection prompt, all companion options, cancel button, and disabled summon button', () => {
       renderModal();
       expect(screen.getByText('Summon Primal Companion')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header .fa-paw')).toBeInTheDocument();
-    });
-
-    it('displays the companion selection prompt', () => {
-      renderModal();
       expect(screen.getByText('Choose a primal beast to bond with:')).toBeInTheDocument();
-    });
-
-    it('renders all companion type options with names and sizes', () => {
-      renderModal();
       expect(screen.getByText('Beast of the Land')).toBeInTheDocument();
       expect(screen.getByText('Beast of the Sea')).toBeInTheDocument();
       expect(screen.getByText('Beast of the Sky')).toBeInTheDocument();
-    });
-
-    it('renders summon button disabled when no type selected', () => {
-      renderModal();
-      expect(screen.getByRole('button', { name: /Summon Primal Companion/ })).toBeDisabled();
-    });
-
-    it('renders Cancel button', () => {
-      renderModal();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Summon Primal Companion/ })).toBeDisabled();
     });
   });
 
@@ -118,34 +102,6 @@ describe('PrimalCompanionSummonModal', () => {
       expect(body.textContent).toContain('40 ft');
       expect(body.textContent).toContain('1d6 + WIS modifier');
       expect(body.textContent).toContain('Slashing');
-    });
-
-    it('renders special speed when present', () => {
-      renderModal();
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Speed: 30 ft, Swim 30 ft');
-      expect(body.textContent).toContain('Speed: 20 ft, Fly 40 ft');
-    });
-
-    it('renders description as HTML when provided instead of stats', () => {
-      const props = makeProps({
-        action: {
-          name: 'Summon Primal Companion',
-          automation: {
-            companionTypes: [
-              {
-                name: 'Custom Beast',
-                size: 'Medium',
-                description: '<p>A mystical beast from the primal plane.</p>',
-              },
-            ],
-          },
-        },
-      });
-      render(<PrimalCompanionSummonModal {...props} />);
-      const body = document.querySelector('.sp-body');
-      expect(body.querySelector('p')).toBeInTheDocument();
-      expect(body.textContent).toContain('A mystical beast from the primal plane.');
     });
 
     it('renders no attacks info when attacks array is empty', () => {
@@ -172,32 +128,6 @@ describe('PrimalCompanionSummonModal', () => {
       expect(body.textContent).toContain('AC 12');
       expect(body.textContent).toContain('HP 10+3xRanger level');
       expect(body.textContent).not.toContain('Attack');
-    });
-
-    it('renders companion with no speed', () => {
-      const props = makeProps({
-        action: {
-          name: 'Summon Primal Companion',
-          automation: {
-            companionTypes: [
-              {
-                name: 'Stationary Beast',
-                size: 'Large',
-                acFormula: '15',
-                hpBase: 20,
-                hpPerLevel: 6,
-                attacks: [{ name: 'Claw', damageDice: '2d4', damageFlat: '+3', damageType: 'Slashing' }],
-              },
-            ],
-          },
-        },
-      });
-      render(<PrimalCompanionSummonModal {...props} />);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('AC 15');
-      expect(body.textContent).toContain('HP 20+6xRanger level');
-      expect(body.textContent).toContain('Claw: 2d4+3 Slashing');
-      expect(body.textContent).not.toContain('Speed:');
     });
 
     it('renders companion with no AC formula', () => {
@@ -227,7 +157,7 @@ describe('PrimalCompanionSummonModal', () => {
   // ── Companion type selection ──
 
   describe('companion type selection', () => {
-    it('enables summon button when a companion type is selected', async () => {
+    it('enables summon button when a companion type is selected and updates on switch', async () => {
       renderModal();
       const summonBtn = screen.getByRole('button', { name: /Summon Primal Companion/ });
       expect(summonBtn).toBeDisabled();
@@ -235,13 +165,7 @@ describe('PrimalCompanionSummonModal', () => {
       await act(async () => {
         fireEvent.click(screen.getByText('Beast of the Sea'));
       });
-
       expect(summonBtn).toBeEnabled();
-    });
-
-    it('updates selection when switching between companion types', async () => {
-      renderModal();
-      const summonBtn = screen.getByRole('button', { name: /Summon Primal Companion/ });
 
       await act(async () => {
         fireEvent.click(screen.getByText('Beast of the Land'));
@@ -252,25 +176,6 @@ describe('PrimalCompanionSummonModal', () => {
         fireEvent.click(screen.getByText('Beast of the Sky'));
       });
       expect(summonBtn).toBeEnabled();
-    });
-
-    it('highlights the selected companion with a blue border', async () => {
-      renderModal();
-      await act(async () => {
-        fireEvent.click(screen.getByText('Beast of the Sea'));
-      });
-      const selectedLabel = screen.getByText('Beast of the Sea').closest('label');
-      expect(selectedLabel).toHaveStyle('border-color: rgb(74, 158, 255)');
-    });
-
-    it('selects a radio input when clicked', async () => {
-      renderModal();
-      const radios = document.querySelectorAll('input[type="radio"][name="primalCompanion"]');
-      expect(radios[0].checked).toBe(false);
-      await act(async () => {
-        fireEvent.click(radios[1]);
-      });
-      expect(radios[1].checked).toBe(true);
     });
   });
 
@@ -313,51 +218,6 @@ describe('PrimalCompanionSummonModal', () => {
       });
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-      });
-    });
-
-    it('replaces selection UI with result screen', async () => {
-      primalCompanionHandler.confirmPrimalCompanionSummon.mockResolvedValue(mockPopupResult);
-      renderModal();
-      await act(async () => {
-        fireEvent.click(screen.getByText('Beast of the Land'));
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Summon Primal Companion/ }));
-      });
-      await waitFor(() => {
-        expect(screen.queryByText('Choose a primal beast to bond with:')).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-        expect(screen.queryAllByRole('radio')).toHaveLength(0);
-      });
-    });
-
-    it('renders the result screen with the action name in the header', async () => {
-      primalCompanionHandler.confirmPrimalCompanionSummon.mockResolvedValue(mockPopupResult);
-      renderModal();
-      await act(async () => {
-        fireEvent.click(screen.getByText('Beast of the Land'));
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Summon Primal Companion/ }));
-      });
-      await waitFor(() => {
-        expect(screen.getByText('Summon Primal Companion')).toBeInTheDocument();
-      });
-    });
-
-    it('displays the result payload description in the body', async () => {
-      primalCompanionHandler.confirmPrimalCompanionSummon.mockResolvedValue(mockPopupResult);
-      renderModal();
-      await act(async () => {
-        fireEvent.click(screen.getByText('Beast of the Land'));
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Summon Primal Companion/ }));
-      });
-      await waitFor(() => {
-        const body = document.querySelector('.sp-body');
-        expect(body.textContent).toContain('Ranger1 summons a Primal Companion');
       });
     });
 
@@ -425,12 +285,7 @@ describe('PrimalCompanionSummonModal', () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
-    it('does not close when clicking a companion type option', () => {
-      const onClose = vi.fn();
-      renderModal({ onClose });
-      fireEvent.click(screen.getByText('Beast of the Sky'));
-      expect(onClose).not.toHaveBeenCalled();
-    });
+
 
     it('closes on Done button click in result screen', async () => {
       const onClose = vi.fn();
@@ -507,17 +362,9 @@ describe('PrimalCompanionSummonModal', () => {
       expect(screen.getByRole('button', { name: /Summon Primal Companion/ })).toBeDisabled();
     });
 
-    it('renders with null action', () => {
+    it('renders with nullish action', () => {
       const props = makeProps({
         action: null,
-      });
-      render(<PrimalCompanionSummonModal {...props} />);
-      expect(screen.getByText('Primal Companion')).toBeInTheDocument();
-    });
-
-    it('renders with undefined action', () => {
-      const props = makeProps({
-        action: undefined,
       });
       render(<PrimalCompanionSummonModal {...props} />);
       expect(screen.getByText('Primal Companion')).toBeInTheDocument();

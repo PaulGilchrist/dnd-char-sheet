@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HurlThroughHellModal from './HurlThroughHellModal.jsx';
@@ -91,58 +92,22 @@ describe('HurlThroughHellModal', () => {
   // ── Info screen rendering ──
 
   describe('info screen rendering', () => {
-    it('renders the modal overlay and modal container', () => {
+    it('renders the modal overlay, header, and body with all info text', () => {
       render(<HurlThroughHellModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-    });
-
-    it('renders the header with dragon icon and feature name', () => {
-      render(<HurlThroughHellModal {...makeProps()} />);
-      const header = document.querySelector('.sp-header');
-      expect(header).toHaveTextContent('Hurl Through Hell');
-      expect(header.querySelector('.fa-solid.fa-dragon')).toBeInTheDocument();
-    });
-
-    it('renders target name in the body', () => {
-      render(<HurlThroughHellModal {...makeProps()} />);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('Target:');
-      expect(body.textContent).toContain('Goblin1');
-    });
-
-    it('renders the description text about disappearing and hurtling', () => {
-      render(<HurlThroughHellModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: /Hurl Through Hell/ })).toBeInTheDocument();
       expect(screen.getByText(/disappears and hurtles through a nightmare landscape/)).toBeInTheDocument();
-    });
-
-    it('renders the save type and DC info', () => {
-      render(<HurlThroughHellModal {...makeProps()} />);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('WIS');
-      expect(body.textContent).toContain('DC 16');
-    });
-
-    it('renders the failed save consequences with damage type and total', () => {
-      render(<HurlThroughHellModal {...makeProps()} />);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('22 Psychic damage');
-      expect(body.textContent).toContain('Incapacitated');
-    });
-
-    it('renders the return description', () => {
-      render(<HurlThroughHellModal {...makeProps()} />);
       expect(screen.getByText(/At the end of your next turn.*returns/)).toBeInTheDocument();
+      expect(screen.getByText('Goblin1')).toBeInTheDocument();
+      expect(screen.getByText('WIS')).toBeInTheDocument();
+      expect(screen.getByText(/DC 16/)).toBeInTheDocument();
+      expect(screen.getByText('22 Psychic damage')).toBeInTheDocument();
+      expect(screen.getByText('Incapacitated')).toBeInTheDocument();
     });
 
     it('renders Hurl Through Hell and Cancel buttons when uses are available', () => {
       render(<HurlThroughHellModal {...makeProps({ currentUses: 1, maxUses: 3 })} />);
       expect(screen.getByRole('button', { name: /Hurl Through Hell/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
-    it('shows uses remaining when hasUse is true', () => {
-      render(<HurlThroughHellModal {...makeProps({ currentUses: 1, maxUses: 3 })} />);
       expect(screen.getByText(/Uses available:.*2 \/ 3/)).toBeInTheDocument();
     });
 
@@ -164,10 +129,9 @@ describe('HurlThroughHellModal', () => {
         pactMagicRecharge: true,
         pactSlotsAvailable: false,
       })} />);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('No uses remaining');
-      expect(body.textContent).toContain('Long Rest');
-      expect(body.textContent).toContain('No Pact Magic slots available');
+      expect(screen.getByText(/No uses remaining/)).toBeInTheDocument();
+      expect(screen.getByText(/Long Rest/)).toBeInTheDocument();
+      expect(screen.getByText(/No Pact Magic slots available/)).toBeInTheDocument();
     });
 
     it('shows no pact magic message when pactMagicRecharge is false and no uses', () => {
@@ -176,9 +140,8 @@ describe('HurlThroughHellModal', () => {
         maxUses: 3,
         pactMagicRecharge: false,
       })} />);
-      const body = document.querySelector('.sp-body');
-      expect(body.textContent).toContain('No uses remaining');
-      expect(body.textContent).toContain('Long Rest');
+      expect(screen.getByText(/No uses remaining/)).toBeInTheDocument();
+      expect(screen.getByText(/Long Rest/)).toBeInTheDocument();
     });
   });
 
@@ -191,25 +154,7 @@ describe('HurlThroughHellModal', () => {
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
 
-    it('does not call onClose when modal content is clicked', () => {
-      render(<HurlThroughHellModal {...makeProps()} />);
-      fireEvent.click(document.querySelector('.sp-modal'));
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
-
-    it('does not call onClose when body is clicked', () => {
-      render(<HurlThroughHellModal {...makeProps()} />);
-      fireEvent.click(document.querySelector('.sp-body'));
-      expect(mockOnClose).not.toHaveBeenCalled();
-    });
-
-    it('calls onClose when Cancel button (sp-dismiss-btn) is clicked', () => {
-      render(<HurlThroughHellModal {...makeProps()} />);
-      fireEvent.click(document.querySelector('.sp-dismiss-btn'));
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onClose when Cancel is clicked via role', () => {
+    it('calls onClose when Cancel button is clicked', () => {
       const onClose = vi.fn();
       render(<HurlThroughHellModal {...makeProps({ onClose })} />);
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -238,39 +183,12 @@ describe('HurlThroughHellModal', () => {
       });
     });
 
-    it('shows result screen after confirm is clicked (with pact slot cost)', async () => {
-      setupConfirmWithTurn('Turn5');
-      render(<HurlThroughHellModal {...makeProps({
-        currentUses: 3,
-        maxUses: 3,
-        pactMagicRecharge: true,
-        pactSlotLevel: 2,
-        pactSlotsAvailable: true,
-      })} />);
-
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitFor(() => {
-        expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-      });
-    });
-
     it('does not show Hurl Through Hell button when no uses and no pact slots', async () => {
       render(<HurlThroughHellModal {...makeProps({
         currentUses: 3,
         maxUses: 3,
         pactMagicRecharge: true,
         pactSlotsAvailable: false,
-      })} />);
-
-      expect(screen.queryByRole('button', { name: /Hurl Through Hell/ })).not.toBeInTheDocument();
-    });
-
-    it('does not show Hurl Through Hell button when no uses and pactMagicRecharge is false', async () => {
-      render(<HurlThroughHellModal {...makeProps({
-        currentUses: 3,
-        maxUses: 3,
-        pactMagicRecharge: false,
       })} />);
 
       expect(screen.queryByRole('button', { name: /Hurl Through Hell/ })).not.toBeInTheDocument();
@@ -287,7 +205,7 @@ describe('HurlThroughHellModal', () => {
       });
     }
 
-    it('sets hurlThroughHellTurnUsed to currentTurn on confirm', async () => {
+    it('sets hurlThroughHellTurnUsed and increments hurlThroughHellUses on confirm', async () => {
       setupConfirmWithTurn('Turn5');
       render(<HurlThroughHellModal {...makeProps({ currentUses: 1, maxUses: 3 })} />);
 
@@ -300,16 +218,6 @@ describe('HurlThroughHellModal', () => {
           'Turn5',
           'test-campaign'
         );
-      });
-    });
-
-    it('increments hurlThroughHellUses when hasUse is true', async () => {
-      setupConfirmWithTurn('Turn5');
-      render(<HurlThroughHellModal {...makeProps({ currentUses: 1, maxUses: 3 })} />);
-
-      fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
-
-      await waitFor(() => {
         expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
           'Throg',
           'hurlThroughHellUses',

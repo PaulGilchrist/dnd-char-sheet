@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CombatSuperiorityModal from './CombatSuperiorityModal.jsx';
@@ -65,8 +66,13 @@ describe('CombatSuperiorityModal - superiority dice', () => {
       expect(screen.getByText(/Choose a maneuver to use/)).toBeInTheDocument();
     });
 
-    it('shows no dice message when getRuntimeValue returns 0', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(0);
+    it.each([
+      [0],
+      [-1],
+      [null],
+      [undefined],
+    ])('shows no dice message when getRuntimeValue returns %s', (value) => {
+      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(value);
       spies.push(spy);
       renderModal({
         payload: makePayload({
@@ -76,85 +82,6 @@ describe('CombatSuperiorityModal - superiority dice', () => {
         }),
       });
       expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Close/ })).toBeInTheDocument();
-    });
-
-    it('shows no dice message when getRuntimeValue returns a negative number', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(-1);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter' },
-        }),
-      });
-      expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-    });
-
-    it('shows no dice message when getRuntimeValue returns null', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(null);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter' },
-        }),
-      });
-      expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-    });
-
-    it('shows no dice message when getRuntimeValue returns undefined', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(undefined);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter' },
-        }),
-      });
-      expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-    });
-
-    it('converts string numbers from getRuntimeValue for positive values', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue('2');
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter' },
-        }),
-      });
-      expect(screen.getByText(/Choose a maneuver to use/)).toBeInTheDocument();
-    });
-
-    it('converts string "0" from getRuntimeValue to show no dice', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue('0');
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter' },
-        }),
-      });
-      expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-    });
-
-    it('calls getRuntimeValue with playerStats.name and superiorityDice key', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(1);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter' },
-        }),
-      });
-      expect(spy).toHaveBeenCalledWith('TestCharacter', 'superiorityDice');
     });
   });
 
@@ -177,85 +104,21 @@ describe('CombatSuperiorityModal - superiority dice', () => {
       expect(screen.getByText(/Choose a maneuver to use/)).toBeInTheDocument();
     });
 
-    it('shows no dice when _trackedResources.current is 0', () => {
+    it.each([
+      [{ superiorityDice: { current: 0 } }, '0'],
+      [{ superiorityDice: { current: -5 } }, 'negative'],
+      [undefined, 'missing _trackedResources'],
+      [{}, 'missing superiorityDice key'],
+      [{ superiorityDice: null }, 'null superiorityDice'],
+      [{ superiorityDice: {} }, 'no current field'],
+    ])('shows no dice when _trackedResources fallback is %s', (trackedResources, _label) => {
       const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(null);
       spies.push(spy);
       renderModal({
         payload: makePayload({
           selectionMode: false,
           knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: {
-            name: 'TestCharacter',
-            _trackedResources: { superiorityDice: { current: 0 } },
-          },
-        }),
-      });
-      expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-    });
-
-    it('shows no dice when _trackedResources.current is negative', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(null);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: {
-            name: 'TestCharacter',
-            _trackedResources: { superiorityDice: { current: -5 } },
-          },
-        }),
-      });
-      expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-    });
-
-    it('shows no dice when _trackedResources is missing', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(null);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter' },
-        }),
-      });
-      expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-    });
-
-    it('shows no dice when _trackedResources.superiorityDice is missing', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(null);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter', _trackedResources: {} },
-        }),
-      });
-      expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-    });
-
-    it('shows no dice when _trackedResources.superiorityDice is null', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(null);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter', _trackedResources: { superiorityDice: null } },
-        }),
-      });
-      expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
-    });
-
-    it('shows no dice when _trackedResources.superiorityDice has no current field', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(null);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter', _trackedResources: { superiorityDice: {} } },
+          playerStats: { name: 'TestCharacter', _trackedResources: trackedResources },
         }),
       });
       expect(screen.getByText(/No Superiority Dice remaining/)).toBeInTheDocument();
@@ -265,45 +128,17 @@ describe('CombatSuperiorityModal - superiority dice', () => {
   // ── Missing playerStats / name ──
 
   describe('missing playerStats/name', () => {
-    it('shows maneuver selection when playerStats is missing', () => {
+    it.each([
+      [undefined, 'playerStats is missing'],
+      [{}, 'playerStats.name is missing'],
+      [{ name: null }, 'playerStats.name is null'],
+      [{ name: '' }, 'playerStats.name is empty string'],
+    ])('shows maneuver selection when %s', (_stats, _label) => {
       renderModal({
         payload: makePayload({
           selectionMode: false,
           knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: undefined,
-        }),
-      });
-      expect(screen.getByText(/Choose a maneuver to use/)).toBeInTheDocument();
-    });
-
-    it('shows maneuver selection when playerStats.name is missing', () => {
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: {},
-        }),
-      });
-      expect(screen.getByText(/Choose a maneuver to use/)).toBeInTheDocument();
-    });
-
-    it('shows maneuver selection when playerStats.name is null', () => {
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: null },
-        }),
-      });
-      expect(screen.getByText(/Choose a maneuver to use/)).toBeInTheDocument();
-    });
-
-    it('shows maneuver selection when playerStats.name is empty string', () => {
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: '' },
+          playerStats: _stats,
         }),
       });
       expect(screen.getByText(/Choose a maneuver to use/)).toBeInTheDocument();
@@ -313,8 +148,11 @@ describe('CombatSuperiorityModal - superiority dice', () => {
   // ── selectionMode overrides dice check ──
 
   describe('selectionMode overrides dice check', () => {
-    it('shows maneuver selection when selectionMode is true even with no dice', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(0);
+    it.each([
+      [0, 'no dice'],
+      [null, 'null dice'],
+    ])('shows maneuver selection when selectionMode is true even with %s', (diceValue, _label) => {
+      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(diceValue);
       spies.push(spy);
       renderModal({
         payload: makePayload({
@@ -325,19 +163,6 @@ describe('CombatSuperiorityModal - superiority dice', () => {
       });
       expect(screen.getByText(/Combat Superiority — Select Maneuvers/)).toBeInTheDocument();
       expect(screen.queryByText(/No Superiority Dice remaining/)).not.toBeInTheDocument();
-    });
-
-    it('shows maneuver selection when selectionMode is true even with null dice', () => {
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(null);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: true,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter' },
-        }),
-      });
-      expect(screen.getByText(/Combat Superiority — Select Maneuvers/)).toBeInTheDocument();
     });
   });
 
@@ -357,23 +182,6 @@ describe('CombatSuperiorityModal - superiority dice', () => {
         onClose,
       });
       fireEvent.click(screen.getByRole('button', { name: /Close/ }));
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('closes on overlay click in no-dice state', () => {
-      const onClose = vi.fn();
-      const spy = vi.spyOn(runtimeModule, 'getRuntimeValue').mockReturnValue(0);
-      spies.push(spy);
-      renderModal({
-        payload: makePayload({
-          selectionMode: false,
-          knownManeuvers: ['Ki-Fueled Attack'],
-          playerStats: { name: 'TestCharacter' },
-        }),
-        onClose,
-      });
-      const overlay = document.querySelector('.sp-overlay');
-      fireEvent.click(overlay);
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });

@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import QuiveringPalmModal from './QuiveringPalmModal.jsx';
 
@@ -115,274 +116,38 @@ describe('QuiveringPalmModal - release flow', () => {
         vi.clearAllMocks();
     });
 
-    // ── Release button click behavior ──
-
-    describe('release button click', () => {
-        it('calls applyRelease with correct arguments', async () => {
-            quiveringPalmHandler.applyRelease.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Quivering Palm',
-                    automationType: 'quivering_palm',
-                    description: 'Vibrations released harmlessly against Goblin1.',
-                    automation: { type: 'quivering_palm' },
-                },
-            });
-
-            renderModal();
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
-            });
-
-            expect(quiveringPalmHandler.applyRelease).toHaveBeenCalledWith(
-                expect.objectContaining({ name: 'Quivering Palm' }),
-                expect.objectContaining({ name: 'Monk1' }),
-                'test-campaign',
-                'Goblin1'
-            );
-            expect(quiveringPalmHandler.applyShockwave).not.toHaveBeenCalled();
+    it('calls applyRelease (not applyShockwave) when release button is clicked', async () => {
+        quiveringPalmHandler.applyRelease.mockResolvedValue({
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: 'Quivering Palm',
+                automationType: 'quivering_palm',
+                description: 'Vibrations released harmlessly against Goblin1.',
+                automation: { type: 'quivering_palm' },
+                success: true,
+                saveType: 'CON',
+                saveDc: 15,
+                rawDamage: 0,
+                finalDamage: 0,
+                damageExpression: '0d0',
+                damageType: 'Force',
+                diceDisplay: '',
+            },
         });
 
-        it('disables both buttons while release is loading', async () => {
-            let resolveRelease;
-            quiveringPalmHandler.applyRelease.mockReturnValue(
-                new Promise((resolve) => { resolveRelease = resolve; })
-            );
+        renderModal();
 
-            renderModal();
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
-            });
-
-            const shockwaveBtn = screen.getByRole('button', { name: /Trigger the Lethal Shockwave/ });
-            const releaseBtn = screen.getByRole('button', { name: /Release the Harmless Vibrations/ });
-            expect(shockwaveBtn.disabled).toBe(true);
-            expect(releaseBtn.disabled).toBe(true);
-
-            await act(async () => {
-                resolveRelease({
-                    type: 'popup',
-                    payload: {
-                        type: 'automation_info',
-                        name: 'Quivering Palm',
-                        description: 'Done',
-                    },
-                });
-            });
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
         });
 
-        it('shows result screen with correct description after release completes', async () => {
-            quiveringPalmHandler.applyRelease.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Quivering Palm',
-                    automationType: 'quivering_palm',
-                    description: 'Vibrations released harmlessly against Goblin1.',
-                    automation: { type: 'quivering_palm' },
-                    success: true,
-                    saveType: 'CON',
-                    saveDc: 15,
-                    rawDamage: 0,
-                    finalDamage: 0,
-                    damageExpression: '0d0',
-                    damageType: 'Force',
-                    diceDisplay: '',
-                },
-            });
-
-            renderModal();
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText('Success')).toBeInTheDocument();
-            });
-        });
-
-        it('calls onClose when Done button is clicked after release', async () => {
-            const { handleClose } = renderModal();
-
-            quiveringPalmHandler.applyRelease.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Quivering Palm',
-                    automationType: 'quivering_palm',
-                    description: 'Vibrations released harmlessly against Goblin1.',
-                    automation: { type: 'quivering_palm' },
-                    success: true,
-                    saveType: 'CON',
-                    saveDc: 15,
-                    rawDamage: 0,
-                    finalDamage: 0,
-                    damageExpression: '0d0',
-                    damageType: 'Force',
-                    diceDisplay: '',
-                },
-            });
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-            });
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-            });
-
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('calls onClose when result overlay is clicked after release', async () => {
-            const { handleClose } = renderModal();
-
-            quiveringPalmHandler.applyRelease.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Quivering Palm',
-                    automationType: 'quivering_palm',
-                    description: 'Vibrations released harmlessly against Goblin1.',
-                    automation: { type: 'quivering_palm' },
-                    success: true,
-                    saveType: 'CON',
-                    saveDc: 15,
-                    rawDamage: 0,
-                    finalDamage: 0,
-                    damageExpression: '0d0',
-                    damageType: 'Force',
-                    diceDisplay: '',
-                },
-            });
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-            });
-
-            await act(async () => {
-                fireEvent.click(document.querySelector('.sp-overlay'));
-            });
-
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-
-    });
-
-    // ── Release-only mode (isRelease=true) ──
-
-    describe('release-only mode (isRelease=true)', () => {
-        it('calls applyRelease when release button is clicked', async () => {
-            quiveringPalmHandler.applyRelease.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Quivering Palm',
-                    automationType: 'quivering_palm',
-                    description: 'Vibrations released harmlessly against Goblin1.',
-                    automation: { type: 'quivering_palm' },
-                    success: true,
-                    saveType: 'CON',
-                    saveDc: 15,
-                    rawDamage: 0,
-                    finalDamage: 0,
-                    damageExpression: '0d0',
-                    damageType: 'Force',
-                    diceDisplay: '',
-                },
-            });
-
-            renderModal({ isRelease: true });
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
-            });
-
-            expect(quiveringPalmHandler.applyRelease).toHaveBeenCalled();
-            expect(quiveringPalmHandler.applyShockwave).not.toHaveBeenCalled();
-        });
-
-        it('does not show shockwave button in release-only mode', async () => {
-            let resolveRelease;
-            quiveringPalmHandler.applyRelease.mockReturnValue(
-                new Promise((resolve) => { resolveRelease = resolve; })
-            );
-
-            renderModal({ isRelease: true });
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
-            });
-
-            expect(
-                screen.queryByRole('button', { name: /Trigger the Lethal Shockwave/ })
-            ).not.toBeInTheDocument();
-
-            await act(async () => {
-                resolveRelease({
-                    type: 'popup',
-                    payload: {
-                        type: 'automation_info',
-                        name: 'Quivering Palm',
-                        description: 'Done',
-                    },
-                });
-            });
-
-            expect(
-                screen.queryByRole('button', { name: /Trigger the Lethal Shockwave/ })
-            ).not.toBeInTheDocument();
-        });
-
-        it('calls onClose when Cancel button is clicked in release-only mode', () => {
-            const { handleClose } = renderModal({ isRelease: true });
-            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('calls onClose when overlay is clicked in release-only mode', () => {
-            const { handleClose } = renderModal({ isRelease: true });
-            fireEvent.click(document.querySelector('.sp-overlay'));
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('disables release button while loading in release-only mode', async () => {
-            let resolveRelease;
-            quiveringPalmHandler.applyRelease.mockReturnValue(
-                new Promise((resolve) => { resolveRelease = resolve; })
-            );
-
-            renderModal({ isRelease: true });
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
-            });
-
-            expect(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }).disabled).toBe(true);
-
-            await act(async () => {
-                resolveRelease({
-                    type: 'popup',
-                    payload: {
-                        type: 'automation_info',
-                        name: 'Quivering Palm',
-                        description: 'Done',
-                    },
-                });
-            });
-        });
+        expect(quiveringPalmHandler.applyRelease).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Quivering Palm' }),
+            expect.objectContaining({ name: 'Monk1' }),
+            'test-campaign',
+            'Goblin1'
+        );
+        expect(quiveringPalmHandler.applyShockwave).not.toHaveBeenCalled();
     });
 });

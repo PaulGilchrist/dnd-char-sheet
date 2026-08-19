@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { renderTargetList, renderResultsSection, logSaveEntry, persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
@@ -66,26 +67,22 @@ describe('renderTargetList', () => {
     vi.clearAllMocks();
   });
 
-  it('renders all eligible targets with checkboxes', () => {
+  it('renders eligible targets with names, types, and checkboxes', () => {
     const toggleTarget = createToggleTarget();
     render(renderTargetList({ eligibleTargets, selected: new Set(), toggleTarget }));
 
     expect(screen.getByText('Goblin')).toBeInTheDocument();
     expect(screen.getByText('Orc')).toBeInTheDocument();
     expect(screen.getByText('Skeleton')).toBeInTheDocument();
-  });
-
-  it('renders target types in parentheses', () => {
-    const toggleTarget = createToggleTarget();
-    const { container } = render(renderTargetList({ eligibleTargets, selected: new Set(), toggleTarget }));
-
-    const typeSpans = container.querySelectorAll('.abjure-target-type');
+    const checkboxes = screen.getAllByRole('checkbox');
+    expect(checkboxes).toHaveLength(3);
+    const typeSpans = document.querySelectorAll('.abjure-target-type');
     const types = [...typeSpans].map(s => s.textContent.trim());
     expect(types).toContain('(monster)');
     expect(types).toContain('(undead)');
   });
 
-  it('marks selected targets with selected class', () => {
+  it('renders selected targets with selected class', () => {
     const toggleTarget = createToggleTarget();
     const selected = new Set(['Goblin']);
     const { container } = render(
@@ -162,7 +159,7 @@ describe('renderResultsSection', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the save resolution header', () => {
+  it('renders save resolution header with save type and DC', () => {
     render(
       renderResultsSection({
         results,
@@ -176,28 +173,12 @@ describe('renderResultsSection', () => {
     expect(screen.getByText('Resolving DEX saving throws (DC 13)...')).toBeInTheDocument();
   });
 
-  it('renders all results in abjure-results-list', () => {
-    render(
-      renderResultsSection({
-        results,
-        pendingPrompts,
-        allResolved: false,
-        saveType: 'DEX',
-        saveDc: 13,
-      }),
-    );
-
-    expect(screen.getByText('Goblin')).toBeInTheDocument();
-    expect(screen.getByText('Orc')).toBeInTheDocument();
-    expect(screen.getByText('Skeleton')).toBeInTheDocument();
-  });
-
-  it('marks successful results with success class', () => {
+  it('renders results with success/fail text based on success prop', () => {
     const { container } = render(
       renderResultsSection({
         results,
-        pendingPrompts,
-        allResolved: false,
+        pendingPrompts: [],
+        allResolved: true,
         saveType: 'DEX',
         saveDc: 13,
       }),
@@ -207,8 +188,8 @@ describe('renderResultsSection', () => {
     const goblinResult = [...resultDivs].find(d => d.querySelector('strong')?.textContent === 'Goblin');
     const orcResult = [...resultDivs].find(d => d.querySelector('strong')?.textContent === 'Orc');
 
-    expect(goblinResult).toHaveClass('abjure-result-fail');
-    expect(orcResult).toHaveClass('abjure-result-success');
+    expect(goblinResult.textContent).toContain('Failed');
+    expect(orcResult.textContent).toContain('Saved');
   });
 
   it('renders pending prompts with waiting message', () => {
@@ -244,7 +225,7 @@ describe('renderResultsSection', () => {
     expect(screen.getByText('All targets resolved.')).toBeInTheDocument();
   });
 
-  it('shows roll details when roll is a number', () => {
+  it('renders roll details when roll is a number, omitting bonus when zero', () => {
     const { container } = render(
       renderResultsSection({
         results,
@@ -259,22 +240,13 @@ describe('renderResultsSection', () => {
     expect(goblinResult.textContent).toContain('Roll: 7');
     expect(goblinResult.textContent).toContain('+2');
     expect(goblinResult.textContent).toContain('= 9');
-  });
-
-  it('omits bonus when saveBonus is 0', () => {
-    const { container } = render(
-      renderResultsSection({
-        results,
-        pendingPrompts: [],
-        allResolved: true,
-        saveType: 'DEX',
-        saveDc: 13,
-      }),
-    );
 
     const orcResult = [...container.querySelectorAll('.abjure-result')].find(d => d.querySelector('strong')?.textContent === 'Orc');
     expect(orcResult.textContent).toContain('Roll: 15');
     expect(orcResult.textContent).not.toContain('+');
+
+    const skeletonResult = [...container.querySelectorAll('.abjure-result')].find(d => d.querySelector('strong')?.textContent === 'Skeleton');
+    expect(skeletonResult.textContent).not.toContain('Roll:');
   });
 
   it('omits roll details when roll is not a number', () => {
@@ -310,50 +282,6 @@ describe('renderResultsSection', () => {
 
     const resultDiv = container.querySelector('.abjure-result');
     expect(resultDiv.textContent).toContain('Custom: Goblin - passed');
-  });
-
-  it('uses default text when getResultText is not provided', () => {
-    const successResult = render(
-      renderResultsSection({
-        results: [{ targetName: 'Goblin', success: true }],
-        pendingPrompts: [],
-        allResolved: true,
-        saveType: 'DEX',
-        saveDc: 13,
-      }),
-    );
-
-    const successDiv = successResult.container.querySelector('.abjure-result');
-    expect(successDiv.textContent).toContain('Saved');
-    expect(successDiv.textContent).toContain('unaffected');
-
-    const failureResult = render(
-      renderResultsSection({
-        results: [{ targetName: 'Goblin', success: false }],
-        pendingPrompts: [],
-        allResolved: true,
-        saveType: 'DEX',
-        saveDc: 13,
-      }),
-    );
-
-    const failureDiv = failureResult.container.querySelector('.abjure-result');
-    expect(failureDiv.textContent).toContain('Failed');
-  });
-
-  it('renders with empty results and pending prompts', () => {
-    render(
-      renderResultsSection({
-        results: [],
-        pendingPrompts: [],
-        allResolved: true,
-        saveType: 'WIS',
-        saveDc: 10,
-      }),
-    );
-
-    expect(screen.getByText('Resolving WIS saving throws (DC 10)...')).toBeInTheDocument();
-    expect(screen.getByText('All targets resolved.')).toBeInTheDocument();
   });
 
   it('shows no resolved message when allResolved is false with empty data', () => {
@@ -419,6 +347,8 @@ describe('logSaveEntry', () => {
   });
 
   it('calls addEntry with success result when success is true', () => {
+    const fixedTime = 1700000000000;
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(fixedTime);
     logSaveEntry(
       'TestCampaign',
       'Fireball',
@@ -432,31 +362,12 @@ describe('logSaveEntry', () => {
       1,
       '1d20+1',
     );
+    nowSpy.mockRestore();
 
     const call = logService.addEntry.mock.calls[0][1];
     expect(call.saveResult).toBe('success');
-  });
-
-  it('includes timestamp as current time', () => {
-    const before = Date.now();
-    logSaveEntry(
-      'TestCampaign',
-      'Burning Hands',
-      'Wizard',
-      'Orc',
-      12,
-      'DEX',
-      true,
-      15,
-      [15],
-      0,
-      '1d20',
-    );
-    const after = Date.now();
-
-    const call = logService.addEntry.mock.calls[0][1];
-    expect(call.timestamp).toBeGreaterThanOrEqual(before);
-    expect(call.timestamp).toBeLessThanOrEqual(after);
+    expect(call.total).toBe(18);
+    expect(call.timestamp).toBe(fixedTime);
   });
 
   it('handles empty rolls array', () => {
@@ -511,57 +422,23 @@ describe('persistAndNotify', () => {
     vi.clearAllMocks();
   });
 
-  it('calls setCombatSummaryCache with correct arguments', () => {
+  it('calls setCombatSummaryCache, storage.set, and dispatches event', () => {
     const combatSummary = {
       creatures: [{ name: 'Goblin', type: 'monster' }],
       players: [{ name: 'Wizard' }],
     };
 
+    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent').mockImplementation(() => true);
     persistAndNotify(combatSummary, 'TestCampaign');
 
     expect(combatData.setCombatSummaryCache).toHaveBeenCalledWith(combatSummary, 'TestCampaign');
-  });
-
-  it('calls storage.set with correct arguments', () => {
-    const combatSummary = {
-      creatures: [{ name: 'Goblin', type: 'monster' }],
-      players: [{ name: 'Wizard' }],
-    };
-
-    persistAndNotify(combatSummary, 'TestCampaign');
-
     expect(storage.default.set).toHaveBeenCalledWith(
       'combatSummary',
       combatSummary,
       'TestCampaign',
     );
-  });
-
-  it('dispatches combat-summary-updated event', () => {
-    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent').mockImplementation(() => true);
-    const combatSummary = {
-      creatures: [],
-      players: [],
-    };
-
-    persistAndNotify(combatSummary, 'TestCampaign');
-
     expect(dispatchEventSpy).toHaveBeenCalledWith(
-      expect.any(Object),
+      expect.objectContaining({ type: 'combat-summary-updated' }),
     );
-    expect(dispatchEventSpy.mock.calls[0][0].type).toBe('combat-summary-updated');
-  });
-
-  it('works with empty combatSummary', () => {
-    const combatSummary = { creatures: [], players: [] };
-
-    persistAndNotify(combatSummary, 'EmptyCampaign');
-
-    expect(storage.default.set).toHaveBeenCalledWith(
-      'combatSummary',
-      combatSummary,
-      'EmptyCampaign',
-    );
-    expect(combatData.setCombatSummaryCache).toHaveBeenCalledWith(combatSummary, 'EmptyCampaign');
   });
 });

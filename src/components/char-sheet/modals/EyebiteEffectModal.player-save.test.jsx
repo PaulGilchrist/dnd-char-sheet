@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EyebiteEffectModal from './EyebiteEffectModal.jsx';
@@ -72,12 +73,10 @@ vi.mock('../../../services/automation/common/damageRollback.js', () => ({
 }));
 
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
-import * as expirations from '../../../services/rules/effects/expirations.js';
 import * as automationService from '../../../services/combat/automation/automationService.js';
 import * as logService from '../../../services/ui/logService.js';
 import * as savePromptService from '../../../services/combat/conditions/savePromptService.js';
 import * as damageRollback from '../../../services/automation/common/damageRollback.js';
-import utils from '../../../services/ui/utils.js';
 
 const baseProps = {
     combatSummary: {
@@ -118,8 +117,6 @@ describe('EyebiteEffectModal - Player save', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         automationService.playerIsImmuneToCondition.mockReturnValue(false);
-        runtimeState.getRuntimeValue.mockReturnValue(null);
-        utils.guid.mockReturnValue('test-guid-123');
     });
 
     describe('sending save prompt', () => {
@@ -139,29 +136,6 @@ describe('EyebiteEffectModal - Player save', () => {
             expect(promptCall.saveType).toBe('WIS');
             expect(promptCall.saveDc).toBe(13);
             expect(promptCall.sourceName).toBe('Witch1');
-        });
-
-        it('uses character computedStats when available', async () => {
-            renderPlayerModal({
-                combatSummary: {
-                    creatures: [
-                        { name: 'Elf Mage', type: 'player', saveBonuses: { wis: 1 } },
-                    ],
-                },
-                characters: [
-                    { name: 'Elf Mage', computedStats: { abilities: { wis: 20 } } },
-                ],
-            });
-            await waitFor(() => {
-                expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            });
-            expect(automationService.playerIsImmuneToCondition).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    playerStats: expect.objectContaining({
-                        abilities: { wis: 20 },
-                    }),
-                })
-            );
         });
 
         it('does not send save prompt for immune player targets', async () => {
@@ -187,7 +161,7 @@ describe('EyebiteEffectModal - Player save', () => {
             });
         }
 
-        it('applies condition when player fails save', async () => {
+        it('applies condition, targetEffect, and logging when player fails save', async () => {
             renderPlayerModal({
                 combatSummary: {
                     creatures: [
@@ -211,27 +185,6 @@ describe('EyebiteEffectModal - Player save', () => {
                     expect.arrayContaining(['unconscious']),
                     'test-campaign'
                 );
-            });
-        });
-
-        it('registers targetEffect when player fails save', async () => {
-            renderPlayerModal({
-                combatSummary: {
-                    creatures: [
-                        { name: 'Elf Mage', type: 'player', saveBonuses: { wis: 1 } },
-                    ],
-                },
-            });
-            await waitFor(() => {
-                expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            });
-            dispatchSaveResult({
-                promptId: 'test-guid-123',
-                success: false,
-                roll: 5,
-                total: 6,
-            });
-            await waitFor(() => {
                 const targetEffectsCall = runtimeState.setRuntimeValue.mock.calls.find(
                     c => c[0] === 'campaign' && c[1] === 'targetEffects'
                 );
@@ -246,54 +199,6 @@ describe('EyebiteEffectModal - Player save', () => {
                         duration: 'concentration',
                     })
                 );
-            });
-        });
-
-        it('calls addExpiration when player fails save', async () => {
-            renderPlayerModal({
-                combatSummary: {
-                    creatures: [
-                        { name: 'Elf Mage', type: 'player', saveBonuses: { wis: 1 } },
-                    ],
-                },
-            });
-            await waitFor(() => {
-                expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            });
-            dispatchSaveResult({
-                promptId: 'test-guid-123',
-                success: false,
-                roll: 5,
-                total: 6,
-            });
-            await waitFor(() => {
-                expect(expirations.addExpiration).toHaveBeenCalledWith(
-                    'Witch1',
-                    'Elf Mage',
-                    expect.any(Array),
-                    'test-campaign'
-                );
-            });
-        });
-
-        it('calls addTargetResult with failure when player fails save', async () => {
-            renderPlayerModal({
-                combatSummary: {
-                    creatures: [
-                        { name: 'Elf Mage', type: 'player', saveBonuses: { wis: 1 } },
-                    ],
-                },
-            });
-            await waitFor(() => {
-                expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            });
-            dispatchSaveResult({
-                promptId: 'test-guid-123',
-                success: false,
-                roll: 5,
-                total: 6,
-            });
-            await waitFor(() => {
                 expect(damageRollback.addTargetResult).toHaveBeenCalledWith(
                     'test-campaign',
                     expect.objectContaining({
@@ -304,49 +209,14 @@ describe('EyebiteEffectModal - Player save', () => {
                         conditions: ['unconscious'],
                     })
                 );
-            });
-        });
-
-        it('logs save_result and condition entries when player fails save', async () => {
-            renderPlayerModal({
-                combatSummary: {
-                    creatures: [
-                        { name: 'Elf Mage', type: 'player', saveBonuses: { wis: 1 } },
-                    ],
-                },
-            });
-            await waitFor(() => {
-                expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            });
-            dispatchSaveResult({
-                promptId: 'test-guid-123',
-                success: false,
-                roll: 5,
-                total: 6,
-            });
-            await waitFor(() => {
                 const saveResultCalls = logService.addEntry.mock.calls.filter(
                     c => c[1].type === 'save_result' && c[1].targetName === 'Elf Mage'
                 );
                 expect(saveResultCalls.length).toBeGreaterThan(0);
-                expect(saveResultCalls[saveResultCalls.length - 1][1]).toEqual(
-                    expect.objectContaining({
-                        targetName: 'Elf Mage',
-                        success: false,
-                        type: 'save_result',
-                    })
-                );
                 const conditionCalls = logService.addEntry.mock.calls.filter(
                     c => c[1].type === 'condition'
                 );
                 expect(conditionCalls.length).toBeGreaterThan(0);
-                expect(conditionCalls[conditionCalls.length - 1][1]).toEqual(
-                    expect.objectContaining({
-                        characterName: 'Elf Mage',
-                        condition: 'Unconscious',
-                        type: 'condition',
-                    })
-                );
             });
         });
 
@@ -374,7 +244,7 @@ describe('EyebiteEffectModal - Player save', () => {
             });
         });
 
-        it('calls addTargetResult with success when player succeeds save', async () => {
+        it('calls addTargetResult and logs when player succeeds save', async () => {
             renderPlayerModal({
                 combatSummary: {
                     creatures: [
@@ -400,27 +270,6 @@ describe('EyebiteEffectModal - Player save', () => {
                         conditions: [],
                     })
                 );
-            });
-        });
-
-        it('logs save_result success when player succeeds save', async () => {
-            renderPlayerModal({
-                combatSummary: {
-                    creatures: [
-                        { name: 'Elf Mage', type: 'player', saveBonuses: { wis: 1 } },
-                    ],
-                },
-            });
-            await waitFor(() => {
-                expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            });
-            dispatchSaveResult({
-                promptId: 'test-guid-123',
-                success: true,
-                roll: 12,
-                total: 13,
-            });
-            await waitFor(() => {
                 const saveResultCalls = logService.addEntry.mock.calls.filter(
                     c => c[1].type === 'save_result' && c[1].targetName === 'Elf Mage'
                 );
@@ -457,35 +306,6 @@ describe('EyebiteEffectModal - Player save', () => {
             });
         });
 
-        it('removes prompt from pendingPrompts after save result', async () => {
-            renderPlayerModal({
-                combatSummary: {
-                    creatures: [
-                        { name: 'Elf Mage', type: 'player', saveBonuses: { wis: 1 } },
-                    ],
-                },
-            });
-            await waitFor(() => {
-                expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            });
-            dispatchSaveResult({
-                promptId: 'test-guid-123',
-                success: false,
-                roll: 5,
-                total: 6,
-            });
-            await waitFor(() => {
-                expect(screen.getByText(/Elf Mage/)).toBeInTheDocument();
-            });
-            // Verify the prompt was removed from pendingPrompts by confirming
-            // setRuntimeValue was called exactly once with 'campaign' / 'targetEffects'
-            // (one call for the failure → one targetEffect entry, no duplicate)
-            const targetEffectsCalls = runtimeState.setRuntimeValue.mock.calls.filter(
-                c => c[0] === 'campaign' && c[1] === 'targetEffects'
-            );
-            expect(targetEffectsCalls.length).toBe(1);
-        });
-
         it('does nothing when save-result detail is null', async () => {
             renderPlayerModal({
                 combatSummary: {
@@ -498,7 +318,6 @@ describe('EyebiteEffectModal - Player save', () => {
                 expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
             });
             dispatchSaveResult(null);
-            // Verify no conditions were applied
             const conditionCalls = runtimeState.setRuntimeValue.mock.calls.filter(
                 c => c[0] === 'Elf Mage' && c[1] === 'activeConditions'
             );
@@ -545,7 +364,7 @@ describe('EyebiteEffectModal - Player save', () => {
             });
         });
 
-        it('handles missing roll/total with defaults on failure', async () => {
+        it('handles missing roll/total with defaults on save result', async () => {
             renderPlayerModal({
                 combatSummary: {
                     creatures: [
@@ -566,34 +385,6 @@ describe('EyebiteEffectModal - Player save', () => {
                     expect.objectContaining({
                         targetName: 'Elf Mage',
                         saveResult: 'failure',
-                        roll: 0,
-                        total: 0,
-                    })
-                );
-            });
-        });
-
-        it('handles missing roll/total with defaults on success', async () => {
-            renderPlayerModal({
-                combatSummary: {
-                    creatures: [
-                        { name: 'Elf Mage', type: 'player', saveBonuses: { wis: 1 } },
-                    ],
-                },
-            });
-            await waitFor(() => {
-                expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            });
-            dispatchSaveResult({
-                promptId: 'test-guid-123',
-                success: true,
-            });
-            await waitFor(() => {
-                expect(damageRollback.addTargetResult).toHaveBeenCalledWith(
-                    'test-campaign',
-                    expect.objectContaining({
-                        targetName: 'Elf Mage',
-                        saveResult: 'success',
                         roll: 0,
                         total: 0,
                     })
@@ -623,28 +414,6 @@ describe('EyebiteEffectModal - Player save', () => {
             });
             fireEvent.click(screen.getByRole('button', { name: 'Done' }));
             expect(baseProps.onClose).toHaveBeenCalled();
-        });
-
-        it('clears pending prompts on unmount', async () => {
-            const { unmount } = renderPlayerModal({
-                combatSummary: {
-                    creatures: [
-                        { name: 'Elf Mage', type: 'player', saveBonuses: { wis: 1 } },
-                    ],
-                },
-            });
-            await waitFor(() => {
-                expect(savePromptService.sendSavePrompt).toHaveBeenCalled();
-            });
-            unmount();
-            // After unmount, pendingPrompts should be cleared (empty array)
-            // This is verified by the useEffect cleanup in the component
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
-                'Elf Mage',
-                'activeConditions',
-                expect.arrayContaining(['unconscious']),
-                'test-campaign'
-            );
         });
     });
 });

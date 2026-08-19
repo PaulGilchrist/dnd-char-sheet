@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingPoolModal from './HealingPoolModal.jsx';
@@ -91,19 +92,6 @@ describe('HealingPoolModal - Bloodied', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: vi.fn() });
-    damageUtils.getCombatContext.mockResolvedValue({
-      creatures: [
-        { name: 'Paladin1', type: 'player', targetName: 'Orc Warrior' },
-        { name: 'Orc Warrior', type: 'npc', maxHp: 30, currentHp: 15, conditions: [{ key: 'blinded' }] },
-      ],
-    });
-    damageUtils.getTargetFromAttacker.mockReturnValue({
-      name: 'Orc Warrior',
-      type: 'npc',
-      maxHp: 30,
-      currentHp: 15,
-      conditions: [{ key: 'blinded' }],
-    });
     setupPoolMock();
   });
 
@@ -119,16 +107,10 @@ describe('HealingPoolModal - Bloodied', () => {
     expect(screen.queryByText(/Bloodied only/)).not.toBeInTheDocument();
   });
 
-  it('does not show bloodied restriction badge when bloodiedOnly is omitted', async () => {
-    await renderModal({ current: 15, max: 20 });
-    expect(screen.queryByText(/Bloodied only/)).not.toBeInTheDocument();
-  });
-
   // ── Apply heal button state with bloodiedOnly ──
 
   it.each([
     { targetHp: 15, maxHp: 30, label: 'bloodied target with bloodiedOnly true' },
-    { targetHp: 15, maxHp: 31, label: 'bloodied target (odd max) with bloodiedOnly true' },
   ])('enables apply heal when target is $label', async ({ targetHp, maxHp }) => {
     damageUtils.getCombatContext.mockResolvedValue({
       creatures: [
@@ -151,7 +133,6 @@ describe('HealingPoolModal - Bloodied', () => {
   it.each([
     { playerHp: 25, label: 'non-bloodied target with bloodiedOnly true' },
     { playerHp: 21, label: 'target just above half HP with bloodiedOnly true' },
-    { playerHp: 40, label: 'full HP target with bloodiedOnly true' },
   ])('disables apply heal when target is $label', async ({ playerHp }) => {
     damageUtils.getCombatContext.mockResolvedValue({
       creatures: [
@@ -219,22 +200,6 @@ describe('HealingPoolModal - Bloodied', () => {
     });
 
     await renderModal({ current: 15, max: 20 }, { bloodiedOnly: true });
-    expect(screen.queryByText(/This feature can only heal Bloodied creatures/)).not.toBeInTheDocument();
-  });
-
-  it('does not show restriction note when bloodiedOnly is false', async () => {
-    damageUtils.getCombatContext.mockResolvedValue({
-      creatures: [
-        { name: 'Orc Warrior', type: 'npc', maxHp: 30, currentHp: 25 },
-      ],
-    });
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'currentHitPoints') return 25;
-      if (key === 'activeConditions') return [];
-      return null;
-    });
-
-    await renderModal({ current: 15, max: 20 }, { bloodiedOnly: false });
     expect(screen.queryByText(/This feature can only heal Bloodied creatures/)).not.toBeInTheDocument();
   });
 

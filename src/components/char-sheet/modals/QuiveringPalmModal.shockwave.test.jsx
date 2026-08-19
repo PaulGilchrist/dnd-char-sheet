@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import QuiveringPalmModal from './QuiveringPalmModal.jsx';
@@ -274,7 +275,8 @@ describe('QuiveringPalmModal - shockwave flow', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText('42')).toBeInTheDocument();
+                const strongs = screen.getAllByRole('strong');
+                expect(strongs[1]).toHaveTextContent('42');
             });
         });
 
@@ -293,26 +295,6 @@ describe('QuiveringPalmModal - shockwave flow', () => {
         });
 
         it('calls onClose when Done button is clicked in result screen', async () => {
-            const { handleClose } = renderModal();
-
-            quiveringPalmHandler.applyShockwave.mockResolvedValue(makeResultPayload({ success: true }));
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Trigger the Lethal Shockwave/ }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-            });
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-            });
-
-            expect(handleClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('calls onClose when result overlay is clicked', async () => {
             const { handleClose } = renderModal();
 
             quiveringPalmHandler.applyShockwave.mockResolvedValue(makeResultPayload({ success: true }));
@@ -409,22 +391,11 @@ describe('QuiveringPalmModal - shockwave flow', () => {
             });
         });
 
-        it('shows "?" when diceDisplay is empty', async () => {
-            quiveringPalmHandler.applyShockwave.mockResolvedValue(makeResultPayload({ diceDisplay: '' }));
-
-            renderModal();
-
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Trigger the Lethal Shockwave/ }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText(/\?/)).toBeInTheDocument();
-            });
-        });
-
-        it('shows "?" when diceDisplay is undefined', async () => {
-            quiveringPalmHandler.applyShockwave.mockResolvedValue(makeResultPayload({ diceDisplay: undefined }));
+        it.each([
+            ['', 'empty string'],
+            [undefined, 'undefined'],
+        ])('shows "?" when diceDisplay is %s (%s)', async (diceDisplayVal) => {
+            quiveringPalmHandler.applyShockwave.mockResolvedValue(makeResultPayload({ diceDisplay: diceDisplayVal }));
 
             renderModal();
 

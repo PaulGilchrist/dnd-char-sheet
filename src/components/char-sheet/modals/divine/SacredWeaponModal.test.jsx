@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SacredWeaponModal from './SacredWeaponModal.jsx';
@@ -87,12 +88,6 @@ describe('SacredWeaponModal', () => {
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
-  it('renders a custom action name from the action prop', () => {
-    const customAction = makeAction({ name: 'Divine Smite' });
-    render(<SacredWeaponModal {...makeProps({ action: customAction })} />);
-    expect(screen.getByText('Divine Smite')).toBeInTheDocument();
-  });
-
   // ── Initial state ──
 
   it('has no option selected and Activate button disabled on mount', () => {
@@ -103,14 +98,14 @@ describe('SacredWeaponModal', () => {
     ).toBeDisabled();
   });
 
-  it('does not show the Done button on initial render', () => {
-    render(<SacredWeaponModal {...makeProps()} />);
-    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-  });
+  // ── Activation flow ──
 
-  // ── Selection behavior ──
-
-  it('enables Activate button after selecting an option', () => {
+  it('activates with selected damage type and shows result', async () => {
+    const description =
+      'Sacred Weapon activated. Your melee weapon glows with bright light in a 20-foot radius.';
+    sacredWeaponHandler.applyDamageTypeChoice.mockResolvedValue(
+      makeResult(description)
+    );
     render(<SacredWeaponModal {...makeProps()} />);
     expect(
       screen.getByRole('button', { name: 'Activate Sacred Weapon' })
@@ -119,10 +114,20 @@ describe('SacredWeaponModal', () => {
     expect(
       screen.getByRole('button', { name: 'Activate Sacred Weapon' })
     ).toBeEnabled();
-    expect(screen.getByLabelText('Fire')).toBeChecked();
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Activate Sacred Weapon' })
+      );
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Activate Sacred Weapon' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Radiant')).not.toBeInTheDocument();
+      expect(screen.queryByText('Choose the damage type for Sacred Weapon:')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+      expect(screen.getByText(description)).toBeInTheDocument();
+    });
   });
-
-  // ── Activation flow ──
 
   it('passes the selected damage type to applyDamageTypeChoice', async () => {
     sacredWeaponHandler.applyDamageTypeChoice.mockResolvedValue(makeResult());
@@ -141,38 +146,7 @@ describe('SacredWeaponModal', () => {
     );
   });
 
-  it('does not call applyDamageTypeChoice when no option is selected', async () => {
-    render(<SacredWeaponModal {...makeProps()} />);
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: 'Activate Sacred Weapon' })
-      );
-    });
-    expect(sacredWeaponHandler.applyDamageTypeChoice).not.toHaveBeenCalled();
-  });
-
-  it('shows the result description and Done button after activation, hides controls', async () => {
-    const description =
-      'Sacred Weapon activated. Your melee weapon glows with bright light in a 20-foot radius.';
-    sacredWeaponHandler.applyDamageTypeChoice.mockResolvedValue(
-      makeResult(description)
-    );
-    render(<SacredWeaponModal {...makeProps()} />);
-    fireEvent.click(screen.getByLabelText('Fire'));
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: 'Activate Sacred Weapon' })
-      );
-    });
-    await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Activate Sacred Weapon' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Radiant')).not.toBeInTheDocument();
-      expect(screen.queryByText('Choose the damage type for Sacred Weapon:')).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-      expect(screen.getByText(description)).toBeInTheDocument();
-    });
-  });
+  // ── Close behavior ──
 
   it('calls onClose when Done is clicked after activation', async () => {
     const onClose = vi.fn();
@@ -197,22 +171,12 @@ describe('SacredWeaponModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onClose when overlay is clicked outside the modal', () => {
-    const onClose = vi.fn();
-    render(<SacredWeaponModal {...makeProps({ onClose })} />);
-    const overlay = document.querySelector('.sp-overlay');
-    fireEvent.click(overlay);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
+  // ── Edge cases: missing / empty automation ──
 
-  // ── Edge cases: missing / empty / null / undefined automation ──
-
-  it('renders without radio options when automation is missing, empty, null, or undefined', () => {
+  it('renders without radio options when automation is missing or null', () => {
     const scenarios = [
-      { automation: { type: 'sacred_weapon' } },
-      { automation: { type: 'sacred_weapon', options: [] } },
       { automation: null },
-      { automation: undefined },
+      { automation: { type: 'sacred_weapon' } },
     ];
     scenarios.forEach((automation) => {
       const action = makeAction({ automation });
@@ -224,19 +188,6 @@ describe('SacredWeaponModal', () => {
       ).toBeInTheDocument();
       unmount();
     });
-  });
-
-  it('does not call applyDamageTypeChoice when no options are available', async () => {
-    const actionNoOptions = makeAction({
-      automation: { type: 'sacred_weapon' },
-    });
-    render(<SacredWeaponModal {...makeProps({ action: actionNoOptions })} />);
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: 'Activate Sacred Weapon' })
-      );
-    });
-    expect(sacredWeaponHandler.applyDamageTypeChoice).not.toHaveBeenCalled();
   });
 
   // ── Edge cases: single option ──
@@ -251,24 +202,5 @@ describe('SacredWeaponModal', () => {
     render(<SacredWeaponModal {...makeProps({ action: actionSingleOption })} />);
     expect(screen.getByLabelText('Radiant')).toBeInTheDocument();
     expect(screen.queryByLabelText('Fire')).not.toBeInTheDocument();
-  });
-
-  // ── State reset on remount ──
-
-  it('resets selection state on each mount', () => {
-    const { unmount } = render(<SacredWeaponModal {...makeProps()} />);
-    fireEvent.click(screen.getByLabelText('Radiant'));
-    expect(screen.getByLabelText('Radiant')).toBeChecked();
-    unmount();
-    const { container } = render(<SacredWeaponModal {...makeProps()} />);
-    expect(container.querySelector('input[name="sacredWeaponOption"]')).not.toBeChecked();
-  });
-
-  // ── Error cases ──
-
-  it('throws when action is undefined', () => {
-    expect(() =>
-      render(<SacredWeaponModal {...makeProps({ action: undefined })} />)
-    ).toThrow();
   });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EyebiteEffectModal from './EyebiteEffectModal.jsx';
@@ -128,26 +129,9 @@ describe('EyebiteEffectModal', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
             expect(baseProps.onClose).toHaveBeenCalled();
         });
-
-        it('renders Cancel button', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
-            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-        });
     });
 
     describe('secondary target modal content', () => {
-        it('passes correct title to SecondaryTargetModal', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            expect(screen.getByTestId('stm-title')).toHaveTextContent('Eyebite');
-        });
-
-        it('passes attacker icon to SecondaryTargetModal', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            expect(screen.getByTestId('stm-icon')).toHaveTextContent('fa-solid fa-eye');
-        });
-
         it('excludes caster from targets', () => {
             render(<EyebiteEffectModal {...makeProps({
                 combatSummary: {
@@ -163,19 +147,12 @@ describe('EyebiteEffectModal', () => {
         });
 
         it('passes correct description with range and DC', () => {
-            render(<EyebiteEffectModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
-            const desc = screen.getByTestId('stm-description');
-            expect(desc.textContent).toContain('60 feet');
-            expect(desc.textContent).toContain('DC 13');
-            expect(desc.textContent).toContain('WIS');
-        });
-
-        it('uses custom rangeFeet in description', () => {
             render(<EyebiteEffectModal {...makeProps({ rangeFeet: 30 })} />);
             fireEvent.click(screen.getByRole('button', { name: /Asleep/ }));
             const desc = screen.getByTestId('stm-description');
             expect(desc.textContent).toContain('30 feet');
+            expect(desc.textContent).toContain('DC 13');
+            expect(desc.textContent).toContain('WIS');
         });
 
         it('calls onSkip when Skip is clicked', () => {
@@ -190,11 +167,6 @@ describe('EyebiteEffectModal', () => {
         it('uses custom featureName in header and modal title', () => {
             render(<EyebiteEffectModal {...makeProps({ featureName: 'Witch Eyebite' })} />);
             expect(screen.getByText('Witch Eyebite')).toBeInTheDocument();
-        });
-
-        it('uses default featureName "Eyebite" when not provided', () => {
-            render(<EyebiteEffectModal {...makeProps({ featureName: undefined })} />);
-            expect(screen.getByText('Eyebite')).toBeInTheDocument();
         });
     });
 

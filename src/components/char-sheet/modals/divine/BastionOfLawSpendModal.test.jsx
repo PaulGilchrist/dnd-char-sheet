@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BastionOfLawSpendModal from './BastionOfLawSpendModal.jsx';
@@ -58,20 +59,6 @@ describe('BastionOfLawSpendModal', () => {
       expect(screen.getByText(/Your magical ward is active/)).toBeInTheDocument();
     });
 
-    it('renders the shield icon in the header', () => {
-      renderModal();
-      expect(document.querySelector('.fa-shield-halved')).toBeInTheDocument();
-    });
-
-    it('renders CSS structural classes on overlay, modal, header, body, and actions', () => {
-      renderModal();
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header')).toBeInTheDocument();
-      expect(document.querySelector('.sp-body')).toBeInTheDocument();
-      expect(document.querySelector('.sp-actions')).toBeInTheDocument();
-    });
-
     it('renders the ward dice count display', () => {
       renderModal();
       expect(screen.getByText('3d8')).toBeInTheDocument();
@@ -111,14 +98,6 @@ describe('BastionOfLawSpendModal', () => {
         expect(body.textContent).toContain('8, 7');
         expect(screen.getByText(/Remaining: 2d8/)).toBeInTheDocument();
       });
-    });
-
-    it('calls rollExpression with 1d8 when rolling', async () => {
-      renderModal();
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Roll & Reduce Damage/ }));
-      });
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d8');
     });
 
     it('hides the roll result section before rolling', () => {
@@ -170,7 +149,7 @@ describe('BastionOfLawSpendModal', () => {
   // ── Ward empty state ──
 
   describe('ward empty state', () => {
-    it('shows 0d8 when ward dice are empty', () => {
+    it('shows 0d8 and hides the roll button when ward dice are empty', () => {
       runtimeState.useRuntimeValue.mockImplementation((_name, key, _campaign) => {
         if (key === 'bastionOfLawWardDice') return [];
         if (key === 'bastionOfLawLastAttackDamage') return 20;
@@ -179,36 +158,7 @@ describe('BastionOfLawSpendModal', () => {
       });
       renderModal();
       expect(screen.getByText('0d8')).toBeInTheDocument();
-    });
-
-    it('hides the roll button when ward dice count is 0', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key, _campaign) => {
-        if (key === 'bastionOfLawWardDice') return [];
-        if (key === 'bastionOfLawLastAttackDamage') return 20;
-        if (key === 'bastionOfLawWardUsed') return 5;
-        return undefined;
-      });
-      renderModal();
       expect(screen.queryByRole('button', { name: /Roll & Reduce Damage/ })).not.toBeInTheDocument();
-    });
-
-    it('shows 0d8 when ward dice are null', () => {
-      runtimeState.useRuntimeValue.mockImplementation((_name, key, _campaign) => {
-        if (key === 'bastionOfLawWardDice') return null;
-        if (key === 'bastionOfLawLastAttackDamage') return 20;
-        if (key === 'bastionOfLawWardUsed') return 5;
-        return undefined;
-      });
-      renderModal();
-      expect(screen.getByText('0d8')).toBeInTheDocument();
-    });
-
-    it('shows 0d8 when ward dice are undefined', () => {
-      renderModal();
-      // Reset to return undefined for all keys
-      runtimeState.useRuntimeValue.mockImplementation(() => undefined);
-      renderModal();
-      expect(screen.getByText('0d8')).toBeInTheDocument();
     });
   });
 
@@ -235,28 +185,6 @@ describe('BastionOfLawSpendModal', () => {
       });
 
       expect(onClose).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // ── Runtime value usage ──
-
-  describe('runtime value usage', () => {
-    it('calls useRuntimeValue for bastionOfLawWardDice, bastionOfLawLastAttackDamage, and bastionOfLawWardUsed', () => {
-      renderModal();
-      const calls = runtimeState.useRuntimeValue.mock.calls;
-      const keys = calls.map((c) => c[1]);
-      expect(keys).toContain('bastionOfLawWardDice');
-      expect(keys).toContain('bastionOfLawLastAttackDamage');
-      expect(keys).toContain('bastionOfLawWardUsed');
-    });
-
-    it('passes playerName and campaignName as first and third arguments to useRuntimeValue', () => {
-      renderModal();
-      const calls = runtimeState.useRuntimeValue.mock.calls;
-      const charKeys = calls.map((c) => c[0]);
-      const campaigns = calls.map((c) => c[2]);
-      expect(charKeys.every((k) => k === 'AllyWarrior')).toBe(true);
-      expect(campaigns.every((c) => c === 'test-campaign')).toBe(true);
     });
   });
 

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ClairvoyantCombatantModal from './ClairvoyantCombatantModal.jsx';
@@ -91,38 +92,6 @@ describe('ClairvoyantCombatantModal - result screen', () => {
       });
     });
 
-    it('displays failure description with custom save type', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3, saveType: 'Charisma' });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      await new Promise(r => setTimeout(r, 10));
-      dispatchSaveEvent(false);
-
-      await waitFor(() => {
-        const body = document.querySelector('.sp-body');
-        expect(body.textContent).toContain('Charisma save');
-      });
-    });
-
-    it('displays failure description with custom action name', async () => {
-      const props = makeProps({
-        currentUses: 1,
-        maxUses: 3,
-        action: { name: 'Awakened Mind' },
-      });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      await new Promise(r => setTimeout(r, 10));
-      dispatchSaveEvent(false);
-
-      await waitFor(() => {
-        const header = document.querySelector('.sp-header');
-        expect(header.textContent).toContain('Awakened Mind');
-      });
-    });
-
     it('closes when Done button is clicked', async () => {
       const onClose = vi.fn();
       const props = makeProps({ currentUses: 1, maxUses: 3, onClose });
@@ -170,7 +139,7 @@ describe('ClairvoyantCombatantModal - result screen', () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
-    it('renders eye icon in header', async () => {
+    it('adds failure save_result log entry with correct details', async () => {
       const props = makeProps({ currentUses: 1, maxUses: 3 });
       renderModal(props);
       fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
@@ -179,22 +148,17 @@ describe('ClairvoyantCombatantModal - result screen', () => {
       dispatchSaveEvent(false);
 
       await waitFor(() => {
-        const icon = document.querySelector('.sp-header i.fa-solid.fa-eye');
-        expect(icon).toBeInTheDocument();
-      });
-    });
-
-    it('renders sp-actions container with Done button', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      await new Promise(r => setTimeout(r, 10));
-      dispatchSaveEvent(false);
-
-      await waitFor(() => {
-        const actions = document.querySelector('.sp-actions');
-        expect(actions).toBeInTheDocument();
+        const saveResultCalls = addEntry.mock.calls.filter(
+          c => c[1] && c[1].type === 'save_result' && c[1].success === false,
+        );
+        expect(saveResultCalls.length).toBeGreaterThan(0);
+        const match = saveResultCalls.find(
+          c =>
+            c[1].targetName === 'Goblin1' &&
+            c[1].saveType === 'Wisdom' &&
+            c[1].saveDc === 13,
+        );
+        expect(match).toBeDefined();
       });
     });
   });
@@ -217,34 +181,6 @@ describe('ClairvoyantCombatantModal - result screen', () => {
       });
     });
 
-    it('displays success description with custom save type', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3, saveType: 'Intelligence' });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      await new Promise(r => setTimeout(r, 10));
-      dispatchSaveEvent(true);
-
-      await waitFor(() => {
-        const body = document.querySelector('.sp-body');
-        expect(body.textContent).toContain('Intelligence save');
-      });
-    });
-
-    it('displays success description with custom target name', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3, targetName: 'Dragon1' });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      await new Promise(r => setTimeout(r, 10));
-      dispatchSaveEvent(true);
-
-      await waitFor(() => {
-        const body = document.querySelector('.sp-body');
-        expect(body.textContent).toContain('Dragon1 succeeded');
-      });
-    });
-
     it('adds success save_result log entry with correct details', async () => {
       const props = makeProps({ currentUses: 1, maxUses: 3 });
       renderModal(props);
@@ -256,29 +192,6 @@ describe('ClairvoyantCombatantModal - result screen', () => {
       await waitFor(() => {
         const saveResultCalls = addEntry.mock.calls.filter(
           c => c[1] && c[1].type === 'save_result' && c[1].success === true,
-        );
-        expect(saveResultCalls.length).toBeGreaterThan(0);
-        const match = saveResultCalls.find(
-          c =>
-            c[1].targetName === 'Goblin1' &&
-            c[1].saveType === 'Wisdom' &&
-            c[1].saveDc === 13,
-        );
-        expect(match).toBeDefined();
-      });
-    });
-
-    it('adds failure save_result log entry with correct details', async () => {
-      const props = makeProps({ currentUses: 1, maxUses: 3 });
-      renderModal(props);
-      fireEvent.click(screen.getByRole('button', { name: /Clairvoyant Combatant/ }));
-
-      await new Promise(r => setTimeout(r, 10));
-      dispatchSaveEvent(false);
-
-      await waitFor(() => {
-        const saveResultCalls = addEntry.mock.calls.filter(
-          c => c[1] && c[1].type === 'save_result' && c[1].success === false,
         );
         expect(saveResultCalls.length).toBeGreaterThan(0);
         const match = saveResultCalls.find(

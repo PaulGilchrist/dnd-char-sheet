@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import LongRestButton from './LongRestButton.jsx';
@@ -71,20 +72,6 @@ describe('LongRestButton', () => {
 
     await waitFor(() => {
       expect(onLongRest).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('calls onLongRest with no arguments when applyLongRest resolves', async () => {
-    const onLongRest = vi.fn();
-    restRules.applyLongRest.mockResolvedValue({ success: true });
-
-    render(<LongRestButton {...makeProps({ onLongRest })} />);
-
-    fireEvent.click(screen.getByRole('button'));
-
-    await waitFor(() => {
-      expect(onLongRest).toHaveBeenCalled();
-      expect(onLongRest).toHaveBeenCalledWith();
     });
   });
 

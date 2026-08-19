@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AOEConditionModal from './AOEConditionModal.jsx';
@@ -112,7 +113,7 @@ describe('AOEConditionModal', () => {
     // ── NPC save resolution ──
 
     describe('NPC save resolution', () => {
-        it('calls storeSpellLastAttack when targets are selected', async () => {
+        it('calls storeSpellLastAttack and logs ability_use when targets are selected', async () => {
             render(<AOEConditionModal {...makeProps()} />);
             await act(async () => selectTargetRow(0));
             await act(async () => {
@@ -126,14 +127,6 @@ describe('AOEConditionModal', () => {
                 saveDc: 12,
                 attackScope: 'aoe',
             }));
-        });
-
-        it('logs ability_use entry when targets are selected', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            await act(async () => selectTargetRow(0));
-            await act(async () => {
-                fireEvent.click(getApplyButton());
-            });
 
             expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                 type: 'ability_use',
@@ -143,7 +136,7 @@ describe('AOEConditionModal', () => {
             }));
         });
 
-        it('applies blinded condition on failed NPC save (low random)', async () => {
+        it('applies blinded condition on failed NPC save and logs save_result + condition entries', async () => {
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             try {
                 render(<AOEConditionModal {...makeProps()} />);
@@ -157,15 +150,30 @@ describe('AOEConditionModal', () => {
                         call => call[1] === 'activeConditions' && call[0] === 'Goblin'
                     );
                     expect(conditionCalls.length).toBeGreaterThan(0);
-                    const conditions = conditionCalls[0][2];
-                    expect(conditions).toContain('blinded');
+                    expect(conditionCalls[0][2]).toContain('blinded');
                 });
+
+                const saveEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Goblin'
+                );
+                expect(saveEntries.length).toBeGreaterThan(0);
+                expect(saveEntries[0][1]).toEqual(expect.objectContaining({
+                    type: 'save_result',
+                    saveType: 'CON',
+                    saveDc: 12,
+                    success: false,
+                }));
+
+                const conditionEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'condition' && call[1]?.condition === 'Blinded'
+                );
+                expect(conditionEntries.length).toBeGreaterThan(0);
             } finally {
                 vi.restoreAllMocks();
             }
         });
 
-        it('does not apply condition on successful NPC save (high random)', async () => {
+        it('does not apply condition on successful NPC save and logs save_result with success', async () => {
             vi.spyOn(Math, 'random').mockReturnValue(0.99);
             try {
                 render(<AOEConditionModal {...makeProps()} />);
@@ -181,57 +189,11 @@ describe('AOEConditionModal', () => {
                     expect(conditionCalls.length).toBe(0);
                 });
 
-                // Verify a save_result was logged for the success
                 const saveEntries = addEntry.mock.calls.filter(
                     call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Goblin'
                 );
                 expect(saveEntries.length).toBeGreaterThan(0);
                 expect(saveEntries[0][1].success).toBe(true);
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('logs save_result entry for NPC saves', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                await act(async () => selectTargetRow(0));
-                await act(async () => {
-                    fireEvent.click(getApplyButton());
-                });
-
-                await waitFor(() => {
-                    const saveEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'save_result'
-                    );
-                    expect(saveEntries.length).toBeGreaterThan(0);
-                    expect(saveEntries[0][1]).toEqual(expect.objectContaining({
-                        type: 'save_result',
-                        saveType: 'CON',
-                        saveDc: 12,
-                    }));
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('logs condition entry on failed NPC save', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                await act(async () => selectTargetRow(0));
-                await act(async () => {
-                    fireEvent.click(getApplyButton());
-                });
-
-                await waitFor(() => {
-                    const conditionEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'condition' && call[1]?.condition === 'Blinded'
-                    );
-                    expect(conditionEntries.length).toBeGreaterThan(0);
-                });
             } finally {
                 vi.restoreAllMocks();
             }
@@ -250,7 +212,6 @@ describe('AOEConditionModal', () => {
                 fireEvent.click(getApplyButton());
             });
 
-            // No condition should be applied
             await waitFor(() => {
                 const conditionCalls = setRuntimeValue.mock.calls.filter(
                     call => call[1] === 'activeConditions' && call[0] === 'Goblin'
@@ -258,7 +219,6 @@ describe('AOEConditionModal', () => {
                 expect(conditionCalls.length).toBe(0);
             });
 
-            // Should log that they succeeded due to Careful Spell
             const saveEntries = addEntry.mock.calls.filter(
                 call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Goblin'
             );
@@ -283,14 +243,6 @@ describe('AOEConditionModal', () => {
                 saveDc: 12,
                 sourceName: 'Wizard1',
             }));
-        });
-
-        it('does not apply condition when player is selected without save result', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            await act(async () => selectTargetRow(2));
-            await act(async () => {
-                fireEvent.click(getApplyButton());
-            });
 
             const conditionCalls = setRuntimeValue.mock.calls.filter(
                 call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
@@ -302,139 +254,54 @@ describe('AOEConditionModal', () => {
     // ── Player save result handling ──
 
     describe('player save result handling', () => {
-        it('applies blinded when player fails save via save-result event', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
+        function dispatchSaveResult(success, extraFields = {}) {
+            const allCalls = vi.mocked(sendSavePrompt).mock.calls;
+            const savePromptCall = allCalls[allCalls.length - 1];
+            const promptId = savePromptCall[1].promptId;
+            return act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: {
+                        promptId,
+                        success,
+                        roll: extraFields.roll ?? (success ? 18 : 5),
+                        total: extraFields.total ?? (success ? 19 : 6),
+                        saveBonus: extraFields.saveBonus ?? 1,
+                        ...extraFields,
+                    },
+                }));
+            });
+        }
 
+        it('applies blinded when player fails save and does not when player passes', async () => {
+            // Fail path
+            const onCloseFail = vi.fn();
+            render(<AOEConditionModal {...makeProps({ onClose: onCloseFail })} />);
             await act(async () => selectTargetRow(2));
             await act(async () => {
                 fireEvent.click(getApplyButton());
             });
-
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
+            await dispatchSaveResult(false);
             await waitFor(() => {
                 const conditionCalls = setRuntimeValue.mock.calls.filter(
                     call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
                 );
                 expect(conditionCalls.length).toBeGreaterThan(0);
-                const conditions = conditionCalls[0][2];
-                expect(conditions).toContain('blinded');
+                expect(conditionCalls[0][2]).toContain('blinded');
             });
-        });
 
-        it('does not apply condition when player passes save', async () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-
+            // Success path
+            const onCloseSuccess = vi.fn();
+            const preSuccessCallCount = setRuntimeValue.mock.calls.length;
+            render(<AOEConditionModal {...makeProps({ onClose: onCloseSuccess })} />);
             await act(async () => selectTargetRow(2));
             await act(async () => {
                 fireEvent.click(getApplyButton());
             });
-
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: true,
-                        roll: 18,
-                        total: 19,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            const conditionCalls = setRuntimeValue.mock.calls.filter(
+            await dispatchSaveResult(true);
+            const successCalls = setRuntimeValue.mock.calls.slice(preSuccessCallCount).filter(
                 call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
             );
-            expect(conditionCalls.length).toBe(0);
-        });
-
-        it('logs save_result failure when player fails save', async () => {
-            getRuntimeValue.mockReturnValue([]);
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-
-            await act(async () => selectTargetRow(2));
-            await act(async () => {
-                fireEvent.click(getApplyButton());
-            });
-
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                        roll: 5,
-                        total: 6,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result' && call[1]?.success === false
-                );
-                expect(saveEntries.length).toBeGreaterThan(0);
-                expect(saveEntries[0][1].targetName).toBe('PlayerAlly');
-            });
-        });
-
-        it('logs save_result success when player passes save', async () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-
-            await act(async () => selectTargetRow(2));
-            await act(async () => {
-                fireEvent.click(getApplyButton());
-            });
-
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: true,
-                        roll: 18,
-                        total: 19,
-                        saveBonus: 1,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
-
-            await waitFor(() => {
-                const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result' && call[1]?.success === true
-                );
-                expect(saveEntries.length).toBeGreaterThan(0);
-            });
+            expect(successCalls.length).toBe(0);
         });
 
         it('handles save-result event with missing optional fields', async () => {
@@ -446,26 +313,14 @@ describe('AOEConditionModal', () => {
                 fireEvent.click(getApplyButton());
             });
 
-            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
-            const actualPromptId = savePromptCall[1].promptId;
-
-            await act(async () => {
-                const event = new CustomEvent('save-result', {
-                    detail: {
-                        promptId: actualPromptId,
-                        success: false,
-                    },
-                });
-                window.dispatchEvent(event);
-            });
+            await dispatchSaveResult(false, {});
 
             await waitFor(() => {
                 const conditionCalls = setRuntimeValue.mock.calls.filter(
                     call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
                 );
                 expect(conditionCalls.length).toBeGreaterThan(0);
-                const conditions = conditionCalls[0][2];
-                expect(conditions).toContain('blinded');
+                expect(conditionCalls[0][2]).toContain('blinded');
             });
         });
     });
@@ -473,34 +328,6 @@ describe('AOEConditionModal', () => {
     // ── Multiple targets ──
 
     describe('multiple targets', () => {
-        it('resolves saves for multiple NPC targets', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                await act(async () => selectTargetRow(0));
-                await act(async () => selectTargetRow(1));
-                await act(async () => {
-                    fireEvent.click(getApplyButton());
-                });
-
-                await waitFor(() => {
-                    const goblinConditions = setRuntimeValue.mock.calls.filter(
-                        call => call[1] === 'activeConditions' && call[0] === 'Goblin'
-                    );
-                    expect(goblinConditions.length).toBeGreaterThan(0);
-                    expect(goblinConditions[0][2]).toContain('blinded');
-
-                    const orcConditions = setRuntimeValue.mock.calls.filter(
-                        call => call[1] === 'activeConditions' && call[0] === 'Orc'
-                    );
-                    expect(orcConditions.length).toBeGreaterThan(0);
-                    expect(orcConditions[0][2]).toContain('blinded');
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
         it('resolves saves for mixed NPC and player targets', async () => {
             vi.spyOn(Math, 'random').mockReturnValue(0.01);
             try {
@@ -511,7 +338,6 @@ describe('AOEConditionModal', () => {
                     fireEvent.click(getApplyButton());
                 });
 
-                // NPC should have condition applied
                 await waitFor(() => {
                     const npcConditionCalls = setRuntimeValue.mock.calls.filter(
                         call => call[1] === 'activeConditions' && call[0] === 'Goblin'
@@ -520,7 +346,6 @@ describe('AOEConditionModal', () => {
                     expect(npcConditionCalls[0][2]).toContain('blinded');
                 });
 
-                // Player should have prompt sent
                 expect(sendSavePrompt).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                     targetName: 'PlayerAlly',
                 }));

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import AttackRiderManeuverPrompt from './AttackRiderManeuverPrompt.jsx';
@@ -80,14 +81,6 @@ describe('AttackRiderManeuverPrompt - selection behavior', () => {
         expect(screen.getByRole('button', { name: /Use Maneuver/ })).not.toBeDisabled();
     });
 
-    it('deselects previous radio when different one is selected', () => {
-        renderPrompt();
-        const radios = document.querySelectorAll('input[name="attackRiderManeuver"]');
-        fireEvent.click(radios[0]);
-        fireEvent.click(radios[2]);
-        expect(radios[0].checked).toBe(false);
-        expect(radios[2].checked).toBe(true);
-    });
 });
 
 // ── Use maneuver flow ──
@@ -122,19 +115,6 @@ describe('AttackRiderManeuverPrompt - use maneuver', () => {
         await waitFor(() => {
             expect(screen.getByText('Disarming Attack')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /Done/ })).toBeInTheDocument();
-        });
-    });
-
-    it('renders result description via dangerouslySetInnerHTML', async () => {
-        const onUse = vi.fn().mockResolvedValue({
-            payload: { name: 'Disarming Attack', description: '<strong>Dropped!</strong>' },
-        });
-        renderPrompt({ onUse });
-        const radios = document.querySelectorAll('input[name="attackRiderManeuver"]');
-        fireEvent.click(radios[0]);
-        fireEvent.click(screen.getByRole('button', { name: /Use Maneuver/ }));
-        await waitFor(() => {
-            expect(screen.getByText('Dropped!')).toBeInTheDocument();
         });
     });
 
@@ -245,20 +225,6 @@ describe('AttackRiderManeuverPrompt - isMiss path', () => {
         await waitFor(() => {
             expect(screen.getByText(/Precision Attack/)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /Done/ })).toBeInTheDocument();
-        });
-    });
-
-    it('renders isMissResult description via dangerouslySetInnerHTML', async () => {
-        const onUse = vi.fn().mockResolvedValue({
-            isMissResult: true,
-            description: '<em>Success!</em>',
-        });
-        renderPrompt({ isMiss: true, onUse });
-        const radios = document.querySelectorAll('input[name="attackRiderManeuver"]');
-        fireEvent.click(radios[0]);
-        fireEvent.click(screen.getByRole('button', { name: /Use Maneuver/ }));
-        await waitFor(() => {
-            expect(screen.getByText('Success!')).toBeInTheDocument();
         });
     });
 

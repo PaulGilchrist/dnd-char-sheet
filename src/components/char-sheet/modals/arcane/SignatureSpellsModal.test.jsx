@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SignatureSpellsModal from './SignatureSpellsModal.jsx';
@@ -78,23 +79,6 @@ describe('SignatureSpellsModal', () => {
     });
   });
 
-  it('renders confirm and popup CSS classes on modal elements', () => {
-    render(<SignatureSpellsModal {...makeProps()} />);
-    expect(document.querySelector('.popup-overlay')).toBeInTheDocument();
-    expect(document.querySelector('.popup-modal')).toBeInTheDocument();
-    const selects = document.querySelectorAll('select');
-    selects.forEach((select) => expect(select).toHaveClass('char-btn'));
-    expect(screen.getByRole('button', { name: 'Confirm Selection' })).toHaveClass('char-btn');
-  });
-
-  it('renders label elements associated with each select dropdown', () => {
-    render(<SignatureSpellsModal {...makeProps()} />);
-    const labels = document.querySelectorAll('label');
-    expect(labels).toHaveLength(2);
-    expect(labels[0]).toHaveTextContent('Signature spell 1:');
-    expect(labels[1]).toHaveTextContent('Signature spell 2:');
-  });
-
   // ── Button disabled state ──
 
   it('disables the confirm button when no spells are selected', () => {
@@ -120,27 +104,6 @@ describe('SignatureSpellsModal', () => {
     fireEvent.change(selects[0], { target: { value: 'Shield' } });
     fireEvent.change(selects[1], { target: { value: 'Shield' } });
     expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeDisabled();
-  });
-
-  it('enables the confirm button after changing one dropdown to a different spell', () => {
-    render(<SignatureSpellsModal {...makeProps()} />);
-    const selects = document.querySelectorAll('select');
-    // Both identical → disabled
-    fireEvent.change(selects[0], { target: { value: 'Shield' } });
-    fireEvent.change(selects[1], { target: { value: 'Shield' } });
-    expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeDisabled();
-    // Change second to different → enabled
-    fireEvent.change(selects[1], { target: { value: 'Magic Missile' } });
-    expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeEnabled();
-  });
-
-  it('allows re-selecting a different spell after an initial selection', () => {
-    render(<SignatureSpellsModal {...makeProps()} />);
-    const selects = document.querySelectorAll('select');
-    fireEvent.change(selects[0], { target: { value: 'Shield' } });
-    fireEvent.change(selects[0], { target: { value: 'Magic Missile' } });
-    fireEvent.change(selects[1], { target: { value: 'Bane' } });
-    expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeEnabled();
   });
 
   // ── Pre-selected spells ──

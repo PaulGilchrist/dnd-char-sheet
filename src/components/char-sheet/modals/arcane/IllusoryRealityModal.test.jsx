@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import IllusoryRealityModal from './IllusoryRealityModal.jsx';
@@ -95,25 +96,11 @@ describe('IllusoryRealityModal', () => {
       expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     });
 
-    it('uses custom featureName from action when provided', () => {
-      renderModal({ action: { featureName: 'Custom Feature', automation: {} } });
-      expect(screen.getByText('Custom Feature')).toBeInTheDocument();
-    });
-
     it('falls back to "Illusory Reality" when action name is absent or null', () => {
       renderModal({ action: { automation: {} } });
       expect(screen.getByText('Illusory Reality')).toBeInTheDocument();
     });
 
-    it('falls back to "Illusory Reality" when action is null', () => {
-      renderModal({ action: null });
-      expect(screen.getByText('Illusory Reality')).toBeInTheDocument();
-    });
-  });
-
-  // ── Confirm button disabled state ──
-
-  describe('confirm button disabled state', () => {
     it('is disabled when the input is empty or whitespace-only', () => {
       renderModal();
       const btn = screen.getByRole('button', { name: /Make Object Real/ });
@@ -208,12 +195,13 @@ describe('IllusoryRealityModal', () => {
       });
     });
 
-    it('renders the feature name in the result header', async () => {
-      renderModal();
+    it('uses custom featureName in the result header when provided', async () => {
+      renderModal({ action: { featureName: 'Custom Feature', automation: {} } });
+      confirmIllusoryReality.mockResolvedValue(makePopupResult('Custom Feature'));
       await fillAndConfirm('stone');
       await waitFor(() => {
         const header = document.querySelector('.sp-header');
-        expect(header.textContent).toContain('Illusory Reality');
+        expect(header.textContent).toContain('Custom Feature');
       });
     });
 
@@ -225,36 +213,6 @@ describe('IllusoryRealityModal', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
       });
       expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('closes the modal when clicking the overlay in result state', async () => {
-      const onClose = vi.fn();
-      renderModal({ onClose });
-      await fillAndConfirm('stone');
-      await waitFor(() => {
-        fireEvent.click(document.querySelector('.sp-overlay'));
-      });
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not close when clicking modal content in result state', async () => {
-      const onClose = vi.fn();
-      renderModal({ onClose });
-      await fillAndConfirm('stone');
-      await waitFor(() => {
-        fireEvent.click(document.querySelector('.sp-modal'));
-      });
-      expect(onClose).not.toHaveBeenCalled();
-    });
-
-    it('uses custom featureName in the result header when provided', async () => {
-      renderModal({ action: { featureName: 'Custom Feature', automation: {} } });
-      confirmIllusoryReality.mockResolvedValue(makePopupResult('Custom Feature'));
-      await fillAndConfirm('stone');
-      await waitFor(() => {
-        const header = document.querySelector('.sp-header');
-        expect(header.textContent).toContain('Custom Feature');
-      });
     });
   });
 

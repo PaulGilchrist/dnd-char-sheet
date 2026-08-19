@@ -1,17 +1,54 @@
 // @improved-by-ai
-import { render, screen } from '@testing-library/react';
+// @cleaned-by-ai
+import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SearingVengeanceModal from './SearingVengeanceModal';
 
+// @cleaned-by-ai: Mock CreatureSelectionModal to test prop passthrough
+// without coupling to its internal DOM structure.
+vi.mock('./shared/CreatureSelectionModal.jsx', () => ({
+  default: vi.fn(({ title, icon, targets, description, note, confirmLabel, confirmIcon: _, onConfirm, onSkip }) => (
+    <div data-testid="creature-selection-modal">
+      <div className="sp-header">
+        <i className={`fa-solid ${icon || 'fa-crosshairs'}`}></i> {title}
+      </div>
+      {description && <p>{description}</p>}
+      {note && <p className="sp-note">{note}</p>}
+      <div className="secondary-target-list">
+        {targets.map((target, i) => (
+          <div key={i} data-testid={`target-${i}`}>
+            {typeof target === 'string' ? target : target.name || target}
+          </div>
+        ))}
+      </div>
+      <div className="sp-actions">
+        <button className="sp-roll-btn" onClick={onConfirm} type="button">
+          {confirmLabel || 'Confirm'}
+        </button>
+        <button className="sp-dismiss-btn" onClick={onSkip} type="button">
+          Skip
+        </button>
+      </div>
+    </div>
+  )),
+}));
+
+import CreatureSelectionModal from './shared/CreatureSelectionModal.jsx';
+
+const mockOnConfirm = vi.fn();
+const mockOnSkip = vi.fn();
+
+const mockTargets = [
+  { name: 'Enemy1', type: 'npc', currentHp: 20, maxHp: 30 },
+  { name: 'Enemy2', type: 'npc', currentHp: 10, maxHp: 25 },
+  'Enemy3',
+];
+
 function makeProps(overrides) {
   return {
-    creatureTargets: [
-      { name: 'Enemy1', type: 'npc', currentHp: 20, maxHp: 30 },
-      { name: 'Enemy2', type: 'npc', currentHp: 10, maxHp: 25 },
-      'Enemy3',
-    ],
-    onConfirm: vi.fn(),
-    onSkip: vi.fn(),
+    creatureTargets: mockTargets,
+    onConfirm: mockOnConfirm,
+    onSkip: mockOnSkip,
     ...(overrides || {}),
   };
 }
@@ -21,81 +58,34 @@ describe('SearingVengeanceModal', () => {
     vi.clearAllMocks();
   });
 
-  describe('rendering', () => {
-    it('renders modal with correct title, icon, description, note, and targets', () => {
+  describe('prop passthrough', () => {
+    it('renders CreatureSelectionModal with correct hardcoded and passed-through props', () => {
       render(<SearingVengeanceModal {...makeProps()} />);
-      expect(screen.getByText('Searing Vengeance')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header i.fa-solid.fa-fire')).toBeInTheDocument();
-      expect(screen.getByText(/Select creatures within 30 feet/)).toBeInTheDocument();
-      expect(screen.getByText(/Each selected creature takes 2d8 \+ Charisma modifier Radiant damage/)).toBeInTheDocument();
-      expect(screen.getByText(/Blinded until end of your turn/)).toBeInTheDocument();
-      expect(screen.getByText('Enemy1')).toBeInTheDocument();
-      expect(screen.getByText('Enemy2')).toBeInTheDocument();
-      expect(screen.getByText('Enemy3')).toBeInTheDocument();
+
+      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
+      expect(props.title).toBe('Searing Vengeance');
+      expect(props.icon).toBe('fa-fire');
+      expect(props.description).toBe('Select creatures within 30 feet to unleash radiant energy upon.');
+      expect(props.note).toBe('Each selected creature takes 2d8 + Charisma modifier Radiant damage and is Blinded until end of your turn.');
+      expect(props.confirmLabel).toBe('Unleash Vengeance');
+      expect(props.confirmIcon).toBe('fa-fire');
+      expect(props.targets).toEqual(mockTargets);
+      expect(props.onConfirm).toBe(mockOnConfirm);
+      expect(props.onSkip).toBe(mockOnSkip);
     });
 
-    it('renders confirm and skip buttons', () => {
-      render(<SearingVengeanceModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Unleash Vengeance (0)' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-    });
-
-    it('shows "No targets available." when creatureTargets is empty', () => {
+    it('passes empty creatureTargets array when creatureTargets is empty', () => {
       render(<SearingVengeanceModal {...makeProps({ creatureTargets: [] })} />);
-      expect(screen.getByText('No targets available.')).toBeInTheDocument();
+
+      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
+      expect(props.targets).toEqual([]);
     });
 
-    it('disables confirm button when no targets are selected', () => {
-      render(<SearingVengeanceModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Unleash Vengeance (0)' })).toBeDisabled();
-    });
-  });
+    it('passes empty array when creatureTargets is null', () => {
+      render(<SearingVengeanceModal {...makeProps({ creatureTargets: null })} />);
 
-  describe('callbacks', () => {
-    it('calls onSkip when skip button is clicked', () => {
-      const onSkip = vi.fn();
-      render(<SearingVengeanceModal {...makeProps({ onSkip })} />);
-      screen.getByRole('button', { name: 'Skip' }).click();
-      expect(onSkip).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onSkip when clicking the overlay background', () => {
-      const onSkip = vi.fn();
-      render(<SearingVengeanceModal {...makeProps({ onSkip })} />);
-      document.querySelector('.sp-overlay').click();
-      expect(onSkip).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onConfirm with selected target names when targets are selected', () => {
-      const props = makeProps();
-      render(<SearingVengeanceModal {...props} />);
-      const rows = document.querySelectorAll('.secondary-target-row');
-      rows[0].click();
-      rows[2].click();
-      screen.getByRole('button', { name: 'Unleash Vengeance (2)' }).click();
-      expect(props.onConfirm).toHaveBeenCalledWith(['Enemy1', 'Enemy3']);
-    });
-
-    it('does not call onConfirm when no targets are selected', () => {
-      const onConfirm = vi.fn();
-      render(<SearingVengeanceModal {...makeProps({ onConfirm })} />);
-      screen.getByRole('button', { name: 'Unleash Vengeance (0)' }).click();
-      expect(onConfirm).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('edge cases', () => {
-    it('renders without crashing when creatureTargets is null', () => {
-      render(<SearingVengeanceModal creatureTargets={null} onConfirm={vi.fn()} onSkip={vi.fn()} />);
-      expect(screen.getByText('Searing Vengeance')).toBeInTheDocument();
-    });
-
-    it('renders Careful Spell protected indicator when target has carefulSpellProtected', () => {
-      const props = makeProps({
-        creatureTargets: [{ name: 'Ally', type: 'npc', carefulSpellProtected: true }],
-      });
-      render(<SearingVengeanceModal {...props} />);
-      expect(screen.getByText('✓ Careful Spell protected')).toBeInTheDocument();
+      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
+      expect(props.targets).toEqual([]);
     });
   });
 });

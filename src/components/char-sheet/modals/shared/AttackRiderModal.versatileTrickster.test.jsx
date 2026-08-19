@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AttackRiderModal from './AttackRiderModal.jsx';
@@ -60,8 +61,13 @@ describe('AttackRiderModal - Versatile Trickster', () => {
       });
     });
 
-    it('shows Versatile Trickster target selection after apply when secondary targets exist', async () => {
+    it('completes the full Versatile Trickster flow: apply option → select target → confirm → result → close', async () => {
       const onClose = vi.fn();
+      applyVersatileTrickster.mockResolvedValue({
+        type: 'popup',
+        payload: { type: 'automation_info', name: 'Trip', description: 'Secondary target tripped.' },
+      });
+
       render(<AttackRiderModal {...makeProps({ onClose })} />);
       selectSingleOption('Burning Hands');
       clickApplySingle();
@@ -71,13 +77,9 @@ describe('AttackRiderModal - Versatile Trickster', () => {
         expect(screen.getByText('Orc A')).toBeInTheDocument();
         expect(screen.getByText('Orc B')).toBeInTheDocument();
       });
-    });
 
-    it('calls applyRiderOption with the selected option before showing target selection', async () => {
-      const onClose = vi.fn();
-      render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
+      selectSecondaryTarget('Orc A');
+      fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
 
       await waitFor(() => {
         expect(applyRiderOption).toHaveBeenCalledWith(
@@ -87,98 +89,12 @@ describe('AttackRiderModal - Versatile Trickster', () => {
           'Goblin A',
           ['Burning Hands']
         );
-      });
-    });
-
-    it('selects a Versatile Trickster target and enables the confirm button', async () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        selectSecondaryTarget('Orc A');
-      });
-
-      await waitFor(() => {
-        const tripBtn = screen.getByRole('button', { name: /Trip Secondary Target/ });
-        expect(tripBtn).not.toBeDisabled();
-      });
-    });
-
-    it('calls applyVersatileTrickster with the correct action and target when confirmed', async () => {
-      const onClose = vi.fn();
-      applyVersatileTrickster.mockResolvedValue({
-        type: 'popup',
-        payload: { type: 'automation_info', name: 'Trip', description: 'Secondary target tripped.' },
-      });
-
-      render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        selectSecondaryTarget('Orc A');
-      });
-
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
-      });
-
-      await waitFor(() => {
         expect(applyVersatileTrickster).toHaveBeenCalledWith(
           mockVtAction,
           expect.any(Object),
           'test-campaign',
           'Orc A'
         );
-      });
-    });
-
-    it('shows result screen and Done button after applying versatile trickster', async () => {
-      const onClose = vi.fn();
-      applyVersatileTrickster.mockResolvedValue({
-        type: 'popup',
-        payload: { type: 'automation_info', name: 'Trip', description: 'Secondary target tripped.' },
-      });
-
-      render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        selectSecondaryTarget('Orc A');
-      });
-
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Versatile Trickster')).toBeInTheDocument();
-        expect(screen.getByText('Done')).toBeInTheDocument();
-      });
-    });
-
-    it('calls onClose when Done is clicked after versatile trickster', async () => {
-      const onClose = vi.fn();
-      applyVersatileTrickster.mockResolvedValue({
-        type: 'popup',
-        payload: { type: 'automation_info', name: 'Trip', description: 'Secondary target tripped.' },
-      });
-
-      render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        selectSecondaryTarget('Orc A');
-      });
-
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Trip Secondary Target/ }));
-      });
-
-      await waitFor(() => {
         expect(screen.getByText('Done')).toBeInTheDocument();
       });
 
@@ -201,22 +117,11 @@ describe('AttackRiderModal - Versatile Trickster', () => {
       expect(applyVersatileTrickster).not.toHaveBeenCalled();
     });
 
-    it('does NOT show Versatile Trickster when no secondary targets exist', async () => {
-      getRuntimeValue.mockReturnValue(null);
-      applyRiderOption.mockResolvedValue(defaultResult);
-
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands');
-      clickApplySingle();
-
-      await waitFor(() => {
-        expect(screen.getByText('Effect applied successfully.')).toBeInTheDocument();
-        expect(screen.queryByText('Versatile Trickster')).not.toBeInTheDocument();
-      });
-    });
-
-    it('does NOT show Versatile Trickster when secondary targets array is empty', async () => {
-      getRuntimeValue.mockReturnValue([]);
+    it.each([
+      { description: 'no secondary targets exist', value: null },
+      { description: 'secondary targets array is empty', value: [] },
+    ])('does NOT show Versatile Trickster when %s', async ({ value }) => {
+      getRuntimeValue.mockReturnValue(value);
 
       render(<AttackRiderModal {...makeProps()} />);
       selectSingleOption('Burning Hands');

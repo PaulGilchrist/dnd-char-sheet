@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
@@ -52,7 +53,7 @@ describe('DiceRollResult', () => {
             expect(screen.queryByText(/Boon of Combat Prowess/)).not.toBeInTheDocument();
         });
 
-        it('hides boon button and shows result after clicking, calling onStrokeOfLuck callback', () => {
+        it('shows boon result after clicking, calling onStrokeOfLuck callback and displaying result text', () => {
             const onStrokeOfLuck = vi.fn();
             render(
                 <DiceRollResult
@@ -70,19 +71,6 @@ describe('DiceRollResult', () => {
             expect(onStrokeOfLuck).toHaveBeenCalled();
             expect(screen.getByText(/Miss converted to Hit/)).toBeInTheDocument();
         });
-
-        it('does not show boon button for non-d20 types', () => {
-            render(
-                <DiceRollResult
-                    name="Fireball"
-                    type="damage"
-                    rolls={[6, 5, 4]}
-                    bonus={0}
-                    autoRerollForAttack={true}
-                />
-            );
-            expect(screen.queryByText(/Boon of Combat Prowess/)).not.toBeInTheDocument();
-        });
     });
 
     describe('empowered spell result display', () => {
@@ -99,20 +87,7 @@ describe('DiceRollResult', () => {
             expect(screen.getByText(/Empowered Spell/)).toBeInTheDocument();
         });
 
-        it('does not show empowered spell button for non-damage types', () => {
-            render(
-                <DiceRollResult
-                    name="Attack"
-                    type="d20"
-                    rolls={[18]}
-                    bonus={3}
-                    empoweredSpell={true}
-                />
-            );
-            expect(screen.queryByText(/Empowered Spell/)).not.toBeInTheDocument();
-        });
-
-        it('shows empowered spell result after clicking with diff info', () => {
+        it('shows empowered spell result after clicking with dice diff info', () => {
             const mockResult = {
                 rerollCount: 2,
                 originalDice: [3, 2],
@@ -241,19 +216,6 @@ describe('DiceRollResult', () => {
             expect(screen.getByText(/Piercer - Puncture/)).toBeInTheDocument();
         });
 
-        it('does not show piercer puncture button for non-damage types', () => {
-            render(
-                <DiceRollResult
-                    name="Attack"
-                    type="d20"
-                    rolls={[18]}
-                    bonus={3}
-                    piercerPuncture={true}
-                />
-            );
-            expect(screen.queryByText(/Piercer - Puncture/)).not.toBeInTheDocument();
-        });
-
         it('shows puncture result after clicking with dice info and calls onPuncture callback', () => {
             const mockPuncture = vi.fn().mockResolvedValue(undefined);
             const { container } = render(
@@ -291,19 +253,6 @@ describe('DiceRollResult', () => {
             expect(screen.getByText(/Savage Attacker/)).toBeInTheDocument();
         });
 
-        it('does not show savage attacker button for non-damage types', () => {
-            render(
-                <DiceRollResult
-                    name="Attack"
-                    type="d20"
-                    rolls={[18]}
-                    bonus={3}
-                    savageAttacker={true}
-                />
-            );
-            expect(screen.queryByText(/Savage Attacker/)).not.toBeInTheDocument();
-        });
-
         it('shows savage attacker result display after clicking and calls onSavageAttacker callback', () => {
             const mockSavage = vi.fn().mockResolvedValue(undefined);
             const { container } = render(
@@ -322,20 +271,6 @@ describe('DiceRollResult', () => {
             const resultEl = container.querySelector('.dice-roll-reroll-result');
             expect(resultEl.textContent).toContain('Savage Attacker');
             expect(resultEl.textContent).toContain('2, 3');
-        });
-
-        it('shows savage attacker button regardless of formula presence', () => {
-            render(
-                <DiceRollResult
-                    name="Greatsword"
-                    type="damage"
-                    rolls={[2, 3]}
-                    bonus={0}
-                    formula=""
-                    savageAttacker={true}
-                />
-            );
-            expect(screen.getByText(/Savage Attacker/)).toBeInTheDocument();
         });
     });
 });

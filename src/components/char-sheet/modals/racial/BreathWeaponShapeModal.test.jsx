@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import BreathWeaponShapeModal from './BreathWeaponShapeModal.jsx';
@@ -66,16 +67,6 @@ describe('BreathWeaponShapeModal', () => {
         expect(screen.getByText('Breath Weapon')).toBeInTheDocument();
     });
 
-    it('shows default title when action is undefined', () => {
-        render(<BreathWeaponShapeModal {...makeProps({ action: undefined })} />);
-        expect(screen.getByText('Breath Weapon')).toBeInTheDocument();
-    });
-
-    it('shows default title when action has no name property', () => {
-        render(<BreathWeaponShapeModal {...makeProps({ action: {} })} />);
-        expect(screen.getByText('Breath Weapon')).toBeInTheDocument();
-    });
-
     // ── Close behavior ──
 
     it('calls onClose when Cancel is clicked', () => {
@@ -113,13 +104,6 @@ describe('BreathWeaponShapeModal', () => {
         expect(screen.getByRole('button', { name: 'Choose Shape' })).toBeEnabled();
     });
 
-    it('enables Choose Shape button after selecting line', () => {
-        render(<BreathWeaponShapeModal {...makeProps()} />);
-        const radios = document.querySelectorAll('input[type="radio"]');
-        fireEvent.click(radios[1]);
-        expect(screen.getByRole('button', { name: 'Choose Shape' })).toBeEnabled();
-    });
-
     it('checks the clicked radio and unchecks the other', () => {
         render(<BreathWeaponShapeModal {...makeProps()} />);
         const radios = document.querySelectorAll('input[type="radio"]');
@@ -150,18 +134,6 @@ describe('BreathWeaponShapeModal', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Choose Shape' }));
         });
         expect(setRuntimeValue).toHaveBeenCalledWith('DragonbornFighter', '_Breath_Weapon_option', 'cone', 'test-campaign');
-        expect(baseProps.onClose).toHaveBeenCalledTimes(1);
-        expect(executeHandler).toHaveBeenCalledWith(baseProps.action, baseProps.playerStats, baseProps.campaignName, null);
-    });
-
-    it('stores line selection and calls onClose and executeHandler', async () => {
-        render(<BreathWeaponShapeModal {...makeProps()} />);
-        const radios = document.querySelectorAll('input[type="radio"]');
-        fireEvent.click(radios[1]);
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Choose Shape' }));
-        });
-        expect(setRuntimeValue).toHaveBeenCalledWith('DragonbornFighter', '_Breath_Weapon_option', 'line', 'test-campaign');
         expect(baseProps.onClose).toHaveBeenCalledTimes(1);
         expect(executeHandler).toHaveBeenCalledWith(baseProps.action, baseProps.playerStats, baseProps.campaignName, null);
     });

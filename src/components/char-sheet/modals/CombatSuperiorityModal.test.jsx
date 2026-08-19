@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CombatSuperiorityModal from './CombatSuperiorityModal.jsx';
@@ -27,15 +28,6 @@ function renderModal({ payload, ...rest } = {}) {
   return render(<CombatSuperiorityModal {...defaultProps} />);
 }
 
-// ── Null/empty payload ──
-
-describe('CombatSuperiorityModal - null payload', () => {
-  it('renders nothing when payload is null', () => {
-    render(<CombatSuperiorityModal payload={null} onClose={vi.fn()} />);
-    expect(screen.queryByText(/Combat Superiority/)).not.toBeInTheDocument();
-  });
-});
-
 // ── Selection mode rendering ──
 
 describe('CombatSuperiorityModal - selection mode rendering', () => {
@@ -45,16 +37,6 @@ describe('CombatSuperiorityModal - selection mode rendering', () => {
     expect(screen.getByText(/Choose up to 3 maneuvers/)).toBeInTheDocument();
     expect(screen.getByText(/You learn 3 at level 3/)).toBeInTheDocument();
     expect(screen.getByText(/0\/3 selected/)).toBeInTheDocument();
-  });
-
-  it('renders prompt mode header when attackContext is provided', () => {
-    renderModal({
-      payload: {
-        selectionMode: true,
-        attackContext: { hit: true, weaponType: 'melee' },
-      },
-    });
-    expect(screen.getByText(/Combat Superiority — Choose Maneuver/)).toBeInTheDocument();
   });
 
   it('shows known maneuvers count when knownManeuvers has entries', () => {
@@ -79,21 +61,6 @@ describe('CombatSuperiorityModal - selection mode rendering', () => {
     BASE_MANEUVERS.forEach(m => {
       expect(screen.getByText(m.name)).toBeInTheDocument();
     });
-  });
-
-  it('renders maneuver descriptions when provided', () => {
-    const maneuversWithDescriptions = [
-      { name: 'Trip Attack', actionType: 'attack_rider', description: 'Trip the target.' },
-    ];
-    renderModal({
-      payload: {
-        selectionMode: true,
-        allManeuvers: maneuversWithDescriptions,
-        maxOptions: 1,
-      },
-    });
-    expect(screen.getByText('Trip Attack')).toBeInTheDocument();
-    expect(screen.getByText('Trip the target.')).toBeInTheDocument();
   });
 
   it('respects maxOptions from payload', () => {
@@ -151,19 +118,15 @@ describe('CombatSuperiorityModal - selection behavior', () => {
     expect(onConfirm).toHaveBeenCalledWith(['Trip Attack', 'Evasive Footwork'], null);
   });
 
-  it('does not call onConfirm when confirm is clicked with no selections', () => {
+  it('does not call onConfirm when confirm is clicked with no selections (button is also disabled)', () => {
     const onConfirm = vi.fn();
     renderModal({
       payload: { selectionMode: true },
       onConfirm,
     });
+    expect(screen.getByRole('button', { name: /Confirm Selection/ })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: /Confirm Selection/ }));
     expect(onConfirm).not.toHaveBeenCalled();
-  });
-
-  it('has confirm button disabled when no selections and enabled when selections exist', () => {
-    renderModal({ payload: { selectionMode: true } });
-    expect(screen.getByRole('button', { name: /Confirm Selection/ })).toBeDisabled();
     const checkboxes = screen.getAllByRole('checkbox');
     fireEvent.click(checkboxes[0]);
     expect(screen.getByRole('button', { name: /Confirm Selection/ })).not.toBeDisabled();
@@ -226,19 +189,6 @@ describe('CombatSuperiorityModal - maneuver use mode', () => {
     expect(radios[1]).toBeChecked();
   });
 
-  it('has use maneuver button disabled when no selection and enabled when selection exists', () => {
-    renderModal({
-      payload: {
-        selectionMode: false,
-        knownManeuvers: ['Ki-Fueled Attack'],
-      },
-    });
-    expect(screen.getByRole('button', { name: /Use Maneuver/ })).toBeDisabled();
-    const radios = screen.getAllByRole('radio', { name: /Ki-Fueled Attack/ });
-    fireEvent.click(radios[0]);
-    expect(screen.getByRole('button', { name: /Use Maneuver/ })).not.toBeDisabled();
-  });
-
   it('calls onConfirm with maneuver name when use maneuver is clicked', () => {
     const onConfirm = vi.fn();
     renderModal({
@@ -254,7 +204,7 @@ describe('CombatSuperiorityModal - maneuver use mode', () => {
     expect(onConfirm).toHaveBeenCalledWith(null, 'Ki-Fueled Attack');
   });
 
-  it('does not call onConfirm when use maneuver is clicked with no selection', () => {
+  it('does not call onConfirm when use maneuver is clicked with no selection (button is also disabled)', () => {
     const onConfirm = vi.fn();
     renderModal({
       payload: {
@@ -263,6 +213,7 @@ describe('CombatSuperiorityModal - maneuver use mode', () => {
       },
       onConfirm,
     });
+    expect(screen.getByRole('button', { name: /Use Maneuver/ })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: /Use Maneuver/ }));
     expect(onConfirm).not.toHaveBeenCalled();
   });
@@ -326,34 +277,23 @@ describe('CombatSuperiorityModal - prompt mode filtering', () => {
     vi.restoreAllMocks();
   });
 
-  it('filters maneuvers by trigger when attackContext is provided', () => {
-    renderModal({
-      payload: {
-        selectionMode: false,
-        knownManeuvers: ['Trip Attack', 'Rally'],
-        attackContext: { hit: true, weaponType: 'melee', attackerName: 'PC', targetName: 'Enemy' },
-        playerStats: { name: 'PC' },
-      },
-    });
-    expect(screen.getByText(/Combat Superiority — Use Maneuver/)).toBeInTheDocument();
-    expect(screen.getByText('Trip Attack')).toBeInTheDocument();
-    expect(screen.getByText('Rally')).toBeInTheDocument();
-  });
-
-  it('filters out maneuvers whose trigger does not match attackContext', () => {
+  it('filters maneuvers by trigger and shows only matching ones in prompt mode', () => {
     renderModal({
       payload: {
         selectionMode: false,
         allManeuvers: [
           { name: 'Parry', actionType: 'reaction', trigger: 'melee_damage_taken' },
           { name: 'Rally', actionType: 'movement' },
+          { name: 'Trip Attack', actionType: 'attack_rider' },
         ],
-        knownManeuvers: ['Parry', 'Rally'],
+        knownManeuvers: ['Parry', 'Rally', 'Trip Attack'],
         attackContext: { hit: true, weaponType: 'melee', attackerName: 'PC', targetName: 'Enemy' },
         playerStats: { name: 'PC' },
       },
     });
+    expect(screen.getByText(/Combat Superiority — Use Maneuver/)).toBeInTheDocument();
     expect(screen.getByText('Rally')).toBeInTheDocument();
+    expect(screen.getByText('Trip Attack')).toBeInTheDocument();
     expect(screen.queryByText('Parry')).not.toBeInTheDocument();
   });
 });

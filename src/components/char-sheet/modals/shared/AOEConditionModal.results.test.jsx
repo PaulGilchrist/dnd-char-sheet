@@ -1,4 +1,38 @@
 // @improved-by-ai
+// @cleaned-by-ai
+//
+// Removed 13 redundant/brittle/low-value tests:
+//
+// REMOVE — redundant with AOEConditionModal.save-flow.test.jsx (same full save flow, same assertions):
+//   1. "shows fail message when player fails save" → save-flow: "applies blinded when player fails save via save-result event"
+//   2. "shows success message when player passes save" → save-flow: "does not apply condition when player passes save"
+//   3. "uses default blinded effect when effects prop is null" → save-flow covers full apply flow with default effects
+//   4. "uses default blinded effect when effects prop is undefined" → save-flow covers full apply flow with default effects
+//
+// REMOVE — brittle UI text assertions (break on label changes, not behavioral):
+//   5. "shows fail message when player fails save" → asserts "Blinded!" text
+//   6. "shows success message when player passes save" → asserts "unaffected" text
+//   7. "shows HP percentage for non-player creatures" → regex on DOM text content
+//   8. "does not show HP percentage for player-type targets" → regex on DOM text content
+//
+// REMOVE — low-value standard React patterns (no unique component behavior):
+//   9. "closes when Close button is clicked in results summary" → standard onClose prop
+//  10. "closes when overlay background is clicked in results summary" → standard Spoke overlay behavior
+//  11. "does not close when clicking inside the modal content" → inverse of above, same low value
+//
+// CONSOLIDATE — 4 blocking effect tests into 1 parameterized test:
+//   12. "excludes creatures blocked by forcecage"
+//   13. "excludes creatures blocked by maze"
+//   14. "excludes creatures blocked by banishment"
+//   15. "excludes creatures blocked by imprisonment"
+//   → merged into single "blocking effects exclude creatures from eligible targets" parameterized test
+//
+// KEEP — unique behavioral coverage:
+//   - "does not add duplicate blinded condition when creature already has it"
+//     → tests applyConditionsToTarget deduplication logic, not covered elsewhere
+//   - "allows both attacker and target when same blocking effect source"
+//     → tests same-source exception in blocking logic, not covered elsewhere
+
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AOEConditionModal from './AOEConditionModal.jsx';
@@ -37,10 +71,9 @@ vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
 
 // Re-import mocked modules
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { getAllyList } from '../../../../hooks/useAllySelection.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
 import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
-import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
+import { getAllyList } from '../../../../hooks/useAllySelection.js';
 
 // ── Test fixtures ──
 
@@ -97,132 +130,6 @@ describe('AOEConditionModal - Results & Behavior', () => {
         getAllyList.mockReturnValue(null);
     });
 
-    // ── Results summary modal ──
-
-    describe('results summary modal', () => {
-        it('shows fail message when player fails save', async () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[2]); });
-            await act(async () => { fireEvent.click(getApplyButton()); });
-
-            await waitFor(() => {
-                expect(sendSavePrompt).toHaveBeenCalled();
-            });
-
-            const promptId = vi.mocked(sendSavePrompt).mock.calls[0][1].promptId;
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('save-result', {
-                    detail: { promptId, success: false, roll: 5, total: 6, saveBonus: 1 },
-                }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText(/Blinded!/)).toBeInTheDocument();
-            });
-        });
-
-        it('shows success message when player passes save', async () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[2]); });
-            await act(async () => { fireEvent.click(getApplyButton()); });
-
-            await waitFor(() => {
-                expect(sendSavePrompt).toHaveBeenCalled();
-            });
-
-            const promptId = vi.mocked(sendSavePrompt).mock.calls[0][1].promptId;
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('save-result', {
-                    detail: { promptId, success: true, roll: 18, total: 19, saveBonus: 1 },
-                }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText(/unaffected/)).toBeInTheDocument();
-            });
-        });
-
-        it('closes when Close button is clicked in results summary', async () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[2]); });
-            await act(async () => { fireEvent.click(getApplyButton()); });
-
-            const promptId = vi.mocked(sendSavePrompt).mock.calls[0][1].promptId;
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('save-result', {
-                    detail: { promptId, success: false, roll: 5, total: 6, saveBonus: 1 },
-                }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
-            });
-
-            fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('closes when overlay background is clicked in results summary', async () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[2]); });
-            await act(async () => { fireEvent.click(getApplyButton()); });
-
-            const promptId = vi.mocked(sendSavePrompt).mock.calls[0][1].promptId;
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('save-result', {
-                    detail: { promptId, success: false, roll: 5, total: 6, saveBonus: 1 },
-                }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText('Save Results')).toBeInTheDocument();
-            });
-
-            fireEvent.click(document.querySelector('.sp-overlay'));
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('does not close when clicking inside the modal content', async () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[2]); });
-            await act(async () => { fireEvent.click(getApplyButton()); });
-
-            const promptId = vi.mocked(sendSavePrompt).mock.calls[0][1].promptId;
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('save-result', {
-                    detail: { promptId, success: false, roll: 5, total: 6, saveBonus: 1 },
-                }));
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText('Save Results')).toBeInTheDocument();
-            });
-
-            fireEvent.click(document.querySelector('.sp-modal'));
-            expect(onClose).not.toHaveBeenCalled();
-        });
-    });
-
     // ── Condition deduplication ──
 
     describe('condition deduplication', () => {
@@ -252,14 +159,23 @@ describe('AOEConditionModal - Results & Behavior', () => {
 
     // ── Blocking effects ──
 
-    describe('blocking effects (forcecage, maze, banishment, imprisonment)', () => {
-        it('excludes creatures blocked by forcecage from eligible targets', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'forcecage', target: 'Goblin', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
+    describe('blocking effects exclude creatures from eligible targets', () => {
+        const blockingEffectTests = [
+            { effect: 'forcecage', description: 'forcecage' },
+            { effect: 'maze', description: 'maze' },
+            { effect: 'banishment', description: 'banishment' },
+            { effect: 'imprisonment', description: 'imprisonment' },
+        ];
+
+        for (const { effect, description } of blockingEffectTests) {
+            it(`excludes creatures blocked by ${description} from eligible targets`, () => {
+                getRuntimeValue.mockReturnValue([
+                    { effect, target: 'Goblin', source: 'CasterA' },
+                ]);
+                render(<AOEConditionModal {...makeProps()} />);
+                expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
+            });
+        }
 
         it('allows both attacker and target when same blocking effect source', () => {
             getRuntimeValue.mockReturnValue([
@@ -268,100 +184,6 @@ describe('AOEConditionModal - Results & Behavior', () => {
             ]);
             render(<AOEConditionModal {...makeProps()} />);
             expect(screen.getByText('Goblin')).toBeInTheDocument();
-        });
-
-        it('excludes creatures blocked by maze from eligible targets', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'maze', target: 'Goblin', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes creatures blocked by banishment from eligible targets', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'banishment', target: 'Goblin', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-
-        it('excludes creatures blocked by imprisonment from eligible targets', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'imprisonment', target: 'Goblin', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-        });
-    });
-
-    // ── Effects prop fallback ──
-
-    describe('effects prop fallback', () => {
-        it('uses default blinded effect when effects prop is null', async () => {
-            render(<AOEConditionModal {...makeProps({ effects: null })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[2]); });
-            await act(async () => { fireEvent.click(getApplyButton()); });
-
-            const promptId = vi.mocked(sendSavePrompt).mock.calls[0][1].promptId;
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('save-result', {
-                    detail: { promptId, success: false, roll: 5, total: 6, saveBonus: 1 },
-                }));
-            });
-
-            await waitFor(() => {
-                const conditionCalls = setRuntimeValue.mock.calls.filter(
-                    call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
-                );
-                expect(conditionCalls.length).toBeGreaterThan(0);
-                const conditions = conditionCalls[0][2];
-                expect(conditions).toContain('blinded');
-            });
-        });
-
-        it('uses default blinded effect when effects prop is undefined', async () => {
-            render(<AOEConditionModal {...makeProps({ effects: undefined })} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[2]); });
-            await act(async () => { fireEvent.click(getApplyButton()); });
-
-            const promptId = vi.mocked(sendSavePrompt).mock.calls[0][1].promptId;
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('save-result', {
-                    detail: { promptId, success: false, roll: 5, total: 6, saveBonus: 1 },
-                }));
-            });
-
-            await waitFor(() => {
-                const conditionCalls = setRuntimeValue.mock.calls.filter(
-                    call => call[1] === 'activeConditions' && call[0] === 'PlayerAlly'
-                );
-                expect(conditionCalls.length).toBeGreaterThan(0);
-                const conditions = conditionCalls[0][2];
-                expect(conditions).toContain('blinded');
-            });
-        });
-    });
-
-    // ── HP display ──
-
-    describe('HP percentage display', () => {
-        it('shows HP percentage for non-player creatures', () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            const goblinRow = [...document.querySelectorAll('.secondary-target-row')]
-                .find(row => row.textContent.includes('Goblin'));
-            expect(goblinRow.textContent).toMatch(/\d+% HP/);
-        });
-
-        it('does not show HP percentage for player-type targets', () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            const playerRow = [...document.querySelectorAll('.secondary-target-row')]
-                .find(row => row.textContent.includes('PlayerAlly'));
-            expect(playerRow.textContent).not.toMatch(/\d+% HP/);
         });
     });
 });

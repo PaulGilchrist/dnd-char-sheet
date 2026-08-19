@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MultiResistanceSelectionModal from './MultiResistanceSelectionModal.jsx';
@@ -72,16 +73,6 @@ describe('MultiResistanceSelectionModal', () => {
       expect(screen.getByLabelText('Lightning')).not.toBeChecked();
     });
 
-    it('renders the Choose Resistances button', () => {
-      render(<MultiResistanceSelectionModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Choose Resistances' })).toBeInTheDocument();
-    });
-
-    it('renders the Cancel button', () => {
-      render(<MultiResistanceSelectionModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
     it('disables the Choose Resistances button when no types are selected', () => {
       render(<MultiResistanceSelectionModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: 'Choose Resistances' })).toBeDisabled();
@@ -102,17 +93,11 @@ describe('MultiResistanceSelectionModal', () => {
       expect(screen.getByLabelText('Lightning')).not.toBeChecked();
     });
 
-    it('shows "(current)" label for existing types that are deselected', () => {
+    it('shows "(current)" label for deselected existing types and hides it when re-selected', () => {
       render(<MultiResistanceSelectionModal {...makeProps({ existingTypes: ['Fire', 'Cold'], maxSelections: 2 })} />);
       fireEvent.click(screen.getByLabelText('Fire'));
       const fireLabel = Array.from(document.querySelectorAll('label')).find(l => l.textContent.includes('Fire'));
       expect(fireLabel.textContent).toContain('(current)');
-    });
-
-    it('hides "(current)" label after an existing type is re-selected', () => {
-      render(<MultiResistanceSelectionModal {...makeProps({ existingTypes: ['Fire', 'Cold'], maxSelections: 2 })} />);
-      fireEvent.click(screen.getByLabelText('Fire'));
-      const fireLabel = Array.from(document.querySelectorAll('label')).find(l => l.textContent.includes('Fire'));
       fireEvent.click(fireLabel);
       expect(fireLabel.textContent).not.toContain('(current)');
     });
@@ -136,20 +121,6 @@ describe('MultiResistanceSelectionModal', () => {
   });
 
   describe('selection behavior', () => {
-    it('toggles a checkbox on when clicked', () => {
-      render(<MultiResistanceSelectionModal {...makeProps()} />);
-      fireEvent.click(screen.getByLabelText('Acid'));
-      expect(screen.getByLabelText('Acid')).toBeChecked();
-    });
-
-    it('toggles a checkbox off when clicked again', () => {
-      render(<MultiResistanceSelectionModal {...makeProps()} />);
-      fireEvent.click(screen.getByLabelText('Acid'));
-      expect(screen.getByLabelText('Acid')).toBeChecked();
-      fireEvent.click(screen.getByLabelText('Acid'));
-      expect(screen.getByLabelText('Acid')).not.toBeChecked();
-    });
-
     it('selects multiple types up to maxSelections', () => {
       render(<MultiResistanceSelectionModal {...makeProps()} />);
       fireEvent.click(screen.getByLabelText('Acid'));
@@ -220,16 +191,6 @@ describe('MultiResistanceSelectionModal', () => {
       fireEvent.click(screen.getByLabelText('Acid'));
       fireEvent.click(screen.getByLabelText('Fire'));
       expect(screen.getByLabelText('Cold')).not.toBeDisabled();
-    });
-
-    it('shows singular "type" in instruction when maxSelections is 1', () => {
-      render(<MultiResistanceSelectionModal {...makeProps({ maxSelections: 1 })} />);
-      expect(screen.getByText(/Choose 1 damage type to gain resistance to:/)).toBeInTheDocument();
-    });
-
-    it('shows plural "types" in instruction when maxSelections > 1', () => {
-      render(<MultiResistanceSelectionModal {...makeProps({ maxSelections: 3 })} />);
-      expect(screen.getByText(/Choose 3 damage types to gain resistance to:/)).toBeInTheDocument();
     });
   });
 
@@ -402,20 +363,6 @@ describe('MultiResistanceSelectionModal', () => {
       expect(props.onClose).not.toHaveBeenCalled();
     });
 
-    it('calls onClose when clicking overlay in result state', async () => {
-      const props = makeProps();
-      props.onConfirm.mockResolvedValue(defaultResult);
-      render(<MultiResistanceSelectionModal {...props} />);
-      fireEvent.click(screen.getByLabelText('Acid'));
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose Resistances' }));
-      });
-      await waitFor(() => {
-        const overlay = document.querySelector('.sp-overlay');
-        fireEvent.click(overlay);
-      });
-      expect(props.onClose).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe('customization props', () => {

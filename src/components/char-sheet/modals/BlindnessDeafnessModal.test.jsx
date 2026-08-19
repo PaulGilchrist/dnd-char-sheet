@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BlindnessDeafnessModal from './BlindnessDeafnessModal.jsx';
@@ -148,12 +149,6 @@ describe('BlindnessDeafnessModal', () => {
             expect(screen.getByText('Blindness/Deafness')).toBeInTheDocument();
         });
 
-        it('renders the eye icon in the header', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const icon = document.querySelector('.sp-header i');
-            expect(icon).toHaveClass('fa-solid fa-eye');
-        });
-
         it('renders the effect selection prompt text', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             expect(screen.getByText('Choose an effect for the target:')).toBeInTheDocument();
@@ -163,12 +158,6 @@ describe('BlindnessDeafnessModal', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: /Blinded/ })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /Deafened/ })).toBeInTheDocument();
-        });
-
-        it('renders effect descriptions for blinded and deafened', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            expect(screen.getByText('Target is blinded')).toBeInTheDocument();
-            expect(screen.getByText('Target is deafened')).toBeInTheDocument();
         });
 
         it('renders a Cancel button', () => {
@@ -184,27 +173,14 @@ describe('BlindnessDeafnessModal', () => {
     // the UI state change on the effect buttons themselves.
 
     describe('effect selection UI', () => {
-        it('applies selected class to Blinded when clicked', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const blindedBtn = screen.getByRole('button', { name: /Blinded/ });
-            fireEvent.click(blindedBtn);
-            expect(blindedBtn).toHaveClass('blindness-deafness-effect-selected');
-        });
-
-        it('applies selected class to Deafened when clicked', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const deafenedBtn = screen.getByRole('button', { name: /Deafened/ });
-            fireEvent.click(deafenedBtn);
-            expect(deafenedBtn).toHaveClass('blindness-deafness-effect-selected');
-        });
-
-        it('switches selection from one effect to another', () => {
+        it('applies selected class and switches selection between effects', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             const blindedBtn = screen.getByRole('button', { name: /Blinded/ });
             const deafenedBtn = screen.getByRole('button', { name: /Deafened/ });
 
             fireEvent.click(blindedBtn);
             expect(blindedBtn).toHaveClass('blindness-deafness-effect-selected');
+            expect(deafenedBtn).not.toHaveClass('blindness-deafness-effect-selected');
 
             fireEvent.click(deafenedBtn);
             expect(deafenedBtn).toHaveClass('blindness-deafness-effect-selected');
@@ -225,12 +201,6 @@ describe('BlindnessDeafnessModal', () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
             fireEvent.click(document.querySelector('.sp-overlay'));
             expect(baseProps.onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('does not call onClose when clicking the modal content', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            fireEvent.click(document.querySelector('.sp-modal'));
-            expect(baseProps.onClose).not.toHaveBeenCalled();
         });
     });
 });

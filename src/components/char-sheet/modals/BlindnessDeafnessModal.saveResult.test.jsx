@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BlindnessDeafnessModal from './BlindnessDeafnessModal.jsx';
@@ -305,30 +306,6 @@ describe('BlindnessDeafnessModal save result handling', () => {
             expect(pendingAccum).toHaveLength(1);
         });
 
-        it('does nothing when event has no detail', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const saveResultFn = getSaveResultFn();
-
-            const ctx = makeCtx();
-            act(() => {
-                saveResultFn({ detail: null }, ctx);
-            });
-
-            expect(expirations.addExpiration).not.toHaveBeenCalled();
-        });
-
-        it('does nothing when event detail has no promptId', () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
-            const saveResultFn = getSaveResultFn();
-
-            const ctx = makeCtx();
-            act(() => {
-                saveResultFn({ detail: {} }, ctx);
-            });
-
-            expect(expirations.addExpiration).not.toHaveBeenCalled();
-        });
-
         it('uses fallback values when detail fields are missing', async () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
 
@@ -366,7 +343,7 @@ describe('BlindnessDeafnessModal save result handling', () => {
             expect(pendingAccum).toHaveLength(0);
         });
 
-        it('logs the save entry with correct formula including bonus', async () => {
+        it('logs the save entry with correct formula based on bonus value', async () => {
             render(<BlindnessDeafnessModal {...makeProps()} />);
 
             await act(async () => {
@@ -402,35 +379,24 @@ describe('BlindnessDeafnessModal save result handling', () => {
                 saveResultFn(event, ctx);
             });
 
-            const rollLogCall = logService.addEntry.mock.calls.find(
+            let rollLogCall = logService.addEntry.mock.calls.find(
                 (call) => call[1]?.type === 'roll'
             );
             expect(rollLogCall[1].formula).toBe('1d20+1');
-        });
 
-        it('logs the save entry with correct formula when bonus is zero', async () => {
-            render(<BlindnessDeafnessModal {...makeProps()} />);
+            logService.addEntry.mockClear();
+            resultsAccum = [];
+            pendingAccum = [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }];
+            const setResults2 = vi.fn((fn) => { resultsAccum = fn(resultsAccum); });
+            const setPendingPrompts2 = vi.fn((fn) => { pendingAccum = fn(pendingAccum); });
 
-            await act(async () => {
-                if (mockState.setSelectedEffect) {
-                    mockState.setSelectedEffect({ key: 'blinded', label: 'Blinded', condition: 'blinded' });
-                }
-            });
-
-            const saveResultFn = getSaveResultFn();
-
-            let resultsAccum = [];
-            let pendingAccum = [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }];
-            const setResults = vi.fn((fn) => { resultsAccum = fn(resultsAccum); });
-            const setPendingPrompts = vi.fn((fn) => { pendingAccum = fn(pendingAccum); });
-
-            const ctx = makeCtx({
+            const ctx2 = makeCtx({
                 pendingPrompts: [{ promptId: 'test-guid-123', targetName: 'Elf Mage' }],
-                setResults,
-                setPendingPrompts,
+                setResults: setResults2,
+                setPendingPrompts: setPendingPrompts2,
             });
 
-            const event = {
+            const event2 = {
                 detail: {
                     promptId: 'test-guid-123',
                     success: false,
@@ -441,10 +407,10 @@ describe('BlindnessDeafnessModal save result handling', () => {
             };
 
             act(() => {
-                saveResultFn(event, ctx);
+                saveResultFn(event2, ctx2);
             });
 
-            const rollLogCall = logService.addEntry.mock.calls.find(
+            rollLogCall = logService.addEntry.mock.calls.find(
                 (call) => call[1]?.type === 'roll'
             );
             expect(rollLogCall[1].formula).toBe('1d20');

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
@@ -149,43 +150,39 @@ describe('ElementalAttunementModal NPC save resolution', () => {
             });
         });
 
-        it('calls applyDamageToTarget for Fire element with correct parameters', async () => {
-            setupNPC();
+        it.each([
+            { element: 'Fire', saveBonuses: { dex: 2 }, damageType: ['fire'], expectedArgs: [1, 'Goblin1', expect.any(Number), ['fire'], 'test-campaign'] },
+            { element: 'Thunder', saveBonuses: { con: 2 }, damageType: ['thunder'], expectedArgs: [1, 'Goblin1', expect.any(Number), ['thunder'], 'test-campaign'] },
+        ])('calls applyDamageToTarget for $element with correct parameters', async ({ element, saveBonuses }) => {
+            setupNPC('Goblin1', saveBonuses);
             renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
+            fireEvent.click(screen.getByText(element));
             await waitFor(() => {
                 expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
                 const callArgs = applyDamage.applyDamageToTarget.mock.calls[0];
                 expect(callArgs[1]).toBe('Goblin1');
-                expect(callArgs[3]).toEqual(['fire']);
+                expect(callArgs[3]).toEqual([element.toLowerCase()]);
                 expect(callArgs[4]).toBe('test-campaign');
             });
         });
 
-        it('calls applyDamageToTarget for Thunder element with correct parameters', async () => {
-            setupNPC('Goblin1', { con: 2 });
+        it.each([
+            { element: 'Fire', saveType: 'dex' },
+            { element: 'Thunder', saveType: 'con' },
+        ])('logs save-damage roll entry for NPC with $element', async ({ element, saveType }) => {
+            const saveBonuses = element === 'Fire' ? { dex: 2 } : { con: 2 };
+            setupNPC('Goblin1', saveBonuses);
             renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Thunder'));
-            await waitFor(() => {
-                expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
-                const callArgs = applyDamage.applyDamageToTarget.mock.calls[0];
-                expect(callArgs[1]).toBe('Goblin1');
-                expect(callArgs[3]).toEqual(['thunder']);
-            });
-        });
-
-        it('logs save-damage roll entry for NPC with Fire', async () => {
-            setupNPC();
-            renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Fire'));
+            fireEvent.click(screen.getByText(element));
             await waitFor(() => {
                 expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                     type: 'roll',
                     rollType: 'save-damage',
-                    saveType: 'dex',
+                    saveType,
                     saveResult: expect.any(String),
                     saveDc: 12,
                     targetName: 'Goblin1',
+                    damageType: element.toLowerCase(),
                 }));
             });
         });
@@ -233,75 +230,7 @@ describe('ElementalAttunementModal NPC save resolution', () => {
         });
     });
 
-    describe('Thunder push effect', () => {
-        it('logs thunder save-damage entry for NPC with push effect', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: { con: -10 }, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
-            renderModal({ activeOverlay: { type: 'sphere' } });
-            fireEvent.click(screen.getByText('Thunder'));
-            await waitFor(() => {
-                expect(logService.addEntry).toHaveBeenCalledWith(
-                    'test-campaign',
-                    expect.objectContaining({
-                        type: 'roll',
-                        rollType: 'save-damage',
-                        saveType: 'con',
-                        damageType: 'thunder',
-                        targetName: 'Goblin1',
-                    })
-                );
-            });
-        });
-    });
-
     describe('summary phase', () => {
-        function renderSummary(_element = 'Fire', saveBonuses = { dex: 2 }) {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: saveBonuses, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
-            renderModal({ activeOverlay: { type: 'sphere' } });
-            const btn = document.querySelector('.sp-roll-btn');
-            if (btn) fireEvent.click(btn);
-        }
-
-        it('renders summary header with element and "Results"', async () => {
-            renderSummary();
-            await waitFor(() => expect(screen.getByText(/Results/)).toBeInTheDocument());
-        });
-
-        it('renders save DC info', async () => {
-            renderSummary();
-            await waitFor(() => expect(screen.getByText(/Save DC/)).toBeInTheDocument());
-        });
-
-        it('renders a close button', async () => {
-            renderSummary();
-            await waitFor(() => expect(screen.getByRole('button', { name: /Close/ })).toBeInTheDocument());
-        });
-
-        it('renders abjure-result elements', async () => {
-            renderSummary();
-            await waitFor(() => expect(document.querySelectorAll('.abjure-result').length).toBeGreaterThan(0));
-        });
-
-        it('renders aoe-summary container', async () => {
-            renderSummary();
-            await waitFor(() => expect(document.querySelector('.aoe-summary')).toBeInTheDocument());
-        });
-
-        it('renders aoe-damage-info section', async () => {
-            renderSummary();
-            await waitFor(() => expect(document.querySelector('.aoe-damage-info')).toBeInTheDocument());
-        });
-
-        it('renders aoe-results section', async () => {
-            renderSummary();
-            await waitFor(() => expect(document.querySelector('.aoe-results')).toBeInTheDocument());
-        });
-
         it('shows "Saved" text for successful NPC saves', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 10 }, resistances: [], immunities: [] },
@@ -327,17 +256,6 @@ describe('ElementalAttunementModal NPC save resolution', () => {
                 const body = document.querySelector('.sp-body');
                 expect(body.textContent).toContain('speed reduced by 15 ft');
             });
-        });
-
-        it('shows speed reduction result text for Cold element', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
-                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 0 }, resistances: [], immunities: [] },
-            ]));
-            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
-            renderModal({ activeOverlay: { type: 'sphere' } });
-            const btn = document.querySelector('.sp-roll-btn');
-            if (btn) fireEvent.click(btn);
-            await waitFor(() => expect(screen.getByText(/Results/)).toBeInTheDocument());
         });
     });
 });

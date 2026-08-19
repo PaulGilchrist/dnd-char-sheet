@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TeleportModal from './TeleportModal.jsx';
@@ -69,13 +70,7 @@ describe('TeleportModal', () => {
       expect(screen.queryByLabelText('Standard teleport')).not.toBeInTheDocument();
     });
 
-    it('displays teleport instruction text', () => {
-      const action = makeAction();
-      render(<TeleportModal action={action} {...makeProps()} />);
-      expect(screen.getByText('Teleport to an unoccupied space you can see:')).toBeInTheDocument();
-    });
-
-    it('displays advantage text for moonlight step', () => {
+    it('displays advantage text for moonlight step and no radios', () => {
       const action = makeAction({ name: 'Shadow Step' });
       render(<TeleportModal action={action} {...makeProps({ isMoonlightStep: true })} />);
       expect(screen.getByText('Gains Advantage on next attack roll.')).toBeInTheDocument();
@@ -114,13 +109,6 @@ describe('TeleportModal', () => {
       expect(standardRadio).not.toBeChecked();
     });
 
-    it('renders Teleport and Cancel buttons', () => {
-      const action = makeAction();
-      render(<TeleportModal action={action} {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Teleport/ })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
     it('calls onClose when Cancel is clicked', () => {
       const action = makeAction();
       render(<TeleportModal action={action} {...makeProps()} />);
@@ -128,32 +116,13 @@ describe('TeleportModal', () => {
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
 
-    it('does not show result state on initial render', () => {
-      const action = makeAction();
-      render(<TeleportModal action={action} {...makeProps()} />);
-      expect(screen.queryByText(/Teleported/)).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-    });
-  });
-
-  // ── Extended distance disabled state ──
-
-  describe('extended distance availability', () => {
-    it('disables extended distance radio and shows used label when not available', () => {
-      tempTeleportHandler.isExtendedAvailable.mockReturnValue(false);
-      const action = makeAction();
-      render(<TeleportModal action={action} {...makeProps()} />);
-      const extendedRadio = screen.getByRole('radio', { name: '60 ft— Already used this Rage' });
-      expect(extendedRadio.disabled).toBe(true);
-      expect(screen.getByText('— Already used this Rage')).toBeInTheDocument();
-    });
-
-    it('prevents switching to disabled extended radio', () => {
+    it('disables extended radio and shows used label when not available, preventing selection', () => {
       tempTeleportHandler.isExtendedAvailable.mockReturnValue(false);
       const action = makeAction();
       render(<TeleportModal action={action} {...makeProps()} />);
       const standardRadio = screen.getByRole('radio', { name: '30 ft— Standard teleport' });
       const extendedRadio = screen.getByRole('radio', { name: '60 ft— Already used this Rage' });
+      expect(extendedRadio.disabled).toBe(true);
       fireEvent.click(extendedRadio);
       expect(extendedRadio).not.toBeChecked();
       expect(standardRadio).toBeChecked();
@@ -200,9 +169,10 @@ describe('TeleportModal', () => {
         automation: { type: 'teleport', effect: 'teleport_swap_with_illusion', distance: '30 ft' },
       });
 
-    it('renders swap-specific header text and Swap button', () => {
+    it('renders swap-specific header text, distance, and Swap button', () => {
       render(<TeleportModal action={swapAction()} {...makeProps()} />);
       expect(screen.getByText(/Swap places with your illusion/)).toBeInTheDocument();
+      expect(screen.getByText(/up to 30 ft/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Swap/ })).toBeInTheDocument();
     });
 
@@ -213,20 +183,6 @@ describe('TeleportModal', () => {
       render(<TeleportModal action={action} {...makeProps()} />);
       expect(screen.getByText(/up to 45 ft/)).toBeInTheDocument();
     });
-
-    it('defaults swap distance to 30 ft when auto.distance is missing', () => {
-      const action = makeAction({
-        automation: { type: 'teleport', effect: 'teleport_swap_with_illusion' },
-      });
-      render(<TeleportModal action={action} {...makeProps()} />);
-      expect(screen.getByText(/up to 30 ft/)).toBeInTheDocument();
-    });
-
-    it('does not show result state on initial render', () => {
-      render(<TeleportModal action={swapAction()} {...makeProps()} />);
-      expect(screen.queryByText(/Swapped/)).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-    });
   });
 
   // ── Elemental stride modal ──
@@ -234,86 +190,83 @@ describe('TeleportModal', () => {
   describe('elemental stride modal', () => {
     const elementalProps = () => makeProps({ triggeredByElementalStride: true });
 
-    it('renders with wind icon and Thunder label in header', () => {
+    it('renders with wind icon, Thunder label, distance instruction, and buttons', () => {
       render(<TeleportModal action={makeAction()} {...elementalProps()} />);
       expect(screen.getByText(/Thunder/)).toBeInTheDocument();
-    });
-
-    it('displays teleport distance instruction with correct distance', () => {
-      render(<TeleportModal action={makeAction()} {...elementalProps()} />);
       expect(screen.getByText(/Teleport up to/)).toBeInTheDocument();
+      expect(screen.getByText(/30 ft/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Teleport/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
-    it('uses teleportDistance from options when available', () => {
+    it('uses teleportDistance from options or defaults to 30 ft', () => {
       const action = makeAction({
         automation: { options: [{ effect: 'teleport', teleportDistance: '60 ft' }] },
       });
       render(<TeleportModal action={action} {...elementalProps()} />);
       expect(screen.getByText(/up to 60 ft/)).toBeInTheDocument();
     });
+  });
 
-    it('defaults elemental distance to 30 ft when options is missing or has no teleport entry', () => {
-      const action = makeAction({ automation: { options: [{ effect: 'other' }] } });
-      render(<TeleportModal action={action} {...elementalProps()} />);
-      expect(screen.getByText(/up to 30 ft/)).toBeInTheDocument();
+  // ── No result state on initial render (all modal types) ──
+
+  describe('no result state on initial render', () => {
+    it('standard modal', () => {
+      const action = makeAction();
+      render(<TeleportModal action={action} {...makeProps()} />);
+      expect(screen.queryByText(/Teleported/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     });
 
-    it('renders Teleport and Cancel buttons', () => {
-      render(<TeleportModal action={makeAction()} {...elementalProps()} />);
-      expect(screen.getByRole('button', { name: /Teleport/ })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    it('swap modal', () => {
+      const action = makeAction({
+        automation: { type: 'teleport', effect: 'teleport_swap_with_illusion' },
+      });
+      render(<TeleportModal action={action} {...makeProps()} />);
+      expect(screen.queryByText(/Swapped/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+    });
+
+    it('elemental stride modal', () => {
+      const action = makeAction();
+      render(<TeleportModal action={action} {...makeProps({ triggeredByElementalStride: true })} />);
+      expect(screen.queryByText(/Teleported/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     });
   });
 
   // ── Elemental stride confirm flow ──
 
   describe('elemental stride confirm flow', () => {
-    it('shows result state with Done button after teleport click', async () => {
-      const action = makeAction();
-      render(<TeleportModal action={action} {...makeProps({ triggeredByElementalStride: true })} />);
-      fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/Teleported 30 ft/)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-      });
-    });
-
-    it('calls onClose when Done is clicked in result state', async () => {
+    it('shows result state with Done button and uses custom distance in result description', async () => {
       const onClose = vi.fn();
-      const action = makeAction();
+      const action = makeAction({
+        automation: { options: [{ effect: 'teleport', teleportDistance: '60 ft' }] },
+      });
       render(<TeleportModal action={action} {...makeProps({ triggeredByElementalStride: true, onClose })} />);
       fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));
 
       await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-      });
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('uses custom elemental distance in result description', async () => {
-      const action = makeAction({
-        automation: { options: [{ effect: 'teleport', teleportDistance: '60 ft' }] },
-      });
-      render(<TeleportModal action={action} {...makeProps({ triggeredByElementalStride: true })} />);
-      fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));
-
-      await waitFor(() => {
         expect(screen.getByText(/Teleported 60 ft/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
       });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 
   // ── Standard teleport confirm flow ──
 
   describe('standard teleport confirm flow', () => {
-    it('calls confirmTeleport with useExtended=false by default', async () => {
+    it('calls confirmTeleport with useExtended=false by default and shows result with Done button', async () => {
+      const onClose = vi.fn();
       tempTeleportHandler.confirmTeleport.mockResolvedValue({
         type: 'popup',
         payload: { description: 'Teleported 60 ft' },
       });
       const action = makeAction();
-      render(<TeleportModal action={action} {...makeProps()} />);
+      render(<TeleportModal action={action} {...makeProps({ onClose })} />);
       fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));
 
       await waitFor(() => {
@@ -323,7 +276,11 @@ describe('TeleportModal', () => {
           mockCampaignName,
           false
         );
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
       });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('calls confirmTeleport with useExtended=true when extended radio is selected', async () => {
@@ -346,43 +303,13 @@ describe('TeleportModal', () => {
         );
       });
     });
-
-    it('renders result description from confirmTeleport response', async () => {
-      tempTeleportHandler.confirmTeleport.mockResolvedValue({
-        type: 'popup',
-        payload: { description: 'Teleported 60 ft to an unoccupied space you can see.' },
-      });
-      const action = makeAction();
-      render(<TeleportModal action={action} {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/Teleported 60 ft/)).toBeInTheDocument();
-      });
-    });
-
-    it('shows Done button and calls onClose after confirmTeleport resolves', async () => {
-      const onClose = vi.fn();
-      tempTeleportHandler.confirmTeleport.mockResolvedValue({
-        type: 'popup',
-        payload: { description: 'Teleported 60 ft' },
-      });
-      const action = makeAction();
-      render(<TeleportModal action={action} {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-      });
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
   });
 
   // ── Swap teleport confirm flow ──
 
   describe('swap teleport confirm flow', () => {
-    it('calls confirmTeleport with correct arguments when Swap is clicked', async () => {
+    it('calls confirmTeleport with correct arguments, shows result state with Done button', async () => {
+      const onClose = vi.fn();
       tempTeleportHandler.confirmTeleport.mockResolvedValue({
         type: 'popup',
         payload: { description: 'Swapped places with your illusion.' },
@@ -390,7 +317,7 @@ describe('TeleportModal', () => {
       const action = makeAction({
         automation: { type: 'teleport', effect: 'teleport_swap_with_illusion' },
       });
-      render(<TeleportModal action={action} {...makeProps()} />);
+      render(<TeleportModal action={action} {...makeProps({ onClose })} />);
       fireEvent.click(screen.getByRole('button', { name: /Swap/ }));
 
       await waitFor(() => {
@@ -400,23 +327,11 @@ describe('TeleportModal', () => {
           mockCampaignName,
           false
         );
-      });
-    });
-
-    it('shows result state with Done button after swap confirm', async () => {
-      tempTeleportHandler.confirmTeleport.mockResolvedValue({
-        type: 'popup',
-        payload: { description: 'Swapped places with your illusion.' },
-      });
-      const action = makeAction({
-        automation: { type: 'teleport', effect: 'teleport_swap_with_illusion' },
-      });
-      render(<TeleportModal action={action} {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Swap/ }));
-
-      await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
       });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });

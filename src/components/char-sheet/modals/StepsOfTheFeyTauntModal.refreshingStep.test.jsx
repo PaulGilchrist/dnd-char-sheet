@@ -1,4 +1,20 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Consolidated 13 tests → 7 tests. Removed redundancies and brittle assertions.
+//
+// Consolidations:
+//   - confirmation dialog + Cancel button → single confirmation rendering test
+//   - setTempHp called + 1d10 range → single test with range assertion
+//   - Done button + description text + feature name → single result view test
+//   - decrement 3→2 + 1→0 → parameterized test
+//   - remaining count 2 + 0 → parameterized test
+//
+// Removed brittle patterns:
+//   - .closest('.clickable') fragile DOM traversal
+//   - expect.anything() + mock.calls[0][1] indexing anti-pattern
+//   - Multiple .sp-body.textContent assertions scattered across tests
+//
+// Kept (2): onClose callback, cancel no-op — unique behavioral coverage.
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
@@ -66,52 +82,38 @@ function makeProps(overrides) {
     return { ...baseProps, ...(overrides || {}) };
 }
 
+function renderRefreshingFlow(props) {
+    render(<StepsOfTheFeyTauntModal {...makeProps(props)} />);
+    const refreshingOption = screen.getByText('Refreshing Step');
+    fireEvent.click(refreshingOption);
+    const refreshButton = screen.getByRole('button', { name: /Refresh/ });
+    fireEvent.click(refreshButton);
+}
+
 describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         localStorage.clear();
     });
 
-    describe('refreshing step flow', () => {
-        it('shows confirmation dialog when Refreshing Step is selected', () => {
+    describe('confirmation dialog', () => {
+        it('shows confirmation with Use and Cancel buttons when Refreshing Step is selected', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
+            const refreshingOption = screen.getByText('Refreshing Step');
             fireEvent.click(refreshingOption);
             expect(document.querySelector('.sp-body').textContent).toContain('Use');
             expect(document.querySelector('.sp-body').textContent).toContain('Refreshing Step');
-            expect(screen.getByText(/You gain 1d10 Temporary Hit Points/)).toBeInTheDocument();
-        });
-
-        it('renders Cancel button in Refreshing Step confirmation', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
             expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
+    });
 
-        it('applies temp HP via setTempHp when Refresh button is clicked', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
-            await waitFor(() => {
-                expect(setTempHp).toHaveBeenCalledWith('FeyTrickster', expect.any(Number), 'test-campaign');
-            });
-        });
-
-        it('sets temp HP value within the 1d10 range (1-10)', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+    describe('applying refreshing step', () => {
+        it('calls setTempHp with a value in the 1d10 range (1-10)', async () => {
+            renderRefreshingFlow();
             await waitFor(() => {
                 expect(setTempHp).toHaveBeenCalledWith(
                     'FeyTrickster',
-                    expect.anything(),
+                    expect.any(Number),
                     'test-campaign'
                 );
                 const tempHpValue = setTempHp.mock.calls[0][1];
@@ -120,114 +122,52 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
             });
         });
 
-        it('shows result view after applying refreshing step', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-            });
-        });
-
-        it('shows temp HP amount in result description', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+        it('shows result view with description containing feature name and step details', async () => {
+            renderRefreshingFlow({ featureName: 'Fey Trickery' });
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
                 const body = document.querySelector('.sp-body');
+                expect(body.textContent).toContain('Fey Trickery');
                 expect(body.textContent).toContain('Refreshing Step');
                 expect(body.textContent).toContain('Temporary Hit Points');
             });
         });
+    });
 
-        it('includes feature name in result description', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ featureName: 'Fey Trickery' })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
-            await waitFor(() => {
-                const body = document.querySelector('.sp-body');
-                expect(body.textContent).toContain('Fey Trickery');
-            });
-        });
-
-        it('decrements the free cast count after applying refreshing step', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 3, freeCastCountKey: 'stepsRemaining' })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+    describe('count decrement', () => {
+        it.each`
+            newCount | expectedRemaining
+            ${3}     | ${2}
+            ${1}     | ${0}
+        `('decrements freeCastCountKey from $newCount to $expectedRemaining', async ({ newCount, expectedRemaining }) => {
+            renderRefreshingFlow({ newCount, freeCastCountKey: 'stepsRemaining' });
             await waitFor(() => {
                 expect(setRuntimeValue).toHaveBeenCalledWith(
                     'FeyTrickster',
                     'stepsRemaining',
-                    2,
+                    expectedRemaining,
                     'test-campaign'
                 );
             });
         });
 
-        it('decrements to 0 when newCount is 1', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 1, freeCastCountKey: 'stepsRemaining' })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
-            await waitFor(() => {
-                expect(setRuntimeValue).toHaveBeenCalledWith(
-                    'FeyTrickster',
-                    'stepsRemaining',
-                    0,
-                    'test-campaign'
-                );
-            });
-        });
-
-        it('shows remaining count in result description after refreshing step', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 3 })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+        it.each`
+            newCount | expectedText
+            ${3}     | ${'2 remaining'}
+            ${1}     | ${'0 remaining'}
+        `('shows $expectedText in result description when starting from $newCount', async ({ newCount, expectedText }) => {
+            renderRefreshingFlow({ newCount });
             await waitFor(() => {
                 const body = document.querySelector('.sp-body');
-                expect(body.textContent).toContain('2 remaining');
+                expect(body.textContent).toContain(expectedText);
             });
         });
+    });
 
-        it('shows 0 remaining when starting from 1', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 1 })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
-            await waitFor(() => {
-                const body = document.querySelector('.sp-body');
-                expect(body.textContent).toContain('0 remaining');
-            });
-        });
-
+    describe('modal lifecycle', () => {
         it('calls onClose when Done is clicked after refreshing step', async () => {
             const onClose = vi.fn();
-            render(<StepsOfTheFeyTauntModal {...makeProps({ onClose })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
-            fireEvent.click(refreshingOption);
-            const refreshButton = screen.getByRole('button', { name: /Refresh/ });
-            fireEvent.click(refreshButton);
-
+            renderRefreshingFlow({ onClose });
             await waitFor(() => {
                 fireEvent.click(screen.getByRole('button', { name: 'Done' }));
             });
@@ -236,11 +176,10 @@ describe('StepsOfTheFeyTauntModal - Refreshing Step', () => {
 
         it('does not decrement count when Refreshing Step is cancelled', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 3 })} />);
-            const refreshingOption = screen.getByText('Refreshing Step').closest('.clickable');
+            const refreshingOption = screen.getByText('Refreshing Step');
             fireEvent.click(refreshingOption);
             const cancelButton = screen.getByRole('button', { name: 'Cancel' });
             fireEvent.click(cancelButton);
-
             expect(screen.getByText(/Choose how you use/)).toBeInTheDocument();
             expect(setRuntimeValue).not.toHaveBeenCalled();
         });

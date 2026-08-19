@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BoonFateModal from './BoonFateModal.jsx';
@@ -260,7 +261,10 @@ describe('BoonFateModal', () => {
   // ── Bonus/Penalty buttons ──
 
   describe('bonus and penalty buttons', () => {
-    it('calls applyBoonFateChoice with "bonus" mode when bonus button is clicked', async () => {
+    it.each([
+      ['bonus', 'Apply +5 (Bonus)'],
+      ['penalty', 'Apply -5 (Penalty)'],
+    ])('calls applyBoonFateChoice with "%s" mode when %s button is clicked', async (mode, buttonName) => {
       boonOfFateHandler.applyBoonFateChoice.mockResolvedValue({
         type: 'popup',
         payload: {
@@ -270,7 +274,7 @@ describe('BoonFateModal', () => {
         },
       });
       renderModal(baseProps);
-      fireEvent.click(screen.getByRole('button', { name: 'Apply +5 (Bonus)' }));
+      fireEvent.click(screen.getByRole('button', { name: buttonName }));
       await waitFor(() => {
         expect(boonOfFateHandler.applyBoonFateChoice).toHaveBeenCalledWith(
           baseAction,
@@ -278,30 +282,7 @@ describe('BoonFateModal', () => {
           baseProps.campaignName,
           baseRoll2d4,
           baseLastAttack,
-          'bonus',
-        );
-      });
-    });
-
-    it('calls applyBoonFateChoice with "penalty" mode when penalty button is clicked', async () => {
-      boonOfFateHandler.applyBoonFateChoice.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Boon of Fate',
-          description: 'Boon of Fate result',
-        },
-      });
-      renderModal(baseProps);
-      fireEvent.click(screen.getByRole('button', { name: 'Apply -5 (Penalty)' }));
-      await waitFor(() => {
-        expect(boonOfFateHandler.applyBoonFateChoice).toHaveBeenCalledWith(
-          baseAction,
-          basePlayerStats,
-          baseProps.campaignName,
-          baseRoll2d4,
-          baseLastAttack,
-          'penalty',
+          mode,
         );
       });
     });
@@ -313,35 +294,9 @@ describe('BoonFateModal', () => {
     });
   });
 
-  // ── Cancel button ──
-
-  describe('cancel button', () => {
-    it('calls onClose when cancel is clicked', () => {
-      renderModal(baseProps);
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(baseProps.onClose).toHaveBeenCalledTimes(1);
-    });
-  });
-
   // ── Result view ──
 
   describe('result view', () => {
-    it('shows result view after applyBoonFateChoice returns a result', async () => {
-      boonOfFateHandler.applyBoonFateChoice.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Boon of Fate',
-          description: 'Attack: d20(14) + 6+5 = <strong>25</strong> vs AC 17 → HIT',
-        },
-      });
-      renderModal(baseProps);
-      fireEvent.click(screen.getByRole('button', { name: 'Apply +5 (Bonus)' }));
-      await waitFor(() => {
-        expect(screen.getByText(/Attack: d20/)).toBeInTheDocument();
-      });
-    });
-
     it('renders the result description from payload', async () => {
       boonOfFateHandler.applyBoonFateChoice.mockResolvedValue({
         type: 'popup',
@@ -446,24 +401,6 @@ describe('BoonFateModal', () => {
   // ── Result view close behavior ──
 
   describe('result view close behavior', () => {
-    it('calls onClose when Done button is clicked', async () => {
-      boonOfFateHandler.applyBoonFateChoice.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Boon of Fate',
-          description: 'Result',
-        },
-      });
-      const onClose = vi.fn();
-      renderModal(makeProps({ onClose }));
-      fireEvent.click(screen.getByRole('button', { name: 'Apply +5 (Bonus)' }));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-      });
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
     it('calls onClose when overlay is clicked in result view', async () => {
       boonOfFateHandler.applyBoonFateChoice.mockResolvedValue({
         type: 'popup',

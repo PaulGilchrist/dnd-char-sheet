@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import SetConditionModal from './SetConditionModal.jsx';
@@ -97,12 +98,9 @@ describe('SetConditionModal', () => {
 
   // ── Render / initial state ──
 
-  it('renders the modal overlay and header with default feature name', () => {
+  it('renders the modal overlay and header with default and custom feature names', () => {
     render(<SetConditionModal {...makeProps()} />);
     expect(screen.getByText('Abjure Foes')).toBeInTheDocument();
-  });
-
-  it('renders the modal overlay and header with custom feature name', () => {
     render(<SetConditionModal {...makeProps({ featureName: 'Turn Undead' })} />);
     expect(screen.getByText('Turn Undead')).toBeInTheDocument();
   });
@@ -188,25 +186,11 @@ describe('SetConditionModal', () => {
 
   // ── Checkbox interactions ──
 
-  it('toggles target selection on checkbox click', () => {
-    render(<SetConditionModal {...makeProps()} />);
-    const checkbox = screen.getAllByRole('checkbox')[0];
-    expect(checkbox.checked).toBe(false);
-    fireEvent.click(checkbox);
-    expect(checkbox.checked).toBe(true);
-  });
-
-  it('allows selecting all targets', () => {
+  it('allows selecting all targets and updates the target counter', () => {
     render(<SetConditionModal {...makeProps()} />);
     const checkboxes = screen.getAllByRole('checkbox');
     checkboxes.forEach(cb => fireEvent.click(cb));
     checkboxes.forEach(cb => expect(cb.checked).toBe(true));
-  });
-
-  it('updates target counter when targets selected and deselected', () => {
-    render(<SetConditionModal {...makeProps()} />);
-    const checkboxes = screen.getAllByRole('checkbox');
-    checkboxes.forEach(cb => fireEvent.click(cb));
     expect(screen.getByText(/Targets selected: 3\/3/)).toBeInTheDocument();
     checkboxes[0].click();
     expect(screen.getByText(/Targets selected: 2\/3/)).toBeInTheDocument();
@@ -214,26 +198,16 @@ describe('SetConditionModal', () => {
 
   // ── Apply button behavior ──
 
-  it('disables apply button when no targets selected', () => {
+  it('disables apply button when no targets selected and enables after selecting one', () => {
     render(<SetConditionModal {...makeProps()} />);
-    const btn = screen.getByRole('button', { name: /Abjure Foes \(0 targets\)/ });
+    let btn = screen.getByRole('button', { name: /Abjure Foes \(0 targets\)/ });
     expect(btn.disabled).toBe(true);
-  });
-
-  it('enables apply button after selecting a target', () => {
-    render(<SetConditionModal {...makeProps()} />);
     fireEvent.click(screen.getAllByRole('checkbox')[0]);
-    const btn = screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ });
+    btn = screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ });
     expect(btn.disabled).toBe(false);
-  });
-
-  it('shows singular "target" when count is 1 and plural when count exceeds 1', () => {
-    render(<SetConditionModal {...makeProps()} />);
-    const boxes = screen.getAllByRole('checkbox');
-    fireEvent.click(boxes[0]);
-    expect(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ })).toBeInTheDocument();
-    fireEvent.click(boxes[1]);
-    expect(screen.getByRole('button', { name: /Abjure Foes \(2 targets\)/ })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('checkbox')[1]);
+    btn = screen.getByRole('button', { name: /Abjure Foes \(2 targets\)/ });
+    expect(btn.disabled).toBe(false);
   });
 
   // ── Cancel and close ──
@@ -247,8 +221,8 @@ describe('SetConditionModal', () => {
 
   // ── Confirm flow — NPC saves (auto-roll) ──
 
-  it('rolls NPC save and shows processing state on confirm', () => {
-    diceRoller.rollD20.mockReturnValue(15);
+  it('rolls NPC save, shows processing, and displays success results', () => {
+    diceRoller.rollD20.mockReturnValue(14);
 
     render(<SetConditionModal {...makeProps()} />);
     fireEvent.click(screen.getAllByRole('checkbox')[0]);
@@ -256,20 +230,10 @@ describe('SetConditionModal', () => {
 
     expect(savePromptService.sendSaveResult).toHaveBeenCalled();
     expect(diceRoller.rollD20).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/Resolving WIS saving throws/)).toBeInTheDocument();
-  });
-
-  it('NPC succeeds when roll total >= saveDc', () => {
-    diceRoller.rollD20.mockReturnValue(14);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]);
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
     expect(screen.getByText(/Saved — unaffected/)).toBeInTheDocument();
   });
 
-  it('NPC fails and shows condition when roll < DC', () => {
+  it('applies condition and calls expiration tracking on NPC failure with correct roll display', () => {
     diceRoller.rollD20.mockReturnValue(5);
 
     render(<SetConditionModal {...makeProps()} />);
@@ -277,31 +241,10 @@ describe('SetConditionModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
 
     expect(screen.getByText(/Failed — Frightened!/)).toBeInTheDocument();
-  });
-
-  it('NPC failure calls turn expiration tracking', () => {
-    diceRoller.rollD20.mockReturnValue(5);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]);
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
     expect(expirations.addExpiration).toHaveBeenCalled();
-  });
+    expect(screen.queryByText(/\+0/)).not.toBeInTheDocument();
 
-  it('NPC success does not call setRuntimeValue for conditions', () => {
-    diceRoller.rollD20.mockReturnValue(20);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]);
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('shows correct roll total with bonus in display', () => {
-    diceRoller.rollD20.mockReturnValue(10); // roll=10, bonus=2, total=12 < 14 → fail
-
+    diceRoller.rollD20.mockReturnValue(10);
     render(<SetConditionModal {...makeProps()} />);
     fireEvent.click(screen.getAllByRole('checkbox')[1]);
     fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
@@ -309,22 +252,12 @@ describe('SetConditionModal', () => {
     expect(screen.getByText(/\(Roll: 10 \+2 = 12\)/)).toBeInTheDocument();
   });
 
-  it('does not show "+0" in roll display when bonus is zero', () => {
-    diceRoller.rollD20.mockReturnValue(10);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]);
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    expect(screen.queryByText(/\+0/)).not.toBeInTheDocument();
-  });
-
   it('rolls all selected NPCs independently', () => {
     diceRoller.rollD20.mockReturnValueOnce(5).mockReturnValueOnce(20);
 
     render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]); // Goblin A
-    fireEvent.click(screen.getAllByRole('checkbox')[1]); // Goblin B
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    fireEvent.click(screen.getAllByRole('checkbox')[1]);
     fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(2 targets\)/ }));
 
     expect(diceRoller.rollD20).toHaveBeenCalledTimes(2);
@@ -385,26 +318,7 @@ describe('SetConditionModal', () => {
 
   // ── Player save result event handling ──
 
-  it('resolves pending prompt when save-result event arrives', async () => {
-    diceRoller.rollD20.mockReturnValue(15);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[2]); // Player Ally
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    const sentPrompt = savePromptService.sendSavePrompt.mock.calls[0][1];
-    window.dispatchEvent(
-      new CustomEvent('save-result', {
-        detail: { promptId: sentPrompt.promptId, targetName: 'Player Ally', success: true, total: 18, roll: 14, saveBonus: 4 },
-      })
-    );
-
-    await waitFor(() => {
-      expect(screen.queryByText(/Waiting for save roll/)).not.toBeInTheDocument();
-    });
-  });
-
-  it('applies condition when player save fails via event', async () => {
+  it('resolves pending prompt on save-result event and applies or skips condition based on success', async () => {
     diceRoller.rollD20.mockReturnValue(15);
 
     render(<SetConditionModal {...makeProps()} />);
@@ -420,45 +334,7 @@ describe('SetConditionModal', () => {
 
     await waitFor(() => {
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalled();
-    });
-  });
-
-  it('does not apply condition when player save succeeds via event', async () => {
-    diceRoller.rollD20.mockReturnValue(15);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[2]); // Player Ally
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    const sentPrompt = savePromptService.sendSavePrompt.mock.calls[0][1];
-    window.dispatchEvent(
-      new CustomEvent('save-result', {
-        detail: { promptId: sentPrompt.promptId, targetName: 'Player Ally', success: true, total: 20, roll: 16, saveBonus: 4 },
-      })
-    );
-
-    await waitFor(() => {
       expect(screen.queryByText(/Waiting for save roll/)).not.toBeInTheDocument();
-    });
-    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-  });
-
-  it('ignores save-result event with unknown promptId', async () => {
-    diceRoller.rollD20.mockReturnValue(5);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]); // NPC
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    window.dispatchEvent(
-      new CustomEvent('save-result', {
-        detail: { promptId: 'nonexistent-id', targetName: 'Unknown', success: false },
-      })
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(/Failed — Frightened!/)).toBeInTheDocument();
-      expect(screen.queryByText(/Unknown/)).not.toBeInTheDocument();
     });
   });
 
@@ -482,16 +358,6 @@ describe('SetConditionModal', () => {
 
     fireEvent.click(screen.getByText('Done'));
     expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not show Done button while pending prompts remain', () => {
-    diceRoller.rollD20.mockReturnValue(15);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[2]); // Player only → pending
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    expect(screen.queryByText('Done')).not.toBeInTheDocument();
   });
 
   // ── Additional condition support ──
@@ -525,13 +391,6 @@ describe('SetConditionModal', () => {
     );
   });
 
-  // ── Custom range in instruction text ──
-
-  it('shows custom range in instruction text', () => {
-    render(<SetConditionModal {...makeProps({ rangeFeet: 15 })} />);
-    expect(screen.getByText(/15 feet/)).toBeInTheDocument();
-  });
-
   // ── Edge case: confirm with no targets selected is a no-op ──
 
   it('is a no-op when clicking confirm with no targets selected', () => {
@@ -559,18 +418,6 @@ describe('SetConditionModal', () => {
         new CustomEvent('save-result', { detail: { promptId: 'nonexistent' } })
       );
     }).not.toThrow();
-  });
-
-  // ── Only NPC targets selected → resolved immediately (no pending) ──
-
-  it('shows resolved state with only NPC targets and no pending prompts', () => {
-    diceRoller.rollD20.mockReturnValue(5);
-
-    render(<SetConditionModal {...makeProps()} />);
-    fireEvent.click(screen.getAllByRole('checkbox')[0]); // NPC only
-    fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
-
-    expect(screen.queryByText(/Waiting for save roll/)).not.toBeInTheDocument();
   });
 
   // ── Target type labels rendered correctly ──

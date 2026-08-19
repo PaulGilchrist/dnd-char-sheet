@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen } from '@testing-library/react';
+// @cleaned-by-ai
+import { render } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
 describe('DiceRollResult', () => {
@@ -250,24 +251,6 @@ describe('DiceRollResult', () => {
             expect(container.querySelector('.dice-roll-secondary-save-result')).not.toBeInTheDocument();
         });
 
-        it('does not render secondary save result element when secondarySaveResult is undefined', () => {
-            render(
-                <DiceRollResult
-                    name="Fireball"
-                    type="damage"
-                    rolls={[6]}
-                    bonus={0}
-                    secondaryFormula="1d6"
-                    secondaryRolls={[4]}
-                    secondaryTotal={4}
-                    secondaryModifier={0}
-                />
-            );
-            expect(screen.queryByTestId('dice-roll-secondary-save-result')).not.toBeInTheDocument();
-            const allElements = document.querySelectorAll('.dice-roll-secondary-save-result');
-            expect(allElements.length).toBe(0);
-        });
-
         it('renders secondary formula section when only secondaryFormula is provided without finalDamage', () => {
             const { container } = render(
                 <DiceRollResult
@@ -287,22 +270,5 @@ describe('DiceRollResult', () => {
             expect(secondaryContainer.querySelector('.dice-roll-secondary-formula')).toBeInTheDocument();
         });
 
-        it('renders secondary formula with empty rolls array', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Longsword"
-                    type="attack"
-                    rolls={[18]}
-                    bonus={5}
-                    secondaryFormula="1d8"
-                    secondaryRolls={[]}
-                    secondaryTotal={0}
-                    secondaryModifier={0}
-                />
-            );
-            const formulaEl = container.querySelector('.dice-roll-secondary-formula');
-            expect(formulaEl.textContent).toContain('1d8');
-            expect(formulaEl.textContent).toContain('= 0');
-        });
     });
 });

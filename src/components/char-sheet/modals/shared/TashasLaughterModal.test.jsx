@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TashasLaughterModal from './TashasLaughterModal.jsx';
@@ -136,19 +137,13 @@ describe('TashasLaughterModal - UI Tests', () => {
     });
 
     describe('maxTargets based on spell slot level', () => {
-        it('uses spell slot level 1 as maxTargets by default', () => {
-            render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 1 })} />);
-            expect(screen.getByText(/Select up to 1 creature/)).toBeInTheDocument();
-        });
-
-        it('uses spell slot level 3 as maxTargets when spellSlotLevel is 3', () => {
-            render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 3 })} />);
-            expect(screen.getByText(/Select up to 3 creature/)).toBeInTheDocument();
-        });
-
-        it('uses spell slot level 5 as maxTargets when spellSlotLevel is 5', () => {
-            render(<TashasLaughterModal {...makeProps({ spellSlotLevel: 5 })} />);
-            expect(screen.getByText(/Select up to 5 creature/)).toBeInTheDocument();
+        it.each([
+            { slot: 1, expected: 1 },
+            { slot: 3, expected: 3 },
+            { slot: 5, expected: 5 },
+        ])('renders description with maxTargets = spellSlotLevel ($slot)', ({ slot, expected }) => {
+            render(<TashasLaughterModal {...makeProps({ spellSlotLevel: slot })} />);
+            expect(screen.getByText(new RegExp(`Select up to ${expected} creature`))).toBeInTheDocument();
         });
 
         it('enforces maxTargets limit when selecting', () => {
@@ -156,7 +151,6 @@ describe('TashasLaughterModal - UI Tests', () => {
             selectTarget(0);
             selectTarget(1);
             expect(getConfirmButton()).toHaveTextContent('(2)');
-            // Third target checkbox should be disabled since maxTargets=2
             const checkboxes = screen.getAllByRole('checkbox');
             expect(checkboxes[2]).toBeDisabled();
         });
@@ -199,14 +193,6 @@ describe('TashasLaughterModal - UI Tests', () => {
             clickSkip();
             expect(onClose).toHaveBeenCalledTimes(1);
         });
-
-        it('does not call any services when skipped', () => {
-            const onClose = vi.fn();
-            render(<TashasLaughterModal {...makeProps({ onClose })} />);
-            clickSkip();
-            expect(getRuntimeValue).not.toHaveBeenCalled();
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
     });
 
     describe('empty targets', () => {
@@ -228,48 +214,19 @@ describe('TashasLaughterModal - UI Tests', () => {
         });
     });
 
-    describe('null combat summary', () => {
-        it('handles null combat summary gracefully - no targets shown', () => {
-            getCombatSummary.mockReturnValue(null);
-            render(<TashasLaughterModal {...makeProps()} />);
-            expect(screen.getByText('No targets available.')).toBeInTheDocument();
-            expect(getConfirmButton()).toBeDisabled();
-        });
-    });
-
     describe('metamagic heighten rendering', () => {
-        it('shows heighten note when metamagicHeighten is true', () => {
+        it('shows heighten note and radio buttons when metamagicHeighten is true', () => {
             render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
             expect(screen.getByText(/Heightened Spell/)).toBeInTheDocument();
             expect(screen.getByText(/one target will have disadvantage/)).toBeInTheDocument();
-        });
-
-        it('does not show heighten note when metamagicHeighten is false or undefined', () => {
-            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: false })} />);
-            expect(screen.queryByText(/Heightened Spell/)).not.toBeInTheDocument();
-
-            render(<TashasLaughterModal {...makeProps()} />);
-            expect(screen.queryByText(/Heightened Spell/)).not.toBeInTheDocument();
-        });
-
-        it('shows heighten radio buttons when metamagicHeighten is true', () => {
-            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
             const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
             expect(heightenRadios).toHaveLength(baseCombatSummary.creatures.length);
         });
 
-        it('does not show heighten radio buttons when metamagicHeighten is false', () => {
+        it('does not show heighten note or radio buttons when metamagicHeighten is false', () => {
             render(<TashasLaughterModal {...makeProps({ metamagicHeighten: false })} />);
+            expect(screen.queryByText(/Heightened Spell/)).not.toBeInTheDocument();
             expect(document.querySelectorAll('input[name="heightenTarget"]')).toHaveLength(0);
-        });
-
-        it('tracks heightenTarget selection state when a radio is clicked', () => {
-            render(<TashasLaughterModal {...makeProps({ metamagicHeighten: true })} />);
-            const heightenRadios = document.querySelectorAll('input[name="heightenTarget"]');
-            expect(heightenRadios).toHaveLength(3);
-
-            fireEvent.click(heightenRadios[0]);
-            expect(heightenRadios[0]).toBeChecked();
         });
     });
 

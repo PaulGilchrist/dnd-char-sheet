@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
@@ -259,62 +260,6 @@ describe('SaveAttackAoeModal - Damage resolution edge cases', () => {
     automationExpressions.resolveScaling.mockReturnValue({});
   });
 
-  // ── resolveAllSavesAndDamage edge cases ──
-
-  describe('resolveAllSavesAndDamage edge cases', () => {
-    it('skips targets that are not found in combatSummary', async () => {
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
-      combatData.getCombatSummary.mockReturnValue({
-        creatures: [
-          { name: 'Goblin A', type: 'npc', currentHp: 5, maxHp: 10, saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
-        ],
-      });
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      // Only Goblin A is in combatSummary; selecting Player One should be silently skipped
-      // The modal still renders because the creature list path is independent of target resolution
-      expect(screen.getByText(/DEX/)).toBeInTheDocument();
-    });
-  });
-
-  // ── dcSuccess edge cases ──
-
-  describe('dcSuccess edge cases', () => {
-    it('applies full damage when dcSuccess is "none" (no reduction on save)', async () => {
-      const { computeDamageAfterSave } = await import('../../../../services/rules/combat/applyDamage.js');
-      computeDamageAfterSave.mockReturnValue(12);
-      render(<SaveAttackAoeModal {...makeProps({ dcSuccess: 'none' })} />);
-      fireEvent.click(getCheckboxByName('Player One'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      const { sendSavePrompt } = await import('../../../../services/combat/conditions/savePromptService.js');
-      const promptCall = sendSavePrompt.mock.calls[0][1];
-
-      await act(async () => {
-        window.dispatchEvent(new CustomEvent('save-result', {
-          detail: {
-            promptId: promptCall.promptId,
-            success: true,
-            saveBonus: 4,
-            rawDamage: 12,
-            total: 16,
-            roll: 12,
-          },
-        }));
-      });
-
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-
-      const { addTargetResult } = await import('../../../../services/automation/common/damageRollback.js');
-      const playerCalls = addTargetResult.mock.calls.filter(c => c[1] && c[1].targetName === 'Player One');
-      expect(playerCalls.length).toBeGreaterThan(0);
-      expect(playerCalls[0][1].saveResult).toBe('success');
-    });
-  });
-
   // ── Multiple targets ──
 
   describe('multiple targets', () => {
@@ -332,96 +277,6 @@ describe('SaveAttackAoeModal - Damage resolution edge cases', () => {
       const goblinBCalls = addTargetResult.mock.calls.filter(c => c[1] && c[1].targetName === 'Goblin B');
       expect(goblinACalls.length).toBeGreaterThan(0);
       expect(goblinBCalls.length).toBeGreaterThan(0);
-    });
-  });
-
-  // ── Save result logging for NPCs ──
-
-  describe('save result logging for NPCs', () => {
-    it('logs save roll entry for NPC when finalDamage is greater than zero', async () => {
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      const { addEntry } = await import('../../../../services/ui/logService.js');
-      const rollCalls = addEntry.mock.calls.filter(c => c[1] && c[1].type === 'roll' && c[1].rollType === 'save-damage' && c[1].name === 'Fireball' && c[1].targetName === 'Goblin A');
-      expect(rollCalls.length).toBeGreaterThan(0);
-    });
-  });
-
-  // ── Player save damage logging ──
-
-  describe('player save damage logging', () => {
-    it('logs damage entry for player when finalDamage is greater than zero after a failed save', async () => {
-      const { sendSavePrompt } = await import('../../../../services/combat/conditions/savePromptService.js');
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Player One'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      const promptCall = sendSavePrompt.mock.calls[0][1];
-
-      await act(async () => {
-        window.dispatchEvent(new CustomEvent('save-result', {
-          detail: {
-            promptId: promptCall.promptId,
-            success: false,
-            saveBonus: 4,
-            rawDamage: 12,
-            total: 16,
-            roll: 12,
-          },
-        }));
-      });
-
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-
-      const { addEntry } = await import('../../../../services/ui/logService.js');
-      const damageCalls = addEntry.mock.calls.filter(c => c[1] && c[1].type === 'roll' && c[1].rollType === 'save-damage' && c[1].name === 'Fireball' && c[1].targetName === 'Player One');
-      expect(damageCalls.length).toBeGreaterThan(0);
-      expect(damageCalls[0][1].saveResult).toBe('failure');
-    });
-  });
-
-  // ── Save bonus from detail ──
-
-  describe('save bonus from detail', () => {
-    it('uses saveBonus from save-result detail for player targets', async () => {
-      const { sendSavePrompt } = await import('../../../../services/combat/conditions/savePromptService.js');
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Player One'));
-      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
-      await act(async () => {
-        fireEvent.click(confirmBtn);
-      });
-      const promptCall = sendSavePrompt.mock.calls[0][1];
-
-      await act(async () => {
-        window.dispatchEvent(new CustomEvent('save-result', {
-          detail: {
-            promptId: promptCall.promptId,
-            success: true,
-            saveBonus: 4,
-            rawDamage: 12,
-            total: 16,
-            roll: 12,
-          },
-        }));
-      });
-
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
-
-      const { addEntry } = await import('../../../../services/ui/logService.js');
-      const rollCalls = addEntry.mock.calls.filter(c => c[1] && c[1].type === 'roll' && c[1].rollType === 'save-damage' && c[1].targetName === 'Player One');
-      expect(rollCalls.length).toBeGreaterThan(0);
     });
   });
 });

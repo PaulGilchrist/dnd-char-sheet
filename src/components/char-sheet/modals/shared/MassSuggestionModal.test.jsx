@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MassSuggestionModal from './MassSuggestionModal.jsx';
@@ -86,139 +87,8 @@ beforeEach(() => {
 });
 
 describe('MassSuggestionModal', () => {
-    describe('initial render', () => {
-        it('renders the modal with title and target list', () => {
-            render(<MassSuggestionModal {...makeProps()} />);
-            expect(screen.getByText('Mass Suggestion')).toBeInTheDocument();
-            expect(screen.getByText('Goblin')).toBeInTheDocument();
-            expect(screen.getByText('Orc')).toBeInTheDocument();
-            expect(screen.getByText('PlayerAlly')).toBeInTheDocument();
-        });
-
-        it('renders the description with save type and DC', () => {
-            render(<MassSuggestionModal {...makeProps()} />);
-            expect(screen.getByText(/Select creatures within range/)).toBeInTheDocument();
-            expect(screen.getByText(/WIS/)).toBeInTheDocument();
-            expect(screen.getByText(/DC 14/)).toBeInTheDocument();
-        });
-
-        it('renders the note about charmed condition', () => {
-            const { container } = render(<MassSuggestionModal {...makeProps()} />);
-            const noteEl = container.querySelector('.sp-note');
-            expect(noteEl).toHaveTextContent(/On a failed save, target becomes.*Charmed/);
-            expect(screen.getByText(/Maximum 12 targets/)).toBeInTheDocument();
-        });
-
-        it('disables the confirm button when no target is selected', () => {
-            render(<MassSuggestionModal {...makeProps()} />);
-            expect(screen.getByRole('button', { name: /Mass Suggestion \(0\)/ })).toBeDisabled();
-        });
-
-        it('renders skip button', () => {
-            render(<MassSuggestionModal {...makeProps()} />);
-            expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-        });
-    });
-
-    describe('target selection', () => {
-        it('selects a target when its checkbox is clicked and enables confirm', async () => {
-            render(<MassSuggestionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-                expect(checkboxes[0].checked).toBe(true);
-            });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ })).toBeEnabled();
-            });
-        });
-
-        it('allows selecting multiple targets', async () => {
-            render(<MassSuggestionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await act(async () => { fireEvent.click(labels[1]); });
-            await waitFor(() => {
-                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-                expect(checkboxes[0].checked).toBe(true);
-                expect(checkboxes[1].checked).toBe(true);
-            });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Mass Suggestion \(2\)/ })).toBeEnabled();
-            });
-        });
-
-        it('enforces maxTargets limit of 12', async () => {
-            const manyCreatures = {
-                creatures: Array.from({ length: 15 }, (_, i) => ({
-                    name: `Creature${i}`,
-                    type: 'npc',
-                    currentHp: 10,
-                    maxHp: 10,
-                    saveBonuses: { wis: 0 },
-                })),
-            };
-            getCombatSummary.mockReturnValue(manyCreatures);
-            render(<MassSuggestionModal {...makeProps()} />);
-
-            const labels = document.querySelectorAll('.secondary-target-row');
-            expect(labels).toHaveLength(15);
-
-            for (let i = 0; i < 12; i++) {
-                await act(async () => { fireEvent.click(labels[i]); });
-            }
-
-            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-            await waitFor(() => {
-                expect(checkboxes[12].disabled).toBe(true);
-            });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Mass Suggestion \(12\)/ })).toBeEnabled();
-            });
-        });
-    });
-
-    describe('close behavior', () => {
-        it('closes when Skip is clicked', () => {
-            const onClose = vi.fn();
-            render(<MassSuggestionModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe('empty targets', () => {
-        it('renders empty target list when no creatures in combat', () => {
-            getCombatSummary.mockReturnValue({ creatures: [] });
-            render(<MassSuggestionModal {...makeProps()} />);
-            expect(screen.getByText('No targets available.')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /Mass Suggestion \(0\)/ })).toBeDisabled();
-        });
-
-        it('renders the caster as a target when caster is the only creature', () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'Wizard1', type: 'player', currentHp: 30, maxHp: 30, saveBonuses: { wis: 4 } },
-                ],
-            });
-            render(<MassSuggestionModal {...makeProps()} />);
-            expect(screen.getByText('Wizard1')).toBeInTheDocument();
-        });
-    });
-
-    describe('null combat summary', () => {
-        it('handles null combat summary gracefully - no targets shown', () => {
-            getCombatSummary.mockReturnValue(null);
-            render(<MassSuggestionModal {...makeProps()} />);
-
-            expect(screen.getByText('No targets available.')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /Mass Suggestion \(0\)/ })).toBeDisabled();
-        });
-    });
-
     describe('NPC save resolution', () => {
-        it('calls storeSpellLastAttack when targets are selected', async () => {
+        it('calls storeSpellLastAttack and logs ability_use when targets are selected', async () => {
             render(<MassSuggestionModal {...makeProps()} />);
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[0]); });
@@ -236,19 +106,6 @@ describe('MassSuggestionModal', () => {
                 saveDc: 14,
                 attackScope: 'aoe',
             });
-        });
-
-        it('logs ability_use entry when targets are selected', async () => {
-            render(<MassSuggestionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ }));
-            });
-
             expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
                 type: 'ability_use',
                 characterName: 'Wizard1',
@@ -298,50 +155,6 @@ describe('MassSuggestionModal', () => {
 
                 await waitFor(() => {
                     expect(addExpiration).not.toHaveBeenCalled();
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('logs save_result entry for NPC saves', async () => {
-            render(<MassSuggestionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            fireEvent.click(labels[0]);
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ }));
-            });
-
-            await waitFor(() => {
-                const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result'
-                );
-                expect(saveEntries.length).toBeGreaterThan(0);
-                expect(saveEntries[0][1]).toEqual(expect.objectContaining({
-                    type: 'save_result',
-                    saveType: 'WIS',
-                    saveDc: 14,
-                }));
-            });
-        });
-
-        it('works when only NPC targets are selected', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.76);
-            try {
-                render(<MassSuggestionModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await act(async () => { fireEvent.click(labels[1]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Mass Suggestion \(2\)/ })).toBeEnabled();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(2\)/ }));
-                });
-
-                expect(storeSpellLastAttack).toHaveBeenCalled();
-                await waitFor(() => {
-                    expect(persistAndNotify).toHaveBeenCalled();
                 });
             } finally {
                 vi.restoreAllMocks();

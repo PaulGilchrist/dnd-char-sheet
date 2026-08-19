@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react/pure';
 import InspiringSmiteModal from './InspiringSmiteModal';
 
@@ -36,67 +37,22 @@ describe('InspiringSmiteModal', () => {
     // ── Rendering ──
 
     describe('initial render', () => {
-        it('renders the modal title', () => {
+        it('renders the modal with title, roll note, targets, and action buttons', () => {
             render(<InspiringSmiteModal {...makeProps()} />);
             expect(screen.getByText('Inspiring Smite')).toBeInTheDocument();
-        });
-
-        it('renders the roll note with total', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
             expect(screen.getByText(/Rolled 2d8 \+ 5: 18 total temp HP/)).toBeInTheDocument();
-        });
-
-        it('renders all creature targets', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
             expect(screen.getByText('Ally1')).toBeInTheDocument();
             expect(screen.getByText('Ally2')).toBeInTheDocument();
             expect(screen.getByText('Self')).toBeInTheDocument();
-        });
-
-        it('renders confirm and skip buttons', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
             expect(screen.getByRole('button', { name: /Inspire \(0\)/ })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
         });
 
-        it('renders confirm button with type="button"', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
-            const btn = screen.getByRole('button', { name: /Inspire/ });
-            expect(btn).toHaveAttribute('type', 'button');
-        });
-
-        it('renders skip button with type="button"', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
-            const btn = screen.getByRole('button', { name: 'Skip' });
-            expect(btn).toHaveAttribute('type', 'button');
-        });
-    });
-
-    // ── Pool bar ──
-
-    describe('pool bar display', () => {
-        it('shows pool total', () => {
+        it('renders pool bar with total, allocated, and remaining on initial render', () => {
             render(<InspiringSmiteModal {...makeProps()} />);
             expect(screen.getByText('Pool: 18 HP')).toBeInTheDocument();
-        });
-
-        it('shows allocated count', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
             expect(screen.getByText('Allocated: 0 / 18')).toBeInTheDocument();
-        });
-
-        it('shows remaining when unallocated', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
             expect(screen.getByText('Remaining: 18')).toBeInTheDocument();
-        });
-
-        it('hides remaining when fully allocated', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
-            const checkbox = screen.getAllByRole('checkbox')[0];
-            fireEvent.click(checkbox);
-            const input = screen.getByRole('spinbutton');
-            fireEvent.change(input, { target: { value: '18' } });
-            expect(screen.queryByText('Remaining:')).not.toBeInTheDocument();
         });
 
         it('reflects different tempHp values in pool bar', () => {
@@ -104,6 +60,19 @@ describe('InspiringSmiteModal', () => {
             expect(screen.getByText('Pool: 10 HP')).toBeInTheDocument();
             expect(screen.getByText('Allocated: 0 / 10')).toBeInTheDocument();
             expect(screen.getByText('Remaining: 10')).toBeInTheDocument();
+        });
+    });
+
+    // ── Pool bar ──
+
+    describe('pool bar display', () => {
+        it('hides remaining when fully allocated', () => {
+            render(<InspiringSmiteModal {...makeProps()} />);
+            const checkbox = screen.getAllByRole('checkbox')[0];
+            fireEvent.click(checkbox);
+            const input = screen.getByRole('spinbutton');
+            fireEvent.change(input, { target: { value: '18' } });
+            expect(screen.queryByText('Remaining:')).not.toBeInTheDocument();
         });
     });
 
@@ -134,13 +103,6 @@ describe('InspiringSmiteModal', () => {
             const checkbox = screen.getAllByRole('checkbox')[0];
             fireEvent.click(checkbox);
             expect(screen.getByRole('button', { name: /Inspire \(1\)/ })).not.toBeDisabled();
-        });
-
-        it('updates confirm button count when selecting a target', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
-            const checkbox = screen.getAllByRole('checkbox')[0];
-            fireEvent.click(checkbox);
-            expect(screen.getByRole('button', { name: /Inspire \(1\)/ })).toBeInTheDocument();
         });
 
         it('allows selecting multiple targets', () => {
@@ -183,15 +145,6 @@ describe('InspiringSmiteModal', () => {
     // ── Allocation ──
 
     describe('allocation', () => {
-        it('allows entering allocation via input', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
-            const checkbox = screen.getAllByRole('checkbox')[0];
-            fireEvent.click(checkbox);
-            const input = screen.getByRole('spinbutton');
-            fireEvent.change(input, { target: { value: '5' } });
-            expect(Number(input.value)).toBe(5);
-        });
-
         it('caps allocation at total pool', () => {
             render(<InspiringSmiteModal {...makeProps()} />);
             const checkbox = screen.getAllByRole('checkbox')[0];
@@ -305,16 +258,6 @@ describe('InspiringSmiteModal', () => {
             expect(mockOnConfirm).toHaveBeenCalledWith({ Ally1: 10 });
         });
 
-        it('calls onConfirm with only selected targets', () => {
-            render(<InspiringSmiteModal {...makeProps()} />);
-            const checkbox = screen.getAllByRole('checkbox')[0];
-            fireEvent.click(checkbox);
-            const input = screen.getByRole('spinbutton');
-            fireEvent.change(input, { target: { value: '12' } });
-            fireEvent.click(screen.getByRole('button', { name: /Inspire \(1\)/ }));
-            expect(mockOnConfirm).toHaveBeenCalledWith({ Ally1: 12 });
-        });
-
         it('allows allocating the entire pool to a single target', () => {
             render(<InspiringSmiteModal {...makeProps()} />);
             const checkbox = screen.getAllByRole('checkbox')[0];
@@ -357,11 +300,6 @@ describe('InspiringSmiteModal', () => {
             render(<InspiringSmiteModal {...makeProps({ tempHp: 0 })} />);
             expect(screen.getByText('Pool: 0 HP')).toBeInTheDocument();
             expect(screen.getByText('Allocated: 0 / 0')).toBeInTheDocument();
-        });
-
-        it('renders with single target', () => {
-            render(<InspiringSmiteModal {...makeProps({ creatureTargets: [{ name: 'Solo', type: 'player' }] })} />);
-            expect(screen.getByText('Solo')).toBeInTheDocument();
         });
     });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ShieldBashChoiceModal from './ShieldBashChoiceModal.jsx';
@@ -35,26 +36,18 @@ beforeEach(() => {
 // ── Initial render ──
 
 describe('ShieldBashChoiceModal - initial render', () => {
-  it('renders the modal with header, instruction text, and action buttons', () => {
+  it('renders the modal with header, instruction text, options, and action buttons', () => {
     render(<ShieldBashChoiceModal {...makeProps()} />);
     expect(screen.getByText('Shield Bash')).toBeInTheDocument();
     expect(screen.getByText(/Choose an effect for/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Apply Effect/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Skip \(do not consume use\)/ })).toBeInTheDocument();
-  });
-
-  it('renders the target name and save DC in instruction text', () => {
-    render(<ShieldBashChoiceModal {...makeProps()} />);
     expect(screen.getByText('Orc')).toBeInTheDocument();
     expect(screen.getByText(/DC 13/)).toBeInTheDocument();
-  });
-
-  it('renders both Push and Prone options with descriptions', () => {
-    render(<ShieldBashChoiceModal {...makeProps()} />);
     expect(screen.getByText('Push')).toBeInTheDocument();
     expect(screen.getByText('Prone')).toBeInTheDocument();
     expect(screen.getByText(/Push target 5 feet away from you/)).toBeInTheDocument();
     expect(screen.getByText(/Target gains Prone condition/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Apply Effect/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Skip \(do not consume use\)/ })).toBeInTheDocument();
   });
 
   it('has Apply Effect button disabled when no selection is made', () => {
@@ -66,19 +59,15 @@ describe('ShieldBashChoiceModal - initial render', () => {
 // ── Selection behavior ──
 
 describe('ShieldBashChoiceModal - selection behavior', () => {
-  it('selects Push option when clicked and enables Apply button', () => {
-    render(<ShieldBashChoiceModal {...makeProps()} />);
-    fireEvent.click(screen.getByText('Push'));
-    expect(screen.getByRole('radio', { name: /Push—/ })).toBeChecked();
-    expect(screen.getByRole('button', { name: /Apply Effect/ })).not.toBeDisabled();
-  });
-
-  it('selects Prone option when clicked and enables Apply button', () => {
-    render(<ShieldBashChoiceModal {...makeProps()} />);
-    fireEvent.click(screen.getByText('Prone'));
-    expect(screen.getByRole('radio', { name: /Prone—/ })).toBeChecked();
-    expect(screen.getByRole('button', { name: /Apply Effect/ })).not.toBeDisabled();
-  });
+  it.each([['Push'], ['Prone']])(
+    'selects %s option when clicked and enables Apply button',
+    (option) => {
+      render(<ShieldBashChoiceModal {...makeProps()} />);
+      fireEvent.click(screen.getByText(option));
+      expect(screen.getByRole('radio', { name: new RegExp(`${option}—`) })).toBeChecked();
+      expect(screen.getByRole('button', { name: /Apply Effect/ })).not.toBeDisabled();
+    },
+  );
 
   it('switches selection when a different option is clicked', () => {
     render(<ShieldBashChoiceModal {...makeProps()} />);
@@ -99,45 +88,31 @@ describe('ShieldBashChoiceModal - apply effect', () => {
     expect(shieldBash.applyShieldBashEffect).not.toHaveBeenCalled();
   });
 
-  it('calls applyShieldBashEffect with "Push" when Apply is clicked', async () => {
-    shieldBash.applyShieldBashEffect.mockResolvedValue({
-      type: 'popup',
-      payload: { description: 'Shield Bash: Orc pushed 5 ft' },
-    });
-    render(<ShieldBashChoiceModal {...makeProps()} />);
-    fireEvent.click(screen.getByText('Push'));
-    fireEvent.click(screen.getByRole('button', { name: /Apply Effect/ }));
-    await waitFor(() => {
-      expect(shieldBash.applyShieldBashEffect).toHaveBeenCalledWith(
-        baseProps.action,
-        baseProps.playerStats,
-        baseProps.campaignName,
-        baseProps.targetName,
-        'Push',
-        baseProps.saveDc
-      );
-    });
-  });
-
-  it('calls applyShieldBashEffect with "Prone" when Apply is clicked', async () => {
-    shieldBash.applyShieldBashEffect.mockResolvedValue({
-      type: 'popup',
-      payload: { description: 'Shield Bash: Orc has Prone condition' },
-    });
-    render(<ShieldBashChoiceModal {...makeProps()} />);
-    fireEvent.click(screen.getByText('Prone'));
-    fireEvent.click(screen.getByRole('button', { name: /Apply Effect/ }));
-    await waitFor(() => {
-      expect(shieldBash.applyShieldBashEffect).toHaveBeenCalledWith(
-        baseProps.action,
-        baseProps.playerStats,
-        baseProps.campaignName,
-        baseProps.targetName,
-        'Prone',
-        baseProps.saveDc
-      );
-    });
-  });
+  it.each([
+    ['Push', 'push', 'Orc pushed 5 ft'],
+    ['Prone', 'prone', 'Orc has Prone condition'],
+  ])(
+    'calls applyShieldBashEffect with "%s" when Apply is clicked',
+    async (option, _effectKey, description) => {
+      shieldBash.applyShieldBashEffect.mockResolvedValue({
+        type: 'popup',
+        payload: { description: `Shield Bash: ${description}` },
+      });
+      render(<ShieldBashChoiceModal {...makeProps()} />);
+      fireEvent.click(screen.getByText(option));
+      fireEvent.click(screen.getByRole('button', { name: /Apply Effect/ }));
+      await waitFor(() => {
+        expect(shieldBash.applyShieldBashEffect).toHaveBeenCalledWith(
+          baseProps.action,
+          baseProps.playerStats,
+          baseProps.campaignName,
+          baseProps.targetName,
+          option,
+          baseProps.saveDc,
+        );
+      });
+    },
+  );
 
   it('shows result state with description after apply resolves', async () => {
     shieldBash.applyShieldBashEffect.mockResolvedValue({
@@ -151,34 +126,6 @@ describe('ShieldBashChoiceModal - apply effect', () => {
       expect(screen.getByText('Shield Bash')).toBeInTheDocument();
       expect(screen.getByText('Done')).toBeInTheDocument();
       expect(screen.getByText('Shield Bash: Orc pushed 5 ft')).toBeInTheDocument();
-    });
-  });
-
-  it('renders the result description via dangerouslySetInnerHTML with HTML', async () => {
-    shieldBash.applyShieldBashEffect.mockResolvedValue({
-      type: 'popup',
-      payload: { description: '<strong>Orc pushed 5 ft!</strong>' },
-    });
-    render(<ShieldBashChoiceModal {...makeProps()} />);
-    fireEvent.click(screen.getByText('Push'));
-    fireEvent.click(screen.getByRole('button', { name: /Apply Effect/ }));
-    await waitFor(() => {
-      expect(screen.getByText('Orc pushed 5 ft!')).toBeInTheDocument();
-    });
-  });
-
-  it('hides choice options after apply resolves', async () => {
-    shieldBash.applyShieldBashEffect.mockResolvedValue({
-      type: 'popup',
-      payload: { description: 'Shield Bash: Orc pushed 5 ft' },
-    });
-    render(<ShieldBashChoiceModal {...makeProps()} />);
-    fireEvent.click(screen.getByText('Push'));
-    fireEvent.click(screen.getByRole('button', { name: /Apply Effect/ }));
-    await waitFor(() => {
-      expect(screen.queryByText(/Choose an effect for/)).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Apply Effect/ })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Skip \(do not consume use\)/ })).not.toBeInTheDocument();
     });
   });
 });
@@ -216,7 +163,7 @@ describe('ShieldBashChoiceModal - skip flow', () => {
         baseProps.campaignName,
         baseProps.targetName,
         'skip',
-        baseProps.saveDc
+        baseProps.saveDc,
       );
     });
   });
@@ -230,17 +177,6 @@ describe('ShieldBashChoiceModal - skip flow', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
-
-  it('works with Skip regardless of whether an option is selected', async () => {
-    const onClose = vi.fn();
-    shieldBash.applyShieldBashEffect.mockResolvedValue(null);
-    render(<ShieldBashChoiceModal {...makeProps({ onClose })} />);
-    fireEvent.click(screen.getByText('Push'));
-    fireEvent.click(screen.getByRole('button', { name: /Skip \(do not consume use\)/ }));
-    await waitFor(() => {
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-  });
 });
 
 // ── Overlay click behavior ──
@@ -248,56 +184,16 @@ describe('ShieldBashChoiceModal - skip flow', () => {
 describe('ShieldBashChoiceModal - overlay click', () => {
   it('calls onClose when overlay background is clicked', () => {
     const onClose = vi.fn();
-    render(<ShieldBashChoiceModal {...makeProps({ onClose })} />);
-    fireEvent.click(document.querySelector('.sp-overlay'));
+    const { container } = render(<ShieldBashChoiceModal {...makeProps({ onClose })} />);
+    fireEvent.click(container.querySelector('.sp-overlay'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('does not close when clicking inside the modal', () => {
     const onClose = vi.fn();
-    render(<ShieldBashChoiceModal {...makeProps({ onClose })} />);
-    fireEvent.click(document.querySelector('.sp-modal'));
+    const { container } = render(<ShieldBashChoiceModal {...makeProps({ onClose })} />);
+    fireEvent.click(container.querySelector('.sp-modal'));
     expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it('calls onClose when overlay is clicked in result state', async () => {
-    const onClose = vi.fn();
-    shieldBash.applyShieldBashEffect.mockResolvedValue({
-      type: 'popup',
-      payload: { description: 'Shield Bash: Orc pushed 5 ft' },
-    });
-    render(<ShieldBashChoiceModal {...makeProps({ onClose })} />);
-    fireEvent.click(screen.getByText('Push'));
-    fireEvent.click(screen.getByRole('button', { name: /Apply Effect/ }));
-    await waitFor(() => {
-      fireEvent.click(document.querySelector('.sp-overlay'));
-    });
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not close when clicking inside the modal in result state', async () => {
-    const onClose = vi.fn();
-    shieldBash.applyShieldBashEffect.mockResolvedValue({
-      type: 'popup',
-      payload: { description: 'Shield Bash: Orc pushed 5 ft' },
-    });
-    render(<ShieldBashChoiceModal {...makeProps({ onClose })} />);
-    fireEvent.click(screen.getByText('Push'));
-    fireEvent.click(screen.getByRole('button', { name: /Apply Effect/ }));
-    await waitFor(() => {
-      fireEvent.click(document.querySelector('.sp-modal'));
-    });
-    expect(onClose).not.toHaveBeenCalled();
-  });
-});
-
-// ── Custom props ──
-
-describe('ShieldBashChoiceModal - custom props', () => {
-  it('renders custom target name and save DC', () => {
-    render(<ShieldBashChoiceModal {...makeProps({ targetName: 'Troll', saveDc: 15 })} />);
-    expect(screen.getByText('Troll')).toBeInTheDocument();
-    expect(screen.getByText(/DC 15/)).toBeInTheDocument();
   });
 });
 

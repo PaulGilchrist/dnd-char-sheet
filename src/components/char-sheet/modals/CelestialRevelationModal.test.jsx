@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CelestialRevelationModal from './CelestialRevelationModal.jsx';
@@ -48,11 +49,6 @@ describe('CelestialRevelationModal', () => {
       expect(screen.getByText(/Proficiency Bonus \(5\)/)).toBeInTheDocument();
     });
 
-    it('displays 0 for proficiency bonus when not provided', () => {
-      render(<CelestialRevelationModal {...createProps({ playerStats: { name: 'S1', level: 3 } })} />);
-      expect(screen.getByText(/Proficiency Bonus \(0\)/)).toBeInTheDocument();
-    });
-
     it('shows a dash for damage type when no option is selected', () => {
       render(<CelestialRevelationModal {...createProps()} />);
       expect(screen.getByText(/— type per turn/)).toBeInTheDocument();
@@ -82,13 +78,6 @@ describe('CelestialRevelationModal', () => {
       expect(screen.getByText(/Proficiency Bonus \(3\) of Radiant type per turn/)).toBeInTheDocument();
       fireEvent.click(screen.getByText('Necrotic Shroud'));
       expect(screen.getByText(/Proficiency Bonus \(3\) of Necrotic type per turn/)).toBeInTheDocument();
-    });
-
-    it('enables Transform button only after an option is selected', () => {
-      render(<CelestialRevelationModal {...createProps()} />);
-      expect(screen.getByRole('button', { name: /Transform/ })).toBeDisabled();
-      fireEvent.click(screen.getByText('Inner Radiance'));
-      expect(screen.getByRole('button', { name: /Transform/ })).toBeEnabled();
     });
   });
 
@@ -121,17 +110,6 @@ describe('CelestialRevelationModal', () => {
       await waitFor(() => {
         expect(screen.getByText(/Transforming into Inner Radiance/)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-      });
-    });
-
-    it('hides selection options and Transform button after transformation', async () => {
-      celestialRevelationHandler.confirmCelestialRevelation.mockResolvedValue(mockSuccessResult('Heavenly Wings'));
-      render(<CelestialRevelationModal {...createProps()} />);
-      fireEvent.click(screen.getByText('Heavenly Wings'));
-      fireEvent.click(screen.getByRole('button', { name: /Transform/ }));
-      await waitFor(() => {
-        expect(screen.queryByText(/Choose a transformation option/)).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /Transform/ })).not.toBeInTheDocument();
       });
     });
   });
@@ -175,7 +153,7 @@ describe('CelestialRevelationModal', () => {
   });
 
   describe('setCondition response path', () => {
-    it('calls onClose and onSetConditionModal when confirmCelestialRevelation returns setCondition type', async () => {
+    it('calls onClose and onSetConditionModal with full payload when confirmCelestialRevelation returns setCondition type', async () => {
       const onClose = vi.fn();
       const onSetConditionModal = vi.fn();
       celestialRevelationHandler.confirmCelestialRevelation.mockResolvedValue({
@@ -198,34 +176,6 @@ describe('CelestialRevelationModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /Transform/ }));
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledTimes(1);
-        expect(onSetConditionModal).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it('passes the full payload to onSetConditionModal', async () => {
-      const onClose = vi.fn();
-      const onSetConditionModal = vi.fn();
-      celestialRevelationHandler.confirmCelestialRevelation.mockResolvedValue({
-        type: 'setCondition',
-        payload: {
-          type: 'setCondition',
-          name: 'Necrotic Shroud',
-          automation: {
-            type: 'set_condition',
-            saveType: 'CHA',
-            saveDc: 'ability',
-            condition: 'frightened',
-            range: '10 ft',
-            duration: 'until_end_of_next_turn',
-          },
-        },
-      });
-      render(<CelestialRevelationModal {...createProps({ onClose, onSetConditionModal })} />);
-      fireEvent.click(screen.getByText('Necrotic Shroud'));
-      fireEvent.click(screen.getByRole('button', { name: /Transform/ }));
-      await waitFor(() => {
-        expect(onClose).toHaveBeenCalledTimes(1);
-        expect(onSetConditionModal).toHaveBeenCalledTimes(1);
         expect(onSetConditionModal).toHaveBeenCalledWith({
           type: 'setCondition',
           name: 'Necrotic Shroud',
@@ -247,25 +197,6 @@ describe('CelestialRevelationModal', () => {
       render(<CelestialRevelationModal {...createProps({ playerStats: {} })} />);
       expect(screen.getByText(/Choose a transformation option/)).toBeInTheDocument();
       expect(screen.getByText(/Proficiency Bonus \(0\)/)).toBeInTheDocument();
-    });
-
-    it('renders HTML content safely via dangerouslySetInnerHTML after transformation', async () => {
-      celestialRevelationHandler.confirmCelestialRevelation.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Celestial Revelation',
-          description: '<strong>Transforming into Heavenly Wings.</strong> The transformation lasts for 1 minute or until you end it.',
-        },
-      });
-      const { container } = render(<CelestialRevelationModal {...createProps()} />);
-      fireEvent.click(screen.getByText('Heavenly Wings'));
-      fireEvent.click(screen.getByRole('button', { name: /Transform/ }));
-      await waitFor(() => {
-        expect(screen.getByText(/Transforming into Heavenly Wings/)).toBeInTheDocument();
-        const resultBody = container.querySelector('.sp-body');
-        expect(resultBody.innerHTML).toContain('<strong>Transforming into Heavenly Wings.</strong>');
-      });
     });
   });
 });

@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent, act } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellMasteryModal from './SpellMasteryModal.jsx';
 
@@ -32,17 +33,13 @@ describe('SpellMasteryModal', () => {
 
   // ── Initial render ──
 
-  it('renders the modal overlay with title, instruction text, and both level labels', () => {
+  it('renders the modal overlay with title, instruction text, both level labels, two select dropdowns, and a Confirm Selection button', () => {
     render(<SpellMasteryModal {...makeProps()} />);
     expect(document.querySelector('[data-testid="spell-mastery-modal"]')).toBeInTheDocument();
     expect(screen.getByText('Spell Mastery')).toBeInTheDocument();
     expect(screen.getByText(/Choose a level 1 and a level 2 spell/)).toBeInTheDocument();
     expect(screen.getByText('Level 1 spell:')).toBeInTheDocument();
     expect(screen.getByText('Level 2 spell:')).toBeInTheDocument();
-  });
-
-  it('renders two select dropdowns and a Confirm Selection button with char-btn class', () => {
-    render(<SpellMasteryModal {...makeProps()} />);
     expect(document.querySelectorAll('select')).toHaveLength(2);
     const btn = screen.getByRole('button', { name: 'Confirm Selection' });
     expect(btn).toBeInTheDocument();
@@ -50,19 +47,11 @@ describe('SpellMasteryModal', () => {
     document.querySelectorAll('select').forEach((select) => {
       expect(select).toHaveClass('char-btn');
     });
-  });
-
-  it('renders placeholder options with correct text and initializes selects with empty values', () => {
-    render(<SpellMasteryModal {...makeProps()} />);
     const selects = screen.getAllByRole('combobox');
     expect(selects[0].value).toBe('');
     expect(selects[1].value).toBe('');
     expect(selects[0].querySelector('option[value=""]')).toHaveTextContent('-- Select a level 1 spell --');
     expect(selects[1].querySelector('option[value=""]')).toHaveTextContent('-- Select a level 2 spell --');
-  });
-
-  it('populates both dropdowns with all spell options from payload', () => {
-    render(<SpellMasteryModal {...makeProps()} />);
     for (const spell of [...level1Options, ...level2Options]) {
       expect(screen.getByText(spell)).toBeInTheDocument();
     }
@@ -79,13 +68,10 @@ describe('SpellMasteryModal', () => {
 
   // ── Confirm button disabled state ──
 
-  it('disables the confirm button when no selections are made', () => {
+  it('disables the confirm button when no selections are made, when only one level is selected, and when the same spell is selected for both levels', () => {
     render(<SpellMasteryModal {...makeProps()} />);
     expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeDisabled();
-  });
 
-  it('disables the confirm button when only one level is selected', () => {
-    render(<SpellMasteryModal {...makeProps()} />);
     const selects = screen.getAllByRole('combobox');
     const btn = screen.getByRole('button', { name: 'Confirm Selection' });
     fireEvent.change(selects[0], { target: { value: 'Fireball' } });
@@ -94,62 +80,32 @@ describe('SpellMasteryModal', () => {
     expect(btn).not.toBeDisabled();
     fireEvent.change(selects[0], { target: { value: '' } });
     expect(btn).toBeDisabled();
-  });
 
-  it('disables the confirm button when the same spell is selected for both levels', () => {
+    cleanup();
     render(<SpellMasteryModal {...makeProps({ payload: { level1Options: ['Magic Missile', 'Shield'], level2Options: ['Magic Missile', 'Shield'], currentLevel1: '', currentLevel2: '' } })} />);
-    const selects = screen.getAllByRole('combobox');
-    const btn = screen.getByRole('button', { name: 'Confirm Selection' });
-    fireEvent.change(selects[0], { target: { value: 'Magic Missile' } });
-    fireEvent.change(selects[1], { target: { value: 'Magic Missile' } });
-    expect(btn).toBeDisabled();
-  });
-
-  it('re-enables the confirm button after changing one dropdown to a different spell', () => {
-    render(<SpellMasteryModal {...makeProps()} />);
-    const selects = screen.getAllByRole('combobox');
-    const btn = screen.getByRole('button', { name: 'Confirm Selection' });
-    // Both identical → disabled
-    fireEvent.change(selects[0], { target: { value: 'Fireball' } });
-    fireEvent.change(selects[1], { target: { value: 'Fireball' } });
-    expect(btn).toBeDisabled();
-    // Change second to different → enabled
-    fireEvent.change(selects[1], { target: { value: 'Misty Step' } });
-    expect(btn).not.toBeDisabled();
+    const selects2 = screen.getAllByRole('combobox');
+    const btn2 = screen.getByRole('button', { name: 'Confirm Selection' });
+    fireEvent.change(selects2[0], { target: { value: 'Magic Missile' } });
+    fireEvent.change(selects2[1], { target: { value: 'Magic Missile' } });
+    expect(btn2).toBeDisabled();
   });
 
   // ── Pre-selected values ──
 
-  it('does not show current selection text when no values are pre-selected', () => {
-    render(<SpellMasteryModal {...makeProps()} />);
-    expect(screen.queryByText(/Current:/)).not.toBeInTheDocument();
-  });
-
-  it('shows current selection text with spell names when both values are pre-selected', () => {
+  it('shows current selection text with spell names and initializes selects with pre-selected values when both are provided', () => {
     render(<SpellMasteryModal {...makeProps({ payload: { level1Options, level2Options, currentLevel1: 'Fireball', currentLevel2: 'Misty Step' } })} />);
     expect(screen.getByText(/Current:/)).toBeInTheDocument();
     const bolds = document.querySelectorAll('[data-testid="spell-mastery-modal"] b');
     expect(bolds[0].textContent).toBe('Fireball');
     expect(bolds[1].textContent).toBe('Misty Step');
-  });
-
-  it('initializes selects with pre-selected values', () => {
-    render(<SpellMasteryModal {...makeProps({ payload: { level1Options, level2Options, currentLevel1: 'Shield', currentLevel2: 'Invisibility' } })} />);
     const selects = screen.getAllByRole('combobox');
-    expect(selects[0].value).toBe('Shield');
-    expect(selects[1].value).toBe('Invisibility');
-  });
-
-  it('does not show current selection text when only one value is pre-selected', () => {
-    render(<SpellMasteryModal {...makeProps({ payload: { level1Options, level2Options, currentLevel1: 'Fireball', currentLevel2: '' } })} />);
-    expect(screen.queryByText(/Current:/)).not.toBeInTheDocument();
-    render(<SpellMasteryModal {...makeProps({ payload: { level1Options, level2Options, currentLevel1: '', currentLevel2: 'Misty Step' } })} />);
-    expect(screen.queryByText(/Current:/)).not.toBeInTheDocument();
+    expect(selects[0].value).toBe('Fireball');
+    expect(selects[1].value).toBe('Misty Step');
   });
 
   // ── Confirm interaction ──
 
-  it('calls onConfirm with selected values when confirm is clicked', async () => {
+  it('calls onConfirm with selected or pre-selected values when confirm is clicked, regardless of selection order', async () => {
     const onConfirm = vi.fn();
     render(<SpellMasteryModal {...makeProps({ onConfirm })} />);
     const selects = screen.getAllByRole('combobox');
@@ -197,19 +153,16 @@ describe('SpellMasteryModal', () => {
 
   // ── Clear Selection ──
 
-  it('does not show Clear Selection button when no selection exists', () => {
+  it('shows Clear Selection button only when both spells are pre-selected, and calls onConfirm with null, null when clicked', () => {
     render(<SpellMasteryModal {...makeProps()} />);
     expect(screen.queryByText('Clear Selection')).not.toBeInTheDocument();
-  });
-
-  it('does not show Clear Selection button when only one level is pre-selected', () => {
+    cleanup();
     render(<SpellMasteryModal {...makeProps({ payload: { level1Options, level2Options, currentLevel1: 'Fireball', currentLevel2: '' } })} />);
     expect(screen.queryByText('Clear Selection')).not.toBeInTheDocument();
+    cleanup();
     render(<SpellMasteryModal {...makeProps({ payload: { level1Options, level2Options, currentLevel1: '', currentLevel2: 'Misty Step' } })} />);
     expect(screen.queryByText('Clear Selection')).not.toBeInTheDocument();
-  });
-
-  it('shows Clear Selection button when both spells are pre-selected', () => {
+    cleanup();
     render(<SpellMasteryModal {...makeProps({ payload: { level1Options, level2Options, currentLevel1: 'Fireball', currentLevel2: 'Misty Step' } })} />);
     expect(screen.getByText('Clear Selection')).toBeInTheDocument();
   });
@@ -243,22 +196,11 @@ describe('SpellMasteryModal', () => {
 
   // ── Edge cases ──
 
-  it('calls onConfirm with null, null when both selects are empty (no pre-selection and no user selection)', async () => {
-    const onConfirm = vi.fn();
-    render(<SpellMasteryModal {...makeProps({ onConfirm })} />);
-    // Button is disabled, so clicking it should not call onConfirm
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm Selection' }));
-    });
-    expect(onConfirm).not.toHaveBeenCalled();
-  });
-
   it('renders selects with only the default option when option arrays are empty and both are pre-selected', () => {
     render(<SpellMasteryModal {...makeProps({ payload: { level1Options: [], level2Options: [], currentLevel1: 'Fireball', currentLevel2: 'Misty Step' } })} />);
     const selects = screen.getAllByRole('combobox');
     expect(selects[0].options.length).toBe(1);
     expect(selects[1].options.length).toBe(1);
-    // Pre-selected values still show in state even though options are empty
     expect(screen.getByText(/Current:/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirm Selection' })).toBeEnabled();
   });

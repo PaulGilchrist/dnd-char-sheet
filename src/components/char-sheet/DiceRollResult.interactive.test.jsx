@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
@@ -96,20 +97,6 @@ describe('DiceRollResult', () => {
                 );
                 expect(screen.queryByText(/Reroll/)).not.toBeInTheDocument();
             });
-
-            it('shows reroll button when autoRerollCondition is a different condition', () => {
-                render(
-                    <DiceRollResult
-                        name="Attack"
-                        type="d20"
-                        rolls={[12]}
-                        bonus={3}
-                        autoReroll={true}
-                        autoRerollCondition="frightened"
-                    />
-                );
-                expect(screen.getByText(/Reroll/)).toBeInTheDocument();
-            });
         });
 
         describe('stroke of luck button', () => {
@@ -183,21 +170,6 @@ describe('DiceRollResult', () => {
                 expect(screen.getByText(/Trip Attack/)).toBeInTheDocument();
             });
 
-            it('renders only Trip Attack when Precision Attack is absent', () => {
-                render(
-                    <DiceRollResult
-                        name="Attack"
-                        type="d20"
-                        rolls={[12]}
-                        bonus={3}
-                        rollType="attack"
-                        availableSuperiorityManeuvers={[{ name: 'Trip Attack' }]}
-                    />
-                );
-                expect(screen.queryByText(/Precision Attack/)).not.toBeInTheDocument();
-                expect(screen.getByText(/Trip Attack/)).toBeInTheDocument();
-            });
-
             it('does not render when maneuvers array is empty', () => {
                 render(
                     <DiceRollResult
@@ -213,20 +185,6 @@ describe('DiceRollResult', () => {
                 expect(screen.queryByText(/Trip Attack/)).not.toBeInTheDocument();
             });
 
-            it('does not render when maneuvers is null', () => {
-                render(
-                    <DiceRollResult
-                        name="Attack"
-                        type="d20"
-                        rolls={[12]}
-                        bonus={3}
-                        rollType="attack"
-                        availableSuperiorityManeuvers={null}
-                    />
-                );
-                expect(screen.queryByText(/Precision Attack/)).not.toBeInTheDocument();
-                expect(screen.queryByText(/Trip Attack/)).not.toBeInTheDocument();
-            });
         });
 
         describe('lucky reroll (Halfling trait)', () => {
@@ -362,6 +320,183 @@ describe('DiceRollResult', () => {
             const hitMiss = container.querySelector('.dice-roll-hit-miss.hit');
             expect(hitMiss.textContent).toContain('HIT');
             expect(hitMiss.textContent).toContain('3 reaction');
+        });
+    });
+
+    describe('damage type choice events', () => {
+        it('dispatches damage-type-choice event with chosen type on button click', () => {
+            const handler = vi.fn();
+            window.addEventListener('damage-type-choice', handler);
+            render(
+                <DiceRollResult
+                    name="Flame Blade"
+                    type="damage_type_choice"
+                    rolls={[18]}
+                    bonus={5}
+                    baseFormula="1d8"
+                    baseRolls={[5]}
+                    baseTotal={5}
+                    bonusFormula="1d8"
+                    bonusRolls={[3]}
+                    bonusTotal={3}
+                    types={['Fire', 'Cold']}
+                />
+            );
+            fireEvent.click(screen.getByText('Fire'));
+            expect(handler).toHaveBeenCalledTimes(1);
+            expect(handler.mock.calls[0][0].detail.chosenType).toBe('Fire');
+            window.removeEventListener('damage-type-choice', handler);
+        });
+
+        it('dispatches damage-type-skip event when skip is clicked', () => {
+            const handler = vi.fn();
+            window.addEventListener('damage-type-skip', handler);
+            render(
+                <DiceRollResult
+                    name="Flame Blade"
+                    type="damage_type_choice"
+                    rolls={[18]}
+                    bonus={5}
+                    baseFormula="1d8"
+                    baseRolls={[5]}
+                    baseTotal={5}
+                    bonusFormula="1d8"
+                    bonusRolls={[3]}
+                    bonusTotal={3}
+                    types={['Fire', 'Cold']}
+                />
+            );
+            fireEvent.click(screen.getByText('Skip'));
+            expect(handler).toHaveBeenCalledTimes(1);
+            window.removeEventListener('damage-type-skip', handler);
+        });
+    });
+
+    describe('bardic inspiration defense interaction', () => {
+        it('calls onBardicInspirationDefense and shows result div after clicking', () => {
+            const onBardicInspirationDefense = vi.fn();
+            const { container } = render(
+                <DiceRollResult
+                    name="Longsword"
+                    type="attack"
+                    rolls={[18]}
+                    bonus={5}
+                    targetName="Goblin"
+                    targetAc={16}
+                    hit={true}
+                    bardicInspirationDefense={true}
+                    bardicInspirationDefenseDieSize={6}
+                    onBardicInspirationDefense={onBardicInspirationDefense}
+                />
+            );
+            fireEvent.click(screen.getByText(/Bardic Inspiration - Defense/));
+            expect(onBardicInspirationDefense).toHaveBeenCalled();
+            expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
+        });
+    });
+
+    describe('bardic inspiration offense interaction', () => {
+        it('calls onBardicInspirationOffense and shows result div after clicking', () => {
+            const onBardicInspirationOffense = vi.fn();
+            const { container } = render(
+                <DiceRollResult
+                    name="Fireball"
+                    type="damage"
+                    rolls={[6, 5, 4]}
+                    bonus={0}
+                    total={15}
+                    bardicInspirationOffense={true}
+                    bardicInspirationOffenseDieSize={6}
+                    onBardicInspirationOffense={onBardicInspirationOffense}
+                />
+            );
+            fireEvent.click(screen.getByText(/Bardic Inspiration - Offense/));
+            expect(onBardicInspirationOffense).toHaveBeenCalled();
+            expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
+        });
+    });
+
+    describe('done button interaction', () => {
+        it('calls onDone with computedHit when clicked', () => {
+            const onDone = vi.fn();
+            render(
+                <DiceRollResult
+                    name="Longsword"
+                    type="attack"
+                    rolls={[18]}
+                    bonus={5}
+                    targetName="Goblin"
+                    targetAc={14}
+                    hit={true}
+                    rollType="attack"
+                    autoDamage={true}
+                    onDone={onDone}
+                />
+            );
+            fireEvent.click(screen.getByText('Done'));
+            expect(onDone).toHaveBeenCalledWith(true);
+        });
+    });
+
+    describe('save-damage total hiding', () => {
+        it('hides total when type is save-damage and finalDamage is 0', () => {
+            const { container } = render(
+                <DiceRollResult
+                    name="Fireball"
+                    type="save-damage"
+                    rolls={[6]}
+                    bonus={0}
+                    finalDamage={0}
+                    damageApplied={true}
+                />
+            );
+            expect(container.querySelector('.dice-roll-total')).not.toBeInTheDocument();
+        });
+
+        it('hides total when rollType is save-damage and finalDamage is 0', () => {
+            const { container } = render(
+                <DiceRollResult
+                    name="Fireball"
+                    type="damage"
+                    rolls={[6]}
+                    bonus={0}
+                    rollType="save-damage"
+                    finalDamage={0}
+                    damageApplied={true}
+                />
+            );
+            expect(container.querySelector('.dice-roll-total')).not.toBeInTheDocument();
+        });
+
+        it('shows total when save-damage has finalDamage > 0', () => {
+            const { container } = render(
+                <DiceRollResult
+                    name="Fireball"
+                    type="save-damage"
+                    rolls={[6]}
+                    bonus={0}
+                    finalDamage={5}
+                    damageApplied={true}
+                />
+            );
+            expect(container.querySelector('.dice-roll-total')).toBeInTheDocument();
+        });
+    });
+
+    describe('auto crit display', () => {
+        it('shows critical hit message for auto crit damage', () => {
+            render(
+                <DiceRollResult
+                    name="Fireball"
+                    type="damage"
+                    rolls={[6, 5, 4]}
+                    bonus={0}
+                    total={15}
+                    isAutoCrit={true}
+                />
+            );
+            expect(screen.getByText(/Critical Hit!/)).toBeInTheDocument();
+            expect(screen.getByText(/damage dice doubled/)).toBeInTheDocument();
         });
     });
 });

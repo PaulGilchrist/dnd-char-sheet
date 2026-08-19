@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import RevelationInFleshModal from './RevelationInFleshModal.jsx';
@@ -107,13 +108,17 @@ describe('RevelationInFleshModal', () => {
   });
 
   describe('selection behavior', () => {
-    it('enables the Activate button after selecting at least one option', () => {
+    it('toggles options and enables/disables the Activate button accordingly', () => {
       render(<RevelationInFleshModal {...makeProps()} />);
       const checkboxes = document.querySelectorAll('input[type="checkbox"]');
 
       fireEvent.click(checkboxes[0]);
       expect(checkboxes[0]).toBeChecked();
       expect(screen.getByRole('button', { name: /Activate/ })).toBeEnabled();
+
+      fireEvent.click(checkboxes[0]);
+      expect(checkboxes[0]).not.toBeChecked();
+      expect(screen.getByRole('button', { name: /Activate/ })).toBeDisabled();
     });
 
     it('allows selecting multiple options simultaneously', () => {
@@ -124,28 +129,6 @@ describe('RevelationInFleshModal', () => {
       fireEvent.click(checkboxes[2]);
       expect(checkboxes[0]).toBeChecked();
       expect(checkboxes[2]).toBeChecked();
-    });
-
-    it('toggles an option on and off when clicking the same checkbox', () => {
-      render(<RevelationInFleshModal {...makeProps()} />);
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-
-      fireEvent.click(checkboxes[0]);
-      expect(checkboxes[0]).toBeChecked();
-
-      fireEvent.click(checkboxes[0]);
-      expect(checkboxes[0]).not.toBeChecked();
-    });
-
-    it('disables the Activate button after deselecting all options', () => {
-      render(<RevelationInFleshModal {...makeProps()} />);
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-
-      fireEvent.click(checkboxes[0]);
-      expect(screen.getByRole('button', { name: /Activate/ })).toBeEnabled();
-
-      fireEvent.click(checkboxes[0]);
-      expect(screen.getByRole('button', { name: /Activate/ })).toBeDisabled();
     });
   });
 
@@ -222,7 +205,7 @@ describe('RevelationInFleshModal', () => {
       });
     });
 
-    it('works when the handler returns no logEntries', async () => {
+    it('renders description and skips logging when handler returns no logEntries', async () => {
       revelationHandler.applyRevelationOptions.mockResolvedValue({
         type: 'popup',
         payload: {
@@ -292,7 +275,7 @@ describe('RevelationInFleshModal', () => {
         fireEvent.click(screen.getByRole('button', { name: /Activate/ }));
       });
       await waitFor(() => {
-        expect(document.querySelector('.sp-body strong')).toBeInTheDocument();
+        expect(screen.getByText('ability')).toBeInTheDocument();
       });
     });
   });

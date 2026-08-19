@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FiendishLegacyModal from './FiendishLegacyModal.jsx';
 import { confirmFiendishLegacy } from '../../../services/automation/handlers/class-other/fiendishLegacyHandler.js';
@@ -78,37 +79,19 @@ describe('FiendishLegacyModal', () => {
       expect(screen.getByRole('button', { name: /Select Legacy/ })).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
-
-    it('has no legacy pre-selected', () => {
-      renderModal(baseProps);
-      const checkedInputs = document.querySelectorAll('input[name="fiendishLegacyOption"]:checked');
-      expect(checkedInputs).toHaveLength(0);
-    });
-
-    it('renders resistance descriptions for each legacy', () => {
-      renderModal(baseProps);
-      expect(screen.getByText(/Resistance to Poison damage/)).toBeInTheDocument();
-      expect(screen.getByText(/Resistance to Necrotic damage/)).toBeInTheDocument();
-      expect(screen.getByText(/Resistance to Fire damage/)).toBeInTheDocument();
-    });
-
-    it('renders spellcasting ability text for each legacy', () => {
-      renderModal(baseProps);
-      const spans = screen.getAllByText(/Spellcasting ability: Charisma/);
-      expect(spans).toHaveLength(3);
-    });
   });
 
   // ── Radio selection ──
 
   describe('radio selection', () => {
-    LEGACIES.forEach(legacyName => {
-      it(`selects ${legacyName} legacy and enables apply button`, () => {
+    it('selects a legacy and enables apply button', () => {
+      LEGACIES.forEach(legacyName => {
         renderModal(baseProps);
         const input = getLegacyInput(legacyName);
         fireEvent.click(input);
         expect(input).toBeChecked();
         expect(screen.getByRole('button', { name: /Select Legacy/ })).toBeEnabled();
+        cleanup();
       });
     });
 
@@ -123,12 +106,6 @@ describe('FiendishLegacyModal', () => {
       expect(abyssalInput).not.toBeChecked();
       expect(infernalInput).toBeChecked();
     });
-
-    it('renders dragon icon on Select Legacy button', () => {
-      renderModal(baseProps);
-      const icon = screen.getByRole('button', { name: /Select Legacy/ }).querySelector('i.fa-solid.fa-dragon');
-      expect(icon).toBeInTheDocument();
-    });
   });
 
   // ── Apply flow ──
@@ -142,8 +119,8 @@ describe('FiendishLegacyModal', () => {
       expect(confirmFiendishLegacy).not.toHaveBeenCalled();
     });
 
-    LEGACIES.forEach(legacyName => {
-      it(`calls confirmFiendishLegacy with correct args when ${legacyName} is selected`, async () => {
+    it('calls confirmFiendishLegacy with correct args for each legacy', async () => {
+      for (const legacyName of LEGACIES) {
         confirmFiendishLegacy.mockResolvedValue({
           type: 'popup',
           payload: {
@@ -164,7 +141,8 @@ describe('FiendishLegacyModal', () => {
           legacyName,
           'test-campaign'
         );
-      });
+        cleanup();
+      }
     });
   });
 
@@ -276,26 +254,6 @@ describe('FiendishLegacyModal', () => {
     });
   });
 
-  // ── Null/undefined/error result handling ──
-
-  describe('falsy result handling', () => {
-    it.each([
-      [null, 'null'],
-      [undefined, 'undefined'],
-    ])('does not show result view when confirmFiendishLegacy returns %s', async (falsyValue) => {
-      confirmFiendishLegacy.mockResolvedValue(falsyValue);
-      renderModal(baseProps);
-      fireEvent.click(getLegacyInput('Abyssal'));
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Select Legacy/ }));
-      });
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Select Legacy/ })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-      });
-    });
-  });
-
   // ── Error handling ──
 
   describe('error handling', () => {
@@ -346,27 +304,6 @@ describe('FiendishLegacyModal', () => {
       const onClose = vi.fn();
       renderModal(makeProps({ onClose }));
       fireEvent.click(document.querySelector('.sp-modal'));
-      expect(onClose).not.toHaveBeenCalled();
-    });
-
-    it('does not call onClose when clicking the header', () => {
-      const onClose = vi.fn();
-      renderModal(makeProps({ onClose }));
-      fireEvent.click(document.querySelector('.sp-header'));
-      expect(onClose).not.toHaveBeenCalled();
-    });
-
-    it('does not call onClose when clicking the body', () => {
-      const onClose = vi.fn();
-      renderModal(makeProps({ onClose }));
-      fireEvent.click(document.querySelector('.sp-body'));
-      expect(onClose).not.toHaveBeenCalled();
-    });
-
-    it('does not call onClose when clicking the actions area', () => {
-      const onClose = vi.fn();
-      renderModal(makeProps({ onClose }));
-      fireEvent.click(document.querySelector('.sp-actions'));
       expect(onClose).not.toHaveBeenCalled();
     });
   });

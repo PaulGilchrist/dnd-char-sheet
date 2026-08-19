@@ -1,4 +1,15 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Redundant tests removed: 6 tests covering skip button rendering,
+// Misty Step skip button text (mode/title variants), and skip/overlay
+// transitions to result view were already covered in render.test.jsx and
+// integration.test.jsx with equal fidelity. The skip button and overlay
+// behaviors do not depend on newCount, so testing them with newCount: 0
+// adds no unique coverage.
+//
+// Kept (2 unique behavioral tests):
+//   - "No uses remaining" message renders when newCount is 0
+//   - All four step options are inert when newCount is 0
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
@@ -76,14 +87,6 @@ describe('StepsOfTheFeyTauntModal - No Uses', () => {
             expect(screen.getByText(/No uses remaining — finish a Long Rest to regain/)).toBeInTheDocument();
         });
 
-        it('does not transition to any step confirmation when an option is clicked', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
-            const refreshingOption = screen.getByTestId('step-option-refreshing');
-            fireEvent.click(refreshingOption);
-            expect(screen.getByText(/Choose how you use/)).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /Refresh/ })).not.toBeInTheDocument();
-        });
-
         it('does not transition to any step confirmation when any option is clicked', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
             const allOptionKeys = ['refreshing', 'taunting', 'disappearing', 'dreadful'];
@@ -92,35 +95,6 @@ describe('StepsOfTheFeyTauntModal - No Uses', () => {
                 fireEvent.click(option);
                 expect(screen.getByText(/Choose how you use/)).toBeInTheDocument();
             }
-        });
-
-        it('still shows the Skip button when no uses', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
-            expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-        });
-
-        it('shows Misty Step only skip button when mode is mistyEscape and no uses', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0, mode: 'mistyEscape' })} />);
-            expect(screen.getByRole('button', { name: 'Misty Step only (free cast)' })).toBeInTheDocument();
-        });
-
-        it('shows Misty Step only skip button when title is Bewitching Magic and no uses', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0, title: 'Bewitching Magic' })} />);
-            expect(screen.getByRole('button', { name: 'Misty Step only (free cast)' })).toBeInTheDocument();
-        });
-
-        it('transitions to result view when Skip is clicked with no uses', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
-            const skipButton = screen.getByRole('button', { name: 'Skip' });
-            fireEvent.click(skipButton);
-            expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-        });
-
-        it('transitions to result view when overlay is clicked with no uses', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ newCount: 0 })} />);
-            const overlay = document.querySelector('.sp-overlay');
-            fireEvent.click(overlay);
-            expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
         });
     });
 });

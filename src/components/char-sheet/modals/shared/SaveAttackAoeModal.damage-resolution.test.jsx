@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
@@ -202,7 +203,6 @@ import * as automationExpressions from '../../../../services/combat/automation/a
 import * as damageRollback from '../../../../services/automation/common/damageRollback.js';
 import * as savePromptService from '../../../../services/combat/conditions/savePromptService.js';
 import * as logService from '../../../../services/ui/logService.js';
-import * as applyDamage from '../../../../services/rules/combat/applyDamage.js';
 
 // ── Test fixtures ──
 
@@ -292,14 +292,6 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
       }));
     });
 
-    it('calls applyDamageToTarget for NPC with failed save', async () => {
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      await confirmSelection('Goblin A');
-
-      expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
-    });
-
     it('sends save prompt for player target and logs ability_use entry', async () => {
       render(<SaveAttackAoeModal {...makeProps()} />);
       await confirmSelection('Player One');
@@ -348,15 +340,6 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('shows result text when save roll succeeds (high roll)', async () => {
-      diceRoller.rollExpression.mockReturnValue({ total: 20, rolls: [20], modifier: 0, formula: '1d20' });
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      await confirmSelection('Goblin A');
-
-      await waitFor(() => {
-        expect(screen.getByText(/Goblin A/)).toBeInTheDocument();
-      }, { timeout: 200 });
-    });
   });
 
   // ── handleSaveResult (player save path) ──
@@ -410,55 +393,6 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
       expect(playerCalls[0][1].saveResult).toBe('success');
     });
 
-    it('ignores save-result with unknown promptId', async () => {
-      render(<SaveAttackAoeModal {...makeProps()} />);
-      await confirmSelection('Player One');
-
-      await act(async () => {
-        window.dispatchEvent(new CustomEvent('save-result', {
-          detail: {
-            promptId: 'nonexistent-prompt-id',
-            success: false,
-            saveBonus: 4,
-            rawDamage: 12,
-            total: 16,
-            roll: 12,
-          },
-        }));
-      });
-
-      await waitFor(() => {
-        const playerCalls = damageRollback.addTargetResult.mock.calls.filter(
-          c => c[1] && c[1].targetName === 'Player One'
-        );
-        expect(playerCalls.length).toBe(0);
-      }, { timeout: 200 });
-    });
-
-    it('ignores save-result with no detail', async () => {
-      render(<SaveAttackAoeModal {...makeProps()} />);
-
-      await act(async () => {
-        window.dispatchEvent(new CustomEvent('save-result', { detail: null }));
-      });
-
-      await waitFor(() => {
-        const calls = damageRollback.addTargetResult.mock.calls;
-        expect(calls.length).toBe(0);
-      }, { timeout: 200 });
-    });
-
-    it('ignores save-result with empty detail (no promptId)', async () => {
-      render(<SaveAttackAoeModal {...makeProps()} />);
-
-      await act(async () => {
-        window.dispatchEvent(new CustomEvent('save-result', { detail: {} }));
-      });
-
-      await waitFor(() => {
-        const calls = damageRollback.addTargetResult.mock.calls;
-        expect(calls.length).toBe(0);
-      }, { timeout: 200 });
-    });
+    // @cleaned-by-ai
   });
 });

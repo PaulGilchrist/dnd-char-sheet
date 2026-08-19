@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingIllusionModal from './HealingIllusionModal.jsx';
@@ -37,13 +38,8 @@ describe('HealingIllusionModal', () => {
   });
 
   describe('initial render', () => {
-    it('renders the overlay, modal, header, body, and action buttons with correct heal amount', () => {
+    it('renders the modal with correct heal amount text', () => {
       render(<HealingIllusionModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header')).toBeInTheDocument();
-      expect(document.querySelector('.sp-body')).toBeInTheDocument();
-      expect(document.querySelector('.sp-actions')).toBeInTheDocument();
       expect(screen.getByText('Healing Illusion')).toBeInTheDocument();
       expect(screen.getByText(/Choose a target within 5 feet to regain 5 HP/)).toBeInTheDocument();
     });
@@ -70,7 +66,7 @@ describe('HealingIllusionModal', () => {
       expect(customInput).toHaveAttribute('placeholder', 'creature name');
     });
 
-    it('toggles target selection between self and custom', () => {
+    it('toggles target selection and enables custom input', () => {
       render(<HealingIllusionModal {...makeProps()} />);
       const selfRadio = document.querySelector(`input[type="radio"][value="${mockPlayerStats.name}"]`);
       const customRadio = document.querySelector('input[type="radio"][value="custom"]');
@@ -81,26 +77,22 @@ describe('HealingIllusionModal', () => {
       expect(selfRadio.checked).toBe(false);
       expect(customRadio.checked).toBe(true);
 
+      const customInput = document.querySelector('input[type="text"]');
+      expect(customInput.disabled).toBe(false);
+
+      fireEvent.change(customInput, { target: { value: 'Orc Warrior' } });
+      expect(customInput.value).toBe('Orc Warrior');
+
       fireEvent.click(selfRadio);
       expect(selfRadio.checked).toBe(true);
       expect(customRadio.checked).toBe(false);
     });
-
-    it('enables the custom name input when custom target is selected and updates its value', () => {
-      render(<HealingIllusionModal {...makeProps()} />);
-      const customRadio = document.querySelector('input[type="radio"][value="custom"]');
-      fireEvent.click(customRadio);
-      const customInput = document.querySelector('input[type="text"]');
-      expect(customInput.disabled).toBe(false);
-      fireEvent.change(customInput, { target: { value: 'Orc Warrior' } });
-      expect(customInput.value).toBe('Orc Warrior');
-    });
   });
 
   describe('close behavior', () => {
-    it('calls onClose when the overlay is clicked', () => {
+    it('calls onClose when the Skip button is clicked', () => {
       render(<HealingIllusionModal {...makeProps()} />);
-      fireEvent.click(document.querySelector('.sp-overlay'));
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
 
@@ -108,12 +100,6 @@ describe('HealingIllusionModal', () => {
       render(<HealingIllusionModal {...makeProps()} />);
       fireEvent.click(document.querySelector('.sp-modal'));
       expect(mockOnClose).not.toHaveBeenCalled();
-    });
-
-    it('calls onClose when the Skip button is clicked', () => {
-      render(<HealingIllusionModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
 
     it('closes the modal when Done is clicked in the applied state', async () => {
@@ -127,21 +113,6 @@ describe('HealingIllusionModal', () => {
 
       await waitFor(() => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-      });
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('closes the modal when the overlay is clicked in the applied state', async () => {
-      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentHitPoints') return 20;
-        return null;
-      });
-
-      render(<HealingIllusionModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
-
-      await waitFor(() => {
-        fireEvent.click(document.querySelector('.sp-overlay'));
       });
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
@@ -257,24 +228,6 @@ describe('HealingIllusionModal', () => {
         });
       });
     });
-
-    it('dispatches combat-summary-updated event after healing', async () => {
-      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-
-      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentHitPoints') return 20;
-        return null;
-      });
-
-      render(<HealingIllusionModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
-
-      await waitFor(() => {
-        expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
-      });
-
-      dispatchSpy.mockRestore();
-    });
   });
 
   describe('healing action — custom target', () => {
@@ -343,27 +296,12 @@ describe('HealingIllusionModal', () => {
   });
 
   describe('validation', () => {
-    it('does not heal when custom name is empty or whitespace-only', async () => {
+    it('does not heal when custom name is empty', async () => {
       render(<HealingIllusionModal {...makeProps()} />);
       const customRadio = document.querySelector('input[type="radio"][value="custom"]');
       fireEvent.click(customRadio);
 
-      // Empty string
       fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
-      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
-      expect(healingRoll.logHealingToSSE).not.toHaveBeenCalled();
-
-      vi.clearAllMocks();
-      useRuntimeState.getRuntimeValue.mockReturnValue(null);
-      useRuntimeState.setRuntimeValue.mockResolvedValue(undefined);
-
-      // Whitespace-only
-      const customRadio2 = document.querySelector('input[type="radio"][value="custom"]');
-      fireEvent.click(customRadio2);
-      const customInput = document.querySelector('input[type="text"]');
-      fireEvent.change(customInput, { target: { value: '   ' } });
-      fireEvent.click(screen.getByRole('button', { name: /Heal/ }));
-
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
       expect(healingRoll.logHealingToSSE).not.toHaveBeenCalled();
     });

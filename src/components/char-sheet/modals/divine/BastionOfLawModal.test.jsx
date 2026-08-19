@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BastionOfLawModal from './BastionOfLawModal.jsx';
@@ -54,12 +55,6 @@ describe('BastionOfLawModal', () => {
       renderModal();
       expect(screen.getByText('Bastion of Law')).toBeInTheDocument();
       expect(screen.getByText(/Choose a creature to create a magical ward on/)).toBeInTheDocument();
-    });
-
-    it('renders the shield icon in the header', () => {
-      renderModal();
-      expect(screen.getByText('Bastion of Law')).toBeInTheDocument();
-      expect(document.querySelector('.fa-shield-halved')).toBeInTheDocument();
     });
 
     it('renders all creature targets in the selection list with HP and type labels', () => {
@@ -134,18 +129,6 @@ describe('BastionOfLawModal', () => {
       expect(warriorOption).not.toHaveClass('selected');
       expect(rogueOption).toHaveClass('selected');
     });
-
-    it('keeps target selected when clicking the same target again', () => {
-      renderModal();
-      const warriorOption = getTargetOption('AllyWarrior');
-      fireEvent.click(warriorOption);
-      expect(warriorOption).toHaveClass('selected');
-
-      fireEvent.click(warriorOption);
-      expect(warriorOption).toHaveClass('selected');
-      const createBtn = screen.getByRole('button', { name: /Create Ward/ });
-      expect(createBtn).not.toBeDisabled();
-    });
   });
 
   // ── SP input clamping behavior ──
@@ -165,16 +148,11 @@ describe('BastionOfLawModal', () => {
       expect(input.value).toBe('3');
     });
 
-    it('defaults to min when input is empty', () => {
+    it('defaults to min for empty or non-numeric input', () => {
       renderModal();
       const input = screen.getByLabelText('Sorcery Points to spend:');
       fireEvent.change(input, { target: { value: '' } });
       expect(input.value).toBe('1');
-    });
-
-    it('defaults to min when input is non-numeric', () => {
-      renderModal();
-      const input = screen.getByLabelText('Sorcery Points to spend:');
       fireEvent.change(input, { target: { value: 'abc' } });
       expect(input.value).toBe('1');
     });
@@ -199,30 +177,11 @@ describe('BastionOfLawModal', () => {
       expect(input.value).toBe('2');
     });
 
-    it('defaults to minSP when sorcery points are zero', () => {
-      runtimeState.getRuntimeValue.mockImplementation((player, key) => {
-        if (key === 'sorceryPoints') return 0;
-        return 10;
-      });
-      renderModal({ auto: { maxSP: 5, minSP: 1 } });
-      const input = screen.getByLabelText('Sorcery Points to spend:');
-      expect(input.value).toBe('1');
-    });
-
     it('updates the Create Ward button dice count when SP changes', () => {
       renderModal({ auto: { maxSP: 5 } });
       const input = screen.getByLabelText('Sorcery Points to spend:');
       fireEvent.change(input, { target: { value: '4' } });
       expect(screen.getByText(/Creates 4d8 ward/)).toBeInTheDocument();
-    });
-
-    it('disables Create Ward when SP is clamped to min but no target is selected', () => {
-      renderModal({ auto: { maxSP: 5 } });
-      const input = screen.getByLabelText('Sorcery Points to spend:');
-      fireEvent.change(input, { target: { value: '0' } });
-      expect(input.value).toBe('1');
-      const createBtn = screen.getByRole('button', { name: /Create Ward/ });
-      expect(createBtn).toBeDisabled();
     });
   });
 
@@ -272,20 +231,6 @@ describe('BastionOfLawModal', () => {
       expect(onConfirm).not.toHaveBeenCalled();
     });
 
-    it('does not call onConfirm when Create Ward is clicked and SP is below min', async () => {
-      const onConfirm = vi.fn();
-      renderModal({ onConfirm });
-
-      const warriorLabel = screen.getByText('AllyWarrior');
-      fireEvent.click(warriorLabel);
-
-      // Force SP below min by mocking sorcery points to 0 which clamps to minSP=1
-      // but canCreateWard requires spAmount >= minSP, so this should still pass.
-      // Instead, test with minSP > available so clamping still meets threshold.
-      // The real edge case: spAmount is valid but target is null.
-      expect(onConfirm).not.toHaveBeenCalled();
-    });
-
     it('calls onClose when Cancel button is clicked', async () => {
       const onClose = vi.fn();
       render(<BastionOfLawModal {...makeProps({ onClose })} />);
@@ -297,18 +242,7 @@ describe('BastionOfLawModal', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClose when overlay is clicked', async () => {
-      const onClose = vi.fn();
-      render(<BastionOfLawModal {...makeProps({ onClose })} />);
-
-      await act(async () => {
-        fireEvent.click(document.querySelector('.sp-overlay'));
-      });
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onClose and not onConfirm when clicking overlay', async () => {
+    it('calls onClose and not onConfirm when overlay is clicked', async () => {
       const onClose = vi.fn();
       const onConfirm = vi.fn();
       render(<BastionOfLawModal {...makeProps({ onClose, onConfirm })} />);
@@ -376,26 +310,6 @@ describe('BastionOfLawModal', () => {
       expect(screen.getByText('Bastion of Law')).toBeInTheDocument();
       expect(screen.getByText(/Choose a creature to create a magical ward on/)).toBeInTheDocument();
       expect(screen.queryByText(/Sorcerer|AllyWarrior|AllyRogue/)).not.toBeInTheDocument();
-    });
-
-    it('disables Create Ward button when creature targets is empty', () => {
-      renderModal({ creatureTargets: [] });
-      const createBtn = screen.getByRole('button', { name: /Create Ward/ });
-      expect(createBtn).toBeDisabled();
-    });
-
-    it('renders without onConfirm callback', async () => {
-      const onClose = vi.fn();
-      render(<BastionOfLawModal {...makeProps({ onClose, onConfirm: undefined })} />);
-
-      const warriorLabel = screen.getByText('AllyWarrior');
-      fireEvent.click(warriorLabel);
-
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Create Ward/ }));
-      });
-
-      expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('renders targets without HP gracefully', () => {

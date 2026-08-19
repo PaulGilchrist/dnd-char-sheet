@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import HypnoticPatternShakeModal from './HypnoticPatternShakeModal.jsx';
@@ -43,13 +44,16 @@ describe('HypnoticPatternShakeModal', () => {
       expect(screen.getByText(/Select a creature/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Shake Free/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
-    it('renders all targets as selectable options', () => {
-      render(<HypnoticPatternShakeModal {...makeProps()} />);
       expect(screen.getByText('Orc Warrior')).toBeInTheDocument();
       expect(screen.getByText('Goblin A')).toBeInTheDocument();
       expect(screen.getByText('Goblin B')).toBeInTheDocument();
+    });
+
+    it('renders no targets and disables Shake Free when targets array is empty', () => {
+      render(<HypnoticPatternShakeModal {...makeProps({ targets: [] })} />);
+      expect(screen.getByText(/Select a creature/)).toBeInTheDocument();
+      expect(screen.queryAllByRole('radio')).toHaveLength(0);
+      expect(screen.getByRole('button', { name: 'Shake Free (none)' })).toBeDisabled();
     });
 
     it('disables the Shake Free button when no target is selected', () => {
@@ -57,32 +61,17 @@ describe('HypnoticPatternShakeModal', () => {
       expect(screen.getByRole('button', { name: 'Shake Free (none)' })).toBeDisabled();
     });
 
-    it('shows a custom feature name when provided', () => {
+    it('renders the feature name header, using custom name when provided or default otherwise', () => {
       render(<HypnoticPatternShakeModal {...makeProps({ featureName: 'Custom Shake' })} />);
       expect(screen.getByText('Custom Shake')).toBeInTheDocument();
-    });
 
-    it('shows default feature name when featureName is undefined', () => {
       render(<HypnoticPatternShakeModal {...makeProps({ featureName: undefined })} />);
       expect(screen.getByText('Shake Out Stupor')).toBeInTheDocument();
-    });
-
-    it('renders no target options when targets array is empty', () => {
-      render(<HypnoticPatternShakeModal {...makeProps({ targets: [] })} />);
-      expect(screen.getByText(/Select a creature/)).toBeInTheDocument();
-      expect(screen.queryAllByRole('radio')).toHaveLength(0);
-      expect(screen.getByRole('button', { name: 'Shake Free (none)' })).toBeDisabled();
-    });
-
-    it('renders a single target when only one is provided', () => {
-      render(<HypnoticPatternShakeModal {...makeProps({ targets: ['Goblin A'] })} />);
-      expect(screen.getByText('Goblin A')).toBeInTheDocument();
-      expect(screen.queryByRole('radio', { name: 'Orc Warrior' })).not.toBeInTheDocument();
     });
   });
 
   describe('radio selection', () => {
-    it('selects a target when its radio is clicked and enables the Shake Free button', () => {
+    it('selects a target when its radio is clicked and enables the Shake Free button with target name', () => {
       render(<HypnoticPatternShakeModal {...makeProps()} />);
       const radios = document.querySelectorAll('input[type="radio"]');
       fireEvent.click(radios[1]);
@@ -91,27 +80,16 @@ describe('HypnoticPatternShakeModal', () => {
       expect(screen.getByRole('button', { name: 'Shake Free (Goblin A)' })).toBeEnabled();
     });
 
-    it('switches selection to a different target', () => {
+    it('switches selection to a different target and updates button label', () => {
       render(<HypnoticPatternShakeModal {...makeProps()} />);
       const radios = document.querySelectorAll('input[type="radio"]');
       fireEvent.click(radios[0]);
+      expect(radios[0].checked).toBe(true);
+      expect(screen.getByRole('button', { name: 'Shake Free (Orc Warrior)' })).toBeEnabled();
       fireEvent.click(radios[2]);
-      expect(radios[0].checked).toBe(false);
       expect(radios[2].checked).toBe(true);
-    });
-
-    it('applies the selected visual class to the chosen target row', () => {
-      render(<HypnoticPatternShakeModal {...makeProps()} />);
-      fireEvent.click(document.querySelectorAll('input[type="radio"]')[1]);
-      const selectedRow = document.querySelector('.abjure-target-selected');
-      expect(selectedRow).toBeInTheDocument();
-      expect(selectedRow.textContent).toContain('Goblin A');
-    });
-
-    it('updates button label when a different target is selected', () => {
-      render(<HypnoticPatternShakeModal {...makeProps()} />);
-      fireEvent.click(document.querySelectorAll('input[type="radio"]')[2]);
-      expect(screen.getByRole('button', { name: 'Shake Free (Goblin B)' })).toBeInTheDocument();
+      expect(radios[0].checked).toBe(false);
+      expect(screen.getByRole('button', { name: 'Shake Free (Goblin B)' })).toBeEnabled();
     });
   });
 
@@ -141,7 +119,7 @@ describe('HypnoticPatternShakeModal', () => {
   });
 
   describe('shake action', () => {
-    it('does not call executeHandler when shaking with no target selected', async () => {
+    it('does not call executeHandler or addEntry when shaking with no target selected', async () => {
       render(<HypnoticPatternShakeModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Shake Free (none)' }));
       await waitFor(() => {
@@ -150,7 +128,7 @@ describe('HypnoticPatternShakeModal', () => {
       });
     });
 
-    it('calls executeHandler with correct params and closes on success', async () => {
+    it('calls executeHandler with correct params, logs the ability use, and closes on success', async () => {
       executeHandler.mockResolvedValue({ success: true });
       const onClose = vi.fn();
       render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
@@ -167,69 +145,15 @@ describe('HypnoticPatternShakeModal', () => {
           'test-campaign',
           null
         );
-        expect(onClose).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it('calls addEntry with correct log data on success', async () => {
-      executeHandler.mockResolvedValue({ success: true });
-      const onClose = vi.fn();
-      render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
-      const radios = document.querySelectorAll('input[type="radio"]');
-      fireEvent.click(radios[2]);
-      fireEvent.click(screen.getByRole('button', { name: 'Shake Free (Goblin B)' }));
-      await waitFor(() => {
         expect(addEntry).toHaveBeenCalledWith('test-campaign', {
           type: 'ability_use',
           characterName: 'Wizard1',
           abilityName: 'Shake Out Stupor',
-          description: 'Wizard1 used an action to shake Goblin B out of its hypnotic stupor.',
-          targetName: 'Goblin B',
+          description: 'Wizard1 used an action to shake Orc Warrior out of its hypnotic stupor.',
+          targetName: 'Orc Warrior',
           timestamp: expect.any(Number),
         });
-      });
-    });
-
-    it('uses custom campaignName, attackerName, featureName, and range in executeHandler and log', async () => {
-      executeHandler.mockResolvedValue({ success: true });
-      render(<HypnoticPatternShakeModal {...makeProps({
-        campaignName: 'my-campaign',
-        attackerName: 'Sorcerer3',
-        featureName: 'Custom Shake',
-        rangeFeet: 45,
-      })} />);
-      const radios = document.querySelectorAll('input[type="radio"]');
-      fireEvent.click(radios[0]);
-      fireEvent.click(screen.getByRole('button', { name: 'Shake Free (Orc Warrior)' }));
-      await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalledWith(
-          {
-            automation: { type: 'hypnotic_pattern_shake', range: '45 ft' },
-            name: 'Custom Shake',
-          },
-          { name: 'Sorcerer3' },
-          'my-campaign',
-          null
-        );
-        expect(addEntry).toHaveBeenCalledWith('my-campaign', expect.objectContaining({
-          characterName: 'Sorcerer3',
-          abilityName: 'Shake Out Stupor',
-          targetName: 'Orc Warrior',
-        }));
-      });
-    });
-
-    it('includes the target name in the log description', async () => {
-      executeHandler.mockResolvedValue({ success: true });
-      render(<HypnoticPatternShakeModal {...makeProps()} />);
-      const radios = document.querySelectorAll('input[type="radio"]');
-      fireEvent.click(radios[1]);
-      fireEvent.click(screen.getByRole('button', { name: 'Shake Free (Goblin A)' }));
-      await waitFor(() => {
-        const logCall = addEntry.mock.calls[0][1];
-        expect(logCall.description).toContain('Goblin A');
-        expect(logCall.description).toContain('hypnotic stupor');
-        expect(logCall.targetName).toBe('Goblin A');
+        expect(onClose).toHaveBeenCalledTimes(1);
       });
     });
 

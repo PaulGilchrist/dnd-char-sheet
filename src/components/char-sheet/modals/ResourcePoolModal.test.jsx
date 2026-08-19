@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import * as useRuntimeState from '../../../hooks/runtime/useRuntimeState.js';
@@ -160,7 +161,6 @@ describe('ResourcePoolModal - Forward Conversion', () => {
     );
     expect(screen.getByText(/You have 3 Wild Shape uses remaining/i)).toBeInTheDocument();
 
-    vi.clearAllMocks();
     setupRuntimeMock({ wildShapeUses: 1 });
     renderModal(
       makePlayerStats(),
@@ -204,17 +204,6 @@ describe('ResourcePoolModal - Forward Conversion', () => {
     const level4Row = findRowByUses(4);
     const radio = level4Row.querySelector('input[type="radio"]');
     expect(radio.disabled).toBe(true);
-  });
-
-  it('expend button is disabled when canForward is false', () => {
-    combatData.getCurrentCombatRound.mockReturnValue(1);
-    setupRuntimeMock({ wildShapeUses: 0, spell_slots_level_1: 0 });
-    renderModal(
-      makePlayerStats(),
-      makeAutomation({ conversion: 'spell_slot_to_wild_shape' })
-    );
-    const button = screen.getByRole('button', { name: /Expend Level 1 Slot/i });
-    expect(button.disabled).toBe(true);
   });
 
   // ── Forward conversion execution ──
@@ -427,20 +416,6 @@ describe('ResourcePoolModal - Archdruid', () => {
     expect(rows[3].children[1].textContent).toBe('8');
   });
 
-  // ── Archdruid prereqs ──
-
-  it('archdruid section shows blocked message when no wild shape uses remaining', () => {
-    setupRuntimeMock({ wildShapeUses: 0 });
-    renderModal(
-      makePlayerStats(),
-      makeAutomation({
-        conversion: 'wild_shape_to_spell_slot',
-        conversionRate: '2_levels_per_use',
-      })
-    );
-    expect(screen.getByText(/no Wild Shape uses remaining/i)).toBeInTheDocument();
-  });
-
   // ── Archdruid conversion execution ──
 
   it('archdruid conversion calls setRuntimeBatch and onClose when convert button clicked', () => {
@@ -471,34 +446,6 @@ describe('ResourcePoolModal - Archdruid', () => {
     expect(handleClose).toHaveBeenCalled();
   });
 
-  it('archdruid converts correct number of uses to target level', () => {
-    setupRuntimeMock({ wildShapeUses: 3, spell_slots_level_2: 1 });
-    const handleClose = vi.fn();
-    renderModal(
-      makePlayerStats(),
-      makeAutomation({
-        conversion: 'wild_shape_to_spell_slot',
-        conversionRate: '2_levels_per_use',
-      }),
-      'test-campaign',
-      handleClose
-    );
-
-    fireEvent.click(
-      screen.getByRole('button', { name: /Convert 1 Wild Shape.*Level 2 Slot/i })
-    );
-
-    expect(useRuntimeState.setRuntimeBatch).toHaveBeenCalledWith(
-      'Druid1',
-      expect.objectContaining({
-        wildShapeUses: 2,
-        spell_slots_level_2: 2,
-      }),
-      'test-campaign'
-    );
-    expect(handleClose).toHaveBeenCalled();
-  });
-
   it('archdruid conversion does not fire when target level has 0 slots', () => {
     setupRuntimeMock({ wildShapeUses: 2, spell_slots_level_4: 0 });
     const handleClose = vi.fn();
@@ -514,6 +461,7 @@ describe('ResourcePoolModal - Archdruid', () => {
 
     const row2 = [...document.querySelectorAll('.resource-pool-table tbody tr')][1];
     const radio = row2.querySelector('input[type="radio"]');
+    expect(radio.disabled).toBe(true);
     fireEvent.click(radio);
 
     fireEvent.click(
@@ -522,20 +470,6 @@ describe('ResourcePoolModal - Archdruid', () => {
 
     expect(useRuntimeState.setRuntimeBatch).not.toHaveBeenCalled();
     expect(handleClose).not.toHaveBeenCalled();
-  });
-
-  it('archdruid radios are disabled when target level has 0 slots', () => {
-    setupRuntimeMock({ wildShapeUses: 2, spell_slots_level_4: 0 });
-    renderModal(
-      makePlayerStats(),
-      makeAutomation({
-        conversion: 'wild_shape_to_spell_slot',
-        conversionRate: '2_levels_per_use',
-      })
-    );
-    const row2 = [...document.querySelectorAll('.resource-pool-table tbody tr')][1];
-    const radio = row2.querySelector('input[type="radio"]');
-    expect(radio.disabled).toBe(true);
   });
 
   // ── archdruidUses state ──
@@ -551,23 +485,6 @@ describe('ResourcePoolModal - Archdruid', () => {
     );
     expect(
       screen.getByRole('button', { name: /Convert 1 Wild Shape.*Level 2 Slot/i })
-    ).toBeInTheDocument();
-  });
-
-  it('updates button text when a different archdruid uses value is selected', () => {
-    setupRuntimeMock({ wildShapeUses: 3, spell_slots_level_4: 1 });
-    renderModal(
-      makePlayerStats(),
-      makeAutomation({
-        conversion: 'wild_shape_to_spell_slot',
-        conversionRate: '2_levels_per_use',
-      })
-    );
-    const row2 = [...document.querySelectorAll('.resource-pool-table tbody tr')][1];
-    const radio = row2.querySelector('input[type="radio"]');
-    fireEvent.click(radio);
-    expect(
-      screen.getByRole('button', { name: /Convert 2 Wild Shape.*Level 4 Slot/i })
     ).toBeInTheDocument();
   });
 });

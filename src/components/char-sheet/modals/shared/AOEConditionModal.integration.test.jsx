@@ -1,4 +1,24 @@
 // @improved-by-ai
+// @cleaned-by-ai
+//
+// Removed redundant tests (covered by other AOEConditionModal test files):
+//   - "skip button" (×2) → covered in AOEConditionModal.test.jsx "initial render" (skip button rendering)
+//                          and AOEConditionModal.save-flow.test.jsx (condition application behavior)
+//   - "apply button count display" (×5) → covered in AOEConditionModal.test.jsx
+//                                         "target selection" (count 0→1→2, toggle)
+//   - "results summary after NPC resolution" (×1) → brittle UI text assertion ("targets saved");
+//                                                   save flow covered in AOEConditionModal.save-flow.test.jsx
+//   - "all creatures blocked by effects" (×2) → covered in AOEConditionModal.results.test.jsx
+//                                               "blocking effects" (all 4: forcecage, maze, banishment, imprisonment)
+//   - "single target scenario" (×2) → covered in AOEConditionModal.test.jsx "target selection"
+//   - "full apply flow with logging verification" (×2) → covered in AOEConditionModal.save-flow.test.jsx
+//                                                        (storeSpellLastAttack, ability_use, persistAndNotify
+//                                                         with precise assertions)
+//
+// Kept tests (unique behavioral coverage):
+//   - "heighten radio button behavior" (×3) → radio state management not tested in other files
+//   - "multiple creature types with mixed save outcomes" (×1) → mixed NPC/player apply path
+
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AOEConditionModal from './AOEConditionModal.jsx';
@@ -42,7 +62,6 @@ import { getCombatSummary } from '../../../../services/encounters/combatData.js'
 import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
 import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
 import { addEntry } from '../../../../services/ui/logService.js';
-import * as damageRollback from '../../../../services/automation/common/damageRollback.js';
 
 // ── Test fixtures ──
 
@@ -100,158 +119,6 @@ describe('AOEConditionModal - Integration', () => {
         getAllyList.mockReturnValue(null);
     });
 
-    // ── Skip button ──
-
-    describe('skip button', () => {
-        it('closes the modal when the Skip button is clicked', () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('does not apply any effects when Skip is clicked', () => {
-            const onClose = vi.fn();
-            render(<AOEConditionModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-            const activeConditionCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'activeConditions'
-            );
-            expect(activeConditionCalls.length).toBe(0);
-        });
-    });
-
-    // ── Apply button count display ──
-
-    describe('apply button count display', () => {
-        it('shows "(0)" when no targets are selected', () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(getApplyButton()).toHaveTextContent('Blinding Darkness (0)');
-        });
-
-        it('shows "(1)" when one target is selected', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (1)');
-            });
-        });
-
-        it('shows "(2)" when two targets are selected', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await act(async () => { fireEvent.click(labels[1]); });
-            await waitFor(() => {
-                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (2)');
-            });
-        });
-
-        it('shows "(3)" when all targets are selected', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await act(async () => { fireEvent.click(labels[1]); });
-            await act(async () => { fireEvent.click(labels[2]); });
-            await waitFor(() => {
-                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (3)');
-            });
-        });
-
-        it('updates count when targets are deselected', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await act(async () => { fireEvent.click(labels[1]); });
-            await waitFor(() => {
-                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (2)');
-            });
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (1)');
-            });
-        });
-    });
-
-    // ── Results summary after NPC resolution ──
-
-    describe('results summary after NPC resolution', () => {
-        it('shows results summary with "targets saved" after NPC saves resolve', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await act(async () => {
-                    fireEvent.click(getApplyButton());
-                });
-                await waitFor(() => {
-                    expect(screen.getByText(/targets saved/)).toBeInTheDocument();
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-    });
-
-    // ── All creatures blocked by effects ──
-
-    describe('all creatures blocked by effects', () => {
-        it('renders empty target list when all creatures are blocked by forcecage', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'forcecage', target: 'Goblin', source: 'CasterA' },
-                { effect: 'forcecage', target: 'Orc', source: 'CasterA' },
-                { effect: 'forcecage', target: 'PlayerAlly', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-            expect(screen.queryByText('Orc')).not.toBeInTheDocument();
-            expect(screen.queryByText('PlayerAlly')).not.toBeInTheDocument();
-            expect(getApplyButton()).toBeDisabled();
-        });
-
-        it('renders empty target list when all creatures are blocked by maze', () => {
-            getRuntimeValue.mockReturnValue([
-                { effect: 'maze', target: 'Goblin', source: 'CasterA' },
-                { effect: 'maze', target: 'Orc', source: 'CasterA' },
-                { effect: 'maze', target: 'PlayerAlly', source: 'CasterA' },
-            ]);
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-            expect(getApplyButton()).toBeDisabled();
-        });
-    });
-
-    // ── Single target scenario ──
-
-    describe('single target scenario', () => {
-        it('renders and allows selection when only one creature exists', () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10, saveBonuses: { con: 0 } },
-                ],
-            });
-            render(<AOEConditionModal {...makeProps()} />);
-            expect(screen.getByText('Goblin')).toBeInTheDocument();
-        });
-
-        it('shows "(1)" count for single target creature', async () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10, saveBonuses: { con: 0 } },
-                ],
-            });
-            render(<AOEConditionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (1)');
-            });
-        });
-    });
-
     // ── Heighten radio button behavior ──
 
     describe('heighten radio button behavior', () => {
@@ -274,53 +141,6 @@ describe('AOEConditionModal - Integration', () => {
             await waitFor(() => {
                 expect(radios[0]).toBeChecked();
             });
-        });
-    });
-
-    // ── Full apply flow with logging verification ──
-
-    describe('full apply flow with logging verification', () => {
-        it('logs ability_use, calls storeSpellLastAttack, and persists when applying to NPC targets', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await act(async () => {
-                    fireEvent.click(getApplyButton());
-                });
-
-                await waitFor(() => {
-                    expect(addEntry).toHaveBeenCalledWith(
-                        campaignName,
-                        expect.objectContaining({ type: 'ability_use' })
-                    );
-                    expect(damageRollback.storeSpellLastAttack).toHaveBeenCalledWith(
-                        campaignName,
-                        expect.objectContaining({ attackScope: 'aoe' })
-                    );
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('calls persistAndNotify after NPC save resolution completes', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await act(async () => {
-                    fireEvent.click(getApplyButton());
-                });
-
-                await waitFor(() => {
-                    expect(persistAndNotify).toHaveBeenCalled();
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
         });
     });
 

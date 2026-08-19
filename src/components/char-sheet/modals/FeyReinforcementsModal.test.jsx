@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FeyReinforcementsModal from './FeyReinforcementsModal.jsx';
 import * as handler from '../../../services/automation/handlers/class-warlock/feyReinforcementsHandler.js';
@@ -37,41 +38,16 @@ describe('FeyReinforcementsModal', () => {
     });
 
     describe('initial render', () => {
-        it('renders the modal overlay with the action name and leaf icon', () => {
+        it('renders the modal with action name, description, concentration checkbox, and buttons', () => {
             render(<FeyReinforcementsModal {...makeProps()} />);
             expect(screen.getByText('Fey Reinforcements')).toBeInTheDocument();
             expect(document.querySelector('.sp-header .fa-solid.fa-leaf')).toBeInTheDocument();
-        });
-
-        it('renders the description about casting without components', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
             expect(
                 screen.getByText((content, node) => {
                     return node?.tagName === 'STRONG' && node.textContent === 'Summon Fey';
                 })
             ).toBeInTheDocument();
-            expect(
-                screen.getByText(/without material components or spell slot/)
-            ).toBeInTheDocument();
-            expect(
-                screen.getByText(/This use does not consume a spell slot/)
-            ).toBeInTheDocument();
-        });
-
-        it('renders the concentration skip checkbox and both description variants', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
-            const checkbox = screen.getByRole('checkbox', { name: /Skip Concentration/ });
-            expect(checkbox).not.toBeChecked();
-            expect(
-                screen.getByText(/require Concentration and last up to 1 hour/)
-            ).toBeInTheDocument();
-            expect(
-                screen.queryByText(/will not require Concentration/)
-            ).not.toBeInTheDocument();
-        });
-
-        it('renders the Summon Fey and Cancel buttons', () => {
-            render(<FeyReinforcementsModal {...makeProps()} />);
+            expect(screen.getByRole('checkbox', { name: /Skip Concentration/ })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /Summon Fey/ })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
@@ -105,7 +81,8 @@ describe('FeyReinforcementsModal', () => {
     });
 
     describe('confirm action', () => {
-        it('calls confirmFeyReinforcement with noConcentration=false on confirm', async () => {
+        it('calls confirmFeyReinforcement with correct noConcentration value on confirm', async () => {
+            // Test with noConcentration=false (checkbox unchecked)
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
                 payload: {
@@ -124,9 +101,10 @@ describe('FeyReinforcementsModal', () => {
                 baseCampaignName,
                 false,
             );
-        });
 
-        it('calls confirmFeyReinforcement with noConcentration=true when checkbox is checked', async () => {
+            // Test with noConcentration=true (checkbox checked)
+            cleanup();
+            vi.clearAllMocks();
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
                 payload: {
@@ -149,7 +127,7 @@ describe('FeyReinforcementsModal', () => {
             );
         });
 
-        it('displays the result and transitions to the result state', async () => {
+        it('displays the handler result and transitions to the result state', async () => {
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
                 payload: {
@@ -213,13 +191,7 @@ describe('FeyReinforcementsModal', () => {
             });
         });
 
-        it('renders with a custom action name', () => {
-            const customAction = { ...baseAction, name: 'Custom Fey Summon' };
-            render(<FeyReinforcementsModal {...makeProps({ action: customAction })} />);
-            expect(screen.getByText('Custom Fey Summon')).toBeInTheDocument();
-        });
-
-        it('shows custom action name in the result header', async () => {
+        it('uses custom action name in both initial render and result', async () => {
             const customAction = { ...baseAction, name: 'Custom Fey Summon' };
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
@@ -230,6 +202,7 @@ describe('FeyReinforcementsModal', () => {
                 },
             });
             render(<FeyReinforcementsModal {...makeProps({ action: customAction })} />);
+            expect(screen.getByText('Custom Fey Summon')).toBeInTheDocument();
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /Summon Fey/ }));
             });
@@ -247,6 +220,7 @@ describe('FeyReinforcementsModal', () => {
         });
 
         it('calls onClose when Done button is clicked after confirmation', async () => {
+            vi.clearAllMocks();
             handler.confirmFeyReinforcement.mockResolvedValue({
                 type: 'popup',
                 payload: {
@@ -298,13 +272,6 @@ describe('FeyReinforcementsModal', () => {
                 expect(screen.getByText('No free casts remaining. Finish a Long Rest to regain them.')).toBeInTheDocument();
             });
             expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-        });
-
-        it('renders the leaf icon when action.name is undefined', () => {
-            const actionWithoutName = { automation: baseAction.automation };
-            render(<FeyReinforcementsModal {...makeProps({ action: actionWithoutName })} />);
-            expect(document.querySelector('.sp-header .fa-solid.fa-leaf')).toBeInTheDocument();
-            expect(screen.queryByText('Fey Reinforcements')).not.toBeInTheDocument();
         });
     });
 });

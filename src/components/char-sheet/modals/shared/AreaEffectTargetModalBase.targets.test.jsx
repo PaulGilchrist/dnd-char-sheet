@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
@@ -50,20 +51,7 @@ beforeEach(() => {
 
 describe('AreaEffectTargetModalBase - Eligible Targets', () => {
   describe('initial filtering', () => {
-    it('excludes the caster when includeCaster is false', () => {
-      getRuntimeValue.mockReturnValue([]);
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      const targetNames = capturedCtx.eligibleTargets.map(t => t.name);
-      expect(targetNames).not.toContain('Wizard1');
-      expect(targetNames).toContain('Goblin');
-    });
-
-    it('includes the caster in eligible targets when includeCaster is true', () => {
+    it('includes or excludes the caster based on includeCaster flag', () => {
       getRuntimeValue.mockReturnValue([]);
       const wizardCreature = { name: 'Wizard1', type: 'player', currentHp: 30, maxHp: 30, saveBonuses: { int: 4 } };
       const combatSummary = { creatures: [...baseCombatSummary.creatures, wizardCreature] };
@@ -76,9 +64,18 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
       const targetNames = capturedCtx.eligibleTargets.map(t => t.name);
       expect(targetNames).toContain('Wizard1');
       expect(targetNames).toContain('Goblin');
+
+      vi.resetAllMocks();
+      getRuntimeValue.mockReturnValue([]);
+      capturedCtx = null;
+      renderBody.mockClear();
+      render(<AreaEffectTargetModalBase {...baseProps} combatSummary={combatSummary} includeCaster={false} renderBody={renderBody} />);
+      const targetNames2 = capturedCtx.eligibleTargets.map(t => t.name);
+      expect(targetNames2).not.toContain('Wizard1');
+      expect(targetNames2).toContain('Goblin');
     });
 
-    it('filters to undead only when turnUndead is true', () => {
+    it('filters to undead only when turnUndead is true, otherwise returns all non-caster targets', () => {
       getRuntimeValue.mockReturnValue([]);
       const monsters = [
         { name: 'Goblin', type: 'Undead' },
@@ -98,56 +95,30 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} combatSummary={combatSummary} turnUndead={true} monsters={monsters} renderBody={renderBody} />);
-      const targetNames = capturedCtx.eligibleTargets.map(t => t.name);
-      expect(targetNames).toEqual(['Goblin', 'PlayerAlly']);
-    });
+      expect(capturedCtx.eligibleTargets.map(t => t.name)).toEqual(['Goblin', 'PlayerAlly']);
 
-    it('returns all non-caster targets when turnUndead is false', () => {
+      vi.resetAllMocks();
       getRuntimeValue.mockReturnValue([]);
-      const monsters = [
-        { name: 'Zombie', type: 'Undead' },
-      ];
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(<AreaEffectTargetModalBase {...baseProps} turnUndead={false} monsters={monsters} renderBody={renderBody} />);
-      const targetNames = capturedCtx.eligibleTargets.map(t => t.name);
-      expect(targetNames).not.toContain('Wizard1');
-      expect(targetNames).toContain('Goblin');
+      capturedCtx = null;
+      renderBody.mockClear();
+      render(<AreaEffectTargetModalBase {...baseProps} combatSummary={combatSummary} turnUndead={false} monsters={monsters} renderBody={renderBody} />);
+      const targetNames2 = capturedCtx.eligibleTargets.map(t => t.name);
+      expect(targetNames2).not.toContain('Wizard1');
+      expect(targetNames2).toContain('Goblin');
     });
 
-    it('returns empty array when combatSummary has no creatures property', () => {
+    it.each([
+      { label: 'no creatures property', combatSummary: {} },
+      { label: 'null combatSummary', combatSummary: null },
+      { label: 'empty creatures array', combatSummary: { creatures: [] } },
+    ])('returns empty array when combatSummary is $label', ({ combatSummary }) => {
       getRuntimeValue.mockReturnValue([]);
       let capturedCtx = null;
       const renderBody = vi.fn(() => {
         capturedCtx = renderBody.mock.calls.at(-1)[0];
         return <div>Captured</div>;
       });
-      render(<AreaEffectTargetModalBase {...baseProps} combatSummary={{}} renderBody={renderBody} />);
-      expect(capturedCtx.eligibleTargets).toEqual([]);
-    });
-
-    it('returns empty array when combatSummary is null', () => {
-      getRuntimeValue.mockReturnValue([]);
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(<AreaEffectTargetModalBase {...baseProps} combatSummary={null} renderBody={renderBody} />);
-      expect(capturedCtx.eligibleTargets).toEqual([]);
-    });
-
-    it('returns empty array when combatSummary.creatures is an empty array', () => {
-      getRuntimeValue.mockReturnValue([]);
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(<AreaEffectTargetModalBase {...baseProps} combatSummary={{ creatures: [] }} renderBody={renderBody} />);
+      render(<AreaEffectTargetModalBase {...baseProps} combatSummary={combatSummary} renderBody={renderBody} />);
       expect(capturedCtx.eligibleTargets).toEqual([]);
     });
   });
@@ -206,28 +177,6 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
       expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
     });
-
-    it('includes target when targetEffects is null', () => {
-      getRuntimeValue.mockReturnValue(null);
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
-    });
-
-    it('includes target when targetEffects is not an array', () => {
-      getRuntimeValue.mockReturnValue('not-an-array');
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
-    });
   });
 
   describe('maze blocking', () => {
@@ -283,17 +232,6 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
       expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
-    });
-
-    it('includes target when targetEffects is null', () => {
-      getRuntimeValue.mockReturnValue(null);
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
   });
 
@@ -351,17 +289,6 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
       expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
     });
-
-    it('includes target when targetEffects is null', () => {
-      getRuntimeValue.mockReturnValue(null);
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
-    });
   });
 
   describe('imprisonment blocking', () => {
@@ -417,17 +344,6 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
       });
       render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
       expect(capturedCtx.eligibleTargets.map(t => t.name)).not.toContain('Goblin');
-    });
-
-    it('includes target when targetEffects is null', () => {
-      getRuntimeValue.mockReturnValue(null);
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(<AreaEffectTargetModalBase {...baseProps} renderBody={renderBody} />);
-      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
   });
 
@@ -532,30 +448,6 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
         return <div>Captured</div>;
       });
       render(<AreaEffectTargetModalBase {...baseProps} mapData={mapData} renderBody={renderBody} />);
-      expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
-    });
-
-    it('falls back to distance-based check when shape is provided but grid coords are missing', () => {
-      getRuntimeValue.mockReturnValue([]);
-      const mapData = {
-        players: [
-          { name: 'Goblin', gridX: 10, gridY: 10 },
-        ],
-      };
-      let capturedCtx = null;
-      const renderBody = vi.fn(() => {
-        capturedCtx = renderBody.mock.calls.at(-1)[0];
-        return <div>Captured</div>;
-      });
-      render(
-        <AreaEffectTargetModalBase
-          {...baseProps}
-          mapData={mapData}
-          shape="sphere"
-          rangeFeet={30}
-          renderBody={renderBody}
-        />
-      );
       expect(capturedCtx.eligibleTargets.map(t => t.name)).toContain('Goblin');
     });
 

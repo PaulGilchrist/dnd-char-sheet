@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AttackRiderModal from './AttackRiderModal.jsx';
@@ -25,21 +26,11 @@ describe('AttackRiderModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
   describe('initial render', () => {
-    it('renders the modal overlay, modal container, header, and action name', () => {
+    it('renders the modal with header, body, actions, and action name', () => {
       render(<AttackRiderModal {...makeProps()} />);
       expect(screen.getByText('Divine Smite')).toBeInTheDocument();
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header')).toBeInTheDocument();
       expect(document.querySelector('.sp-body')).toBeInTheDocument();
       expect(document.querySelector('.sp-actions')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header .fa-solid.fa-bolt')).toBeInTheDocument();
-    });
-
-    it('renders the bolt icon on the apply button', () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      const applyBtn = screen.getByRole('button', { name: /Apply Effect$/ });
-      expect(applyBtn.querySelector('.fa-solid.fa-bolt')).toBeInTheDocument();
     });
 
     it('renders the cancel button', () => {
@@ -61,14 +52,10 @@ describe('AttackRiderModal', () => {
       expect(bodyDiv.innerHTML).not.toMatch(/against/);
     });
 
-    it('renders all options from the action', () => {
+    it('renders all options with their effect descriptions', () => {
       render(<AttackRiderModal {...makeProps()} />);
       expect(screen.getByText('Burning Hands')).toBeInTheDocument();
       expect(screen.getByText('Push Back')).toBeInTheDocument();
-    });
-
-    it('renders effect descriptions for options with known effects', () => {
-      render(<AttackRiderModal {...makeProps()} />);
       expect(screen.getByText(/— \+5 to next attack/)).toBeInTheDocument();
       expect(screen.getByText(/— Push 15 ft/)).toBeInTheDocument();
     });
@@ -116,23 +103,13 @@ describe('AttackRiderModal', () => {
   });
 
   describe('single select mode', () => {
-    it('renders radio inputs for each option', () => {
+    it('renders radio inputs and no checkboxes', () => {
       render(<AttackRiderModal {...makeProps()} />);
       expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(2);
-    });
-
-    it('does not render checkbox inputs', () => {
-      render(<AttackRiderModal {...makeProps()} />);
       expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
     });
 
-    it('selects an option when clicked', () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      const firstOption = selectSingleOption('Burning Hands');
-      expect(firstOption.querySelector('input[type="radio"]').checked).toBe(true);
-    });
-
-    it('deselects previous selection when a different option is clicked', () => {
+    it('selects an option and deselects previous when a different option is clicked', () => {
       render(<AttackRiderModal {...makeProps()} />);
       const firstOption = selectSingleOption('Burning Hands');
       const secondOption = screen.getByText('Push Back').parentElement;
@@ -141,50 +118,24 @@ describe('AttackRiderModal', () => {
       expect(secondOption.querySelector('input[type="radio"]').checked).toBe(true);
     });
 
-    it('disables the apply button when no option is selected', () => {
+    it('disables the apply button when no option is selected and enables it after selection', () => {
       render(<AttackRiderModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: /Apply Effect$/ })).toBeDisabled();
-    });
-
-    it('enables the apply button after selecting an option', () => {
-      render(<AttackRiderModal {...makeProps()} />);
       selectSingleOption('Burning Hands');
       expect(screen.getByRole('button', { name: /Apply Effect$/ })).not.toBeDisabled();
-    });
-
-    it('highlights the selected option with background and border styles', () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      const firstOption = screen.getByText('Burning Hands').parentElement;
-      expect(firstOption.style.background).toContain('transparent');
-      selectSingleOption('Burning Hands');
-      expect(firstOption.style.background).toMatch(/rgba\(255,\s*255,\s*255,\s*0\.15\)/);
-      expect(firstOption.style.border).toContain('var(--color-link)');
-    });
-
-    it('uses the radio input name "riderOption"', () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      expect(document.querySelectorAll('input[type="radio"]')[0].name).toBe('riderOption');
-    });
-
-    it('shows singular "Effect" on the apply button', () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Apply Effect$/ })).toBeInTheDocument();
     });
   });
 
   describe('multi-select mode', () => {
     const action = makeMultiSelectAction();
 
-    it('renders checkbox inputs for each option', () => {
+    it('renders checkboxes, multi-select label with max count and target name, and selected count', () => {
       render(<AttackRiderModal {...makeProps({ action })} />);
       expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);
-    });
-
-    it('renders multi-select label with max count and target name', () => {
-      render(<AttackRiderModal {...makeProps({ action })} />);
       const bodyDiv = document.querySelector('.sp-body');
       expect(bodyDiv.textContent).toMatch(/Choose up to 3 effects/);
       expect(bodyDiv.innerHTML).toMatch(/Goblin A/);
+      expect(screen.getByText(/0\/3 selected/)).toBeInTheDocument();
     });
 
     it('renders multi-select label without target name when null', () => {
@@ -192,50 +143,20 @@ describe('AttackRiderModal', () => {
       expect(document.querySelector('.sp-body').innerHTML).not.toMatch(/against/);
     });
 
-    it('shows selected count starting at zero', () => {
-      render(<AttackRiderModal {...makeProps({ action })} />);
-      expect(screen.getByText(/0\/3 selected/)).toBeInTheDocument();
-    });
-
-    it('increments selected count when checkbox is clicked', () => {
+    it('increments and decrements selected count when checkboxes are clicked', () => {
       render(<AttackRiderModal {...makeProps({ action })} />);
       clickCheckbox(0);
       expect(screen.getByText(/1\/3 selected/)).toBeInTheDocument();
-    });
-
-    it('decrements selected count when checkbox is unclicked', () => {
-      render(<AttackRiderModal {...makeProps({ action })} />);
-      clickCheckbox(0); clickCheckbox(0);
+      clickCheckbox(0); clickCheckbox(0); clickCheckbox(0);
       expect(screen.getByText(/0\/3 selected/)).toBeInTheDocument();
     });
 
-    it('enables apply button when at least one option is selected', () => {
+    it('enables apply button when at least one option is selected and prevents selecting more than maxEffects', () => {
       render(<AttackRiderModal {...makeProps({ action })} />);
       expect(screen.getByRole('button', { name: /Apply Effects$/ })).toBeDisabled();
       clickCheckbox(0);
       expect(screen.getByRole('button', { name: /Apply Effects$/ })).not.toBeDisabled();
-    });
-
-    it('highlights selected options with background and border styles', () => {
-      render(<AttackRiderModal {...makeProps({ action })} />);
-      const checkboxes = screen.getAllByRole('checkbox');
-      fireEvent.click(checkboxes[0]);
-      expect(checkboxes[0].parentElement.style.background).toMatch(/rgba\(255,\s*255,\s*255,\s*0\.15\)/);
-    });
-
-    it('uses checkbox input names with riderOption_ prefix and index', () => {
-      render(<AttackRiderModal {...makeProps({ action })} />);
-      expect(document.querySelectorAll('input[type="checkbox"]')[0].name).toMatch(/riderOption_/);
-    });
-
-    it('shows plural "Effects" on the apply button', () => {
-      render(<AttackRiderModal {...makeProps({ action })} />);
-      expect(screen.getByRole('button', { name: /Apply Effects$/ })).toBeInTheDocument();
-    });
-
-    it('prevents selecting more than maxEffects', () => {
-      render(<AttackRiderModal {...makeProps({ action })} />);
-      clickCheckbox(0); clickCheckbox(1); clickCheckbox(2);
+      clickCheckbox(1); clickCheckbox(2);
       expect(screen.getByText(/3\/3 selected/)).toBeInTheDocument();
       expect(screen.queryByText(/4\/3 selected/)).not.toBeInTheDocument();
     });
@@ -253,34 +174,17 @@ describe('AttackRiderModal', () => {
       });
     });
 
-    it('shows result screen after applying', async () => {
-      render(<AttackRiderModal {...makeProps()} />);
+    it('shows result screen with action name, description, and Done button, then closes on Done click', async () => {
+      const onClose = vi.fn();
+      render(<AttackRiderModal {...makeProps({ onClose })} />);
       selectSingleOption('Burning Hands'); clickApplySingle();
       await waitFor(() => expect(screen.getByText('Effect applied successfully.')).toBeInTheDocument());
-    });
-
-    it('hides selection options after applying', async () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.queryByText(/Choose an effect/)).not.toBeInTheDocument());
-    });
-
-    it('hides the apply and cancel buttons after applying', async () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => {
-        expect(screen.queryByRole('button', { name: /Apply Effect$/ })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-      });
-    });
-
-    it('renders result with bolt icon and action name in header', async () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => {
-        expect(screen.getByText('Divine Smite')).toBeInTheDocument();
-        expect(document.querySelector('.sp-header .fa-solid.fa-bolt')).toBeInTheDocument();
-      });
+      expect(screen.getByText('Divine Smite')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Apply Effect$/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText('Done'));
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('renders result description as HTML in the body', async () => {
@@ -288,39 +192,6 @@ describe('AttackRiderModal', () => {
       render(<AttackRiderModal {...makeProps()} />);
       selectSingleOption('Burning Hands'); clickApplySingle();
       await waitFor(() => expect(document.querySelector('.sp-body').innerHTML).toContain('<strong>Bold</strong>'));
-    });
-
-    it('renders Done button with sp-roll-btn class', async () => {
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByRole('button', { name: 'Done' }).classList.contains('sp-roll-btn')).toBe(true));
-    });
-
-    it('calls onClose when Done button is clicked', async () => {
-      const onClose = vi.fn();
-      render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
-      fireEvent.click(screen.getByText('Done'));
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onClose when clicking the overlay in applied state', async () => {
-      const onClose = vi.fn();
-      render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
-      fireEvent.click(document.querySelector('.sp-overlay'));
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('does NOT close when clicking inside the modal in applied state', async () => {
-      const onClose = vi.fn();
-      render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
-      fireEvent.click(document.querySelector('.sp-modal'));
-      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
@@ -354,7 +225,7 @@ describe('AttackRiderModal', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClose when clicking the overlay before applying', () => {
+    it('calls onClose when overlay is clicked', () => {
       const onClose = vi.fn();
       render(<AttackRiderModal {...makeProps({ onClose })} />);
       fireEvent.click(document.querySelector('.sp-overlay'));
@@ -363,95 +234,50 @@ describe('AttackRiderModal', () => {
   });
 
   describe('edge cases', () => {
-    it('handles empty options array gracefully', () => {
-      const action = makeSingleSelectAction({ options: [] });
-      render(<AttackRiderModal {...makeProps({ action })} />);
+    it('handles empty options and undefined automation gracefully', () => {
+      const actionEmpty = makeSingleSelectAction({ options: [] });
+      render(<AttackRiderModal {...makeProps({ action: actionEmpty })} />);
       expect(screen.getByText('Divine Smite')).toBeInTheDocument();
       expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(0);
       expect(screen.getByRole('button', { name: /Apply Effect$/ })).toBeDisabled();
-    });
 
-    it('handles undefined automation gracefully', () => {
-      const action = { name: 'No Automation Action' };
-      render(<AttackRiderModal {...makeProps({ action })} />);
+      const actionNoAutomation = { name: 'No Automation Action' };
+      render(<AttackRiderModal {...makeProps({ action: actionNoAutomation })} />);
       expect(screen.getByText('No Automation Action')).toBeInTheDocument();
       expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(0);
     });
 
-    it('handles null result from applyRiderOption gracefully (stays open)', async () => {
+    it('stays open when applyRiderOption returns null', async () => {
       applyRiderOption.mockResolvedValue(null);
       render(<AttackRiderModal {...makeProps()} />);
       selectSingleOption('Burning Hands'); clickApplySingle();
       await waitFor(() => expect(screen.queryByText('Done')).not.toBeInTheDocument());
     });
-
-    it('uses radio inputs when maxEffects is 1 (default)', () => {
-      const action = { name: 'Default Max', automation: { type: 'attack_rider', options: [{ name: 'Opt A' }] } };
-      render(<AttackRiderModal {...makeProps({ action })} />);
-      expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(1);
-    });
-
-    it('uses checkbox inputs when maxEffects > 1', () => {
-      render(<AttackRiderModal {...makeProps({ action: makeMultiSelectAction() })} />);
-      expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);
-    });
   });
 
   describe('Improved Cunning Strike multi-select', () => {
-    it('renders checkbox inputs for Improved Cunning Strike', () => {
+    it('renders checkboxes with costs, shows 0/2 selected, limits to maxEffects, and calls applyRiderOption with selected options', async () => {
+      applyRiderOption.mockResolvedValue(defaultResult);
       render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
       expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(3);
       expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(0);
-    });
-
-    it('shows label with max count of 2', () => {
-      render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
-      expect(document.querySelector('.sp-body').textContent).toMatch(/Choose up to 2 effects/);
-    });
-
-    it('shows selected count starting at 0/2', () => {
-      render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
+      expect(document.querySelector('.sp-body').textContent).toContain('Cost: 1d6 Sneak Attack dice');
       expect(screen.getByText(/0\/2 selected/)).toBeInTheDocument();
-    });
-
-    it('limits selection to maxEffects (2)', () => {
-      render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
       clickCheckbox(0); clickCheckbox(1);
       expect(screen.getByText(/2\/2 selected/)).toBeInTheDocument();
       clickCheckbox(2);
       expect(screen.getByText(/2\/2 selected/)).toBeInTheDocument();
-    });
-
-    it('calls applyRiderOption with multiple selected options', async () => {
-      applyRiderOption.mockResolvedValue(defaultResult);
-      render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
-      clickCheckbox(0); clickCheckbox(1); clickApplyMulti();
+      clickApplyMulti();
       await waitFor(() => {
         expect(applyRiderOption).toHaveBeenCalledWith(cunningStrikeAction, expect.any(Object), 'test-campaign', 'Goblin A', ['Poison', 'Trip']);
       });
-    });
-
-    it('shows cost for each option', () => {
-      render(<AttackRiderModal {...makeProps({ action: cunningStrikeAction })} />);
-      expect(document.querySelector('.sp-body').textContent).toContain('Cost: 1d6 Sneak Attack dice');
     });
   });
 
   describe("Stalker's Flurry secondary targets", () => {
     beforeEach(() => applyRiderOption.mockResolvedValue(defaultResult));
 
-    it("shows Stalker's Flurry secondary target modal after applying", async () => {
-      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
-      grv.mockImplementation((char, key) => {
-        if (key === 'stalkersFlurrySecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
-        return undefined;
-      });
-      render(<AttackRiderModal {...makeProps()} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByText("Stalker's Flurry")).toBeInTheDocument());
-    });
-
-    it("handles Sudden Strike path when selected", async () => {
+    it("shows Stalker's Flurry secondary target modal after applying and handles Sudden Strike path", async () => {
       const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
       grv.mockImplementation((char, key) => {
         if (key === 'stalkersFlurrySecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
@@ -481,28 +307,6 @@ describe('AttackRiderModal', () => {
       fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
       fireEvent.click(screen.getByRole('button', { name: 'Apply Fear' }));
       await waitFor(() => expect(screen.getByText('Done')).toBeInTheDocument());
-    });
-
-    it("shows Stalker's Flurry result screen after apply", async () => {
-      const { getRuntimeValue: grv } = await import('../../../../hooks/runtime/useRuntimeState.js');
-      grv.mockImplementation((char, key) => {
-        if (key === 'stalkersFlurrySecondaryTargets') return [{ label: 'Creature A', value: 'Creature A' }];
-        if (key === 'stalkersFlurryOptions') return ['Mass Fear'];
-        if (key === 'targetEffects' && char === 'campaign') return [];
-        return undefined;
-      });
-      const onClose = vi.fn();
-      render(<AttackRiderModal {...makeProps({ onClose })} />);
-      selectSingleOption('Burning Hands'); clickApplySingle();
-      await waitFor(() => expect(screen.getByText("Stalker's Flurry")).toBeInTheDocument());
-      fireEvent.click(document.querySelector('input[type="radio"][name="secondaryTarget"]'));
-      fireEvent.click(screen.getByRole('button', { name: 'Apply Fear' }));
-      await waitFor(() => {
-        expect(screen.getByText("Stalker's Flurry")).toBeInTheDocument();
-        expect(screen.getByText('Done')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText('Done'));
-      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });

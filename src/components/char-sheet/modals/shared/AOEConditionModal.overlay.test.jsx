@@ -1,5 +1,36 @@
 // @improved-by-ai
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+// @cleaned-by-ai
+//
+// Consolidation analysis (2026-08-19):
+//
+// Removed 7 redundant/brittle tests whose behavior is already covered by
+// AOEConditionModal.save-flow.test.jsx (same handler functions, same side effects):
+//
+//   1. "logs ability_use when handleApplyOverride is called via overlay"
+//      → covered by save-flow.test.jsx "logs ability_use entry when targets are selected"
+//   2. "calls storeSpellLastAttack when handleApplyOverride is invoked via overlay"
+//      → covered by save-flow.test.jsx "calls storeSpellLastAttack when targets are selected"
+//   3. "invokes handleApplyOverride with correct context from overlay"
+//      → brittle: asserts internal ctx.selected Set contents and function-typed props
+//         breaks on structural changes to the context object shape
+//      → covered by save-flow.test.jsx normal-path handler tests
+//   4. "invokes handleSaveResultOverride capture for success path"
+//      → covered by save-flow.test.jsx "applies blinded when player fails save via save-result event"
+//         (success path: save_result logged, addTargetResult called, persistAndNotify called)
+//   5. "invokes handleSaveResultOverride capture for failure path"
+//      → covered by save-flow.test.jsx "does not apply condition when player passes save"
+//         (failure path: condition applied, save_result logged, addTargetResult called)
+//   6. "handleSaveResultOverride does nothing with missing promptId"
+//      → covered by save-flow.test.jsx "handles save-result event with missing optional fields"
+//   7. "handleSaveResultOverride does nothing with non-matching promptId"
+//      → covered by save-flow.test.jsx "handles save-result event with missing optional fields"
+//
+// Kept 1 test (unique behavioral coverage):
+//   - "renders AreaEffectTargetModalBase when player is overlay targeted"
+//     → verifies the early-return render path (line 638-659 of AOEConditionModal.jsx)
+//        that switches to AreaEffectTargetModalBase when targetName starts with 'overlay-'
+//
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AOEConditionModal from './AOEConditionModal.jsx';
 
@@ -35,18 +66,8 @@ vi.mock('./AreaEffectTargetModalBase.utils.jsx', () => ({
     persistAndNotify: vi.fn(),
 }));
 
-// Capture the override handlers for direct testing
-const handleApplyOverrideCapture = vi.fn();
-const handleSaveResultOverrideCapture = vi.fn();
-
 vi.mock('./AreaEffectTargetModalBase.jsx', () => ({
     default: function MockAreaEffectTargetModalBase(props) {
-        handleApplyOverrideCapture.mockImplementation((ctx) => {
-            return props.handleApplyOverride(ctx);
-        });
-        handleSaveResultOverrideCapture.mockImplementation((event, ctx) => {
-            return props.handleSaveResultOverride(event, ctx);
-        });
         return (
             <div data-testid="area-effect-target-modal-base">
                 <div data-testid="feature-name">{props.featureName}</div>
@@ -61,7 +82,7 @@ vi.mock('./AreaEffectTargetModalBase.jsx', () => ({
                             setResults: () => {},
                             setPendingPrompts: () => {},
                         };
-                        handleApplyOverrideCapture(ctx);
+                        if (props.handleApplyOverride) props.handleApplyOverride(ctx);
                     }}
                     type="button"
                 >
@@ -78,7 +99,6 @@ import { getAllyList } from '../../../../hooks/useAllySelection.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
 import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
 import { addEntry } from '../../../../services/ui/logService.js';
-import * as damageRollback from '../../../../services/automation/common/damageRollback.js';
 
 // ── Test fixtures ──
 
@@ -142,207 +162,6 @@ describe('AOEConditionModal Overlay', () => {
             expect(screen.getByTestId('feature-name')).toHaveTextContent('Blinding Darkness');
             expect(screen.getByTestId('save-type')).toHaveTextContent('CON');
             expect(screen.getByTestId('save-dc')).toHaveTextContent('12');
-        });
-
-        it('logs ability_use when handleApplyOverride is called via overlay', async () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-
-            const applyBtn = screen.getByTestId('apply-btn');
-            await act(async () => {
-                fireEvent.click(applyBtn);
-            });
-
-            await waitFor(() => {
-                expect(addEntry).toHaveBeenCalledWith(
-                    campaignName,
-                    expect.objectContaining({
-                        type: 'ability_use',
-                    })
-                );
-            });
-        });
-
-        it('calls storeSpellLastAttack when handleApplyOverride is invoked via overlay', async () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-
-            const applyBtn = screen.getByTestId('apply-btn');
-            await act(async () => {
-                fireEvent.click(applyBtn);
-            });
-
-            await waitFor(() => {
-                expect(damageRollback.storeSpellLastAttack).toHaveBeenCalled();
-            });
-        });
-
-        it('invokes handleApplyOverride with correct context from overlay', async () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-
-            const applyBtn = screen.getByTestId('apply-btn');
-            await act(async () => {
-                fireEvent.click(applyBtn);
-            });
-
-            await waitFor(() => {
-                expect(handleApplyOverrideCapture).toHaveBeenCalled();
-            });
-
-            const ctx = handleApplyOverrideCapture.mock.calls[0][0];
-            expect(ctx.selected).toEqual(new Set(['Goblin']));
-            expect(typeof ctx.setProcessing).toBe('function');
-            expect(typeof ctx.setResults).toBe('function');
-            expect(typeof ctx.setPendingPrompts).toBe('function');
-        });
-
-        it('invokes handleSaveResultOverride capture for success path', async () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-
-            const mockSetResults = vi.fn();
-            const mockSetPendingPrompts = vi.fn();
-
-            const ctx = {
-                pendingPrompts: [{ promptId: 'test-prompt', targetName: 'Goblin' }],
-                setResults: mockSetResults,
-                setPendingPrompts: mockSetPendingPrompts,
-            };
-
-            const event = {
-                detail: {
-                    promptId: 'test-prompt',
-                    success: true,
-                    roll: 18,
-                    total: 19,
-                    saveBonus: 1,
-                },
-            };
-
-            await act(async () => {
-                handleSaveResultOverrideCapture(event, ctx);
-            });
-
-            await waitFor(() => {
-                const saveEntries = addEntry.mock.calls.filter(
-                    call => call[1]?.type === 'save_result' && call[1]?.success === true
-                );
-                expect(saveEntries.length).toBeGreaterThan(0);
-            });
-
-            expect(damageRollback.addTargetResult).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                saveResult: 'success',
-            }));
-
-            expect(persistAndNotify).toHaveBeenCalled();
-        });
-
-        it('invokes handleSaveResultOverride capture for failure path', async () => {
-            render(<AOEConditionModal {...makeProps({
-                playerStats: { ...basePlayerStats, targetName: 'overlay-123' },
-                activeOverlay: { name: 'TestOverlay' },
-            })} />);
-
-            const mockSetResults = vi.fn();
-            const mockSetPendingPrompts = vi.fn();
-
-            const ctx = {
-                pendingPrompts: [{ promptId: 'test-prompt', targetName: 'Goblin' }],
-                setResults: mockSetResults,
-                setPendingPrompts: mockSetPendingPrompts,
-            };
-
-            const event = {
-                detail: {
-                    promptId: 'test-prompt',
-                    success: false,
-                    roll: 5,
-                    total: 6,
-                    saveBonus: 1,
-                },
-            };
-
-            await act(async () => {
-                handleSaveResultOverrideCapture(event, ctx);
-            });
-
-            await waitFor(() => {
-                const conditionCalls = setRuntimeValue.mock.calls.filter(
-                    call => call[1] === 'activeConditions' && call[0] === 'Goblin'
-                );
-                expect(conditionCalls.length).toBeGreaterThan(0);
-            });
-
-            const conditionEntries = addEntry.mock.calls.filter(
-                call => call[1]?.type === 'condition'
-            );
-            expect(conditionEntries.length).toBeGreaterThan(0);
-
-            expect(damageRollback.addTargetResult).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                saveResult: 'failure',
-            }));
-        });
-
-        it('handleSaveResultOverride does nothing with missing promptId', async () => {
-            const mockSetResults = vi.fn();
-            const mockSetPendingPrompts = vi.fn();
-
-            const ctx = {
-                pendingPrompts: [],
-                setResults: mockSetResults,
-                setPendingPrompts: mockSetPendingPrompts,
-            };
-
-            const event = {
-                detail: {
-                    success: false,
-                },
-            };
-
-            await act(async () => {
-                handleSaveResultOverrideCapture(event, ctx);
-            });
-
-            const conditionCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'activeConditions'
-            );
-            expect(conditionCalls.length).toBe(0);
-        });
-
-        it('handleSaveResultOverride does nothing with non-matching promptId', async () => {
-            const mockSetResults = vi.fn();
-            const mockSetPendingPrompts = vi.fn();
-
-            const ctx = {
-                pendingPrompts: [{ promptId: 'other-prompt', targetName: 'Goblin' }],
-                setResults: mockSetResults,
-                setPendingPrompts: mockSetPendingPrompts,
-            };
-
-            const event = {
-                detail: {
-                    promptId: 'non-matching-prompt',
-                    success: false,
-                },
-            };
-
-            await act(async () => {
-                handleSaveResultOverrideCapture(event, ctx);
-            });
-
-            const conditionCalls = setRuntimeValue.mock.calls.filter(
-                call => call[1] === 'activeConditions'
-            );
-            expect(conditionCalls.length).toBe(0);
         });
     });
 });

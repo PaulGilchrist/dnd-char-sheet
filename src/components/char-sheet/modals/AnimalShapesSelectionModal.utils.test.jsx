@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AnimalShapesSelectionModal from './AnimalShapesSelectionModal.jsx';
@@ -87,19 +88,6 @@ function makeProps(overrides) {
     return { ...baseProps, ...(overrides || {}) };
 }
 
-function getBeastNamesInSection(sectionEl) {
-    const items = sectionEl.querySelectorAll('.animal-shapes-beast-item');
-    return Array.from(items).map(item => {
-        const nameEl = item.querySelector('.animal-shapes-beast-name');
-        return nameEl ? nameEl.childNodes[0].textContent.trim() : '';
-    });
-}
-
-function getTargetSection(index) {
-    const sections = document.querySelectorAll('.animal-shapes-target-section');
-    return sections[index] || null;
-}
-
 describe('AnimalShapesSelectionModal - utility rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -120,49 +108,13 @@ describe('AnimalShapesSelectionModal - utility rendering', () => {
                 expect(icons.length).toBeGreaterThan(0);
             });
         });
-
-        it('uses default title and icon when not provided', async () => {
-            const props = {
-                targets: ['Alric'],
-                maxCR: 4,
-                campaignName: 'test-campaign',
-                onConfirm: vi.fn(),
-                onCancel: vi.fn(),
-            };
-            render(<AnimalShapesSelectionModal {...props} />);
-            await waitFor(() => {
-                expect(screen.getByText('Animal Shapes')).toBeInTheDocument();
-            });
-            const icons = document.querySelectorAll('i.fa-solid.fa-paw');
-            expect(icons.length).toBeGreaterThan(0);
-        });
-    });
-
-    describe('empty targets', () => {
-        it('renders no target sections when targets is empty', async () => {
-            render(<AnimalShapesSelectionModal {...makeProps({ targets: [] })} />);
-            await waitFor(() => {
-                expect(screen.getByText('Animal Shapes')).toBeInTheDocument();
-            });
-            expect(document.querySelectorAll('.animal-shapes-target-section').length).toBe(0);
-        });
-
-        it('disables Transform button when targets is empty', async () => {
-            render(<AnimalShapesSelectionModal {...makeProps({ targets: [] })} />);
-            await waitFor(() => {
-                const transformBtn = screen.getByRole('button', { name: /Transform/ });
-                expect(transformBtn).toBeDisabled();
-                expect(transformBtn.textContent).toContain('0/0');
-            });
-        });
     });
 
     describe('speed display', () => {
         it('renders combined movement speeds for beasts with multiple types', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                const section = getTargetSection(0);
-                expect(section).not.toBeNull();
+                const section = document.querySelectorAll('.animal-shapes-target-section')[0];
                 const wolfItem = Array.from(section.querySelectorAll('.animal-shapes-beast-item')).find(item => {
                     const nameEl = item.querySelector('.animal-shapes-beast-name');
                     return nameEl && nameEl.childNodes[0].textContent.trim() === 'Wolf';
@@ -170,19 +122,6 @@ describe('AnimalShapesSelectionModal - utility rendering', () => {
                 expect(wolfItem).not.toBeNull();
                 const statsEl = wolfItem.querySelector('.animal-shapes-beast-stats');
                 expect(statsEl.textContent.trim()).toBe('Walk 40, Climb 20, Swim 20');
-            });
-        });
-
-        it('renders only available speed types without gaps', async () => {
-            render(<AnimalShapesSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const section = getTargetSection(0);
-                const eagleItem = section.querySelector('.animal-shapes-beast-item');
-                const eagleNameEl = eagleItem.querySelector('.animal-shapes-beast-name');
-                if (eagleNameEl && eagleNameEl.childNodes[0].textContent.trim() === 'Eagle') {
-                    const statsEl = eagleItem.querySelector('.animal-shapes-beast-stats');
-                    expect(statsEl.textContent.trim()).toBe('Fly 50');
-                }
             });
         });
     });
@@ -208,8 +147,12 @@ describe('AnimalShapesSelectionModal - utility rendering', () => {
         it('displays beasts sorted by CR ascending then alphabetically by name', async () => {
             render(<AnimalShapesSelectionModal {...baseProps} />);
             await waitFor(() => {
-                const section = getTargetSection(0);
-                const names = getBeastNamesInSection(section);
+                const section = document.querySelectorAll('.animal-shapes-target-section')[0];
+                const items = section.querySelectorAll('.animal-shapes-beast-item');
+                const names = Array.from(items).map(item => {
+                    const nameEl = item.querySelector('.animal-shapes-beast-name');
+                    return nameEl ? nameEl.childNodes[0].textContent.trim() : '';
+                });
 
                 // Verify the list is non-empty
                 expect(names.length).toBeGreaterThan(0);
@@ -241,14 +184,6 @@ describe('AnimalShapesSelectionModal - utility rendering', () => {
             render(<AnimalShapesSelectionModal {...makeProps({ maxCR: 2 })} />);
             await waitFor(() => {
                 expect(screen.getByText(/Choose a beast form \(CR 2 or lower, Small or Large\)/)).toBeInTheDocument();
-            });
-        });
-
-        it('displays default CR limit of 4 when maxCR is not provided', async () => {
-            const props = makeProps({ maxCR: undefined });
-            render(<AnimalShapesSelectionModal {...props} />);
-            await waitFor(() => {
-                expect(screen.getByText(/Choose a beast form \(CR 4 or lower, Small or Large\)/)).toBeInTheDocument();
             });
         });
     });

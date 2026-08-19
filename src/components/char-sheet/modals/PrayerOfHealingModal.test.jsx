@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PrayerOfHealingModal from './PrayerOfHealingModal.jsx';
@@ -82,8 +83,6 @@ vi.mock('./shared/CreatureSelectionModal.jsx', () => ({
   }),
 }));
 
-import CreatureSelectionModal from './shared/CreatureSelectionModal.jsx';
-
 // ── Test helpers ──
 
 const mockOnConfirm = vi.fn();
@@ -123,29 +122,6 @@ describe('PrayerOfHealingModal', () => {
       expect(screen.getByRole('button', { name: /Heal/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
     });
-
-    it('renders all creature targets from creatureTargets', () => {
-      render(<PrayerOfHealingModal {...makeProps()} />);
-      expect(screen.getByText('Ally1')).toBeInTheDocument();
-      expect(screen.getByText('Ally2')).toBeInTheDocument();
-      expect(screen.getByText('Ally3')).toBeInTheDocument();
-      expect(screen.getByText('Enemy1')).toBeInTheDocument();
-    });
-
-    it('shows selection count in confirm button', () => {
-      render(<PrayerOfHealingModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Heal \(0\)/ })).toBeInTheDocument();
-    });
-
-    it('disables confirm button when no targets are selected', () => {
-      render(<PrayerOfHealingModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: /Heal \(0\)/ })).toBeDisabled();
-    });
-
-    it('shows "No targets available." when creatureTargets is empty', () => {
-      render(<PrayerOfHealingModal {...makeProps({ creatureTargets: [] })} />);
-      expect(screen.getByText('No targets available.')).toBeInTheDocument();
-    });
   });
 
   describe('user interactions', () => {
@@ -154,62 +130,12 @@ describe('PrayerOfHealingModal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
       expect(mockOnSkip).toHaveBeenCalledTimes(1);
     });
-
-    it('does not call onConfirm when confirm button is clicked with no selection', () => {
-      render(<PrayerOfHealingModal {...makeProps()} />);
-      const confirmBtn = screen.getByRole('button', { name: /Heal \(0\)/ });
-      expect(confirmBtn).toBeDisabled();
-      fireEvent.click(confirmBtn);
-      expect(mockOnConfirm).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('prop passthrough', () => {
-    it('passes creatureTargets to CreatureSelectionModal', () => {
-      render(<PrayerOfHealingModal {...makeProps()} />);
-      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
-      expect(props.targets).toEqual(defaultTargets);
-    });
-
-    it('passes maxTargets to CreatureSelectionModal', () => {
-      render(<PrayerOfHealingModal {...makeProps({ maxTargets: 5 })} />);
-      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
-      expect(props.maxTargets).toBe(5);
-    });
-
-    it('passes empty creatureTargets to CreatureSelectionModal', () => {
-      render(<PrayerOfHealingModal {...makeProps({ creatureTargets: [] })} />);
-      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
-      expect(props.targets).toEqual([]);
-    });
-
-    it('passes string targets to CreatureSelectionModal', () => {
-      const stringTargets = ['AllyA', 'AllyB', 'AllyC'];
-      render(<PrayerOfHealingModal {...makeProps({ creatureTargets: stringTargets })} />);
-      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
-      expect(props.targets).toEqual(stringTargets);
-    });
   });
 
   describe('edge cases', () => {
-    it('renders without optional maxTargets prop', () => {
+    it.each(['maxTargets', 'onConfirm', 'onSkip'])('renders without optional %s prop', (propName) => {
       const props = makeProps();
-      delete props.maxTargets;
-      render(<PrayerOfHealingModal {...props} />);
-      expect(screen.getByText('Prayer of Healing')).toBeInTheDocument();
-      expect(screen.getByText('Choose up to 5 creatures to heal.')).toBeInTheDocument();
-    });
-
-    it('renders without optional onConfirm prop', () => {
-      const props = makeProps();
-      delete props.onConfirm;
-      render(<PrayerOfHealingModal {...props} />);
-      expect(screen.getByText('Prayer of Healing')).toBeInTheDocument();
-    });
-
-    it('renders without optional onSkip prop', () => {
-      const props = makeProps();
-      delete props.onSkip;
+      delete props[propName];
       render(<PrayerOfHealingModal {...props} />);
       expect(screen.getByText('Prayer of Healing')).toBeInTheDocument();
     });

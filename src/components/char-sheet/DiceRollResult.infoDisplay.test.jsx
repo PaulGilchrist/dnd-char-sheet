@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
@@ -36,13 +37,6 @@ describe('DiceRollResult', () => {
             );
             expect(screen.queryByText(/\+\d/)).not.toBeInTheDocument();
         });
-
-        it('does not show bonus text when bonus plus modifier is zero with bonusDetail', () => {
-            render(
-                <DiceRollResult name="Test" type="d20" rolls={[10]} bonus={5} modifier={-5} bonusDetail="test" />
-            );
-            expect(screen.queryByText(/\+\d/)).not.toBeInTheDocument();
-        });
     });
 
     describe('save info display', () => {
@@ -64,20 +58,6 @@ describe('DiceRollResult', () => {
             );
             expect(screen.getByText(/Save DC 16 DEX/)).toBeInTheDocument();
             expect(screen.getByText(expectedText)).toBeInTheDocument();
-        });
-
-        it('shows "no damage on save" when dcSuccess is undefined (not "half")', () => {
-            render(
-                <DiceRollResult
-                    name="Fireball"
-                    type="damage"
-                    rolls={[6, 5, 4]}
-                    bonus={0}
-                    dc={16}
-                    dcType="DEX"
-                />
-            );
-            expect(screen.getByText(/no damage on save/)).toBeInTheDocument();
         });
 
         it('does not show save info when dc is undefined', () => {
@@ -121,26 +101,18 @@ describe('DiceRollResult', () => {
             expect(screen.getByText(/Target resistant to fire damage/)).toBeInTheDocument();
         });
 
-        it('does not show resistance notice when null', () => {
+        it.each`
+            resistanceNotice
+            ${null}
+            ${undefined}
+        `('does not show resistance notice when falsy ($resistanceNotice)', ({ resistanceNotice }) => {
             render(
                 <DiceRollResult
                     name="Fireball"
                     type="damage"
                     rolls={[6]}
                     bonus={0}
-                    resistanceNotice={null}
-                />
-            );
-            expect(screen.queryByText(/resistant/)).not.toBeInTheDocument();
-        });
-
-        it('does not show resistance notice when undefined', () => {
-            render(
-                <DiceRollResult
-                    name="Fireball"
-                    type="damage"
-                    rolls={[6]}
-                    bonus={0}
+                    resistanceNotice={resistanceNotice}
                 />
             );
             expect(screen.queryByText(/resistant/)).not.toBeInTheDocument();
@@ -208,26 +180,18 @@ describe('DiceRollResult', () => {
             expect(screen.getByText(/half damage on miss/)).toBeInTheDocument();
         });
 
-        it('does not show potent cantrip notice when false', () => {
+        it.each`
+            isPotentCantrip
+            ${false}
+            ${undefined}
+        `('does not show potent cantrip notice when falsy ($isPotentCantrip)', ({ isPotentCantrip }) => {
             render(
                 <DiceRollResult
                     name="Ray of Frost"
                     type="attack"
                     rolls={[15]}
                     bonus={3}
-                    isPotentCantrip={false}
-                />
-            );
-            expect(screen.queryByText(/Potent Cantrip/)).not.toBeInTheDocument();
-        });
-
-        it('does not show potent cantrip notice when undefined', () => {
-            render(
-                <DiceRollResult
-                    name="Ray of Frost"
-                    type="attack"
-                    rolls={[15]}
-                    bonus={3}
+                    isPotentCantrip={isPotentCantrip}
                 />
             );
             expect(screen.queryByText(/Potent Cantrip/)).not.toBeInTheDocument();

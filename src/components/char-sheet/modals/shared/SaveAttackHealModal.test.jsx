@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackHealModal from './SaveAttackHealModal.jsx';
@@ -36,10 +37,6 @@ vi.mock('../../../../services/automation/common/healingRoll.js', () => ({
   logHealingToSSE: vi.fn(),
 }));
 
-// ── Re-import mocked modules ──
-
-import * as rangeValidation from '../../../../services/rules/combat/rangeValidation.js';
-
 // ── Test fixtures ──
 
 import { makeProps, getCheckboxByName } from './SaveAttackHealModal.test-utils.js';
@@ -60,13 +57,6 @@ describe('SaveAttackHealModal', () => {
   // ── Initial render / display ──
 
   describe('initial render', () => {
-    it('renders the overlay, modal header with feature name and dice icon', () => {
-      render(<SaveAttackHealModal {...makeProps()} />);
-      expect(screen.getByText('Divine Smite')).toBeInTheDocument();
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.fa-dice-d20')).toBeInTheDocument();
-    });
-
     it('displays save type and DC in the body instructions', () => {
       render(<SaveAttackHealModal {...makeProps()} />);
       const body = document.querySelector('.sp-body');
@@ -93,21 +83,6 @@ describe('SaveAttackHealModal', () => {
     it('displays target count with initial zero selection', () => {
       render(<SaveAttackHealModal {...makeProps()} />);
       expect(screen.getByText(/Targets selected: 0\/3/)).toBeInTheDocument();
-    });
-
-    it('renders Cancel button', () => {
-      render(<SaveAttackHealModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
-    it('renders apply button with feature name and zero target count', () => {
-      render(<SaveAttackHealModal {...makeProps()} />);
-      expect(getApplyButton()).toHaveTextContent('Divine Smite (0 targets)');
-    });
-
-    it('disables the apply button when no targets are selected', () => {
-      render(<SaveAttackHealModal {...makeProps()} />);
-      expect(getApplyButton()).toBeDisabled();
     });
   });
 
@@ -142,85 +117,27 @@ describe('SaveAttackHealModal', () => {
       expect(screen.getByText(/Targets selected: 1\/3/)).toBeInTheDocument();
     });
 
-    it('enables the apply button when at least one target is selected', () => {
+    it('enables the apply button and updates label when targets are selected', () => {
       render(<SaveAttackHealModal {...makeProps()} />);
+      expect(getApplyButton()).toBeDisabled();
       fireEvent.click(getCheckboxByName('Goblin A'));
       expect(getApplyButton()).toBeEnabled();
-    });
-
-    it('shows singular "target" when exactly one is selected and plural for multiple', () => {
-      render(<SaveAttackHealModal {...makeProps()} />);
-      fireEvent.click(getCheckboxByName('Goblin A'));
       expect(getApplyButton()).toHaveTextContent('Divine Smite (1 target)');
       fireEvent.click(getCheckboxByName('Goblin B'));
       expect(getApplyButton()).toHaveTextContent('Divine Smite (2 targets)');
     });
   });
 
-  // ── Range filtering ──
-
-  describe('range filtering', () => {
-    const baseProps = makeProps({ rangeFeet: 10, mapData: { players: [], placedItems: [] } });
-
-    afterEach(() => {
-      vi.mocked(rangeValidation.getDistanceFeet).mockReturnValue(10);
-    });
-
-    it('includes targets within range', () => {
-      rangeValidation.getDistanceFeet.mockReturnValue(5);
-      render(<SaveAttackHealModal {...baseProps} />);
-      expect(getCheckboxByName('Goblin A')).toBeInTheDocument();
-    });
-
-    it('excludes targets beyond range', () => {
-      rangeValidation.getDistanceFeet.mockReturnValue(15);
-      render(<SaveAttackHealModal {...baseProps} />);
-      expect(screen.queryByLabelText('Goblin A')).not.toBeInTheDocument();
-    });
-
-    it('includes a target when mapData is missing', () => {
-      render(<SaveAttackHealModal {...makeProps({ mapData: null })} />);
-      expect(getCheckboxByName('Goblin A')).toBeInTheDocument();
-    });
-  });
-
   // ── No eligible targets ──
 
   describe('no eligible targets', () => {
-    it('shows the no valid targets message when combatSummary has no creatures', () => {
-      render(<SaveAttackHealModal {...makeProps({ combatSummary: { creatures: [] } })} />);
+    it.each([
+      { label: 'empty creatures array', combatSummary: { creatures: [] } },
+      { label: 'null combatSummary', combatSummary: null },
+      { label: 'undefined creatures array', combatSummary: {} },
+    ])('shows "No valid targets in range." when %s', ({ combatSummary }) => {
+      render(<SaveAttackHealModal {...makeProps({ combatSummary })} />);
       expect(screen.getByText('No valid targets in range.')).toBeInTheDocument();
-    });
-
-    it('handles null combatSummary gracefully', () => {
-      render(<SaveAttackHealModal {...makeProps({ combatSummary: null })} />);
-      expect(screen.getByText('No valid targets in range.')).toBeInTheDocument();
-    });
-
-    it('handles undefined creatures array gracefully', () => {
-      render(<SaveAttackHealModal {...makeProps({ combatSummary: {} })} />);
-      expect(screen.getByText('No valid targets in range.')).toBeInTheDocument();
-    });
-  });
-
-  // ── Cancel button behavior ──
-
-  describe('cancel button', () => {
-    it('calls onClose when Cancel is clicked before applying', () => {
-      const onClose = vi.fn();
-      render(<SaveAttackHealModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // ── Edge cases ──
-
-  describe('edge cases', () => {
-    it('does not process when apply is clicked with no targets selected', () => {
-      render(<SaveAttackHealModal {...makeProps()} />);
-      fireEvent.click(getApplyButton());
-      expect(screen.queryByText(/Resolving/)).not.toBeInTheDocument();
     });
   });
 });

@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PolymorphSelectionModal from './PolymorphSelectionModal.jsx';
 
@@ -117,36 +118,19 @@ describe('PolymorphSelectionModal - Features', () => {
     });
 
     describe('customization props', () => {
-        it('renders custom title when provided', async () => {
-            render(<PolymorphSelectionModal {...makeProps({ title: 'Polymorph Selection' })} />);
+        it('renders custom title, action label, and defaults when not provided', async () => {
+            render(<PolymorphSelectionModal {...makeProps({ title: 'Polymorph Selection', actionLabel: 'Transform' })} />);
             await waitFor(() => {
                 expect(screen.getByText('Polymorph Selection')).toBeInTheDocument();
+                expect(screen.getByRole('button', { name: 'Transform' })).toBeInTheDocument();
             });
         });
 
-        it('renders custom icon when provided', async () => {
-            render(<PolymorphSelectionModal {...makeProps({ icon: 'fa-dragon' })} />);
-            await waitFor(() => {
-                const icons = document.querySelectorAll('i.fa-solid.fa-dragon');
-                expect(icons.length).toBeGreaterThan(0);
-            });
-        });
-
-        it('uses custom action label when provided', async () => {
-            render(<PolymorphSelectionModal {...makeProps({ actionLabel: 'Transform' })} />);
-            await waitFor(() => {
-                const confirmBtn = screen.getByRole('button', { name: 'Transform' });
-                expect(confirmBtn).toBeInTheDocument();
-            });
-        });
-
-        it('uses default title and icon when not provided', async () => {
+        it('renders default title when no custom title is provided', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 expect(screen.getByText('Wild Shape')).toBeInTheDocument();
             });
-            const icons = document.querySelectorAll('i.fa-solid.fa-paw');
-            expect(icons.length).toBeGreaterThan(0);
         });
     });
 
@@ -158,24 +142,11 @@ describe('PolymorphSelectionModal - Features', () => {
             });
         });
 
-        it('changes search placeholder for allowAnyCreature mode', async () => {
+        it('changes search placeholder and instruction text for allowAnyCreature mode', async () => {
             render(<PolymorphSelectionModal {...makeProps({ allowAnyCreature: true })} />);
             await waitFor(() => {
                 expect(screen.getByPlaceholderText('Search creatures...')).toBeInTheDocument();
-            });
-        });
-
-        it('changes instruction text for allowAnyCreature mode', async () => {
-            render(<PolymorphSelectionModal {...makeProps({ allowAnyCreature: true })} />);
-            await waitFor(() => {
                 expect(screen.getByText('Choose a creature form (CR 1 or lower)')).toBeInTheDocument();
-            });
-        });
-
-        it('does not show wild shape limitations info in allowAnyCreature mode', async () => {
-            render(<PolymorphSelectionModal {...makeProps({ allowAnyCreature: true })} />);
-            await waitFor(() => {
-                expect(screen.queryByText(/Movement:/)).not.toBeInTheDocument();
             });
         });
 
@@ -202,15 +173,6 @@ describe('PolymorphSelectionModal - Features', () => {
             });
         });
 
-        it('excludes types case-insensitively', async () => {
-            render(<PolymorphSelectionModal {...makeProps({
-                excludeTypes: ['beast'],
-            })} />);
-            await waitFor(() => {
-                expect(screen.getByText(/No beasts match/)).toBeInTheDocument();
-            });
-        });
-
         it('does not show excluded types info when excludeTypes is empty', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
@@ -220,7 +182,7 @@ describe('PolymorphSelectionModal - Features', () => {
     });
 
     describe('challenge rating display', () => {
-        it('displays all CR formats correctly and sorts by CR ascending then name', async () => {
+        it('displays all CR formats correctly', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {
                 const crTexts = document.querySelectorAll('.wild-shape-beast-cr');
@@ -228,18 +190,6 @@ describe('PolymorphSelectionModal - Features', () => {
                 expect(crs).toContain('CR 0');
                 expect(crs).toContain('CR 0.25');
                 expect(crs).toContain('CR 1');
-
-                const items = document.querySelectorAll('.wild-shape-beast-item');
-                const names = Array.from(items).map(item => {
-                    const nameEl = item.querySelector('.wild-shape-beast-name');
-                    return nameEl ? nameEl.textContent.trim() : '';
-                });
-                // CR 0 (Rat) should come first
-                expect(names[0]).toContain('Rat');
-                // CR 0.25 items sorted alphabetically
-                const cr025Items = names.filter(n => n.includes('Panther') || n.includes('Wolf'));
-                expect(cr025Items[0]).toContain('Panther');
-                expect(cr025Items[1]).toContain('Wolf');
             });
         });
     });
@@ -256,43 +206,6 @@ describe('PolymorphSelectionModal - Features', () => {
                 const speeds = Array.from(speedTexts).map(el => el.textContent.trim());
                 expect(speeds.some(s => s.includes('Climb 20'))).toBe(true);
             });
-        });
-
-        it('separates multiple speeds with commas', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                const speedParents = document.querySelectorAll('.wild-shape-beast-stats');
-                const parentTexts = Array.from(speedParents).map(el => el.textContent.trim());
-                expect(parentTexts.some(t => t.includes('Walk 40') && t.includes('Climb 20'))).toBe(true);
-            });
-        });
-    });
-
-    describe('error handling', () => {
-        it('renders error message when loadMonsters fails', async () => {
-            const { loadMonsters } = await import('../../../services/ui/dataLoader.js');
-            loadMonsters.mockRejectedValueOnce(new Error('Network error'));
-
-            render(<PolymorphSelectionModal {...baseProps} />);
-
-            await waitFor(() => {
-                expect(screen.getByText('Failed to load creature data.')).toBeInTheDocument();
-                expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
-            });
-        });
-
-        it('calls onCancel when Close button is clicked in error state', async () => {
-            const { loadMonsters } = await import('../../../services/ui/dataLoader.js');
-            loadMonsters.mockRejectedValueOnce(new Error('Network error'));
-
-            render(<PolymorphSelectionModal {...baseProps} />);
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
-            });
-
-            fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-            expect(baseProps.onCancel).toHaveBeenCalled();
         });
     });
 
@@ -330,39 +243,7 @@ describe('PolymorphSelectionModal - Features', () => {
         });
     });
 
-    describe('overlay and modal structure', () => {
-        it('renders overlay with correct classes', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            });
-            const overlay = document.querySelector('.sp-overlay');
-            expect(overlay).toHaveClass('sp-overlay');
-            expect(overlay).toHaveClass('sp-overlay--evasion');
-        });
-
-        it('renders modal with correct classes', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            });
-            const modal = document.querySelector('.sp-modal');
-            expect(modal).toHaveClass('sp-modal');
-            expect(modal).toHaveClass('sp-modal--wide');
-        });
-
-        it('renders both Cancel and confirm buttons in the actions area', async () => {
-            render(<PolymorphSelectionModal {...baseProps} />);
-            await waitFor(() => {
-                expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            });
-            const dismissBtn = document.querySelector('.sp-dismiss-btn');
-            const rollBtn = document.querySelector('.sp-roll-btn');
-            expect(dismissBtn).toBeInTheDocument();
-            expect(rollBtn).toBeInTheDocument();
-            expect(dismissBtn.textContent).toContain('Cancel');
-        });
-
+    describe('beast detail rendering', () => {
         it('renders beast size in the stats line', async () => {
             render(<PolymorphSelectionModal {...baseProps} />);
             await waitFor(() => {

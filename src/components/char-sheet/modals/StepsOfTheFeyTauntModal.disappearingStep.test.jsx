@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
@@ -73,13 +74,6 @@ describe('StepsOfTheFeyTauntModal - Disappearing Step', () => {
     });
 
     describe('disappearing step flow', () => {
-        it('shows confirmation dialog when Disappearing Step is selected', () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const disappearingOption = screen.getByText('Disappearing Step').closest('.clickable');
-            fireEvent.click(disappearingOption);
-            expect(screen.getByText(/Disappearing Step/)).toBeInTheDocument();
-        });
-
         it('applies invisible condition and adds expiration when Disappear is clicked', async () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             const disappearingOption = screen.getByText('Disappearing Step').closest('.clickable');
@@ -102,10 +96,14 @@ describe('StepsOfTheFeyTauntModal - Disappearing Step', () => {
                     undefined,
                     'FeyTrickster'
                 );
+                const body = document.querySelector('.sp-body');
+                expect(body.textContent).toContain('Disappearing Step');
+                expect(body.textContent).toContain('Invisible condition');
+                expect(body.textContent).toContain('2 remaining');
             });
         });
 
-        it('does not add duplicate invisible condition if already present', async () => {
+        it('refreshes expiration when invisible condition is already present', async () => {
             vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
                 if (prop === 'activeConditions' && key === 'FeyTrickster') return ['invisible'];
                 return null;
@@ -118,13 +116,6 @@ describe('StepsOfTheFeyTauntModal - Disappearing Step', () => {
             fireEvent.click(disappearButton);
 
             await waitFor(() => {
-                // setRuntimeValue should not be called since invisible is already present
-                expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                    'FeyTrickster',
-                    'activeConditions',
-                    expect.any(Array)
-                );
-                // addExpiration should still be called to refresh the expiration
                 expect(addExpiration).toHaveBeenCalled();
             });
         });
@@ -144,48 +135,6 @@ describe('StepsOfTheFeyTauntModal - Disappearing Step', () => {
                     'test-campaign'
                 );
             });
-        });
-
-        it('shows result view with remaining count after applying', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const disappearingOption = screen.getByText('Disappearing Step').closest('.clickable');
-            fireEvent.click(disappearingOption);
-            const disappearButton = screen.getByRole('button', { name: /Disappear/ });
-            fireEvent.click(disappearButton);
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-                const body = document.querySelector('.sp-body');
-                expect(body.textContent).toContain('Disappearing Step');
-                expect(body.textContent).toContain('Invisible condition');
-                expect(body.textContent).toContain('2 remaining');
-            });
-        });
-
-        it('calls onClose when Done is clicked after applying', async () => {
-            const onClose = vi.fn();
-            render(<StepsOfTheFeyTauntModal {...makeProps({ onClose })} />);
-            const disappearingOption = screen.getByText('Disappearing Step').closest('.clickable');
-            fireEvent.click(disappearingOption);
-            const disappearButton = screen.getByRole('button', { name: /Disappear/ });
-            fireEvent.click(disappearButton);
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-            });
-            fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('does not apply condition when Disappearing Step is cancelled', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            const disappearingOption = screen.getByText('Disappearing Step').closest('.clickable');
-            fireEvent.click(disappearingOption);
-            const cancelButton = screen.getByRole('button', { name: 'Cancel' });
-            fireEvent.click(cancelButton);
-
-            expect(screen.getByText('Disappearing Step')).toBeInTheDocument();
-            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
     });
 });

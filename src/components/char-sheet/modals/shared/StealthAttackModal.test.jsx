@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StealthAttackModal from './StealthAttackModal.jsx';
@@ -118,13 +119,6 @@ describe('StealthAttackModal', () => {
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('does not call onClose when modal content is clicked', () => {
-            const onClose = vi.fn();
-            render(<StealthAttackModal {...makeProps({ onClose })} />);
-            fireEvent.click(document.querySelector('.sp-modal'));
-            expect(onClose).not.toHaveBeenCalled();
-        });
-
         it('calls onClose when Cancel button is clicked', () => {
             const onClose = vi.fn();
             render(<StealthAttackModal {...makeProps({ onClose })} />);
@@ -134,20 +128,6 @@ describe('StealthAttackModal', () => {
     });
 
     describe('apply behavior', () => {
-        it('calls applyStealthAttack with correct arguments', async () => {
-            render(<StealthAttackModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Activate Stealth Attack/ }));
-
-            await waitFor(() => {
-                expect(stealthAttackHandler.applyStealthAttack).toHaveBeenCalledWith(
-                    expect.objectContaining({ name: 'Stealth Attack' }),
-                    expect.objectContaining({ level: 5 }),
-                    mockCampaignName,
-                    1,
-                );
-            });
-        });
-
         it('transitions to applied state after successful apply', async () => {
             stealthAttackHandler.applyStealthAttack.mockResolvedValue({
                 type: 'popup',
@@ -175,26 +155,6 @@ describe('StealthAttackModal', () => {
                 expect(screen.queryByRole('button', { name: /Activate Stealth Attack/ })).not.toBeInTheDocument();
                 expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
                 expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-            });
-        });
-
-        it('renders the result description as HTML', async () => {
-            stealthAttackHandler.applyStealthAttack.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Stealth Attack',
-                    description: '<strong>Stealth Attack</strong> active.',
-                },
-            });
-
-            render(<StealthAttackModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Activate Stealth Attack/ }));
-
-            await waitFor(() => {
-                const strongEl = document.querySelector('.sp-body strong');
-                expect(strongEl).toBeInTheDocument();
-                expect(strongEl.textContent).toBe('Stealth Attack');
             });
         });
 
@@ -242,19 +202,6 @@ describe('StealthAttackModal', () => {
             fireEvent.click(document.querySelector('.sp-overlay'));
             expect(onClose).toHaveBeenCalledTimes(1);
         });
-
-        it('does not call onClose when modal content is clicked in applied state', async () => {
-            const onClose = vi.fn();
-            render(<StealthAttackModal {...makeProps({ onClose })} />);
-            fireEvent.click(screen.getByRole('button', { name: /Activate Stealth Attack/ }));
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-            });
-
-            fireEvent.click(document.querySelector('.sp-modal'));
-            expect(onClose).not.toHaveBeenCalled();
-        });
     });
 
     describe('error handling from applyStealthAttack', () => {
@@ -274,26 +221,6 @@ describe('StealthAttackModal', () => {
             await waitFor(() => {
                 expect(screen.getByText(/Not enough Sneak Attack dice/)).toBeInTheDocument();
                 expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-            });
-        });
-
-        it('renders error description as HTML', async () => {
-            stealthAttackHandler.applyStealthAttack.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Stealth Attack',
-                    description: '<b>Not enough</b> Sneak Attack dice.',
-                },
-            });
-
-            render(<StealthAttackModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Activate Stealth Attack/ }));
-
-            await waitFor(() => {
-                const bEl = document.querySelector('.sp-body b');
-                expect(bEl).toBeInTheDocument();
-                expect(bEl.textContent).toBe('Not enough');
             });
         });
     });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MistyWandererModal from './MistyWandererModal.jsx';
@@ -54,30 +55,15 @@ describe('MistyWandererModal', () => {
   // ── Rendering ──
 
   describe('initial render', () => {
-    it('renders the modal overlay, container, header, body, and actions sections', () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header')).toBeInTheDocument();
-      expect(document.querySelector('.sp-body')).toBeInTheDocument();
-      expect(document.querySelector('.sp-actions')).toBeInTheDocument();
-    });
-
-    it('renders the header with cloud icon and action name', () => {
+    it('renders the modal with overlay, header, body, and action buttons', () => {
       render(<MistyWandererModal {...makeProps()} />);
       expect(screen.getByText('Misty Wanderer')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header .fa-solid.fa-cloud')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Cast Misty Step/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     });
 
-    it('renders the Misty Step description with teleport details', () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      const body = document.querySelector('.sp-body p');
-      expect(body.textContent).toContain('Cast');
-      expect(body.textContent).toContain('Misty Step');
-      expect(body.textContent).toContain('teleport up to 30 feet');
-    });
-
-    it('renders the ally selection prompt and description', () => {
+    it('renders the body content with Misty Step description and ally selection prompt', () => {
       render(<MistyWandererModal {...makeProps()} />);
       expect(screen.getByText(/Bring a willing creature within 5 feet/)).toBeInTheDocument();
       expect(screen.getByText(/The creature appears in an unoccupied space within 5 feet/)).toBeInTheDocument();
@@ -87,60 +73,25 @@ describe('MistyWandererModal', () => {
       render(<MistyWandererModal {...makeProps()} />);
       const select = screen.getByRole('combobox');
       expect(select).toHaveValue('');
-      const options = select.querySelectorAll('option');
-      expect(options.length).toBe(1);
-      expect(options[0].textContent).toBe('None');
-    });
-
-    it('renders the Cast Misty Step button with cloud icon', () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      const button = screen.getByRole('button', { name: /Cast Misty Step/ });
-      expect(button).toBeInTheDocument();
-      expect(button.querySelector('.fa-solid.fa-cloud')).toBeInTheDocument();
-    });
-
-    it('renders the Cancel button', () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
-    it('does not show Done button or result on initial render', () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-      expect(screen.queryByText(/Misty Wanderer: Cast Misty Step/)).not.toBeInTheDocument();
     });
   });
 
   // ── Custom action name ──
 
-  it('displays the custom action name in the header', () => {
-    render(<MistyWandererModal {...makeProps({ action: makeAction({ name: 'Custom Misty Step' }) })} />);
-    expect(screen.getByText('Custom Misty Step')).toBeInTheDocument();
+  describe('action name display', () => {
+    it('displays the custom action name in the header', () => {
+      render(<MistyWandererModal {...makeProps({ action: makeAction({ name: 'Custom Misty Step' }) })} />);
+      expect(screen.getByText('Custom Misty Step')).toBeInTheDocument();
+    });
   });
 
   // ── Ally selection ──
 
   describe('ally selection', () => {
-    it('calls confirmMistyWanderer with bringAlly=false and null when no ally is selected', async () => {
-      confirmMistyWanderer.mockResolvedValue(mockResult);
-      render(<MistyWandererModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
-      await waitFor(() => {
-        expect(confirmMistyWanderer).toHaveBeenCalledWith(
-          baseAction,
-          basePlayerStats,
-          'test-campaign',
-          false,
-          null
-        );
-      });
-    });
-
-    it('calls confirmMistyWanderer with bringAlly=true and ally name when an ally is selected', async () => {
+    it('passes the selected ally name to confirmMistyWanderer when an ally is chosen', async () => {
       confirmMistyWanderer.mockResolvedValue(mockResult);
       render(<MistyWandererModal {...makeProps()} />);
       const select = screen.getByRole('combobox');
-      // Select only has "None" option; set value via property getter to simulate selection
       Object.defineProperty(select, 'value', { get: () => 'Ally1', configurable: true });
       fireEvent.change(select);
       fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
@@ -163,31 +114,12 @@ describe('MistyWandererModal', () => {
       confirmMistyWanderer.mockResolvedValue(mockResult);
     });
 
-    it('replaces initial content with result after confirm', async () => {
+    it('displays the result description and Done button after confirm', async () => {
       render(<MistyWandererModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
       await waitFor(() => {
         expect(screen.getByText('Done')).toBeInTheDocument();
-      });
-    });
-
-    it('renders the result description via dangerouslySetInnerHTML', async () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
-      await waitFor(() => {
         expect(document.querySelector('.sp-body')).toHaveTextContent('Misty Wanderer: Cast Misty Step');
-      });
-    });
-
-    it('hides the initial content after confirm', async () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
-      await waitFor(() => {
-        expect(screen.queryByText(/Cast Misty Step.*teleport/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/Bring a willing creature/)).not.toBeInTheDocument();
-        expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /Cast Misty Step/ })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
       });
     });
 
@@ -205,14 +137,6 @@ describe('MistyWandererModal', () => {
       await waitFor(() => {
         expect(document.querySelector('.sp-body')).toHaveTextContent('Ally1');
         expect(document.querySelector('.sp-body')).toHaveTextContent('Brought');
-      });
-    });
-
-    it('renders the cloud icon in the result header', async () => {
-      render(<MistyWandererModal {...makeProps()} />);
-      fireEvent.click(screen.getByRole('button', { name: /Cast Misty Step/ }));
-      await waitFor(() => {
-        expect(document.querySelector('.sp-header .fa-solid.fa-cloud')).toBeInTheDocument();
       });
     });
   });

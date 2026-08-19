@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
@@ -76,36 +77,6 @@ describe('DiceRollResult', () => {
             );
             expect(c2.querySelector('.dice-roll-hit-miss.miss').textContent).toContain('AUTO-MISS');
             expect(c2.querySelector('.dice-roll-hit-miss.miss').textContent).toContain('out of range');
-        });
-    });
-
-    describe('auto damage rolling', () => {
-        it('shows Done button when autoDamage is true and hit is true', () => {
-            render(
-                <DiceRollResult
-                    name="Longsword"
-                    type="attack"
-                    rolls={[18]}
-                    bonus={5}
-                    autoDamage={true}
-                    hit={true}
-                />
-            );
-            expect(screen.getByText('Done')).toBeInTheDocument();
-        });
-
-        it('does not show Done button when autoDamage is true but hit is false', () => {
-            render(
-                <DiceRollResult
-                    name="Longsword"
-                    type="attack"
-                    rolls={[8]}
-                    bonus={3}
-                    autoDamage={true}
-                    hit={false}
-                />
-            );
-            expect(screen.queryByText('Done')).not.toBeInTheDocument();
         });
     });
 

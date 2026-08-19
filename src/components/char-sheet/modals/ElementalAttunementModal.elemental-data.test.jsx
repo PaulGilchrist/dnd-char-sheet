@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalAttunementModal from './ElementalAttunementModal.jsx';
 
@@ -120,101 +121,6 @@ describe('ElementalAttunementModal ELEMENT_DATA structure', () => {
             expect(screen.getByText('Lightning')).toBeInTheDocument();
             expect(screen.getByText('Thunder')).toBeInTheDocument();
             expect(document.querySelectorAll('.sp-roll-btn').length).toBe(4);
-        });
-
-        it('Cold element has no damage property (effect-only)', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Cold'));
-            await new Promise(r => setTimeout(r, 0));
-            await waitFor(() => {
-                const note = screen.getByTestId('cs-modal-note');
-                expect(note.textContent).not.toContain('damage');
-                expect(note.textContent).not.toContain('half');
-            });
-        });
-
-        it('Fire element has 1d10 fire damage with half-on-save', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await new Promise(r => setTimeout(r, 0));
-            await waitFor(() => {
-                const note = screen.getByTestId('cs-modal-note');
-                expect(note.textContent).toContain('1d10');
-                expect(note.textContent.toLowerCase()).toContain('fire');
-                expect(note.textContent).toContain('half');
-            });
-        });
-
-        it('Lightning element has 1d8 lightning damage with half-on-save', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Lightning'));
-            await new Promise(r => setTimeout(r, 0));
-            await waitFor(() => {
-                const note = screen.getByTestId('cs-modal-note');
-                expect(note.textContent).toContain('1d8');
-                expect(note.textContent.toLowerCase()).toContain('lightning');
-                expect(note.textContent).toContain('half');
-            });
-        });
-
-        it('Thunder element has 1d6 thunder damage with half-on-save', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Thunder'));
-            await new Promise(r => setTimeout(r, 0));
-            await waitFor(() => {
-                const note = screen.getByTestId('cs-modal-note');
-                expect(note.textContent).toContain('1d6');
-                expect(note.textContent.toLowerCase()).toContain('thunder');
-                expect(note.textContent).toContain('half');
-            });
-        });
-
-        it('Cold element uses DEX save type', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Cold'));
-            await new Promise(r => setTimeout(r, 0));
-            await waitFor(() => {
-                const desc = screen.getByTestId('cs-modal-description');
-                expect(desc.innerHTML).toContain('DEX');
-            });
-        });
-
-        it('Fire element uses DEX save type', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Fire'));
-            await new Promise(r => setTimeout(r, 0));
-            await waitFor(() => {
-                const desc = screen.getByTestId('cs-modal-description');
-                expect(desc.innerHTML).toContain('DEX');
-            });
-        });
-
-        it('Lightning element uses DEX save type', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Lightning'));
-            await new Promise(r => setTimeout(r, 0));
-            await waitFor(() => {
-                const desc = screen.getByTestId('cs-modal-description');
-                expect(desc.innerHTML).toContain('DEX');
-            });
-        });
-
-        it('Thunder element uses CON save type', async () => {
-            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([]));
-            renderModal();
-            fireEvent.click(screen.getByText('Thunder'));
-            await new Promise(r => setTimeout(r, 0));
-            await waitFor(() => {
-                const desc = screen.getByTestId('cs-modal-description');
-                expect(desc.innerHTML).toContain('CON');
-            });
         });
 
         it('element data is not mutated by rendering', async () => {

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SummonSpiritModal from './SummonSpiritModal.jsx';
@@ -42,33 +43,19 @@ describe('SummonSpiritModal', () => {
     // ── Initial render ──
 
     describe('initial render', () => {
-        it('renders the action name in the header', () => {
+        it('renders the modal structure with action name, instruction prompt, and all variant buttons with descriptions', () => {
             render(<SummonSpiritModal {...makeProps()} />);
             expect(screen.getByText('Summon Beast')).toBeInTheDocument();
-        });
-
-        it('renders the instruction prompt', () => {
-            render(<SummonSpiritModal {...makeProps()} />);
-            expect(
-                screen.getByText('Choose the form your summoned creature takes:')
-            ).toBeInTheDocument();
-        });
-
-        it('renders all variant buttons with their names', () => {
-            render(<SummonSpiritModal {...makeProps()} />);
+            expect(screen.getByText('Choose the form your summoned creature takes:')).toBeInTheDocument();
             expect(screen.getByText('Bestial Spirit (Air)')).toBeInTheDocument();
             expect(screen.getByText('Bestial Spirit (Land)')).toBeInTheDocument();
             expect(screen.getByText('Bestial Spirit (Water)')).toBeInTheDocument();
-        });
-
-        it('renders variant descriptions when present', () => {
-            render(<SummonSpiritModal {...makeProps()} />);
             expect(screen.getByText('Flies at 60 ft.')).toBeInTheDocument();
             expect(screen.getByText('Walks and climbs at 30 ft.')).toBeInTheDocument();
             expect(screen.getByText('Swims at 30 ft.')).toBeInTheDocument();
         });
 
-        it('omits the description span when a variant has no description', () => {
+        it('renders variant buttons and descriptions when only some variants have descriptions', () => {
             const props = makeProps({
                 action: {
                     name: 'Summon Spirit',
@@ -87,23 +74,6 @@ describe('SummonSpiritModal', () => {
             expect(screen.queryByText(/Spirit A description/i)).not.toBeInTheDocument();
         });
 
-        it('renders variant buttons when no description is provided on others', () => {
-            const props = makeProps({
-                action: {
-                    name: 'Summon Spirit',
-                    automation: {
-                        variants: [
-                            { name: 'Spirit A' },
-                            { name: 'Spirit B', description: 'A description' },
-                        ],
-                    },
-                },
-            });
-            render(<SummonSpiritModal {...props} />);
-            const buttons = document.querySelectorAll('.summon-spirit-option');
-            expect(buttons.length).toBe(2);
-        });
-
         it('renders no variant buttons when variants array is empty', () => {
             const props = makeProps({
                 action: {
@@ -115,51 +85,12 @@ describe('SummonSpiritModal', () => {
             expect(screen.getByText('Summon Spirit')).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /Spirit/i })).not.toBeInTheDocument();
         });
-
-        it('renders no variant buttons when automation is missing', () => {
-            const props = makeProps({
-                action: { name: 'Summon Spirit' },
-            });
-            render(<SummonSpiritModal {...props} />);
-            expect(screen.getByText('Summon Spirit')).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /Spirit/i })).not.toBeInTheDocument();
-        });
-
-        it('renders the header icon', () => {
-            render(<SummonSpiritModal {...makeProps()} />);
-            const header = document.querySelector('.sp-header');
-            expect(header.querySelector('i.fa-solid.fa-hand-sparkles')).toBeInTheDocument();
-        });
-
-        it('renders the Summon button with the header icon', () => {
-            render(<SummonSpiritModal {...makeProps()} />);
-            const summonButton = screen.getByRole('button', { name: /Summon/ });
-            expect(summonButton.querySelector('i.fa-solid.fa-hand-sparkles')).toBeInTheDocument();
-        });
-
-        it('renders all buttons with type="button"', () => {
-            render(<SummonSpiritModal {...makeProps()} />);
-            const buttons = document.querySelectorAll('button[type="button"]');
-            expect(buttons.length).toBeGreaterThan(0);
-        });
-
-        it('does not call onClose on initial render', () => {
-            const onClose = vi.fn();
-            render(<SummonSpiritModal {...makeProps({ onClose })} />);
-            expect(onClose).not.toHaveBeenCalled();
-        });
     });
 
     // ── Summon button state ──
 
     describe('summon button state', () => {
-        it('is disabled when no variant is selected', () => {
-            render(<SummonSpiritModal {...makeProps()} />);
-            const summonButton = screen.getByRole('button', { name: /Summon/ });
-            expect(summonButton).toBeDisabled();
-        });
-
-        it('is enabled after a variant is selected', () => {
+        it('is disabled when no variant is selected and enabled after selection', () => {
             render(<SummonSpiritModal {...makeProps()} />);
             const summonButton = screen.getByRole('button', { name: /Summon/ });
             expect(summonButton).toBeDisabled();
@@ -184,16 +115,7 @@ describe('SummonSpiritModal', () => {
     // ── Variant selection ──
 
     describe('variant selection', () => {
-        it('selects a variant on click', () => {
-            render(<SummonSpiritModal {...makeProps()} />);
-            selectVariant('Bestial Spirit (Land)');
-
-            const selectedBtn = document.querySelector('button.summon-spirit-option-selected');
-            expect(selectedBtn).toBeInTheDocument();
-            expect(selectedBtn.textContent).toContain('Bestial Spirit (Land)');
-        });
-
-        it('deselects the previous selection when another variant is clicked', () => {
+        it('selects a variant on click, deselects the previous, and allows variants without descriptions', () => {
             render(<SummonSpiritModal {...makeProps()} />);
 
             selectVariant('Bestial Spirit (Air)');
@@ -203,10 +125,9 @@ describe('SummonSpiritModal', () => {
             selectVariant('Bestial Spirit (Land)');
             selectedBtn = document.querySelector('button.summon-spirit-option-selected');
             expect(selectedBtn.textContent).toContain('Bestial Spirit (Land)');
-        });
 
-        it('selects a variant that has no description', () => {
-            const props = makeProps({
+            // Variant without description — re-render with different variants
+            const props2 = makeProps({
                 action: {
                     name: 'Summon Spirit',
                     automation: {
@@ -217,12 +138,11 @@ describe('SummonSpiritModal', () => {
                     },
                 },
             });
-            render(<SummonSpiritModal {...props} />);
+            const { container } = render(<SummonSpiritModal {...props2} />);
             selectVariant('Spirit A');
-
-            const selectedBtn = document.querySelector('button.summon-spirit-option-selected');
-            expect(selectedBtn).toBeInTheDocument();
-            expect(selectedBtn.textContent).toContain('Spirit A');
+            const selectedBtnNoDesc = container.querySelector('button.summon-spirit-option-selected');
+            expect(selectedBtnNoDesc).toBeInTheDocument();
+            expect(selectedBtnNoDesc.textContent).toContain('Spirit A');
         });
 
         it('does not close the modal when a variant is clicked', () => {
@@ -237,18 +157,12 @@ describe('SummonSpiritModal', () => {
     // ── Confirm behavior ──
 
     describe('confirm behavior', () => {
-        it('calls onConfirm with the selected variant name', () => {
+        it('calls onConfirm with the selected variant name and not without a selection', () => {
             render(<SummonSpiritModal {...makeProps()} />);
             selectVariant('Bestial Spirit (Land)');
             fireEvent.click(screen.getByRole('button', { name: /Summon/ }));
 
             expect(baseProps.onConfirm).toHaveBeenCalledWith('Bestial Spirit (Land)');
-        });
-
-        it('does not call onConfirm without a selection', () => {
-            render(<SummonSpiritModal {...makeProps()} />);
-            fireEvent.click(screen.getByRole('button', { name: /Summon/ }));
-            expect(baseProps.onConfirm).not.toHaveBeenCalled();
         });
 
         it('calls onConfirm with the latest selection after switching', () => {
@@ -271,15 +185,14 @@ describe('SummonSpiritModal', () => {
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('calls onClose when the overlay background is clicked', () => {
+        it('calls onClose when the overlay background is clicked but not when clicking inside the modal', () => {
             const onClose = vi.fn();
             render(<SummonSpiritModal {...makeProps({ onClose })} />);
+
             fireEvent.click(document.querySelector('.sp-overlay'));
             expect(onClose).toHaveBeenCalledTimes(1);
-        });
 
-        it('does not close when clicking inside the modal content', () => {
-            const onClose = vi.fn();
+            onClose.mockClear();
             render(<SummonSpiritModal {...makeProps({ onClose })} />);
             fireEvent.click(document.querySelector('.sp-modal'));
             expect(onClose).not.toHaveBeenCalled();

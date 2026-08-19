@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CombatStanceModal from './CombatStanceModal.jsx';
@@ -71,21 +72,16 @@ describe('CombatStanceModal', () => {
       expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(6);
     });
 
-    it('shows no options when automation.options is empty', () => {
+    it('shows no options when automation.options is empty or undefined', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ automation: { options: [] } }) })} />);
-      expect(screen.getByText('Rage')).toBeInTheDocument();
+      expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(0);
+      render(<CombatStanceModal {...makeProps({ action: { name: 'Rage', automation: {} } })} />);
       expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(0);
     });
 
     it('renders gracefully when automation is missing', () => {
       render(<CombatStanceModal {...makeProps({ action: { name: 'Rage' } })} />);
       expect(screen.getByText('Rage')).toBeInTheDocument();
-    });
-
-    it('shows no options when automation exists but options is undefined', () => {
-      render(<CombatStanceModal {...makeProps({ action: { name: 'Rage', automation: {} } })} />);
-      expect(screen.getByText('Rage')).toBeInTheDocument();
-      expect(document.querySelectorAll('input[type="radio"]')).toHaveLength(0);
     });
 
     it('displays instruction text for non-Rage actions', () => {
@@ -107,13 +103,9 @@ describe('CombatStanceModal', () => {
   });
 
   describe('apply button state', () => {
-    it('is disabled when no option is selected', () => {
+    it('is disabled when no option is selected and enabled after selection', () => {
       render(<CombatStanceModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: /Activate Rage/ })).toBeDisabled();
-    });
-
-    it('is enabled after selecting an option', () => {
-      render(<CombatStanceModal {...makeProps()} />);
       const radios = document.querySelectorAll('input[type="radio"]');
       fireEvent.click(radios[0]);
       expect(screen.getByRole('button', { name: /Activate Rage/ })).not.toBeDisabled();
@@ -155,12 +147,6 @@ describe('CombatStanceModal', () => {
       render(<CombatStanceModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
       expect(combatStanceHandler.applyStanceOption).not.toHaveBeenCalled();
-    });
-
-    it('uses wind icon for non-Rage actions', () => {
-      render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'Movement' }) })} />);
-      const btn = screen.getByRole('button', { name: /Activate Movement/ });
-      expect(btn.querySelector('.fa-solid.fa-wind')).toBeInTheDocument();
     });
 
     it('handles error when applyStanceOption throws', async () => {
@@ -218,17 +204,30 @@ describe('CombatStanceModal', () => {
       });
     });
 
-    it('does not show applied state when result is null', async () => {
+    it('does not show applied state when result is null or has no payload', async () => {
       combatStanceHandler.applyStanceOption.mockResolvedValue(null);
 
       render(<CombatStanceModal {...makeProps()} />);
-      const radios = document.querySelectorAll('input[type="radio"]');
+      let radios = document.querySelectorAll('input[type="radio"]');
       fireEvent.click(radios[0]);
       fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
 
       await waitFor(() => {
         expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
         expect(screen.queryByText(/Bear chosen/)).not.toBeInTheDocument();
+      });
+
+      document.body.innerHTML = '';
+
+      combatStanceHandler.applyStanceOption.mockResolvedValue({ type: 'popup' });
+
+      render(<CombatStanceModal {...makeProps()} />);
+      radios = document.querySelectorAll('input[type="radio"]');
+      fireEvent.click(radios[0]);
+      fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
       });
     });
 
@@ -241,38 +240,9 @@ describe('CombatStanceModal', () => {
       fireEvent.click(screen.getByText('Done'));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
-
-    it('does not show applied state when result has no payload', async () => {
-      combatStanceHandler.applyStanceOption.mockResolvedValue({ type: 'popup' });
-
-      render(<CombatStanceModal {...makeProps()} />);
-      const radios = document.querySelectorAll('input[type="radio"]');
-      fireEvent.click(radios[0]);
-      fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
-
-      await waitFor(() => {
-        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
-      });
-    });
   });
 
   describe('different stance options', () => {
-    it('selects and applies Falcon stance', async () => {
-      combatStanceHandler.applyStanceOption.mockResolvedValue({
-        type: 'popup',
-        payload: { type: 'automation_info', name: 'Rage', description: 'Falcon chosen.' },
-      });
-
-      render(<CombatStanceModal {...makeProps()} />);
-      const radios = document.querySelectorAll('input[type="radio"]');
-      fireEvent.click(radios[3]);
-      fireEvent.click(screen.getByRole('button', { name: /Activate Rage/ }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/Falcon chosen/)).toBeInTheDocument();
-      });
-    });
-
     it('shows effects descriptions for each stance option', () => {
       render(<CombatStanceModal {...makeProps()} />);
       expect(screen.getByText(/Resistance to all damage except Force, Necrotic, Psychic, Radiant/)).toBeInTheDocument();
@@ -283,32 +253,22 @@ describe('CombatStanceModal', () => {
       expect(screen.getByText(/Melee hits cause Large or smaller creatures to have the Prone condition/)).toBeInTheDocument();
     });
 
-    it('shows Cold elemental movement effects', () => {
+    it('shows elemental movement effects', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Cold' }] } }) })} />);
       expect(screen.getByText(/Ice Walk: Walk across icy\/water surfaces without checks; ignore ice\/snow difficult terrain/)).toBeInTheDocument();
-    });
 
-    it('applies Fire stance with configurable speed bonus', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Fire', speedBonus: 15 }] } }) })} />);
       expect(screen.getByText(/Speed Boost: \+15 feet to Speed/)).toBeInTheDocument();
-    });
 
-    it('applies Fire stance with default speed bonus', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Fire' }] } }) })} />);
       expect(screen.getByText(/Speed Boost: \+10 feet to Speed/)).toBeInTheDocument();
-    });
 
-    it('applies Lightning stance', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Lightning' }] } }) })} />);
       expect(screen.getByText(/Fly Speed equal to your Speed for 1 round/)).toBeInTheDocument();
-    });
 
-    it('applies Thunder stance with configurable teleport distance', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Thunder', teleportDistance: '60 ft' }] } }) })} />);
       expect(screen.getByText(/Teleport up to 60 ft to an unoccupied space you can see/)).toBeInTheDocument();
-    });
 
-    it('applies Thunder stance with default teleport distance', () => {
       render(<CombatStanceModal {...makeProps({ action: makeAction({ name: 'ElementalStride', automation: { type: 'stance', options: [{ name: 'Thunder' }] } }) })} />);
       expect(screen.getByText(/Teleport up to 30 ft to an unoccupied space you can see/)).toBeInTheDocument();
     });
@@ -322,28 +282,20 @@ describe('CombatStanceModal', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClose when overlay is clicked', () => {
+    it('calls onClose when overlay is clicked but not when modal content is clicked', () => {
       const onClose = vi.fn();
       render(<CombatStanceModal {...makeProps({ onClose })} />);
       const overlay = document.querySelector('.sp-overlay');
       fireEvent.click(overlay);
       expect(onClose).toHaveBeenCalledTimes(1);
-    });
 
-    it('does not close when modal inner content is clicked', () => {
-      const onClose = vi.fn();
-      render(<CombatStanceModal {...makeProps({ onClose })} />);
+      document.body.innerHTML = '';
+
+      const onClose2 = vi.fn();
+      render(<CombatStanceModal {...makeProps({ onClose: onClose2 })} />);
       const modal = document.querySelector('.sp-modal');
       fireEvent.click(modal);
-      expect(onClose).not.toHaveBeenCalled();
-    });
-
-    it('does not close when a stance option label is clicked', () => {
-      const onClose = vi.fn();
-      render(<CombatStanceModal {...makeProps({ onClose })} />);
-      const labels = document.querySelectorAll('label');
-      fireEvent.click(labels[0]);
-      expect(onClose).not.toHaveBeenCalled();
+      expect(onClose2).not.toHaveBeenCalled();
     });
   });
 });

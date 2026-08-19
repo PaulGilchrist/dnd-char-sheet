@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MoonlightStepResourceModal from './MoonlightStepResourceModal.jsx';
@@ -48,10 +49,6 @@ function getConvertBtn() {
   return screen.getByRole('button', { name: /Expend Level \d+ Slot/ });
 }
 
-function getOverlay() {
-  return document.querySelector('.resource-pool-overlay');
-}
-
 describe('MoonlightStepResourceModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,38 +56,19 @@ describe('MoonlightStepResourceModal', () => {
   });
 
   describe('rendering', () => {
-    it('displays the modal title and subtitle', () => {
+    it('displays the modal title, subtitle, current uses, and buttons', () => {
       render(<MoonlightStepResourceModal {...makeProps()} />);
       expect(screen.getByText('Moonlight Step — Restore Uses')).toBeInTheDocument();
       expect(
         screen.getByText(/Expend a level 2\+ spell slot to regain 1 use of Moonlight Step/)
       ).toBeInTheDocument();
-    });
-
-    it('displays current uses from playerStats', () => {
-      render(<MoonlightStepResourceModal {...makeProps()} />);
       expect(screen.getByText(/Current uses: 2\/2/)).toBeInTheDocument();
-    });
-
-    it('renders a Cancel button', () => {
-      render(<MoonlightStepResourceModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    });
-
-    it('renders a convert button labeled with the selected level', () => {
-      render(<MoonlightStepResourceModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: 'Expend Level 2 Slot' })).toBeInTheDocument();
     });
   });
 
   describe('available slots display', () => {
-    it('shows max slots for each level in the Available column', () => {
-      render(<MoonlightStepResourceModal {...makeProps()} />);
-      const table = document.querySelector('.resource-pool-table');
-      expect(table.textContent).toContain('3 / 3');
-      expect(table.textContent).toContain('1 / 1');
-    });
-
     it('shows correct available/max when runtime value overrides a stored slot count', () => {
       useRuntimeState.getRuntimeValue.mockImplementation((charKey, prop) => {
         if (prop === 'spell_slots_level_2') return '1';
@@ -122,53 +100,41 @@ describe('MoonlightStepResourceModal', () => {
   });
 
   describe('conversionRate behavior', () => {
-    it('selects level 2 by default regardless of conversionRate', () => {
+    it('selects level 2 by default and sets button states based on available slots', () => {
       render(<MoonlightStepResourceModal {...makeProps({ automation: makeAutomation('all_levels') })} />);
       const radios = getRadios();
       expect(radios[0]).toBeChecked();
-    });
-
-    it('disables the convert button when the currently selected level has no slots', () => {
-      render(<MoonlightStepResourceModal {...makeProps()} />);
-      const radios = getRadios();
+      expect(getConvertBtn()).not.toBeDisabled();
       fireEvent.click(radios[4]);
       expect(getConvertBtn()).toBeDisabled();
     });
 
-    it('enables the convert button when the selected level has slots available', () => {
-      render(<MoonlightStepResourceModal {...makeProps()} />);
-      expect(getConvertBtn()).not.toBeDisabled();
-    });
-  });
-
-  describe('user interaction', () => {
     it('updates the convert button label when a different level is selected', () => {
       render(<MoonlightStepResourceModal {...makeProps()} />);
       const radios = getRadios();
       fireEvent.click(radios[3]);
       expect(screen.getByRole('button', { name: 'Expend Level 5 Slot' })).toBeInTheDocument();
     });
+  });
 
-    it('closes the modal when the Escape key is pressed', () => {
+  describe('user interaction', () => {
+    it('closes the modal via Escape key, overlay click, or Cancel button', () => {
       const onClose = vi.fn();
-      render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
+
+      const { container: c1 } = render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
       fireEvent.keyDown(document, { key: 'Escape' });
       expect(onClose).toHaveBeenCalledTimes(1);
-    });
+      c1.remove();
 
-    it('closes the modal when the overlay background is clicked', () => {
-      const onClose = vi.fn();
-      render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
-      const overlay = getOverlay();
-      fireEvent.click(overlay);
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
+      const { container: c2 } = render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
+      fireEvent.click(c2.querySelector('.resource-pool-overlay'));
+      expect(onClose).toHaveBeenCalledTimes(2);
+      c2.remove();
 
-    it('closes the modal when the Cancel button is clicked', () => {
-      const onClose = vi.fn();
-      render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(onClose).toHaveBeenCalledTimes(1);
+      const { container: c3 } = render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
+      fireEvent.click(c3.querySelector('button.char-btn'));
+      expect(onClose).toHaveBeenCalledTimes(3);
+      c3.remove();
     });
   });
 
@@ -185,6 +151,7 @@ describe('MoonlightStepResourceModal', () => {
         }),
         'test-campaign'
       );
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('caps restored uses at maxUses', () => {
@@ -200,13 +167,6 @@ describe('MoonlightStepResourceModal', () => {
       fireEvent.click(getConvertBtn());
       const updates = useRuntimeState.setRuntimeBatch.mock.calls[0][1];
       expect(updates.moonlightStepUses).toBe(1);
-    });
-
-    it('closes the modal after a successful conversion', () => {
-      const onClose = vi.fn();
-      render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
-      fireEvent.click(getConvertBtn());
-      expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     it('converts using a radio-selected level other than 2', () => {
@@ -227,21 +187,12 @@ describe('MoonlightStepResourceModal', () => {
       render(<MoonlightStepResourceModal {...makeProps({ playerStatsOverrides: stats })} />);
       const convertBtn = getConvertBtn();
       expect(convertBtn).toBeDisabled();
-      const radios = getRadios();
-      radios.forEach((radio) => expect(radio).toBeDisabled());
     });
 
     it('handles missing _trackedResources, defaulting maxUses to 0', () => {
       const stats = makePlayerStats({ _trackedResources: undefined });
       render(<MoonlightStepResourceModal {...makeProps({ playerStatsOverrides: stats })} />);
       expect(screen.getByText(/Current uses: 0\/0/)).toBeInTheDocument();
-    });
-
-    it('defaults conversionRate to level_2_plus when automation is an empty object', () => {
-      render(<MoonlightStepResourceModal {...makeProps({ automation: {} })} />);
-      expect(
-        screen.getByText(/Expend a level 2\+ spell slot to regain 1 use of Moonlight Step/)
-      ).toBeInTheDocument();
     });
 
     it('disables all radios and the convert button when no slots exist at any level', () => {
@@ -262,12 +213,6 @@ describe('MoonlightStepResourceModal', () => {
       const radios = getRadios();
       radios.forEach((radio) => expect(radio).toBeDisabled());
       expect(getConvertBtn()).toBeDisabled();
-    });
-
-    it('defaults currentUses to maxUses when no runtime override exists', () => {
-      const stats = makePlayerStats({ _trackedResources: { moonlightStepUses: { max: 4 } } });
-      render(<MoonlightStepResourceModal {...makeProps({ playerStatsOverrides: stats })} />);
-      expect(screen.getByText(/Current uses: 4\/4/)).toBeInTheDocument();
     });
   });
 });

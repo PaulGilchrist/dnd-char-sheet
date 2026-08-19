@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HexAbilityModal from './HexAbilityModal.jsx';
@@ -31,63 +32,32 @@ describe('HexAbilityModal', () => {
   });
 
   describe('rendering', () => {
-    it('renders the modal overlay and content', () => {
-      render(<HexAbilityModal {...baseProps} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-    });
-
-    it('renders the default title', () => {
-      render(<HexAbilityModal {...baseProps} />);
-      expect(screen.getByText('Hex — Choose Ability')).toBeInTheDocument();
-    });
-
-    it('renders a custom title when provided', () => {
-      render(<HexAbilityModal {...makeProps({ title: 'Custom Title' })} />);
-      expect(screen.getByText('Custom Title')).toBeInTheDocument();
-    });
-
-    it('renders the default prompt text', () => {
-      render(<HexAbilityModal {...baseProps} />);
-      expect(
-        screen.getByText(
-          'Choose an ability check for the target to have disadvantage on:'
-        )
-      ).toBeInTheDocument();
-    });
-
-    it('renders a custom prompt when provided', () => {
-      render(<HexAbilityModal {...makeProps({ prompt: 'Choose wisely:' })} />);
-      expect(screen.getByText('Choose wisely:')).toBeInTheDocument();
+    it.each([
+      { input: undefined, expected: 'Hex — Choose Ability' },
+      { input: null, expected: 'Hex — Choose Ability' },
+      { input: 'Custom Title', expected: 'Custom Title' },
+    ])('renders title: $expected', ({ input, expected }) => {
+      render(<HexAbilityModal {...makeProps(input !== undefined ? { title: input } : {})} />);
+      expect(screen.getByText(expected)).toBeInTheDocument();
     });
 
     it.each([
+      { input: undefined, expected: 'Choose an ability check for the target to have disadvantage on:' },
+      { input: null, expected: 'Choose an ability check for the target to have disadvantage on:' },
+      { input: 'Choose wisely:', expected: 'Choose wisely:' },
+    ])('renders prompt: $expected', ({ input, expected }) => {
+      render(<HexAbilityModal {...makeProps(input !== undefined ? { prompt: input } : {})} />);
+      expect(screen.getByText(expected)).toBeInTheDocument();
+    });
+
+    it.each([
+      { icon: undefined, expectedClass: 'fa-solid fa-eye' },
       { icon: 'fa-eye', expectedClass: 'fa-solid fa-eye' },
       { icon: 'fa-skull', expectedClass: 'fa-solid fa-skull' },
     ])('renders icon "$expectedClass" for icon prop "$icon"', ({ icon, expectedClass }) => {
-      render(<HexAbilityModal {...makeProps({ icon })} />);
+      render(<HexAbilityModal {...makeProps(icon !== undefined ? { icon } : {})} />);
       const headerIcon = document.querySelector('.sp-header i');
       expect(headerIcon).toHaveClass(expectedClass);
-    });
-
-    it.each([null, undefined])('uses default title when title is %s', (title) => {
-      render(<HexAbilityModal {...makeProps({ title })} />);
-      expect(screen.getByText('Hex — Choose Ability')).toBeInTheDocument();
-    });
-
-    it.each([null, undefined])('uses default prompt when prompt is %s', (prompt) => {
-      render(<HexAbilityModal {...makeProps({ prompt })} />);
-      expect(
-        screen.getByText(
-          'Choose an ability check for the target to have disadvantage on:'
-        )
-      ).toBeInTheDocument();
-    });
-
-    it.each([null, undefined])('uses default icon when icon is %s', (icon) => {
-      render(<HexAbilityModal {...makeProps({ icon })} />);
-      const headerIcon = document.querySelector('.sp-header i');
-      expect(headerIcon).toHaveClass('fa-solid fa-eye');
     });
 
     it('renders all six default ability buttons', () => {
@@ -137,12 +107,6 @@ describe('HexAbilityModal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Stealth (STE)' }));
       expect(baseProps.onAbilitySelected).toHaveBeenCalledWith('STE');
     });
-
-    it('does not call onCancel when an ability is selected', () => {
-      render(<HexAbilityModal {...baseProps} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Strength (STR)' }));
-      expect(baseProps.onCancel).not.toHaveBeenCalled();
-    });
   });
 
   describe('close behavior', () => {
@@ -156,12 +120,6 @@ describe('HexAbilityModal', () => {
       render(<HexAbilityModal {...baseProps} />);
       fireEvent.click(document.querySelector('.sp-overlay'));
       expect(baseProps.onCancel).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not call onCancel when clicking the modal content', () => {
-      render(<HexAbilityModal {...baseProps} />);
-      fireEvent.click(document.querySelector('.sp-modal'));
-      expect(baseProps.onCancel).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
 describe('DiceRollResult', () => {
@@ -28,6 +29,23 @@ describe('DiceRollResult', () => {
             );
             const icon = container.querySelector('.dice-roll-header .fa-solid');
             expect(icon).toHaveClass(expectedIcon);
+        });
+    });
+
+    describe('elemental adept display', () => {
+        it('shows 0× count when bonus > 0 but no 1s in rolls', () => {
+            const { container } = render(
+                <DiceRollResult
+                    name="Fire Bolt"
+                    type="damage"
+                    rolls={[3, 6, 4]}
+                    bonus={0}
+                    elementalAdeptBonus={1}
+                />
+            );
+            const el = container.querySelector('.dice-roll-elemental-adept');
+            expect(el.textContent).toContain('0× 1 → 2');
+            expect(el.textContent).toContain('+1');
         });
     });
 
@@ -95,12 +113,16 @@ describe('DiceRollResult', () => {
     });
 
     describe('reliable talent display', () => {
-        it('shows reliable talent indicator when d20 roll is 9 or less', () => {
+        it.each`
+            roll   | expectedRoll
+            ${3}   | ${'d20 3'}
+            ${9}   | ${'d20 9'}
+        `('shows reliable talent indicator for d20 roll $roll (≤9)', ({ roll, expectedRoll }) => {
             const { container } = render(
                 <DiceRollResult
                     name="Athletics"
                     type="d20"
-                    rolls={[3]}
+                    rolls={[roll]}
                     bonus={5}
                     rollType="skill"
                     reliableTalent={true}
@@ -109,24 +131,8 @@ describe('DiceRollResult', () => {
             const rt = container.querySelector('.dice-roll-reliable-talent');
             expect(rt).toBeInTheDocument();
             expect(rt.textContent).toContain('Reliable Talent');
-            expect(rt.textContent).toContain('d20 3');
+            expect(rt.textContent).toContain(expectedRoll);
             expect(rt.textContent).toContain('10');
-        });
-
-        it('shows reliable talent indicator at boundary value of 9', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Stealth"
-                    type="d20"
-                    rolls={[9]}
-                    bonus={2}
-                    rollType="skill"
-                    reliableTalent={true}
-                />
-            );
-            const rt = container.querySelector('.dice-roll-reliable-talent');
-            expect(rt).toBeInTheDocument();
-            expect(rt.textContent).toContain('d20 9');
         });
 
         it('does not show reliable talent indicator when d20 roll is 10', () => {
@@ -212,7 +218,11 @@ describe('DiceRollResult', () => {
             expect(heal.textContent).toContain('HP:');
         });
 
-        it('shows already at full HP when finalHeal is 0', () => {
+        it.each`
+            finalHeal
+            ${0}
+            ${-3}
+        `('shows already at full HP when finalHeal is $finalHeal', ({ finalHeal }) => {
             const { container } = render(
                 <DiceRollResult
                     name="Cure Wounds"
@@ -220,29 +230,13 @@ describe('DiceRollResult', () => {
                     rolls={[5, 3]}
                     bonus={0}
                     total={8}
-                    finalHeal={0}
+                    finalHeal={finalHeal}
                     targetName="Ally"
                 />
             );
             const heal = container.querySelector('.dice-roll-heal-applied');
             expect(heal.textContent).toContain('already at full HP');
             expect(heal.textContent).not.toContain('healing applied');
-        });
-
-        it('shows already at full HP when finalHeal is negative', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Cure Wounds"
-                    type="heal"
-                    rolls={[5, 3]}
-                    bonus={0}
-                    total={8}
-                    finalHeal={-3}
-                    targetName="Ally"
-                />
-            );
-            const heal = container.querySelector('.dice-roll-heal-applied');
-            expect(heal.textContent).toContain('already at full HP');
         });
 
         it('shows bonus heal when bonusHeal is greater than 0', () => {
@@ -265,7 +259,11 @@ describe('DiceRollResult', () => {
             expect(bonus.textContent).toContain('Divine Spark');
         });
 
-        it('does not show bonus heal when bonusHeal is 0', () => {
+        it.each`
+            bonusHeal
+            ${0}
+            ${undefined}
+        `('does not show bonus heal when bonusHeal is $bonusHeal', ({ bonusHeal }) => {
             const { container } = render(
                 <DiceRollResult
                     name="Cure Wounds"
@@ -274,98 +272,11 @@ describe('DiceRollResult', () => {
                     bonus={0}
                     total={8}
                     finalHeal={8}
-                    bonusHeal={0}
+                    bonusHeal={bonusHeal}
                     targetName="Ally"
                 />
             );
             expect(container.querySelector('.dice-roll-heal-bonus')).not.toBeInTheDocument();
-        });
-
-        it('does not show bonus heal when bonusHeal is undefined', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Cure Wounds"
-                    type="heal"
-                    rolls={[5, 3]}
-                    bonus={0}
-                    total={8}
-                    finalHeal={8}
-                    targetName="Ally"
-                />
-            );
-            expect(container.querySelector('.dice-roll-heal-bonus')).not.toBeInTheDocument();
-        });
-    });
-
-    describe('psi-bolstered knack full flow', () => {
-        it('shows psi-bolstered knack button for check/skill roll types', () => {
-            render(
-                <DiceRollResult
-                    name="Insight"
-                    type="d20"
-                    rolls={[5]}
-                    bonus={3}
-                    rollType="skill"
-                    psiBolsteredKnack={true}
-                    psiBolsteredKnackDieSize={6}
-                />
-            );
-            expect(screen.getByText(/Psi-Bolstered Knack/)).toBeInTheDocument();
-        });
-
-        it('does not show psi-bolstered knack for non-check/non-skill roll types', () => {
-            render(
-                <DiceRollResult
-                    name="Attack"
-                    type="d20"
-                    rolls={[5]}
-                    bonus={3}
-                    rollType="attack"
-                    psiBolsteredKnack={true}
-                />
-            );
-            expect(screen.queryByText(/Psi-Bolstered Knack/)).not.toBeInTheDocument();
-        });
-
-        it('shows psi-bolstered knack result with succeed/failed buttons after clicking', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Insight"
-                    type="d20"
-                    rolls={[5]}
-                    bonus={3}
-                    rollType="skill"
-                    psiBolsteredKnack={true}
-                    psiBolsteredKnackDieSize={6}
-                />
-            );
-            fireEvent.click(screen.getByText(/Psi-Bolstered Knack/));
-            expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
-            expect(screen.getByText(/Succeeded/)).toBeInTheDocument();
-            expect(screen.getByText(/Still Failed/)).toBeInTheDocument();
-        });
-
-        it('shows consumed state with result after clicking succeeded', () => {
-            const { container } = render(
-                <DiceRollResult
-                    name="Insight"
-                    type="d20"
-                    rolls={[5]}
-                    bonus={3}
-                    rollType="skill"
-                    psiBolsteredKnack={true}
-                    psiBolsteredKnackDieSize={6}
-                />
-            );
-            fireEvent.click(screen.getByText(/Psi-Bolstered Knack/));
-            expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
-            fireEvent.click(screen.getByText(/Succeeded/));
-            // consumed state should still show the result but without buttons
-            const rerollResults = container.querySelectorAll('.dice-roll-reroll-result');
-            expect(rerollResults.length).toBeGreaterThanOrEqual(1);
-            // Succeeded/Still Failed buttons should no longer be visible
-            expect(screen.queryByText(/Succeeded/)).not.toBeInTheDocument();
-            expect(screen.queryByText(/Still Failed/)).not.toBeInTheDocument();
         });
     });
 });

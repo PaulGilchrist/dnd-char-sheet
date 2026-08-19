@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ElementalEpitomeModal from './ElementalEpitomeModal.jsx';
 
@@ -55,31 +56,25 @@ describe('ElementalEpitomeModal', () => {
   // ── Initial render / display ──
 
   describe('initial render', () => {
-    it('renders the modal overlay and modal container', () => {
+    it('renders the modal overlay, container, action name, instruction text, radio options, and buttons', () => {
       render(<ElementalEpitomeModal {...defaultProps} />);
       expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
       expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-    });
-
-    it('renders the action name in the header', () => {
-      render(<ElementalEpitomeModal {...defaultProps} />);
       expect(screen.getByText('Elemental Epitome')).toBeInTheDocument();
+      expect(screen.getByText('Choose your damage resistance type:')).toBeInTheDocument();
+      expect(document.querySelectorAll('input[name="epitomeResistance"]')).toHaveLength(5);
+      expect(screen.getByRole('radio', { name: /^Acid\b/ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Cold\b/ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Fire\b/ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Lightning\b/ })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /^Thunder\b/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Choose' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
     it('renders a fallback name when action.name is missing', () => {
       render(<ElementalEpitomeModal {...makeProps({ action: { automation: { type: 'class_feature' } } })} />);
       expect(screen.getByText('Elemental Epitome')).toBeInTheDocument();
-    });
-
-    it('renders the instruction text', () => {
-      render(<ElementalEpitomeModal {...defaultProps} />);
-      expect(screen.getByText('Choose your damage resistance type:')).toBeInTheDocument();
-    });
-
-    it('renders all five resistance type radio options', () => {
-      render(<ElementalEpitomeModal {...defaultProps} />);
-      const radios = document.querySelectorAll('input[name="epitomeResistance"]');
-      expect(radios).toHaveLength(5);
     });
 
     it('renders each resistance type with its icon and description', () => {
@@ -89,12 +84,6 @@ describe('ElementalEpitomeModal', () => {
       expect(screen.getByRole('radio', { name: /^Fire\b/ })).toBeInTheDocument();
       expect(screen.getByRole('radio', { name: /^Lightning\b/ })).toBeInTheDocument();
       expect(screen.getByRole('radio', { name: /^Thunder\b/ })).toBeInTheDocument();
-    });
-
-    it('renders Choose and Cancel buttons', () => {
-      render(<ElementalEpitomeModal {...defaultProps} />);
-      expect(screen.getByRole('button', { name: 'Choose' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 
     it('disables Choose button when no option is selected', () => {
@@ -113,17 +102,13 @@ describe('ElementalEpitomeModal', () => {
       expect(body.textContent).toContain('Current resistance: Fire');
     });
 
-    it('does not show current resistance line when not provided', () => {
+    it('does not show current resistance line when falsy', () => {
       render(<ElementalEpitomeModal {...defaultProps} />);
       expect(screen.queryByText('Current resistance:')).not.toBeInTheDocument();
-    });
-
-    it('does not show current resistance line when null', () => {
+      cleanup();
       render(<ElementalEpitomeModal {...makeProps({ currentResistance: null })} />);
       expect(screen.queryByText('Current resistance:')).not.toBeInTheDocument();
-    });
-
-    it('does not show current resistance line when undefined', () => {
+      cleanup();
       render(<ElementalEpitomeModal {...makeProps({ currentResistance: undefined })} />);
       expect(screen.queryByText('Current resistance:')).not.toBeInTheDocument();
     });
@@ -169,14 +154,6 @@ describe('ElementalEpitomeModal', () => {
       fireEvent.click(overlay);
       expect(onClose).toHaveBeenCalledTimes(1);
     });
-
-    it('does not call onClose when modal content is clicked', () => {
-      const onClose = vi.fn();
-      render(<ElementalEpitomeModal {...makeProps({ onClose })} />);
-      const modal = document.querySelector('.sp-modal');
-      fireEvent.click(modal);
-      expect(onClose).not.toHaveBeenCalled();
-    });
   });
 
   // ── Cancel button ──
@@ -187,14 +164,6 @@ describe('ElementalEpitomeModal', () => {
       render(<ElementalEpitomeModal {...makeProps({ onClose })} />);
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not call applyResistanceChoice when Cancel is clicked', () => {
-      const onClose = vi.fn();
-      render(<ElementalEpitomeModal {...makeProps({ onClose })} />);
-      selectResistance('Fire');
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(elementalEpitomeHandler.applyResistanceChoice).not.toHaveBeenCalled();
     });
   });
 
@@ -274,39 +243,7 @@ describe('ElementalEpitomeModal', () => {
       });
     });
 
-    it('does not call onConfirm when result type is not popup', async () => {
-      const onConfirm = vi.fn();
-      elementalEpitomeHandler.applyResistanceChoice.mockResolvedValue({
-        type: 'other',
-        payload: { some: 'data' },
-      });
-      render(<ElementalEpitomeModal {...makeProps({ onConfirm })} />);
-      selectResistance('Acid');
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      });
-      await waitFor(() => {
-        expect(onConfirm).not.toHaveBeenCalled();
-      });
-    });
-
-    it('does not call onConfirm when onConfirm is not provided', async () => {
-      elementalEpitomeHandler.applyResistanceChoice.mockResolvedValue({
-        type: 'popup',
-        payload: { type: 'automation_info' },
-      });
-      const onClose = vi.fn();
-      render(<ElementalEpitomeModal {...makeProps({ onClose, onConfirm: undefined })} />);
-      selectResistance('Lightning');
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      });
-      await waitFor(() => {
-        expect(onClose).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it('calls onClose even when result is null', async () => {
+    it('calls onClose even when result is null or undefined', async () => {
       const onClose = vi.fn();
       elementalEpitomeHandler.applyResistanceChoice.mockResolvedValue(null);
       render(<ElementalEpitomeModal {...makeProps({ onClose })} />);
@@ -317,10 +254,8 @@ describe('ElementalEpitomeModal', () => {
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledTimes(1);
       });
-    });
-
-    it('calls onClose even when result is undefined', async () => {
-      const onClose = vi.fn();
+      cleanup();
+      vi.clearAllMocks();
       elementalEpitomeHandler.applyResistanceChoice.mockResolvedValue(undefined);
       render(<ElementalEpitomeModal {...makeProps({ onClose })} />);
       selectResistance('Cold');
@@ -346,12 +281,10 @@ describe('ElementalEpitomeModal', () => {
   // ── Edge cases ──
 
   describe('edge cases', () => {
-    it('renders without crashing when action is null', () => {
+    it('renders without crashing when action is null or undefined', () => {
       render(<ElementalEpitomeModal {...makeProps({ action: null })} />);
       expect(screen.getByText('Elemental Epitome')).toBeInTheDocument();
-    });
-
-    it('renders without crashing when action is undefined', () => {
+      cleanup();
       render(<ElementalEpitomeModal {...makeProps({ action: undefined })} />);
       expect(screen.getByText('Elemental Epitome')).toBeInTheDocument();
     });

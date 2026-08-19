@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HealingPoolModal from './HealingPoolModal.jsx';
@@ -134,26 +135,7 @@ describe('HealingPoolModal - Curing', () => {
 
   // ── Individual cure behavior ──
 
-  it('applies individual cure when cure button clicked', async () => {
-    damageUtils.getCombatContext.mockResolvedValue(mockCombatSummary);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeConditions') return ['blinded', 'charmed'];
-      if (key === 'currentHitPoints') return 15;
-      return null;
-    });
-
-    await renderModal({ current: 10, max: 20 });
-    fireEvent.click(screen.getByRole('button', { name: /Blinded/i }));
-
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-      'Paladin1',
-      'activeConditions',
-      expect.arrayContaining(['charmed']),
-      mockCampaignName,
-    );
-  });
-
-  it('removes the cured condition from the activeConditions array', async () => {
+  it('applies individual cure: removes cured condition, preserves others, logs entry, and deducts pool', async () => {
     damageUtils.getCombatContext.mockResolvedValue(mockCombatSummary);
     useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeConditions') return ['blinded', 'charmed', 'poisoned'];
@@ -171,6 +153,14 @@ describe('HealingPoolModal - Curing', () => {
     expect(callArgs[2]).not.toContain('blinded');
     expect(callArgs[2]).toContain('charmed');
     expect(callArgs[2]).toContain('poisoned');
+
+    const rows = getLogTableRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent(/Cure/);
+    expect(rows[0]).toHaveTextContent('Paladin1');
+    expect(rows[0]).toHaveTextContent('3');
+
+    expect(updateFn).toHaveBeenCalledWith(7);
   });
 
   it('does not apply cure when pool insufficient for cost', async () => {
@@ -183,38 +173,6 @@ describe('HealingPoolModal - Curing', () => {
     await renderModal({ current: 3, max: 20 }, { cureCost: 3 });
     const btn = screen.getByRole('button', { name: /Blinded/i });
     expect(btn).not.toBeDisabled();
-  });
-
-  it('individual cure adds log entry with cure action and cost', async () => {
-    damageUtils.getCombatContext.mockResolvedValue(mockCombatSummary);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeConditions') return ['blinded'];
-      if (key === 'currentHitPoints') return 15;
-      return null;
-    });
-    await renderModal({ current: 10, max: 20 });
-
-    fireEvent.click(screen.getByRole('button', { name: /Blinded/i }));
-
-    const rows = getLogTableRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent(/Cure/);
-    expect(rows[0]).toHaveTextContent('Paladin1');
-    expect(rows[0]).toHaveTextContent('3');
-  });
-
-  it('deducts pool amount on successful individual cure', async () => {
-    damageUtils.getCombatContext.mockResolvedValue(mockCombatSummary);
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeConditions') return ['blinded'];
-      if (key === 'currentHitPoints') return 15;
-      return null;
-    });
-
-    await renderModal({ current: 10, max: 20 });
-    fireEvent.click(screen.getByRole('button', { name: /Blinded/i }));
-
-    expect(updateFn).toHaveBeenCalledWith(7);
   });
 
   it('does not call storage.set for player targets', async () => {
@@ -308,55 +266,54 @@ describe('HealingPoolModal - Curing', () => {
     expect(blindedBtn).not.toHaveClass('cure-btn-active');
   });
 
-  it('batch cure button is disabled when no conditions selected', async () => {
+  it('batch cure button disabled when no conditions selected, enabled after selecting with sufficient pool, and disabled when selected exceed pool', async () => {
+    // Disabled when nothing selected
     useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeConditions') return ['blinded'];
       return null;
     });
-
-    await renderModal({ current: 15, max: 20 }, {
+    const { unmount: unmount1 } = await renderModal({ current: 15, max: 20 }, {
       restoringTouchConditions: ['Blinded'],
       alsoCures: [],
     });
-    const batchBtn = screen.getByRole('button', { name: /Cure Selected/i });
+    let batchBtn = screen.getByRole('button', { name: /Cure Selected/i });
     expect(batchBtn).toBeDisabled();
-  });
+    unmount1();
 
-  it('batch cure button enabled after selecting a condition with sufficient pool', async () => {
+    // Enabled after selecting with sufficient pool
     useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeConditions') return ['blinded'];
       return null;
     });
-
-    await renderModal({ current: 20, max: 20 }, {
+    const { unmount: unmount2 } = await renderModal({ current: 20, max: 20 }, {
       restoringTouchConditions: ['Blinded'],
       alsoCures: [],
     });
     fireEvent.click(screen.getByText(/Blinded/));
-    const batchBtn = screen.getByRole('button', { name: /Cure Selected/i });
+    batchBtn = screen.getByRole('button', { name: /Cure Selected/i });
     expect(batchBtn).not.toBeDisabled();
-  });
+    unmount2();
 
-  it('batch cure button disabled when selected conditions exceed pool', async () => {
+    // Disabled when selected conditions exceed pool
     useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeConditions') return ['blinded', 'charmed'];
       return null;
     });
-
-    await renderModal({ current: 3, max: 20 }, {
+    const { unmount: unmount3 } = await renderModal({ current: 3, max: 20 }, {
       restoringTouchConditions: ['Blinded', 'Charmed'],
       alsoCures: [],
       cureCost: 3,
     });
     fireEvent.click(screen.getByText(/Blinded/));
     fireEvent.click(screen.getByText(/Charmed/));
-    const batchBtn = screen.getByRole('button', { name: /Cure Selected/i });
+    batchBtn = screen.getByRole('button', { name: /Cure Selected/i });
     expect(batchBtn).toBeDisabled();
+    unmount3();
   });
 
   // ── Batch cure behavior ──
 
-  it('applies batch cure for all selected conditions', async () => {
+  it('applies batch cure: removes all selected conditions, deducts total pool cost, and logs one entry per condition', async () => {
     damageUtils.getCombatContext.mockResolvedValue(mockCombatSummary);
     useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeConditions') return ['blinded', 'charmed'];
@@ -379,63 +336,12 @@ describe('HealingPoolModal - Curing', () => {
       expect.any(Array),
       mockCampaignName,
     );
-  });
-
-  it('batch cure deducts total cost from pool', async () => {
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeConditions') return ['blinded', 'charmed'];
-      return null;
-    });
-
-    await renderModal({ current: 20, max: 20 }, {
-      restoringTouchConditions: ['Blinded', 'Charmed'],
-      alsoCures: [],
-      cureCost: 3,
-    });
-    fireEvent.click(screen.getByText(/Blinded/));
-    fireEvent.click(screen.getByText(/Charmed/));
-    fireEvent.click(screen.getByRole('button', { name: /Cure Selected/i }));
-
     expect(updateFn).toHaveBeenCalledWith(14);
-  });
-
-  it('batch cure adds log entries for each cured condition', async () => {
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeConditions') return ['blinded', 'poisoned'];
-      return null;
-    });
-
-    await renderModal({ current: 20, max: 20 }, {
-      restoringTouchConditions: ['Blinded', 'Poisoned'],
-      alsoCures: [],
-      cureCost: 3,
-    });
-    fireEvent.click(screen.getByText(/Blinded/));
-    fireEvent.click(screen.getByText(/Poisoned/));
-    fireEvent.click(screen.getByRole('button', { name: /Cure Selected/i }));
 
     const rows = getLogTableRows();
     expect(rows).toHaveLength(2);
-  });
-
-  it('batch cure log entries show correct cost per condition', async () => {
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeConditions') return ['blinded', 'poisoned'];
-      return null;
-    });
-
-    await renderModal({ current: 20, max: 20 }, {
-      restoringTouchConditions: ['Blinded', 'Poisoned'],
-      alsoCures: [],
-      cureCost: 5,
-    });
-    fireEvent.click(screen.getByText(/Blinded/));
-    fireEvent.click(screen.getByText(/Poisoned/));
-    fireEvent.click(screen.getByRole('button', { name: /Cure Selected/i }));
-
-    const rows = getLogTableRows();
-    expect(rows[0]).toHaveTextContent('5');
-    expect(rows[1]).toHaveTextContent('5');
+    expect(rows[0]).toHaveTextContent('3');
+    expect(rows[1]).toHaveTextContent('3');
   });
 
   it('resets selected conditions after batch cure', async () => {
@@ -474,21 +380,6 @@ describe('HealingPoolModal - Curing', () => {
 
   // ── Pool after / warning display ──
 
-  it('shows "Pool after" info when selections are affordable', async () => {
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeConditions') return ['blinded'];
-      return null;
-    });
-
-    await renderModal({ current: 20, max: 20 }, {
-      restoringTouchConditions: ['Blinded'],
-      alsoCures: [],
-    });
-    fireEvent.click(screen.getByText(/Blinded/));
-
-    expect(screen.getByText(/Pool after/)).toBeInTheDocument();
-  });
-
   it('shows warning when not enough pool for batch cure', async () => {
     useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeConditions') return ['blinded'];
@@ -525,29 +416,12 @@ describe('HealingPoolModal - Curing', () => {
     expect(screen.getByText(/Need 12 more HP/)).toBeInTheDocument();
   });
 
-  // ── Merged cure sections (alsoCures + restoringTouchConditions both present) ──
-
-  it('renders restoring touch section when both alsoCures and restoringTouchConditions are provided', async () => {
-    useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-      if (key === 'activeConditions') return ['blinded'];
-      return null;
-    });
-
-    await renderModal({ current: 15, max: 20 }, {
-      alsoCures: ['Blinded'],
-      restoringTouchConditions: ['Blinded'],
-    });
-    expect(screen.getByText(/Select conditions affecting/)).toBeInTheDocument();
-  });
-
   // ── Cure cost display ──
 
-  it('shows cure cost in section header', async () => {
+  it('shows cure cost in section header for both individual and batch cure modes', async () => {
     await renderModal({ current: 15, max: 20 }, { cureCost: 5 });
     expect(screen.getByText(/Cure Conditions \(5 HP each\)/)).toBeInTheDocument();
-  });
 
-  it('shows cure cost in batch cure section when restoring touch', async () => {
     useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
       if (key === 'activeConditions') return ['blinded'];
       return null;
