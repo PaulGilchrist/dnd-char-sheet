@@ -24,6 +24,118 @@ export default function useCharActionsAutomation({
         const MONK_KI_FEATURES = ['Flurry of Blows', 'Patient Defense', 'Step of the Wind', 'Heightened Flurry of Blows', 'Heightened Patient Defense', 'Heightened Step of the Wind', 'Hand of Healing', 'Stunning Strike'];
         const HAS_FLURRY_HEALING_HARM = playerStats.specialActions?.some(f => f.name === "Flurry of Healing and Harm");
 
+        const simpleModal = (stateKey) => (payload) => setModalState({ [stateKey]: payload });
+
+        const modalMap = {
+            healingPool: simpleModal('healingPoolModal'),
+            handOfHealing: simpleModal('handOfHealingModal'),
+            fontOfMagic: () => setModalState({ fontOfMagicModal: true }),
+            resourcePool: simpleModal('resourcePoolModal'),
+            wildCompanion: simpleModal('wildCompanionModal'),
+            setCondition: simpleModal('setConditionModal'),
+            blindnessDeafness: simpleModal('blindnessDeafnessModal'),
+            eyebiteEffect: simpleModal('eyebiteEffectModal'),
+            attackRider: simpleModal('attackRiderModal'),
+            openHandTechnique: simpleModal('openHandTechniqueModal'),
+            shieldBash: simpleModal('shieldBashModal'),
+            quiveringPalm: simpleModal('quiveringPalmModal'),
+            combatStance: simpleModal('combatStanceModal'),
+            teleport: simpleModal('teleportModal'),
+            healingIllusion: simpleModal('healingIllusionModal'),
+            invokeDuplicity: simpleModal('invokeDuplicityModal'),
+            saveAttackHeal: simpleModal('saveAttackHealModal'),
+            saveAttackAoe: simpleModal('saveAttackAoeModal'),
+            aoeCondition: simpleModal('aoeConditionModal'),
+            elementalAttunement: simpleModal('elementalAttunementModal'),
+            elementalBurst: simpleModal('elementalBurstModal'),
+            divineSpark: simpleModal('divineSparkModal'),
+            divineIntervention: (payload) => setModalState({ divineInterventionAction: action, divineInterventionModal: payload }),
+            moonlightStepResource: simpleModal('moonlightStepResourceModal'),
+            moonlightStepFallback: simpleModal('moonlightStepFallbackModal'),
+            starryFormConstellation: simpleModal('starryFormConstellationModal'),
+            twinklingConstellation: simpleModal('twinklingConstellationModal'),
+            arcaneCharge: simpleModal('arcaneChargeModal'),
+            warMagicCantrip: simpleModal('warMagicCantripModal'),
+            warMagicSpell: simpleModal('warMagicSpellModal'),
+            sacredWeaponDamageType: simpleModal('sacredWeaponModal'),
+            primalCompanionBonusActionCommand: simpleModal('primalCompanionBonusActionModal'),
+            primalCompanionSummon: simpleModal('primalCompanionSummonModal'),
+            mistyWanderer: simpleModal('mistyWandererModal'),
+            feyReinforcements: simpleModal('feyReinforcementsModal'),
+            stepsOfTheFeyTaunt: simpleModal('stepsOfTheFeyTauntModal'),
+            bonusActionChoice: simpleModal('bonusActionChoiceModal'),
+            stealthAttack: simpleModal('stealthAttackModal'),
+            revelationInFlesh: simpleModal('revelationInFleshModal'),
+            bastionOfLaw: simpleModal('bastionOfLawModal'),
+            elementalAffinity: (payload) => {
+                const affAction = payload?.action;
+                const affTypes = payload?.damageTypes || ['Acid', 'Cold', 'Fire', 'Lightning', 'Poison'];
+                setModalState({ elementalAffinityModal: { action: affAction, playerStats, campaignName, damageTypes: affTypes, existingType: payload?.existingType } });
+            },
+            fiendishResilience: (payload) => {
+                const frAction = payload?.action;
+                const frTypes = payload?.damageTypes || ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
+                setModalState({ fiendishResilienceModal: { action: frAction, playerStats, campaignName, damageTypes: frTypes, existingType: payload?.existingType } });
+            },
+            dragonCompanion: simpleModal('dragonCompanionModal'),
+            wildMagicSurge: simpleModal('wildMagicSurgeModal'),
+            weaponMasteryChoice: simpleModal('weaponMasteryChoiceModal'),
+            weaponKindMastery: simpleModal('weaponKindMasteryModal'),
+            bendFateChoice: simpleModal('bendFateModal'),
+            thirdEye: simpleModal('thirdEyeModal'),
+            soulstitchSpells: simpleModal('soulstitchSpellsModal'),
+            illusoryReality: simpleModal('illusoryRealityModal'),
+            celestialRevelation: simpleModal('celestialRevelationModal'),
+            celestialResilienceModal: (payload) => setModalState({ celestialResilienceModal: { ...payload, playerStats, campaignName } }),
+            elfishLineage: simpleModal('elfishLineageModal'),
+            gnomishLineage: simpleModal('gnomishLineageModal'),
+            fiendishLegacy: simpleModal('fiendishLegacyModal'),
+            giantAncestry: simpleModal('giantAncestryModal'),
+            breathWeaponShape: (payload) => setModalState({ breathWeaponShapeModal: { action: payload.action, playerStats, campaignName, options: payload.options } }),
+            hypnoticPatternShake: (payload) => setModalState({ hypnoticPatternShakeModal: payload }),
+            combatSuperiority: simpleModal('combatSuperiorityModal'),
+            sweepingAttackTarget: simpleModal('sweepingAttackTargetModal'),
+            baitAndSwitchChoice: simpleModal('baitAndSwitchChoiceModal'),
+            bulwarkOfForceTarget: simpleModal('bulwarkOfForceModal'),
+            zealousPresenceTarget: simpleModal('zealousPresenceModal'),
+            clockworkCavalcade: simpleModal('clockworkCavalcadeModal'),
+            naturesSanctuaryCreatures: simpleModal('naturesSanctuaryCreaturesModal'),
+            coronaEnemySelection: simpleModal('coronaEnemySelectionModal'),
+            radianceOfDawn: simpleModal('radianceOfDawnModal'),
+            mantleOfInspirationTarget: simpleModal('mantleOfInspirationTarget'),
+            vitalityOfTheTreeTarget: simpleModal('vitalityOfTheTreeTarget'),
+            tricksterBlessing: simpleModal('tricksterBlessingModal'),
+            bardicInspirationTarget: simpleModal('bardicInspirationTargetModal'),
+            inspiringMovementAlly: simpleModal('inspiringMovementAllyModal'),
+            arcaneWardRestore: simpleModal('arcaneWardRestoreModal'),
+            oceanicGiftTarget: simpleModal('oceanicGiftTargetModal'),
+            telepathicSpeech: (payload) => {
+                const { action: speechAction, creatureTargets } = payload;
+                setModalState({ secondaryTargetModal: {
+                    title: speechAction.name || 'Telepathic Speech',
+                    icon: 'fa-brain',
+                    targets: creatureTargets,
+                    confirmLabel: 'Establish Link',
+                    confirmIcon: 'fa-brain',
+                    description: 'Choose one creature within 30 feet to communicate with telepathically.',
+                    featureDescription: `Range: ${Math.max(1, playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 1)} mile(s) | Duration: ${playerStats.level} minute(s)`,
+                    onTargetSelected: async (_targetName) => {
+                        setModalState({ secondaryTargetModal: null });
+                    },
+                    onSkip: () => {
+                        setModalState({ secondaryTargetModal: null });
+                    },
+                }});
+            },
+            flurryOfBlows: simpleModal('flurryOfBlowsModal'),
+            elementalEpitome: simpleModal('epitomeModal'),
+            destructiveStride: simpleModal('destructiveStrideModal'),
+            destructiveStrideTarget: simpleModal('destructiveStrideTargetModal'),
+            animateDead: simpleModal('animateDeadModal'),
+            createUndead: simpleModal('createUndeadModal'),
+            summonSpirit: simpleModal('summonSpiritModal'),
+        };
+
         if (cannotAct) return;
 
         const playerName = playerStats.name;
@@ -91,213 +203,13 @@ export default function useCharActionsAutomation({
             case 'popup':
                 setPopupHtml(result.payload);
                 break;
-            case 'modal':
-                switch (result.modalName) {
-                    case 'healingPool': setModalState({ healingPoolModal: result.payload }); break;
-                    case 'handOfHealing': setModalState({ handOfHealingModal: result.payload }); break;
-                    case 'fontOfMagic': setModalState({ fontOfMagicModal: true }); break;
-                    case 'resourcePool': setModalState({ resourcePoolModal: result.payload }); break;
-                    case 'wildCompanion': setModalState({ wildCompanionModal: result.payload }); break;
-                    case 'setCondition': setModalState({ setConditionModal: result.payload }); break;
-                    case 'blindnessDeafness': setModalState({ blindnessDeafnessModal: result.payload }); break;
-                    case 'eyebiteEffect': setModalState({ eyebiteEffectModal: result.payload }); break;
-                    case 'attackRider': setModalState({ attackRiderModal: result.payload }); break;
-                    case 'openHandTechnique': setModalState({ openHandTechniqueModal: result.payload }); break;
-                    case 'shieldBash': setModalState({ shieldBashModal: result.payload }); break;
-                    case 'quiveringPalm': setModalState({ quiveringPalmModal: result.payload }); break;
-                    case 'combatStance': setModalState({ combatStanceModal: result.payload }); break;
-                    case 'teleport': setModalState({ teleportModal: result.payload }); break;
-                    case 'healingIllusion': setModalState({ healingIllusionModal: result.payload }); break;
-                    case 'invokeDuplicity': setModalState({ invokeDuplicityModal: result.payload }); break;
-                    case 'saveAttackHeal':
-                        setModalState({ saveAttackHealModal: result.payload });
-                        break;
-                    case 'saveAttackAoe':
-                        setModalState({ saveAttackAoeModal: result.payload });
-                        break;
-                    case 'aoeCondition':
-                        setModalState({ aoeConditionModal: result.payload });
-                        break;
-                    case 'elementalAttunement': setModalState({ elementalAttunementModal: result.payload }); break;
-                    case 'elementalBurst': setModalState({ elementalBurstModal: result.payload }); break;
-                    case 'divineSpark': setModalState({ divineSparkModal: result.payload }); break;
-                    case 'divineIntervention':
-                        setModalState({ divineInterventionAction: action, divineInterventionModal: result.payload });
-                        break;
-                    case 'moonlightStepResource': setModalState({ moonlightStepResourceModal: result.payload }); break;
-                    case 'moonlightStepFallback': setModalState({ moonlightStepFallbackModal: result.payload }); break;
-                    case 'starryFormConstellation': setModalState({ starryFormConstellationModal: result.payload }); break;
-                    case 'twinklingConstellation': setModalState({ twinklingConstellationModal: result.payload }); break;
-                    case 'arcaneCharge': setModalState({ arcaneChargeModal: result.payload }); break;
-                    case 'warMagicCantrip': setModalState({ warMagicCantripModal: result.payload }); break;
-                    case 'warMagicSpell': setModalState({ warMagicSpellModal: result.payload }); break;
-                    case 'sacredWeaponDamageType': setModalState({ sacredWeaponModal: result.payload }); break;
-                    case 'primalCompanionBonusActionCommand': setModalState({ primalCompanionBonusActionModal: result.payload }); break;
-                    case 'primalCompanionSummon': setModalState({ primalCompanionSummonModal: result.payload }); break;
-                    case 'mistyWanderer': setModalState({ mistyWandererModal: result.payload }); break;
-                    case 'feyReinforcements': setModalState({ feyReinforcementsModal: result.payload }); break;
-                    case 'stepsOfTheFeyTaunt': setModalState({ stepsOfTheFeyTauntModal: result.payload }); break;
-                    case 'bonusActionChoice': setModalState({ bonusActionChoiceModal: result.payload }); break;
-                    case 'stealthAttack': setModalState({ stealthAttackModal: result.payload }); break;
-                    case 'revelationInFlesh': setModalState({ revelationInFleshModal: result.payload }); break;
-                    case 'bastionOfLaw': setModalState({ bastionOfLawModal: result.payload }); break;
-                    case 'elementalAffinity': {
-                        const affPayload = result.payload;
-                        const affAction = affPayload?.action;
-                        const affTypes = affPayload?.damageTypes || ['Acid', 'Cold', 'Fire', 'Lightning', 'Poison'];
-                        setModalState({ elementalAffinityModal: { action: affAction, playerStats, campaignName, damageTypes: affTypes, existingType: affPayload?.existingType } });
-                        break;
-                    }
-                    case 'fiendishResilience': {
-                        const frPayload = result.payload;
-                        const frAction = frPayload?.action;
-                        const frTypes = frPayload?.damageTypes || ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
-                        setModalState({ fiendishResilienceModal: { action: frAction, playerStats, campaignName, damageTypes: frTypes, existingType: frPayload?.existingType } });
-                        break;
-                    }
-                    case 'dragonCompanion':
-                        setModalState({ dragonCompanionModal: result.payload });
-                        break;
-                    case 'wildMagicSurge':
-                        setModalState({ wildMagicSurgeModal: result.payload });
-                        break;
-                    case 'weaponMasteryChoice':
-                        setModalState({ weaponMasteryChoiceModal: result.payload });
-                        break;
-                    case 'weaponKindMastery':
-                        setModalState({ weaponKindMasteryModal: result.payload });
-                        break;
-                    case 'bendFateChoice':
-                        setModalState({ bendFateModal: result.payload });
-                        break;
-                    case 'thirdEye':
-                        setModalState({ thirdEyeModal: result.payload });
-                        break;
-                    case 'soulstitchSpells':
-                        setModalState({ soulstitchSpellsModal: result.payload });
-                        break;
-                    case 'illusoryReality':
-                        setModalState({ illusoryRealityModal: result.payload });
-                        break;
-                    case 'celestialRevelation':
-                        setModalState({ celestialRevelationModal: result.payload });
-                        break;
-                    case 'celestialResilienceModal':
-                        setModalState({ celestialResilienceModal: { ...result.payload, playerStats, campaignName } });
-                        break;
-                    case 'elfishLineage':
-                        setModalState({ elfishLineageModal: result.payload });
-                        break;
-                    case 'gnomishLineage':
-                        setModalState({ gnomishLineageModal: result.payload });
-                        break;
-                    case 'fiendishLegacy':
-                        setModalState({ fiendishLegacyModal: result.payload });
-                        break;
-                    case 'giantAncestry':
-                        setModalState({ giantAncestryModal: result.payload });
-                        break;
-                    case 'breathWeaponShape': {
-                        const bwPayload = result.payload;
-                        setModalState({ breathWeaponShapeModal: { action: bwPayload.action, playerStats, campaignName, options: bwPayload.options } });
-                        break;
-                    }
-                    case 'hypnoticPatternShake': {
-                        const shakePayload = result.payload;
-                        setModalState({ hypnoticPatternShakeModal: shakePayload });
-                        break;
-                    }
-                    case 'combatSuperiority':
-                        setModalState({ combatSuperiorityModal: result.payload });
-                        break;
-                    case 'sweepingAttackTarget':
-                        setModalState({ sweepingAttackTargetModal: result.payload });
-                        break;
-                    case 'baitAndSwitchChoice':
-                        setModalState({ baitAndSwitchChoiceModal: result.payload });
-                        break;
-                    case 'bulwarkOfForceTarget':
-                        setModalState({ bulwarkOfForceModal: result.payload });
-                        break;
-                    case 'zealousPresenceTarget':
-                        setModalState({ zealousPresenceModal: result.payload });
-                        break;
-                    case 'clockworkCavalcade':
-                        setModalState({ clockworkCavalcadeModal: result.payload });
-                        break;
-                    case 'naturesSanctuaryCreatures':
-                        setModalState({ naturesSanctuaryCreaturesModal: result.payload });
-                        break;
-                    case 'coronaEnemySelection':
-                        setModalState({ coronaEnemySelectionModal: result.payload });
-                        break;
-                    case 'radianceOfDawn':
-                        setModalState({ radianceOfDawnModal: result.payload });
-                        break;
-                    case 'mantleOfInspirationTarget':
-                        setModalState({ mantleOfInspirationTarget: result.payload });
-                        break;
-                    case 'vitalityOfTheTreeTarget':
-                        setModalState({ vitalityOfTheTreeTarget: result.payload });
-                        break;
-                    case 'tricksterBlessing':
-                        setModalState({ tricksterBlessingModal: result.payload });
-                        break;
-                    case 'bardicInspirationTarget':
-                        setModalState({ bardicInspirationTargetModal: result.payload });
-                        break;
-                    case 'inspiringMovementAlly':
-                        setModalState({ inspiringMovementAllyModal: result.payload });
-                        break;
-                    case 'arcaneWardRestore':
-                        setModalState({ arcaneWardRestoreModal: result.payload });
-                        break;
-                    case 'oceanicGiftTarget':
-                        setModalState({ oceanicGiftTargetModal: result.payload });
-                        break;
-                    case 'telepathicSpeech': {
-                        const { action, creatureTargets } = result.payload;
-                        setModalState({ secondaryTargetModal: {
-                            title: action.name || 'Telepathic Speech',
-                            icon: 'fa-brain',
-                            targets: creatureTargets,
-                            confirmLabel: 'Establish Link',
-                            confirmIcon: 'fa-brain',
-                            description: 'Choose one creature within 30 feet to communicate with telepathically.',
-                            featureDescription: `Range: ${Math.max(1, playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 1)} mile(s) | Duration: ${playerStats.level} minute(s)`,
-                            onTargetSelected: async (_targetName) => {
-                                // confirmTelepathicSpeech needs to be passed in
-                                setModalState({ secondaryTargetModal: null });
-                            },
-                            onSkip: () => {
-                                setModalState({ secondaryTargetModal: null });
-                            },
-                        }});
-                        break;
-                    }
-                    case 'flurryOfBlows':
-                        setModalState({ flurryOfBlowsModal: result.payload });
-                        break;
-                    case 'elementalEpitome':
-                        setModalState({ epitomeModal: result.payload });
-                        break;
-                    case 'destructiveStride':
-                        setModalState({ destructiveStrideModal: result.payload });
-                        break;
-                    case 'destructiveStrideTarget':
-                        setModalState({ destructiveStrideTargetModal: result.payload });
-                        break;
-                    case 'animateDead':
-                        setModalState({ animateDeadModal: result.payload });
-                        break;
-                    case 'createUndead':
-                        setModalState({ createUndeadModal: result.payload });
-                        break;
-                    case 'summonSpirit':
-                        setModalState({ summonSpiritModal: result.payload });
-                        break;
+            case 'modal': {
+                const handler = modalMap[result.modalName];
+                if (handler) {
+                    handler(result.payload);
                 }
                 break;
+            }
             case 'roll':
                 if (result.payload.rollType === 'damage') {
                     rollDamage(

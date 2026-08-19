@@ -114,13 +114,7 @@ The entire file is a single `routeAutomation()` function containing a 243-case s
 
 Monolithic registry importing every automation handler in the system. 269 unique dependency targets — the highest fan-out in the entire codebase.
 
-### 3.3 High: `useCharActionsAutomation.js` — 87-Case Nested Switch
-
-**File:** `src/components/char-sheet/useCharActionsAutomation.js:95`
-
-An 87-case inner switch on `result.modalName` maps modal names to `setModalState` calls. Each case is a one-liner. This is pure dispatch boilerplate that could be a lookup table.
-
-### 3.4 High: Top Files by Branch Density
+### 3.3 High: Top Files by Branch Density
 
 | Branches | Lines | Branch % | File |
 |----------|-------|----------|------|
@@ -185,7 +179,6 @@ An 87-case inner switch on `result.modalName` maps modal names to `setModalState
 | Cases | File:Line | Description |
 |-------|-----------|-------------|
 | 243 | `services/combat/automation/automationRouter.js:2` | Automation type routing |
-| 87 | `components/char-sheet/useCharActionsAutomation.js:95` | Modal name dispatch |
 | 41 | `services/rules/effects/clearExpirationEffects.js:35` | Effect expiration cleanup |
 | 22 | `hooks/combat/useSpellCastExecutor.js:66` | Spell execution routing |
 | 21 | `components/log/log-utils.js:7` | Log entry type routing |
@@ -271,10 +264,6 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 - Extract `getSpellCastingMod()` and `resolveHealExpression()` to a shared healing utility
 - Create a `createMassHealHandler(config)` factory that parameterizes spell name, level, and modal name
 
-### Priority 8: Convert 87-Case Switch to Lookup Table
-**Risk:** Low (mechanical transformation) | **Impact:** Major readability improvement
-- `src/components/char-sheet/useCharActionsAutomation.js:95` — Replace 87-case switch with `const modalMap = { ... }; const handler = modalMap[result.modalName];`
-
 ### Priority 13: Normalize Component File Naming to PascalCase
 **Risk:** Low (requires import path updates) | **Impact:** Consistency with 200+ other components
 - Rename 14 kebab-case `.jsx` files to PascalCase
@@ -298,6 +287,6 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 |----------|-------|
 | Duplicate code instances | 3 remaining patterns (~1,405+ lines, down from 8/~2,200+) |
 | Dead/unused code | 1 orphaned module remaining (4 backup files + 1 orphan removed, unused CSS cleaned) |
-| Complexity hotspots | 6 critical/high findings (243-case switch, 269-import registry, 87-case switch, 40% branch density, 11-level nesting, 497 importers) |
+| Complexity hotspots | 5 critical/high findings (243-case switch, 269-import registry, 40% branch density, 11-level nesting, 497 importers) |
 | Inconsistencies | 10 categories remaining (error handling normalized, inline styles, naming, organization, async patterns) |
-| Low-risk improvements identified | 5 remaining items (10 completed) |
+| Low-risk improvements identified | 4 remaining items (11 completed) |
