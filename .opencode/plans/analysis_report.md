@@ -318,10 +318,6 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 - Create `registerTargetEffect(campaignName, targetName, effectKey, casterName)` in `src/services/combat/conditions/`
 - Replace identical 15-line blocks in 5 aura handlers
 
-### Priority 7: Extract Melee Attack Filter Utility
-**Risk:** Zero (identical code in 3 places) | **Impact:** Small but eliminates drift risk
-- Move the 7-line melee weapon filter to a shared utility (e.g., `combatUtils.js`)
-
 ### Priority 8: Convert 87-Case Switch to Lookup Table
 **Risk:** Low (mechanical transformation) | **Impact:** Major readability improvement
 - `src/components/char-sheet/useCharActionsAutomation.js:95` — Replace 87-case switch with `const modalMap = { ... }; const handler = modalMap[result.modalName];`
@@ -361,8 +357,8 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 
 | Category | Count |
 |----------|-------|
-| Duplicate code instances | 5 remaining patterns (~1,500+ lines, down from 8/~2,200+) |
+| Duplicate code instances | 4 remaining patterns (~1,480+ lines, down from 8/~2,200+) |
 | Dead/unused code | 1 orphaned module remaining, ~50+ unused CSS classes (4 backup files + 1 orphan removed) |
 | Complexity hotspots | 6 critical/high findings (243-case switch, 269-import registry, 87-case switch, 40% branch density, 11-level nesting, 497 importers) |
 | Inconsistencies | 11 categories (error handling, inline styles, naming, organization, async patterns) |
-| Low-risk improvements identified | 10 remaining items (5 completed) |
+| Low-risk improvements identified | 9 remaining items (6 completed) |

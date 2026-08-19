@@ -1,6 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { MELEE_REACH_FEET } from '../../../combat/baseCombatActions.js';
+import { filterMeleeAttacks } from '../../../combat/filterMeleeAttacks.js';
 import { findLastAttack, rollbackDamage } from '../../common/damageRollback.js';
 import { infoPopup } from '../../common/infoPopup.js';
 
@@ -62,15 +62,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         await setRuntimeValue(playerName, USES_KEY, currentUses - 1, campaignName);
 
         // Find the Paladin's main melee weapon for the counterattack
-        const meleeAttacks = (playerStats.attacks || []).filter(a => {
-            if (a.weaponType === 'melee' || a.attackType === 'melee') return true;
-            if (a.range === MELEE_REACH_FEET || a.range === '5' || a.range === '5 ft' || a.range === '5_ft')
-                return a.type === 'Action' || a.actionType === 'Action';
-            if (a.isRanged === false) return true;
-            if (Array.isArray(a.properties) && a.properties.some(p => String(p).toLowerCase() === 'melee'))
-                return true;
-            return false;
-        });
+        const meleeAttacks = filterMeleeAttacks(playerStats.attacks);
         const attack = meleeAttacks.length > 0 ? meleeAttacks[0] : (playerStats.attacks || [])[0];
 
         if (!attack) {
