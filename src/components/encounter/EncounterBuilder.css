@@ -84,15 +84,6 @@
   background: var(--background-color-error);
 }
 
-.encounter-builder .encounter-btn-warning {
-  border-color: var(--color-warning);
-  color: var(--color-warning);
-}
-
-.encounter-builder .encounter-btn-warning:hover {
-  background: var(--background-color-warning);
-}
-
 .encounter-builder .player-levels {
   display: grid;
   grid-template-columns: 1fr 1fr;

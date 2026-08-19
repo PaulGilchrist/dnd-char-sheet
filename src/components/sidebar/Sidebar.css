@@ -38,14 +38,6 @@
   color: var(--color-hover);
 }
 
-.sidebar-toggle-icon {
-  display: inline-block;
-  width: 16px;
-  text-align: center;
-  flex-shrink: 0;
-  font-size: 0.8em;
-}
-
 .sidebar-section {
   display: flex;
   flex-direction: column;
@@ -111,12 +103,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.sidebar-header-buttons {
-  display: flex;
-  margin-left: 50px;
-  gap: 2px;
 }
 
 .sidebar-active-indicator {

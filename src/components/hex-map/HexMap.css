@@ -292,29 +292,6 @@
     outline: none;
 }
 
-/* Context menu list picker (e.g. Link to Map) */
-.context-menu-list {
-    background: #333;
-    border: 1px solid #555;
-    border-radius: 3px;
-    overflow-y: auto;
-}
-
-.context-menu-list-item {
-    padding: 4px 8px;
-    color: #ccc;
-    font-size: 11px;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.context-menu-list-item:hover {
-    background: #4a4a4a;
-    color: #fff;
-}
-
 /* Marching Order Panel */
 .marching-order-panel {
     position: absolute;
@@ -503,66 +480,6 @@
 
 .party-marker-layer text {
     pointer-events: none;
-}
-
-/* POI tabs */
-.poi-tabs {
-    display: flex;
-    border-bottom: 1px solid #444;
-    flex-shrink: 0;
-}
-
-.poi-tab {
-    flex: 1;
-    background: #2a2a2a;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: #888;
-    padding: 8px 4px;
-    font-size: 11px;
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
-}
-
-.poi-tab:hover {
-    color: #ccc;
-}
-
-.poi-tab.active {
-    color: #e0e0e0;
-    border-bottom-color: #4a90d9;
-}
-
-.poi-panel-empty {
-    color: #777;
-    font-size: 12px;
-    text-align: center;
-    padding: 20px 0;
-    width: 100%;
-}
-
-.poi-panel-char-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: #555;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 2px;
-}
-
-.poi-panel-char-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.poi-panel-char-initial {
-    color: #ccc;
-    font-size: 14px;
-    font-weight: bold;
 }
 
 /* Enterable POI cursor */

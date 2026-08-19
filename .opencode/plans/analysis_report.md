@@ -112,26 +112,6 @@
 
 Different signatures, same exported name. Used by different callers (`useLoggedDiceRollAttack.js` vs `useLoggedDiceRollDamage.js`).
 
-### 2.5 Unused CSS Classes (~50+ classes)
-
-**CharacterCreationWizard.css** (most affected): `.add-custom-btn`, `.category-filter-btn`, `.feat-more-description`, `.feat-results-container`, `.feat-results-header`, `.feat-results-list`, `.feat-search-input`, `.feats-filters`, `.magic-item-results-container`, `.magic-item-results-header`, `.magic-item-results-list`, `.magic-items-filters`, `.spell-higher-level`, `.spell-results-container`, `.spell-results-header`, `.spell-results-list`, `.spell-search-input`, `.spells-filters`, `.validation-message`
-
-**Map.css**: `.items-panel-npc-item`, `.items-panel-npc-name`, `.items-panel-npc-placed`, `.items-panel-npc-section`, `.items-panel-npc-title`, `.items-panel-npc-toggle`, `.npc-context-menu`
-
-**HexMap.css**: `.context-menu-list`, `.context-menu-list-item`, `.poi-panel-char-avatar`, `.poi-panel-char-img`, `.poi-panel-char-initial`, `.poi-panel-empty`, `.poi-tab`, `.poi-tabs`
-
-**EncounterBuilder.css**: `.encounter-btn-warning`, `.summary-item-difficulty-deadly`, `.summary-item-difficulty-easy`, `.summary-item-difficulty-hard`, `.summary-item-difficulty-medium`
-
-**MonsterCardModal.css / CreatureBadge.css**: `.effect-resist`
-
-**CampaignAdmin.css**: `.admin-status--error`, `.admin-status--loading`, `.admin-status--success`
-
-**Sidebar.css**: `.sidebar-header-buttons`, `.sidebar-toggle-icon`
-
-**DiceTray.css**: `.dice-btn`
-
-**WizardStepAbilities.css**: `.feat-asi-assignment-inline`, `.feat-asi-card-type`, `.feat-increase-input`
-
 ---
 
 ## 3. Complexity Hotspots
@@ -322,11 +302,6 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 **Risk:** Low (mechanical transformation) | **Impact:** Major readability improvement
 - `src/components/char-sheet/useCharActionsAutomation.js:95` — Replace 87-case switch with `const modalMap = { ... }; const handler = modalMap[result.modalName];`
 
-### Priority 9: Clean Up Unused CSS Classes
-**Risk:** Near zero | **Impact:** Reduces CSS bloat, prevents confusion
-- Remove ~50+ unused CSS classes identified in Section 2.5
-- Most impactful: CharacterCreationWizard.css (~19 classes), Map.css (~7 classes), HexMap.css (~8 classes)
-
 ### Priority 10: Normalize `.catch(() => {})` to Logged Errors
 **Risk:** Low (adds logging, no behavior change) | **Impact:** Dramatically improves debuggability
 - Convert 264 silent `.catch(() => {})` to `.catch((e) => { console.error('Context:', e); })` in production handler files
@@ -358,7 +333,7 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 | Category | Count |
 |----------|-------|
 | Duplicate code instances | 4 remaining patterns (~1,480+ lines, down from 8/~2,200+) |
-| Dead/unused code | 1 orphaned module remaining, ~50+ unused CSS classes (4 backup files + 1 orphan removed) |
+| Dead/unused code | 1 orphaned module remaining (4 backup files + 1 orphan removed, unused CSS cleaned) |
 | Complexity hotspots | 6 critical/high findings (243-case switch, 269-import registry, 87-case switch, 40% branch density, 11-level nesting, 497 importers) |
 | Inconsistencies | 11 categories (error handling, inline styles, naming, organization, async patterns) |
-| Low-risk improvements identified | 9 remaining items (6 completed) |
+| Low-risk improvements identified | 8 remaining items (7 completed) |

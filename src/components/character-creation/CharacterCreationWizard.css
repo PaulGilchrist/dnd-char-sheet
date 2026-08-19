@@ -504,26 +504,6 @@
     height: 100%;
 }
 
-/* Spell/feat/magic-item variants extend shared list-results classes */
-/* These classes are kept for semantic clarity in JSX but inherit from shared styles */
-.character-creation-wizard .spell-results-container,
-.character-creation-wizard .feat-results-container,
-.character-creation-wizard .magic-item-results-container {
-    /* inherits from .list-results-container */
-}
-
-.character-creation-wizard .spell-results-header,
-.character-creation-wizard .feat-results-header,
-.character-creation-wizard .magic-item-results-header {
-    /* inherits from .list-results-header */
-}
-
-.character-creation-wizard .spell-results-list,
-.character-creation-wizard .feat-results-list,
-.character-creation-wizard .magic-item-results-list {
-    /* inherits from .list-results-list */
-}
-
 .character-creation-wizard .no-results-found {
     padding: 2rem;
     text-align: center;
@@ -768,7 +748,6 @@
     font-weight: 500;
 }
 
-.character-creation-wizard .spell-higher-level,
 .character-creation-wizard .spell-components,
 .character-creation-wizard .spell-damage {
     margin-top: 0.25rem;
@@ -793,8 +772,7 @@
 }
 
 .character-creation-wizard .feat-prerequisites,
-.character-creation-wizard .feat-description,
-.character-creation-wizard .feat-more-description {
+.character-creation-wizard .feat-description {
     margin-top: 0.5rem;
 }
 
@@ -874,18 +852,6 @@
     border: 1px solid var(--border-color-error);
 }
 
-/* Spell & Feat Search Inputs */
-.character-creation-wizard .spell-search-input,
-.character-creation-wizard .feat-search-input {
-    padding: 0.5rem;
-    border: 1px solid var(--border-color-input);
-    border-radius: 4px;
-    font-size: 0.9rem;
-    width: 100%;
-    color: var(--color-text);
-    background-color: var(--background-color-input);
-}
-
 .character-creation-wizard .level-filter,
 .character-creation-wizard .class-filter,
 .character-creation-wizard .type-filter {
@@ -896,36 +862,6 @@
     background-color: var(--background-color-input);
     color: var(--color-text);
     cursor: pointer;
-}
-
-/* ===== Validation Messages ===== */
-.character-creation-wizard .validation-message {
-    padding: 0.75rem 1rem;
-    border-radius: 6px;
-    margin-top: 1rem;
-    font-weight: 600;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.character-creation-wizard .validation-message.error {
-    background-color: var(--background-color-error);
-    color: var(--color-error-light);
-    border: 1px solid var(--border-color-error);
-}
-
-.character-creation-wizard .validation-message.success {
-    background-color: var(--background-color-success);
-    color: var(--color-success);
-    border: 1px solid var(--border-color-success);
-}
-
-.character-creation-wizard .validation-message.warning {
-    background-color: var(--background-color-warning);
-    color: var(--color-warning);
-    border: 1px solid var(--border-color-warning);
 }
 
 /* ===== Equipment Search Modal ===== */
@@ -994,27 +930,6 @@
     gap: 0.5rem;
     margin-bottom: 1rem;
     flex-wrap: wrap;
-}
-
-.character-creation-wizard .category-filter-btn {
-    padding: 0.5rem 1rem;
-    background-color: var(--background-color-category-filter);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    color: var(--color-text-secondary);
-}
-
-.character-creation-wizard .category-filter-btn:hover {
-    background-color: var(--background-color-category-filter-hover);
-}
-
-.character-creation-wizard .category-filter-btn.active {
-    background-color: var(--background-color-category-filter-active);
-    color: var(--color-text-inverse);
-    border-color: var(--background-color-category-filter-active);
 }
 
 .character-creation-wizard .category-select {
@@ -1121,27 +1036,6 @@
     gap: 0.5rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border-color);
-}
-
-.character-creation-wizard .add-custom-btn {
-    padding: 0.75rem 1.5rem;
-    background-color: var(--color-primary);
-    color: var(--color-text-inverse);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    transition: background-color 0.2s;
-}
-
-.character-creation-wizard .add-custom-btn:hover {
-    background-color: var(--color-primary-hover);
-}
-
-.character-creation-wizard .add-custom-btn:disabled {
-    background-color: var(--background-color-button-disabled);
-    cursor: not-allowed;
-    color: var(--color-text-secondary);
 }
 
 .character-creation-wizard .cancel-btn {

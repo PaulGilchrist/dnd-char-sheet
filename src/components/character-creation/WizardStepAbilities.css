@@ -245,19 +245,6 @@
   font-size: 0.75rem;
 }
 
-.wizard-step-abilities .feat-increase-input {
-  max-width: 60px;
-  padding: 6px 8px;
-  border: 1px solid var(--border-color-input);
-  border-radius: 4px;
-  font-size: 0.9rem;
-  text-align: center;
-  flex-grow: 1;
-  background-color: var(--background-color-point-cost);
-  color: var(--color-text);
-  font-weight: 600;
-}
-
 /* Feat ASI cards */
 .wizard-step-abilities .feat-asi-cards {
   display: flex;
@@ -293,12 +280,6 @@
   color: var(--color-text);
 }
 
-.wizard-step-abilities .feat-asi-card-type {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-  font-style: italic;
-}
-
 .wizard-step-abilities .feat-asi-mode-toggle {
   display: flex;
   gap: 16px;
@@ -330,21 +311,6 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.wizard-step-abilities .feat-asi-assignment-inline {
-  flex-wrap: nowrap;
-}
-
-.wizard-step-abilities .feat-asi-assignment-inline .feat-asi-assignment-label {
-  white-space: nowrap;
-  margin-right: 0;
-  flex-shrink: 0;
-}
-
-.wizard-step-abilities .feat-asi-assignment-inline .bg-ability-select {
-  flex-shrink: 1;
-  min-width: 0;
 }
 
 .wizard-step-abilities .feat-asi-assignment-label {
