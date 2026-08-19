@@ -246,21 +246,17 @@ describe('useAttackDamageResolution - ctxOverrides and popupHtml fallbacks', () 
     });
 
     describe('empoweredEvocationModifier override', () => {
-        it('passes empoweredEvocationModifier through to ctx', async () => {
+        it('passes empoweredEvocationModifier through to ctx and defaults to 0', async () => {
             const { resolveAttackDamage } = UseAttackDamageResolution();
             const attack = { name: 'Fire Bolt', damage: '1d10+4', damageType: 'fire' };
 
             await resolveAttackDamage(attack, { empoweredEvocationModifier: 4 });
-            const ctx = getCtx();
+            let ctx = getCtx();
             expect(ctx.empoweredEvocationModifier).toBe(4);
-        });
 
-        it('defaults empoweredEvocationModifier to 0', async () => {
-            const { resolveAttackDamage } = UseAttackDamageResolution();
-            const attack = { name: 'Fire Bolt', damage: '1d10+4', damageType: 'fire' };
-
+            mockPipeline.run.mockClear();
             await resolveAttackDamage(attack);
-            const ctx = getCtx();
+            ctx = getCtx();
             expect(ctx.empoweredEvocationModifier).toBe(0);
         });
     });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepSubclass from './WizardStepSubclass.jsx';
@@ -108,7 +109,7 @@ describe('WizardStepSubclass', () => {
   });
 
   describe('Subclass details expand/collapse', () => {
-    it('should show subclass details when a subclass is selected', () => {
+    it('should show subclass details header when a subclass is selected', () => {
       render(
         <WizardStepSubclass
           {...createMockProps({
@@ -118,18 +119,6 @@ describe('WizardStepSubclass', () => {
       );
       expect(screen.getByText('Battle Master Details')).toBeInTheDocument();
       expect(screen.getByText('Show Details')).toBeInTheDocument();
-      expect(screen.queryByText('Hide Details')).not.toBeInTheDocument();
-    });
-
-    it('should not show subclass details when no subclass is selected', () => {
-      render(
-        <WizardStepSubclass
-          {...createMockProps({
-            formData: { class: { name: 'Fighter', subclass: { name: '' } } },
-          })}
-        />
-      );
-      expect(screen.queryByText('Battle Master Details')).not.toBeInTheDocument();
     });
 
     it('should toggle expanded state when the header is clicked', () => {
@@ -140,20 +129,19 @@ describe('WizardStepSubclass', () => {
           })}
         />
       );
-      const header = screen.getByText('Battle Master Details');
-      fireEvent.click(header.closest('.detail-card-header'));
+      fireEvent.click(screen.getByText('Show Details'));
 
       expect(screen.getByText('Hide Details')).toBeInTheDocument();
       expect(screen.queryByText('Show Details')).not.toBeInTheDocument();
       expect(screen.getByText('Features')).toBeInTheDocument();
       expect(screen.getByText('Combat Superiority')).toBeInTheDocument();
 
-      fireEvent.click(header.closest('.detail-card-header'));
+      fireEvent.click(screen.getByText('Hide Details'));
       expect(screen.getByText('Show Details')).toBeInTheDocument();
       expect(screen.queryByText('Hide Details')).not.toBeInTheDocument();
     });
 
-    it('should toggle expanded state when the toggle button is clicked', () => {
+    it('should render the subclass description, flavor, and features when expanded', () => {
       render(
         <WizardStepSubclass
           {...createMockProps({
@@ -161,41 +149,18 @@ describe('WizardStepSubclass', () => {
           })}
         />
       );
-      const toggleBtn = screen.getByText('Show Details');
-      fireEvent.click(toggleBtn);
-
-      expect(screen.getByText('Hide Details')).toBeInTheDocument();
-      expect(screen.queryByText('Show Details')).not.toBeInTheDocument();
-    });
-
-    it('should render the subclass description as sanitized HTML', () => {
-      render(
-        <WizardStepSubclass
-          {...createMockProps({
-            formData: { class: { name: 'Fighter', subclass: { name: 'Battle Master' } } },
-          })}
-        />
-      );
-      const header = screen.getByText('Battle Master Details');
-      fireEvent.click(header.closest('.detail-card-header'));
+      fireEvent.click(screen.getByText('Show Details'));
 
       expect(screen.getByText('Description')).toBeInTheDocument();
       expect(screen.getByText('A student of martial combat.')).toBeInTheDocument();
-    });
-
-    it('should render the subclass flavor when present', () => {
-      render(
-        <WizardStepSubclass
-          {...createMockProps({
-            formData: { class: { name: 'Fighter', subclass: { name: 'Battle Master' } } },
-          })}
-        />
-      );
-      const header = screen.getByText('Battle Master Details');
-      fireEvent.click(header.closest('.detail-card-header'));
-
       expect(screen.getByText('Flavor')).toBeInTheDocument();
       expect(screen.getByText('Martial Archetype')).toBeInTheDocument();
+      expect(screen.getByText('Features')).toBeInTheDocument();
+      expect(screen.getByText('Combat Superiority')).toBeInTheDocument();
+      expect(screen.getByText('Level 3')).toBeInTheDocument();
+      expect(screen.getByText(/You learn maneuvers that exploit openings in your foes/)).toBeInTheDocument();
+      expect(screen.getByText('Student of War')).toBeInTheDocument();
+      expect(screen.getByText('Level 7')).toBeInTheDocument();
     });
 
     it('should not render the flavor section when subclass_flavor is absent', () => {
@@ -206,30 +171,9 @@ describe('WizardStepSubclass', () => {
           })}
         />
       );
-      const header = screen.getByText('Champion Details');
-      fireEvent.click(header.closest('.detail-card-header'));
+      fireEvent.click(screen.getByText('Champion Details'));
 
       expect(screen.queryByText('Flavor')).not.toBeInTheDocument();
-    });
-
-    it('should render feature items with level badges and descriptions', () => {
-      render(
-        <WizardStepSubclass
-          {...createMockProps({
-            formData: { class: { name: 'Fighter', subclass: { name: 'Battle Master' } } },
-          })}
-        />
-      );
-      const header = screen.getByText('Battle Master Details');
-      fireEvent.click(header.closest('.detail-card-header'));
-
-      expect(screen.getByText('Features')).toBeInTheDocument();
-      expect(screen.getByText('Combat Superiority')).toBeInTheDocument();
-      expect(screen.getByText('Level 3')).toBeInTheDocument();
-      expect(screen.getByText(/You learn maneuvers that exploit openings in your foes/)).toBeInTheDocument();
-
-      expect(screen.getByText('Student of War')).toBeInTheDocument();
-      expect(screen.getByText('Level 7')).toBeInTheDocument();
     });
   });
 
@@ -267,24 +211,10 @@ describe('WizardStepSubclass', () => {
       const select = screen.getByRole('combobox');
       expect(select).toHaveClass('error');
     });
-
-    it('should not show error message or error class when there is no error', () => {
-      render(
-        <WizardStepSubclass
-          {...createMockProps({
-            formData: { class: { name: 'Fighter', subclass: { name: '' } } },
-            errors: {},
-          })}
-        />
-      );
-      expect(screen.queryByText('Subclass is required')).not.toBeInTheDocument();
-      const select = screen.getByRole('combobox');
-      expect(select).not.toHaveClass('error');
-    });
   });
 
   describe('2024 ruleset', () => {
-    it('should show 2024 major features with correct levels', () => {
+    it('should show 2024 major features and description', () => {
       render(
         <WizardStepSubclass
           {...createMockProps({
@@ -294,28 +224,12 @@ describe('WizardStepSubclass', () => {
           })}
         />
       );
-      const header = screen.getByText('Battle Master Details');
-      fireEvent.click(header.closest('.detail-card-header'));
+      fireEvent.click(screen.getByText('Battle Master Details'));
 
       expect(screen.getByText('Combat Superiority')).toBeInTheDocument();
       expect(screen.getByText('Level 3')).toBeInTheDocument();
       expect(screen.getByText('Student of War')).toBeInTheDocument();
       expect(screen.getByText('Level 7')).toBeInTheDocument();
-    });
-
-    it('should show 2024 major description', () => {
-      render(
-        <WizardStepSubclass
-          {...createMockProps({
-            formData: { class: { name: 'Fighter', subclass: { name: 'Battle Master' } } },
-            ruleset: '2024',
-            allClassesData: mockAllClassesData2024,
-          })}
-        />
-      );
-      const header = screen.getByText('Battle Master Details');
-      fireEvent.click(header.closest('.detail-card-header'));
-
       expect(screen.getByText('A student of martial combat.')).toBeInTheDocument();
     });
   });

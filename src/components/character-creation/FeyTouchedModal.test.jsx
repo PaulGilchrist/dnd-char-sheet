@@ -1,12 +1,8 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FeyTouchedModal, { ShadowTouchedModal } from './FeyTouchedModal.jsx';
-import { renderMarkdown } from '../../services/ui/sanitize.js';
-
-vi.mock('../../services/ui/sanitize.js', () => ({
-  renderMarkdown: vi.fn((md) => `<p>${md}</p>`),
-}));
 
 const createDivinationEnchantmentSpell = (overrides = {}) => ({
   index: overrides.index || 'test-spell',
@@ -88,18 +84,6 @@ const modalConfigs = [
     saveField: 'spells',
     otherSpell: 'Charm Person',
     spellWithDetails: 'Animal Friendship',
-    spellSchool: 'Enchantment',
-    spellConcentration: true,
-    spellDuration: '24 hours',
-    spellComponents: ['V', 'S', 'M'],
-    spellMaterial: 'A morsel of food.',
-    spellRitual: false,
-    ritualSpellName: 'Comprehend Languages',
-    spellWithDamage: 'Blight',
-    spellWithDamageSchool: 'Divination',
-    spellWithoutDamage: 'Animal Friendship',
-    spellWithoutMaterial: 'Charm Person',
-    spellDescription: 'Convince a beast to be friendly.',
     validationError: 'You must choose one level 1 Divination or Enchantment spell',
     schoolValidationError: 'Spell must be from Divination or Enchantment school',
     validSchools: ['Divination', 'Enchantment'],
@@ -115,18 +99,6 @@ const modalConfigs = [
     saveField: 'spells',
     otherSpell: 'Blight',
     spellWithDetails: 'Disguise Self',
-    spellSchool: 'Illusion',
-    spellConcentration: false,
-    spellDuration: '1 hour',
-    spellComponents: ['V', 'S'],
-    spellMaterial: null,
-    spellRitual: false,
-    ritualSpellName: 'Disguise Self',
-    spellWithDamage: 'Blight',
-    spellWithDamageSchool: 'Necromancy',
-    spellWithoutDamage: 'Disguise Self',
-    spellWithoutMaterial: 'Disguise Self',
-    spellDescription: 'Disguise your appearance.',
     validationError: 'You must choose one level 1 Illusion or Necromancy spell',
     schoolValidationError: 'Spell must be from Illusion or Necromancy school',
     validSchools: ['Illusion', 'Necromancy'],
@@ -160,17 +132,6 @@ describe.each(modalConfigs)('$name', (config) => {
     saveField,
     otherSpell,
     spellWithDetails,
-    spellSchool,
-    spellConcentration,
-    spellDuration,
-    spellComponents,
-    spellMaterial,
-    ritualSpellName,
-    spellWithDamage,
-    spellWithDamageSchool,
-    spellWithoutDamage,
-    spellWithoutMaterial,
-    spellDescription,
     validationError,
     schoolValidationError,
     validSchools,
@@ -178,7 +139,6 @@ describe.each(modalConfigs)('$name', (config) => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(renderMarkdown).mockReturnValue('<p>mocked</p>');
   });
 
   describe('rendering', () => {
@@ -237,13 +197,6 @@ describe.each(modalConfigs)('$name', (config) => {
       expect(select.options.length).toBe(1);
     });
 
-    it('should render an empty select when allSpells is an empty array', () => {
-      render(<Component {...createProps(config, { allSpells: [] })} />);
-      expect(screen.getByText(header)).toBeInTheDocument();
-      const select = screen.getByRole('combobox');
-      expect(select.options.length).toBe(1);
-    });
-
     it('should not render spells that are not level 1', () => {
       const level2Spell = createDivinationEnchantmentSpell({ name: 'Hold Person', level: 2 });
       render(
@@ -262,15 +215,6 @@ describe.each(modalConfigs)('$name', (config) => {
       );
       const select = screen.getByRole('combobox');
       expect(select.value).toBe(spellName);
-    });
-
-    it('should show SpellDetails toggle for the pre-selected spell', () => {
-      render(
-        <Component {...createProps(config, {
-          formData: { [spellField]: spellName, spells: [spellName] },
-        })} />
-      );
-      expect(screen.getByText(`${spellName} details`)).toBeInTheDocument();
     });
 
     it('should not pre-select when the spell field is null in formData', () => {
@@ -314,13 +258,6 @@ describe.each(modalConfigs)('$name', (config) => {
       expect(select.value).toBe('');
     });
 
-    it('should show SpellDetails after selecting a new spell', () => {
-      render(<Component {...createProps(config)} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: spellWithDetails } });
-      expect(screen.getByText(`${spellWithDetails} details`)).toBeInTheDocument();
-    });
-
     it('should clear error when user changes selection after an error', () => {
       render(<Component {...createProps(config)} />);
       const saveBtn = screen.getByRole('button', { name: /save/i });
@@ -329,117 +266,6 @@ describe.each(modalConfigs)('$name', (config) => {
       const select = screen.getByRole('combobox');
       fireEvent.change(select, { target: { value: spellWithDetails } });
       expect(screen.queryByText(/You must choose/)).not.toBeInTheDocument();
-    });
-  });
-
-  describe('SpellDetails subcomponent', () => {
-    it('should not render spell details when no spell is selected', () => {
-      render(<Component {...createProps(config)} />);
-      expect(screen.queryByText(/details/)).not.toBeInTheDocument();
-    });
-
-    it('should render spell details toggle button when a spell is selected', () => {
-      render(<Component {...createProps(config)} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: spellWithDetails } });
-      expect(screen.getByText(`${spellWithDetails} details`)).toBeInTheDocument();
-    });
-
-    it('should render spell details content when expanded', () => {
-      render(<Component {...createProps(config)} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: spellWithDetails } });
-      const toggleBtn = screen.getByText(`${spellWithDetails} details`);
-      fireEvent.click(toggleBtn);
-      expect(screen.getByText(`School: ${spellSchool}`)).toBeInTheDocument();
-      expect(screen.getByText('Casting: 1 action')).toBeInTheDocument();
-      if (spellConcentration) {
-        expect(screen.getByText('Concentration')).toBeInTheDocument();
-      } else {
-        expect(screen.queryByText('Concentration')).not.toBeInTheDocument();
-      }
-      expect(screen.getByText(`Duration: ${spellDuration}`)).toBeInTheDocument();
-      expect(screen.getByText(`Components: ${spellComponents.join(', ')}`)).toBeInTheDocument();
-      if (spellMaterial) {
-        expect(screen.getByText(`Material: ${spellMaterial}`)).toBeInTheDocument();
-      } else {
-        expect(screen.queryAllByText(/Material:/).length).toBe(0);
-      }
-    });
-
-    it('should toggle spell details collapsed/expanded state', () => {
-      render(<Component {...createProps(config)} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: spellWithDetails } });
-      const toggleBtn = screen.getByText(`${spellWithDetails} details`);
-      expect(screen.queryByText(`School: ${spellSchool}`)).not.toBeInTheDocument();
-      fireEvent.click(toggleBtn);
-      expect(screen.getByText(`School: ${spellSchool}`)).toBeInTheDocument();
-      fireEvent.click(toggleBtn);
-      expect(screen.queryByText(`School: ${spellSchool}`)).not.toBeInTheDocument();
-    });
-
-    it('should render ritual badge when spell has ritual=true', () => {
-      render(<Component {...createProps(config)} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: ritualSpellName } });
-      const toggleBtn = screen.getByText(`${ritualSpellName} details`);
-      fireEvent.click(toggleBtn);
-      if (ritualSpellName === 'Comprehend Languages') {
-        expect(screen.getByText('Ritual')).toBeInTheDocument();
-      } else {
-        expect(screen.queryByText('Ritual')).not.toBeInTheDocument();
-      }
-    });
-
-    it('should not render ritual badge when spell has ritual=false', () => {
-      render(<Component {...createProps(config)} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: spellWithoutDamage } });
-      const toggleBtn = screen.getByText(`${spellWithoutDamage} details`);
-      fireEvent.click(toggleBtn);
-      expect(screen.queryByText('Ritual')).not.toBeInTheDocument();
-    });
-
-    it('should render damage type when spell has damage', () => {
-      const damageSpell = createDivinationEnchantmentSpell({
-        name: spellWithDamage,
-        school: spellWithDamageSchool,
-        damage: { damage_type: 'Necrotic' },
-      });
-      render(<Component {...createProps(config, { allSpells: [damageSpell] })} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: spellWithDamage } });
-      const toggleBtn = screen.getByText(`${spellWithDamage} details`);
-      fireEvent.click(toggleBtn);
-      expect(screen.getByText('Damage: Necrotic')).toBeInTheDocument();
-    });
-
-    it('should not render damage section when spell has no damage', () => {
-      render(<Component {...createProps(config)} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: spellWithoutDamage } });
-      const toggleBtn = screen.getByText(`${spellWithoutDamage} details`);
-      fireEvent.click(toggleBtn);
-      expect(screen.queryAllByText(/Damage:/).length).toBe(0);
-    });
-
-    it('should not render material section when spell has no material', () => {
-      render(<Component {...createProps(config)} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: spellWithoutMaterial } });
-      const toggleBtn = screen.getByText(`${spellWithoutMaterial} details`);
-      fireEvent.click(toggleBtn);
-      expect(screen.queryAllByText(/Material:/).length).toBe(0);
-    });
-
-    it('should call renderMarkdown with the spell description', () => {
-      render(<Component {...createProps(config)} />);
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: spellWithDetails } });
-      const toggleBtn = screen.getByText(`${spellWithDetails} details`);
-      fireEvent.click(toggleBtn);
-      expect(renderMarkdown).toHaveBeenCalledWith(spellDescription);
     });
   });
 

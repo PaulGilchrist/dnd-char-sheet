@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CascadingSelect from './CascadingSelect.jsx';
@@ -30,22 +31,28 @@ const baseProps = {
 
 describe('CascadingSelect', () => {
   describe('rendering', () => {
-    it('should render parent dropdown with all options', () => {
-      render(<CascadingSelect {...baseProps} />);
+    it('should render parent dropdown with all options and correct selections', () => {
+      const { container } = render(<CascadingSelect {...baseProps} />);
+      const [parentSelect, childSelect] = container.querySelectorAll('select');
+
       expect(screen.getByRole('option', { name: 'Human' })).toBeInTheDocument();
       expect(screen.getByRole('option', { name: 'Elf' })).toBeInTheDocument();
-    });
-
-    it('should render a placeholder option in the parent select', () => {
-      const { container } = render(<CascadingSelect {...baseProps} formData={{ race: {} }} />);
-      const [parentSelect] = container.querySelectorAll('select');
-      expect(parentSelect.querySelector('option[value=""]')).toHaveTextContent('Select a race');
-    });
-
-    it('should render child dropdown when subOptions exist', () => {
-      const { container } = render(<CascadingSelect {...baseProps} />);
-      expect(container.querySelectorAll('select').length).toBe(2);
       expect(screen.getByRole('option', { name: 'Hill' })).toBeInTheDocument();
+
+      expect(parentSelect.querySelector('option[value=""]')).toHaveTextContent('Select a race');
+      expect(parentSelect.value).toBe('Human');
+      expect(childSelect.value).toBe('Hill');
+      expect(container.querySelectorAll('select').length).toBe(2);
+    });
+
+    it('should show empty selects when formData keys are missing', () => {
+      const { container: emptyContainer } = render(<CascadingSelect {...baseProps} formData={{}} />);
+      expect(emptyContainer.querySelectorAll('select')[0].value).toBe('');
+
+      const { container: partialContainer } = render(
+        <CascadingSelect {...baseProps} formData={{ race: { name: 'Human' } }} />
+      );
+      expect(partialContainer.querySelectorAll('select')[1].value).toBe('');
     });
 
     it('should hide child dropdown when subOptions are empty', () => {
@@ -60,50 +67,19 @@ describe('CascadingSelect', () => {
       expect(container.querySelectorAll('select').length).toBe(1);
     });
 
-    it('should select the correct parent value from formData', () => {
-      const { container } = render(<CascadingSelect {...baseProps} />);
-      const [parentSelect] = container.querySelectorAll('select');
-      expect(parentSelect.value).toBe('Human');
-    });
-
-    it('should select the correct child value from formData', () => {
-      const { container } = render(<CascadingSelect {...baseProps} />);
-      const [, childSelect] = container.querySelectorAll('select');
-      expect(childSelect.value).toBe('Hill');
-    });
-
-    it('should show empty parent select when formData has no race key', () => {
-      const { container } = render(<CascadingSelect {...baseProps} formData={{}} />);
-      const [parentSelect] = container.querySelectorAll('select');
-      expect(parentSelect.value).toBe('');
-    });
-
-    it('should show empty child select when formData has no childFieldName', () => {
-      const { container } = render(
-        <CascadingSelect {...baseProps} formData={{ race: { name: 'Human' } }} />
-      );
-      const [, childSelect] = container.querySelectorAll('select');
-      expect(childSelect.value).toBe('');
-    });
-
-    it('should append (Major) suffix to child label for 2024 ruleset using default label', () => {
+    it('should append (Major) suffix to child label for 2024 ruleset', () => {
       const { container } = render(<CascadingSelect {...baseProps} ruleset="2024" />);
       const labels = container.querySelectorAll('label');
       expect(labels[1].textContent).toContain('Race (Major)');
-    });
 
-    it('should append (Major) suffix to child label for 2024 ruleset using custom childLabel', () => {
       render(<CascadingSelect {...baseProps} childLabel="Subrace Type" ruleset="2024" />);
       expect(screen.getByText('Subrace Type (Major) *')).toBeInTheDocument();
+
+      const { container: fiveEContainer } = render(<CascadingSelect {...baseProps} ruleset="5e" />);
+      expect(fiveEContainer.querySelectorAll('label')[1].textContent).toBe('Race *');
     });
 
-    it('should not append (Major) suffix for 5e ruleset', () => {
-      const { container } = render(<CascadingSelect {...baseProps} ruleset="5e" />);
-      const labels = container.querySelectorAll('label');
-      expect(labels[1].textContent).toBe('Race *');
-    });
-
-    it('should use custom optionsKey for parent option values and display text', () => {
+    it('should use custom optionsKey and childOptionsKey for option values and display text', () => {
       const options = [
         { id: 'human', displayName: 'Humanoid' },
         { id: 'elf', displayName: 'Elven' },
@@ -118,9 +94,7 @@ describe('CascadingSelect', () => {
       );
       expect(screen.getByRole('option', { name: 'Humanoid' })).toBeInTheDocument();
       expect(screen.getByRole('option', { name: 'Elven' })).toBeInTheDocument();
-    });
 
-    it('should use custom childOptionsKey for child option values and display text', () => {
       render(
         <CascadingSelect
           {...baseProps}
@@ -130,9 +104,7 @@ describe('CascadingSelect', () => {
         />
       );
       expect(screen.getByRole('option', { name: 'Hill Dwarf' })).toBeInTheDocument();
-    });
 
-    it('should use childOptionsIndexKey fallback for child option values', () => {
       render(
         <CascadingSelect
           {...baseProps}
@@ -142,9 +114,7 @@ describe('CascadingSelect', () => {
         />
       );
       expect(screen.getByRole('option', { name: 'hill' })).toBeInTheDocument();
-    });
 
-    it('should use optionsKey fallback to index for parent option values', () => {
       render(
         <CascadingSelect
           {...baseProps}
@@ -207,14 +177,6 @@ describe('CascadingSelect', () => {
         })
       );
     });
-
-    it('should clear child value when parent changes', () => {
-      const { container } = render(<CascadingSelect {...baseProps} />);
-      const [parentSelect] = container.querySelectorAll('select');
-
-      fireEvent.change(parentSelect, { target: { value: 'Elf' } });
-      expect(baseProps.onInputChange).toHaveBeenCalledWith('race', { name: 'Elf' });
-    });
   });
 
   describe('error display', () => {
@@ -259,24 +221,23 @@ describe('CascadingSelect', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle subOptionsSelector returning null', () => {
-      render(
+    it('should handle subOptionsSelector returning null or undefined', () => {
+      const { container: nullContainer } = render(
         <CascadingSelect
           {...baseProps}
           subOptionsSelector={() => null}
         />
       );
       expect(screen.queryByRole('option', { name: /Hill|Wood/ })).not.toBeInTheDocument();
-    });
+      expect(nullContainer.querySelectorAll('select').length).toBe(1);
 
-    it('should handle subOptionsSelector returning undefined', () => {
-      render(
+      const { container: undefinedContainer } = render(
         <CascadingSelect
           {...baseProps}
           subOptionsSelector={() => undefined}
         />
       );
-      expect(screen.queryByRole('option', { name: /Hill|Wood/ })).not.toBeInTheDocument();
+      expect(undefinedContainer.querySelectorAll('select').length).toBe(1);
     });
 
     it('should render with undefined formData field gracefully', () => {

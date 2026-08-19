@@ -1,4 +1,14 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Removed 6 redundant/low-value tests:
+//   - "should hide rules info when toolLimits is null" + "should hide rules info when toolLimits is an empty object"
+//     -> consolidated into "should hide rules info when toolLimits is falsy or empty" (single test, both cases)
+//   - "should NOT show skilled info when skilledUsesAvailable is 0" + "should show skilled info when skilledUsesAvailable > 0"
+//     -> consolidated into "should conditionally show skilled info based on skilledUsesAvailable"
+//   - "should render all tools from all categories" -> redundant with "should render all four tool categories" + "should render tools within each category"
+//   - "should render category sections with correct structure" -> asserts internal CSS class names (tool-category-header, tool-category-section)
+//   - "should render multi-select-container with compact class" -> asserts internal CSS class names (multi-select-compact)
+//   - "should render without crashing when all props are minimal" -> trivially simple component, no unique behavioral coverage
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepTools from './WizardStepTools.jsx';
@@ -168,21 +178,12 @@ describe('WizardStepTools', () => {
       expect(screen.getByText('Tool proficiency error')).toBeInTheDocument();
     });
 
-    it('should hide rules info when toolLimits is null', async () => {
-      render(<WizardStepTools
-        {...baseProps}
-        toolLimits={null}
-      />);
+    it('should hide rules info when toolLimits is falsy or empty', async () => {
+      render(<WizardStepTools {...baseProps} toolLimits={null} />);
       await waitForTools();
       expect(screen.queryByText(/Rules:/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/You have selected/)).not.toBeInTheDocument();
-    });
 
-    it('should hide rules info when toolLimits is an empty object', async () => {
-      render(<WizardStepTools
-        {...baseProps}
-        toolLimits={{}}
-      />);
+      render(<WizardStepTools {...baseProps} toolLimits={{}} />);
       await waitForTools();
       expect(screen.queryByText(/Rules:/)).not.toBeInTheDocument();
     });
@@ -396,46 +397,29 @@ describe('WizardStepTools', () => {
   });
 
   describe('skilled tool usage display', () => {
-    it('should NOT show skilled info when skilledUsesAvailable is 0', async () => {
+    it('should conditionally show skilled info based on skilledUsesAvailable', async () => {
       render(<WizardStepTools
         {...baseProps}
-        toolLimits={{
-          categoryLimits: new Map(),
-          skilledUsesAvailable: 0,
-        }}
+        toolLimits={{ categoryLimits: new Map(), skilledUsesAvailable: 0 }}
       />);
       await waitForTools();
-
       expect(screen.queryByText(/Skilled/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/uses used for tools/)).not.toBeInTheDocument();
-    });
 
-    it('should show skilled info when skilledUsesAvailable > 0', async () => {
       render(<WizardStepTools
         {...baseProps}
-        toolLimits={{
-          categoryLimits: new Map(),
-          skilledUsesAvailable: 3,
-        }}
+        toolLimits={{ categoryLimits: new Map(), skilledUsesAvailable: 3 }}
         skillLimits={{ skilledUsesUsed: 2 }}
       />);
       await waitForTools();
-
       expect(screen.getByText(/Skilled/)).toBeInTheDocument();
       expect(screen.getByText(/2 of 3 uses used for tools/)).toBeInTheDocument();
-    });
 
-    it('should show 0 uses when none used yet', async () => {
       render(<WizardStepTools
         {...baseProps}
-        toolLimits={{
-          categoryLimits: new Map(),
-          skilledUsesAvailable: 3,
-        }}
+        toolLimits={{ categoryLimits: new Map(), skilledUsesAvailable: 3 }}
         skillLimits={{ skilledUsesUsed: 0 }}
       />);
       await waitForTools();
-
       expect(screen.getByText(/0 of 3 uses used for tools/)).toBeInTheDocument();
     });
   });
@@ -471,36 +455,6 @@ describe('WizardStepTools', () => {
     });
   });
 
-  describe('category rendering', () => {
-    it('should render category sections with correct structure', async () => {
-      render(<WizardStepTools {...baseProps} />);
-      await waitForTools();
-
-      const categoryHeaders = document.querySelectorAll('.tool-category-header');
-      expect(categoryHeaders).toHaveLength(4);
-
-      const categorySections = document.querySelectorAll('.tool-category-section');
-      expect(categorySections).toHaveLength(4);
-    });
-
-    it('should render multi-select-container with compact class', async () => {
-      render(<WizardStepTools {...baseProps} />);
-      await waitForTools();
-
-      const containers = document.querySelectorAll('.multi-select-container.multi-select-compact');
-      expect(containers).toHaveLength(4);
-    });
-
-    it('should render all tools from all categories', async () => {
-      render(<WizardStepTools {...baseProps} />);
-      await waitForTools();
-
-      const allToolCards = document.querySelectorAll('.tool-card');
-      // 3 artisan + 2 gaming + 3 musical + 2 other = 10
-      expect(allToolCards).toHaveLength(10);
-    });
-  });
-
   describe('empty state', () => {
     it('should render without crashing when formData has no toolProficiencies key', async () => {
       render(<WizardStepTools
@@ -511,19 +465,6 @@ describe('WizardStepTools', () => {
       expect(screen.getByText('Step 11: Tool Proficiencies')).toBeInTheDocument();
     });
 
-    it('should render without crashing when all props are minimal', async () => {
-      render(<WizardStepTools
-        formData={{ toolProficiencies: [] }}
-        errors={{}}
-        onToolToggle={() => {}}
-        toolLimits={null}
-        toolWarnings={[]}
-        preSelectedTools={[]}
-        skillLimits={{}}
-      />);
-      await waitForTools();
-      expect(screen.getByText('Step 11: Tool Proficiencies')).toBeInTheDocument();
-    });
   });
 
   describe('memoization (areEqual)', () => {

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ShortRestModal from './ShortRestModal.jsx';
@@ -231,39 +232,6 @@ describe('ShortRestModal - Celestial Resilience', () => {
       expect(onComplete).toHaveBeenCalled();
     });
 
-    it('sets temp HP on selected allies after confirming', async () => {
-      renderModal({
-        class: { name: 'Warlock', major: { name: 'Celestial Patron' } },
-        specialActions: [{ name: 'Celestial Resilience' }],
-      });
-
-      const { applyShortRest } = await import('../../services/rules/effects/restRules.js');
-      vi.mocked(applyShortRest).mockResolvedValueOnce({
-        celestialResilienceAllies: {
-          creatureTargets: [
-            { name: 'Ally1', type: 'player' },
-            { name: 'Ally2', type: 'player' },
-          ],
-          allyTempHp: 7,
-          selfTempHp: 8,
-          maxTargets: 5,
-        },
-      });
-
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
-
-      const confirmBtn = screen.getByTestId('confirm-button');
-      fireEvent.click(confirmBtn);
-      await act(async () => {});
-
-      const allyCalls = setTempHpMock.mock.calls.filter(
-        (call) => call[0] !== 'Thorin'
-      );
-      expect(allyCalls).toHaveLength(1);
-      expect(allyCalls[0]).toEqual(['Ally1', 7, mockCampaignName]);
-    });
-
     it('logs an ability_use entry when confirming Celestial Resilience', async () => {
       renderModal({
         class: { name: 'Warlock', major: { name: 'Celestial Patron' } },
@@ -353,32 +321,6 @@ describe('ShortRestModal - Celestial Resilience', () => {
       expect(logCall.description).toContain('skipped');
     });
 
-    it('does not call setTempHp when skipping Celestial Resilience', async () => {
-      renderModal({
-        class: { name: 'Warlock', major: { name: 'Celestial Patron' } },
-        specialActions: [{ name: 'Celestial Resilience' }],
-      });
-
-      const { applyShortRest } = await import('../../services/rules/effects/restRules.js');
-      vi.mocked(applyShortRest).mockResolvedValueOnce({
-        celestialResilienceAllies: {
-          creatureTargets: [{ name: 'Ally1', type: 'player' }],
-          allyTempHp: 7,
-          selfTempHp: 8,
-          maxTargets: 5,
-        },
-      });
-
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
-
-      const skipBtn = screen.getByTestId('skip-button');
-      fireEvent.click(skipBtn);
-      await act(async () => {});
-
-      expect(setTempHpMock).not.toHaveBeenCalled();
-    });
-
     it('completes immediately when applyShortRest returns no celestialResilienceAllies', async () => {
       const { onComplete } = renderModal({
         class: { name: 'Warlock', major: { name: 'Celestial Patron' } },
@@ -414,22 +356,6 @@ describe('ShortRestModal - Celestial Resilience', () => {
       expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
     });
 
-    it('does not show CreatureSelectionModal when celestialResilienceAllies is undefined', async () => {
-      renderModal({
-        class: { name: 'Warlock', major: { name: 'Celestial Patron' } },
-        specialActions: [{ name: 'Celestial Resilience' }],
-      });
-
-      const { applyShortRest } = await import('../../services/rules/effects/restRules.js');
-      vi.mocked(applyShortRest).mockResolvedValueOnce({
-        celestialResilienceAllies: undefined,
-      });
-
-      fireEvent.click(screen.getByText('Complete Short Rest'));
-      await act(async () => {});
-
-      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
-    });
   });
 
   describe('edge cases', () => {

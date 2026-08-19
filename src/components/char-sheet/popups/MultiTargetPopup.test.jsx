@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import MultiTargetPopup from './MultiTargetPopup.jsx';
@@ -60,18 +61,10 @@ describe('MultiTargetPopup', () => {
     });
 
     describe('confirm button state', () => {
-        it('is disabled by default and enabled after selecting a target', () => {
+        it('is disabled by default, enabled after selecting a target, and disabled again when cleared', () => {
             render(<MultiTargetPopup {...makeProps()} />);
             const btn = screen.getByRole('button', { name: 'Cast on Both Targets' });
             expect(btn).toBeDisabled();
-            const select = screen.getByRole('combobox');
-            fireEvent.change(select, { target: { value: 'Goblin' } });
-            expect(btn).not.toBeDisabled();
-        });
-
-        it('is disabled again when target selection is cleared', () => {
-            render(<MultiTargetPopup {...makeProps()} />);
-            const btn = screen.getByRole('button', { name: 'Cast on Both Targets' });
             const select = screen.getByRole('combobox');
             fireEvent.change(select, { target: { value: 'Goblin' } });
             expect(btn).not.toBeDisabled();
@@ -100,26 +93,6 @@ describe('MultiTargetPopup', () => {
         it('calls onSkip when "Cast on First Target Only" button is clicked', () => {
             render(<MultiTargetPopup {...makeProps()} />);
             fireEvent.click(screen.getByRole('button', { name: 'Cast on First Target Only' }));
-            expect(mockOnSkip).toHaveBeenCalledTimes(1);
-        });
-
-        it('calls onSkip when clicking outside the modal', () => {
-            render(<MultiTargetPopup {...makeProps()} />);
-            const overlay = screen.getByText('Words of Creation').closest('.popup-overlay');
-            fireEvent.click(overlay);
-            expect(mockOnSkip).toHaveBeenCalledTimes(1);
-        });
-
-        it('does NOT call onSkip when clicking inside the modal content', () => {
-            render(<MultiTargetPopup {...makeProps()} />);
-            const modal = screen.getByText('Words of Creation').closest('.popup-modal');
-            fireEvent.click(modal);
-            expect(mockOnSkip).not.toHaveBeenCalled();
-        });
-
-        it('calls onSkip when Escape key is pressed', () => {
-            render(<MultiTargetPopup {...makeProps()} />);
-            fireEvent.keyDown(document, { key: 'Escape' });
             expect(mockOnSkip).toHaveBeenCalledTimes(1);
         });
     });

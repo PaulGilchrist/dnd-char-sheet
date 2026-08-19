@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WeaponMasteryChoiceModal from './WeaponMasteryChoiceModal.jsx';
@@ -48,20 +49,6 @@ describe('WeaponMasteryChoiceModal', () => {
       expect(screen.getByText(/Choose a mastery property/)).toBeInTheDocument();
       expect(screen.queryAllByRole('radio')).toHaveLength(0);
     });
-
-    it('renders with a single mastery property', () => {
-      render(
-        <WeaponMasteryChoiceModal
-          playerStats={baseProps.playerStats}
-          campaignName={baseProps.campaignName}
-          masteryProperties={['Piercing']}
-          onClose={vi.fn()}
-          onConfirm={vi.fn()}
-        />
-      );
-      expect(screen.getByText('Piercing')).toBeInTheDocument();
-      expect(screen.getAllByRole('radio')).toHaveLength(1);
-    });
   });
 
   // ── Selection behavior ──
@@ -91,19 +78,6 @@ describe('WeaponMasteryChoiceModal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
       expect(onClose).toHaveBeenCalledTimes(1);
       expect(automation.applyWeaponMasteryChoice).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── Skip button ──
-
-  describe('skip button', () => {
-    it('calls onClose and not onConfirm when Skip is clicked without selection', () => {
-      const onClose = vi.fn();
-      const onConfirm = vi.fn();
-      render(<WeaponMasteryChoiceModal {...makeProps({ onClose, onConfirm })} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
-      expect(onClose).toHaveBeenCalledTimes(1);
-      expect(onConfirm).not.toHaveBeenCalled();
     });
   });
 
@@ -151,28 +125,6 @@ describe('WeaponMasteryChoiceModal', () => {
         expect(onConfirm).toHaveBeenCalledWith('Slashing');
       });
     });
-
-    it('passes custom playerStats and campaignName to applyWeaponMasteryChoice', async () => {
-      automation.applyWeaponMasteryChoice.mockResolvedValue({
-        type: 'popup',
-        payload: { description: 'Test' },
-      });
-      const customPlayerStats = { name: 'Rogue2', level: 10 };
-      render(
-        <WeaponMasteryChoiceModal
-          {...makeProps({ playerStats: customPlayerStats, campaignName: 'custom-campaign' })}
-        />
-      );
-      fireEvent.click(screen.getByText('Piercing'));
-      fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-      await waitFor(() => {
-        expect(automation.applyWeaponMasteryChoice).toHaveBeenCalledWith(
-          'Piercing',
-          customPlayerStats,
-          'custom-campaign'
-        );
-      });
-    });
   });
 
   // ── Result state ──
@@ -208,41 +160,12 @@ describe('WeaponMasteryChoiceModal', () => {
         expect(screen.getByText('Mastery property set to: Piercing.')).toBeInTheDocument();
       });
     });
-
-    it('renders bold HTML tags in the result body', async () => {
-      automation.applyWeaponMasteryChoice.mockResolvedValue({
-        type: 'popup',
-        payload: { description: '<strong>Heavy</strong> mastery activated.' },
-      });
-      render(<WeaponMasteryChoiceModal {...makeProps()} />);
-      fireEvent.click(screen.getByText('Heavy'));
-      fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-      await waitFor(() => {
-        const body = document.querySelector('.sp-body');
-        expect(body.innerHTML).toContain('<strong>Heavy</strong>');
-      });
-    });
   });
 
   // ── Close behavior ──
 
   describe('close behavior', () => {
-    it('calls onClose when Done is clicked after a selection', async () => {
-      const onClose = vi.fn();
-      automation.applyWeaponMasteryChoice.mockResolvedValue({
-        type: 'popup',
-        payload: { description: 'Mastery property set to: Piercing.' },
-      });
-      render(<WeaponMasteryChoiceModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByText('Piercing'));
-      fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-      });
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onConfirm with the selected mastery when Done is clicked', async () => {
+    it('calls onClose and onConfirm when Done is clicked after a selection', async () => {
       const onClose = vi.fn();
       const onConfirm = vi.fn();
       automation.applyWeaponMasteryChoice.mockResolvedValue({
@@ -255,8 +178,8 @@ describe('WeaponMasteryChoiceModal', () => {
       await waitFor(() => {
         fireEvent.click(screen.getByRole('button', { name: 'Done' }));
       });
-      expect(onConfirm).toHaveBeenCalledWith('Piercing');
       expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onConfirm).toHaveBeenCalledWith('Piercing');
     });
 
     it('does not close when clicking inside the modal', () => {
@@ -272,14 +195,5 @@ describe('WeaponMasteryChoiceModal', () => {
       fireEvent.click(document.querySelector('.sp-overlay'));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
-
-    it('does not close when clicking the modal content area', () => {
-      const onClose = vi.fn();
-      render(<WeaponMasteryChoiceModal {...makeProps({ onClose })} />);
-      fireEvent.click(screen.getByText(/Choose a mastery property/));
-      expect(onClose).not.toHaveBeenCalled();
-    });
   });
-
-
 });

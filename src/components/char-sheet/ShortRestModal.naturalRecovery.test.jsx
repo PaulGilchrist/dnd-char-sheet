@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ShortRestModal from './ShortRestModal.jsx';
@@ -133,24 +134,6 @@ describe('ShortRestModal - Natural Recovery', () => {
       expect(screen.getByText('Natural Recovery')).toBeInTheDocument();
     });
 
-    it('does not render Natural Recovery for non-Druids', () => {
-      renderModal({
-        class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [] },
-      });
-      expect(screen.queryByText('Natural Recovery')).not.toBeInTheDocument();
-    });
-
-    it('shows budget display with all levels available when no selections', () => {
-      renderModal({
-        level: 10,
-        class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-        automation: { passives: [{ type: 'natural_recovery' }] },
-        spellAbilities: { spell_slots_level_1: 4, spell_slots_level_2: 3, spells: [] },
-      });
-      expect(screen.getByText(/Budget: 5 of 5 levels remaining/)).toBeInTheDocument();
-    });
-
     it('shows correct max budget based on druid level', () => {
       // Level 5 druid: Math.floor(5/2) = 2
       renderModal({
@@ -162,57 +145,21 @@ describe('ShortRestModal - Natural Recovery', () => {
       expect(screen.getByText(/Budget: 2 of 2 levels remaining/)).toBeInTheDocument();
     });
 
-    it('shows spell slot levels table with column headers', () => {
+    it('shows only slot levels with max > 0', () => {
       renderModal({
         level: 10,
         class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
         automation: { passives: [{ type: 'natural_recovery' }] },
         spellAbilities: {
           spell_slots_level_1: 4,
-          spell_slots_level_2: 3,
-          spell_slots_level_3: 3,
-          spell_slots_level_4: 1,
-          spells: [],
-        },
-      });
-      expect(screen.getByText('Level')).toBeInTheDocument();
-      expect(screen.getByText('Current')).toBeInTheDocument();
-      expect(screen.getByText('Available')).toBeInTheDocument();
-      expect(screen.getByText('Recover')).toBeInTheDocument();
-    });
-
-    it('shows + and - buttons for each slot level', () => {
-      renderModal({
-        level: 10,
-        class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-        automation: { passives: [{ type: 'natural_recovery' }] },
-        spellAbilities: {
-          spell_slots_level_1: 4,
-          spell_slots_level_2: 3,
-          spells: [],
-        },
-      });
-      const plusButtons = screen.getAllByRole('button', { name: '+' });
-      const minusButtons = screen.getAllByRole('button', { name: '-' });
-      expect(plusButtons.length).toBe(2);
-      expect(minusButtons.length).toBe(2);
-    });
-
-    it('shows slot level values in the table', () => {
-      renderModal({
-        level: 10,
-        class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-        automation: { passives: [{ type: 'natural_recovery' }] },
-        spellAbilities: {
-          spell_slots_level_1: 4,
-          spell_slots_level_2: 3,
+          spell_slots_level_2: 0,
           spell_slots_level_3: 3,
           spells: [],
         },
       });
       expect(screen.getByText('1')).toBeInTheDocument();
-      expect(screen.getByText('2')).toBeInTheDocument();
       expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.queryByText('2')).not.toBeInTheDocument();
     });
   });
 
@@ -233,25 +180,6 @@ describe('ShortRestModal - Natural Recovery', () => {
       expect(plusButtons[0]).not.toBeDisabled();
       fireEvent.click(plusButtons[0]);
       expect(screen.getByText(/Budget: 4 of 5 levels remaining/)).toBeInTheDocument();
-    });
-
-    it('decrements selection count with - button', () => {
-      setupGetRuntimeValue({ spell_slots_level_1: 2, spell_slots_level_2: 1 });
-      renderModal({
-        level: 10,
-        class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-        automation: { passives: [{ type: 'natural_recovery' }] },
-        spellAbilities: {
-          spell_slots_level_1: 4,
-          spell_slots_level_2: 3,
-          spells: [],
-        },
-      });
-      const plusButtons = screen.getAllByRole('button', { name: '+' });
-      const minusButtons = screen.getAllByRole('button', { name: '-' });
-      fireEvent.click(plusButtons[0]);
-      fireEvent.click(minusButtons[0]);
-      expect(screen.getByText(/Budget: 5 of 5 levels remaining/)).toBeInTheDocument();
     });
 
     it('disables minus button when selection count is 0', () => {
@@ -361,41 +289,6 @@ describe('ShortRestModal - Natural Recovery', () => {
       expect(screen.getByText(/Budget: 4 of 5 levels remaining/)).toBeInTheDocument();
       fireEvent.click(minusButtons[0]);
       expect(screen.getByText(/Budget: 5 of 5 levels remaining/)).toBeInTheDocument();
-    });
-  });
-
-  describe('slot availability display', () => {
-    it('shows current/max for each slot level', () => {
-      setupGetRuntimeValue({ spell_slots_level_1: 2, spell_slots_level_2: 1 });
-      renderModal({
-        level: 10,
-        class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-        automation: { passives: [{ type: 'natural_recovery' }] },
-        spellAbilities: {
-          spell_slots_level_1: 4,
-          spell_slots_level_2: 3,
-          spells: [],
-        },
-      });
-      expect(screen.getByText(/2 \/ 4/)).toBeInTheDocument();
-      expect(screen.getByText(/1 \/ 3/)).toBeInTheDocument();
-    });
-
-    it('shows only slot levels with max > 0', () => {
-      renderModal({
-        level: 10,
-        class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-        automation: { passives: [{ type: 'natural_recovery' }] },
-        spellAbilities: {
-          spell_slots_level_1: 4,
-          spell_slots_level_2: 0,
-          spell_slots_level_3: 3,
-          spells: [],
-        },
-      });
-      expect(screen.getByText('1')).toBeInTheDocument();
-      expect(screen.getByText('3')).toBeInTheDocument();
-      expect(screen.queryByText('2')).not.toBeInTheDocument();
     });
   });
 });

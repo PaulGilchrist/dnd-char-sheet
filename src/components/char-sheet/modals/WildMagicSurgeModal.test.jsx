@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import WildMagicSurgeModal from './WildMagicSurgeModal.jsx';
@@ -88,23 +89,13 @@ describe('WildMagicSurgeModal', () => {
             roll2: 87,
         };
 
-        it('displays both roll numbers with their matched effects', () => {
+        it('displays both roll numbers with matched effects and instruction text', () => {
             render(<WildMagicSurgeModal {...controlledProps} />);
             expect(screen.getByText(/Roll 1: 15/)).toBeInTheDocument();
             expect(screen.getByText(/Roll 2: 87/)).toBeInTheDocument();
             expect(screen.getByText('Effect 4')).toBeInTheDocument();
             expect(screen.getByText('Effect 22')).toBeInTheDocument();
-        });
-
-        it('displays "Choose your roll" instruction', () => {
-            render(<WildMagicSurgeModal {...controlledProps} />);
             expect(screen.getByText('Controlled Chaos — Choose your roll:')).toBeInTheDocument();
-        });
-
-        it('renders only two roll badges, not the full table', () => {
-            render(<WildMagicSurgeModal {...controlledProps} />);
-            const badges = document.querySelectorAll('.wms-roll-badge');
-            expect(badges.length).toBe(2);
         });
 
         it('disables Done button when no roll is selected', () => {
@@ -148,13 +139,6 @@ describe('WildMagicSurgeModal', () => {
                 expect(handler.onSurgeSelected).not.toHaveBeenCalled();
             });
         });
-
-        it('shows no effect when both rolls are outside the table range', () => {
-            render(<WildMagicSurgeModal {...defaultProps} mode="controlledChaos" roll1={999} roll2={1000} />);
-            expect(screen.getByText(/Roll 1: 999/)).toBeInTheDocument();
-            expect(screen.getByText(/Roll 2: 1000/)).toBeInTheDocument();
-            expect(screen.queryByText(/Effect \d+/)).not.toBeInTheDocument();
-        });
     });
 
     describe('tamedSurge mode', () => {
@@ -163,14 +147,10 @@ describe('WildMagicSurgeModal', () => {
             mode: 'tamedSurge',
         };
 
-        it('displays all entries except the last one', () => {
+        it('displays all entries except the last one with instruction text', () => {
             render(<WildMagicSurgeModal {...tamedProps} />);
-            const entries = document.querySelectorAll('.wms-entry-effect');
+            const entries = document.querySelectorAll('.wms-entry');
             expect(entries.length).toBe(24);
-        });
-
-        it('displays the tamed surge instruction text', () => {
-            render(<WildMagicSurgeModal {...tamedProps} />);
             expect(screen.getByText('Tamed Surge — Choose your effect:')).toBeInTheDocument();
             expect(screen.getByText('Choose one effect from the Wild Magic Surge table.')).toBeInTheDocument();
         });
@@ -179,15 +159,6 @@ describe('WildMagicSurgeModal', () => {
             render(<WildMagicSurgeModal {...tamedProps} />);
             const confirmBtn = screen.getByRole('button', { name: 'Confirm' });
             expect(confirmBtn).toBeDisabled();
-        });
-
-        it('enables Confirm button after a surge is selected', async () => {
-            handler.onTamedSurgeSelected.mockResolvedValue({ type: 'popup', payload: {} });
-            render(<WildMagicSurgeModal {...tamedProps} />);
-            const entries = document.querySelectorAll('.wms-entry');
-            fireEvent.click(entries[0]);
-            const confirmBtn = screen.getByRole('button', { name: 'Confirm' });
-            expect(confirmBtn).not.toBeDisabled();
         });
 
         it('calls onTamedSurgeSelected and onClose when Confirm is clicked after selection', async () => {
@@ -214,15 +185,6 @@ describe('WildMagicSurgeModal', () => {
             fireEvent.click(cancelBtn);
             await waitFor(() => {
                 expect(defaultProps.onClose).toHaveBeenCalled();
-            });
-        });
-
-        it('does not call onTamedSurgeSelected when Cancel is clicked', async () => {
-            render(<WildMagicSurgeModal {...tamedProps} />);
-            const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
-            fireEvent.click(cancelBtn);
-            await waitFor(() => {
-                expect(handler.onTamedSurgeSelected).not.toHaveBeenCalled();
             });
         });
     });

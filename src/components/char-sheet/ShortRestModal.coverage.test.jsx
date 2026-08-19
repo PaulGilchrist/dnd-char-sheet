@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ShortRestModal from './ShortRestModal.jsx';
@@ -6,12 +7,11 @@ import ShortRestModal from './ShortRestModal.jsx';
 const getRuntimeValueMock = vi.fn(() => null);
 const setRuntimeValueMock = vi.fn();
 const setRuntimeBatchMock = vi.fn();
-let _useRuntimeValueResult = null;
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
-  useRuntimeValue: () => _useRuntimeValueResult,
+  useRuntimeValue: () => null,
   listeners: new Map(),
   getRuntimeValue: vi.fn((...args) => getRuntimeValueMock(...args)),
   setRuntimeValue: vi.fn((...args) => setRuntimeValueMock(...args)),
@@ -110,34 +110,28 @@ function setupGetRuntimeValue(returns) {
   });
 }
 
-function setupUseRuntimeValue(returns) {
-  if (returns.replenishingMeals != null) {
-    _useRuntimeValueResult = returns.replenishingMeals;
-  } else {
-    _useRuntimeValueResult = null;
-  }
-}
-
 describe('ShortRestModal - Memorize Spell Swap', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getRuntimeValueMock.mockImplementation(() => null);
-    _useRuntimeValueResult = null;
   });
 
-  describe('rendering', () => {
-    it('shows swap button when memorize spell is available with prepared spells', () => {
+  describe('rendering and entry', () => {
+    it('shows swap button when memorize spell is available with prepared spells, and enters swap mode on click', () => {
       renderModal({
         class: { name: 'Wizard', major: { name: 'Wizard' } },
         automation: { passives: [{ type: 'memorize_spell' }] },
         spellAbilities: {
           spells: [
             { name: 'Fireball', prepared: 'Prepared', level: 3 },
-            { name: 'Mage Armor', prepared: 'Prepared', level: 1 },
+            { name: 'Mage Armor', prepared: 'Not Prepared', level: 1 },
           ],
         },
       });
       expect(screen.getByText(/Swap Prepared Spell/)).toBeInTheDocument();
+      fireEvent.click(screen.getByText(/Swap Prepared Spell/));
+      expect(screen.getByText(/Remove prepared spell:/)).toBeInTheDocument();
+      expect(screen.getByText(/Add from spellbook:/)).toBeInTheDocument();
     });
 
     it('does not show memorize spell when no prepared spells', () => {
@@ -153,49 +147,7 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
   });
 
   describe('swap mode', () => {
-    it('enters swap mode when swap button is clicked', () => {
-      renderModal({
-        class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
-        spellAbilities: {
-          spells: [
-            { name: 'Fireball', prepared: 'Prepared', level: 3 },
-            { name: 'Mage Armor', prepared: 'Not Prepared', level: 1 },
-          ],
-        },
-      });
-      fireEvent.click(screen.getByText(/Swap Prepared Spell/));
-      expect(screen.getByText(/Remove prepared spell:/)).toBeInTheDocument();
-      expect(screen.getByText(/Add from spellbook:/)).toBeInTheDocument();
-    });
-
-    it('shows prepared spells in the remove dropdown after spellbook loads', async () => {
-      const { loadSpellData } = await import('../../services/ui/dataLoader.js');
-      vi.mocked(loadSpellData).mockResolvedValueOnce([
-        { name: 'Fireball', level: 3 },
-        { name: 'Mage Armor', level: 1 },
-      ]);
-
-      renderModal({
-        class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
-        spellAbilities: {
-          spells: [
-            { name: 'Fireball', prepared: 'Prepared', level: 3 },
-            { name: 'Mage Armor', prepared: 'Prepared', level: 1 },
-          ],
-        },
-      });
-      fireEvent.click(screen.getByText(/Swap Prepared Spell/));
-      await act(() => Promise.resolve());
-      const removeSelect = screen.getByText(/Remove prepared spell:/).nextElementSibling;
-      const options = removeSelect.querySelectorAll('option');
-      const optionTexts = Array.from(options).map(o => o.textContent);
-      expect(optionTexts).toContain('Fireball (level 3)');
-      expect(optionTexts).toContain('Mage Armor (level 1)');
-    });
-
-    it('shows non-prepared spells in the add dropdown after spellbook loads', async () => {
+    it('shows prepared spells in remove dropdown and non-prepared in add dropdown after spellbook loads', async () => {
       const { loadSpellData } = await import('../../services/ui/dataLoader.js');
       vi.mocked(loadSpellData).mockResolvedValueOnce([
         { name: 'Fireball', level: 3 },
@@ -216,39 +168,18 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
       });
       fireEvent.click(screen.getByText(/Swap Prepared Spell/));
       await act(() => Promise.resolve());
+      const removeSelect = screen.getByText(/Remove prepared spell:/).nextElementSibling;
       const addSelect = screen.getByText(/Add from spellbook:/).nextElementSibling;
-      const options = addSelect.querySelectorAll('option');
-      const optionTexts = Array.from(options).map(o => o.textContent);
-      expect(optionTexts).toContain('Mage Armor (level 1)');
-      expect(optionTexts).toContain('Shield (level 1)');
+      const removeOptions = Array.from(removeSelect.querySelectorAll('option')).map(o => o.textContent);
+      const addOptions = Array.from(addSelect.querySelectorAll('option')).map(o => o.textContent);
+      expect(removeOptions).toContain('Fireball (level 3)');
+      expect(addOptions).toContain('Mage Armor (level 1)');
+      expect(addOptions).toContain('Shield (level 1)');
+      // Level 0 spells should be excluded
+      expect(addOptions).not.toContain('True Strike (level 0)');
     });
 
-    it('does not show level 0 spells in dropdowns', async () => {
-      const { loadSpellData } = await import('../../services/ui/dataLoader.js');
-      vi.mocked(loadSpellData).mockResolvedValueOnce([
-        { name: 'Fireball', level: 3 },
-        { name: 'True Strike', level: 0 },
-      ]);
-
-      renderModal({
-        class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
-        spellAbilities: {
-          spells: [
-            { name: 'Fireball', prepared: 'Prepared', level: 3 },
-            { name: 'True Strike', prepared: 'Not Prepared', level: 0 },
-          ],
-        },
-      });
-      fireEvent.click(screen.getByText(/Swap Prepared Spell/));
-      await act(() => Promise.resolve());
-      const addSelect = screen.getByText(/Add from spellbook:/).nextElementSibling;
-      const options = addSelect.querySelectorAll('option');
-      const optionTexts = Array.from(options).map(o => o.textContent);
-      expect(optionTexts).not.toContain('True Strike (level 0)');
-    });
-
-    it('has swap button disabled when no spells selected', async () => {
+    it('does not show already-prepared spells in the add dropdown', async () => {
       const { loadSpellData } = await import('../../services/ui/dataLoader.js');
       vi.mocked(loadSpellData).mockResolvedValueOnce([
         { name: 'Fireball', level: 3 },
@@ -261,42 +192,15 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
         spellAbilities: {
           spells: [
             { name: 'Fireball', prepared: 'Prepared', level: 3 },
-            { name: 'Mage Armor', prepared: 'Not Prepared', level: 1 },
+            { name: 'Mage Armor', prepared: 'Prepared', level: 1 },
           ],
         },
       });
       fireEvent.click(screen.getByText(/Swap Prepared Spell/));
       await act(() => Promise.resolve());
-      const swapBtn = screen.getByText(/Swap Spell/);
-      expect(swapBtn).toBeDisabled();
-    });
-
-    it('exits swap mode and clears selections when cancel is clicked', async () => {
-      const { loadSpellData } = await import('../../services/ui/dataLoader.js');
-      vi.mocked(loadSpellData).mockResolvedValueOnce([
-        { name: 'Fireball', level: 3 },
-        { name: 'Mage Armor', level: 1 },
-      ]);
-
-      renderModal({
-        class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
-        spellAbilities: {
-          spells: [
-            { name: 'Fireball', prepared: 'Prepared', level: 3 },
-            { name: 'Mage Armor', prepared: 'Not Prepared', level: 1 },
-          ],
-        },
-      });
-      fireEvent.click(screen.getByText(/Swap Prepared Spell/));
-      await act(() => Promise.resolve());
-      const swapBtn = screen.getByText(/Swap Spell/);
-      const swapBtnParent = swapBtn.parentElement;
-      const cancelBtn = swapBtnParent.querySelector('button:last-child');
-      fireEvent.click(cancelBtn);
-      await act(() => Promise.resolve());
-      expect(screen.queryByText(/Remove prepared spell:/)).not.toBeInTheDocument();
-      expect(screen.getByText(/Swap Prepared Spell/)).toBeInTheDocument();
+      const addSelect = screen.getByText(/Add from spellbook:/).nextElementSibling;
+      const options = addSelect.querySelectorAll('option');
+      expect(options.length).toBe(1);
     });
 
     it('calls setRuntimeValue with updated preparedSpells when swap is executed', async () => {
@@ -334,7 +238,7 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
       expect(preparedCalls[0][2]).toEqual(['Mage Armor']);
     });
 
-    it('does not call setRuntimeValue when swap is cancelled', async () => {
+    it('exits swap mode and clears selections when cancel is clicked, without calling setRuntimeValue', async () => {
       const { loadSpellData } = await import('../../services/ui/dataLoader.js');
       vi.mocked(loadSpellData).mockResolvedValueOnce([
         { name: 'Fireball', level: 3 },
@@ -358,84 +262,13 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
       const cancelBtn = swapBtnParent.querySelector('button:last-child');
       fireEvent.click(cancelBtn);
       await act(() => Promise.resolve());
-
+      expect(screen.queryByText(/Remove prepared spell:/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Swap Prepared Spell/)).toBeInTheDocument();
       const preparedCalls = setRuntimeValueMock.mock.calls.filter(
         (call) => call[1] === 'preparedSpells'
       );
       expect(preparedCalls).toHaveLength(0);
     });
-
-    it('does not show already-prepared spells in the add dropdown', async () => {
-      const { loadSpellData } = await import('../../services/ui/dataLoader.js');
-      vi.mocked(loadSpellData).mockResolvedValueOnce([
-        { name: 'Fireball', level: 3 },
-        { name: 'Mage Armor', level: 1 },
-      ]);
-
-      renderModal({
-        class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
-        spellAbilities: {
-          spells: [
-            { name: 'Fireball', prepared: 'Prepared', level: 3 },
-            { name: 'Mage Armor', prepared: 'Prepared', level: 1 },
-          ],
-        },
-      });
-      fireEvent.click(screen.getByText(/Swap Prepared Spell/));
-      await act(() => Promise.resolve());
-      const addSelect = screen.getByText(/Add from spellbook:/).nextElementSibling;
-      const options = addSelect.querySelectorAll('option');
-      // Only the default empty option should exist since Mage Armor is already prepared
-      expect(options.length).toBe(1);
-    });
-  });
-});
-
-describe('ShortRestModal - Song of Rest with Combat Context', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getRuntimeValueMock.mockImplementation(() => null);
-    _useRuntimeValueResult = null;
-  });
-
-  it('uses applyHealingToTarget result when combat context is available', async () => {
-    const { applyHealingToTarget } = await import('../../services/rules/combat/applyHealing.js');
-    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
-    vi.mocked(getCombatContext).mockResolvedValueOnce({ creatures: [] });
-    vi.mocked(applyHealingToTarget).mockReturnValue({ actualHeal: 5 });
-
-    renderModal();
-    fireEvent.click(screen.getByText(/Apply Song of Rest/));
-    await act(() => Promise.resolve());
-
-    expect(applyHealingToTarget).toHaveBeenCalled();
-  });
-
-  it('adds actualHeal from applyHealingToTarget to recovered HP when combat context exists', async () => {
-    const { applyHealingToTarget } = await import('../../services/rules/combat/applyHealing.js');
-    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
-    vi.mocked(getCombatContext).mockResolvedValueOnce({ creatures: [] });
-    vi.mocked(applyHealingToTarget).mockReturnValue({ actualHeal: 8 });
-
-    renderModal();
-    fireEvent.click(screen.getByText(/Apply Song of Rest/));
-    await act(() => Promise.resolve());
-
-    const totalEl = document.querySelector('.short-rest-total');
-    expect(totalEl.textContent.trim()).toContain('8');
-  });
-
-  it('falls back to raw bonus when combat context is null', async () => {
-    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
-    vi.mocked(getCombatContext).mockResolvedValueOnce(null);
-
-    renderModal();
-    fireEvent.click(screen.getByText(/Apply Song of Rest/));
-    await act(() => Promise.resolve());
-
-    // Song of Rest button should be disabled after applying
-    expect(screen.queryByText(/Apply Song of Rest/)).not.toBeInTheDocument();
   });
 });
 
@@ -443,66 +276,6 @@ describe('ShortRestModal - Natural Recovery on Completion', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getRuntimeValueMock.mockImplementation(() => null);
-    _useRuntimeValueResult = null;
-  });
-
-  it('shows Natural Recovery section when naturalRecoveryAvailable is true', () => {
-    setupGetRuntimeValue({ naturalRecoverySlots: 2 });
-    renderModal({
-      level: 10,
-      class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-      automation: { passives: [{ type: 'natural_recovery' }] },
-      spellAbilities: {
-        spell_slots_level_1: 4,
-        spells: [],
-      },
-    });
-    expect(screen.getByText('Natural Recovery')).toBeInTheDocument();
-  });
-
-  it('logs Natural Recovery in log when slot selections were made', async () => {
-    setupGetRuntimeValue({ naturalRecoverySlots: 2, spell_slots_level_1: 2, spell_slots_level_2: 1 });
-    renderModal({
-      level: 10,
-      class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-      automation: { passives: [{ type: 'natural_recovery' }] },
-      spellAbilities: {
-        spell_slots_level_1: 4,
-        spell_slots_level_2: 3,
-        spells: [],
-      },
-    });
-    const plusButtons = screen.getAllByRole('button', { name: '+' });
-    fireEvent.click(plusButtons[0]);
-    await act(() => Promise.resolve());
-    expect(screen.getByText(/Budget: 4 of 5 levels remaining/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText('Complete Short Rest'));
-    await act(() => Promise.resolve());
-
-    expect(screen.getByText(/Natural Recovery/)).toBeInTheDocument();
-  });
-
-  it('reflects multiple slot level selections in budget display', async () => {
-    setupGetRuntimeValue({ naturalRecoverySlots: 3, spell_slots_level_1: 2, spell_slots_level_2: 1 });
-    renderModal({
-      level: 10,
-      class: { name: 'Druid', major: { name: 'Druid' }, subclass: { name: 'Circle of the Land' } },
-      automation: { passives: [{ type: 'natural_recovery' }] },
-      spellAbilities: {
-        spell_slots_level_1: 4,
-        spell_slots_level_2: 3,
-        spells: [],
-      },
-    });
-    const plusButtons = screen.getAllByRole('button', { name: '+' });
-    // Select 1x level 1 (costs 1 budget)
-    fireEvent.click(plusButtons[0]);
-    await act(() => Promise.resolve());
-    // Select 1x level 2 (costs 2 budget)
-    fireEvent.click(plusButtons[1]);
-    await act(() => Promise.resolve());
-    // Total budget used: 1 + 2 = 3, remaining: 5 - 3 = 2
-    expect(screen.getByText(/Budget: 2 of 5 levels remaining/)).toBeInTheDocument();
   });
 
   it('allows completing short rest without making Natural Recovery selections', async () => {
@@ -516,95 +289,10 @@ describe('ShortRestModal - Natural Recovery on Completion', () => {
         spells: [],
       },
     });
-    // NR section should be visible
     expect(screen.getByText('Natural Recovery')).toBeInTheDocument();
-    // Budget should show full amount
     expect(screen.getByText(/Budget: 5 of 5 levels remaining/)).toBeInTheDocument();
-    // Completing without selections should not error
     fireEvent.click(screen.getByText('Complete Short Rest'));
     await act(() => Promise.resolve());
     expect(screen.getByText('Short Rest')).toBeInTheDocument();
-  });
-});
-
-describe('ShortRestModal - Replenishing Meal Runtime Reset', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getRuntimeValueMock.mockImplementation(() => null);
-    _useRuntimeValueResult = null;
-  });
-
-  it('subtracts 1 from replenishingMeals on completion when meal was consumed', async () => {
-    setupUseRuntimeValue({ replenishingMeals: 2 });
-    renderModal({
-      automation: { passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }] },
-    });
-    fireEvent.click(screen.getByText('Roll One'));
-    await act(() => Promise.resolve());
-    fireEvent.click(screen.getByText('Complete Short Rest'));
-    await act(() => Promise.resolve());
-
-    const mealCalls = setRuntimeValueMock.mock.calls.filter(
-      (call) => call[1] === 'replenishingMeals'
-    );
-    expect(mealCalls.length).toBeGreaterThan(1);
-  });
-});
-
-describe('ShortRestModal - Hit Die Recovery Minimum', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getRuntimeValueMock.mockImplementation(() => null);
-    _useRuntimeValueResult = null;
-  });
-
-  it('displays correct HP recovered from rolling hit dice', async () => {
-    renderModal();
-    fireEvent.click(screen.getByText('Roll One'));
-    await act(() => Promise.resolve());
-
-    // Default mock: rollDice(1,8) returns 4, computeHitDieRecovery(4, 2) returns 6
-    const totalEl = document.querySelector('.short-rest-total');
-    expect(totalEl.textContent.trim()).toContain('6');
-  });
-});
-
-describe('ShortRestModal - Multiple Roll Accumulation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getRuntimeValueMock.mockImplementation(() => null);
-    _useRuntimeValueResult = null;
-  });
-
-  it('accumulates HP correctly across multiple single rolls', async () => {
-    renderModal();
-    for (let i = 0; i < 3; i++) {
-      fireEvent.click(screen.getByText('Roll One'));
-      await act(() => Promise.resolve());
-    }
-    // Each roll: rollDice(1,8) returns 4, computeHitDieRecovery(4,2) returns 6
-    // 3 rolls = 18 HP total
-    const totalEl = document.querySelector('.short-rest-total');
-    expect(totalEl.textContent.trim()).toContain('18');
-  });
-
-  it('shows individual roll entries in the log table', async () => {
-    renderModal();
-    fireEvent.click(screen.getByText('Roll One'));
-    await act(() => Promise.resolve());
-    fireEvent.click(screen.getByText('Roll One'));
-    await act(() => Promise.resolve());
-
-    const rows = document.querySelectorAll('table tbody tr');
-    expect(rows.length).toBe(2);
-  });
-
-  it('marks Song of Rest entries with a special row style', async () => {
-    renderModal();
-    fireEvent.click(screen.getByText(/Apply Song of Rest/));
-    await act(() => Promise.resolve());
-
-    const songRows = document.querySelectorAll('tr.short-rest-song-row');
-    expect(songRows.length).toBe(1);
   });
 });

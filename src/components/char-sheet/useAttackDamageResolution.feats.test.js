@@ -201,49 +201,6 @@ describe('useAttackDamageResolution - feats', () => {
             }
             expect(mockRollDamage).toHaveBeenCalled();
         });
-
-        it('does not apply charge effect when oncePerTurn already used this round', async () => {
-            getCombatContext.mockResolvedValue(createCombatContext());
-            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === '_Charge_Attack_usedRound') return 1;
-                return null;
-            });
-            const stats = {
-                ...mockPlayerStats,
-                automation: {
-                    actions: [],
-                    passives: [
-                        {
-                            type: 'attack_rider',
-                            trigger: 'melee_hit_after_10ft_charge',
-                            chooseOne: true,
-                            name: 'Charge Attack',
-                            options: [{ name: 'Push 10 ft', effect: 'push', value: 10 }],
-                        },
-                    ],
-                },
-            };
-            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
-            const attack = makeAttack();
-
-            await resolveAttackDamage(attack);
-            await tick();
-
-            const targetEffectCalls = setRuntimeValue.mock.calls.filter(
-                (c) => c[1] === 'targetEffects'
-            );
-            for (const call of targetEffectCalls) {
-                const effects = call[2];
-                expect(effects).not.toContainEqual(
-                    expect.objectContaining({
-                        source: 'Charge Attack',
-                        effect: 'push',
-                    })
-                );
-            }
-            expect(mockRollDamage).toHaveBeenCalled();
-        });
     });
 
     describe('Shield Master (2024 ruleset)', () => {

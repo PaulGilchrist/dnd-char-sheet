@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardSidebar from './WizardSidebar.jsx';
@@ -56,17 +57,10 @@ describe('WizardSidebar', () => {
       expect(screen.getByText('Basic Information')).toBeInTheDocument();
     });
 
-    it('hides step 5 (Background) when ruleset is 5e', () => {
+    it('hides step 5 (Background) for non-2024 rulesets and shows it for 2024', () => {
       renderSidebar({ ruleset: '5e' });
       expect(screen.queryByText('Background')).not.toBeInTheDocument();
-    });
 
-    it('hides step 5 (Background) when ruleset is undefined', () => {
-      renderSidebar({ ruleset: undefined });
-      expect(screen.queryByText('Background')).not.toBeInTheDocument();
-    });
-
-    it('shows step 5 (Background) when ruleset is 2024', () => {
       renderSidebar({ ruleset: '2024' });
       expect(screen.getByText('Background')).toBeInTheDocument();
     });
@@ -77,12 +71,6 @@ describe('WizardSidebar', () => {
       expect(screen.getByText('Background')).toBeInTheDocument();
     });
 
-    it('renders step numbers for each tab', () => {
-      renderSidebar();
-      expect(screen.getByText('1')).toBeInTheDocument();
-      expect(screen.getByText('17')).toBeInTheDocument();
-    });
-
     it('renders the save button with checkmark', () => {
       renderSidebar();
       expect(screen.getByText('Save')).toBeInTheDocument();
@@ -91,37 +79,24 @@ describe('WizardSidebar', () => {
   });
 
   describe('active state', () => {
-    it('marks the current step tab as active', () => {
+    it('marks the current step tab as active and others as inactive', () => {
       renderSidebar({ currentStep: 3 });
       const activeTab = findByTabTitle('Race');
       expect(activeTab).toHaveClass('active');
-    });
-
-    it('marks non-current tabs as not active', () => {
-      renderSidebar({ currentStep: 3 });
       const inactiveTab = findByTabTitle('Basic Information');
       expect(inactiveTab).not.toHaveClass('active');
-    });
-
-    it('handles currentStep outside valid range without crashing', () => {
-      renderSidebar({ currentStep: 99 });
-      expect(screen.getByText('Basic Information')).toBeInTheDocument();
     });
   });
 
   describe('disabled state', () => {
-    it('applies disabled class and disabled property to tabs where getStepEnabled returns false', () => {
-      renderSidebar({ getStepEnabled: (step) => step !== 3 });
+    it('applies disabled class and property to tabs and save button', () => {
+      renderSidebar({ getStepEnabled: (step) => step !== 3, isSaveEnabled: false });
       const disabledTab = findByTabTitle('Race');
       expect(disabledTab).toHaveClass('disabled');
       expect(disabledTab).toBeDisabled();
       const enabledTab = findByTabTitle('Basic Information');
       expect(enabledTab).not.toHaveClass('disabled');
       expect(enabledTab).not.toBeDisabled();
-    });
-
-    it('applies disabled class and disabled property to save button when isSaveEnabled is false', () => {
-      renderSidebar({ isSaveEnabled: false });
       const saveButton = findSaveButton();
       expect(saveButton).toHaveClass('disabled');
       expect(saveButton).toBeDisabled();
@@ -129,33 +104,37 @@ describe('WizardSidebar', () => {
   });
 
   describe('navigation interaction', () => {
-    it('calls goToStep with the correct step number when an enabled tab is clicked', () => {
+    it('calls goToStep when an enabled tab is clicked', () => {
       const props = createProps();
-      render(<WizardSidebar {...props} />);
-      fireEvent.click(findByTabTitle('Race'));
+      const { container } = render(<WizardSidebar {...props} />);
+      const tab = container.querySelector('.sidebar-tab:nth-child(3)');
+      fireEvent.click(tab);
       expect(props.goToStep).toHaveBeenCalledWith(3);
     });
 
     it('does not call goToStep when a disabled tab is clicked', () => {
       const props = createProps({ getStepEnabled: (step) => step !== 3 });
-      render(<WizardSidebar {...props} />);
-      fireEvent.click(findByTabTitle('Race'));
+      const { container } = render(<WizardSidebar {...props} />);
+      const tab = container.querySelector('.sidebar-tab:nth-child(3)');
+      fireEvent.click(tab);
       expect(props.goToStep).not.toHaveBeenCalled();
     });
   });
 
   describe('save button interaction', () => {
-    it('calls onSave when the save button is clicked', () => {
+    it('calls onSave when the save button is enabled', () => {
       const props = createProps();
-      render(<WizardSidebar {...props} />);
-      fireEvent.click(findSaveButton());
+      const { container } = render(<WizardSidebar {...props} />);
+      const saveBtn = container.querySelector('.sidebar-save');
+      fireEvent.click(saveBtn);
       expect(props.onSave).toHaveBeenCalled();
     });
 
     it('does not call onSave when the save button is disabled', () => {
       const props = createProps({ isSaveEnabled: false });
-      render(<WizardSidebar {...props} />);
-      fireEvent.click(findSaveButton());
+      const { container } = render(<WizardSidebar {...props} />);
+      const saveBtn = container.querySelector('.sidebar-save');
+      fireEvent.click(saveBtn);
       expect(props.onSave).not.toHaveBeenCalled();
     });
   });

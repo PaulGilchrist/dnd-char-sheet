@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useAttackDamageResolution from './useAttackDamageResolution.js';
 
@@ -161,45 +162,20 @@ describe('useAttackDamageResolution', () => {
     });
 
     describe('two weapon fighting modifier', () => {
-        it('appends ability modifier for light bonus action weapons', async () => {
+        it.each([
+            { scenario: 'appends modifier', attack: { name: 'Handaxe', damage: '1d6', damageType: 'slashing', type: 'Bonus Action', properties: ['Light'], abilityName: 'Strength' }, expected: /\+ 3 \[Strength\]/ },
+            { scenario: 'no modifier for non-light', attack: { name: 'Warhammer', damage: '1d8', damageType: 'bludgeoning', type: 'Bonus Action', properties: [], abilityName: 'Strength' }, expected: null },
+            { scenario: 'no modifier when abilityName missing', attack: { name: 'Handaxe', damage: '1d6', damageType: 'slashing', type: 'Bonus Action', properties: ['Light'] }, expected: null },
+        ])('TWF: $scenario', async ({ attack, expected }) => {
             hasTwoWeaponFighting.mockReturnValue(true);
             const { resolveAttackDamage } = useAttackDamageResolution(deps);
-            const attack = makeAttack({
-                name: 'Handaxe',
-                damage: '1d6',
-                damageType: 'slashing',
-                type: 'Bonus Action',
-                properties: ['Light'],
-                abilityName: 'Strength',
-            });
-
-            await resolveAttackDamage(attack);
-
-            expect(deps.rollDamage).toHaveBeenCalledWith(
-                'Handaxe',
-                expect.stringMatching(/\+ 3 \[Strength\]/),
-                expect.any(Number),
-                expect.any(Array),
-                expect.any(Number),
-                expect.any(Object),
-            );
-        });
-
-        it('does not append modifier for non-light weapons', async () => {
-            const { resolveAttackDamage } = useAttackDamageResolution(deps);
-            const attack = makeAttack({
-                name: 'Warhammer',
-                damage: '1d8',
-                damageType: 'bludgeoning',
-                type: 'Bonus Action',
-                properties: [],
-                abilityName: 'Strength',
-            });
-
-            await resolveAttackDamage(attack);
-
+            await resolveAttackDamage(makeAttack(attack));
             const formula = deps.rollDamage.mock.calls[0][1];
-            expect(formula).not.toMatch(/\+ 3 \[Strength\]/);
+            if (expected) {
+                expect(formula).toMatch(expected);
+            } else {
+                expect(formula).not.toMatch(/\+ \d+ \[Strength\]/);
+            }
         });
 
         it('does not append when ability modifier is zero', async () => {
@@ -207,52 +183,17 @@ describe('useAttackDamageResolution', () => {
             const stats = { ...deps.playerStats, abilities: [{ name: 'Strength', bonus: 0 }] };
             const testDeps = createMockDeps({ playerStats: stats });
             const { resolveAttackDamage } = useAttackDamageResolution(testDeps);
-            const attack = makeAttack({
-                name: 'Handaxe',
-                damage: '1d6',
-                damageType: 'slashing',
-                type: 'Bonus Action',
-                properties: ['Light'],
-                abilityName: 'Strength',
-            });
-
+            const attack = makeAttack({ name: 'Handaxe', damage: '1d6', damageType: 'slashing', type: 'Bonus Action', properties: ['Light'], abilityName: 'Strength' });
             await resolveAttackDamage(attack);
-
             const formula = testDeps.rollDamage.mock.calls[0][1];
             expect(formula).not.toMatch(/\+ 0 \[Strength\]/);
-        });
-
-        it('does not append when abilityName is missing', async () => {
-            hasTwoWeaponFighting.mockReturnValue(true);
-            const { resolveAttackDamage } = useAttackDamageResolution(deps);
-            const attack = makeAttack({
-                name: 'Handaxe',
-                damage: '1d6',
-                damageType: 'slashing',
-                type: 'Bonus Action',
-                properties: ['Light'],
-            });
-
-            await resolveAttackDamage(attack);
-
-            const formula = deps.rollDamage.mock.calls[0][1];
-            expect(formula).not.toMatch(/\[Strength\]/);
         });
 
         it('does not duplicate modifier already in formula', async () => {
             hasTwoWeaponFighting.mockReturnValue(true);
             const { resolveAttackDamage } = useAttackDamageResolution(deps);
-            const attack = makeAttack({
-                name: 'Handaxe',
-                damage: '1d6+3',
-                damageType: 'slashing',
-                type: 'Bonus Action',
-                properties: ['Light'],
-                abilityName: 'Strength',
-            });
-
+            const attack = makeAttack({ name: 'Handaxe', damage: '1d6+3', damageType: 'slashing', type: 'Bonus Action', properties: ['Light'], abilityName: 'Strength' });
             await resolveAttackDamage(attack);
-
             const formula = deps.rollDamage.mock.calls[0][1];
             const matches = formula.match(/\+ 3 \[Strength\]/g);
             expect(matches).toHaveLength(1);

@@ -36,19 +36,14 @@ describe('AvatarImage', () => {
       expect(screen.getByText('T')).toBeInTheDocument();
     });
 
-    it('renders "?" when name is empty', () => {
-      render(<AvatarImage name="" />);
-      expect(screen.getByText('?')).toBeInTheDocument();
-    });
-
-    it('renders "?" when name is null', () => {
-      render(<AvatarImage name={null} />);
-      expect(screen.getByText('?')).toBeInTheDocument();
-    });
-
-    it('renders "?" when name is undefined', () => {
-      render(<AvatarImage />);
-      expect(screen.getByText('?')).toBeInTheDocument();
+    // @cleaned-by-ai
+    it('renders "?" for falsy names (empty, null, undefined)', () => {
+      const { container: c1 } = render(<AvatarImage name="" />);
+      expect(c1.querySelector('span')).toHaveTextContent('?');
+      const { container: c2 } = render(<AvatarImage name={null} />);
+      expect(c2.querySelector('span')).toHaveTextContent('?');
+      const { container: c3 } = render(<AvatarImage />);
+      expect(c3.querySelector('span')).toHaveTextContent('?');
     });
 
     it('renders uppercase first character for the initial', () => {
@@ -123,31 +118,29 @@ describe('AvatarImage', () => {
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
     });
 
-    it('sets role="button" and tabIndex=0 when onClick is provided', () => {
+    // @cleaned-by-ai
+    it('sets role="button" and tabIndex=0 when onClick is provided, omits them otherwise', () => {
       const onClick = vi.fn();
-      const { container } = render(<AvatarImage name="Test" imagePath="/avatar.png" onClick={onClick} />);
-      const wrapper = container.querySelector('.avatar-wrapper');
-      expect(wrapper).toHaveAttribute('role', 'button');
-      expect(wrapper).toHaveAttribute('tabindex', '0');
+      const { container: withClick } = render(<AvatarImage name="Test" imagePath="/avatar.png" onClick={onClick} />);
+      const wrapperWith = withClick.querySelector('.avatar-wrapper');
+      expect(wrapperWith).toHaveAttribute('role', 'button');
+      expect(wrapperWith).toHaveAttribute('tabindex', '0');
+
+      const { container: withoutClick } = render(<AvatarImage name="Test" imagePath="/avatar.png" />);
+      const wrapperWithout = withoutClick.querySelector('.avatar-wrapper');
+      expect(wrapperWithout).not.toHaveAttribute('role');
+      expect(wrapperWithout).not.toHaveAttribute('tabindex');
     });
 
-    it('omits role and tabIndex when onClick is not provided', () => {
-      const { container } = render(<AvatarImage name="Test" imagePath="/avatar.png" />);
-      const wrapper = container.querySelector('.avatar-wrapper');
-      expect(wrapper).not.toHaveAttribute('role');
-      expect(wrapper).not.toHaveAttribute('tabindex');
-    });
+    // @cleaned-by-ai
+    it('applies cursor pointer style when onClick is provided, omits it otherwise', () => {
+      const { container: withClick } = render(<AvatarImage name="Test" imagePath="/avatar.png" onClick={() => {}} />);
+      const wrapperWith = withClick.querySelector('.avatar-wrapper');
+      expect(wrapperWith).toHaveStyle({ cursor: 'pointer' });
 
-    it('applies cursor pointer style when onClick is provided', () => {
-      const { container } = render(<AvatarImage name="Test" imagePath="/avatar.png" onClick={() => {}} />);
-      const wrapper = container.querySelector('.avatar-wrapper');
-      expect(wrapper).toHaveStyle({ cursor: 'pointer' });
-    });
-
-    it('does not apply cursor pointer when onClick is not provided', () => {
-      const { container } = render(<AvatarImage name="Test" imagePath="/avatar.png" />);
-      const wrapper = container.querySelector('.avatar-wrapper');
-      expect(wrapper).not.toHaveStyle({ cursor: 'pointer' });
+      const { container: withoutClick } = render(<AvatarImage name="Test" imagePath="/avatar.png" />);
+      const wrapperWithout = withoutClick.querySelector('.avatar-wrapper');
+      expect(wrapperWithout).not.toHaveStyle({ cursor: 'pointer' });
     });
   });
 });

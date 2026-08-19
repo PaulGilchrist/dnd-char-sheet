@@ -1,4 +1,11 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Removed 3 redundant/low-value tests:
+//   - "should show points remaining in description" → covered by header test (asserts step-description text)
+//   - "should display point cost for each ability score" → low value, only asserts "Cost: 0" ×6 with no variation
+//   - "should not show background ability section for 5e" → negative assertion redundant with 2024 positive test
+// Consolidated 2 input-change callback tests into 1 parameterized test
+
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepAbilities from './WizardStepAbilities.jsx';
@@ -166,26 +173,18 @@ describe('WizardStepAbilities', () => {
       });
     });
 
-    it('should call onAbilityBaseScoreChange when base score input changes', async () => {
+    it('should call the appropriate callback when base score or misc increase inputs change', async () => {
+      const baseProps = createMockProps();
       setupFetchMock('5e');
-      const props = createMockProps();
-      await renderWizard(props);
+      await renderWizard(baseProps);
 
       const baseInputs = screen.getAllByLabelText('Base Score (8-15)');
       fireEvent.change(baseInputs[0], { target: { value: '10' } });
-
-      expect(props.onAbilityBaseScoreChange).toHaveBeenCalledWith(0, '10');
-    });
-
-    it('should call onAbilityMiscIncreaseChange when misc increase input changes', async () => {
-      setupFetchMock('5e');
-      const props = createMockProps();
-      await renderWizard(props);
+      expect(baseProps.onAbilityBaseScoreChange).toHaveBeenCalledWith(0, '10');
 
       const miscInputs = screen.getAllByLabelText('Misc Increase');
       fireEvent.change(miscInputs[0], { target: { value: '3' } });
-
-      expect(props.onAbilityMiscIncreaseChange).toHaveBeenCalledWith(0, 3);
+      expect(baseProps.onAbilityMiscIncreaseChange).toHaveBeenCalledWith(0, 3);
     });
 
     it('should show error styling and message for invalid base score or misc increase', async () => {
@@ -225,15 +224,6 @@ describe('WizardStepAbilities', () => {
       expect(errorTotals.length).toBeGreaterThan(0);
     });
 
-    it('should display point cost for each ability score', async () => {
-      setupFetchMock('5e');
-      const props = createMockProps();
-      await renderWizard(props);
-
-      const pointCosts = screen.getAllByText('Cost: 0');
-      expect(pointCosts.length).toBe(6);
-    });
-
     it('should show misc points warning when misc increases total more than 0', async () => {
       setupFetchMock('5e');
       const props = createMockProps({
@@ -252,24 +242,6 @@ describe('WizardStepAbilities', () => {
       await renderWizard(props);
 
       expect(screen.getByText(/Misc increases total 3 points./)).toBeInTheDocument();
-    });
-
-    it('should show points remaining in description', async () => {
-      setupFetchMock('5e');
-      const props = createMockProps();
-      await renderWizard(props);
-
-      expect(screen.getByText(/remaining to spend/)).toBeInTheDocument();
-    });
-  });
-
-  describe('Ruleset-specific behavior', () => {
-    it('should not show background ability section for 5e ruleset', async () => {
-      setupFetchMock('5e');
-      const props = createMockProps();
-      await renderWizard(props);
-
-      expect(screen.queryByText(/Background Ability Scores/)).not.toBeInTheDocument();
     });
   });
 

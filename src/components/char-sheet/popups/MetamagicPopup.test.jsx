@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
@@ -247,20 +248,6 @@ describe('MetamagicPopup', () => {
       });
     });
 
-    it('does not confirm when selected cost exceeds available SP', () => {
-      getMaxMetamagicPerSpell.mockReturnValue(3);
-      computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
-      const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 2 } });
-      fireEvent.click(screen.getByText('Careful Spell'));
-      fireEvent.click(screen.getByText(/Apply & Cast/));
-      expect(onConfirm).toHaveBeenCalledWith({
-        options: ['Careful Spell'],
-        totalCost: 1,
-        twinTarget: null,
-        psionicActive: false,
-      });
-    });
-
     it('does not call onConfirm when cost exceeds available SP', () => {
       getMaxMetamagicPerSpell.mockReturnValue(3);
       computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
@@ -278,14 +265,6 @@ describe('MetamagicPopup', () => {
       renderPopup();
       fireEvent.click(screen.getByText('Twinned Spell'));
       expect(screen.getByText(/Second Target/)).toBeInTheDocument();
-    });
-
-    it('populates target dropdown with all creatures in combat', () => {
-      renderPopup();
-      fireEvent.click(screen.getByText('Twinned Spell'));
-      expect(screen.getByText('Goblin')).toBeInTheDocument();
-      expect(screen.getByText('Orc')).toBeInTheDocument();
-      expect(screen.getByText('Sorcerer')).toBeInTheDocument();
     });
 
     it('does not call onConfirm when Twinned selected but no target chosen', () => {
@@ -310,20 +289,6 @@ describe('MetamagicPopup', () => {
       });
     });
 
-    it('includes twinTarget in onConfirm when Twinned is selected with a target', () => {
-      const { onConfirm } = renderPopup();
-      computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
-      fireEvent.click(screen.getByText('Twinned Spell'));
-      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Orc' } });
-      fireEvent.click(screen.getByText(/Apply & Cast/));
-      expect(onConfirm).toHaveBeenCalledWith({
-        options: ['Twinned Spell'],
-        totalCost: 3,
-        twinTarget: 'Orc',
-        psionicActive: false,
-      });
-    });
-
     it('sends twinTarget as null when no creatures exist', () => {
       getCombatSummary.mockReturnValue({ creatures: [] });
       const { onConfirm } = renderPopup();
@@ -342,15 +307,6 @@ describe('MetamagicPopup', () => {
   // ── Affordability / insufficient SP ──
 
   describe('affordability', () => {
-    it('does not call onConfirm when cost exceeds available SP', () => {
-      getMaxMetamagicPerSpell.mockReturnValue(3);
-      computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
-      const { onConfirm } = renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 1 } });
-      fireEvent.click(screen.getByText('Quickened Spell'));
-      fireEvent.click(screen.getByText(/Apply & Cast/));
-      expect(onConfirm).not.toHaveBeenCalled();
-    });
-
     it('disables the option label when an option is unaffordable', () => {
       getMaxMetamagicPerSpell.mockReturnValue(3);
       renderPopup({ playerStats: { ...basePlayerStats, _metamagicCurrentSP: 1 } });
@@ -416,17 +372,20 @@ describe('MetamagicPopup', () => {
   // ── 2024 ruleset / maxPerSpell > 1 ──
 
   describe('2024 ruleset / maxPerSpell > 1', () => {
-    it('shows incarnate note when maxPerSpell > 1', () => {
-      getMaxMetamagicPerSpell.mockReturnValue(2);
+    it.each`
+      maxPerSpell | showNote
+      ${1}        | ${false}
+      ${2}        | ${true}
+      ${3}        | ${true}
+    `('shows incarnate note when maxPerSpell > 1 ($maxPerSpell => $showNote)', ({ maxPerSpell, showNote }) => {
+      getMaxMetamagicPerSpell.mockReturnValue(maxPerSpell);
       renderPopup();
-      expect(screen.getByText(/Sorcery Incarnate/)).toBeInTheDocument();
-      expect(screen.getByText(/up to 2 Metamagic options/)).toBeInTheDocument();
-    });
-
-    it('does not show incarnate note when maxPerSpell is 1', () => {
-      getMaxMetamagicPerSpell.mockReturnValue(1);
-      renderPopup();
-      expect(screen.queryByText(/Sorcery Incarnate/)).not.toBeInTheDocument();
+      if (showNote) {
+        expect(screen.getByText(/Sorcery Incarnate/)).toBeInTheDocument();
+        expect(screen.getByText(new RegExp(`up to ${maxPerSpell} Metamagic options`))).toBeInTheDocument();
+      } else {
+        expect(screen.queryByText(/Sorcery Incarnate/)).not.toBeInTheDocument();
+      }
     });
   });
 

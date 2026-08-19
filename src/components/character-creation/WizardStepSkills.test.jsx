@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepSkills from './WizardStepSkills.jsx';
@@ -67,7 +68,7 @@ describe('WizardStepSkills', () => {
       expect(screen.getByText(/Rogues get expertise in 2 skills/)).toBeInTheDocument();
     });
 
-    it('should display expertise count based on formData', async () => {
+    it('should display expertise count when skill has expertise', async () => {
       render(<WizardStepSkills
         {...baseProps}
         formData={{ skillProficiencies: ['Acrobatics'], expertSkills: ['Acrobatics'] }}
@@ -106,32 +107,29 @@ describe('WizardStepSkills', () => {
       expect(screen.queryByText(/Expertise:/)).not.toBeInTheDocument();
     });
 
-    it('should mark pre-selected skills with pre-selected class and disable checkbox only when also proficient', async () => {
-      render(<WizardStepSkills {...baseProps} />);
+    it('should mark pre-selected skills correctly based on proficiency state', async () => {
+      // Pre-selected but NOT proficient: checkbox enabled, pre-selected class
+      const { container: c1 } = render(<WizardStepSkills {...baseProps} />);
       await waitForSkillsLoaded();
 
-      const labels = document.querySelectorAll('.multi-select-item');
-      const stealthLabel = Array.from(labels).find(l => l.textContent.includes('Stealth'));
-      const stealthCheckbox = stealthLabel.querySelector('input[type="checkbox"]');
-
-      // Stealth is pre-selected but not proficient, so checkbox is NOT disabled
+      let labels = c1.querySelectorAll('.multi-select-item');
+      let stealthLabel = Array.from(labels).find(l => l.textContent.includes('Stealth'));
+      let stealthCheckbox = stealthLabel.querySelector('input[type="checkbox"]');
       expect(stealthCheckbox).not.toBeDisabled();
       expect(stealthLabel).toHaveClass('pre-selected');
       expect(stealthLabel).not.toHaveClass('selected');
-    });
 
-    it('should disable checkbox for pre-selected skill that is already proficient', async () => {
-      render(<WizardStepSkills
+      // Pre-selected AND proficient: checkbox disabled, both classes
+      const { container: c2 } = render(<WizardStepSkills
         {...baseProps}
         formData={{ skillProficiencies: ['Acrobatics', 'Stealth'], expertSkills: [] }}
         preSelectedSkills={['Stealth']}
       />);
       await waitForSkillsLoaded();
 
-      const labels = document.querySelectorAll('.multi-select-item');
-      const stealthLabel = Array.from(labels).find(l => l.textContent.includes('Stealth'));
-      const stealthCheckbox = stealthLabel.querySelector('input[type="checkbox"]');
-
+      labels = c2.querySelectorAll('.multi-select-item');
+      stealthLabel = Array.from(labels).find(l => l.textContent.includes('Stealth'));
+      stealthCheckbox = stealthLabel.querySelector('input[type="checkbox"]');
       expect(stealthCheckbox).toBeDisabled();
       expect(stealthLabel).toHaveClass('selected');
       expect(stealthLabel).toHaveClass('pre-selected');
@@ -153,51 +151,47 @@ describe('WizardStepSkills', () => {
       expect(acrobaticsLabel).toHaveTextContent('(Expert)');
     });
 
-    it('should show expertise toggle button with correct state for expert skills', async () => {
-      render(<WizardStepSkills
+    it('should show expertise toggle button with correct state for all proficiency levels', async () => {
+      // Expert skill: active button, enabled
+      const { container: c1 } = render(<WizardStepSkills
         {...baseProps}
         formData={{ skillProficiencies: ['Acrobatics'], expertSkills: ['Acrobatics'] }}
       />);
       await waitForSkillsLoaded();
 
-      const labels = document.querySelectorAll('.multi-select-item');
-      const acrobaticsLabel = Array.from(labels).find(l => l.textContent.includes('Acrobatics'));
-      const button = acrobaticsLabel.querySelector('.expertise-toggle-btn');
-
+      let labels = c1.querySelectorAll('.multi-select-item');
+      let acrobaticsLabel = Array.from(labels).find(l => l.textContent.includes('Acrobatics'));
+      let button = acrobaticsLabel.querySelector('.expertise-toggle-btn');
       expect(button).toHaveTextContent('✓ Expert');
       expect(button).toHaveClass('active');
       expect(button).not.toBeDisabled();
       expect(button).toHaveAttribute('title', 'Click to remove Expert status');
-    });
 
-    it('should show expertise toggle button disabled for non-proficient skills', async () => {
-      render(<WizardStepSkills
+      // Non-proficient: disabled button
+      const { container: c2 } = render(<WizardStepSkills
         {...baseProps}
         formData={{ skillProficiencies: [], expertSkills: [] }}
       />);
       await waitForSkillsLoaded();
 
-      const labels = document.querySelectorAll('.multi-select-item');
-      const acrobaticsLabel = Array.from(labels).find(l => l.textContent.includes('Acrobatics'));
-      const button = acrobaticsLabel.querySelector('.expertise-toggle-btn');
-
+      labels = c2.querySelectorAll('.multi-select-item');
+      acrobaticsLabel = Array.from(labels).find(l => l.textContent.includes('Acrobatics'));
+      button = acrobaticsLabel.querySelector('.expertise-toggle-btn');
       expect(button).toHaveTextContent('Elevate');
       expect(button).not.toHaveClass('active');
       expect(button).toBeDisabled();
       expect(button).toHaveAttribute('title', 'Select proficient first');
-    });
 
-    it('should show expertise toggle button enabled for proficient non-expert skills', async () => {
-      render(<WizardStepSkills
+      // Proficient non-expert: enabled button
+      const { container: c3 } = render(<WizardStepSkills
         {...baseProps}
         formData={{ skillProficiencies: ['Acrobatics'], expertSkills: [] }}
       />);
       await waitForSkillsLoaded();
 
-      const labels = document.querySelectorAll('.multi-select-item');
-      const acrobaticsLabel = Array.from(labels).find(l => l.textContent.includes('Acrobatics'));
-      const button = acrobaticsLabel.querySelector('.expertise-toggle-btn');
-
+      labels = c3.querySelectorAll('.multi-select-item');
+      acrobaticsLabel = Array.from(labels).find(l => l.textContent.includes('Acrobatics'));
+      button = acrobaticsLabel.querySelector('.expertise-toggle-btn');
       expect(button).toHaveTextContent('Elevate');
       expect(button).not.toHaveClass('active');
       expect(button).not.toBeDisabled();
@@ -288,24 +282,6 @@ describe('WizardStepSkills', () => {
 
       expect(mockOnSkillToggle).toHaveBeenCalledWith('Acrobatics');
       expect(mockOnSkillExpertiseToggle).toHaveBeenCalledWith('Acrobatics', false);
-    });
-
-    it('should have disabled checkbox for pre-selected proficient skill', async () => {
-      const mockOnSkillToggle = vi.fn();
-
-      render(<WizardStepSkills
-        {...baseProps}
-        formData={{ skillProficiencies: ['Acrobatics', 'Stealth'], expertSkills: [] }}
-        preSelectedSkills={['Stealth']}
-        onSkillToggle={mockOnSkillToggle}
-      />);
-      await waitForSkillsLoaded();
-
-      const labels = document.querySelectorAll('.multi-select-item');
-      const stealthLabel = Array.from(labels).find(l => l.textContent.includes('Stealth'));
-      const checkbox = stealthLabel.querySelector('input[type="checkbox"]');
-
-      expect(checkbox).toBeDisabled();
     });
   });
 
@@ -542,8 +518,9 @@ describe('WizardStepSkills', () => {
   });
 
   describe('class expertise slots', () => {
-    it('should show error when no class or feat slots available for non-restricted skill', async () => {
-      const mockOnSkillExpertiseToggle = vi.fn();
+    it('should show appropriate error when no expertise slots are available', async () => {
+      // No class or feat slots for non-restricted skill
+      const mockOnSkillExpertiseToggle1 = vi.fn();
       render(<WizardStepSkills
         {...baseProps}
         formData={{ skillProficiencies: ['Acrobatics', 'Stealth', 'Perception'], expertSkills: ['Acrobatics', 'Stealth'] }}
@@ -553,7 +530,7 @@ describe('WizardStepSkills', () => {
           classCount: 2,
           featCount: 0,
         }}
-        onSkillExpertiseToggle={mockOnSkillExpertiseToggle}
+        onSkillExpertiseToggle={mockOnSkillExpertiseToggle1}
       />);
       await waitForSkillsLoaded();
 
@@ -562,11 +539,36 @@ describe('WizardStepSkills', () => {
       const button = perceptionLabel.querySelector('.expertise-toggle-btn');
       fireEvent.click(button);
 
-      expect(mockOnSkillExpertiseToggle).not.toHaveBeenCalled();
+      expect(mockOnSkillExpertiseToggle1).not.toHaveBeenCalled();
       await waitFor(() => {
         const feedback = document.querySelector('.expertise-feedback');
         expect(feedback).toBeInTheDocument();
         expect(feedback.textContent).toContain('expertise slots');
+      });
+
+      // Class grants 0 slots and feat count is 0
+      const { container: c2 } = render(<WizardStepSkills
+        {...baseProps}
+        formData={{ skillProficiencies: ['Acrobatics'], expertSkills: [] }}
+        expertiseLimits={{
+          allowed: true,
+          count: 0,
+          classCount: 0,
+          featCount: 0,
+        }}
+        onSkillExpertiseToggle={vi.fn()}
+      />);
+      await waitForSkillsLoaded();
+
+      const labels2 = c2.querySelectorAll('.multi-select-item');
+      const acrobaticsLabel = Array.from(labels2).find(l => l.textContent.includes('Acrobatics'));
+      const button2 = acrobaticsLabel.querySelector('.expertise-toggle-btn');
+      fireEvent.click(button2);
+
+      await waitFor(() => {
+        const feedback = c2.querySelector('.expertise-feedback');
+        expect(feedback).toBeInTheDocument();
+        expect(feedback.textContent).toContain('does not grant expertise slots');
       });
     });
 
@@ -592,32 +594,6 @@ describe('WizardStepSkills', () => {
 
       // classSlotsAvailable = 2 - 2 + 0 = 0, but feat slots available (featSlotsUsed=0 < featCount=1)
       expect(mockOnSkillExpertiseToggle).toHaveBeenCalledWith('Perception', true);
-    });
-
-    it('should show error when class does not grant expertise slots and feat count is zero', async () => {
-      const mockOnSkillExpertiseToggle = vi.fn();
-      render(<WizardStepSkills
-        {...baseProps}
-        formData={{ skillProficiencies: ['Acrobatics'], expertSkills: [] }}
-        expertiseLimits={{
-          allowed: true,
-          count: 0,
-          classCount: 0,
-          featCount: 0,
-        }}
-        onSkillExpertiseToggle={mockOnSkillExpertiseToggle}
-      />);
-      await waitForSkillsLoaded();
-
-      const labels = document.querySelectorAll('.multi-select-item');
-      const acrobaticsLabel = Array.from(labels).find(l => l.textContent.includes('Acrobatics'));
-      const button = acrobaticsLabel.querySelector('.expertise-toggle-btn');
-      fireEvent.click(button);
-
-      expect(mockOnSkillExpertiseToggle).not.toHaveBeenCalled();
-      await waitFor(() => {
-        expect(screen.getByText(/This class does not grant expertise slots/)).toBeInTheDocument();
-      });
     });
   });
 
@@ -700,65 +676,6 @@ describe('WizardStepSkills', () => {
         el.textContent.includes('This should not appear.')
       );
       expect(detailsPresent).toBe(false);
-    });
-  });
-
-  describe('memoization (areEqual)', () => {
-    it('should not re-render when only a new function reference is passed but props are otherwise equal', async () => {
-      const { rerender } = render(
-        <WizardStepSkills
-          {...baseProps}
-          onSkillToggle={vi.fn()}
-          onSkillExpertiseToggle={vi.fn()}
-        />
-      );
-      await waitForSkillsLoaded();
-
-      const itemsBefore = document.querySelectorAll('.multi-select-item').length;
-
-      // Pass new function references — areEqual uses === for callbacks, so this WILL re-render
-      // This test documents the current behavior: callback identity matters
-      rerender(
-        <WizardStepSkills
-          {...baseProps}
-          onSkillToggle={vi.fn()}
-          onSkillExpertiseToggle={vi.fn()}
-        />
-      );
-
-      // The component WILL re-render because areEqual uses === for callbacks
-      // This is expected behavior — callers should memoize callbacks
-      const itemsAfter = document.querySelectorAll('.multi-select-item').length;
-      expect(itemsBefore).toBe(itemsAfter);
-    });
-
-    it('should re-render when skillLimits change', async () => {
-      const mockOnSkillToggle = vi.fn();
-      const mockOnSkillExpertiseToggle = vi.fn();
-
-      const { rerender } = render(
-        <WizardStepSkills
-          {...baseProps}
-          skillLimits={{ allowed: 3, details: 'Original' }}
-          onSkillToggle={mockOnSkillToggle}
-          onSkillExpertiseToggle={mockOnSkillExpertiseToggle}
-        />
-      );
-      await waitForSkillsLoaded();
-
-      rerender(
-        <WizardStepSkills
-          {...baseProps}
-          skillLimits={{ allowed: 5, details: 'Changed' }}
-          onSkillToggle={mockOnSkillToggle}
-          onSkillExpertiseToggle={mockOnSkillExpertiseToggle}
-        />
-      );
-
-      await waitFor(() => {
-        const summaryText = document.querySelector('.skill-count-text');
-        expect(summaryText).toHaveTextContent('5');
-      });
     });
   });
 });

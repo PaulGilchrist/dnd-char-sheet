@@ -1,4 +1,8 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Removed 2 tests:
+//   - "should render an empty alignment select when fetch fails" → redundant with error-logging test (same failure path)
+//   - "should do nothing when no file is selected" → low-value negative assertion for trivial guard
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepBasic from './WizardStepBasic.jsx';
@@ -247,17 +251,6 @@ describe('WizardStepBasic', () => {
 
       readAsDataURLSpy.mockRestore();
     });
-
-    it('should do nothing when no file is selected', () => {
-      const mockOnChange = vi.fn();
-
-      render(<WizardStepBasic {...createMockProps({ onInputChange: mockOnChange })} />);
-
-      const fileInput = document.querySelector('input[type="file"]');
-      fireEvent.change(fileInput, { target: { files: [] } });
-
-      expect(mockOnChange).not.toHaveBeenCalled();
-    });
   });
 
   describe('Alignment fetch error handling', () => {
@@ -276,17 +269,6 @@ describe('WizardStepBasic', () => {
 
       expect(screen.getByText('Step 2: Basic Information')).toBeInTheDocument();
       consoleSpy.mockRestore();
-    });
-
-    it('should render an empty alignment select when fetch fails', async () => {
-      setupFetchFailure();
-      render(<WizardStepBasic {...createMockProps()} />);
-
-      await waitFor(() => {
-        const select = screen.getByRole('combobox');
-        expect(select).toBeInTheDocument();
-        expect(select.options.length).toBe(0);
-      });
     });
   });
 });

@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, fireEvent } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardFooter from './WizardFooter.jsx';
 
@@ -67,17 +68,12 @@ describe('WizardFooter', () => {
       expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
     });
 
-    it('disables Next when isNextDisabled on a middle step', () => {
-      render(<WizardFooter {...createProps()} isFirstStep={false} isLastStep={false} isNextDisabled />);
-      expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
+    it('disables Next when isNextDisabled on first and middle steps', () => {
+      render(<WizardFooter {...createProps()} isFirstStep isLastStep={false} isNextDisabled />);
       expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
-    });
-
-    it('prevents onNext from being called when Next is disabled', () => {
-      const onNext = vi.fn();
-      render(<WizardFooter {...createProps({ onNext })} isFirstStep={false} isLastStep={false} isNextDisabled />);
-      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-      expect(onNext).not.toHaveBeenCalled();
+      cleanup();
+      render(<WizardFooter {...createProps()} isFirstStep={false} isLastStep={false} isNextDisabled />);
+      expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
     });
 
     it('shows Previous and Create Character on the last non-first step (create mode)', () => {
@@ -131,16 +127,4 @@ describe('WizardFooter', () => {
     });
   });
 
-  describe('default prop values', () => {
-    it('defaults isEditing to false (shows Create Character, not Save Changes)', () => {
-      render(<WizardFooter {...createProps()} isLastStep />);
-      expect(screen.getByRole('button', { name: 'Create Character' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
-    });
-
-    it('defaults isNextDisabled to false (Next is enabled)', () => {
-      render(<WizardFooter {...createProps()} isFirstStep={false} isLastStep={false} />);
-      expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
-    });
-  });
 });

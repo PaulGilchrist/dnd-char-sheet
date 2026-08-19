@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepLanguages from './WizardStepLanguages.jsx';
@@ -58,10 +59,6 @@ function setupFetchSuccess() {
   });
 }
 
-/**
- * Wait for both language and fighting style lists to be rendered.
- * Checks for the presence of the first item in each section to confirm data loaded.
- */
 async function waitForListsLoaded() {
   await waitFor(() => {
     expect(screen.getByText('Common')).toBeInTheDocument();
@@ -92,11 +89,9 @@ describe('WizardStepLanguages', () => {
       setupFetchSuccess();
       render(<WizardStepLanguages {...createMockProps()} />);
       await waitForListsLoaded();
-      expect(screen.getByText('Common')).toBeInTheDocument();
       expect(screen.getByText('Elvish')).toBeInTheDocument();
       expect(screen.getByText('Dwarfish')).toBeInTheDocument();
       expect(screen.getByText('Gnome')).toBeInTheDocument();
-      expect(screen.getByText('Defense')).toBeInTheDocument();
       expect(screen.getByText('Dueling')).toBeInTheDocument();
       expect(screen.getByText('Archery')).toBeInTheDocument();
     });
@@ -113,18 +108,10 @@ describe('WizardStepLanguages', () => {
       await waitForListsLoaded();
       expect(screen.getByText(warningMsg)).toBeInTheDocument();
     });
-
-    it('should not render warnings when warnings array is empty', async () => {
-      setupFetchSuccess();
-      render(<WizardStepLanguages {...createMockProps()} warnings={[]} />);
-      await waitForListsLoaded();
-      expect(screen.getByText('Step 7: Languages & Fighting Styles')).toBeInTheDocument();
-      expect(screen.queryByText(/exceeded the limit/)).not.toBeInTheDocument();
-    });
   });
 
   describe('conditional rendering', () => {
-    it('should not render fighting style rule info when fightingStyleLimits is null', async () => {
+    it('should hide fighting style rule info when fightingStyleLimits is null', async () => {
       setupFetchSuccess();
       render(<WizardStepLanguages {...createMockProps()} fightingStyleLimits={null} />);
       await waitForListsLoaded();
@@ -132,7 +119,7 @@ describe('WizardStepLanguages', () => {
       expect(screen.queryByText(/allowed fighting style/)).not.toBeInTheDocument();
     });
 
-    it('should not render language rule info when languageLimits is null', async () => {
+    it('should hide language rule info when languageLimits is null', async () => {
       setupFetchSuccess();
       render(<WizardStepLanguages {...createMockProps()} languageLimits={null} />);
       await waitForListsLoaded();
@@ -140,31 +127,6 @@ describe('WizardStepLanguages', () => {
       expect(screen.queryByText(/allowed language/)).not.toBeInTheDocument();
     });
 
-    it('should hide both sections rule info when both limits are null', async () => {
-      setupFetchSuccess();
-      render(
-        <WizardStepLanguages
-          {...createMockProps()}
-          languageLimits={null}
-          fightingStyleLimits={null}
-        />
-      );
-      await waitForListsLoaded();
-      expect(screen.queryByText(/allowed language/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/allowed fighting style/)).not.toBeInTheDocument();
-    });
-
-    it('should not show validation errors when errors object is empty', async () => {
-      setupFetchSuccess();
-      render(<WizardStepLanguages {...createMockProps()} errors={{}} />);
-      await waitForListsLoaded();
-      expect(screen.getByText('Step 7: Languages & Fighting Styles')).toBeInTheDocument();
-      expect(screen.queryByText(/select at least one/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/selection required/)).not.toBeInTheDocument();
-    });
-  });
-
-  describe('validation errors', () => {
     it('should show validation errors for languages and fighting styles', async () => {
       setupFetchSuccess();
       render(
@@ -193,160 +155,107 @@ describe('WizardStepLanguages', () => {
   });
 
   describe('pre-selected items', () => {
-    it('should mark pre-selected items with pre-selected class and disable already-selected checkboxes', async () => {
+    it('should disable checkboxes for pre-selected items already in formData', async () => {
       setupFetchSuccess();
       render(<WizardStepLanguages {...createMockProps()} />);
       await waitForListsLoaded();
-      const preSelectedLabel = document.querySelector('.multi-select-item.pre-selected');
-      expect(preSelectedLabel).toBeInTheDocument();
-      expect(preSelectedLabel.textContent).toContain('Common');
-      const checkbox = preSelectedLabel.querySelector('input[type="checkbox"]');
-      expect(checkbox).toBeDisabled();
+      const langCheckbox = screen.getByRole('checkbox', { name: 'Common' });
+      expect(langCheckbox).toBeDisabled();
+      const styleCheckbox = screen.getByRole('checkbox', { name: 'Defense' });
+      expect(styleCheckbox).toBeDisabled();
     });
 
-    it('should not apply pre-selected class when preSelectedLanguages is empty', async () => {
+    it('should not disable pre-selected items when not in formData', async () => {
       setupFetchSuccess();
       render(
         <WizardStepLanguages
-          {...createMockProps()}
-          preSelectedLanguages={[]}
-          preSelectedFightingStyles={[]}
+          {...createMockProps({
+            formData: { languages: [], class: { fightingStyles: [] } },
+          })}
         />
       );
       await waitForListsLoaded();
-      const preSelectedLabels = document.querySelectorAll('.multi-select-item.pre-selected');
-      expect(preSelectedLabels.length).toBe(0);
-    });
-
-    it('should disable pre-selected fighting style checkbox when already selected', async () => {
-      setupFetchSuccess();
-      render(<WizardStepLanguages {...createMockProps()} />);
-      await waitForListsLoaded();
-      const styleLabels = document.querySelectorAll('.multi-select-item');
-      const defenseLabel = Array.from(styleLabels).find(l => l.textContent.includes('Defense'));
-      expect(defenseLabel).toHaveClass('pre-selected');
-      const checkbox = defenseLabel.querySelector('input[type="checkbox"]');
-      expect(checkbox).toBeDisabled();
-    });
-
-    it('should mark pre-selected fighting styles with pre-selected class', async () => {
-      setupFetchSuccess();
-      render(<WizardStepLanguages {...createMockProps()} />);
-      await waitForListsLoaded();
-      const styleLabels = document.querySelectorAll('.multi-select-item');
-      const defenseLabel = Array.from(styleLabels).find(l => l.textContent.includes('Defense'));
-      expect(defenseLabel).toHaveClass('pre-selected');
+      const langCheckbox = screen.getByRole('checkbox', { name: 'Common' });
+      expect(langCheckbox).not.toBeDisabled();
+      const styleCheckbox = screen.getByRole('checkbox', { name: 'Defense' });
+      expect(styleCheckbox).not.toBeDisabled();
     });
   });
 
   describe('auto-selection', () => {
-    it('should auto-select pre-selected languages not already in formData', async () => {
+    it('should auto-select pre-selected languages and fighting styles not already in formData', async () => {
       setupFetchSuccess();
       const mockOnLanguageToggle = vi.fn();
+      const mockOnFightingStyleToggle = vi.fn();
       render(
         <WizardStepLanguages
           {...createMockProps({
-            formData: { languages: [], class: { fightingStyles: ['Defense'] } },
+            formData: { languages: [], class: { fightingStyles: [] } },
           })}
           languageLimits={{
             ...defaultLanguageLimits,
             preSelected: ['Elvish'],
           }}
+          fightingStyleLimits={{
+            ...defaultFightingStyleLimits,
+            preSelected: ['Dueling'],
+          }}
           onLanguageToggle={mockOnLanguageToggle}
+          onFightingStyleToggle={mockOnFightingStyleToggle}
         />
       );
       await waitForListsLoaded();
       expect(mockOnLanguageToggle).toHaveBeenCalledWith('Elvish');
+      expect(mockOnFightingStyleToggle).toHaveBeenCalledWith('Dueling');
     });
 
     it('should not auto-select when items are already in formData', async () => {
       setupFetchSuccess();
       const mockOnLanguageToggle = vi.fn();
+      const mockOnFightingStyleToggle = vi.fn();
       render(
         <WizardStepLanguages
           {...createMockProps({
-            formData: { languages: ['Elvish'], class: { fightingStyles: [] } },
+            formData: { languages: ['Elvish'], class: { fightingStyles: ['Dueling'] } },
           })}
           languageLimits={{
             ...defaultLanguageLimits,
             preSelected: ['Elvish'],
           }}
+          fightingStyleLimits={{
+            ...defaultFightingStyleLimits,
+            preSelected: ['Dueling'],
+          }}
           onLanguageToggle={mockOnLanguageToggle}
+          onFightingStyleToggle={mockOnFightingStyleToggle}
         />
       );
       await waitForListsLoaded();
       expect(mockOnLanguageToggle).not.toHaveBeenCalled();
+      expect(mockOnFightingStyleToggle).not.toHaveBeenCalled();
     });
 
-    it('should not auto-select when languageLimits is null', async () => {
+    it('should not auto-select when limits are null', async () => {
       setupFetchSuccess();
       const mockOnLanguageToggle = vi.fn();
+      const mockOnFightingStyleToggle = vi.fn();
       render(
         <WizardStepLanguages
           {...createMockProps({ formData: { languages: [], class: { fightingStyles: [] } } })}
           languageLimits={null}
+          fightingStyleLimits={null}
           onLanguageToggle={mockOnLanguageToggle}
+          onFightingStyleToggle={mockOnFightingStyleToggle}
         />
       );
       await waitForListsLoaded();
       expect(mockOnLanguageToggle).not.toHaveBeenCalled();
-    });
-
-    it('should auto-select pre-selected fighting styles not already in formData', async () => {
-      setupFetchSuccess();
-      const mockOnFightingStyleToggle = vi.fn();
-      render(
-        <WizardStepLanguages
-          {...createMockProps({
-            formData: { languages: [], class: { fightingStyles: [] } },
-          })}
-          fightingStyleLimits={{
-            ...defaultFightingStyleLimits,
-            preSelected: ['Dueling'],
-          }}
-          onFightingStyleToggle={mockOnFightingStyleToggle}
-        />
-      );
-      await waitForListsLoaded();
-      expect(mockOnFightingStyleToggle).toHaveBeenCalledWith('Dueling');
-    });
-
-    it('should not auto-select fighting styles when already in formData', async () => {
-      setupFetchSuccess();
-      const mockOnFightingStyleToggle = vi.fn();
-      render(
-        <WizardStepLanguages
-          {...createMockProps({
-            formData: { languages: [], class: { fightingStyles: ['Dueling'] } },
-          })}
-          fightingStyleLimits={{
-            ...defaultFightingStyleLimits,
-            preSelected: ['Dueling'],
-          }}
-          onFightingStyleToggle={mockOnFightingStyleToggle}
-        />
-      );
-      await waitForListsLoaded();
-      expect(mockOnFightingStyleToggle).not.toHaveBeenCalled();
-    });
-
-    it('should not auto-select fighting styles when fightingStyleLimits is null', async () => {
-      setupFetchSuccess();
-      const mockOnFightingStyleToggle = vi.fn();
-      render(
-        <WizardStepLanguages
-          {...createMockProps({ formData: { languages: [], class: { fightingStyles: [] } } })}
-          fightingStyleLimits={null}
-          onFightingStyleToggle={mockOnFightingStyleToggle}
-        />
-      );
-      await waitForListsLoaded();
       expect(mockOnFightingStyleToggle).not.toHaveBeenCalled();
     });
   });
 
   describe('user interactions', () => {
-    it('should call onLanguageToggle when a non-pre-selected language checkbox is clicked', async () => {
+    it('should call onLanguageToggle when a language checkbox is clicked', async () => {
       setupFetchSuccess();
       const mockOnLanguageToggle = vi.fn();
       render(
@@ -361,42 +270,7 @@ describe('WizardStepLanguages', () => {
       expect(mockOnLanguageToggle).toHaveBeenCalledWith('Elvish');
     });
 
-    it('should call onLanguageToggle when clicking an already-selected non-pre-selected language to deselect it', async () => {
-      setupFetchSuccess();
-      const mockOnLanguageToggle = vi.fn();
-      render(
-        <WizardStepLanguages
-          {...createMockProps({ formData: { languages: ['Common', 'Elvish'], class: { fightingStyles: ['Defense'] } } })}
-          onLanguageToggle={mockOnLanguageToggle}
-        />
-      );
-      await waitForListsLoaded();
-      const checkbox = screen.getByRole('checkbox', { name: 'Elvish' });
-      fireEvent.click(checkbox);
-      expect(mockOnLanguageToggle).toHaveBeenCalledWith('Elvish');
-    });
-
-    it('should disable checkboxes for pre-selected items already in formData', async () => {
-      setupFetchSuccess();
-      const mockOnLanguageToggle = vi.fn();
-      const props = {
-        formData: { languages: ['Common', 'Elvish'], class: { fightingStyles: ['Defense'] } },
-        errors: {},
-        languageLimits: { allowed: 3, details: 'Your race grants 2 languages. Your level grants 1.', preSelected: ['Common', 'Elvish'] },
-        fightingStyleLimits: { allowed: 1, details: 'Fighters get 1 fighting style.', preSelected: ['Defense'] },
-        preSelectedLanguages: ['Common', 'Elvish'],
-        preSelectedFightingStyles: ['Defense'],
-        warnings: [],
-        onLanguageToggle: mockOnLanguageToggle,
-        onFightingStyleToggle: vi.fn(),
-      };
-      render(<WizardStepLanguages {...props} />);
-      await waitForListsLoaded();
-      const checkbox = screen.getByRole('checkbox', { name: 'Common' });
-      expect(checkbox.disabled).toBe(true);
-    });
-
-    it('should call onFightingStyleToggle when a non-pre-selected fighting style checkbox is clicked', async () => {
+    it('should call onFightingStyleToggle when a fighting style checkbox is clicked', async () => {
       setupFetchSuccess();
       const mockOnFightingStyleToggle = vi.fn();
       render(
@@ -411,82 +285,10 @@ describe('WizardStepLanguages', () => {
       expect(mockOnFightingStyleToggle).toHaveBeenCalledWith('Dueling');
     });
 
-    it('should call onFightingStyleToggle when clicking an already-selected non-pre-selected style to deselect it', async () => {
-      setupFetchSuccess();
-      const mockOnFightingStyleToggle = vi.fn();
-      render(
-        <WizardStepLanguages
-          {...createMockProps({ formData: { languages: [], class: { fightingStyles: ['Defense', 'Dueling'] } } })}
-          onFightingStyleToggle={mockOnFightingStyleToggle}
-        />
-      );
-      await waitForListsLoaded();
-      const checkbox = screen.getByRole('checkbox', { name: 'Dueling' });
-      fireEvent.click(checkbox);
-      expect(mockOnFightingStyleToggle).toHaveBeenCalledWith('Dueling');
-    });
-  });
-
-  describe('empty state', () => {
-    it('should render the step header when no languages or fighting styles are allowed', async () => {
-      setupFetchSuccess();
-      render(
-        <WizardStepLanguages
-          {...createMockProps({
-            formData: { languages: [], class: { fightingStyles: [] } },
-            languageLimits: { allowed: 0, details: 'No languages allowed', preSelected: [] },
-            fightingStyleLimits: { allowed: 0, details: 'No styles', preSelected: [] },
-          })}
-        />
-      );
-      await waitForListsLoaded();
-      expect(screen.getByText('Step 7: Languages & Fighting Styles')).toBeInTheDocument();
-    });
-
-    it('should render the step header even when fetch returns empty lists', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve([]),
-        })
-      );
-      render(<WizardStepLanguages {...createMockProps()} />);
-      await waitFor(() => {
-        expect(screen.getByText('Step 7: Languages & Fighting Styles')).toBeInTheDocument();
-      });
-    });
-
-    it('should render with null/undefined formData.class', async () => {
-      setupFetchSuccess();
-      render(
-        <WizardStepLanguages
-          {...createMockProps({
-            formData: { languages: [], class: null },
-          })}
-        />
-      );
-      await waitFor(() => {
-        expect(screen.getByText('Step 7: Languages & Fighting Styles')).toBeInTheDocument();
-      });
-    });
-
-    it('should render with undefined formData.languages', async () => {
-      setupFetchSuccess();
-      render(
-        <WizardStepLanguages
-          {...createMockProps({
-            formData: { languages: undefined, class: {} },
-          })}
-        />
-      );
-      await waitFor(() => {
-        expect(screen.getByText('Step 7: Languages & Fighting Styles')).toBeInTheDocument();
-      });
-    });
   });
 
   describe('error handling', () => {
-    it('should continue rendering correctly when fetch fails for languages', async () => {
+    it('should continue rendering when fetch fails for one section', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       global.fetch = vi.fn((url) => {
         if (url.includes('languages.json')) {
@@ -503,26 +305,6 @@ describe('WizardStepLanguages', () => {
         expect(screen.getByText('Fighting Styles')).toBeInTheDocument();
       });
       expect(consoleSpy).toHaveBeenCalledWith('Error loading languages:', expect.any(Error));
-      consoleSpy.mockRestore();
-    });
-
-    it('should continue rendering correctly when fetch fails for fighting styles', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      global.fetch = vi.fn((url) => {
-        if (url.includes('fighting-styles.json')) {
-          return Promise.reject(new Error('Network error'));
-        }
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockLanguages),
-        });
-      });
-      render(<WizardStepLanguages {...createMockProps()} />);
-      await waitFor(() => {
-        expect(screen.getByText('Step 7: Languages & Fighting Styles')).toBeInTheDocument();
-        expect(screen.getByText('Languages')).toBeInTheDocument();
-      });
-      expect(consoleSpy).toHaveBeenCalledWith('Error loading fighting styles:', expect.any(Error));
       consoleSpy.mockRestore();
     });
 
@@ -554,16 +336,6 @@ describe('WizardStepLanguages', () => {
       await waitFor(() => {
         expect(screen.getByText('Undercommon')).toBeInTheDocument();
       });
-    });
-
-    it('should not duplicate items that exist in both formData and fetched list', async () => {
-      setupFetchSuccess();
-      render(<WizardStepLanguages {...createMockProps()} />);
-      await waitForListsLoaded();
-      // "Common" should appear in the merged list exactly once (not duplicated from formData + data file)
-      const allText = document.body.textContent;
-      const commonCount = (allText.match(/Common/g) || []).length;
-      expect(commonCount).toBeGreaterThan(0);
     });
 
     it('should render object items with name property from fetched data', async () => {

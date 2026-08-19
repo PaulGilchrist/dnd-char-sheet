@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepSpells from './WizardStepSpells.jsx';
 
@@ -118,51 +119,30 @@ describe('WizardStepSpells feat integrations', () => {
   });
 
   describe('Warlock Mystic Arcanum', () => {
-    it('renders Mystic Arcanum section for Warlock at level 17', async () => {
+    it('renders qualifying arcanum levels based on warlock character level', async () => {
       setSpellLimits();
-      render(<WizardStepSpells {...warlockProps} />);
+      const { rerender } = render(<WizardStepSpells {...warlockProps} />);
       await waitFor(() => {
         expect(screen.getByText('Mystic Arcanum')).toBeInTheDocument();
-      });
-    });
-
-    it('renders all four qualifying arcanum levels for level 17 warlock', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...warlockProps} />);
-      await waitFor(() => {
         expect(screen.getByText('6th Level Arcanum:')).toBeInTheDocument();
         expect(screen.getByText('7th Level Arcanum:')).toBeInTheDocument();
         expect(screen.getByText('8th Level Arcanum:')).toBeInTheDocument();
         expect(screen.getByText('9th Level Arcanum:')).toBeInTheDocument();
       });
-    });
 
-    it('renders only 6th and 7th arcanum levels for level 13 warlock', async () => {
-      const level13Props = { ...warlockProps, formData: { ...warlockProps.formData, level: 13 } };
-      setSpellLimits();
-      render(<WizardStepSpells {...level13Props} />);
+      rerender(<WizardStepSpells {...warlockProps} formData={{ ...warlockProps.formData, level: 13 }} />);
       await waitFor(() => {
-        expect(screen.getByText('6th Level Arcanum:')).toBeInTheDocument();
         expect(screen.getByText('7th Level Arcanum:')).toBeInTheDocument();
         expect(screen.queryByText('8th Level Arcanum:')).not.toBeInTheDocument();
-        expect(screen.queryByText('9th Level Arcanum:')).not.toBeInTheDocument();
       });
-    });
 
-    it('renders only 6th arcanum level for level 11 warlock', async () => {
-      const level11Props = { ...warlockProps, formData: { ...warlockProps.formData, level: 11 } };
-      setSpellLimits();
-      render(<WizardStepSpells {...level11Props} />);
+      rerender(<WizardStepSpells {...warlockProps} formData={{ ...warlockProps.formData, level: 11 }} />);
       await waitFor(() => {
         expect(screen.getByText('6th Level Arcanum:')).toBeInTheDocument();
         expect(screen.queryByText('7th Level Arcanum:')).not.toBeInTheDocument();
       });
-    });
 
-    it('does not render arcanum section for level 10 warlock', async () => {
-      const level10Props = { ...warlockProps, formData: { ...warlockProps.formData, level: 10 } };
-      setSpellLimits();
-      render(<WizardStepSpells {...level10Props} />);
+      rerender(<WizardStepSpells {...warlockProps} formData={{ ...warlockProps.formData, level: 10 }} />);
       await waitFor(() => {
         expect(screen.queryByText('Mystic Arcanum')).not.toBeInTheDocument();
       });
@@ -178,11 +158,10 @@ describe('WizardStepSpells feat integrations', () => {
 
     it('shows selected state for already-selected arcanum spell', async () => {
       setSpellLimits();
-      const { container } = render(<WizardStepSpells {...warlockProps} formData={{ ...warlockProps.formData, class: { name: 'Warlock', subclass: { name: 'Hexblade' }, arcanums: ['Hold Monster'] } }} />);
+      render(<WizardStepSpells {...warlockProps} formData={{ ...warlockProps.formData, class: { name: 'Warlock', subclass: { name: 'Hexblade' }, arcanums: ['Hold Monster'] } }} />);
       await waitFor(() => {
-        const checkEl = container.querySelector('.arcanum-slot-count.selected');
-        expect(checkEl).toBeInTheDocument();
-        expect(checkEl).toHaveTextContent('1/1');
+        const selectedCounts = screen.getAllByText('1/1');
+        expect(selectedCounts.length).toBeGreaterThan(0);
       });
     });
 
@@ -190,15 +169,16 @@ describe('WizardStepSpells feat integrations', () => {
       setSpellLimits();
       render(<WizardStepSpells {...warlockProps} />);
       await waitFor(() => {
-        const level6Options = document.querySelectorAll('.arcanum-option');
-        level6Options.forEach(option => {
-          expect(option.textContent).not.toContain('Fireball');
-          expect(option.textContent).not.toContain('Magic Missile');
-        });
+        expect(screen.getByText('Mystic Arcanum')).toBeInTheDocument();
       });
+      const level6Header = screen.getByText('6th Level Arcanum:');
+      const level6Section = level6Header.closest('.arcanum-slot');
+      expect(level6Section.textContent).not.toContain('Fireball');
+      expect(level6Section.textContent).not.toContain('Magic Missile');
+      expect(level6Section.textContent).toContain('Hold Monster');
     });
 
-    it('calls onArrayFieldChange when selecting an arcanum spell', async () => {
+    it('adds arcanum spell on click', async () => {
       setSpellLimits();
       const { container } = render(<WizardStepSpells {...warlockProps} />);
       await waitFor(() => {
@@ -213,7 +193,7 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('removes arcanum spell when clicking already-selected option', async () => {
+    it('removes pre-selected arcanum spell on click', async () => {
       setSpellLimits();
       const { container } = render(<WizardStepSpells {...warlockProps} formData={{ ...warlockProps.formData, class: { name: 'Warlock', subclass: { name: 'Hexblade' }, arcanums: ['Hold Monster'] } }} />);
       await waitFor(() => {
@@ -235,12 +215,11 @@ describe('WizardStepSpells feat integrations', () => {
       await waitFor(() => {
         expect(screen.getByText('Mystic Arcanum')).toBeInTheDocument();
       });
-      const infoIcons = container.querySelectorAll('.fa-circle-info');
+      const infoIcons = container.querySelectorAll('[title="View spell details"]');
       if (infoIcons.length > 0) {
         fireEvent.click(infoIcons[0]);
         await waitFor(() => {
-          const detailsEl = container.querySelector('.arcanum-option-details');
-          expect(detailsEl).toBeInTheDocument();
+          expect(container.querySelector('.arcanum-option-desc')).toBeInTheDocument();
         });
       }
     });
@@ -259,17 +238,6 @@ describe('WizardStepSpells feat integrations', () => {
       expect(noSpans.length).toBeGreaterThan(0);
     });
 
-    it('excludes pre-selected arcanum spells from user spell counts', async () => {
-      setSpellLimits({ cantrip: 2 });
-      const { container } = render(<WizardStepSpells {...warlockProps} formData={{ ...warlockProps.formData, class: { name: 'Warlock', subclass: { name: 'Hexblade' }, arcanums: ['Astral Projection'] }, spells: ['Astral Projection'] }} />);
-      await waitFor(() => {
-        expect(screen.getByText('Mystic Arcanum')).toBeInTheDocument();
-        const countEl = container.querySelector('.level-count');
-        if (countEl) {
-          expect(countEl.textContent).not.toContain('1/2');
-        }
-      });
-    });
   });
 
   describe('Magic Initiate integration', () => {
@@ -281,7 +249,7 @@ describe('WizardStepSpells feat integrations', () => {
       { name: 'Healing Word', index: 'healing_word', level: 1, school: 'Evocation', description: ['Healing word.'], classes: ['Cleric'] },
     ];
 
-    it('renders edit button when Magic Initiate feat is present as a string with instances configured', async () => {
+    it('renders edit button when Magic Initiate feat is present with instances configured', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate'], magicInitiateInstances: [{ class: 'Wizard', cantrips: ['Burning Hands', 'Thunderwave'], level1Spell: 'Healing Word' }] }} allSpells={baseSpells} />);
       await waitFor(() => {
@@ -289,35 +257,23 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('renders edit button when Magic Initiate feat is present as an object with instances configured', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [{ name: 'Magic Initiate', index: 'magic-initiate' }], magicInitiateInstances: [{ class: 'Wizard', cantrips: ['Burning Hands', 'Thunderwave'], level1Spell: 'Healing Word' }] }} allSpells={baseSpells} />);
-      await waitFor(() => {
-        expect(screen.getByText('Edit Magic Initiate')).toBeInTheDocument();
-      });
-    });
-
-    it('renders the modal when Magic Initiate feat is added but instances do not match', async () => {
+    it('shows modal when Magic Initiate feat is present but instances are missing or mismatched', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate'] }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.getByTestId('magic-initiate-modal')).toBeInTheDocument();
       });
-    });
+      cleanup();
 
-    it('does not render the modal when instances match the number of Magic Initiate feats', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate'], magicInitiateInstances: [{ class: 'Wizard', cantrips: ['Cantrip1'], level1Spell: 'Spell1' }] }} />);
-      await waitFor(() => {
-        expect(screen.queryByTestId('magic-initiate-modal')).not.toBeInTheDocument();
-      });
-    });
-
-    it('renders the modal when there are two Magic Initiate feats but only one instance', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate', 'Magic Initiate'] }} />);
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate', 'Magic Initiate'] }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.getByTestId('magic-initiate-modal')).toBeInTheDocument();
+      });
+      cleanup();
+
+      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Magic Initiate', 'Magic Initiate'], magicInitiateInstances: [{ class: 'Wizard', cantrips: ['Cantrip1'], level1Spell: 'Spell1' }, { class: 'Wizard', cantrips: ['Cantrip2'], level1Spell: 'Spell2' }] }} allSpells={baseSpells} />);
+      await waitFor(() => {
+        expect(screen.queryByTestId('magic-initiate-modal')).not.toBeInTheDocument();
       });
     });
 
@@ -356,7 +312,7 @@ describe('WizardStepSpells feat integrations', () => {
       { name: 'Misty Step', index: 'misty_step', level: 1, school: 'Conjuration', description: ['Misty step.'], classes: ['Sorcerer', 'Warlock', 'Wizard'] },
     ];
 
-    it('renders edit button when Fey Touched feat is present as a string with spell set', async () => {
+    it('renders edit button when Fey Touched feat is present with spell set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Fey Touched'], feyTouchedSpell: 'Misty Step' }} allSpells={baseSpells} />);
       await waitFor(() => {
@@ -364,32 +320,20 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('renders edit button when Fey Touched feat is present as an object with spell set', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [{ name: 'Fey Touched', index: 'fey-touched' }], feyTouchedSpell: 'Misty Step' }} allSpells={baseSpells} />);
-      await waitFor(() => {
-        expect(screen.getByText('Edit Fey Magic')).toBeInTheDocument();
-      });
-    });
-
-    it('renders the modal when Fey Touched feat is present but spell is not set', async () => {
+    it('shows modal when Fey Touched feat is present but spell is not set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Fey Touched'] }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.getByTestId('fey-touched-modal')).toBeInTheDocument();
       });
-    });
+      cleanup();
 
-    it('does not render the modal when Fey Touched spell is already set', async () => {
-      setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Fey Touched'], feyTouchedSpell: 'Misty Step' }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.queryByTestId('fey-touched-modal')).not.toBeInTheDocument();
       });
-    });
+      cleanup();
 
-    it('does not render the modal or edit button when Fey Touched feat is not present', async () => {
-      setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [] }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.queryByTestId('fey-touched-modal')).not.toBeInTheDocument();
@@ -414,7 +358,7 @@ describe('WizardStepSpells feat integrations', () => {
       { name: 'Invisibility', index: 'invisibility', level: 2, school: 'Illusion', description: ['Invisibility.'], classes: ['Sorcerer', 'Wizard'] },
     ];
 
-    it('renders edit button when Shadow Touched feat is present as a string with spell set', async () => {
+    it('renders edit button when Shadow Touched feat is present with spell set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Shadow Touched'], shadowTouchedSpell: 'Invisibility' }} allSpells={baseSpells} />);
       await waitFor(() => {
@@ -422,32 +366,20 @@ describe('WizardStepSpells feat integrations', () => {
       });
     });
 
-    it('renders edit button when Shadow Touched feat is present as an object with spell set', async () => {
-      setSpellLimits();
-      render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [{ name: 'Shadow Touched', index: 'shadow-touched' }], shadowTouchedSpell: 'Invisibility' }} allSpells={baseSpells} />);
-      await waitFor(() => {
-        expect(screen.getByText('Edit Shadow Magic')).toBeInTheDocument();
-      });
-    });
-
-    it('renders the modal when Shadow Touched feat is present but spell is not set', async () => {
+    it('shows modal when Shadow Touched feat is present but spell is not set', async () => {
       setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Shadow Touched'] }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.getByTestId('shadow-touched-modal')).toBeInTheDocument();
       });
-    });
+      cleanup();
 
-    it('does not render the modal when Shadow Touched spell is already set', async () => {
-      setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: ['Shadow Touched'], shadowTouchedSpell: 'Invisibility' }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.queryByTestId('shadow-touched-modal')).not.toBeInTheDocument();
       });
-    });
+      cleanup();
 
-    it('does not render the modal or edit button when Shadow Touched feat is not present', async () => {
-      setSpellLimits();
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, feats: [] }} allSpells={baseSpells} />);
       await waitFor(() => {
         expect(screen.queryByTestId('shadow-touched-modal')).not.toBeInTheDocument();

@@ -350,21 +350,21 @@ describe('useAttackDamageResolution - class features', () => {
             expect(conditionCalls).toHaveLength(0);
         });
 
-        it('skips Rend Mind when already used this long rest', async () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (key === '_RendMind_Used') return true;
-                if (key === '_LastLongRest') return 2;
-                if (key === '_CurrentLongRest') return 2;
-                return null;
-            });
-            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeRendMindStats() });
-            await resolveAttackDamage(makeAttack({ name: 'Psychic Blade', damage: '1d6+5', damageType: 'Psychic' }));
-            await tick();
-            expect(createSaveListener).not.toHaveBeenCalled();
-        });
-
-        it('skips Rend Mind when no target in context', async () => {
-            mockBuildCtxSync.mockResolvedValue({ targetName: null });
+        it.each([
+            { scenario: 'already used this long rest', _RendMind_Used: true, _LastLongRest: 2, _CurrentLongRest: 2 },
+            { scenario: 'no target in context', _RendMind_Used: false, targetName: null },
+        ])('skips Rend Mind when $scenario', async ({ _RendMind_Used, _LastLongRest, _CurrentLongRest, targetName }) => {
+            if (_RendMind_Used !== undefined) {
+                getRuntimeValue.mockImplementation((name, key) => {
+                    if (key === '_RendMind_Used') return _RendMind_Used;
+                    if (key === '_LastLongRest') return _LastLongRest;
+                    if (key === '_CurrentLongRest') return _CurrentLongRest;
+                    return null;
+                });
+            }
+            if (targetName !== undefined) {
+                mockBuildCtxSync.mockResolvedValue({ targetName });
+            }
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeRendMindStats() });
             await resolveAttackDamage(makeAttack({ name: 'Psychic Blade', damage: '1d6+5', damageType: 'Psychic' }));
             await tick();
@@ -565,14 +565,11 @@ describe('useAttackDamageResolution - class features', () => {
             await resolveAttackDamage(makeAttack());
             await tick();
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
+                'campaign', 'targetEffects',
                 expect.arrayContaining([
                     expect.objectContaining({
-                        target: 'Goblin',
-                        source: 'Eldritch Strike',
-                        option: 'Impose Disadvantage',
-                        effect: 'impose_disadvantage',
+                        target: 'Goblin', source: 'Eldritch Strike',
+                        option: 'Impose Disadvantage', effect: 'impose_disadvantage',
                         duration: 'until_start_of_next_turn',
                     }),
                 ]),
@@ -580,9 +577,13 @@ describe('useAttackDamageResolution - class features', () => {
             );
         });
 
-        it('tracks oncePerTurn usage when rider has oncePerTurn flag', async () => {
+        it.each([
+            { desc: 'tracks oncePerTurn usage', oncePerTurn: true, usedRound: null, checkTracking: true, checkEffects: true },
+            { desc: 'skips when oncePerTurn and already used', oncePerTurn: true, usedRound: 1, checkTracking: false, checkEffects: false },
+            { desc: 'no oncePerTurn tracking without flag', oncePerTurn: false, usedRound: null, checkTracking: false, checkEffects: true },
+        ])('Eldritch Strike: $desc', async ({ oncePerTurn, usedRound, checkTracking, checkEffects }) => {
             getRuntimeValue.mockImplementation((name, key) => {
-                if (key === '_Eldritch_Strike_usedRound') return null;
+                if (key === '_Eldritch_Strike_usedRound') return usedRound;
                 return null;
             });
             getCombatContext.mockResolvedValue({
@@ -592,31 +593,33 @@ describe('useAttackDamageResolution - class features', () => {
                 ],
             });
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
-            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeEldritchStrikeStats({ oncePerTurn: true }) });
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeEldritchStrikeStats({ oncePerTurn }) });
             await resolveAttackDamage(makeAttack());
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestRogue',
-                '_Eldritch_Strike_usedRound',
-                1,
-                'test-campaign',
-            );
-        });
 
-        it('skips when oncePerTurn and already used this round', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === '_Eldritch_Strike_usedRound') return 1;
-                return null;
-            });
-            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeEldritchStrikeStats() });
-            await resolveAttackDamage(makeAttack());
-            await tick();
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.anything(),
-                'test-campaign',
+            const usedRoundCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === '_Eldritch_Strike_usedRound'
             );
+            if (checkTracking) {
+                expect(usedRoundCalls).toHaveLength(1);
+                expect(usedRoundCalls[0]).toEqual([
+                    'TestRogue', '_Eldritch_Strike_usedRound', 1, 'test-campaign',
+                ]);
+            } else {
+                expect(usedRoundCalls).toHaveLength(0);
+            }
+
+            const effectsCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'targetEffects'
+            );
+            if (checkEffects) {
+                expect(effectsCalls).toHaveLength(1);
+                expect(effectsCalls[0][2]).toContainEqual(
+                    expect.objectContaining({ effect: 'impose_disadvantage' })
+                );
+            } else {
+                expect(effectsCalls).toHaveLength(0);
+            }
         });
     });
 

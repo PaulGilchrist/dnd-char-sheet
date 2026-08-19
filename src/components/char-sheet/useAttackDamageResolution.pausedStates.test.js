@@ -284,8 +284,13 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
     });
 
     describe('pipeline completes without pause', () => {
-        it('runs the pipeline and does not set any modal or pending state', async () => {
-            mockPendingDamageRef.current = null;
+        it.each([
+            { scenario: 'resumeRef.current is null', current: null },
+            { scenario: '_pausedStep is null', current: { _pausedStep: null } },
+            { scenario: '_pausedStep is unknown', current: { _pausedStep: 'unknownStep' } },
+            { scenario: 'resumeRef.current is undefined', current: undefined },
+        ])('does not set any modal state when $scenario', async ({ current }) => {
+            mockPendingDamageRef.current = current;
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
             const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
@@ -295,47 +300,10 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
 
             expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
             expect(mockSetModalState).not.toHaveBeenCalled();
-            expect(mockSetPendingDamage).not.toHaveBeenCalled();
+            if (current !== undefined && current !== null) {
+                expect(mockSetPendingDamage).not.toHaveBeenCalled();
+            }
             expect(setRuntimeObject).not.toHaveBeenCalled();
-        });
-
-        it('does not set any modal state when _pausedStep is null', async () => {
-            mockPendingDamageRef.current = { _pausedStep: null };
-
-            const { resolveAttackDamage } = UseAttackDamageResolution();
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-
-            await resolveAttackDamage(attack);
-            await tick();
-
-            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
-            expect(mockSetModalState).not.toHaveBeenCalled();
-        });
-
-        it('does not set any modal state when _pausedStep is an unknown value', async () => {
-            mockPendingDamageRef.current = { _pausedStep: 'unknownStep' };
-
-            const { resolveAttackDamage } = UseAttackDamageResolution();
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-
-            await resolveAttackDamage(attack);
-            await tick();
-
-            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
-            expect(mockSetModalState).not.toHaveBeenCalled();
-        });
-
-        it('does not set any modal state when resumeRef.current is undefined', async () => {
-            mockPendingDamageRef.current = undefined;
-
-            const { resolveAttackDamage } = UseAttackDamageResolution();
-            const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
-
-            await resolveAttackDamage(attack);
-            await tick();
-
-            expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
-            expect(mockSetModalState).not.toHaveBeenCalled();
         });
     });
 });

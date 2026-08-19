@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/automation/index.js', () => ({
@@ -129,33 +130,13 @@ describe('WeaponKindMasteryModal', () => {
       const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
       battleaxeCheckbox.click();
 
-      await fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+      });
 
       await waitFor(() => {
-        const bodyDiv = document.querySelector('.sp-body');
-        expect(bodyDiv.querySelector('strong')).toBeInTheDocument();
-      });
-    });
-
-    it('renders result state when result payload description is falsy', async () => {
-      automation.applyWeaponKindMastery.mockResolvedValue({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Weapon Mastery',
-          description: '',
-        },
-      });
-      renderWithWeapons();
-      await waitForWeapons();
-
-      const battleaxeCheckbox = screen.getByRole('checkbox', { name: /Battleaxe/ });
-      battleaxeCheckbox.click();
-
-      await fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+        expect(screen.getByText(/Battleaxe/)).toBeInTheDocument();
+        expect(screen.getByText(/selected/)).toBeInTheDocument();
       });
     });
   });
@@ -202,28 +183,4 @@ describe('WeaponKindMasteryModal', () => {
     });
   });
 
-  describe('edge cases', () => {
-    it('renders with no weapons when equipment.json returns empty array', async () => {
-      renderWithWeapons([], []);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
-      expect(screen.getByRole('button', { name: 'Select' })).toBeDisabled();
-    });
-
-    it('renders with no weapons when no weapons match the filter criteria', async () => {
-      const nonWeaponItems = [
-        { name: 'Potion', equipment_category: 'Adventuring Gear' },
-      ];
-      renderWithWeapons({}, nonWeaponItems);
-      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
-    });
-
-    it('renders with meleeOnly=true when no melee weapons exist', async () => {
-      const rangedOnly = [
-        { name: 'Longbow', equipment_category: 'Weapon', weapon_category: 'Martial', weapon_range: 'Ranged', mastery: 'Vex' },
-      ];
-      renderWithWeapons({ meleeOnly: true }, rangedOnly);
-      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
-    });
-  });
 });

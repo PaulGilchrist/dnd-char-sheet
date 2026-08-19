@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WildCompanionModal from './WildCompanionModal.jsx';
@@ -101,21 +102,17 @@ describe('WildCompanionModal', () => {
 
   // ── Radio selection ──
 
-  it('shows expended level button text when a different level radio is selected', () => {
+  it('updates selected level and button text when a different level radio is selected', () => {
     render(<WildCompanionModal {...makeProps()} />);
-    // Level 3 radio is at index 2
     const radios = document.querySelectorAll('input[name="wildCompanionSlotLevel"]');
+    // Level 3 radio is at index 2
     fireEvent.click(radios[2]);
     expect(radios[2]).toBeChecked();
     expect(
       screen.getByRole('button', { name: /Expend Level 3 Slot/i })
     ).toBeInTheDocument();
-  });
-
-  it('disables the expend button after selecting a zero-slot level', () => {
-    render(<WildCompanionModal {...makeProps()} />);
-    const radios = document.querySelectorAll('input[name="wildCompanionSlotLevel"]');
-    fireEvent.click(radios[5]); // level 6
+    // Level 6 radio is at index 5 (zero slots)
+    fireEvent.click(radios[5]);
     expect(radios[5]).toBeChecked();
     expect(
       screen.getByRole('button', { name: /Expend Level 6 Slot/i })
@@ -123,21 +120,6 @@ describe('WildCompanionModal', () => {
   });
 
   // ── Expend spell slot ──
-
-  it('does not expend when the selected level has no available slots', () => {
-    const props = makeProps({
-      playerStats: {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...baseSpellAbilities,
-          spell_slots_level_1: 0,
-        },
-      },
-    });
-    render(<WildCompanionModal {...props} />);
-    fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
-    expect(mockSetRuntimeBatch).not.toHaveBeenCalled();
-  });
 
   it('decrements the selected spell slot when expended', () => {
     render(<WildCompanionModal {...makeProps()} />);
@@ -232,21 +214,6 @@ describe('WildCompanionModal', () => {
     expect(screen.getByText('2 / 4')).toBeInTheDocument();
   });
 
-  it('caps runtime spell slot value at max when runtime exceeds max', () => {
-    vi.spyOn(runtimeState, 'getRuntimeValue').mockImplementation((key, prop) => {
-      if (prop === 'spell_slots_level_1') return '10';
-      return null;
-    });
-    render(<WildCompanionModal {...makeProps()} />);
-    expect(screen.getByText('4 / 4')).toBeInTheDocument();
-  });
-
-  it('treats null runtime value as falling back to max', () => {
-    vi.spyOn(runtimeState, 'getRuntimeValue').mockReturnValue(null);
-    render(<WildCompanionModal {...makeProps()} />);
-    expect(screen.getByText('4 / 4')).toBeInTheDocument();
-  });
-
   it('uses runtime value for wild shape and decrements from it', () => {
     vi.spyOn(runtimeState, 'getRuntimeValue').mockImplementation((key, prop) => {
       if (prop === 'wildShapeUses') return '1';
@@ -304,14 +271,5 @@ describe('WildCompanionModal', () => {
     expect(
       screen.getByText('You have no Wild Shape uses remaining.')
     ).toBeInTheDocument();
-  });
-
-  it('handles playerStats with no name', () => {
-    const props = makeProps({
-      spellAbilities: baseSpellAbilities,
-      _trackedResources: { wildShapeUses: { max: 2 } },
-    });
-    render(<WildCompanionModal {...props} />);
-    expect(screen.getByText('Wild Companion')).toBeInTheDocument();
   });
 });

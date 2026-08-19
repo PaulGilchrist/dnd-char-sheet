@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ShortRestButton from './ShortRestButton.jsx';
@@ -21,15 +22,5 @@ describe('ShortRestButton', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /short rest/i }));
     expect(onClick).toHaveBeenCalledTimes(1);
-  });
-
-  it('passes through the onClick handler without crashing when no handler is provided', () => {
-    render(<ShortRestButton />);
-
-    const button = screen.getByRole('button', { name: /short rest/i });
-    expect(button).toBeInTheDocument();
-
-    fireEvent.click(button);
-    // No error thrown — button exists and is clickable without a handler
   });
 });

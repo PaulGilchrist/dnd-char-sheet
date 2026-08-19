@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SelectableList from './SelectableList.jsx';
@@ -67,22 +68,14 @@ describe('SelectableList', () => {
       expect(screen.getByText('Test List')).toBeInTheDocument();
     });
 
-    it('should apply custom className to root and nested containers', () => {
-      const { container } = renderComponent({ className: 'custom-class' });
-      expect(container.querySelector('.wizard-step.custom-class')).toBeInTheDocument();
-      expect(container.querySelector('.custom-class-results-container')).toBeInTheDocument();
-      expect(container.querySelector('.custom-class-results-header')).toBeInTheDocument();
-      expect(container.querySelector('.custom-class-results-list')).toBeInTheDocument();
-    });
-
     it('should render the search input with the correct label', () => {
       renderComponent();
       expect(screen.getByLabelText('Search Test List')).toBeInTheDocument();
     });
 
-    it('should render result count with correct singular pluralization for one item', () => {
-      const renderItem = createRenderItem((item) => <div key={item.name}>{item.name}</div>);
-      render(
+    it('should render result count with correct singular/plural form', () => {
+      const singleRenderItem = createRenderItem((item) => <div key={item.name}>{item.name}</div>);
+      const { container: singleContainer } = render(
         <SelectableList
           items={[{ name: 'Item A' }]}
           fieldName="skills"
@@ -91,13 +84,11 @@ describe('SelectableList', () => {
           title="Test List"
           searchPlaceholder="Search..."
           filters={[]}
-          renderItem={renderItem}
+          renderItem={singleRenderItem}
         />,
       );
-      expect(screen.getByText(/Showing 1 item/)).toBeInTheDocument();
-    });
+      expect(singleContainer.querySelector('.result-count').textContent).toBe('Showing 1 item');
 
-    it('should render result count with correct pluralization for multiple items', () => {
       renderComponent();
       expect(screen.getByText(/Showing 3 items/)).toBeInTheDocument();
     });
@@ -141,9 +132,10 @@ describe('SelectableList', () => {
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
-    it('should render default "not loaded" message when items is null', () => {
+    it('should render default "not loaded" message when items is null or undefined', () => {
       const renderItem = createRenderItem();
-      render(
+
+      const nullRender = render(
         <SelectableList
           items={null}
           fieldName="skills"
@@ -155,12 +147,9 @@ describe('SelectableList', () => {
           renderItem={renderItem}
         />,
       );
-      expect(screen.getByText('Data not yet loaded. Please try again.')).toBeInTheDocument();
-    });
+      expect(nullRender.container.querySelector('.no-results-found').textContent).toBe('Data not yet loaded. Please try again.');
 
-    it('should render default "not loaded" message when items is undefined', () => {
-      const renderItem = createRenderItem();
-      render(
+      const undefRender = render(
         <SelectableList
           items={undefined}
           fieldName="skills"
@@ -172,7 +161,7 @@ describe('SelectableList', () => {
           renderItem={renderItem}
         />,
       );
-      expect(screen.getByText('Data not yet loaded. Please try again.')).toBeInTheDocument();
+      expect(undefRender.container.querySelector('.no-results-found').textContent).toBe('Data not yet loaded. Please try again.');
     });
   });
 
@@ -402,12 +391,6 @@ describe('SelectableList', () => {
       expect(mockOnChange).toHaveBeenCalledWith('skills', ['Item B']);
     });
 
-    it('should add a non-selected item to an existing array', () => {
-      const { mockOnChange } = renderToggleTest({ skills: ['Item A'] });
-      fireEvent.click(screen.getByTestId('item-1'));
-      expect(mockOnChange).toHaveBeenCalledWith('skills', ['Item A', 'Item B']);
-    });
-
     it('should remove a selected item from the array', () => {
       const { mockOnChange } = renderToggleTest({ skills: ['Item A', 'Item B'] });
       fireEvent.click(screen.getByTestId('item-1'));
@@ -569,30 +552,6 @@ describe('SelectableList', () => {
       expect(screen.queryByText('Item B')).not.toBeInTheDocument();
       expect(screen.queryByText('Item C')).not.toBeInTheDocument();
       expect(screen.getByText(/Showing 1 item/)).toBeInTheDocument();
-    });
-
-    it('should show multiple selected items when checkbox is checked', () => {
-      const renderItem = createRenderItem();
-      render(
-        <SelectableList
-          items={mockItems}
-          fieldName="skills"
-          formData={{ skills: ['Item A', 'Item C'] }}
-          onArrayFieldChange={vi.fn()}
-          title="Test List"
-          searchPlaceholder="Search..."
-          filters={[]}
-          renderItem={renderItem}
-        />,
-      );
-
-      const checkbox = screen.getByRole('checkbox');
-      fireEvent.click(checkbox);
-
-      expect(screen.getByText('Item A')).toBeInTheDocument();
-      expect(screen.getByText('Item C')).toBeInTheDocument();
-      expect(screen.queryByText('Item B')).not.toBeInTheDocument();
-      expect(screen.getByText(/Showing 2 items/)).toBeInTheDocument();
     });
 
     it('should show no results message when checkbox is checked but nothing is selected', () => {

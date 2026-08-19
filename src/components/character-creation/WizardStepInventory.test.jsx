@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepInventory from './WizardStepInventory.jsx';
@@ -117,23 +118,6 @@ vi.mock('./EquipmentSearchModal.jsx', () => ({
 
 import { useEquipmentSearch } from '../../hooks/ui/useEquipmentSearch.js';
 
-const mockEquipment = [
-  {
-    index: 'club',
-    name: 'Club',
-    equipment_category: 'Weapons',
-    cost: { quantity: 1, unit: 'cp' },
-    weight: 2,
-  },
-  {
-    index: 'dagger',
-    name: 'Dagger',
-    equipment_category: 'Weapons',
-    cost: { quantity: 2, unit: 'gp' },
-    weight: 1,
-  },
-];
-
 const createMockHookReturn = (overrides = {}) => ({
   searchQuery: '',
   setSearchQuery: vi.fn(),
@@ -202,7 +186,7 @@ describe('WizardStepInventory', () => {
       expect(onInventoryChange).toHaveBeenCalledWith('gold', 100);
     });
 
-    it('calls onInventoryChange with 0 when gold input is empty or non-numeric', () => {
+    it('calls onInventoryChange with 0 for empty, non-numeric, or decimal input', () => {
       const onInventoryChange = vi.fn();
       const props = createMockProps({ onInventoryChange });
       render(<WizardStepInventory {...props} />);
@@ -214,6 +198,10 @@ describe('WizardStepInventory', () => {
       vi.mocked(onInventoryChange).mockClear();
       fireEvent.change(goldInput, { target: { value: 'abc' } });
       expect(onInventoryChange).toHaveBeenCalledWith('gold', 0);
+
+      vi.mocked(onInventoryChange).mockClear();
+      fireEvent.change(goldInput, { target: { value: '10.5' } });
+      expect(onInventoryChange).toHaveBeenCalledWith('gold', 10);
     });
 
     it('renders null for gold input when formData.inventory.gold is undefined', () => {
@@ -223,19 +211,9 @@ describe('WizardStepInventory', () => {
       render(<WizardStepInventory {...props} />);
       expect(screen.getByRole('spinbutton')).toHaveValue(null);
     });
-
-    it('calls onInventoryChange with NaN-derived 0 for decimal input', () => {
-      const onInventoryChange = vi.fn();
-      const props = createMockProps({ onInventoryChange });
-      render(<WizardStepInventory {...props} />);
-      const goldInput = screen.getByRole('spinbutton');
-      fireEvent.change(goldInput, { target: { value: '10.5' } });
-      // parseInt('10.5') returns 10, but parseInt('') returns 0, parseInt('abc') returns NaN which becomes 0 via || 0
-      expect(onInventoryChange).toHaveBeenCalledWith('gold', 10);
-    });
   });
 
-  describe('textarea blur commits items', () => {
+  describe('textarea commits items on blur and Enter', () => {
     it('splits comma-separated items and commits them on blur', () => {
       const onInventoryChange = vi.fn();
       const onTempInventoryChange = vi.fn();
@@ -286,7 +264,7 @@ describe('WizardStepInventory', () => {
       ]);
     });
 
-    it('commits an empty array when blur results in empty or whitespace-only text', () => {
+    it('commits an empty array when blur results in empty text', () => {
       const onInventoryChange = vi.fn();
       const onTempInventoryChange = vi.fn();
       const props = createMockProps({
@@ -328,10 +306,8 @@ describe('WizardStepInventory', () => {
         'Shield',
       ]);
     });
-  });
 
-  describe('textarea Enter key commits items', () => {
-    it('splits and commits comma-separated items when Enter is pressed', () => {
+    it('commits items when Enter is pressed but not when Shift+Enter is pressed', () => {
       const onInventoryChange = vi.fn();
       const onTempInventoryChange = vi.fn();
       const props = createMockProps({
@@ -342,6 +318,8 @@ describe('WizardStepInventory', () => {
       render(<WizardStepInventory {...props} />);
 
       const backpackTextarea = screen.getAllByRole('textbox')[0];
+
+      // Enter key commits
       fireEvent.change(backpackTextarea, {
         target: { value: 'Dagger, Arrow' },
       });
@@ -355,21 +333,13 @@ describe('WizardStepInventory', () => {
         'Dagger',
         'Arrow',
       ]);
-    });
 
-    it('does not commit items when Shift+Enter is pressed', () => {
-      const onInventoryChange = vi.fn();
-      const onTempInventoryChange = vi.fn();
-      const props = createMockProps({
-        tempInventory: { backpack: [], equipped: [] },
-        onInventoryChange,
-        onTempInventoryChange,
-      });
-      render(<WizardStepInventory {...props} />);
+      vi.mocked(onInventoryChange).mockClear();
+      vi.mocked(onTempInventoryChange).mockClear();
 
-      const backpackTextarea = screen.getAllByRole('textbox')[0];
+      // Shift+Enter does not commit
       fireEvent.change(backpackTextarea, {
-        target: { value: 'Dagger, Arrow' },
+        target: { value: 'Sword, Shield' },
       });
       fireEvent.keyDown(backpackTextarea, { key: 'Enter', shiftKey: true });
 
@@ -431,11 +401,9 @@ describe('WizardStepInventory', () => {
       });
       const { rerender } = render(<WizardStepInventory {...props} />);
 
-      // Initial raw text should be 'Rope'
       const backpackTextarea = screen.getAllByRole('textbox')[0];
       expect(backpackTextarea).toHaveValue('Rope');
 
-      // Rerender with updated items (simulating external change via modal)
       rerender(
         <WizardStepInventory
           {...props}
@@ -443,7 +411,6 @@ describe('WizardStepInventory', () => {
         />
       );
 
-      // Raw text should sync to 'Rope, Torch'
       expect(backpackTextarea).toHaveValue('Rope, Torch');
     });
 
@@ -459,7 +426,6 @@ describe('WizardStepInventory', () => {
         target: { value: 'Custom Item' },
       });
 
-      // Rerender with updated items while focused
       rerender(
         <WizardStepInventory
           {...props}
@@ -467,7 +433,6 @@ describe('WizardStepInventory', () => {
         />
       );
 
-      // Raw text should NOT sync because the field is focused
       expect(backpackTextarea).toHaveValue('Custom Item');
     });
   });
@@ -493,7 +458,7 @@ describe('WizardStepInventory', () => {
     });
   });
 
-  describe('EquipmentSearchModal', () => {
+  describe('EquipmentSearchModal integration', () => {
     it('renders the modal when searchField is set', () => {
       useEquipmentSearch.mockReturnValue(
         createMockHookReturn({ searchField: 'backpack' })
@@ -514,7 +479,7 @@ describe('WizardStepInventory', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('calls setSearchField and setSearchQuery when close button is clicked', () => {
+    it('calls setSearchField and setSearchQuery when modal is closed', () => {
       const setSearchField = vi.fn();
       const setSearchQuery = vi.fn();
       useEquipmentSearch.mockReturnValue(
@@ -528,156 +493,10 @@ describe('WizardStepInventory', () => {
       const props = createMockProps();
       render(<WizardStepInventory {...props} />);
 
+      // Close via ✕ button
       fireEvent.click(screen.getByText('✕'));
       expect(setSearchField).toHaveBeenCalledWith(null);
       expect(setSearchQuery).toHaveBeenCalledWith('');
-    });
-
-    it('calls setSearchField and setSearchQuery when the cancel button is clicked', () => {
-      const setSearchField = vi.fn();
-      const setSearchQuery = vi.fn();
-      useEquipmentSearch.mockReturnValue(
-        createMockHookReturn({
-          searchField: 'backpack',
-          setSearchField,
-          setSearchQuery,
-        })
-      );
-
-      const props = createMockProps();
-      render(<WizardStepInventory {...props} />);
-
-      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-      expect(setSearchField).toHaveBeenCalledWith(null);
-      expect(setSearchQuery).toHaveBeenCalledWith('');
-    });
-
-    it('renders equipment items and calls onEquipmentSelect when clicked', () => {
-      const handleEquipmentSelect = vi.fn();
-      useEquipmentSearch.mockReturnValue(
-        createMockHookReturn({
-          searchField: 'backpack',
-          filteredEquipment: mockEquipment,
-          handleEquipmentSelect,
-        })
-      );
-
-      const props = createMockProps();
-      render(<WizardStepInventory {...props} />);
-
-      expect(screen.getByText('Club')).toBeInTheDocument();
-      expect(screen.getByText('Dagger')).toBeInTheDocument();
-      fireEvent.click(screen.getByText('Club'));
-      expect(handleEquipmentSelect).toHaveBeenCalledWith(mockEquipment[0]);
-    });
-
-    it('passes the correct currentItemCount based on the active field', () => {
-      useEquipmentSearch.mockReturnValue(
-        createMockHookReturn({ searchField: 'backpack' })
-      );
-
-      const props = createMockProps({
-        tempInventory: {
-          backpack: ['Rope', 'Torch'],
-          equipped: ['Sword'],
-        },
-      });
-      render(<WizardStepInventory {...props} />);
-      expect(screen.getByText('2 selected)')).toBeInTheDocument();
-    });
-
-    it('renders the category dropdown with unique categories', () => {
-      useEquipmentSearch.mockReturnValue(
-        createMockHookReturn({
-          searchField: 'backpack',
-          uniqueCategories: ['All', 'Weapons', 'Armor', 'Potions'],
-        })
-      );
-
-      const onCategoryChange = vi.fn();
-      useEquipmentSearch.mockReturnValue(
-        createMockHookReturn({
-          searchField: 'backpack',
-          uniqueCategories: ['All', 'Weapons', 'Armor', 'Potions'],
-          onCategoryChange,
-        })
-      );
-
-      const props = createMockProps();
-      render(<WizardStepInventory {...props} />);
-
-      const select = screen.getByRole('combobox');
-      expect(select).toHaveValue('All');
-      expect(screen.getByText('Weapons')).toBeInTheDocument();
-      expect(screen.getByText('Armor')).toBeInTheDocument();
-      expect(screen.getByText('Potions')).toBeInTheDocument();
-    });
-
-    it('renders the search input with the correct placeholder', () => {
-      useEquipmentSearch.mockReturnValue(
-        createMockHookReturn({
-          searchField: 'backpack',
-          searchQuery: '',
-        })
-      );
-
-      const props = createMockProps();
-      render(<WizardStepInventory {...props} />);
-
-      const searchInput = screen.getByPlaceholderText('Search equipment...');
-      expect(searchInput).toBeInTheDocument();
-    });
-
-    it('renders the "Show Only Selected" checkbox and calls setShowOnlySelectedBackpack when toggled', () => {
-      const setShowOnlySelectedBackpack = vi.fn();
-      useEquipmentSearch.mockReturnValue(
-        createMockHookReturn({
-          searchField: 'backpack',
-          setShowOnlySelectedBackpack,
-        })
-      );
-
-      const props = createMockProps();
-      render(<WizardStepInventory {...props} />);
-
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).toBeInTheDocument();
-      fireEvent.click(checkbox);
-      expect(setShowOnlySelectedBackpack).toHaveBeenCalledWith(true);
-    });
-
-    it('displays "Start typing to search equipment." when filteredEquipment is empty and no searchQuery', () => {
-      useEquipmentSearch.mockReturnValue(
-        createMockHookReturn({
-          searchField: 'backpack',
-          filteredEquipment: [],
-          searchQuery: '',
-        })
-      );
-
-      const props = createMockProps();
-      render(<WizardStepInventory {...props} />);
-
-      expect(
-        screen.getByText('Start typing to search equipment.')
-      ).toBeInTheDocument();
-    });
-
-    it('displays "No matches found. Press Enter to add as custom item." when filteredEquipment is empty and searchQuery exists', () => {
-      useEquipmentSearch.mockReturnValue(
-        createMockHookReturn({
-          searchField: 'backpack',
-          filteredEquipment: [],
-          searchQuery: 'nonexistent',
-        })
-      );
-
-      const props = createMockProps();
-      render(<WizardStepInventory {...props} />);
-
-      expect(
-        screen.getByText('No matches found. Press Enter to add as custom item.')
-      ).toBeInTheDocument();
     });
   });
 });

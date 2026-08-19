@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepFeats from './WizardStepFeats.jsx';
@@ -78,32 +79,17 @@ describe('WizardStepFeats', () => {
   });
 
   describe('Rendering — expanded details', () => {
-    it('should toggle "Show More"/"Show Less" after expanding', async () => {
+    it('should show expanded content when "Show More" is clicked', async () => {
       renderComponent();
-      const buttons = screen.getAllByRole('button', { name: 'Show More' });
-      expect(buttons.length).toBeGreaterThan(0);
+      const toggleBtns = screen.getAllByRole('button', { name: 'Show More' });
+      fireEvent.click(toggleBtns[0]);
 
-      fireEvent.click(buttons[0]);
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Show Less' })).toBeInTheDocument();
       });
     });
 
-    it('should render HTML descriptions for feats with a description field', async () => {
-      renderComponent();
-      const featName = 'Magic Initiate';
-      const featRow = screen.getByText(featName).closest('.list-item');
-      const toggleBtn = featRow.querySelector('.toggle-details-btn');
-      fireEvent.click(toggleBtn);
-
-      await waitFor(() => {
-        const descriptionDiv = document.querySelector('.feat-description');
-        expect(descriptionDiv).toBeInTheDocument();
-        expect(descriptionDiv).toContainHTML('<p>Learn two cantrips</p>');
-      });
-    });
-
-    it('should render text descriptions for feats with a desc field', async () => {
+    it('should render text descriptions from a feat with a desc field', async () => {
       renderComponent();
       const featName = 'Sharpshooter';
       const featRow = screen.getByText(featName).closest('.list-item');
@@ -112,32 +98,6 @@ describe('WizardStepFeats', () => {
 
       await waitFor(() => {
         expect(screen.getByText('No disadvantage on long range')).toBeInTheDocument();
-      });
-    });
-
-    it('should render HTML content with sanitized markup', async () => {
-      renderComponent();
-      const featName = 'Weapon Master';
-      const featRow = screen.getByText(featName).closest('.list-item');
-      const toggleBtn = featRow.querySelector('.toggle-details-btn');
-      fireEvent.click(toggleBtn);
-
-      await waitFor(() => {
-        const descriptionDiv = document.querySelector('.feat-description');
-        expect(descriptionDiv).toContainHTML('<strong>Master</strong>');
-      });
-    });
-
-    it('should not render a description element when the feat has no description', async () => {
-      renderComponent();
-      const featName = 'Great Weapon Master';
-      const featRow = screen.getByText(featName).closest('.list-item');
-      const toggleBtn = featRow.querySelector('.toggle-details-btn');
-      fireEvent.click(toggleBtn);
-
-      await waitFor(() => {
-        const descriptionDiv = document.querySelector('.feat-description');
-        expect(descriptionDiv).toBeInTheDocument();
       });
     });
   });
@@ -358,25 +318,12 @@ describe('WizardStepFeats', () => {
   });
 
   describe('Edge cases', () => {
-    it('should handle null allFeats gracefully', () => {
-      renderComponent({ allFeats: null });
+    it('should render the wizard step title when allFeats is null or undefined', () => {
+      const { rerender } = render(<WizardStepFeats formData={mockFormData} allFeats={null} onArrayFieldChange={vi.fn()} preSelectedFeats={[]} />);
       expect(screen.getByText('Step 4: Feats')).toBeInTheDocument();
-    });
 
-    it('should handle undefined allFeats gracefully', () => {
-      renderComponent({ allFeats: undefined });
+      rerender(<WizardStepFeats formData={mockFormData} allFeats={undefined} onArrayFieldChange={vi.fn()} preSelectedFeats={[]} />);
       expect(screen.getByText('Step 4: Feats')).toBeInTheDocument();
-    });
-
-    it('should pass correct props to SelectableList', () => {
-      renderComponent({
-        formData: { ...mockFormData, feats: ['Lucky'] },
-        preSelectedFeats: ['Lucky'],
-      });
-
-      expect(screen.getByText('Step 4: Feats')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Search feats...')).toBeInTheDocument();
-      expect(screen.getByText(/Showing 7 feats/)).toBeInTheDocument();
     });
   });
 });

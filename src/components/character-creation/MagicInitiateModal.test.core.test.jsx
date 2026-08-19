@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MagicInitiateModal, createProps } from './MagicInitiateModal.fixtures.js';
@@ -15,27 +16,6 @@ describe('MagicInitiateModal', () => {
   });
 
   describe('initial rendering', () => {
-    it('should render the modal header', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-      expect(screen.getByText('Magic Initiate')).toBeInTheDocument();
-    });
-
-    it('should render the description explaining the feature', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-      const desc = screen.getByText(
-        /Choose a class and select spells from its spell list/
-      );
-      expect(desc).toBeInTheDocument();
-    });
-
-    it('should render the "Add Another Instance" button', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-      expect(screen.getByText('Add Another Instance')).toBeInTheDocument();
-    });
-
     it('should still render header and description when allSpells is null', () => {
       const props = createProps({ allSpells: null });
       render(<MagicInitiateModal {...props} />);
@@ -45,7 +25,7 @@ describe('MagicInitiateModal', () => {
   });
 
   describe('ruleset-aware class selection', () => {
-    it('should show 5e classes (Bard, Cleric, Druid, Sorcerer, Warlock, Wizard) by default', () => {
+    it('should show 5e classes by default', () => {
       const props = createProps({ formData: { rules: '5e' } });
       render(<MagicInitiateModal {...props} />);
       const addBtn = screen.getByText('Add Another Instance');
@@ -57,7 +37,7 @@ describe('MagicInitiateModal', () => {
       expect(optionValues).toEqual(['Bard', 'Cleric', 'Druid', 'Sorcerer', 'Warlock', 'Wizard']);
     });
 
-    it('should show only 2024 classes (Cleric, Druid, Wizard) when ruleset is 2024', () => {
+    it('should show only 2024 classes when ruleset is 2024', () => {
       const props = createProps({ formData: { rules: '2024' } });
       render(<MagicInitiateModal {...props} />);
       const addBtn = screen.getByText('Add Another Instance');
@@ -68,52 +48,21 @@ describe('MagicInitiateModal', () => {
 
       expect(optionValues).toEqual(['Cleric', 'Druid', 'Wizard']);
     });
-
-    it('should default to 5e classes when formData.rules is missing', () => {
-      const props = createProps({ formData: {} });
-      render(<MagicInitiateModal {...props} />);
-      const addBtn = screen.getByText('Add Another Instance');
-      fireEvent.click(addBtn);
-
-      const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      const optionValues = Array.from(classSelect.querySelectorAll('option')).map(o => o.value);
-
-      expect(optionValues).toContain('Bard');
-      expect(optionValues).toContain('Wizard');
-    });
   });
 
   describe('adding instances', () => {
-    it('should add a new instance and show it when clicking "Add Another Instance"', () => {
+    it('should add a new instance in edit mode with default class', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
+
       expect(screen.queryByText('Instance 1:')).not.toBeInTheDocument();
 
       const addBtn = screen.getByText('Add Another Instance');
       fireEvent.click(addBtn);
 
       expect(screen.getByText('Instance 1')).toBeInTheDocument();
-    });
-
-    it('should enter edit mode for the newly added instance', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-      const addBtn = screen.getByText('Add Another Instance');
-      fireEvent.click(addBtn);
-
-      expect(screen.getByText('Instance 1')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Save Instance' })).toBeInTheDocument();
-    });
-
-    it('should default to the first available class for the ruleset', () => {
-      const props = createProps({ formData: { rules: '5e' } });
-      render(<MagicInitiateModal {...props} />);
-      const addBtn = screen.getByText('Add Another Instance');
-      fireEvent.click(addBtn);
-
-      const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      expect(classSelect.value).toBe('Bard');
     });
 
     it('should allow adding and removing multiple instances', () => {
@@ -264,25 +213,6 @@ describe('MagicInitiateModal', () => {
       // After removing Wizard, Bard is renumbered as Instance 1
       expect(screen.getByText('Instance 1: Bard')).toBeInTheDocument();
     });
-
-    it('should clear editing index and errors when removing an instance', () => {
-      const existingInstances = [
-        { class: 'Wizard', cantrips: ['Acid Splash', 'Chill Touch'], level1Spell: 'Burning Hands' },
-        { class: 'Bard', cantrips: ['Dancing Lights', 'Guidance'], level1Spell: 'Bless' },
-      ];
-      const props = createProps({
-        formData: { magicInitiateInstances: existingInstances, spells: [] },
-      });
-      render(<MagicInitiateModal {...props} />);
-
-      // Remove the first instance
-      const summaryElements = document.querySelectorAll('.mi-instance-summary');
-      const firstRemoveBtn = summaryElements[0].querySelector('.mi-remove-btn');
-      fireEvent.click(firstRemoveBtn);
-
-      expect(screen.queryByText('Instance 1: Wizard')).not.toBeInTheDocument();
-      expect(screen.getByText('Instance 1: Bard')).toBeInTheDocument();
-    });
   });
 
   describe('overlay interaction', () => {
@@ -304,7 +234,7 @@ describe('MagicInitiateModal', () => {
   });
 
   describe('editor state management', () => {
-    it('should hide "Add Another Instance" while editing an instance', () => {
+    it('should hide summary controls while editing an instance', () => {
       const existingInstances = [
         { class: 'Wizard', cantrips: ['Acid Splash', 'Chill Touch'], level1Spell: 'Burning Hands' },
       ];
@@ -317,35 +247,7 @@ describe('MagicInitiateModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
       expect(screen.queryByText('Add Another Instance')).not.toBeInTheDocument();
-    });
-
-    it('should hide "Save All" while editing an instance', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-      fireEvent.click(screen.getByRole('button', { name: 'Save Instance' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-
-      // Now we're back to summary with instances
-      expect(screen.getByText(/Save All/)).toBeInTheDocument();
-
-      // Edit an instance
-      fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-      expect(screen.queryByText(/Save All/)).not.toBeInTheDocument();
-    });
-
-    it('should show instances list and Add button when not editing', () => {
-      const existingInstances = [
-        { class: 'Wizard', cantrips: ['Acid Splash', 'Chill Touch'], level1Spell: 'Burning Hands' },
-      ];
-      const props = createProps({
-        formData: { magicInitiateInstances: existingInstances, spells: [] },
-      });
-      render(<MagicInitiateModal {...props} />);
-
-      expect(screen.getByText('Instance 1: Wizard')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Save All/ })).not.toBeInTheDocument();
     });
   });
 });

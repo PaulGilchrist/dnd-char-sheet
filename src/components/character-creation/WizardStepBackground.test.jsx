@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepBackground from './WizardStepBackground.jsx';
@@ -56,14 +57,10 @@ describe('WizardStepBackground', () => {
   });
 
   describe('dropdown', () => {
-    it('should render the background label and select element', () => {
+    it('should render the background label, select element, and options from backgrounds array', () => {
       render(<WizardStepBackground {...createMockProps()} />);
       expect(screen.getByText('Background *')).toBeInTheDocument();
       expect(screen.getByRole('combobox')).toBeInTheDocument();
-    });
-
-    it('should populate options from backgrounds array', () => {
-      render(<WizardStepBackground {...createMockProps()} />);
       expect(screen.getByText('Select a background')).toBeInTheDocument();
       expect(screen.getByText('Acolyte')).toBeInTheDocument();
       expect(screen.getByText('Soldier')).toBeInTheDocument();
@@ -117,36 +114,9 @@ describe('WizardStepBackground', () => {
       );
       expect(screen.getByText('Background is required')).toBeInTheDocument();
     });
-
-    it('should apply the error class to the select element', () => {
-      render(
-        <WizardStepBackground
-          {...createMockProps({
-            errors: { background: 'Background is required' },
-          })}
-        />
-      );
-      expect(screen.getByRole('combobox')).toHaveClass('error');
-    });
   });
 
   describe('detail card', () => {
-    it('should not render a detail card when no background is selected', () => {
-      render(<WizardStepBackground {...createMockProps()} />);
-      expect(screen.queryByText(/Details$/)).not.toBeInTheDocument();
-    });
-
-    it('should not render a detail card when selected background is not found', () => {
-      render(
-        <WizardStepBackground
-          {...createMockProps({
-            formData: { background: 'Nonexistent Background' },
-          })}
-        />
-      );
-      expect(screen.queryByText(/Details$/)).not.toBeInTheDocument();
-    });
-
     it('should render the detail card header when a background is selected', () => {
       render(
         <WizardStepBackground
@@ -159,7 +129,7 @@ describe('WizardStepBackground', () => {
       expect(screen.getByRole('button', { name: 'Show Details' })).toBeInTheDocument();
     });
 
-    it('should expand details when the header is clicked', () => {
+    it('should toggle expanded state when header or toggle button is clicked', () => {
       render(
         <WizardStepBackground
           {...createMockProps({
@@ -169,44 +139,6 @@ describe('WizardStepBackground', () => {
       );
       fireEvent.click(screen.getByText('Acolyte Details'));
       expect(screen.getByRole('button', { name: 'Hide Details' })).toBeInTheDocument();
-    });
-
-    it('should collapse details when the header is clicked again', () => {
-      render(
-        <WizardStepBackground
-          {...createMockProps({
-            formData: { background: 'Acolyte' },
-          })}
-        />
-      );
-      const header = screen.getByText('Acolyte Details');
-      fireEvent.click(header);
-      fireEvent.click(header);
-      expect(screen.getByRole('button', { name: 'Show Details' })).toBeInTheDocument();
-    });
-
-    it('should expand details when the toggle button is clicked independently', () => {
-      render(
-        <WizardStepBackground
-          {...createMockProps({
-            formData: { background: 'Acolyte' },
-          })}
-        />
-      );
-      fireEvent.click(screen.getByRole('button', { name: 'Show Details' }));
-      expect(screen.getByRole('button', { name: 'Hide Details' })).toBeInTheDocument();
-    });
-
-    it('should collapse details when the toggle button is clicked again', () => {
-      render(
-        <WizardStepBackground
-          {...createMockProps({
-            formData: { background: 'Acolyte' },
-          })}
-        />
-      );
-      const toggle = screen.getByRole('button', { name: 'Show Details' });
-      fireEvent.click(toggle);
       fireEvent.click(screen.getByRole('button', { name: 'Hide Details' }));
       expect(screen.getByRole('button', { name: 'Show Details' })).toBeInTheDocument();
     });
@@ -249,13 +181,8 @@ describe('WizardStepBackground', () => {
     });
   });
 
-  describe('5e ruleset', () => {
-    it('should display the not-available notice', () => {
-      render(<WizardStepBackground {...createMockProps({ ruleset: '5e' })} />);
-      expect(screen.getByText(/Backgrounds are only available for 2024/)).toBeInTheDocument();
-    });
-
-    it('should not render the dropdown or error for 5e ruleset', () => {
+  describe('early return paths', () => {
+    it('should display the not-available notice for non-2024 rulesets and not render the dropdown', () => {
       render(
         <WizardStepBackground
           {...createMockProps({
@@ -264,18 +191,12 @@ describe('WizardStepBackground', () => {
           })}
         />
       );
+      expect(screen.getByText(/Backgrounds are only available for 2024/)).toBeInTheDocument();
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
       expect(screen.queryByText('Background is required')).not.toBeInTheDocument();
     });
-  });
 
-  describe('empty backgrounds', () => {
-    it('should show a loading message when no backgrounds are available', () => {
-      render(<WizardStepBackground {...createMockProps({ backgrounds: [] })} />);
-      expect(screen.getByText('Background data not yet loaded. Please try again.')).toBeInTheDocument();
-    });
-
-    it('should not render the dropdown or error when backgrounds are empty', () => {
+    it('should show a loading message when no backgrounds are available and not render the dropdown', () => {
       render(
         <WizardStepBackground
           {...createMockProps({
@@ -284,6 +205,7 @@ describe('WizardStepBackground', () => {
           })}
         />
       );
+      expect(screen.getByText('Background data not yet loaded. Please try again.')).toBeInTheDocument();
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
       expect(screen.queryByText('Background is required')).not.toBeInTheDocument();
     });

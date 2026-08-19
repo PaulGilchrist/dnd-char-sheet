@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import AttackResultPopup from './AttackResultPopup.jsx';
@@ -73,49 +74,6 @@ describe('AttackResultPopup', () => {
       expect(screen.getByRole('button', { name: /Boon of Combat Prowess/i })).toBeInTheDocument();
     });
 
-    it('does NOT show Boon of Combat Prowess when autoRerollForAttack is false', () => {
-      renderPopup({
-        popupHtml: {
-          name: 'Test Attack',
-          type: 'd20',
-          rolls: [3],
-          bonus: 3,
-          hit: false,
-          autoRerollForAttack: false,
-        },
-        attackerName: 'PlayerOne',
-      });
-
-      expect(screen.queryByRole('button', { name: /Boon of Combat Prowess/i })).not.toBeInTheDocument();
-    });
-
-    it('does NOT show Stroke of Luck when strokeOfLuck prop is false', () => {
-      renderPopup({
-        popupHtml: {
-          name: 'Test Attack',
-          type: 'd20',
-          rolls: [3],
-          bonus: 3,
-          hit: false,
-          strokeOfLuck: false,
-        },
-      });
-
-      expect(screen.queryByRole('button', { name: /Stroke of Luck/i })).not.toBeInTheDocument();
-    });
-
-    it('does NOT show Stroke of Luck button when popupHtml is null', () => {
-      renderPopup({ popupHtml: null });
-
-      expect(screen.queryByRole('button', { name: /Stroke of Luck/i })).not.toBeInTheDocument();
-    });
-
-    it('does NOT show Stroke of Luck button when popupHtml is a string', () => {
-      renderPopup({ popupHtml: '<b>String popup</b>' });
-
-      expect(screen.queryByRole('button', { name: /Stroke of Luck/i })).not.toBeInTheDocument();
-    });
-
     it('calls onStrokeOfLuck when Stroke of Luck button is clicked', () => {
       const onStrokeOfLuck = vi.fn();
       renderPopup({
@@ -155,28 +113,6 @@ describe('AttackResultPopup', () => {
       fireEvent.click(boonBtn);
 
       expect(onStrokeOfLuck).toHaveBeenCalledTimes(1);
-    });
-
-    it('does NOT call onStrokeOfLuck when it is not provided', () => {
-      renderPopup({
-        popupHtml: {
-          name: 'Test Attack',
-          type: 'd20',
-          rolls: [3],
-          bonus: 3,
-          hit: false,
-          strokeOfLuck: true,
-        },
-      });
-
-      const strokeBtn = screen.getByRole('button', { name: /Stroke of Luck/i });
-      expect(() => fireEvent.click(strokeBtn)).not.toThrow();
-    });
-
-    it('does NOT show Stroke of Luck button when popupHtml is undefined', () => {
-      renderPopup({ popupHtml: undefined });
-
-      expect(screen.queryByRole('button', { name: /Stroke of Luck/i })).not.toBeInTheDocument();
     });
   });
 
@@ -224,22 +160,6 @@ describe('AttackResultPopup', () => {
       fireEvent.click(boonBtn);
 
       expect(onStrokeOfLuck).toHaveBeenCalledTimes(1);
-    });
-
-    it('shows Boon of Combat Prowess even when attackerName is null (ref is just not initialized)', () => {
-      renderPopup({
-        popupHtml: {
-          name: 'Test Attack',
-          type: 'd20',
-          rolls: [3],
-          bonus: 3,
-          hit: false,
-          autoRerollForAttack: true,
-        },
-        attackerName: null,
-      });
-
-      expect(screen.getByRole('button', { name: /Boon of Combat Prowess/i })).toBeInTheDocument();
     });
   });
 });

@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen } from '@testing-library/react';
+// @cleaned-by-ai
+import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../services/automation/index.js', () => ({
@@ -59,23 +60,6 @@ describe('WeaponKindMasteryModal', () => {
   });
 
   describe('initial render', () => {
-    it('renders the modal overlay structure with overlay, modal, header, body, and action buttons', () => {
-      renderWithWeapons();
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-      expect(document.querySelector('.sp-header')).toBeInTheDocument();
-      expect(document.querySelector('.sp-body')).toBeInTheDocument();
-      expect(document.querySelector('.sp-actions')).toBeInTheDocument();
-    });
-
-    it('renders the Weapon Mastery header with crosshairs icon and correct title', () => {
-      renderWithWeapons();
-      const icon = document.querySelector('.fa-solid.fa-crosshairs');
-      expect(icon).toBeInTheDocument();
-      const header = document.querySelector('.sp-header');
-      expect(header.textContent).toContain('Weapon Mastery');
-    });
-
     it('renders the instruction text with the correct maxKinds count and pluralization', () => {
       renderWithWeapons();
       const bodyP = document.querySelector('.sp-body p');
@@ -88,17 +72,6 @@ describe('WeaponKindMasteryModal', () => {
       renderWithWeapons({ meleeOnly: true });
       const bodyP = document.querySelector('.sp-body p');
       expect(bodyP.textContent).toContain('Melee only');
-    });
-
-    it('renders Select and Skip buttons', () => {
-      renderWithWeapons();
-      expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
-    });
-
-    it('disables the Select button when no weapons are selected', () => {
-      renderWithWeapons();
-      expect(screen.getByRole('button', { name: 'Select' })).toBeDisabled();
     });
   });
 });

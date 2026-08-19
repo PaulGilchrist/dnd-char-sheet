@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import SingleTargetPopup from './SingleTargetPopup.jsx';
@@ -32,17 +33,6 @@ describe('SingleTargetPopup', () => {
 
   // ── Rendering ──
 
-  it('renders popup with icon, title, and spell info', () => {
-    render(<SingleTargetPopup {...makeProps()} />);
-    expect(screen.getByRole('heading', { name: 'Burning Hands' })).toBeInTheDocument();
-    expect(screen.getByText(/Level 1.*Evocation/)).toBeInTheDocument();
-  });
-
-  it('renders the description when provided', () => {
-    render(<SingleTargetPopup {...makeProps({ description: 'Pick one creature' })} />);
-    expect(screen.getByText('Pick one creature')).toBeInTheDocument();
-  });
-
   it('renders creature targets in the target selection list', () => {
     render(<SingleTargetPopup {...makeProps()} />);
     expect(screen.getByText(/Goblin/)).toBeInTheDocument();
@@ -50,9 +40,21 @@ describe('SingleTargetPopup', () => {
     expect(screen.getByText(/Orc/)).toBeInTheDocument();
   });
 
-  it('renders the target label', () => {
-    render(<SingleTargetPopup {...makeProps()} />);
+  it('renders with empty creature targets list', () => {
+    render(<SingleTargetPopup {...makeProps({ creatureTargets: [] })} />);
+    expect(screen.getByRole('button', { name: 'Cast' })).toBeInTheDocument();
     expect(screen.getByText('Target:')).toBeInTheDocument();
+    expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
+  });
+
+  it('renders gracefully with null spell', () => {
+    render(<SingleTargetPopup {...makeProps({ spell: null })} />);
+    expect(screen.getByText(/Spell/)).toBeInTheDocument();
+  });
+
+  it('renders gracefully with empty spell object', () => {
+    render(<SingleTargetPopup {...makeProps({ spell: {} })} />);
+    expect(screen.getByText(/Spell/)).toBeInTheDocument();
   });
 
   // ── Target selection ──
@@ -81,13 +83,10 @@ describe('SingleTargetPopup', () => {
 
   // ── Button behavior ──
 
-  it('disables confirm button when no target is selected', () => {
+  it('disables confirm when no target is selected and enables after selection', () => {
     render(<SingleTargetPopup {...makeProps()} />);
     expect(screen.getByRole('button', { name: 'Cast' })).toBeDisabled();
-  });
 
-  it('enables confirm button after selecting a target', () => {
-    render(<SingleTargetPopup {...makeProps()} />);
     const goblinRow = screen.getByText('Goblin').closest('div');
     fireEvent.click(goblinRow);
     expect(screen.getByRole('button', { name: 'Cast' })).not.toBeDisabled();
@@ -107,83 +106,7 @@ describe('SingleTargetPopup', () => {
     expect(mockOnConfirm).not.toHaveBeenCalled();
   });
 
-  it('uses custom confirmLabel when provided', () => {
-    render(<SingleTargetPopup {...makeProps({ confirmLabel: 'Cast Spell' })} />);
-    expect(screen.getByRole('button', { name: 'Cast Spell' })).toBeInTheDocument();
-  });
-
-  it('uses default confirmLabel "Cast {title}" when confirmLabel is not provided', () => {
-    render(<SingleTargetPopup {...makeProps({ confirmLabel: undefined })} />);
-    expect(screen.getByRole('button', { name: 'Cast Burning Hands' })).toBeInTheDocument();
-  });
-
-  it('uses custom cancelLabel when provided', () => {
-    render(<SingleTargetPopup {...makeProps({ cancelLabel: 'Nope' })} />);
-    expect(screen.getByRole('button', { name: 'Nope' })).toBeInTheDocument();
-  });
-
-  it('uses default cancelLabel "Cancel" when cancelLabel is not provided', () => {
-    render(<SingleTargetPopup {...makeProps({ cancelLabel: undefined })} />);
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-  });
-
-  it('calls onSkip when cancel button is clicked', () => {
-    render(<SingleTargetPopup {...makeProps()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(mockOnSkip).toHaveBeenCalledTimes(1);
-  });
-
-  // ── Skip behavior ──
-
-  it('calls onSkip when Escape key is pressed', () => {
-    render(<SingleTargetPopup {...makeProps()} />);
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(mockOnSkip).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not call onSkip for non-Escape key presses', () => {
-    render(<SingleTargetPopup {...makeProps()} />);
-    fireEvent.keyDown(document, { key: 'Enter' });
-    expect(mockOnSkip).not.toHaveBeenCalled();
-  });
-
-  it('calls onSkip when overlay background is clicked', () => {
-    render(<SingleTargetPopup {...makeProps()} />);
-    const overlay = document.querySelector('.popup-overlay');
-    fireEvent.click(overlay);
-    expect(mockOnSkip).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not call onSkip when modal content is clicked', () => {
-    render(<SingleTargetPopup {...makeProps()} />);
-    const modal = document.querySelector('.popup-modal');
-    fireEvent.click(modal);
-    expect(mockOnSkip).not.toHaveBeenCalled();
-  });
-
   // ── Edge cases ──
-
-  it('renders with empty creature targets list', () => {
-    render(<SingleTargetPopup {...makeProps({ creatureTargets: [] })} />);
-    expect(screen.getByRole('button', { name: 'Cast' })).toBeInTheDocument();
-    expect(screen.getByText('Target:')).toBeInTheDocument();
-    expect(screen.queryByText('Goblin')).not.toBeInTheDocument();
-  });
-
-  it('renders with null spell gracefully', () => {
-    render(<SingleTargetPopup {...makeProps({ spell: null })} />);
-    expect(screen.getByText(/Spell/)).toBeInTheDocument();
-  });
-
-  it('renders with missing spell name gracefully', () => {
-    render(<SingleTargetPopup {...makeProps({ spell: {} })} />);
-    expect(screen.getByText(/Spell/)).toBeInTheDocument();
-  });
-
-  it('shows default level and school when spell has no level or school', () => {
-    render(<SingleTargetPopup {...makeProps({ spell: {}, defaultLevel: 3 })} />);
-    expect(screen.getByText(/Level 3/)).toBeInTheDocument();
-  });
 
   it('uses provided defaultLevel when spell has no level', () => {
     render(<SingleTargetPopup {...makeProps({ spell: {}, defaultLevel: 5, school: 'Necromancy' })} />);

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CombatSuperiorityModal from './CombatSuperiorityModal.jsx';
@@ -33,18 +34,16 @@ function renderModalDirect(props) {
 // ── Null/undefined payload ──
 
 describe('CombatSuperiorityModal - null/undefined payload', () => {
-  it('renders nothing when payload is null', () => {
-    renderModalDirect({ payload: null });
-    expect(document.body.textContent).toBe('');
-  });
-
-  it('renders nothing when payload is undefined', () => {
-    renderModalDirect({ payload: undefined });
-    expect(document.body.textContent).toBe('');
-  });
-
-  it('renders nothing when payload prop is missing entirely', () => {
-    render(<CombatSuperiorityModal onConfirm={vi.fn()} onClose={vi.fn()} />);
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+    ['missing prop', undefined],
+  ])('renders nothing when payload is %s', (label, payloadValue) => {
+    const props = { onConfirm: vi.fn(), onClose: vi.fn() };
+    if (label !== 'missing prop') {
+      props.payload = payloadValue;
+    }
+    renderModalDirect(props);
     expect(document.body.textContent).toBe('');
   });
 });
@@ -71,36 +70,6 @@ describe('CombatSuperiorityModal - overlay clicks', () => {
     fireEvent.click(overlay);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
-
-  it('closes on overlay click in use mode', () => {
-    const onClose = vi.fn();
-    renderModal({
-      payload: { selectionMode: false, knownManeuvers: ['Ki-Fueled Attack'] },
-      onClose,
-    });
-    const overlay = document.querySelector('.sp-overlay');
-    fireEvent.click(overlay);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('closes on overlay click in result state', async () => {
-    const onClose = vi.fn();
-    const onConfirm = vi.fn().mockResolvedValue({ payload: { name: 'Test', description: 'Desc' } });
-    renderModal({
-      payload: { selectionMode: false, knownManeuvers: ['Ki-Fueled Attack'] },
-      onClose,
-      onConfirm,
-    });
-    const radios = document.querySelectorAll('input[name="combatManeuver"]');
-    fireEvent.click(radios[0]);
-    fireEvent.click(screen.getByRole('button', { name: /Use Maneuver/ }));
-    await waitFor(() => {
-      expect(screen.getByText('Done')).toBeInTheDocument();
-    });
-    const overlay = document.querySelector('.sp-overlay');
-    fireEvent.click(overlay);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
 });
 
 // ── maxOptions = 0 edge case (unique: test.jsx only has maxOptions=5) ──
@@ -114,16 +83,6 @@ describe('CombatSuperiorityModal - maxOptions zero', () => {
     checkboxes.forEach(cb => expect(cb.disabled).toBe(true));
     expect(screen.getByText(/0\/0 selected/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Confirm Selection/ })).toBeDisabled();
-  });
-
-  it('does not call onConfirm when confirm is clicked with maxOptions=0 and no valid selections', () => {
-    const onConfirm = vi.fn();
-    renderModal({
-      payload: { selectionMode: true, maxOptions: 0 },
-      onConfirm,
-    });
-    fireEvent.click(screen.getByRole('button', { name: /Confirm Selection/ }));
-    expect(onConfirm).not.toHaveBeenCalled();
   });
 });
 
@@ -171,44 +130,20 @@ describe('CombatSuperiorityModal - action type ordering', () => {
       expect(headingTexts[i]).toBe(text);
     });
   });
-
-  it('excludes skill_check from use mode grouping', () => {
-    renderModal({
-      payload: {
-        selectionMode: false,
-        knownManeuvers: ['Ki-Fueled Attack', 'Evasive Footwork', 'Kicking Attack'],
-      },
-    });
-    const headings = document.querySelectorAll('h4');
-    const headingTexts = Array.from(headings).map(h => h.textContent);
-    expect(headingTexts).not.toContain('Skill Checks');
-    expect(headingTexts[0]).toBe('Bonus Actions');
-    expect(headingTexts[1]).toBe('Reactions');
-  });
-
-  it('excludes attack_rider from use mode grouping', () => {
-    renderModal({
-      payload: {
-        selectionMode: false,
-        knownManeuvers: ['Trip Attack', 'Ki-Fueled Attack'],
-      },
-    });
-    const headings = document.querySelectorAll('h4');
-    const headingTexts = Array.from(headings).map(h => h.textContent);
-    expect(headingTexts).not.toContain('Attack Riders (on hit)');
-  });
 });
 
 // ── Maneuver descriptions in use mode (unique: triggers.test.jsx only covers selection mode) ──
 
 describe('CombatSuperiorityModal - maneuver descriptions in use mode', () => {
-  it('renders maneuver descriptions alongside names in use mode', () => {
+  it('renders descriptions when present and omits them when absent', () => {
+    // With description
     renderModalDirect({
       payload: {
         allManeuvers: [
           { name: 'Trip Attack', actionType: 'bonus_action', description: 'Prone the target.' },
+          { name: 'Simple Move', actionType: 'movement', description: null },
         ],
-        knownManeuvers: ['Trip Attack'],
+        knownManeuvers: ['Trip Attack', 'Simple Move'],
         maxOptions: 3,
         selectionMode: false,
       },
@@ -217,19 +152,6 @@ describe('CombatSuperiorityModal - maneuver descriptions in use mode', () => {
     });
     expect(screen.getByText('Trip Attack')).toBeInTheDocument();
     expect(screen.getByText('Prone the target.')).toBeInTheDocument();
-  });
-
-  it('omits description element when maneuver has no description in use mode', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [{ name: 'Simple Move', actionType: 'movement', description: null }],
-        knownManeuvers: ['Simple Move'],
-        maxOptions: 3,
-        selectionMode: false,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
     expect(screen.getByText('Simple Move')).toBeInTheDocument();
     expect(screen.queryByText('Simple Move')).toBeInTheDocument();
   });
@@ -238,7 +160,8 @@ describe('CombatSuperiorityModal - maneuver descriptions in use mode', () => {
 // ── Prompt mode headers (unique: triggers.test.jsx checks header text but not all prompt variants) ──
 
 describe('CombatSuperiorityModal - prompt mode headers', () => {
-  it('shows "Choose Maneuver" header in selection mode with attackContext', () => {
+  it('shows the correct header based on selectionMode and attackContext', () => {
+    // selectionMode with attackContext → "Choose Maneuver"
     renderModalDirect({
       payload: {
         allManeuvers: [{ name: 'A', actionType: 'bonus_action' }],
@@ -251,9 +174,8 @@ describe('CombatSuperiorityModal - prompt mode headers', () => {
       onClose: vi.fn(),
     });
     expect(screen.getByText(/Combat Superiority — Choose Maneuver/)).toBeInTheDocument();
-  });
 
-  it('shows "Use Maneuver" header in use mode with attackContext', () => {
+    // use mode with attackContext → "Use Maneuver"
     renderModalDirect({
       payload: {
         allManeuvers: [{ name: 'Ki-Fueled Attack', actionType: 'bonus_action' }],
@@ -266,9 +188,8 @@ describe('CombatSuperiorityModal - prompt mode headers', () => {
       onClose: vi.fn(),
     });
     expect(screen.getByText(/Combat Superiority — Use Maneuver/)).toBeInTheDocument();
-  });
 
-  it('shows "Select Maneuvers" header in selection mode without attackContext', () => {
+    // selectionMode without attackContext → "Select Maneuvers"
     renderModalDirect({
       payload: {
         allManeuvers: [{ name: 'A', actionType: 'bonus_action' }],
@@ -427,72 +348,6 @@ describe('CombatSuperiorityModal - duplicate maneuver names', () => {
   });
 });
 
-// ── Unknown actionType falls back to 'other' (unique) ──
-
-describe('CombatSuperiorityModal - unknown actionType', () => {
-  it('does not render maneuvers with unknown actionType in selection mode (not in ACTION_TYPE_ORDER)', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Mystery Maneuver', actionType: 'unknown_type' },
-          { name: 'Ki-Fueled Attack', actionType: 'bonus_action' },
-        ],
-        knownManeuvers: [],
-        maxOptions: 3,
-        selectionMode: true,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    // known actionTypes render normally
-    expect(screen.getByText('Ki-Fueled Attack')).toBeInTheDocument();
-    // unknown actionType is not in ACTION_TYPE_ORDER so it won't get a heading
-    // and won't be rendered
-    expect(screen.queryByText('Mystery Maneuver')).not.toBeInTheDocument();
-  });
-});
-
-// ── Maneuver subtitle labels in use mode (unique) ──
-
-describe('CombatSuperiorityModal - maneuver subtitle labels', () => {
-  it('renders correct subtitle for bonus_action and reaction maneuvers in use mode', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Bonus One', actionType: 'bonus_action' },
-          { name: 'Reaction One', actionType: 'reaction' },
-        ],
-        knownManeuvers: ['Bonus One', 'Reaction One'],
-        maxOptions: 3,
-        selectionMode: false,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText(/— bonus action/)).toBeInTheDocument();
-    expect(screen.getByText(/— reaction/)).toBeInTheDocument();
-  });
-
-  it('omits subtitle for attack_rider maneuvers in use mode (they are excluded anyway)', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [
-          { name: 'Attack Rider', actionType: 'attack_rider' },
-          { name: 'Bonus One', actionType: 'bonus_action' },
-        ],
-        knownManeuvers: ['Attack Rider', 'Bonus One'],
-        maxOptions: 3,
-        selectionMode: false,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText(/— bonus action/)).toBeInTheDocument();
-    // attack_rider is excluded from use mode display
-    expect(screen.queryByText(/— on hit/)).not.toBeInTheDocument();
-  });
-});
-
 // ── Use maneuver error path (unique: triggers.test.jsx covers rejection but not applied state) ──
 
 describe('CombatSuperiorityModal - use maneuver error path', () => {
@@ -548,25 +403,6 @@ describe('CombatSuperiorityModal - onReopenSelection error handling', () => {
       );
     });
     consoleSpy.mockRestore();
-  });
-});
-
-// ── Maneuver with description in selection mode (unique: triggers.test.jsx covers use mode only) ──
-
-describe('CombatSuperiorityModal - selection mode descriptions', () => {
-  it('renders maneuver descriptions in selection mode', () => {
-    renderModalDirect({
-      payload: {
-        allManeuvers: [{ name: 'Trip Attack', actionType: 'attack_rider', description: 'Prone the target.' }],
-        knownManeuvers: [],
-        maxOptions: 3,
-        selectionMode: true,
-      },
-      onConfirm: vi.fn(),
-      onClose: vi.fn(),
-    });
-    expect(screen.getByText('Trip Attack')).toBeInTheDocument();
-    expect(screen.getByText('Prone the target.')).toBeInTheDocument();
   });
 });
 

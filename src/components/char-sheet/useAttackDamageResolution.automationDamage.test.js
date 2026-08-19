@@ -337,10 +337,15 @@ describe('useAttackDamageResolution - automation damage bonuses', () => {
             );
         });
 
-        it('skips Frenzy damage when already used this round', async () => {
+        it.each([
+            { scenario: 'skips when already used this round', _frenzyUsedRound: 1, expectDamage: false },
+            { scenario: 're-enables when round changes', _frenzyUsedRound: 1, expectDamage: true, round: 2 },
+            { scenario: 'skips when rage buff is missing', _frenzyUsedRound: null, expectDamage: false, buffs: [] },
+        ])('Frenzy: $scenario', async ({ _frenzyUsedRound, expectDamage, round, buffs }) => {
+            if (round) getCurrentCombatRound.mockReturnValue(round);
             getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === '_frenzyUsedRound') return 1;
-                if (key === 'activeBuffs') return [
+                if (key === '_frenzyUsedRound') return _frenzyUsedRound;
+                if (key === 'activeBuffs') return buffs ?? [
                     { effect: 'advantage_attacks_advantage_against' },
                     { damageBonusExpression: '2' },
                 ];
@@ -358,57 +363,16 @@ describe('useAttackDamageResolution - automation damage bonuses', () => {
 
             const rollDamageCalls = mockRollDamage.mock.calls;
             const formula = rollDamageCalls.length > 0 ? rollDamageCalls[0][1] : '';
-            expect(formula).not.toContain('2 [necrotic]');
-        });
-
-        it('skips Frenzy damage when round changes (new round available)', async () => {
-            getCurrentCombatRound.mockReturnValue(2);
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === '_frenzyUsedRound') return 1;
-                if (key === 'activeBuffs') return [
-                    { effect: 'advantage_attacks_advantage_against' },
-                    { damageBonusExpression: '2' },
-                ];
-                return null;
-            });
-            const stats = makeFrenzyStats();
-            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
-            const attack = {
-                name: 'Greataxe', damage: '1d12+3', damageType: 'Slashing',
-                weaponType: 'melee', properties: ['Heavy'], abilityName: 'Strength',
-            };
-
-            await resolveAttackDamage(attack);
-            await tick();
-
-            const rollDamageCalls = mockRollDamage.mock.calls;
-            const formula = rollDamageCalls.length > 0 ? rollDamageCalls[0][1] : '';
-            expect(formula).toContain('2 [necrotic]');
-        });
-
-        it('skips Frenzy when rage buff is missing', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
-                if (key === 'activeBuffs') return [];
-                return null;
-            });
-            const stats = makeFrenzyStats();
-            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
-            const attack = {
-                name: 'Greataxe', damage: '1d12+3', damageType: 'Slashing',
-                weaponType: 'melee', properties: ['Heavy'], abilityName: 'Strength',
-            };
-
-            await resolveAttackDamage(attack);
-            await tick();
-
-            const rollDamageCalls = mockRollDamage.mock.calls;
-            const formula = rollDamageCalls.length > 0 ? rollDamageCalls[0][1] : '';
-            expect(formula).not.toContain('2 [necrotic]');
+            if (expectDamage) {
+                expect(formula).toContain('2 [necrotic]');
+            } else {
+                expect(formula).not.toContain('2 [necrotic]');
+            }
         });
     });
 
-    describe('empty automation actions', () => {
-        it('does not crash when automation actions array is empty', async () => {
+    describe('empty automation', () => {
+        it('does not crash when automation actions array is empty or missing', async () => {
             const stats = {
                 ...mockPlayerStats,
                 automation: { actions: [], passives: [] },
@@ -423,23 +387,18 @@ describe('useAttackDamageResolution - automation damage bonuses', () => {
             await tick();
 
             expect(mockRollDamage).toHaveBeenCalled();
-        });
 
-        it('does not crash when automation is missing', async () => {
-            const stats = {
+            setRuntimeValue.mockClear();
+            const statsNoAutomation = {
                 ...mockPlayerStats,
                 automation: undefined,
             };
-            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: stats });
-            const attack = {
-                name: 'Longsword', damage: '1d8+3', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
+            const { resolveAttackDamage: resolveAttackDamage2 } = UseAttackDamageResolution({ playerStats: statsNoAutomation });
 
-            await resolveAttackDamage(attack);
+            await resolveAttackDamage2(attack);
             await tick();
 
-            expect(mockRollDamage).toHaveBeenCalled();
+            expect(mockRollDamage).toHaveBeenCalledTimes(2);
         });
     });
 });

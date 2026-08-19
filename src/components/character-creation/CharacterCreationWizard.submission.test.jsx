@@ -1,4 +1,11 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Removed 5 tests:
+//   - "passes the character ruleset to validateStep" (2024) + "passes the character ruleset to validateStep for 5e" -> consolidated into "passes the character ruleset to validateStep"
+//   - "uses 'Save Changes' button text when isEditing is true" -> button label is WizardFooter concern (covered in WizardFooter.test.jsx)
+//   - "uses 'Create Character' button text when isEditing is false" -> same as above
+//   - "calls onComplete with the formData from the wizard form hook" -> merged into the happy-path test (asserts same onComplete call + setFormData not called)
+//   - "does not call setErrors when validation succeeds" -> implied by the happy-path test calling onComplete
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharacterCreationWizard from './CharacterCreationWizard.jsx';
@@ -313,23 +320,12 @@ describe('CharacterCreationWizard - Submission', () => {
 
     await waitFor(() => {
       expect(localOnComplete).toHaveBeenCalledWith(mockFormData);
+      expect(mockSetFormData).not.toHaveBeenCalled();
+      expect(mockSetErrors).not.toHaveBeenCalled();
     });
   });
 
   it('passes the character ruleset to validateStep', async () => {
-    const localOnComplete = vi.fn();
-    renderWizard({ onComplete: localOnComplete, characterData: { rules: '2024' } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Create Character'));
-    });
-
-    await waitFor(() => {
-      expect(validateStep).toHaveBeenCalledWith(12, mockFormData, {}, [], [], '2024');
-    });
-  });
-
-  it('passes the character ruleset to validateStep for 5e', async () => {
     const localOnComplete = vi.fn();
     renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
 
@@ -396,59 +392,6 @@ describe('CharacterCreationWizard - Submission', () => {
     await waitFor(() => {
       expect(mockSetErrors).toHaveBeenCalledWith({ name: 'Name is required' });
       expect(localOnComplete).not.toHaveBeenCalled();
-    });
-  });
-
-  it('uses "Save Changes" button text when isEditing is true', async () => {
-    const localOnComplete = vi.fn();
-    renderWizard({ onComplete: localOnComplete, isEditing: true, characterData: { rules: '5e' } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Save Changes'));
-    });
-
-    await waitFor(() => {
-      expect(localOnComplete).toHaveBeenCalledWith(mockFormData);
-    });
-  });
-
-  it('uses "Create Character" button text when isEditing is false', async () => {
-    const localOnComplete = vi.fn();
-    renderWizard({ onComplete: localOnComplete, isEditing: false, characterData: { rules: '5e' } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Create Character'));
-    });
-
-    await waitFor(() => {
-      expect(localOnComplete).toHaveBeenCalledWith(mockFormData);
-    });
-  });
-
-  it('calls onComplete with the formData from the wizard form hook', async () => {
-    const localOnComplete = vi.fn();
-    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Create Character'));
-    });
-
-    await waitFor(() => {
-      expect(localOnComplete).toHaveBeenCalledWith(mockFormData);
-      expect(mockSetFormData).not.toHaveBeenCalled();
-    });
-  });
-
-  it('does not call setErrors when validation succeeds', async () => {
-    const localOnComplete = vi.fn();
-    renderWizard({ onComplete: localOnComplete, characterData: { rules: '5e' } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Create Character'));
-    });
-
-    await waitFor(() => {
-      expect(mockSetErrors).not.toHaveBeenCalled();
     });
   });
 });

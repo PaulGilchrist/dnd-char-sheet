@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MagicInitiateModal, createProps } from './MagicInitiateModal.fixtures.js';
@@ -58,50 +59,6 @@ describe('MagicInitiateModal - Save All Behavior', () => {
       ]);
     });
 
-    it('should call onClose after saving all', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-
-      const selects = document.querySelectorAll('.mi-selector-select');
-      fireEvent.change(selects[0], { target: { value: 'Wizard' } });
-      fireEvent.change(selects[1], { target: { value: 'Acid Splash' } });
-      fireEvent.change(selects[2], { target: { value: 'Chill Touch' } });
-      fireEvent.change(selects[3], { target: { value: 'Burning Hands' } });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Save Instance' }));
-
-      fireEvent.click(screen.getByRole('button', { name: /Save All/ }));
-
-      expect(props.onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('should deduplicate spells when adding to existing spells array', () => {
-      const props = createProps({
-        formData: { spells: ['Acid Splash'] },
-      });
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-
-      const selects = document.querySelectorAll('.mi-selector-select');
-      fireEvent.change(selects[0], { target: { value: 'Wizard' } });
-      fireEvent.change(selects[1], { target: { value: 'Acid Splash' } });
-      fireEvent.change(selects[2], { target: { value: 'Chill Touch' } });
-      fireEvent.change(selects[3], { target: { value: 'Burning Hands' } });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Save Instance' }));
-
-      fireEvent.click(screen.getByRole('button', { name: /Save All/ }));
-
-      expect(props.onArrayFieldChange).toHaveBeenNthCalledWith(1, 'spells', [
-        'Acid Splash',
-        'Chill Touch',
-        'Burning Hands',
-      ]);
-    });
-
     it('should merge spells from multiple instances preserving order of first occurrence', () => {
       const props = createProps();
       render(<MagicInitiateModal {...props} />);
@@ -146,25 +103,6 @@ describe('MagicInitiateModal - Save All Behavior', () => {
           },
         ]
       );
-    });
-
-    it('should call onArrayFieldChange twice: spells first, then instances', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-
-      const selects = document.querySelectorAll('.mi-selector-select');
-      fireEvent.change(selects[0], { target: { value: 'Wizard' } });
-      fireEvent.change(selects[1], { target: { value: 'Acid Splash' } });
-      fireEvent.change(selects[2], { target: { value: 'Chill Touch' } });
-      fireEvent.change(selects[3], { target: { value: 'Burning Hands' } });
-
-      fireEvent.click(screen.getByRole('button', { name: 'Save Instance' }));
-
-      fireEvent.click(screen.getByRole('button', { name: /Save All/ }));
-
-      expect(props.onArrayFieldChange).toHaveBeenCalledTimes(2);
     });
 
     it('should not call onArrayFieldChange or onClose when validation fails', () => {

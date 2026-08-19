@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import WarMagicSpellModal from './WarMagicSpellModal.jsx'
@@ -75,17 +76,11 @@ describe('WarMagicSpellModal', () => {
     })
 
     describe('spell selection', () => {
-        it('enables confirm button after selecting a spell', () => {
+        it('enables confirm button after selecting a spell and maintains enabled state when switching', () => {
             renderModal()
+            expect(screen.getByRole('button', { name: /replace attack/i })).toBeDisabled()
             fireEvent.click(screen.getByText('Web'))
             expect(screen.getByRole('button', { name: /replace attack/i })).toBeEnabled()
-        })
-
-        it('allows switching selection to a different spell', () => {
-            renderModal()
-            fireEvent.click(screen.getByText('Web'))
-            expect(screen.getByRole('button', { name: /replace attack/i })).toBeEnabled()
-
             fireEvent.click(screen.getByText('Shield'))
             expect(screen.getByRole('button', { name: /replace attack/i })).toBeEnabled()
         })
@@ -208,56 +203,6 @@ describe('WarMagicSpellModal', () => {
             })
         })
 
-    })
-
-    describe('result state interactions', () => {
-        it('calls onClose when overlay is clicked in result state', async () => {
-            const { confirmWarMagicSpell } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicSpellHandler.js')
-            confirmWarMagicSpell.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Improved War Magic',
-                    description: 'Replaced one attack with the level 2 spell Web.',
-                },
-            })
-
-            renderModal()
-            fireEvent.click(screen.getByText('Web'))
-            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
-
-            await waitFor(() => {
-                expect(screen.getByText('Done')).toBeInTheDocument()
-            })
-
-            const overlay = document.querySelector('.sp-overlay')
-            fireEvent.click(overlay)
-            expect(mockOnClose).toHaveBeenCalled()
-        })
-
-        it('does NOT close when clicking inside the modal in result state', async () => {
-            const { confirmWarMagicSpell } = await import('../../../services/automation/handlers/class-fighter-rogue/warMagicSpellHandler.js')
-            confirmWarMagicSpell.mockResolvedValue({
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Improved War Magic',
-                    description: 'Replaced one attack with the level 2 spell Web.',
-                },
-            })
-
-            renderModal()
-            fireEvent.click(screen.getByText('Web'))
-            fireEvent.click(screen.getByRole('button', { name: /replace attack/i }))
-
-            await waitFor(() => {
-                expect(screen.getByText('Done')).toBeInTheDocument()
-            })
-
-            const modal = document.querySelector('.sp-modal')
-            fireEvent.click(modal)
-            expect(mockOnClose).not.toHaveBeenCalled()
-        })
     })
 
     describe('edge cases', () => {

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -44,7 +45,7 @@ function renderModal(overrides, weapons = mockWeapons) {
   globalThis.fetch = vi.fn().mockResolvedValue({
     json: () => Promise.resolve(weapons),
   });
-  return render(<WeaponKindMasteryModal {...makeProps(overrides)} />);
+  return { ...render(<WeaponKindMasteryModal {...makeProps(overrides)} />) };
 }
 
 describe('WeaponKindMasteryModal', () => {
@@ -67,11 +68,6 @@ describe('WeaponKindMasteryModal', () => {
       await findInstructionParagraph(/Choose up to 2 weapons/);
     });
 
-    it('displays default maxKinds of 2 when action is null', async () => {
-      renderModal({ action: null });
-      await findInstructionParagraph(/Choose up to 2 weapons/);
-    });
-
     it('uses numeric maxKinds from action.automation.maxKinds', async () => {
       renderModal({ action: { automation: { maxKinds: 4 } } });
       await findInstructionParagraph(/Choose up to 4 weapons/);
@@ -82,28 +78,20 @@ describe('WeaponKindMasteryModal', () => {
       await findInstructionParagraph(/Choose up to 3 weapons/);
     });
 
-    it('falls back to 2 when class_level_scaling finds no matching level', async () => {
-      renderModal({
-        action: { automation: { maxKinds: 'class_level_scaling' } },
-        playerStats: { name: 'Fighter1', level: 10, class: { class_levels: [] } },
-      });
-      await findInstructionParagraph(/Choose up to 2 weapons/);
-    });
-
-    it('falls back to 2 when playerStats.class is undefined', async () => {
-      renderModal({
-        action: { automation: { maxKinds: 'class_level_scaling' } },
-        playerStats: { name: 'Fighter1', level: 5 },
-      });
-      await findInstructionParagraph(/Choose up to 2 weapons/);
-    });
-
-    it('falls back to 2 when class_levels is undefined', async () => {
-      renderModal({
-        action: { automation: { maxKinds: 'class_level_scaling' } },
-        playerStats: { name: 'Fighter1', level: 5, class: {} },
-      });
-      await findInstructionParagraph(/Choose up to 2 weapons/);
+    it('falls back to 2 when class_level_scaling encounters missing class data', async () => {
+      const fallbackCases = [
+        { playerStats: { name: 'Fighter1', level: 10, class: { class_levels: [] } } },
+        { playerStats: { name: 'Fighter1', level: 5 } },
+        { playerStats: { name: 'Fighter1', level: 5, class: {} } },
+      ];
+      for (const { playerStats } of fallbackCases) {
+        const { unmount } = renderModal({
+          action: { automation: { maxKinds: 'class_level_scaling' } },
+          playerStats,
+        });
+        await findInstructionParagraph(/Choose up to 2 weapons/);
+        unmount();
+      }
     });
 
     it('shows singular "weapon" when maxKinds is 1', async () => {
@@ -111,12 +99,6 @@ describe('WeaponKindMasteryModal', () => {
       const el = await findInstructionParagraph(/Choose up to 1 weapon[^s]/);
       expect(el.textContent).toContain('weapon');
       expect(el.textContent).not.toContain('weapons');
-    });
-
-    it('shows plural "weapons" when maxKinds is greater than 1', async () => {
-      renderModal({ action: { automation: { maxKinds: 5 } } });
-      const el = await findInstructionParagraph(/Choose up to 5 weapons/);
-      expect(el.textContent).toContain('weapons');
     });
   });
 });

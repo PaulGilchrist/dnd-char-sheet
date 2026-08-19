@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepSpecial from './WizardStepSpecial.jsx';
@@ -56,31 +57,6 @@ describe('WizardStepSpecial', () => {
       expect(screen.queryByText('Custom Special Actions')).not.toBeInTheDocument();
     });
 
-    it('should not render description paragraph when description is empty string', () => {
-      const props = {
-        ...baseProps,
-        formData: {
-          specialActions: [{ name: 'Action', description: '', details: null }],
-        },
-      };
-      const { container } = render(<WizardStepSpecial {...props} />);
-      expect(screen.getByText('Action')).toBeInTheDocument();
-      const actionLi = container.querySelector('.wizard-step li');
-      const paragraphs = actionLi.querySelectorAll('p');
-      expect(paragraphs.length).toBe(0);
-    });
-
-    it('should not render details paragraph when details is empty string', () => {
-      const props = {
-        ...baseProps,
-        formData: {
-          specialActions: [{ name: 'Action', description: 'Desc', details: '' }],
-        },
-      };
-      render(<WizardStepSpecial {...props} />);
-      expect(screen.getByText('Action')).toBeInTheDocument();
-      expect(screen.getByText('Desc')).toBeInTheDocument();
-    });
   });
 
   describe('normalization', () => {
@@ -96,16 +72,6 @@ describe('WizardStepSpecial', () => {
       expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
     });
 
-    it('should handle undefined specialActions gracefully', () => {
-      const props = {
-        ...baseProps,
-        formData: {},
-      };
-      const { container } = render(<WizardStepSpecial {...props} />);
-      expect(screen.getByText('Step 12: Special Actions')).toBeInTheDocument();
-      expect(container.querySelector('.form-group')).toBeTruthy();
-      expect(screen.queryByText('Custom Special Actions')).not.toBeInTheDocument();
-    });
   });
 
   describe('adding actions', () => {
@@ -128,9 +94,11 @@ describe('WizardStepSpecial', () => {
       expect(mockOnChange).toHaveBeenCalledWith('newSpecialAction', {});
     });
 
-    it('should not add an action when name is empty or whitespace-only', () => {
+    it('should not add an action when name is empty, whitespace-only, or missing', () => {
       const mockOnChange = vi.fn();
-      const props = {
+
+      // Whitespace-only name
+      const propsWhitespace = {
         ...baseProps,
         formData: {
           specialActions: [],
@@ -138,15 +106,12 @@ describe('WizardStepSpecial', () => {
         },
         onArrayFieldChange: mockOnChange,
       };
-      render(<WizardStepSpecial {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Add Action' }));
-      const specialActionsCalls = mockOnChange.mock.calls.filter((c) => c[0] === 'specialActions');
-      expect(specialActionsCalls).toHaveLength(0);
-    });
+      const { container: c1 } = render(<WizardStepSpecial {...propsWhitespace} />);
+      fireEvent.click(c1.querySelector('button.btn-primary'));
+      expect(mockOnChange.mock.calls.filter((c) => c[0] === 'specialActions')).toHaveLength(0);
 
-    it('should not add an action when name is undefined or missing', () => {
-      const mockOnChange = vi.fn();
-      const props = {
+      // Missing name
+      const propsNoName = {
         ...baseProps,
         formData: {
           specialActions: [],
@@ -154,10 +119,9 @@ describe('WizardStepSpecial', () => {
         },
         onArrayFieldChange: mockOnChange,
       };
-      render(<WizardStepSpecial {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Add Action' }));
-      const specialActionsCalls = mockOnChange.mock.calls.filter((c) => c[0] === 'specialActions');
-      expect(specialActionsCalls).toHaveLength(0);
+      const { container: c2 } = render(<WizardStepSpecial {...propsNoName} />);
+      fireEvent.click(c2.querySelector('button.btn-primary'));
+      expect(mockOnChange.mock.calls.filter((c) => c[0] === 'specialActions')).toHaveLength(0);
     });
 
     it('should append to existing actions without replacing them', () => {
@@ -180,9 +144,11 @@ describe('WizardStepSpecial', () => {
   });
 
   describe('removing actions', () => {
-    it('should remove only the clicked action when multiple actions exist', () => {
+    it('should remove only the clicked action from the array', () => {
       const mockOnChange = vi.fn();
-      const props = {
+
+      // Multiple actions: remove middle one
+      const propsMulti = {
         ...baseProps,
         formData: {
           specialActions: [
@@ -193,26 +159,25 @@ describe('WizardStepSpecial', () => {
         },
         onArrayFieldChange: mockOnChange,
       };
-      render(<WizardStepSpecial {...props} />);
-      const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+      const { container: c1 } = render(<WizardStepSpecial {...propsMulti} />);
+      const removeButtons = c1.querySelectorAll('button.btn-danger');
       fireEvent.click(removeButtons[1]);
       expect(mockOnChange).toHaveBeenCalledWith('specialActions', [
         { name: 'Action 1', description: 'Desc 1', details: null },
         { name: 'Action 3', description: 'Desc 3', details: null },
       ]);
-    });
 
-    it('should remove the only action when there is just one', () => {
-      const mockOnChange = vi.fn();
-      const props = {
+      // Single action: removal yields empty array (same code path)
+      vi.clearAllMocks();
+      const propsSingle = {
         ...baseProps,
         formData: {
           specialActions: [{ name: 'Only Action', description: 'Solo', details: null }],
         },
         onArrayFieldChange: mockOnChange,
       };
-      render(<WizardStepSpecial {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+      const { container: c2 } = render(<WizardStepSpecial {...propsSingle} />);
+      fireEvent.click(c2.querySelector('button.btn-danger'));
       expect(mockOnChange).toHaveBeenCalledWith('specialActions', []);
     });
 

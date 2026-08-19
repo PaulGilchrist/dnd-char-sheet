@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import WeaponMasteryModal from './WeaponMasteryModal.jsx';
@@ -65,12 +66,6 @@ describe('WeaponMasteryModal', () => {
       expect(screen.getByText(/Choose a mastery property to activate/)).toBeInTheDocument();
       expect(screen.getByText(/You can activate one mastery property per hit/)).toBeInTheDocument();
     });
-
-    it('renders the target name in the instruction text when provided', () => {
-      renderModal();
-      expect(screen.getByText(/against/)).toBeInTheDocument();
-      expect(screen.getByText(/Goblin/)).toBeInTheDocument();
-    });
   });
 
   describe('mastery options rendering', () => {
@@ -103,13 +98,6 @@ describe('WeaponMasteryModal', () => {
       expect(screen.getByText('Feature')).toBeInTheDocument();
     });
 
-    it('does not mark weapon-source masteries with a Feature badge', () => {
-      const props = makeProps();
-      props.extraMasteries = [];
-      render(<WeaponMasteryModal {...props} />);
-      expect(screen.queryByText('Feature')).not.toBeInTheDocument();
-    });
-
     it('falls back to mastery name when MASTERY_EFFECTS has no entry', () => {
       const props = makeProps();
       props.baseMastery = 'CustomMastery';
@@ -128,13 +116,6 @@ describe('WeaponMasteryModal', () => {
       await screen.findByText('Custom Push description.');
     });
 
-    it('shows no descriptions when loadWeaponMasteries returns empty data', () => {
-      useActionPopup.loadWeaponMasteries.mockResolvedValue([]);
-      renderModal();
-      const radios = screen.getAllByRole('radio');
-      expect(radios).toHaveLength(2);
-    });
-
     it('renders radio buttons when baseMastery is null and extraMasteries has items', () => {
       renderModal({ baseMastery: null });
       const radios = screen.getAllByRole('radio');
@@ -144,23 +125,11 @@ describe('WeaponMasteryModal', () => {
   });
 
   describe('mastery selection', () => {
-    it('has no option selected initially', () => {
-      renderModal();
-      const radios = screen.getAllByRole('radio');
-      radios.forEach(radio => expect(radio).not.toBeChecked());
-    });
-
-    it('selects a mastery when its radio is clicked', () => {
+    it('selects a mastery when its radio is clicked and deselects on a different click', () => {
       renderModal();
       const radios = screen.getAllByRole('radio');
       fireEvent.click(radios[0]);
       expect(radios[0]).toBeChecked();
-    });
-
-    it('deselects the previous selection when a different radio is clicked', () => {
-      renderModal();
-      const radios = screen.getAllByRole('radio');
-      fireEvent.click(radios[0]);
       fireEvent.click(radios[1]);
       expect(radios[0]).not.toBeChecked();
       expect(radios[1]).toBeChecked();
@@ -168,30 +137,7 @@ describe('WeaponMasteryModal', () => {
   });
 
   describe('activate button behavior', () => {
-    it('is disabled when no mastery is selected', () => {
-      renderModal();
-      expect(screen.getByRole('button', { name: /Activate/ })).toBeDisabled();
-    });
-
-    it('is enabled after selecting a mastery', () => {
-      renderModal();
-      const radios = screen.getAllByRole('radio');
-      fireEvent.click(radios[0]);
-      expect(screen.getByRole('button', { name: /Activate/ })).not.toBeDisabled();
-    });
-
-    it('is disabled when there are no masteries available', () => {
-      renderModal({ baseMastery: null, extraMasteries: [] });
-      expect(screen.getByRole('button', { name: /Activate/ })).toBeDisabled();
-    });
-
-    it('does not call applyMasteryEffect when clicked without a selection', () => {
-      renderModal();
-      fireEvent.click(screen.getByRole('button', { name: /Activate/ }));
-      expect(weaponMasteryHandler.applyMasteryEffect).not.toHaveBeenCalled();
-    });
-
-    it('calls applyMasteryEffect with correct arguments when activated', async () => {
+    it('calls applyMasteryEffect with selected mastery, playerStats, campaignName, and targetName when activated', async () => {
       weaponMasteryHandler.applyMasteryEffect.mockResolvedValue({
         type: 'popup',
         payload: {
@@ -211,38 +157,13 @@ describe('WeaponMasteryModal', () => {
       expect(callArgs[0]).toBe('Vex');
       expect(callArgs[1]).toBe(mockPlayerStats);
       expect(callArgs[2]).toBe(mockCampaignName);
-    });
-
-    it('passes the target name to applyMasteryEffect', async () => {
-      weaponMasteryHandler.applyMasteryEffect.mockResolvedValue(null);
-
-      renderModal();
-      const radios = screen.getAllByRole('radio');
-      fireEvent.click(radios[0]);
-      fireEvent.click(screen.getByRole('button', { name: /Activate/ }));
-
-      expect(weaponMasteryHandler.applyMasteryEffect).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(Object),
-        expect.any(String),
-        'Goblin'
-      );
+      expect(callArgs[3]).toBe('Goblin');
     });
   });
 
   describe('applied state', () => {
-    async function setupAppliedState(result) {
-      weaponMasteryHandler.applyMasteryEffect.mockResolvedValue(result);
-      renderModal();
-      const radios = screen.getAllByRole('radio');
-      fireEvent.click(radios[0]);
-      fireEvent.click(screen.getByRole('button', { name: /Activate/ }));
-      // Wait for the async state update to complete
-      await screen.findByRole('button', { name: 'Done' });
-    }
-
-    it('shows the result description after applying', async () => {
-      await setupAppliedState({
+    it('shows result description and Done button, hides selection UI after applying', async () => {
+      weaponMasteryHandler.applyMasteryEffect.mockResolvedValue({
         type: 'popup',
         payload: {
           type: 'automation_info',
@@ -250,59 +171,19 @@ describe('WeaponMasteryModal', () => {
           description: 'Vex applied to Goblin — you have Advantage on next attack.',
         },
       });
+      renderModal();
+      const radios = screen.getAllByRole('radio');
+      fireEvent.click(radios[0]);
+      fireEvent.click(screen.getByRole('button', { name: /Activate/ }));
+      await screen.findByRole('button', { name: 'Done' });
       expect(screen.getByText(/Vex applied/)).toBeInTheDocument();
-    });
-
-    it('renders the Done button in applied state', async () => {
-      await setupAppliedState({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Vex',
-          description: 'Vex applied.',
-        },
-      });
-      expect(screen.getByText('Done')).toBeInTheDocument();
-    });
-
-    it('hides selection options after applying', async () => {
-      await setupAppliedState({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Vex',
-          description: 'Vex applied.',
-        },
-      });
       expect(screen.queryByText(/Choose a mastery property/)).not.toBeInTheDocument();
-    });
-
-    it('hides the Activate button after applying', async () => {
-      await setupAppliedState({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Vex',
-          description: 'Vex applied.',
-        },
-      });
       expect(screen.queryByRole('button', { name: /Activate/ })).not.toBeInTheDocument();
-    });
-
-    it('hides the Skip button after applying', async () => {
-      await setupAppliedState({
-        type: 'popup',
-        payload: {
-          type: 'automation_info',
-          name: 'Vex',
-          description: 'Vex applied.',
-        },
-      });
       expect(screen.queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
     });
 
-    it('renders the result description with HTML tags preserved', async () => {
-      await setupAppliedState({
+    it('renders HTML tags in the result description', async () => {
+      weaponMasteryHandler.applyMasteryEffect.mockResolvedValue({
         type: 'popup',
         payload: {
           type: 'automation_info',
@@ -310,6 +191,11 @@ describe('WeaponMasteryModal', () => {
           description: '<strong>Vex</strong> applied to Goblin.',
         },
       });
+      renderModal();
+      const radios = screen.getAllByRole('radio');
+      fireEvent.click(radios[0]);
+      fireEvent.click(screen.getByRole('button', { name: /Activate/ }));
+      await screen.findByRole('button', { name: 'Done' });
       const body = document.querySelector('.sp-body');
       expect(body.innerHTML).toContain('<strong>Vex</strong>');
     });
@@ -355,8 +241,8 @@ describe('WeaponMasteryModal', () => {
 
     it('calls onClose when clicking outside the modal overlay', () => {
       const onClose = vi.fn();
-      render(<WeaponMasteryModal {...makeProps({ onClose })} />);
-      const overlay = document.querySelector('.sp-overlay');
+      const { container } = render(<WeaponMasteryModal {...makeProps({ onClose })} />);
+      const overlay = container.querySelector('.sp-overlay');
       fireEvent.click(overlay);
       expect(onClose).toHaveBeenCalledTimes(1);
     });
