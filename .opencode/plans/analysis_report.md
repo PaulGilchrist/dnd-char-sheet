@@ -55,20 +55,6 @@
 
 **Similarity:** ~90% identical (~600 lines)
 
-### 1.5 High: targetEffect Registration Pattern
-
-**Files:**
-- `src/services/automation/handlers/buffs/holyAuraHandler.js` (lines 62-78)
-- `src/services/automation/handlers/buffs/auraOfLifeHandler.js` (lines 72-88)
-- `src/services/automation/handlers/buffs/auraOfPurityHandler.js` (lines 62-77)
-- `src/services/automation/handlers/buffs/circleOfPowerHandler.js` (lines 60-76)
-- `src/services/automation/handlers/buffs/auraOfVitalityHandler.js` (lines 148-164)
-
-**Description:** All 5 handlers contain an identical 15-line pattern for reading stored effects, finding existing entries, creating new entries, and writing back. Only the effect key string differs.
-
-**Similarity:** ~95% identical (~75 lines)
-
-
 ### 1.7 Moderate: Combat Context Guard Clause
 
 **Files:** 27+ handler files across `buffs/`, `spells/`, `healing/`, `class-*` directories
@@ -209,13 +195,9 @@ An 87-case inner switch on `result.modalName` maps modal names to `setModalState
 
 ## 4. Coding Inconsistencies
 
-### 4.1 High: Silent Error Swallowing
+### 4.1 ~~High: Silent Error Swallowing~~ — RESOLVED
 
-**264 instances** of `.catch(() => {})` across 108 production `.js` files. This directly violates the project convention: "Use `console.error` for error logging instead of silent fallbacks."
-
-Worst offenders: `attackRiderHandler.js` (8), `quiveringPalmHandler.js` (8), `attackRollPostDamage.js` (9).
-
-Meanwhile, `.catch((e) => { console.error(...) })` appears 547 times across 219 files — showing the convention IS followed elsewhere. The inconsistency is concentrated in automation handlers.
+**Fixed:** 278 instances of `.catch(() => {})` across 122 production files have been converted to `.catch((e) => { console.error("[context]", e); })` with contextual prefixes matching the codebase convention.
 
 ### 4.2 High: Inline Styles Despite Convention
 
@@ -289,11 +271,6 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 - Extract `getSpellCastingMod()` and `resolveHealExpression()` to a shared healing utility
 - Create a `createMassHealHandler(config)` factory that parameterizes spell name, level, and modal name
 
-### Priority 6: Extract targetEffect Registration Utility
-**Risk:** Low (pure extraction) | **Impact:** ~75 lines reduced, consistency improvement
-- Create `registerTargetEffect(campaignName, targetName, effectKey, casterName)` in `src/services/combat/conditions/`
-- Replace identical 15-line blocks in 5 aura handlers
-
 ### Priority 8: Convert 87-Case Switch to Lookup Table
 **Risk:** Low (mechanical transformation) | **Impact:** Major readability improvement
 - `src/components/char-sheet/useCharActionsAutomation.js:95` — Replace 87-case switch with `const modalMap = { ... }; const handler = modalMap[result.modalName];`
@@ -319,8 +296,8 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 
 | Category | Count |
 |----------|-------|
-| Duplicate code instances | 4 remaining patterns (~1,480+ lines, down from 8/~2,200+) |
+| Duplicate code instances | 3 remaining patterns (~1,405+ lines, down from 8/~2,200+) |
 | Dead/unused code | 1 orphaned module remaining (4 backup files + 1 orphan removed, unused CSS cleaned) |
 | Complexity hotspots | 6 critical/high findings (243-case switch, 269-import registry, 87-case switch, 40% branch density, 11-level nesting, 497 importers) |
-| Inconsistencies | 11 categories (error handling, inline styles, naming, organization, async patterns) |
-| Low-risk improvements identified | 7 remaining items (8 completed) |
+| Inconsistencies | 10 categories remaining (error handling normalized, inline styles, naming, organization, async patterns) |
+| Low-risk improvements identified | 5 remaining items (10 completed) |

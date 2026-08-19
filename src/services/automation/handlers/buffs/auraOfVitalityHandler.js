@@ -1,10 +1,11 @@
 import { rollExpression } from '../../../dice/diceRoller.js';
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { registerTargetEffect } from '../../../combat/conditions/targetEffectDefinitions.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const combatSummary = await getCombatSummary(campaignName);
@@ -145,39 +146,11 @@ export async function applyAuraOfVitality(action, playerStats, campaignName, map
         timestamp: Date.now(),
     }).catch((e) => { console.error('[auraOfVitality] Error:', e); });
 
-    const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-
     // Badge on the healed creature (for display on their card)
-    const existingTeIndex = storedEffects.findIndex(te => te.target === targetName && te.effect === 'aura_of_vitality' && te.source === casterName);
-    const newEffect = {
-        target: targetName,
-        effect: 'aura_of_vitality',
-        source: casterName,
-        duration: 'concentration',
-    };
-    let updatedEffects;
-    if (existingTeIndex >= 0) {
-        updatedEffects = [...storedEffects];
-        updatedEffects[existingTeIndex] = newEffect;
-    } else {
-        updatedEffects = [...storedEffects, newEffect];
-    }
+    registerTargetEffect(campaignName, targetName, 'aura_of_vitality', casterName);
 
     // Also store on the caster (for free cast checking)
-    const casterExistingIndex = updatedEffects.findIndex(te => te.target === casterName && te.effect === 'aura_of_vitality' && te.source === casterName);
-    const casterEffect = {
-        target: casterName,
-        effect: 'aura_of_vitality',
-        source: casterName,
-        duration: 'concentration',
-    };
-    if (casterExistingIndex >= 0) {
-        updatedEffects[casterExistingIndex] = casterEffect;
-    } else {
-        updatedEffects = [...updatedEffects, casterEffect];
-    }
-
-    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true);
+    registerTargetEffect(campaignName, casterName, 'aura_of_vitality', casterName);
 
     addExpiration(casterName, targetName, [
         { type: 'remove_active_buff', buffName: 'Aura of Vitality' },

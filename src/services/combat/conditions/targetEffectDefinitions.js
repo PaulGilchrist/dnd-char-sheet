@@ -1,3 +1,5 @@
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+
 /**
  * @typedef {Object} TargetEffectDef
  * @property {string} effect - Unique key used in runtime store (te.effect value)
@@ -709,4 +711,29 @@ function getEffectDefinition(effectKey) {
   return TARGET_EFFECT_DEFINITIONS.find(def => def.effect === effectKey)
 }
 
-export { TARGET_EFFECT_DEFINITIONS, getEffectDefinition }
+/**
+ * Register or update a targetEffect entry in the campaign runtime store.
+ * Handles the read-findIndex-merge-write pattern for badge display on CreatureCard.
+ * @param {string} campaignName
+ * @param {string} targetName
+ * @param {string} effectKey
+ * @param {string} source
+ * @param {Object} [extraProps={}] - Additional properties merged into the effect object
+ */
+function registerTargetEffect(campaignName, targetName, effectKey, source, extraProps = {}) {
+  const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || []
+  const existingIndex = storedEffects.findIndex(
+    te => te.target === targetName && te.effect === effectKey && te.source === source
+  )
+  const newEffect = { target: targetName, effect: effectKey, source, duration: 'concentration', ...extraProps }
+  let updatedEffects
+  if (existingIndex >= 0) {
+    updatedEffects = [...storedEffects]
+    updatedEffects[existingIndex] = newEffect
+  } else {
+    updatedEffects = [...storedEffects, newEffect]
+  }
+  setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true)
+}
+
+export { TARGET_EFFECT_DEFINITIONS, getEffectDefinition, registerTargetEffect }

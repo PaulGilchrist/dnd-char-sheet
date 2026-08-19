@@ -3,6 +3,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
+import { registerTargetEffect } from '../../../combat/conditions/targetEffectDefinitions.js';
 
 const AURA_OF_PURITY_BUFF_NAME = 'Aura of Purity';
 const SAVE_ADVANTAGE_CONDITIONS_KEY = 'auraOfPuritySaveAdvantageConditions';
@@ -59,22 +60,7 @@ export async function applyAuraOfPurity(action, playerStats, campaignName, mapNa
             setRuntimeValue(targetName, 'activeBuffs', buffs, campaignName);
         }
 
-        const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-        const existingTeIndex = storedEffects.findIndex(te => te.target === targetName && te.effect === 'aura_of_purity' && te.source === casterName);
-        const newEffect = {
-            target: targetName,
-            effect: 'aura_of_purity',
-            source: casterName,
-            duration: 'concentration',
-        };
-        let updatedEffects;
-        if (existingTeIndex >= 0) {
-            updatedEffects = [...storedEffects];
-            updatedEffects[existingTeIndex] = newEffect;
-        } else {
-            updatedEffects = [...storedEffects, newEffect];
-        }
-        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true);
+        registerTargetEffect(campaignName, targetName, 'aura_of_purity', casterName);
 
         setRuntimeValue(
             targetName,

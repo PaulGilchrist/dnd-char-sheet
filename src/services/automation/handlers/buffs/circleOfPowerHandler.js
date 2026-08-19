@@ -3,6 +3,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
+import { registerTargetEffect } from '../../../combat/conditions/targetEffectDefinitions.js';
 
 const CIRCLE_OF_POWER_BUFF_NAME = 'Circle of Power';
 
@@ -58,22 +59,7 @@ export async function applyCircleOfPower(action, playerStats, campaignName, mapN
         }
 
         // Register targetEffect for badge display on CreatureCard
-        const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-        const existingTeIndex = storedEffects.findIndex(te => te.target === targetName && te.effect === 'circle_of_power' && te.source === casterName);
-        const newEffect = {
-            target: targetName,
-            effect: 'circle_of_power',
-            source: casterName,
-            duration: 'concentration',
-        };
-        let updatedEffects;
-        if (existingTeIndex >= 0) {
-            updatedEffects = [...storedEffects];
-            updatedEffects[existingTeIndex] = newEffect;
-        } else {
-            updatedEffects = [...storedEffects, newEffect];
-        }
-        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true);
+        registerTargetEffect(campaignName, targetName, 'circle_of_power', casterName);
 
         // Register expirations: remove buff on initiative roll (concentration expiry)
         addExpiration(casterName, targetName, [

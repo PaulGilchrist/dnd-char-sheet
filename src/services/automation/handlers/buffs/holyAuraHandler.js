@@ -3,6 +3,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import { addEntry } from '../../../ui/logService.js';
+import { registerTargetEffect } from '../../../combat/conditions/targetEffectDefinitions.js';
 
 const HOLY_AURA_TARGETS_KEY = 'holyAuraTargets';
 const HOLY_AURA_BUFF_NAME = 'Holy Aura';
@@ -60,22 +61,7 @@ export async function applyHolyAura(action, playerStats, campaignName, mapName, 
         }
 
         // Register targetEffect for badge display on CreatureCard
-        const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-        const existingTeIndex = storedEffects.findIndex(te => te.target === targetName && te.effect === 'holy_aura' && te.source === casterName);
-        const newEffect = {
-            target: targetName,
-            effect: 'holy_aura',
-            source: casterName,
-            duration: 'concentration',
-        };
-        let updatedEffects;
-        if (existingTeIndex >= 0) {
-            updatedEffects = [...storedEffects];
-            updatedEffects[existingTeIndex] = newEffect;
-        } else {
-            updatedEffects = [...storedEffects, newEffect];
-        }
-        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true);
+        registerTargetEffect(campaignName, targetName, 'holy_aura', casterName);
 
         addExpiration(casterName, targetName, [
             { type: 'remove_active_buff', buffName: HOLY_AURA_BUFF_NAME }

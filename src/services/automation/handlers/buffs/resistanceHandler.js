@@ -3,6 +3,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { registerTargetEffect } from '../../../combat/conditions/targetEffectDefinitions.js';
 
 const DAMAGE_TYPES = [
     'Acid', 'Bludgeoning', 'Cold', 'Fire', 'Lightning',
@@ -49,28 +50,7 @@ export async function applyResistance(action, playerStats, campaignName, targetN
     const auto = action.automation || {};
     const damageType = chosenDamageType.charAt(0).toUpperCase() + chosenDamageType.slice(1).toLowerCase();
 
-    const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const existingIndex = storedEffects.findIndex(
-        te => te.target === targetName && te.effect === 'resistance_damage_reduction' && te.source === playerStats.name
-    );
-
-    const newEffect = {
-        target: targetName,
-        effect: 'resistance_damage_reduction',
-        source: playerStats.name,
-        chosenType: damageType,
-        duration: 'concentration',
-    };
-
-    let updatedEffects;
-    if (existingIndex >= 0) {
-        updatedEffects = [...storedEffects];
-        updatedEffects[existingIndex] = newEffect;
-    } else {
-        updatedEffects = [...storedEffects, newEffect];
-    }
-
-    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true);
+    registerTargetEffect(campaignName, targetName, 'resistance_damage_reduction', playerStats.name, { chosenType: damageType });
     setRuntimeValue(targetName, RESISTANCE_CHOOSE_KEY, damageType, campaignName);
     setRuntimeValue(targetName, RESISTANCE_USED_KEY, false, campaignName);
 

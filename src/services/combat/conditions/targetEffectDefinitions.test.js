@@ -3,8 +3,15 @@
 // @cleaned-by-ai
 // @improved-by-ai
 // @cleaned-by-ai
-import { describe, it, expect } from 'vitest';
-import { TARGET_EFFECT_DEFINITIONS, getEffectDefinition } from './targetEffectDefinitions.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TARGET_EFFECT_DEFINITIONS, getEffectDefinition, registerTargetEffect } from './targetEffectDefinitions.js';
+
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn(),
+}));
+
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 describe('targetEffectDefinitions', () => {
   describe('TARGET_EFFECT_DEFINITIONS', () => {
@@ -380,6 +387,110 @@ describe('targetEffectDefinitions', () => {
           }
         }
       }
+    });
+  });
+
+  describe('registerTargetEffect', () => {
+    const campaignName = 'test-campaign';
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('creates a new targetEffect entry when none exists', () => {
+      getRuntimeValue.mockReturnValue([]);
+      registerTargetEffect(campaignName, 'Ally1', 'holy_aura', 'Paladin');
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        [{ target: 'Ally1', effect: 'holy_aura', source: 'Paladin', duration: 'concentration' }],
+        campaignName,
+        true,
+      );
+    });
+
+    it('creates a new entry when store is empty', () => {
+      getRuntimeValue.mockReturnValue(null);
+      registerTargetEffect(campaignName, 'Ally1', 'aura_of_life', 'Cleric');
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        [{ target: 'Ally1', effect: 'aura_of_life', source: 'Cleric', duration: 'concentration' }],
+        campaignName,
+        true,
+      );
+    });
+
+    it('updates an existing entry for same target+effect+source instead of duplicating', () => {
+      const existing = [
+        { target: 'Ally1', effect: 'holy_aura', source: 'Paladin', duration: 'concentration' },
+      ];
+      getRuntimeValue.mockReturnValue(existing);
+      registerTargetEffect(campaignName, 'Ally1', 'holy_aura', 'Paladin');
+
+      const updated = setRuntimeValue.mock.calls[0][2];
+      expect(updated).toHaveLength(1);
+      expect(updated[0]).toEqual({ target: 'Ally1', effect: 'holy_aura', source: 'Paladin', duration: 'concentration' });
+    });
+
+    it('appends new entry when existing entries are for different targets', () => {
+      const existing = [
+        { target: 'Ally1', effect: 'holy_aura', source: 'Paladin', duration: 'concentration' },
+      ];
+      getRuntimeValue.mockReturnValue(existing);
+      registerTargetEffect(campaignName, 'Ally2', 'holy_aura', 'Paladin');
+
+      const updated = setRuntimeValue.mock.calls[0][2];
+      expect(updated).toHaveLength(2);
+      expect(updated[1].target).toBe('Ally2');
+    });
+
+    it('appends new entry when existing entries are for different sources', () => {
+      const existing = [
+        { target: 'Ally1', effect: 'resistance_damage_reduction', source: 'Cleric', chosenType: 'Fire', duration: 'concentration' },
+      ];
+      getRuntimeValue.mockReturnValue(existing);
+      registerTargetEffect(campaignName, 'Ally1', 'resistance_damage_reduction', 'Paladin', { chosenType: 'Cold' });
+
+      const updated = setRuntimeValue.mock.calls[0][2];
+      expect(updated).toHaveLength(2);
+      expect(updated[1].source).toBe('Paladin');
+      expect(updated[1].chosenType).toBe('Cold');
+    });
+
+    it('passes extra properties through via extraProps', () => {
+      getRuntimeValue.mockReturnValue([]);
+      registerTargetEffect(campaignName, 'Goblin', 'resistance_damage_reduction', 'Cleric', { chosenType: 'Fire' });
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        [{ target: 'Goblin', effect: 'resistance_damage_reduction', source: 'Cleric', duration: 'concentration', chosenType: 'Fire' }],
+        campaignName,
+        true,
+      );
+    });
+
+    it('overwrites extra properties on existing entry', () => {
+      const existing = [
+        { target: 'Ally1', effect: 'resistance_damage_reduction', source: 'Paladin', chosenType: 'Fire', duration: 'concentration' },
+      ];
+      getRuntimeValue.mockReturnValue(existing);
+      registerTargetEffect(campaignName, 'Ally1', 'resistance_damage_reduction', 'Paladin', { chosenType: 'Cold' });
+
+      const updated = setRuntimeValue.mock.calls[0][2];
+      expect(updated).toHaveLength(1);
+      expect(updated[0].chosenType).toBe('Cold');
+    });
+
+    it('always sets skipSync as 5th argument', () => {
+      getRuntimeValue.mockReturnValue([]);
+      registerTargetEffect(campaignName, 'Ally1', 'holy_aura', 'Paladin');
+
+      const callArgs = setRuntimeValue.mock.calls[0];
+      expect(callArgs[4]).toBe(true);
     });
   });
 });

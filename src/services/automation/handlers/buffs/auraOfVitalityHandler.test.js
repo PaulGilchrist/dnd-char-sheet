@@ -446,9 +446,12 @@ describe('auraOfVitalityHandler', () => {
             });
             mockHealDice(8, [5, 3]);
             await applyAuraOfVitality(defaultAction, makePlayerStats(), campaignName, null, ['Ally1']);
-            const effectsArg = vi.mocked(useRuntimeState.setRuntimeValue).mock.calls[0][2];
-            expect(effectsArg).toContainEqual({ target: 'Ally1', effect: 'aura_of_vitality', source: 'Cleric', duration: 'concentration' });
-            expect(effectsArg).toContainEqual({ target: 'Cleric', effect: 'aura_of_vitality', source: 'Cleric', duration: 'concentration' });
+            const teCalls = vi.mocked(useRuntimeState.setRuntimeValue).mock.calls.filter(
+                (c) => c[0] === 'campaign' && c[1] === 'targetEffects'
+            );
+            const allEffects = teCalls.flatMap((c) => c[2]);
+            expect(allEffects).toContainEqual({ target: 'Ally1', effect: 'aura_of_vitality', source: 'Cleric', duration: 'concentration' });
+            expect(allEffects).toContainEqual({ target: 'Cleric', effect: 'aura_of_vitality', source: 'Cleric', duration: 'concentration' });
         });
 
         it('uses player runtime values for player-type creatures', async () => {

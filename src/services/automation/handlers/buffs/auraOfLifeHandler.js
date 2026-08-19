@@ -3,6 +3,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
+import { registerTargetEffect } from '../../../combat/conditions/targetEffectDefinitions.js';
 
 const AURA_OF_LIFE_BUFF_NAME = 'Aura of Life';
 const AURA_OF_LIFE_HP_PROTECT_KEY = 'auraOfLifeHpMaxProtected';
@@ -70,22 +71,7 @@ export async function applyAuraOfLife(action, playerStats, campaignName, mapName
         }
 
         // Register targetEffect for badge display on CreatureCard
-        const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-        const existingTeIndex = storedEffects.findIndex(te => te.target === targetName && te.effect === 'aura_of_life' && te.source === casterName);
-        const newEffect = {
-            target: targetName,
-            effect: 'aura_of_life',
-            source: casterName,
-            duration: 'concentration',
-        };
-        let updatedEffects;
-        if (existingTeIndex >= 0) {
-            updatedEffects = [...storedEffects];
-            updatedEffects[existingTeIndex] = newEffect;
-        } else {
-            updatedEffects = [...storedEffects, newEffect];
-        }
-        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true);
+        registerTargetEffect(campaignName, targetName, 'aura_of_life', casterName);
 
         // Register expirations: remove buff and HP protection on initiative roll
         addExpiration(casterName, targetName, [
