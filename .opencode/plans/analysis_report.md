@@ -259,11 +259,6 @@ Only **137 of ~1,120 production files** (~12%) have JSDoc documentation. Critica
 
 The following items are ordered by impact-to-risk ratio. All are safe to implement without altering runtime behavior.
 
-### Priority 5: Consolidate Mass Healing Handlers
-**Risk:** Low (parameterization only) | **Impact:** ~520 lines reduced to ~200
-- Extract `getSpellCastingMod()` and `resolveHealExpression()` to a shared healing utility
-- Create a `createMassHealHandler(config)` factory that parameterizes spell name, level, and modal name
-
 ### Priority 13: Normalize Component File Naming to PascalCase
 **Risk:** Low (requires import path updates) | **Impact:** Consistency with 200+ other components
 - Rename 14 kebab-case `.jsx` files to PascalCase
@@ -285,8 +280,8 @@ The following items are ordered by impact-to-risk ratio. All are safe to impleme
 
 | Category | Count |
 |----------|-------|
-| Duplicate code instances | 3 remaining patterns (~1,405+ lines, down from 8/~2,200+) |
+| Duplicate code instances | 2 remaining patterns (~885+ lines, down from 8/~2,200+) |
 | Dead/unused code | 1 orphaned module remaining (4 backup files + 1 orphan removed, unused CSS cleaned) |
 | Complexity hotspots | 5 critical/high findings (243-case switch, 269-import registry, 40% branch density, 11-level nesting, 497 importers) |
 | Inconsistencies | 10 categories remaining (error handling normalized, inline styles, naming, organization, async patterns) |
-| Low-risk improvements identified | 4 remaining items (11 completed) |
+| Low-risk improvements identified | 3 remaining items (12 completed) |
