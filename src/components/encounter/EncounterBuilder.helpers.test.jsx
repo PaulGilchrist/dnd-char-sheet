@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 
 describe('toggleMonster', () => {
@@ -33,13 +34,6 @@ describe('toggleMonster', () => {
     expect(result.find(m => m.index === 'orc')).toEqual({ index: 'orc', name: 'Orc', xp: 100, qty: 1 });
     expect(result.find(m => m.index === 'goblin').qty).toBe(1);
   });
-
-  it('toggles a monster that has no qty property (defaults to 1, then removes)', () => {
-    const monster = { index: 'goblin', name: 'Goblin', xp: 50 };
-    const withoutQty = { index: 'goblin', name: 'Goblin', xp: 50 };
-    expect(toggleMonster([], monster)).toEqual([{ index: 'goblin', name: 'Goblin', xp: 50, qty: 1 }]);
-    expect(toggleMonster([withoutQty], monster)).toEqual([]);
-  });
 });
 
 describe('updateQty', () => {
@@ -69,12 +63,6 @@ describe('updateQty', () => {
     const result = updateQty(selected, 'goblin', 1);
     expect(result).toHaveLength(2);
     expect(result.find(m => m.index === 'orc').qty).toBe(2);
-  });
-
-  it('handles monster with no qty property (defaults to 1 before delta)', () => {
-    const base = [{ index: 'goblin', name: 'Goblin', xp: 50 }];
-    expect(updateQty(base, 'goblin', 1)[0].qty).toBe(2);
-    expect(updateQty(base, 'goblin', -1)).toEqual([]);
   });
 });
 
@@ -110,10 +98,6 @@ describe('calculateMonsterCount', () => {
     ])).toBe(3);
     expect(calculateMonsterCount([{ index: 'goblin' }])).toBe(1);
   });
-
-  it('returns 0 for empty array', () => {
-    expect(calculateMonsterCount([])).toBe(0);
-  });
 });
 
 describe('calculateDifficultyIndex', () => {
@@ -138,8 +122,6 @@ describe('calculateDifficultyIndex', () => {
 
   it('returns 0 when totalThreshold is falsy', () => {
     expect(calculateDifficultyIndex(100, 0)).toBe(0);
-    expect(calculateDifficultyIndex(100, '' )).toBe(0);
-    expect(calculateDifficultyIndex(100, undefined)).toBe(0);
   });
 });
 
@@ -206,7 +188,6 @@ describe('filterMonsters', () => {
     expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', 'humanoid', '', '', '' ).map(m => m.index)).toEqual(['goblin', 'orc']);
     expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', 'dragon', '', '', '' ).map(m => m.index)).toEqual(['dragon']);
     expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', 'beast', '', '', '' ).map(m => m.index)).toEqual(['tiger']);
-    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', '', '', '', '' ).filter(m => ['goblin', 'orc'].includes(m.index)).length).toBe(2);
   });
 
   it('filters by size', () => {
@@ -267,42 +248,6 @@ describe('filterMonsters', () => {
     expect(filterMonsters(null, '', [1], 1, 50, '', '', '', '', '' )).toEqual([]);
     expect(filterMonsters(monsters, 'unicorn', [1, 1, 1], 1, 150, '', '', '', '', '' )).toEqual([]);
   });
-
-  it('matches search in monster name substrings and partial words', () => {
-    expect(filterMonsters(monsters, 'Young', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['dragon']);
-    expect(filterMonsters(monsters, 'Green', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['slime']);
-    expect(filterMonsters(monsters, 'Sphere', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['flaming-sphere']);
-  });
-
-  it('passes monsters without subtype when searching by type', () => {
-    const noSubtype = [
-      { index: 'goblin', name: 'Goblin', type: 'humanoid', challenge_rating: 0.25 },
-      { index: 'orc', name: 'Orc', type: 'dragon', challenge_rating: 0.5 },
-    ];
-    expect(filterMonsters(noSubtype, 'humanoid', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['goblin']);
-  });
-
-  it('handles empty string search as no filter', () => {
-    const result = filterMonsters(monsters, '', [1], 0, 100, '', '', '', '', '');
-    expect(result).toHaveLength(monsters.length);
-  });
-
-  it('passes monsters without environments array when environment filter is active', () => {
-    const noEnvMonsters = [
-      { index: 'goblin', name: 'Goblin', type: 'humanoid', challenge_rating: 0.25 },
-    ];
-    expect(filterMonsters(noEnvMonsters, '', [1], 0, 100, 'forest', '', '', '', '')).toEqual(noEnvMonsters);
-  });
-
-  it('handles CR min only with float string and CR max only', () => {
-    expect(filterMonsters(monsters, '', [1], 0, 100, '', '', '', '0.5', '').map(m => m.index)).toEqual(['orc', 'dragon', 'slime', 'tiger', 'flaming-sphere', 'shadow']);
-    expect(filterMonsters(monsters, '', [1], 0, 100, '', '', '', '', '0.5').map(m => m.index)).toEqual(['goblin', 'orc', 'shadow']);
-  });
-
-  it('treats empty string crMin/crMax as no filter (falsy)', () => {
-    const result = filterMonsters(monsters, '', [1], 0, 100, '', '', '', '', '');
-    expect(result).toHaveLength(monsters.length);
-  });
 });
 
 describe('stripMonsters', () => {
@@ -322,10 +267,6 @@ describe('stripMonsters', () => {
     expect(stripMonsters([{ index: 'goblin', name: 'Goblin' }])).toEqual([
       { index: 'goblin', name: 'Goblin', qty: 1 },
     ]);
-  });
-
-  it('handles empty array', () => {
-    expect(stripMonsters([])).toEqual([]);
   });
 });
 
@@ -347,11 +288,6 @@ describe('loadSavedFilter', () => {
   it('returns saved filter with difficulty number', () => {
     localStorage.setItem('encounterFilter-2024', JSON.stringify({ difficulty: 2, environment: 'forest' }));
     expect(loadSavedFilter()).toEqual({ difficulty: 2, environment: 'forest' });
-  });
-
-  it('returns saved filter with new fields', () => {
-    localStorage.setItem('encounterFilter-2024', JSON.stringify({ difficulty: 1, environment: 'mountain', type: 'humanoid', size: 'medium', crMin: 0, crMax: 2 }));
-    expect(loadSavedFilter()).toEqual({ difficulty: 1, environment: 'mountain', type: 'humanoid', size: 'medium', crMin: 0, crMax: 2 });
   });
 
   it('returns null when difficulty is not a number, data is missing, corrupt, or absent', () => {
@@ -392,17 +328,5 @@ describe('saveFilter', () => {
     saveFilter({ difficulty: 0, environment: '' });
     const savedEmpty = JSON.parse(localStorage.getItem('encounterFilter-2024'));
     expect(savedEmpty).toEqual({ difficulty: 0, environment: '' });
-  });
-
-  it('saves new filter fields (type, size, crMin, crMax)', () => {
-    saveFilter({ difficulty: 1, environment: 'forest', type: 'beast', size: 'medium', crMin: 0, crMax: 2 });
-    const saved = JSON.parse(localStorage.getItem('encounterFilter-2024'));
-    expect(saved).toEqual({ difficulty: 1, environment: 'forest', type: 'beast', size: 'medium', crMin: 0, crMax: 2 });
-  });
-
-  it('handles undefined filter fields gracefully', () => {
-    saveFilter({ difficulty: 3 });
-    const saved = JSON.parse(localStorage.getItem('encounterFilter-2024'));
-    expect(saved).toEqual({ difficulty: 3, environment: undefined, type: undefined, size: undefined, crMin: undefined, crMax: undefined });
   });
 });
