@@ -163,13 +163,13 @@ describe('CreatureCard - conditions', () => {
     describe('effect add button', () => {
         it('should call onOpenEffectAdder when add effect button is clicked', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            fireEvent.click(screen.getByTitle('Add condition, effect, or concentration'));
+            fireEvent.click(screen.getByTitle('Add condition, effect, or concentration to Alice'));
             expect(props.onOpenEffectAdder).toHaveBeenCalledWith(defaultPlayerCreature, 'conditions');
         });
 
         it('should not render add button for non-localhost', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} isLocalhost={false} />);
-            expect(screen.queryByTitle('Add condition, effect, or concentration')).not.toBeInTheDocument();
+            expect(screen.queryByTitle('Add condition, effect, or concentration to Alice')).not.toBeInTheDocument();
         });
     });
 });

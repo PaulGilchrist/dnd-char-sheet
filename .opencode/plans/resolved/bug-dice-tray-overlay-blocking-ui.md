@@ -31,3 +31,25 @@ The issue is likely that the overlay's `pointer-events: all` CSS is applied glob
 
 ## Severity
 **Minor UX issue** — The dice tray is eventually dismissible (Escape key works), but it creates a frustrating experience when trying to quickly perform actions after rolling dice.
+
+## Resolution
+
+**Root cause:** The dice popup (`DicePopup` component) had no obvious close mechanism. While the overlay background had `onClick={onClose}` and Escape key worked, there was no visible close button. The dismiss text "click anywhere to dismiss" was small and easily missed, causing confusion when users needed to close the popup to interact with underlying UI elements.
+
+**Fix:** Added a visible close button (X icon) to the top-right corner of the dice popup modal. The button:
+- Calls the same `onClose` handler as the overlay background click
+- Is positioned absolutely within the modal (which is now `position: relative`)
+- Uses flexbox on the overlay for centering instead of absolute positioning with transform
+- Matches the app's existing styling conventions
+
+**Files changed:**
+- `src/components/sidebar/DiceTray.jsx` — Added `<button className="dice-tray-popup-close">` with Font Awesome X icon inside the modal
+- `src/components/sidebar/DiceTray.css` — Added `.dice-tray-popup-close` styles and changed `.dice-tray-popup-overlay` to use flexbox centering, changed `.dice-tray-popup-modal` to `position: relative`
+
+**Verification:**
+1. Reproduced the bug: opened dice popup on NPCs page, confirmed overlay blocks "Generate NPC" button clicks
+2. Verified close button appears in top-right of popup
+3. Clicked close button — popup dismissed successfully
+4. After closing, clicked "Generate NPC" button — worked correctly
+5. All 30,021 existing tests pass (including all 24 DiceTray tests)
+6. ESLint passes with zero warnings

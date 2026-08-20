@@ -61,9 +61,9 @@ function NPCListItem({ npc, campaignName, onEdit, onAddToInitiative }) {
                 e.stopPropagation();
                 onAddToInitiative(npc);
               }}
-              title="Add to Initiative"
+              title={`Add ${npc.name} to Initiative`}
             >
-              <i className="fa-solid fa-shield-alt" /> Add to Initiative
+              <i className="fa-solid fa-shield-alt" /> Add {npc.name} to Initiative
             </button>
           )}
         </div>

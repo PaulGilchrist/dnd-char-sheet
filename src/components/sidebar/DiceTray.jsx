@@ -69,6 +69,9 @@ function DicePopup({ result, onClose }) {
     return (
            <div className="dice-tray-popup-overlay" onClick={onClose}>
                <div className="dice-tray-popup-modal" onClick={(e) => e.stopPropagation()}>
+                   <button className="dice-tray-popup-close" onClick={onClose} aria-label="Close">
+                       <i className="fa-solid fa-xmark"></i>
+                   </button>
                    <div className="dice-tray-result">
                        <div className="dice-tray-result-icon">{getResultIcon(result.label)}</div>
                        <div className="dice-tray-result-value">{result.value}</div>

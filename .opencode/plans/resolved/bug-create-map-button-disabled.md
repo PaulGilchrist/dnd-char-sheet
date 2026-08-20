@@ -28,3 +28,16 @@ The Maps page component — likely a React component that controls the `disabled
 
 ## Severity
 **Broken feature** — The primary action for creating maps is non-functional. Users cannot create maps through the UI.
+
+## Resolution
+
+**Not a bug.** The Create Map button is disabled when the map name input is empty — this is intentional design. The `handleCreate` function at `MapsManager.jsx:66-85` validates that a name is provided before creating a map.
+
+**Repro steps re-run:**
+1. Navigate to test-campaign → Maps page → button is disabled (name field empty) ✓
+2. Type "Test Map" in the name field → button becomes enabled ✓
+3. Click Create Map → map is created successfully ✓
+
+The button works exactly as designed. The "Generate Dungeon" button is always enabled because it opens a configuration modal where the user can specify the map name. The "Create Map" button requires a name upfront and creates the map immediately. This is a deliberate UX difference between the two flows.
+
+**Files touched:** None. No code changes were needed.

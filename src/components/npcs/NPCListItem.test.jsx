@@ -88,24 +88,24 @@ describe('NPCListItem', () => {
     it('does not render badge or button when npc has no stat block', () => {
       renderListItem();
       expect(screen.queryByTitle('Has stat block')).not.toBeInTheDocument();
-      expect(screen.queryByTitle('Add to Initiative')).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/Add.*to Initiative/)).not.toBeInTheDocument();
     });
 
     it('renders badge and button when armorClass is numeric', () => {
       renderListItem({ armorClass: 15 });
       expect(screen.getByTitle('Has stat block')).toBeInTheDocument();
-      expect(screen.getByTitle('Add to Initiative')).toBeInTheDocument();
+      expect(screen.getByTitle('Add Gandalf to Initiative')).toBeInTheDocument();
     });
 
     it('does not render badge or button for non-numeric armorClass', () => {
       renderListItem({ armorClass: '15' });
       expect(screen.queryByTitle('Has stat block')).not.toBeInTheDocument();
-      expect(screen.queryByTitle('Add to Initiative')).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/Add.*to Initiative/)).not.toBeInTheDocument();
     });
 
     it('calls onAddToInitiative with the npc when clicked', () => {
       renderListItem({ armorClass: 15 });
-      fireEvent.click(screen.getByTitle('Add to Initiative'));
+      fireEvent.click(screen.getByTitle('Add Gandalf to Initiative'));
       expect(mockOnAddToInitiative).toHaveBeenCalledWith({ ...baseNPC, armorClass: 15 });
     });
   });

@@ -38,3 +38,18 @@ When rendering each `effect-add-btn`, include the creature name in the accessibl
 
 ## Severity
 **Minor UX issue / Accessibility** — The buttons work correctly when clicked visually (proximity makes it clear which creature), but screen reader users and automated tests cannot distinguish between them.
+
+## Resolution
+
+**Root cause confirmed** — the bug file's "Likely location" and "Suggested fix" were correct. The `effect-add-btn` button in `CreatureCard.jsx` had a static `title` attribute and no `aria-label`, making all 101 buttons indistinguishable by accessible name.
+
+**Files changed:**
+- `src/components/initiative/CreatureCard.jsx:226-235` — Updated the effect add button to include the creature name in both `title` and `aria-label` attributes
+- `src/components/initiative/CreatureCard.conditions.test.jsx:163-174` — Updated test assertions to match the new dynamic title format
+
+**Verification:**
+1. Navigated to test-campaign in browser, clicked Initiative — confirmed 101 buttons existed
+2. Applied fix to `CreatureCard.jsx`
+3. Re-ran repro steps in browser — each button now has a unique accessible name (e.g., "Add condition, effect, or concentration to Test Skeleton", "Add condition, effect, or concentration to NPC 1", etc.)
+4. Ran `npm run lint` — zero warnings
+5. Ran `npm run test:run` — all 1730 test files pass (30021 tests)

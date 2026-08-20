@@ -71,13 +71,38 @@
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.85);
   z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dice-tray-popup-modal {
+  position: relative;
+}
+
+.dice-tray-popup-close {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: -12px;
+  right: -12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--background-color-card);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.dice-tray-popup-close:hover {
+  background-color: var(--background-color-card-hover);
+  color: var(--color-hover);
 }
 
 .dice-tray-result {

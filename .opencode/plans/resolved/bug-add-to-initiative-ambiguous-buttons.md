@@ -33,3 +33,17 @@ Or use the NPC name as the accessible name while keeping the visible text as "Ad
 
 ## Severity
 **Minor UX issue** — The buttons work correctly when clicked visually (proximity makes it clear which NPC), but accessibility and automation are impacted.
+
+## Resolution
+
+### Root Cause
+The "Add to Initiative" button in `NPCListItem.jsx` used a static `title` attribute and visible text of `"Add to Initiative"` without including the NPC's name. When multiple NPCs with stat blocks exist in the list, all their initiative buttons share the same accessible name, making them indistinguishable to screen readers and automated testing tools.
+
+### Files Changed
+1. **`src/components/npcs/NPCListItem.jsx`** (line 64-66) — Changed the button's `title` from `"Add to Initiative"` to `` `Add ${npc.name} to Initiative` `` and updated the visible text to `` Add {npc.name} to Initiative ``.
+2. **`src/components/npcs/NPCListItem.test.jsx`** (lines 91, 97, 103, 108) — Updated test assertions to use the NPC name in title lookups: `getByTitle('Add Gandalf to Initiative')` and `queryByTitle(/Add.*to Initiative/)` for absence checks.
+
+### Verification
+- **Repro steps re-run in browser:** Created two NPCs ("Test Goblin", "Test Skeleton") in test-campaign. Both buttons now display unique accessible names: "Add Test Goblin to Initiative" and "Add Test Skeleton to Initiative". Playwright can target each button uniquely by name.
+- **Tests:** All 20 NPCListItem tests pass. All 151 NPC component tests pass.
+- **Lint:** Zero warnings.

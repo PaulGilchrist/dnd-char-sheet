@@ -15,6 +15,8 @@ public/campaigns/Frostfall/*
 
 tests/e2e/screenshots
 tests/e2e/screensets
+.playwright-mcp
+.playwright-report
 
 # Per-campaign character change data (debounced in-memory state)
 public/campaigns/*/data/character-change-data.json

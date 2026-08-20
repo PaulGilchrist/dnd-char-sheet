@@ -228,7 +228,8 @@ function CreatureCard({
                         className='effect-add-btn'
                         onClick={() => onOpenEffectAdder(creature, 'conditions')}
                         type='button'
-                        title='Add condition, effect, or concentration'
+                        title={`Add condition, effect, or concentration to ${creature.name}`}
+                        aria-label={`Add condition, effect, or concentration to ${creature.name}`}
                     >
                         <i className='fa-solid fa-wand-magic-sparkles'></i> Add
                     </button>
