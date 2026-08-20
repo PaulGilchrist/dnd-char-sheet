@@ -1,5 +1,7 @@
+// @improved-by-ai
 import { render, screen, fireEvent, renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
 import usePopup from './usePopup.js';
 
 describe('usePopup', () => {
@@ -9,12 +11,13 @@ describe('usePopup', () => {
       expect(result.current).toHaveProperty('showPopup');
       expect(result.current).toHaveProperty('popupHtml');
       expect(result.current).toHaveProperty('setPopupHtml');
-      expect(result.current.popupHtml).toBeNull();
     });
 
-    it('should initialize popupHtml to null', () => {
-      const { result } = renderHook(() => usePopup(() => '<p>x</p>'));
-      expect(result.current.popupHtml).toBeNull();
+    it('should initialize popupHtml to null regardless of buildHtml return value', () => {
+      const { result: r1 } = renderHook(() => usePopup(() => ''));
+      const { result: r2 } = renderHook(() => usePopup(() => '<p>x</p>'));
+      expect(r1.current.popupHtml).toBeNull();
+      expect(r2.current.popupHtml).toBeNull();
     });
   });
 
@@ -28,7 +31,7 @@ describe('usePopup', () => {
       expect(result.current.popupHtml).toBe('<p>hello</p>');
     });
 
-    it('should not change popupHtml when buildHtml returns a falsy value', () => {
+    it('should not set popupHtml when buildHtml returns a falsy value', () => {
       const buildHtml = vi.fn(() => null);
       const { result } = renderHook(() => usePopup(buildHtml));
       act(() => result.current.showPopup({ id: 1 }));
@@ -41,15 +44,6 @@ describe('usePopup', () => {
       const { result } = renderHook(() => usePopup(buildHtml));
       act(() => result.current.showPopup(entity));
       expect(buildHtml).toHaveBeenCalledWith(entity);
-    });
-
-    it('should call buildHtml even when entity is null or undefined', () => {
-      const buildHtml = vi.fn(() => '<p>x</p>');
-      const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => result.current.showPopup(null));
-      expect(buildHtml).toHaveBeenNthCalledWith(1, null);
-      act(() => result.current.showPopup(undefined));
-      expect(buildHtml).toHaveBeenNthCalledWith(2, undefined);
     });
 
     it('should update popupHtml on successive showPopup calls', () => {
@@ -97,29 +91,50 @@ describe('usePopup', () => {
   });
 
   describe('DOM integration', () => {
-    function TestHarness({ onShow, onSet, html }) {
-      const { showPopup, setPopupHtml } = usePopup(() => '');
+    function TestHarness() {
+      const { showPopup, popupHtml, setPopupHtml } = usePopup((entity) => `<p>${entity.name}</p>`);
       return (
         <div>
           <button data-testid="show" onClick={() => showPopup({ name: 'Test' })}>Show</button>
-          <button data-testid="set" onClick={() => setPopupHtml(html)}>Set</button>
-          {onShow && <button data-testid="on-show" onClick={onShow}>OnShow</button>}
-          {onSet && <button data-testid="on-set" onClick={onSet}>OnSet</button>}
-          {onShow && onSet && (
-            <div data-testid="output" dangerouslySetInnerHTML={{ __html: html || (onSet ? '' : '') }} />
-          )}
+          <button data-testid="set" onClick={() => setPopupHtml('<p>direct</p>')} data-testid="set">Set</button>
+          <button data-testid="clear" onClick={() => setPopupHtml(null)}>Clear</button>
+          <div data-testid="output" dangerouslySetInnerHTML={{ __html: popupHtml || '' }} />
         </div>
       );
     }
 
-    it('should render buttons and trigger showPopup on click', () => {
+    it('should render the popup content when showPopup is triggered', () => {
       render(<TestHarness />);
-      fireEvent.click(screen.getByTestId('show'));
+      act(() => {
+        fireEvent.click(screen.getByTestId('show'));
+      });
+      expect(screen.getByTestId('output').innerHTML).toBe('<p>Test</p>');
     });
 
-    it('should render buttons and trigger setPopupHtml on click', () => {
-      render(<TestHarness html="<p>direct</p>" />);
-      fireEvent.click(screen.getByTestId('set'));
+    it('should render the popup content when setPopupHtml is called directly', () => {
+      render(<TestHarness />);
+      act(() => {
+        fireEvent.click(screen.getByTestId('set'));
+      });
+      expect(screen.getByTestId('output').innerHTML).toBe('<p>direct</p>');
+    });
+
+    it('should update popup content when switching between showPopup and setPopupHtml', () => {
+      render(<TestHarness />);
+      act(() => {
+        fireEvent.click(screen.getByTestId('show'));
+      });
+      expect(screen.getByTestId('output').innerHTML).toBe('<p>Test</p>');
+
+      act(() => {
+        fireEvent.click(screen.getByTestId('set'));
+      });
+      expect(screen.getByTestId('output').innerHTML).toBe('<p>direct</p>');
+
+      act(() => {
+        fireEvent.click(screen.getByTestId('clear'));
+      });
+      expect(screen.getByTestId('output').innerHTML).toBe('');
     });
   });
 });

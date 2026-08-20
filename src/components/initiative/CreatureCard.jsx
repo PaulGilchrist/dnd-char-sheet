@@ -163,6 +163,7 @@ function CreatureCard({
             })()}
             <div className='creature-initiative'>Initiative&nbsp;
                 <input
+                    data-testid="initiative-input"
                     min="0"
                     onBlur={(event) => onInitiativeChange(creature.name, event.target.value)}
                     onKeyDown={(event) => {
@@ -177,6 +178,7 @@ function CreatureCard({
             </div>
             <div className='creature-target'>Target&nbsp;
                 <select
+                    data-testid="target-select"
                     value={creature.targetName || ''}
                     onChange={(e) => onTargetChange(creature.name, e.target.value)}
                     disabled={creature.type !== 'player' && !isLocalhost && !isPlayerSummoned}

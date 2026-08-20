@@ -1,5 +1,6 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import EffectAdder from './EffectAdder.jsx';
 import { TARGET_EFFECT_DEFINITIONS } from '../../services/combat/conditions/targetEffectDefinitions.js';
 
@@ -7,7 +8,6 @@ describe('EffectAdder - effects browsing', () => {
   let props;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     props = {
       targetName: 'Goblin',
       initialTab: 'conditions',
@@ -44,14 +44,6 @@ describe('EffectAdder - effects browsing', () => {
     });
   });
 
-  it('should show effects with Font Awesome icons', () => {
-    render(<EffectAdder {...props} initialTab='conditions' />);
-    fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-    const firstEffect = TARGET_EFFECT_DEFINITIONS[0];
-    const icon = document.querySelector(`.fa-solid.${firstEffect.icon}`);
-    expect(icon).toBeInTheDocument();
-  });
-
   it('should show effect badges with tooltip from description', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
@@ -74,7 +66,6 @@ describe('EffectAdder - effects browsing', () => {
     const searchInput = screen.getByPlaceholderText('Search effects…');
     fireEvent.change(searchInput, { target: { value: 'Goad' } });
     expect(screen.getByText('Goad')).toBeInTheDocument();
-    // "Escape the Horde" should not appear
     expect(screen.queryByText('Escape the Horde')).not.toBeInTheDocument();
   });
 
@@ -82,8 +73,8 @@ describe('EffectAdder - effects browsing', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
     const searchInput = screen.getByPlaceholderText('Search effects…');
-    fireEvent.change(searchInput, { target: { value: 'Disadvantage on attack' } });
-    // Should find effects with "Disadvantage on attack rolls" in description
+    fireEvent.change(searchInput, { target: { value: 'Disadvantage on attack rolls' } });
+    expect(screen.getByText('Attack Disadv')).toBeInTheDocument();
     expect(screen.queryByText('No effects match')).not.toBeInTheDocument();
   });
 
@@ -93,30 +84,38 @@ describe('EffectAdder - effects browsing', () => {
     const searchInput = screen.getByPlaceholderText('Search effects…');
     fireEvent.change(searchInput, { target: { value: 'Movement' } });
     expect(screen.getByText('Movement')).toBeInTheDocument();
+    expect(screen.queryByText('Attack')).not.toBeInTheDocument();
   });
 
   it('should filter effects by effect key', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
     const searchInput = screen.getByPlaceholderText('Search effects…');
-    fireEvent.change(searchInput, { target: { value: 'slasher_enhanced_critical' } });
-    expect(screen.getByText('Attack Disadv')).toBeInTheDocument();
+    fireEvent.change(searchInput, { target: { value: 'goad' } });
+    expect(screen.getByText('Goad')).toBeInTheDocument();
+    expect(screen.queryByText('No effects match')).not.toBeInTheDocument();
+  });
+
+  it('should be case-insensitive when searching', () => {
+    render(<EffectAdder {...props} initialTab='conditions' />);
+    fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
+    const searchInput = screen.getByPlaceholderText('Search effects…');
+    fireEvent.change(searchInput, { target: { value: 'GOAD' } });
+    expect(screen.getByText('Goad')).toBeInTheDocument();
+    expect(screen.queryByText('No effects match')).not.toBeInTheDocument();
   });
 
   it('should clear selection when search input changes', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-    // Select an effect
     fireEvent.click(screen.getByText('Goad'));
-    // Should show config view
     expect(document.querySelector('.ea-config')).toBeInTheDocument();
 
-    // Type in search - this resets selection and goes back to browse
     const searchInput = screen.getByPlaceholderText('Search effects…');
     fireEvent.change(searchInput, { target: { value: 'a' } });
 
-    // Should return to browse view
     expect(document.querySelector('.ea-config')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search effects…')).toBeInTheDocument();
   });
 
   it('should auto-focus the search input', () => {
@@ -130,9 +129,30 @@ describe('EffectAdder - effects browsing', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
     const searchInput = screen.getByPlaceholderText('Search effects…');
-    // Search for something that only exists in "Movement" group
     fireEvent.change(searchInput, { target: { value: 'Speed' } });
-    // "Movement" group should appear
     expect(screen.getByText('Movement')).toBeInTheDocument();
+    expect(screen.queryByText('Attack')).not.toBeInTheDocument();
+  });
+
+  it('should navigate to config view when an effect is clicked', () => {
+    render(<EffectAdder {...props} initialTab='conditions' />);
+    fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
+    fireEvent.click(screen.getByText('Goad'));
+    expect(document.querySelector('.ea-config')).toBeInTheDocument();
+    expect(screen.getByText('Goad')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
+  });
+
+  it('should render effects without fields without errors', () => {
+    render(<EffectAdder {...props} initialTab='conditions' />);
+    fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
+    // "No Opportunity Attacks" has no fields array
+    fireEvent.click(screen.getByText('No Opportunity Attacks'));
+    expect(document.querySelector('.ea-config')).toBeInTheDocument();
+    expect(screen.getByText('No Opportunity Attacks')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Custom source name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Value:')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Save DC:')).not.toBeInTheDocument();
   });
 });

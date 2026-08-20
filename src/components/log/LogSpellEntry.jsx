@@ -68,7 +68,7 @@ export function MetamagicEntry({ entry }) {
             {isPositive ? '+' : ''}{entry.damageDifference}
           </span>
           <span className="log-empowered-dice-info">
-            Rerolled {entry.rerolledDiceCount} die{entry.rerolledDiceCount !== 1 ? 's' : ''}
+            Rerolled {entry.rerolledDiceCount} {entry.rerolledDiceCount === 1 ? 'die' : 'dice'}
           </span>
         </div>
       </div>

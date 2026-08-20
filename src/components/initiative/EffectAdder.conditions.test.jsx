@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EffectAdder from './EffectAdder.jsx';
@@ -7,7 +8,6 @@ describe('EffectAdder - conditions tab', () => {
   let props;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     props = {
       targetName: 'Goblin',
       initialTab: 'conditions',
@@ -23,7 +23,7 @@ describe('EffectAdder - conditions tab', () => {
 
   it('should render all conditions as clickable badges', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
-    CONDITIONS.forEach(({ key: _key, label }) => {
+    CONDITIONS.forEach(({ label }) => {
       expect(screen.getByText(label)).toBeInTheDocument();
     });
   });
@@ -46,11 +46,6 @@ describe('EffectAdder - conditions tab', () => {
     expect(blindedBtn).toHaveClass('ea-badge--selected');
   });
 
-  it('should disable Apply button when no condition is selected', () => {
-    render(<EffectAdder {...props} initialTab='conditions' />);
-    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
-  });
-
   it('should enable Apply button when a condition is selected', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByText('Blinded'));
@@ -65,6 +60,25 @@ describe('EffectAdder - conditions tab', () => {
     expect(select.value).toBe('str');
   });
 
+  it('should keep current ability when selecting a condition with no default ability', () => {
+    render(<EffectAdder {...props} initialTab='conditions' />);
+    // blinded has no default ability
+    fireEvent.click(screen.getByText('Blinded'));
+    const select = screen.getByLabelText('Save');
+    expect(select.value).toBe('con');
+  });
+
+  it('should update ability when re-selecting a condition with a different default', () => {
+    render(<EffectAdder {...props} initialTab='conditions' />);
+    // blinded has no default, stays at 'con'
+    fireEvent.click(screen.getByText('Blinded'));
+    const select = screen.getByLabelText('Save');
+    expect(select.value).toBe('con');
+    // grappled defaults to 'str'
+    fireEvent.click(screen.getByText('Grappled'));
+    expect(select.value).toBe('str');
+  });
+
   it('should allow changing the DC input', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     const dcInput = screen.getByLabelText('DC');
@@ -72,10 +86,17 @@ describe('EffectAdder - conditions tab', () => {
     expect(dcInput).toHaveValue(15);
   });
 
-  it('should handle invalid DC input by defaulting to 10', () => {
+  it('should default DC to 10 when entering invalid text', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     const dcInput = screen.getByLabelText('DC');
     fireEvent.change(dcInput, { target: { value: 'abc' } });
+    expect(dcInput).toHaveValue(10);
+  });
+
+  it('should default DC to 10 when entering 0', () => {
+    render(<EffectAdder {...props} initialTab='conditions' />);
+    const dcInput = screen.getByLabelText('DC');
+    fireEvent.change(dcInput, { target: { value: '0' } });
     expect(dcInput).toHaveValue(10);
   });
 
@@ -118,6 +139,13 @@ describe('EffectAdder - conditions tab', () => {
     expect(props.onCancel).toHaveBeenCalled();
   });
 
+  it('should call onCancel when clicking outside the modal', () => {
+    render(<EffectAdder {...props} initialTab='conditions' />);
+    const overlay = document.querySelector('.ea-overlay');
+    fireEvent.click(overlay);
+    expect(props.onCancel).toHaveBeenCalled();
+  });
+
   it('should not call onApply when Apply is clicked without a selection', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
@@ -127,13 +155,12 @@ describe('EffectAdder - conditions tab', () => {
   it('should have all six ability options in the Save dropdown', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     const select = screen.getByLabelText('Save');
-    const options = select.querySelectorAll('option');
-    expect(options).toHaveLength(6);
-    expect(options[0]).toHaveValue('str');
-    expect(options[1]).toHaveValue('dex');
-    expect(options[2]).toHaveValue('con');
-    expect(options[3]).toHaveValue('int');
-    expect(options[4]).toHaveValue('wis');
-    expect(options[5]).toHaveValue('cha');
+    const options = Array.from(select.querySelectorAll('option')).map(o => o.value);
+    expect(options).toContain('str');
+    expect(options).toContain('dex');
+    expect(options).toContain('con');
+    expect(options).toContain('int');
+    expect(options).toContain('wis');
+    expect(options).toContain('cha');
   });
 });

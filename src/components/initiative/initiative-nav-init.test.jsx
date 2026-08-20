@@ -1,9 +1,8 @@
+// @improved-by-ai
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Initiative from './initiative.jsx';
-import { loadCombatSummary, getActiveCreatureName, getCombatSummary } from '../../services/encounters/combatData.js';
-import { setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import storage from '../../services/ui/storage.js';
+import { loadCombatSummary } from '../../services/encounters/combatData.js';
 
 vi.mock('../../hooks/runtime/useSSEEqualityGuard.js', () => ({ default: (setter) => setter }));
 vi.mock('../../services/ui/utils.js', () => ({ default: { getName: (name) => name } }));
@@ -99,6 +98,10 @@ vi.mock('../../services/encounters/combatLoggingService.js', () => ({
     logInitiativeRoll: vi.fn(), logConditionEvent: vi.fn(), logConcentrationSave: vi.fn(),
     logConditionSave: vi.fn(), logHpChange: vi.fn(), logNpcThreshold: vi.fn(),
 }));
+vi.mock('../../services/ui/logService.js', () => ({
+    getLog: vi.fn(async () => []),
+    addEntry: vi.fn(async () => ({})),
+}));
 vi.mock('../encounter/MonsterCardModal.jsx', () => ({ default: () => <div data-testid="monster-card-modal" /> }));
 vi.mock('../common/Subscriber.jsx', () => ({ default: () => <div data-testid="subscriber" /> }));
 vi.mock('../common/Popup.jsx', () => ({ default: ({ children, onClickOrKeyDown }) => (<div data-testid="popup-overlay" onClick={onClickOrKeyDown}><div data-testid="popup-modal">{children}</div></div>) }));
@@ -126,56 +129,14 @@ describe('Initiative - Navigation & Init Paths', () => {
         };
     });
 
-    describe('initiative-rolled handler', () => {
-        it('should clear player buffs on initiative roll', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
-            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
-            await act(async () => {
-                window.dispatchEvent(new Event('initiative-rolled'));
-            });
-
-            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'activeBuffs', [], 'test-campaign');
-        });
-    });
-
-    describe('init - no active creature', () => {
-        it('should set first creature as active when no getActiveCreatureName', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
-            vi.mocked(getActiveCreatureName).mockReturnValue(null);
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-        });
-    });
-
-    describe('SSE event - activeCreatureName round decrement', () => {
-        it('should handle previous creature with round decrement', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 3, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }, { name: 'Charlie', type: 'player' }] });
-            vi.mocked(getActiveCreatureName).mockReturnValue('Charlie');
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Charlie')).toBeInTheDocument(); });
-
-            vi.mocked(getCombatSummary).mockReturnValue({ round: 3, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }, { name: 'Charlie', type: 'player' }], activeCreatureName: 'Charlie' });
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('change-test-campaign-activeCreatureName', {
-                    data: 'Bob',
-                }));
-            });
-
-            expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
-        });
-    });
-
     describe('displayCreatures useMemo - polymorph sources', () => {
-        it('should include wildShapeSource creatures in display', async () => {
+        it('should render wildShapeSource creatures from the displayCreatures memo', async () => {
             vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bear', type: 'npc', wildShapeSource: 'Alice', beastName: 'Brown Bear' }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Bear')).toBeInTheDocument(); });
         });
 
-        it('should include polymorphSource creatures in display', async () => {
+        it('should render polymorphSource creatures from the displayCreatures memo', async () => {
             vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Dragon', type: 'npc', polymorphSource: 'Alice', beastName: 'Young Red Dragon' }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Dragon')).toBeInTheDocument(); });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createNextCreatureHandler, createPreviousCreatureHandler } from './initiative-navigation.jsx';
 import * as initiativeService from '../../services/encounters/initiativeService.js';
@@ -65,12 +66,7 @@ describe('initiative-navigation.jsx', () => {
         lastAppliedTurnStartCreatureRef = { current: null };
         setCombatSummary = vi.fn();
         setActiveCreatureName = vi.fn();
-        setRuntimeStateTick = vi.fn((fn) => {
-            if (typeof fn === 'function') {
-                return fn(0);
-            }
-            return fn;
-        });
+        setRuntimeStateTick = vi.fn();
     });
 
     describe('createNextCreatureHandler', () => {
@@ -93,7 +89,7 @@ describe('initiative-navigation.jsx', () => {
             expect(setActiveCreatureName).not.toHaveBeenCalled();
         });
 
-        it('should set next creature without round increment when not at last creature', () => {
+        it('should set the next creature without round increment when not at the last creature', () => {
             initiativeService.getNextCreatureName.mockReturnValue({
                 newActiveName: 'Bob',
                 roundIncrement: false,
@@ -113,9 +109,10 @@ describe('initiative-navigation.jsx', () => {
 
             handler();
 
-            expect(storage.set).toHaveBeenCalledWith('activeCreatureName', 'Bob', campaignName);
             expect(setActiveCreatureName).toHaveBeenCalledWith('Bob');
+            expect(storage.set).toHaveBeenCalledWith('activeCreatureName', 'Bob', campaignName);
             expect(setCombatSummary).not.toHaveBeenCalled();
+            expect(expirations.expireStaleEffects).not.toHaveBeenCalled();
         });
 
         it('should increment round when moving from last creature to first', () => {
@@ -138,12 +135,29 @@ describe('initiative-navigation.jsx', () => {
 
             handler();
 
-            expect(roundRef.current).toBe(1);
             expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.objectContaining({ round: 2 }), campaignName);
             expect(setCombatSummary).toHaveBeenCalledWith(expect.objectContaining({ round: 2 }));
             expect(storage.set).toHaveBeenCalledWith('activeCreatureName', 'Alice', campaignName);
             expect(setActiveCreatureName).toHaveBeenCalledWith('Alice');
         });
+
+        const perRoundResetFields = [
+            ['Alice', '_cunningStrikeCostUsed', 0],
+            ['Alice', '_CunningStrike_usedRound', null],
+            ['Alice', '_Charge_Attack_usedRound', null],
+            ['Alice', '_FastHands_usedRound', null],
+            ['Alice', '_CunningAction_usedRound', null],
+            ['Alice', '_Cleave_UsedRound', null],
+            ['Alice', '_Nick_UsedRound', null],
+            ['Alice', 'surgeUsedRound', null],
+            ['Alice', 'illusoryRealityUsedRound', null],
+            ['Alice', 'portentUsedThisTurn', null],
+            ['Alice', 'psionicStrikeUsedThisTurn', null],
+            ['Alice', '_BrutalStrike_usedRound', null],
+            ['Alice', '_fortifiedHealth_usedRound', null],
+            ['Alice', '_Shield_Bash_usedRound', null],
+            ['Alice', 'piercerPunctureUsedThisTurn', null],
+        ];
 
         it('should reset player runtime values on round increment', () => {
             initiativeService.getNextCreatureName.mockReturnValue({
@@ -165,24 +179,37 @@ describe('initiative-navigation.jsx', () => {
 
             handler();
 
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_cunningStrikeCostUsed', 0, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_CunningStrike_usedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_Charge_Attack_usedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_FastHands_usedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_CunningAction_usedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_Cleave_UsedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_Nick_UsedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', 'surgeUsedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', 'illusoryRealityUsedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', 'portentUsedThisTurn', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', 'psionicStrikeUsedThisTurn', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_BrutalStrike_usedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_fortifiedHealth_usedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', '_Shield_Bash_usedRound', null, campaignName);
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', 'piercerPunctureUsedThisTurn', null, campaignName);
+            for (const [creature, key, value] of perRoundResetFields) {
+                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(creature, key, value, campaignName);
+            }
         });
 
-        it('should call clearPerRoundMajestyTrackers for each creature on round increment', () => {
+        it('should NOT reset player runtime values when there is no round increment', () => {
+            initiativeService.getNextCreatureName.mockReturnValue({
+                newActiveName: 'Bob',
+                roundIncrement: false,
+            });
+
+            const handler = createNextCreatureHandler({
+                combatSummaryRef,
+                activeCreatureName: 'Alice',
+                campaignName,
+                characters: baseCharacters,
+                roundRef,
+                lastAppliedTurnStartCreatureRef,
+                setCombatSummary,
+                setActiveCreatureName,
+                setRuntimeStateTick,
+            });
+
+            handler();
+
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+            expect(unbreakableMajesty.clearPerRoundMajestyTrackers).not.toHaveBeenCalled();
+            expect(expirations.expireStaleEffects).not.toHaveBeenCalled();
+        });
+
+        it('should call clearPerRoundMajestyTrackers for all creatures on round increment', () => {
             initiativeService.getNextCreatureName.mockReturnValue({
                 newActiveName: 'Alice',
                 roundIncrement: true,
@@ -207,7 +234,7 @@ describe('initiative-navigation.jsx', () => {
             expect(unbreakableMajesty.clearPerRoundMajestyTrackers).toHaveBeenCalledWith('Charlie', campaignName);
         });
 
-        it('should NOT reset player runtime values when there is no round increment', () => {
+        it('should NOT call clearPerRoundMajestyTrackers when there is no round increment', () => {
             initiativeService.getNextCreatureName.mockReturnValue({
                 newActiveName: 'Bob',
                 roundIncrement: false,
@@ -227,9 +254,7 @@ describe('initiative-navigation.jsx', () => {
 
             handler();
 
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith('Alice', '_cunningStrikeCostUsed', 0, campaignName);
             expect(unbreakableMajesty.clearPerRoundMajestyTrackers).not.toHaveBeenCalled();
-            expect(expirations.expireStaleEffects).not.toHaveBeenCalled();
         });
 
         it('should apply turn start effects when lastApplied creature differs', () => {
@@ -327,7 +352,7 @@ describe('initiative-navigation.jsx', () => {
                 campaignName,
                 characters: [
                     { name: 'Alice', computedStats: { hitPoints: 20 } },
-                    { name: 'Bob', computedStats: { hitPoints: 15 } },
+                    { name: 'Bear Claw', computedStats: { hitPoints: 25 } },
                 ],
                 roundRef,
                 lastAppliedTurnStartCreatureRef,
@@ -338,10 +363,9 @@ describe('initiative-navigation.jsx', () => {
 
             handler();
 
-            // Should find the character and pass computedStats
             expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith(
                 'Bear',
-                undefined,
+                { hitPoints: 25 },
                 campaignName,
                 expect.any(Array)
             );
@@ -397,8 +421,36 @@ describe('initiative-navigation.jsx', () => {
 
             handler();
 
-            // Should only be called once (for the round update), not again for lastApplied
             expect(setCombatSummary).toHaveBeenCalledTimes(1);
+        });
+
+        it('should handle empty characters array during round increment', () => {
+            initiativeService.getNextCreatureName.mockReturnValue({
+                newActiveName: 'Unknown',
+                roundIncrement: true,
+            });
+
+            const handler = createNextCreatureHandler({
+                combatSummaryRef,
+                activeCreatureName: 'Charlie',
+                campaignName,
+                characters: [],
+                roundRef,
+                lastAppliedTurnStartCreatureRef,
+                setCombatSummary,
+                setActiveCreatureName,
+                setRuntimeStateTick,
+            });
+
+            handler();
+
+            expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith(
+                'Unknown',
+                undefined,
+                campaignName,
+                []
+            );
+            expect(setActiveCreatureName).toHaveBeenCalledWith('Unknown');
         });
     });
 
@@ -443,7 +495,7 @@ describe('initiative-navigation.jsx', () => {
             expect(setActiveCreatureName).not.toHaveBeenCalled();
         });
 
-        it('should set previous creature without round decrement when not at first creature', () => {
+        it('should set the previous creature without round decrement when not at the first creature', () => {
             initiativeService.getPreviousCreatureName.mockReturnValue({
                 newActiveName: 'Alice',
                 roundDecrement: false,
@@ -464,9 +516,10 @@ describe('initiative-navigation.jsx', () => {
 
             handler();
 
-            expect(storage.set).toHaveBeenCalledWith('activeCreatureName', 'Alice', campaignName);
             expect(setActiveCreatureName).toHaveBeenCalledWith('Alice');
+            expect(storage.set).toHaveBeenCalledWith('activeCreatureName', 'Alice', campaignName);
             expect(setCombatSummary).not.toHaveBeenCalled();
+            expect(expirations.expireStaleEffects).not.toHaveBeenCalled();
         });
 
         it('should decrement round when moving from first to last creature', () => {
@@ -519,8 +572,8 @@ describe('initiative-navigation.jsx', () => {
 
             handler();
 
-            expect(storage.set).not.toHaveBeenCalledWith('combatSummary', expect.any(Object), campaignName);
             expect(setCombatSummary).not.toHaveBeenCalled();
+            expect(storage.set).not.toHaveBeenCalledWith('combatSummary', expect.any(Object), campaignName);
         });
 
         it('should call expireStaleEffects on round decrement', () => {
@@ -607,7 +660,7 @@ describe('initiative-navigation.jsx', () => {
             expect(setRuntimeStateTick).not.toHaveBeenCalled();
         });
 
-        it('should call clearPerRoundMajestyTrackers for each creature on round decrement', () => {
+        it('should call clearPerRoundMajestyTrackers for all creatures on round decrement', () => {
             roundRef.current = 2;
             initiativeService.getPreviousCreatureName.mockReturnValue({
                 newActiveName: 'Charlie',
@@ -634,7 +687,7 @@ describe('initiative-navigation.jsx', () => {
             expect(unbreakableMajesty.clearPerRoundMajestyTrackers).toHaveBeenCalledWith('Charlie', campaignName);
         });
 
-        it('should NOT call clearPerRoundMajestyTrackers when no round decrement', () => {
+        it('should NOT call clearPerRoundMajestyTrackers when there is no round decrement', () => {
             initiativeService.getPreviousCreatureName.mockReturnValue({
                 newActiveName: 'Alice',
                 roundDecrement: false,
@@ -681,7 +734,6 @@ describe('initiative-navigation.jsx', () => {
 
             handler();
 
-            // roundRef.current ?? 1 = 1, so currentRound > 1 is false, nothing happens
             expect(storage.set).not.toHaveBeenCalledWith('combatSummary', expect.any(Object), campaignName);
         });
 

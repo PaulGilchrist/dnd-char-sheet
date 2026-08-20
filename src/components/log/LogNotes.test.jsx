@@ -1,17 +1,29 @@
+// @improved-by-ai
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { q, setup, beforeEachSetup, mockAddEntry } from './log-test-utils.jsx';
 
 import Log from './Log.jsx';
 
-describe('Log', () => {
+describe('Log - note adding', () => {
   beforeEach(() => {
     beforeEachSetup();
   });
 
-  // ── ADDING NOTES ───────────────
-  describe('adding notes', () => {
-    it('adds note on button click with trimmed text', async () => {
+  describe('textarea and character select default state', () => {
+    it('textarea starts empty', () => {
+      setup(Log, []);
+      expect(screen.getByPlaceholderText('Add a note to the log...')).toHaveValue('');
+    });
+
+    it('character select defaults to Anonymous', () => {
+      setup(Log, []);
+      expect(screen.getByRole('combobox')).toHaveValue('');
+    });
+  });
+
+  describe('adding notes on button click', () => {
+    it('submits note with trimmed text', async () => {
       setup(Log, []);
       fireEvent.change(screen.getByPlaceholderText('Add a note to the log...'), {
         target: { value: ' Hello ' },
@@ -24,7 +36,7 @@ describe('Log', () => {
       });
     });
 
-    it('uses selected char as author, Anonymous when none selected', async () => {
+    it('uses selected character as author', async () => {
       setup(Log, []);
       fireEvent.change(screen.getByPlaceholderText('Add a note to the log...'), {
         target: { value: 'hi' },
@@ -33,12 +45,12 @@ describe('Log', () => {
       fireEvent.click(q('.log-add-btn'));
       await waitFor(() => {
         expect(mockAddEntry).toHaveBeenCalledWith(
-          expect.objectContaining({ characterName: 'Aragorn' }),
+          expect.objectContaining({ type: 'note', characterName: 'Aragorn', noteText: 'hi' }),
         );
       });
     });
 
-    it('uses Anonymous when no char options available', async () => {
+    it('uses Anonymous when no characters available', async () => {
       setup(Log, [], true, []);
       fireEvent.change(screen.getByPlaceholderText('Add a note to the log...'), {
         target: { value: 'hi' },
@@ -46,15 +58,19 @@ describe('Log', () => {
       fireEvent.click(q('.log-add-btn'));
       await waitFor(() => {
         expect(mockAddEntry).toHaveBeenCalledWith(
-          expect.objectContaining({ characterName: 'Anonymous' }),
+          expect.objectContaining({ type: 'note', characterName: 'Anonymous' }),
         );
       });
     });
 
-    it('no-op for empty or whitespace text', () => {
+    it('does not submit when text is empty string', () => {
       setup(Log, []);
       fireEvent.click(q('.log-add-btn'));
       expect(mockAddEntry).not.toHaveBeenCalled();
+    });
+
+    it('does not submit when text is whitespace only', () => {
+      setup(Log, []);
       fireEvent.change(screen.getByPlaceholderText('Add a note to the log...'), {
         target: { value: '    ' },
       });
@@ -62,7 +78,34 @@ describe('Log', () => {
       expect(mockAddEntry).not.toHaveBeenCalled();
     });
 
-    it('ctrl+enter submits', async () => {
+    it('clears textarea after successful submit', async () => {
+      setup(Log, []);
+      const textarea = screen.getByPlaceholderText('Add a note to the log...');
+      fireEvent.change(textarea, { target: { value: 'x' } });
+      fireEvent.click(q('.log-add-btn'));
+      await waitFor(() => expect(textarea).toHaveValue(''));
+    });
+
+    it('preserves textarea content when note is empty/whitespace', () => {
+      setup(Log, []);
+      const textarea = screen.getByPlaceholderText('Add a note to the log...');
+      fireEvent.change(textarea, { target: { value: '   ' } });
+      fireEvent.click(q('.log-add-btn'));
+      expect(textarea).toHaveValue('   ');
+    });
+
+    it('preserves textarea content when no characters and text is empty', () => {
+      setup(Log, [], true, []);
+      const textarea = screen.getByPlaceholderText('Add a note to the log...');
+      fireEvent.change(textarea, { target: { value: '   ' } });
+      fireEvent.click(q('.log-add-btn'));
+      expect(textarea).toHaveValue('   ');
+    });
+
+  });
+
+  describe('keyboard shortcuts', () => {
+    it('ctrl+enter submits the note', async () => {
       setup(Log, []);
       const textarea = screen.getByPlaceholderText('Add a note to the log...');
       fireEvent.change(textarea, { target: { value: 'x' } });
@@ -70,7 +113,7 @@ describe('Log', () => {
       await waitFor(() => expect(mockAddEntry).toHaveBeenCalled());
     });
 
-    it('meta+enter submits', async () => {
+    it('meta+enter submits the note', async () => {
       setup(Log, []);
       const textarea = screen.getByPlaceholderText('Add a note to the log...');
       fireEvent.change(textarea, { target: { value: 'x' } });
@@ -78,25 +121,20 @@ describe('Log', () => {
       await waitFor(() => expect(mockAddEntry).toHaveBeenCalled());
     });
 
-    it('plain enter and ctrl+r do NOT submit', () => {
+    it('plain enter does not submit', () => {
       setup(Log, []);
       const textarea = screen.getByPlaceholderText('Add a note to the log...');
       fireEvent.change(textarea, { target: { value: 'x' } });
       fireEvent.keyDown(textarea, { key: 'Enter' });
       expect(mockAddEntry).not.toHaveBeenCalled();
-      fireEvent.keyDown(textarea, { key: 'r', ctrlKey: true });
-      expect(mockAddEntry).not.toHaveBeenCalled();
     });
 
-    it('clears textarea after submit but not on empty note', async () => {
+    it('ctrl+r does not submit', () => {
       setup(Log, []);
       const textarea = screen.getByPlaceholderText('Add a note to the log...');
       fireEvent.change(textarea, { target: { value: 'x' } });
-      fireEvent.click(q('.log-add-btn'));
-      await waitFor(() => expect(textarea).toHaveValue(''));
-      fireEvent.change(textarea, { target: { value: '   ' } });
-      fireEvent.click(q('.log-add-btn'));
-      expect(textarea).toHaveValue('   ');
+      fireEvent.keyDown(textarea, { key: 'r', ctrlKey: true });
+      expect(mockAddEntry).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,39 +1,127 @@
-import { screen, cleanup } from '@testing-library/react';
+// @improved-by-ai
+import { screen } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { loot, q, setup, beforeEachSetup } from './log-test-utils.jsx';
 
 import Log from './Log.jsx';
 
-describe('Log', () => {
+describe('LogLootEntry', () => {
   beforeEach(() => {
     beforeEachSetup();
   });
 
-  // ── LOOT ENTRY component ───────────────
-  describe('LootEntry', () => {
-    it('renders icon, title, and details container', () => {
+  // ── BASIC RENDERING ──────────────────────
+  describe('basic rendering', () => {
+    it('renders the log-loot entry wrapper with correct classes', () => {
       setup(Log, [loot()]);
-      expect(q('.log-loot i.fa-coins')).toBeInTheDocument();
-      expect(screen.getByText(/Loot/i)).toBeInTheDocument();
-      expect(q('.log-loot-details')).toBeInTheDocument();
       expect(q('.log-entry.log-loot')).toBeInTheDocument();
     });
 
-    it('formats XP with locale and shows/hides based on value', () => {
+    it('renders the coins icon', () => {
+      setup(Log, [loot()]);
+      expect(q('.log-loot i.fa-coins')).toBeInTheDocument();
+    });
+
+    it('renders the title text', () => {
+      setup(Log, [loot()]);
+      expect(screen.getByText(/Loot & XP Awarded/i)).toBeInTheDocument();
+    });
+
+    it('renders the timestamp', () => {
+      setup(Log, [loot({ timestamp: 1700000000000 })]);
+      expect(q('.log-time')).toBeInTheDocument();
+    });
+
+    it('renders the details container', () => {
+      setup(Log, [loot()]);
+      expect(q('.log-loot-details')).toBeInTheDocument();
+    });
+  });
+
+  // ── XP DISPLAY ───────────────────────────
+  describe('XP display', () => {
+    it('formats XP with locale separator and shows star icon', () => {
       setup(Log, [loot({ xpPerChar: 1500 })]);
       expect(screen.getByText(/1,500 XP per character/i)).toBeInTheDocument();
       expect(q('.log-loot-xp i.fa-star')).toBeInTheDocument();
-      cleanup();
+    });
+
+    it('formats large XP values with proper locale', () => {
+      setup(Log, [loot({ xpPerChar: 1000000 })]);
+      expect(screen.getByText(/1,000,000 XP per character/i)).toBeInTheDocument();
+    });
+
+    it('hides XP section when xpPerChar is 0', () => {
       setup(Log, [loot({ xpPerChar: 0 })]);
+      expect(q('.log-loot-xp')).not.toBeInTheDocument();
       expect(screen.queryByText(/XP per character/i)).not.toBeInTheDocument();
     });
 
-    it('renders loot items as list, hides when empty', () => {
-      setup(Log, [loot({ lootItems: ['Ring', 'Potion'] })]);
+    it('hides XP section when xpPerChar is null', () => {
+      setup(Log, [loot({ xpPerChar: null })]);
+      expect(q('.log-loot-xp')).not.toBeInTheDocument();
+    });
+
+    it('hides XP section when xpPerChar is undefined', () => {
+      setup(Log, [loot({ xpPerChar: undefined })]);
+      expect(q('.log-loot-xp')).not.toBeInTheDocument();
+    });
+
+    it('hides XP section when xpPerChar is negative', () => {
+      setup(Log, [loot({ xpPerChar: -100 })]);
+      expect(q('.log-loot-xp')).not.toBeInTheDocument();
+    });
+
+    it('hides XP section when xpPerChar is missing', () => {
+      setup(Log, [loot({})]);
+      expect(q('.log-loot-xp')).not.toBeInTheDocument();
+    });
+  });
+
+  // ── LOOT ITEMS DISPLAY ───────────────────
+  describe('loot items display', () => {
+    it('renders each loot item as a list item', () => {
+      setup(Log, [loot({ lootItems: ['Ring of Protection', 'Potion of Healing'] })]);
       expect(document.querySelectorAll('.log-loot-item').length).toBe(2);
-      cleanup();
+      expect(screen.getByText('Ring of Protection')).toBeInTheDocument();
+      expect(screen.getByText('Potion of Healing')).toBeInTheDocument();
+    });
+
+    it('renders a single loot item', () => {
+      setup(Log, [loot({ lootItems: ['Gold Sword'] })]);
+      expect(document.querySelectorAll('.log-loot-item').length).toBe(1);
+      expect(screen.getByText('Gold Sword')).toBeInTheDocument();
+    });
+
+    it('hides the items list when lootItems is an empty array', () => {
       setup(Log, [loot({ lootItems: [] })]);
-      expect(screen.queryByText(/log-loot-items/i)).not.toBeInTheDocument();
+      expect(q('.log-loot-items')).not.toBeInTheDocument();
+    });
+
+    it('hides the items list when lootItems is null', () => {
+      setup(Log, [loot({ lootItems: null })]);
+      expect(q('.log-loot-items')).not.toBeInTheDocument();
+    });
+
+    it('hides the items list when lootItems is undefined', () => {
+      setup(Log, [loot({ lootItems: undefined })]);
+      expect(q('.log-loot-items')).not.toBeInTheDocument();
+    });
+
+    it('hides the items list when lootItems is missing', () => {
+      setup(Log, [loot({})]);
+      expect(q('.log-loot-items')).not.toBeInTheDocument();
+    });
+  });
+
+  // ── COMBINED XP + ITEMS ──────────────────
+  describe('combined XP and items', () => {
+    it('renders both XP and loot items in the same entry', () => {
+      setup(Log, [loot({ xpPerChar: 500, lootItems: ['Gold', 'Scroll'] })]);
+      expect(screen.getByText(/500 XP per character/i)).toBeInTheDocument();
+      expect(q('.log-loot-xp i.fa-star')).toBeInTheDocument();
+      expect(document.querySelectorAll('.log-loot-item').length).toBe(2);
+      expect(q('.log-loot-items')).toBeInTheDocument();
     });
   });
 });

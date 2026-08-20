@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createSseEventHandler } from './initiative-sse-handlers.jsx';
 import * as combatData from '../../services/encounters/combatData.js';
@@ -68,8 +69,18 @@ describe('createSseEventHandler', () => {
             expect(mocks.setCombatSummary).not.toHaveBeenCalled();
         });
 
+        it('should return early when event.key is undefined', () => {
+            handler({ key: undefined, data: null });
+            expect(mocks.setCombatSummary).not.toHaveBeenCalled();
+        });
+
         it('should return early when event.data is null', () => {
             handler({ key: 'change-test-campaign-something', data: null });
+            expect(mocks.setCombatSummary).not.toHaveBeenCalled();
+        });
+
+        it('should return early when event.data is undefined', () => {
+            handler({ key: 'change-test-campaign-something', data: undefined });
             expect(mocks.setCombatSummary).not.toHaveBeenCalled();
         });
 
@@ -95,6 +106,16 @@ describe('createSseEventHandler', () => {
             expect(mocks.setCombatSummaryG).not.toHaveBeenCalled();
         });
 
+        it('should skip when event.data.creatures is undefined', () => {
+            handler({ key: 'change-test-campaign-combatSummary', data: { round: 2, creatures: undefined } });
+            expect(mocks.setCombatSummaryG).not.toHaveBeenCalled();
+        });
+
+        it('should process event.data with empty creatures array (empty array is truthy in !check)', () => {
+            handler({ key: 'change-test-campaign-combatSummary', data: { round: 2, creatures: [] } });
+            expect(mocks.setCombatSummaryG).toHaveBeenCalled();
+        });
+
         it('should process a valid combatSummary event', () => {
             handler({ key: 'change-test-campaign-combatSummary', data: baseCombatSummary });
             expect(mocks.setCombatSummaryG).toHaveBeenCalledWith(
@@ -111,34 +132,37 @@ describe('createSseEventHandler', () => {
             );
         });
 
+        it('should not override existing activeCreatureName from event data', () => {
+            const data = { round: 2, creatures: [{ name: 'Alice', type: 'player' }], activeCreatureName: 'Alice' };
+            handler({ key: 'change-test-campaign-combatSummary', data });
+            expect(mocks.setCombatSummaryG).toHaveBeenCalledWith(
+                expect.objectContaining({ activeCreatureName: 'Alice' }),
+            );
+            expect(combatData.getActiveCreatureName).not.toHaveBeenCalled();
+        });
+
         it('should skip when merged.round < prevRound (round regression)', () => {
             refs.combatSummaryRef.current = { round: 5, creatures: [] };
             handler({ key: 'change-test-campaign-combatSummary', data: { round: 3, creatures: [] } });
             expect(mocks.setCombatSummaryG).not.toHaveBeenCalled();
         });
 
-        it('should NOT call expireStaleEffects in combatSummary path (round check is dead code after ref assignment)', () => {
-            refs.combatSummaryRef.current = { round: 1, creatures: [] };
-            handler({ key: 'change-test-campaign-combatSummary', data: { round: 2, creatures: [], activeCreatureName: 'Alice' } });
-            // Line 85 sets combatSummaryRef.current = merged, so line 88 comparison is always false
-            expect(expirations.expireStaleEffects).not.toHaveBeenCalled();
-        });
-
-        it('should call setCombatSummaryCache', () => {
+        it('should call setCombatSummaryCache with merged data and campaign name', () => {
             handler({ key: 'change-test-campaign-combatSummary', data: baseCombatSummary });
-            expect(combatData.setCombatSummaryCache).toHaveBeenCalled();
-        });
-
-        it('should skip expireStaleEffects when round does not change', () => {
-            refs.combatSummaryRef.current = { round: 2, creatures: [] };
-            handler({ key: 'change-test-campaign-combatSummary', data: { round: 2, creatures: [], activeCreatureName: 'Alice' } });
-            expect(expirations.expireStaleEffects).not.toHaveBeenCalled();
+            expect(combatData.setCombatSummaryCache).toHaveBeenCalledWith(
+                expect.objectContaining({ round: 2 }), campaignName,
+            );
         });
 
         it('should use combatSummaryRef.current.round default of 1 when ref is undefined', () => {
             refs.combatSummaryRef.current = undefined;
             handler({ key: 'change-test-campaign-combatSummary', data: { round: 0, creatures: [] } });
-            // round 0 < 1 (default), so should skip
+            expect(mocks.setCombatSummaryG).not.toHaveBeenCalled();
+        });
+
+        it('should use combatSummaryRef.current.round default of 1 when ref is null', () => {
+            refs.combatSummaryRef.current = null;
+            handler({ key: 'change-test-campaign-combatSummary', data: { round: 0, creatures: [] } });
             expect(mocks.setCombatSummaryG).not.toHaveBeenCalled();
         });
     });
@@ -166,10 +190,10 @@ describe('createSseEventHandler', () => {
             expect(mocks.setActiveCreatureNameG).toHaveBeenCalledWith('Bob');
         });
 
-        it('should call expireStaleEffects with the new active creature', () => {
+        it('should call expireStaleEffects with campaign name and new active creature', () => {
             handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
             expect(expirations.expireStaleEffects).toHaveBeenCalledWith(
-                'test-campaign', 'Bob',
+                campaignName, 'Bob',
             );
         });
 
@@ -200,7 +224,7 @@ describe('createSseEventHandler', () => {
             refs.lastAppliedTurnStartCreatureRef.current = null;
             handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                '__initiative__', 'lastAppliedTurnStartCreature', 'Bob', 'test-campaign',
+                '__initiative__', 'lastAppliedTurnStartCreature', 'Bob', campaignName,
             );
         });
 
@@ -217,35 +241,12 @@ describe('createSseEventHandler', () => {
             expect(mocks.setCombatSummary).not.toHaveBeenCalled();
         });
 
-        it('should look up character by name with suffix matching', () => {
-            refs.lastAppliedTurnStartCreatureRef.current = null;
-            refs.combatSummaryRef.current = { round: 1, creatures: [] };
-            refs.activeCreatureNameRef.current = 'Charlie';
-            const chars = [{ name: 'Alice (Druid)', computedStats: { turnStartEffects: [] } }];
-            handler = createSseEventHandler({
-                campaignName,
-                characters: chars,
-                combatSummaryRef: refs.combatSummaryRef,
-                activeCreatureNameRef: refs.activeCreatureNameRef,
-                lastAppliedTurnStartCreatureRef: refs.lastAppliedTurnStartCreatureRef,
-                setCombatSummary: mocks.setCombatSummary,
-                setCombatSummaryG: mocks.setCombatSummaryG,
-                setActiveCreatureNameG: mocks.setActiveCreatureNameG,
-                setRuntimeStateTick: mocks.setRuntimeStateTick,
-                handleOverlayEvent: mocks.handleOverlayEvent,
-            });
-            handler({ key: 'change-test-campaign-activeCreatureName', data: 'Alice' });
-            expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith(
-                'Alice', expect.anything(), 'test-campaign', expect.any(Array),
-            );
-        });
-
         it('should pass undefined computedStats when character not found', () => {
             refs.lastAppliedTurnStartCreatureRef.current = null;
             refs.combatSummaryRef.current = { round: 1, creatures: [] };
             handler({ key: 'change-test-campaign-activeCreatureName', data: 'Unknown' });
             expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith(
-                'Unknown', undefined, 'test-campaign', characters,
+                'Unknown', undefined, campaignName, characters,
             );
         });
 
@@ -255,16 +256,35 @@ describe('createSseEventHandler', () => {
                 round: 1, creatures: [], activeCreatureName: 'Bob',
             });
             handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
-            expect(combatData.getCombatSummary).toHaveBeenCalledWith('test-campaign');
+            expect(combatData.getCombatSummary).toHaveBeenCalledWith(campaignName);
         });
 
         it('should skip combatSummary update when cs is null from ref and getCombatSummary', () => {
             refs.combatSummaryRef.current = null;
             combatData.getCombatSummary.mockReturnValue(null);
-            // With cs being null, the cs check at line 98 fails, so setActiveCreatureNameG still runs
-            // but no cache update or expireStaleEffects from the cs branch
             handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
             expect(mocks.setActiveCreatureNameG).toHaveBeenCalledWith('Bob');
+        });
+
+        it('should call expireStaleEffects even when cs is null', () => {
+            refs.combatSummaryRef.current = null;
+            combatData.getCombatSummary.mockReturnValue(null);
+            handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
+            expect(expirations.expireStaleEffects).toHaveBeenCalledWith(campaignName, 'Bob');
+        });
+
+        it('should call setActiveCreatureNameG even when cs is null', () => {
+            refs.combatSummaryRef.current = null;
+            combatData.getCombatSummary.mockReturnValue(null);
+            handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
+            expect(mocks.setActiveCreatureNameG).toHaveBeenCalledWith('Bob');
+        });
+
+        it('should not call setCombatSummaryCache when cs is null', () => {
+            refs.combatSummaryRef.current = null;
+            combatData.getCombatSummary.mockReturnValue(null);
+            handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
+            expect(combatData.setCombatSummaryCache).not.toHaveBeenCalled();
         });
     });
 

@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createConcentrationHandlers } from './initiative-concentration.jsx';
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import storage from '../../services/ui/storage.js';
+import {
+    rollConcentrationSave,
+    buildConcentrationPopup,
+    cleanupConcentrationEffects,
+} from '../../services/combat/concentration/concentrationService.js';
+import { logConcentrationSave } from '../../services/encounters/combatLoggingService.js';
+
+// @improved-by-ai
 
 vi.mock('../../services/ui/storage.js', () => ({
     default: {
@@ -25,14 +35,6 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
 }));
 
-import storage from '../../services/ui/storage.js';
-import {
-    rollConcentrationSave,
-    buildConcentrationPopup,
-    cleanupConcentrationEffects,
-} from '../../services/combat/concentration/concentrationService.js';
-import { logConcentrationSave } from '../../services/encounters/combatLoggingService.js';
-
 describe('initiative-concentration', () => {
     let mockCombatSummary;
     let mockCharacters;
@@ -42,7 +44,7 @@ describe('initiative-concentration', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        storage.set.mockReturnValue(undefined);
+        // storage.set is a void function; vi.fn() returns undefined by default.
         mockCombatSummary = {
             round: 1,
             creatures: [
@@ -59,7 +61,7 @@ describe('initiative-concentration', () => {
         mockSetCombatSummary = vi.fn();
     });
 
-    function createHandlers() {
+    function createHandlers(overrides = {}) {
         return createConcentrationHandlers({
             combatSummary: mockCombatSummary,
             campaignName: 'test-campaign',
@@ -68,7 +70,22 @@ describe('initiative-concentration', () => {
             mapName: 'test-map',
             setConditionPopup: mockSetConditionPopup,
             setCombatSummary: mockSetCombatSummary,
+            ...overrides,
         });
+    }
+
+    function mockSuccessResult() {
+        return {
+            roll: 15, success: true, bonus: 2, bonusDetail: undefined,
+            starryDragonFloor: false, displayRolls: [15],
+        };
+    }
+
+    function mockFailureResult() {
+        return {
+            roll: 5, success: false, bonus: 2, bonusDetail: undefined,
+            starryDragonFloor: false, displayRolls: [5],
+        };
     }
 
     // ------------------------------------------------------------------
@@ -90,13 +107,13 @@ describe('initiative-concentration', () => {
             expect(rollConcentrationSave).not.toHaveBeenCalled();
         });
 
-        it('should return early when creature is not found', async () => {
+        it('should return early when creature is not found in combatSummary', async () => {
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('NonExistent');
             expect(rollConcentrationSave).not.toHaveBeenCalled();
         });
 
-        it('should return early when creature has no concentration', async () => {
+        it('should return early when creature exists but has no concentration', async () => {
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
             expect(rollConcentrationSave).not.toHaveBeenCalled();
@@ -108,19 +125,9 @@ describe('initiative-concentration', () => {
     // ------------------------------------------------------------------
 
     describe('handleRollConcentrationSave — successful save', () => {
-        it('should execute full flow on success', async () => {
-            mockCombatSummary.creatures[0].concentration = {
-                spell: 'Fireball',
-                dc: 13,
-            };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
+        it('should execute full flow on success and preserve concentration', async () => {
+            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
+            rollConcentrationSave.mockResolvedValue(mockSuccessResult());
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
@@ -140,7 +147,6 @@ describe('initiative-concentration', () => {
             expect(buildConcentrationPopup).toHaveBeenCalled();
             expect(logConcentrationSave).toHaveBeenCalled();
             expect(cleanupConcentrationEffects).not.toHaveBeenCalled();
-            // concentration should remain untouched on success
             expect(mockCombatSummary.creatures[0].concentration).toEqual({ spell: 'Fireball', dc: 13 });
         });
     });
@@ -151,18 +157,8 @@ describe('initiative-concentration', () => {
 
     describe('handleRollConcentrationSave — failed save', () => {
         it('should clear concentration and call cleanup on failure', async () => {
-            mockCombatSummary.creatures[0].concentration = {
-                spell: 'Fireball',
-                dc: 13,
-            };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 5,
-                success: false,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [5],
-            });
+            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
+            rollConcentrationSave.mockResolvedValue(mockFailureResult());
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
@@ -186,21 +182,8 @@ describe('initiative-concentration', () => {
     describe('handleRollConcentrationSave — hasConcentrationBreaker', () => {
         it('should pass hasConcentrationBreaker=true when attacker has concentration_breaker disadvantage modifier', async () => {
             mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            // Simulate: lastAttack points to an attacker with concentration_breaker modifier
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue({
-                attackerName: 'Goblin',
-            });
-
+            rollConcentrationSave.mockResolvedValue(mockSuccessResult());
+            getRuntimeValue.mockResolvedValue({ attackerName: 'Goblin' });
             mockCharacters[1].saveModifiers = [
                 { condition: 'concentration_breaker', effect: 'disadvantage', source: 'Goblin' },
             ];
@@ -216,7 +199,7 @@ describe('initiative-concentration', () => {
                 'test-campaign',
                 'test-map',
                 expect.any(Function),
-                true // hasConcentrationBreaker
+                true
             );
             expect(logConcentrationSave).toHaveBeenCalledWith(
                 'test-campaign',
@@ -234,17 +217,8 @@ describe('initiative-concentration', () => {
 
         it('should default hasConcentrationBreaker to false when lastAttack is null', async () => {
             mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
+            rollConcentrationSave.mockResolvedValue(mockSuccessResult());
+            getRuntimeValue.mockResolvedValue(null);
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
@@ -263,17 +237,8 @@ describe('initiative-concentration', () => {
 
         it('should default hasConcentrationBreaker to false when lastAttack has no attackerName', async () => {
             mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue({});
+            rollConcentrationSave.mockResolvedValue(mockSuccessResult());
+            getRuntimeValue.mockResolvedValue({});
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
@@ -296,237 +261,96 @@ describe('initiative-concentration', () => {
     // ------------------------------------------------------------------
 
     describe('handleRollConcentrationSave — advantageSources', () => {
-        it('should collect advantageSources from saveModifiers with target "concentration_saving_throws"', async () => {
+        function setupAdvantageTest() {
             mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
+            rollConcentrationSave.mockResolvedValue(mockSuccessResult());
+            getRuntimeValue.mockResolvedValue(null);
+        }
 
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
+        it('should collect advantageSources from saveModifiers with target concentration_saving_throws', async () => {
+            setupAdvantageTest();
             mockCharacters[0].saveModifiers = [
-                {
-                    source: 'Bard',
-                    target: 'concentration_saving_throws',
-                    condition: 'bless',
-                    effect: 'advantage',
-                },
+                { source: 'Bard', target: 'concentration_saving_throws', condition: 'bless', effect: 'advantage' },
             ];
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
 
             expect(logConcentrationSave).toHaveBeenCalledWith(
-                'test-campaign',
-                'Alice',
-                15,
-                2,
-                undefined,
-                'Fireball',
-                13,
-                true,
-                'advantage',
-                ['Bard']
+                'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
+                true, 'advantage', ['Bard']
             );
         });
 
-        it('should collect advantageSources from saveModifiers with target "saving_throw" + concentration_spell_damage + Constitution', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
+        it('should collect advantageSources from saveModifiers with target saving_throw + concentration_spell_damage + Constitution', async () => {
+            setupAdvantageTest();
             mockCharacters[0].saveModifiers = [
-                {
-                    source: 'Paladin',
-                    target: 'saving_throw',
-                    condition: 'concentration_spell_damage',
-                    effect: 'advantage',
-                    abilities: ['Constitution'],
-                },
+                { source: 'Paladin', target: 'saving_throw', condition: 'concentration_spell_damage', effect: 'advantage', abilities: ['Constitution'] },
             ];
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
 
             expect(logConcentrationSave).toHaveBeenCalledWith(
-                'test-campaign',
-                'Alice',
-                15,
-                2,
-                undefined,
-                'Fireball',
-                13,
-                true,
-                'advantage',
-                ['Paladin']
+                'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
+                true, 'advantage', ['Paladin']
             );
         });
 
-        it('should NOT collect advantageSources when target is "saving_throw" but abilities does not include Constitution', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
+        it('should NOT collect advantageSources when target is saving_throw but abilities does not include Constitution', async () => {
+            setupAdvantageTest();
             mockCharacters[0].saveModifiers = [
-                {
-                    source: 'SomeSource',
-                    target: 'saving_throw',
-                    condition: 'concentration_spell_damage',
-                    effect: 'advantage',
-                    abilities: ['Strength'],
-                },
+                { source: 'SomeSource', target: 'saving_throw', condition: 'concentration_spell_damage', effect: 'advantage', abilities: ['Strength'] },
             ];
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
 
             expect(logConcentrationSave).toHaveBeenCalledWith(
-                'test-campaign',
-                'Alice',
-                15,
-                2,
-                undefined,
-                'Fireball',
-                13,
-                true,
-                'normal',
-                undefined
+                'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
+                true, 'normal', undefined
             );
         });
 
         it('should deduplicate advantageSources from multiple modifiers', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
+            setupAdvantageTest();
             mockCharacters[0].saveModifiers = [
-                {
-                    source: 'Bard',
-                    target: 'concentration_saving_throws',
-                    condition: 'bless',
-                    effect: 'advantage',
-                },
-                {
-                    source: 'Bard',
-                    target: 'concentration_saving_throws',
-                    condition: 'other',
-                    effect: 'advantage',
-                },
+                { source: 'Bard', target: 'concentration_saving_throws', condition: 'bless', effect: 'advantage' },
+                { source: 'Bard', target: 'concentration_saving_throws', condition: 'other', effect: 'advantage' },
             ];
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
 
             expect(logConcentrationSave).toHaveBeenCalledWith(
-                'test-campaign',
-                'Alice',
-                15,
-                2,
-                undefined,
-                'Fireball',
-                13,
-                true,
-                'advantage',
-                ['Bard']
+                'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
+                true, 'advantage', ['Bard']
             );
         });
 
-        it('should default to "normal" when no targetModifiers exist', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
+        it('should default to normal when targetModifiers is undefined', async () => {
+            setupAdvantageTest();
             mockCharacters[0].saveModifiers = undefined;
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
 
             expect(logConcentrationSave).toHaveBeenCalledWith(
-                'test-campaign',
-                'Alice',
-                15,
-                2,
-                undefined,
-                'Fireball',
-                13,
-                true,
-                'normal',
-                undefined
+                'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
+                true, 'normal', undefined
             );
         });
 
-        it('should default to "normal" when targetModifiers is empty array', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
+        it('should default to normal when targetModifiers is empty array', async () => {
+            setupAdvantageTest();
             mockCharacters[0].saveModifiers = [];
 
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
 
             expect(logConcentrationSave).toHaveBeenCalledWith(
-                'test-campaign',
-                'Alice',
-                15,
-                2,
-                undefined,
-                'Fireball',
-                13,
-                true,
-                'normal',
-                undefined
+                'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
+                true, 'normal', undefined
             );
         });
     });
@@ -536,27 +360,16 @@ describe('initiative-concentration', () => {
     // ------------------------------------------------------------------
 
     describe('handleRollConcentrationSave — targetCharacter matching', () => {
-        it('should find targetCharacter by exact name match', async () => {
+        function setupTargetTest() {
             mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
+            rollConcentrationSave.mockResolvedValue(mockSuccessResult());
+            getRuntimeValue.mockResolvedValue(null);
+        }
 
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
+        it('should find targetCharacter by exact name match', async () => {
+            setupTargetTest();
             mockCharacters[0].saveModifiers = [
-                {
-                    source: 'Bard',
-                    target: 'concentration_saving_throws',
-                    condition: 'bless',
-                    effect: 'advantage',
-                },
+                { source: 'Bard', target: 'concentration_saving_throws', condition: 'bless', effect: 'advantage' },
             ];
 
             const { handleRollConcentrationSave } = createHandlers();
@@ -574,23 +387,8 @@ describe('initiative-concentration', () => {
             );
         });
 
-        it('should find targetCharacter by name with trailing space in characters array (e.g. "Goblin Companion")', async () => {
-            // When creatureName has a trailing space match in characters,
-            // the targetCharacter lookup should find it for saveModifiers
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
-            // Add a character named "Alice Companion" that matches Alice with trailing space
+        it('should find targetCharacter by name prefix when creature name matches start of a character name', async () => {
+            setupTargetTest();
             mockCharacters.push({ name: 'Alice Companion', saveModifiers: [], computedStats: {} });
 
             const { handleRollConcentrationSave } = createHandlers();
@@ -611,5 +409,4 @@ describe('initiative-concentration', () => {
             );
         });
     });
-
 });

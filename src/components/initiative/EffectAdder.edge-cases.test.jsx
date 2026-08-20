@@ -1,16 +1,56 @@
-import { render } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+// @improved-by-ai
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EffectAdder from './EffectAdder.jsx';
 
 describe('EffectAdder - edge cases', () => {
+  let props;
+
+  beforeEach(() => {
+    props = {
+      targetName: 'Goblin',
+      onCancel: vi.fn(),
+      onApply: vi.fn(),
+      creatures: [
+        { name: 'Alice' },
+        { name: 'Bob' },
+      ],
+    };
+  });
+
   it('should render without crashing when all props are minimal', () => {
     render(<EffectAdder targetName='Test' onCancel={vi.fn()} onApply={vi.fn()} creatures={[]} />);
     expect(document.querySelector('.ea-modal')).toBeInTheDocument();
   });
 
-  it('should render without crashing when onApply/onCancel are undefined', () => {
+  it('should handle invalid initialTab gracefully', () => {
     expect(() => {
-      render(<EffectAdder targetName='Test' />);
+      render(<EffectAdder {...props} initialTab='invalidTab' />);
     }).not.toThrow();
+    expect(document.querySelector('.ea-modal')).toBeInTheDocument();
+  });
+
+  it('should render effects tab correctly when it is the initial tab', () => {
+    render(<EffectAdder {...props} initialTab='effects' />);
+    expect(screen.getByPlaceholderText('Search effects…')).toBeInTheDocument();
+    expect(screen.getByText('Attack')).toBeInTheDocument();
+  });
+
+  it('should disable Apply button in conditions tab when no condition is selected', () => {
+    render(<EffectAdder {...props} initialTab='conditions' />);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+  });
+
+  it('should render overlay and modal when starting on effects tab', () => {
+    render(<EffectAdder {...props} initialTab='effects' />);
+    expect(document.querySelector('.ea-overlay')).toBeInTheDocument();
+    expect(document.querySelector('.ea-modal')).toBeInTheDocument();
+  });
+
+  it('should show Back and Apply buttons when selecting an effect on initial effects tab', () => {
+    render(<EffectAdder {...props} initialTab='effects' />);
+    fireEvent.click(screen.getByText('Goad'));
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
   });
 });

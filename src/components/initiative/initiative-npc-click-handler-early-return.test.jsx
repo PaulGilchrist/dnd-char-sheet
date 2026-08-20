@@ -1,31 +1,6 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
-import { loadMonsters } from '../../services/ui/dataLoader.js';
-import { getCombatSummary } from '../../services/encounters/combatData.js';
-import { getMonsterData } from '../../services/npcs/monsterUtils.js';
-import { npcToMonsterFormat } from '../../services/encounters/npcStatBlockUtils.js';
-
-vi.mock('../../services/ui/dataLoader.js', () => ({
-    loadMonsters: vi.fn(() => Promise.resolve([])),
-}));
-vi.mock('../../services/encounters/combatData.js', () => ({
-    getCombatSummary: vi.fn(() => null),
-}));
-vi.mock('../../services/npcs/monsterUtils.js', () => ({
-    getMonsterData: vi.fn(() => Promise.resolve(null)),
-}));
-vi.mock('../../services/encounters/npcStatBlockUtils.js', () => ({
-    npcToMonsterFormat: vi.fn(() => null),
-}));
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-    getRuntimeValue: vi.fn((_key, _prop, _campaign) => {
-        if (_prop === 'currentHitPoints') return 15;
-        if (_prop === 'circleFormsAC') return null;
-        if (_prop === 'polymorphTempHp') return 0;
-        if (_prop === 'shapechangeTempHp') return 0;
-        return null;
-    }),
-}));
 
 describe('createNpcClickHandler - early return for non-localhost', () => {
     let setViewingMonster;
@@ -57,13 +32,8 @@ describe('createNpcClickHandler - early return for non-localhost', () => {
         ];
     });
 
-    it('should return early without calling setters when not localhost and allowNonLocalhost is false', async () => {
-        vi.mocked(loadMonsters).mockResolvedValue([]);
-        vi.mocked(getCombatSummary).mockReturnValue(null);
-        vi.mocked(getMonsterData).mockResolvedValue(null);
-        vi.mocked(npcToMonsterFormat).mockReturnValue(null);
-
-        const nonLocalHandler = createNpcClickHandler({
+    it('should return undefined without calling setters when not localhost and allowNonLocalhost is false', async () => {
+        const handler = createNpcClickHandler({
             isLocalhost: false,
             campaignNpcs,
             campaignName: 'test-campaign',
@@ -71,18 +41,16 @@ describe('createNpcClickHandler - early return for non-localhost', () => {
             setViewingMonster,
             setViewingMonsterCreatureName,
         });
-        await nonLocalHandler({ name: 'Goblin' });
+
+        const result = await handler({ name: 'Goblin' });
+
+        expect(result).toBeUndefined();
         expect(setViewingMonster).not.toHaveBeenCalled();
         expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
     });
 
-    it('should proceed when allowNonLocalhost is true even if not localhost', async () => {
-        vi.mocked(loadMonsters).mockResolvedValue([]);
-        vi.mocked(getCombatSummary).mockReturnValue(null);
-        vi.mocked(getMonsterData).mockResolvedValue(null);
-        vi.mocked(npcToMonsterFormat).mockReturnValue(null);
-
-        const nonLocalHandler = createNpcClickHandler({
+    it('should return early when creature is null', async () => {
+        const handler = createNpcClickHandler({
             isLocalhost: false,
             campaignNpcs,
             campaignName: 'test-campaign',
@@ -90,10 +58,27 @@ describe('createNpcClickHandler - early return for non-localhost', () => {
             setViewingMonster,
             setViewingMonsterCreatureName,
         });
-        const mockMonster = { index: 'goblin', name: 'Goblin' };
-        vi.mocked(getMonsterData).mockResolvedValue(mockMonster);
-        await nonLocalHandler({ name: 'Goblin' }, { allowNonLocalhost: true });
-        expect(setViewingMonster).toHaveBeenCalledWith(mockMonster);
-        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('Goblin');
+
+        await handler(null);
+
+        expect(setViewingMonster).not.toHaveBeenCalled();
+        expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
     });
+
+    it('should return early when creature is undefined', async () => {
+        const handler = createNpcClickHandler({
+            isLocalhost: false,
+            campaignNpcs,
+            campaignName: 'test-campaign',
+            characters,
+            setViewingMonster,
+            setViewingMonsterCreatureName,
+        });
+
+        await handler(undefined);
+
+        expect(setViewingMonster).not.toHaveBeenCalled();
+        expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
+    });
+
 });

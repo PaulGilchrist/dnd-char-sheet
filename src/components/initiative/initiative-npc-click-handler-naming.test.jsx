@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
 import { loadMonsters } from '../../services/ui/dataLoader.js';
@@ -17,12 +18,14 @@ vi.mock('../../services/npcs/monsterUtils.js', () => ({
 describe('createNpcClickHandler - Creature name matching', () => {
     let handler;
     let setViewingMonster;
+    let setViewingMonsterCreatureName;
     let campaignNpcs;
     let characters;
 
     beforeEach(() => {
         vi.clearAllMocks();
         setViewingMonster = vi.fn();
+        setViewingMonsterCreatureName = vi.fn();
         campaignNpcs = [];
         characters = [
             {
@@ -47,11 +50,11 @@ describe('createNpcClickHandler - Creature name matching', () => {
             campaignName: 'test-campaign',
             characters,
             setViewingMonster,
-            setViewingMonsterCreatureName: vi.fn(),
+            setViewingMonsterCreatureName,
         });
     });
 
-    it('should match runtime creature by exact name', async () => {
+    it('should merge runtime creature data with base monster and call setters with original creature name', async () => {
         const combatSummary = {
             creatures: [
                 {
@@ -82,9 +85,37 @@ describe('createNpcClickHandler - Creature name matching', () => {
         await handler({ name: 'Goblin Leader' });
 
         expect(setViewingMonster).toHaveBeenCalled();
+        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('Goblin Leader');
+        const monster = setViewingMonster.mock.calls[0][0];
+        expect(monster.name).toBe('Goblin Leader');
+        expect(monster.armor_class).toBe(15);
+        expect(monster.hit_points).toBe(7);
     });
 
-    it('should skip path when runtimeCreature is undefined', async () => {
+    it('should use case-sensitive matching for runtime creatures and fallback to getMonsterData on mismatch', async () => {
+        const combatSummary = {
+            creatures: [
+                {
+                    name: 'Goblin Leader',
+                    type: 'npc',
+                    monsterIndex: 'goblin',
+                    ac: 15,
+                    currentHp: 7,
+                },
+            ],
+        };
+        vi.mocked(getCombatSummary).mockReturnValue(combatSummary);
+        const fallbackMonster = { index: 'ogre', name: 'Ogre' };
+        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
+
+        await handler({ name: 'goblin leader' });
+
+        expect(getMonsterData).toHaveBeenCalledWith('goblin leader');
+        expect(setViewingMonster).toHaveBeenCalledWith(fallbackMonster);
+        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('goblin leader');
+    });
+
+    it('should call getMonsterData fallback and set viewing monster when runtime creature is undefined', async () => {
         vi.mocked(getCombatSummary).mockReturnValue(null);
         const fallbackMonster = { index: 'ogre', name: 'Ogre' };
         vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
@@ -93,5 +124,6 @@ describe('createNpcClickHandler - Creature name matching', () => {
 
         expect(getMonsterData).toHaveBeenCalledWith('Ogre');
         expect(setViewingMonster).toHaveBeenCalledWith(fallbackMonster);
+        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('Ogre');
     });
 });

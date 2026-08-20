@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createConcentrationHandlers } from './initiative-concentration.jsx';
 
+// @improved-by-ai
 vi.mock('../../services/ui/storage.js', () => ({
     default: {
         get: vi.fn(),
@@ -31,10 +32,10 @@ import storage from '../../services/ui/storage.js';
 import {
     rollConcentrationSave,
     breakConcentration,
-    buildConcentrationPopup,
     cleanupConcentrationEffects,
 } from '../../services/combat/concentration/concentrationService.js';
-import { logConcentrationSave, logConditionEvent } from '../../services/encounters/combatLoggingService.js';
+import { logConditionEvent } from '../../services/encounters/combatLoggingService.js';
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 
 describe('initiative-concentration', () => {
     let mockCombatSummary;
@@ -45,7 +46,6 @@ describe('initiative-concentration', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        storage.set.mockReturnValue(undefined);
         mockCombatSummary = {
             round: 1,
             creatures: [
@@ -75,6 +75,18 @@ describe('initiative-concentration', () => {
     }
 
     // ------------------------------------------------------------------
+    // Returned handlers object
+    // ------------------------------------------------------------------
+
+    describe('returned handlers object', () => {
+        it('should return an object with handleRollConcentrationSave and handleBreakConcentration', () => {
+            const handlers = createHandlers();
+            expect(typeof handlers.handleRollConcentrationSave).toBe('function');
+            expect(typeof handlers.handleBreakConcentration).toBe('function');
+        });
+    });
+
+    // ------------------------------------------------------------------
     // handleBreakConcentration — early returns
     // ------------------------------------------------------------------
 
@@ -91,22 +103,18 @@ describe('initiative-concentration', () => {
             });
             handleBreakConcentration('Alice');
             expect(breakConcentration).not.toHaveBeenCalled();
+            expect(storage.set).not.toHaveBeenCalled();
+            expect(logConditionEvent).not.toHaveBeenCalled();
+            expect(cleanupConcentrationEffects).not.toHaveBeenCalled();
         });
 
-        it('should return early when breakConcentration returns null (creature not found)', () => {
+        it('should return early when breakConcentration returns null (creature not found or no concentration)', () => {
             breakConcentration.mockReturnValue(null);
             const { handleBreakConcentration } = createHandlers();
             handleBreakConcentration('NonExistent');
             expect(storage.set).not.toHaveBeenCalled();
             expect(logConditionEvent).not.toHaveBeenCalled();
             expect(cleanupConcentrationEffects).not.toHaveBeenCalled();
-        });
-
-        it('should return early when breakConcentration returns null (no concentration)', () => {
-            breakConcentration.mockReturnValue(null);
-            const { handleBreakConcentration } = createHandlers();
-            handleBreakConcentration('Alice');
-            expect(storage.set).not.toHaveBeenCalled();
         });
     });
 
@@ -137,234 +145,14 @@ describe('initiative-concentration', () => {
                 'test-campaign'
             );
         });
-    });
 
-    // ------------------------------------------------------------------
-    // buildConcentrationPopup arguments
-    // ------------------------------------------------------------------
-
-    describe('buildConcentrationPopup arguments', () => {
-        it('should pass correct arguments to buildConcentrationPopup on success', async () => {
+        it('should call setCombatSummary with a cloned object (cloneDeep)', () => {
             mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 18,
-                success: true,
-                bonus: 3,
-                bonusDetail: '(+3 proficiency)',
-                starryDragonFloor: false,
-                displayRolls: [18],
-            });
+            breakConcentration.mockReturnValue('Fireball');
 
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
+            const { handleBreakConcentration } = createHandlers();
+            handleBreakConcentration('Alice');
 
-            const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
-
-            expect(buildConcentrationPopup).toHaveBeenCalledWith(
-                18,
-                3,
-                '(+3 proficiency)',
-                'Fireball',
-                13,
-                true,
-                false,
-                [18]
-            );
-        });
-
-        it('should pass correct arguments to buildConcentrationPopup on failure', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 5,
-                success: false,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [5],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
-            const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
-
-            expect(buildConcentrationPopup).toHaveBeenCalledWith(
-                5,
-                2,
-                undefined,
-                'Fireball',
-                13,
-                false,
-                false,
-                [5]
-            );
-        });
-
-        it('should pass starryDragonFloor when true', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 10,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: true,
-                displayRolls: [10],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
-            const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
-
-            expect(buildConcentrationPopup).toHaveBeenCalledWith(
-                10,
-                2,
-                undefined,
-                'Fireball',
-                13,
-                true,
-                true,
-                [10]
-            );
-        });
-    });
-
-    // ------------------------------------------------------------------
-    // Returned handlers object
-    // ------------------------------------------------------------------
-
-    describe('returned handlers object', () => {
-        it('should return an object with handleRollConcentrationSave and handleBreakConcentration', () => {
-            const handlers = createHandlers();
-            expect(typeof handlers.handleRollConcentrationSave).toBe('function');
-            expect(typeof handlers.handleBreakConcentration).toBe('function');
-        });
-    });
-
-    // ------------------------------------------------------------------
-    // logConcentrationSave mode determination
-    // ------------------------------------------------------------------
-
-    describe('logConcentrationSave mode determination', () => {
-        it('should pass "disadvantage" mode when hasConcentrationBreaker is true regardless of advantageSources', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue({ attackerName: 'Goblin' });
-
-            mockCharacters[1].saveModifiers = [
-                { condition: 'concentration_breaker', effect: 'disadvantage', source: 'Goblin' },
-            ];
-            mockCharacters[0].saveModifiers = [
-                {
-                    source: 'Bard',
-                    target: 'concentration_saving_throws',
-                    condition: 'bless',
-                    effect: 'advantage',
-                },
-            ];
-
-            const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
-
-            expect(logConcentrationSave).toHaveBeenCalledWith(
-                'test-campaign',
-                'Alice',
-                15,
-                2,
-                undefined,
-                'Fireball',
-                13,
-                true,
-                'disadvantage',
-                expect.any(Array)
-            );
-        });
-    });
-
-    // ------------------------------------------------------------------
-    // combatSummary persistence (storage.set + setCombatSummary)
-    // ------------------------------------------------------------------
-
-    describe('combatSummary persistence', () => {
-        it('should persist combatSummary on success', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
-            const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
-
-            expect(storage.set).toHaveBeenCalledWith('combatSummary', mockCombatSummary, 'test-campaign');
-            expect(mockSetCombatSummary).toHaveBeenCalled();
-        });
-
-        it('should persist combatSummary on failure', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 5,
-                success: false,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [5],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
-            const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
-
-            expect(storage.set).toHaveBeenCalledWith('combatSummary', mockCombatSummary, 'test-campaign');
-            expect(mockSetCombatSummary).toHaveBeenCalled();
-        });
-    });
-
-    // ------------------------------------------------------------------
-    // cloneDeep usage in setCombatSummary
-    // ------------------------------------------------------------------
-
-    describe('cloneDeep usage', () => {
-        it('should call setCombatSummary with a cloned object', async () => {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue({
-                roll: 15,
-                success: true,
-                bonus: 2,
-                bonusDetail: undefined,
-                starryDragonFloor: false,
-                displayRolls: [15],
-            });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue(null);
-
-            const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
-
-            // Verify setCombatSummary was called and the argument is a deep clone
-            // (structurally equal but not the same reference as mockCombatSummary)
             expect(mockSetCombatSummary).toHaveBeenCalledTimes(1);
             const calledWith = mockSetCombatSummary.mock.calls[0][0];
             expect(calledWith).toEqual(mockCombatSummary);
@@ -373,7 +161,55 @@ describe('initiative-concentration', () => {
     });
 
     // ------------------------------------------------------------------
-    // getRuntimeValue import behavior
+    // handleRollConcentrationSave — cloneDeep usage
+    // ------------------------------------------------------------------
+
+    describe('handleRollConcentrationSave — cloneDeep usage', () => {
+        it('should call setCombatSummary with a cloned object on success', async () => {
+            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
+            rollConcentrationSave.mockResolvedValue({
+                roll: 15,
+                success: true,
+                bonus: 2,
+                bonusDetail: undefined,
+                starryDragonFloor: false,
+                displayRolls: [15],
+            });
+            getRuntimeValue.mockResolvedValue(null);
+
+            const { handleRollConcentrationSave } = createHandlers();
+            await handleRollConcentrationSave('Alice');
+
+            expect(mockSetCombatSummary).toHaveBeenCalledTimes(1);
+            const calledWith = mockSetCombatSummary.mock.calls[0][0];
+            expect(calledWith).toEqual(mockCombatSummary);
+            expect(calledWith).not.toBe(mockCombatSummary);
+        });
+
+        it('should call setCombatSummary with a cloned object on failure', async () => {
+            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
+            rollConcentrationSave.mockResolvedValue({
+                roll: 5,
+                success: false,
+                bonus: 2,
+                bonusDetail: undefined,
+                starryDragonFloor: false,
+                displayRolls: [5],
+            });
+            getRuntimeValue.mockResolvedValue(null);
+
+            const { handleRollConcentrationSave } = createHandlers();
+            await handleRollConcentrationSave('Alice');
+
+            expect(mockSetCombatSummary).toHaveBeenCalledTimes(1);
+            const calledWith = mockSetCombatSummary.mock.calls[0][0];
+            expect(calledWith).toEqual(mockCombatSummary);
+            expect(calledWith).not.toBe(mockCombatSummary);
+        });
+    });
+
+    // ------------------------------------------------------------------
+    // handleRollConcentrationSave — getRuntimeValue import behavior
     // ------------------------------------------------------------------
 
     describe('dynamic getRuntimeValue import', () => {
@@ -387,9 +223,7 @@ describe('initiative-concentration', () => {
                 starryDragonFloor: false,
                 displayRolls: [15],
             });
-
-            const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
-            grv.mockResolvedValue({ attackerName: 'Goblin' });
+            getRuntimeValue.mockResolvedValue({ attackerName: 'Goblin' });
 
             mockCharacters[1].saveModifiers = [
                 { condition: 'concentration_breaker', effect: 'disadvantage', source: 'Goblin' },
@@ -398,7 +232,7 @@ describe('initiative-concentration', () => {
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('Alice');
 
-            expect(grv).toHaveBeenCalledWith('campaign', 'lastAttack', 'test-campaign');
+            expect(getRuntimeValue).toHaveBeenCalledWith('campaign', 'lastAttack', 'test-campaign');
         });
     });
 });

@@ -1,7 +1,10 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureCard from './CreatureCard.jsx';
+import * as runtimeState from '../../hooks/runtime/useRuntimeState.js';
 import * as buffToggle from '../../services/automation/common/buffToggle.js';
+
 vi.mock('../common/AvatarImage.jsx', () => ({
     default: vi.fn(({ name, imagePath }) => {
         return <div data-testid={`avatar-${name}`} className="avatar-wrapper">{imagePath ? <img src={imagePath} alt={name} /> : <span>{name?.charAt(0).toUpperCase() || '?'}</span>}</div>;
@@ -45,30 +48,16 @@ vi.mock('../../services/automation/common/buffToggle.js', () => ({
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  useRuntimeValue: vi.fn((_campaignName, key) => {
-      if (key === 'targetEffects') return [];
-      return null;
-  }),
-  getRuntimeValue: vi.fn((target, key, _campaignName) => {
-      if (key === 'naturesSanctuaryActive') return sanctuaryMocks.naturesSanctuaryActive?.[target];
-      if (key === 'naturesSanctuaryCreatures') return sanctuaryMocks.naturesSanctuaryCreatures?.[target];
-      if (key === 'naturesSanctuaryResistance') return sanctuaryMocks.naturesSanctuaryResistance?.[target];
-      if (key === 'wrathOfTheSeaActive') return wrathOfTheSeaMocks[target];
-      if (key === 'concentration') return { spell: "Hunter's Mark" };
-      if (key === 'targetEffects') return runtimeTargetEffects;
-      if (key === 'activeBuffs') return runtimeActiveBuffs?.[target];
-      return undefined;
-  }),
-  setRuntimeValue: vi.fn(),
-  listeners: new Map(),
+    getStore: vi.fn(() => new Map()),
+    useSyncedState: vi.fn(() => [null, vi.fn()]),
+    useRuntimeValue: vi.fn((_campaignName, key) => {
+        if (key === 'targetEffects') return [];
+        return null;
+    }),
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+    listeners: new Map(),
 }));
-
-let sanctuaryMocks = {};
-let wrathOfTheSeaMocks = {};
-let runtimeTargetEffects = [];
-let runtimeActiveBuffs = {};
 
 vi.mock('../../services/combat/auras/unbreakableMajesty.js', () => ({
     isUnbreakableMajestyActive: vi.fn(() => false),
@@ -97,7 +86,7 @@ vi.mock('../../services/automation/handlers/spells/shapechangeService.js', () =>
     revertShapechange: vi.fn(),
 }));
 
-describe('CreatureCard', () => {
+describe('CreatureCard - rendering', () => {
     let props;
 
     const defaultPlayerCreature = {
@@ -124,6 +113,9 @@ describe('CreatureCard', () => {
     };
 
     beforeEach(() => {
+        runtimeState.getRuntimeValue.mockClear();
+        runtimeState.useRuntimeValue.mockClear();
+        runtimeState.useRuntimeValue.mockReturnValue(null);
         props = {
             creature: defaultPlayerCreature,
             isActive: false,
@@ -144,29 +136,74 @@ describe('CreatureCard', () => {
             onRollConcentrationSave: vi.fn(),
             onBreakConcentration: vi.fn(),
         };
-        wrathOfTheSeaMocks = {};
-        sanctuaryMocks = {};
-        runtimeTargetEffects = [];
-        runtimeActiveBuffs = {};
         buffToggle.isBuffActive.mockReturnValue(false);
     });
 
-    describe('rendering - player creatures', () => {
-        it.each`
-            currentHp | expectUnconscious
-            ${0}      | ${true}
-            ${-5}     | ${true}
-            ${1}      | ${false}
-        `('should $expectUnconscious class when currentHp is $currentHp', ({ currentHp, expectUnconscious }) => {
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, currentHp }} />);
+    describe('creature-card class styling', () => {
+        it('should apply creature-unconscious class when currentHp is 0', () => {
+            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, currentHp: 0 }} />);
             const card = document.querySelector('.creature-card');
-            if (expectUnconscious) {
-                expect(card).toHaveClass('creature-unconscious');
-            } else {
-                expect(card).not.toHaveClass('creature-unconscious');
-            }
+            expect(card).toHaveClass('creature-unconscious');
         });
 
+        it('should apply creature-unconscious class when currentHp is negative', () => {
+            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, currentHp: -5 }} />);
+            const card = document.querySelector('.creature-card');
+            expect(card).toHaveClass('creature-unconscious');
+        });
+
+        it('should not apply creature-unconscious class when currentHp is positive', () => {
+            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, currentHp: 1 }} />);
+            const card = document.querySelector('.creature-card');
+            expect(card).not.toHaveClass('creature-unconscious');
+        });
+
+        it('should apply active class when isActive is true', () => {
+            render(<CreatureCard {...props} isActive={true} />);
+            const card = document.querySelector('.creature-card');
+            expect(card).toHaveClass('active');
+        });
+
+        it('should not apply active class when isActive is false', () => {
+            render(<CreatureCard {...props} isActive={false} />);
+            const card = document.querySelector('.creature-card');
+            expect(card).not.toHaveClass('active');
+        });
+
+        it('should apply the creature type class', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
+            const card = document.querySelector('.creature-card');
+            expect(card).toHaveClass('player');
+        });
+
+        it('should apply npc type class for npc creatures', () => {
+            render(<CreatureCard {...props} creature={defaultNpcCreature} />);
+            const card = document.querySelector('.creature-card');
+            expect(card).toHaveClass('npc');
+        });
+    });
+
+    describe('initiative rendering', () => {
+        it('should render initiative input with the creature\'s initiative value', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
+            const initiativeInput = screen.getByTestId('initiative-input');
+            expect(initiativeInput).toHaveValue(14);
+        });
+
+        it('should render initiative input with null value when initiative is null', () => {
+            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, initiative: null }} />);
+            const initiativeInput = screen.getByTestId('initiative-input');
+            expect(initiativeInput).toHaveValue(null);
+        });
+
+        it('should render initiative input with null value when initiative is undefined', () => {
+            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, initiative: undefined }} />);
+            const initiativeInput = screen.getByTestId('initiative-input');
+            expect(initiativeInput).toHaveValue(null);
+        });
+    });
+
+    describe('target select rendering', () => {
         it('should populate target select options from allCreatures excluding self', () => {
             const allCreatures = [
                 defaultPlayerCreature,
@@ -188,34 +225,89 @@ describe('CreatureCard', () => {
             const targetSelect = document.querySelector('.creature-target select');
             expect(targetSelect.querySelector('option[value="overlay-overlay1"]')).toBeInTheDocument();
         });
+
+        it('should render a default empty option in target select', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
+            const targetSelect = screen.getByTestId('target-select');
+            expect(targetSelect.querySelector('option[value=""]')).toBeInTheDocument();
+        });
+
+        it('should not render overlay options when overlays array is empty', () => {
+            render(<CreatureCard {...props} overlays={[]} />);
+            const targetSelect = document.querySelector('.creature-target select');
+            expect(targetSelect.querySelector('option[value="overlay-"]')).not.toBeInTheDocument();
+        });
     });
 
-    describe('rendering - NPC creatures', () => {
-        it.each`
-            npcName     | campaignNpcName | expectBadge
-            ${'Goblin'} | ${'Goblin'}     | ${true}
-            ${'Goblin'} | ${'goblin'}     | ${true}
-            ${'Goblin'} | ${'Orc'}        | ${false}
-        `('should $expectBadge NPC match badge when NPC name is "$npcName" and campaignNpcName is "$campaignNpcName"', ({ npcName, campaignNpcName, expectBadge }) => {
-            const creature = { ...defaultNpcCreature, name: npcName };
-            const campaignNpcs = [{ name: campaignNpcName }];
+    describe('NPC rendering', () => {
+        it('should show NPC match badge when NPC name matches campaign npc (case-insensitive)', () => {
+            const creature = { ...defaultNpcCreature, name: 'Goblin' };
+            const campaignNpcs = [{ name: 'Goblin' }];
             render(<CreatureCard {...props} creature={creature} campaignNpcs={campaignNpcs} />);
-            if (expectBadge) {
-                expect(screen.getByTestId('npc-match-badge')).toBeInTheDocument();
-            } else {
-                expect(screen.queryByTestId('npc-match-badge')).not.toBeInTheDocument();
-            }
+            expect(screen.getByTestId('npc-match-badge')).toBeInTheDocument();
+        });
+
+        it('should show NPC match badge for case-insensitive match', () => {
+            const creature = { ...defaultNpcCreature, name: 'Goblin' };
+            const campaignNpcs = [{ name: 'goblin' }];
+            render(<CreatureCard {...props} creature={creature} campaignNpcs={campaignNpcs} />);
+            expect(screen.getByTestId('npc-match-badge')).toBeInTheDocument();
+        });
+
+        it('should not show NPC match badge when no match exists', () => {
+            const creature = { ...defaultNpcCreature, name: 'Goblin' };
+            const campaignNpcs = [{ name: 'Orc' }];
+            render(<CreatureCard {...props} creature={creature} campaignNpcs={campaignNpcs} />);
+            expect(screen.queryByTestId('npc-match-badge')).not.toBeInTheDocument();
         });
     });
 
     describe('polymorphObject rendering', () => {
-        it('should display polymorphObject type as name when present', () => {
+        it('should display polymorphObject type as formatted name', () => {
             const creature = {
                 ...defaultNpcCreature,
                 polymorphObject: { type: 'giant_toad', icon: 'fa-toad' },
             };
             render(<CreatureCard {...props} creature={creature} />);
             expect(screen.getByText('Giant Toad')).toBeInTheDocument();
+        });
+
+        it('should display polymorphObject with underscores converted to spaces and title-cased', () => {
+            const creature = {
+                ...defaultNpcCreature,
+                polymorphObject: { type: 'black_dragon', icon: 'fa-dragon' },
+            };
+            render(<CreatureCard {...props} creature={creature} />);
+            expect(screen.getByText('Black Dragon')).toBeInTheDocument();
+        });
+
+        it('should render the polymorphObject icon when present', () => {
+            const creature = {
+                ...defaultNpcCreature,
+                polymorphObject: { type: 'spider', icon: 'fa-spider' },
+            };
+            render(<CreatureCard {...props} creature={creature} />);
+            expect(screen.getByText('Spider')).toBeInTheDocument();
+        });
+    });
+
+    describe('edge cases - creature data', () => {
+        it('should render the creature card when allCreatures is empty', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} allCreatures={[]} />);
+            const card = document.querySelector('.creature-card');
+            expect(card).toBeInTheDocument();
+        });
+
+        it('should render the creature card when conditions array is empty', () => {
+            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions: [] }} />);
+            const card = document.querySelector('.creature-card');
+            expect(card).toBeInTheDocument();
+        });
+
+        it('should render the creature card when name is an empty string', () => {
+            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, name: '' }} />);
+            const card = document.querySelector('.creature-card');
+            expect(card).toBeInTheDocument();
         });
     });
 });

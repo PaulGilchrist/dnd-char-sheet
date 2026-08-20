@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
 import { loadMonsters } from '../../services/ui/dataLoader.js';
@@ -13,13 +14,13 @@ vi.mock('../../services/encounters/combatData.js', () => ({
 describe('createNpcClickHandler - Regular monster from campaign data path', () => {
     let handler;
     let setViewingMonster;
-    let campaignNpcs;
+    let setViewingMonsterCreatureName;
     let characters;
 
     beforeEach(() => {
         vi.clearAllMocks();
         setViewingMonster = vi.fn();
-        campaignNpcs = [];
+        setViewingMonsterCreatureName = vi.fn();
         characters = [
             {
                 name: 'DruidAlice',
@@ -39,15 +40,15 @@ describe('createNpcClickHandler - Regular monster from campaign data path', () =
         ];
         handler = createNpcClickHandler({
             isLocalhost: true,
-            campaignNpcs,
+            campaignNpcs: [],
             campaignName: 'test-campaign',
             characters,
             setViewingMonster,
-            setViewingMonsterCreatureName: vi.fn(),
+            setViewingMonsterCreatureName,
         });
     });
 
-    it('should load monster by runtimeCreature.monsterIndex', async () => {
+    it('should load monster by runtimeCreature.monsterIndex with full property merging', async () => {
         const combatSummary = {
             creatures: [
                 {
@@ -60,7 +61,7 @@ describe('createNpcClickHandler - Regular monster from campaign data path', () =
                     speed: { walk: '30 ft.' },
                     saveBonuses: { dex: 4 },
                     resistances: 'cold',
-                    immunities: '',
+                    immunities: 'bludgeoning;piercing',
                     actions: [{ name: 'Scimitar', attack_bonus: 4, damage_type_primary: 'Slashing', description: '4 Slashing damage' }],
                 },
             ],
@@ -84,6 +85,7 @@ describe('createNpcClickHandler - Regular monster from campaign data path', () =
         await handler({ name: 'Goblin' });
 
         expect(setViewingMonster).toHaveBeenCalled();
+        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('Goblin');
         const monster = setViewingMonster.mock.calls[0][0];
         expect(monster.name).toBe('Goblin');
         expect(monster.armor_class).toBe(15);
@@ -93,10 +95,11 @@ describe('createNpcClickHandler - Regular monster from campaign data path', () =
         expect(monster.speed).toEqual({ walk: '30 ft.' });
         expect(monster.saving_throws.dex.modifier).toBe(4);
         expect(monster.damage_resistances).toBe('cold');
+        expect(monster.damage_immunities).toBe('bludgeoning;piercing');
         expect(monster.actions[0].name).toBe('Scimitar');
     });
 
-    it('should apply druid abilities when runtimeCreature has wildShapeSource', async () => {
+    it('should apply druid abilities and languages when runtimeCreature has wildShapeSource', async () => {
         const combatSummary = {
             creatures: [
                 {
@@ -105,7 +108,6 @@ describe('createNpcClickHandler - Regular monster from campaign data path', () =
                     monsterIndex: 'goblin',
                     ac: 15,
                     currentHp: 7,
-                    size: 'Small',
                     wildShapeSource: 'DruidAlice',
                 },
             ],
@@ -129,9 +131,11 @@ describe('createNpcClickHandler - Regular monster from campaign data path', () =
         await handler({ name: 'Goblin' });
 
         const monster = setViewingMonster.mock.calls[0][0];
+        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('Goblin');
         expect(monster.ability_scores.int).toBe(16);
         expect(monster.ability_scores.wis).toBe(14);
         expect(monster.ability_scores.cha).toBe(12);
+        expect(monster.languages).toBe('Common, Elvish');
     });
 
     it('should not set viewing monster when base monster not found', async () => {
@@ -152,5 +156,120 @@ describe('createNpcClickHandler - Regular monster from campaign data path', () =
         await handler({ name: 'MysteryMonster' });
 
         expect(setViewingMonster).not.toHaveBeenCalled();
+        expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
+    });
+
+    it('should match runtime creature by exact name (case-sensitive)', async () => {
+        const combatSummary = {
+            creatures: [
+                {
+                    name: 'Goblin Leader',
+                    type: 'npc',
+                    monsterIndex: 'goblin',
+                    ac: 16,
+                    currentHp: 10,
+                },
+            ],
+        };
+        vi.mocked(getCombatSummary).mockReturnValue(combatSummary);
+        vi.mocked(loadMonsters).mockResolvedValue([
+            {
+                index: 'goblin',
+                name: 'Goblin',
+                armor_class: 15,
+                hit_points: 7,
+                ability_scores: { str: 8, dex: 14, con: 10, int: 8, wis: 8, cha: 8 },
+                saving_throws: {},
+                actions: [],
+                size: 'Small',
+                type: 'Humanoid',
+                challenge_rating: 0.25,
+            },
+        ]);
+
+        await handler({ name: 'Goblin Leader' });
+
+        expect(setViewingMonster).toHaveBeenCalled();
+        const monster = setViewingMonster.mock.calls[0][0];
+        expect(monster.name).toBe('Goblin Leader');
+        expect(monster.armor_class).toBe(16);
+        expect(monster.hit_points).toBe(10);
+    });
+
+    it('should use default values when runtime creature has minimal fields', async () => {
+        const combatSummary = {
+            creatures: [
+                {
+                    name: 'Goblin',
+                    type: 'npc',
+                    monsterIndex: 'goblin',
+                    currentHp: 7,
+                },
+            ],
+        };
+        vi.mocked(getCombatSummary).mockReturnValue(combatSummary);
+        vi.mocked(loadMonsters).mockResolvedValue([
+            {
+                index: 'goblin',
+                name: 'Goblin',
+                armor_class: 15,
+                hit_points: 7,
+                ability_scores: { str: 8, dex: 14, con: 10, int: 8, wis: 8, cha: 8 },
+                saving_throws: { dex: { modifier: 2 } },
+                actions: [{ name: 'Scimitar', attack_bonus: 4, damage_type_primary: 'Slashing', description: '4 Slashing damage' }],
+                size: 'Small',
+                type: 'Humanoid',
+                challenge_rating: 0.25,
+            },
+        ]);
+
+        await handler({ name: 'Goblin' });
+
+        const monster = setViewingMonster.mock.calls[0][0];
+        expect(monster.name).toBe('Goblin');
+        expect(monster.hit_points).toBe(7);
+        expect(monster.armor_class).toBeUndefined();
+        expect(monster.type).toBe('npc');
+        expect(monster.speed).toBeUndefined();
+        expect(monster.damage_resistances).toBeUndefined();
+        expect(monster.damage_immunities).toBeUndefined();
+        expect(monster.actions[0].name).toBe('Scimitar');
+    });
+
+    it('should override save bonuses from runtime creature', async () => {
+        const combatSummary = {
+            creatures: [
+                {
+                    name: 'Goblin',
+                    type: 'npc',
+                    monsterIndex: 'goblin',
+                    ac: 15,
+                    currentHp: 7,
+                    saveBonuses: { dex: 6, con: 3 },
+                },
+            ],
+        };
+        vi.mocked(getCombatSummary).mockReturnValue(combatSummary);
+        vi.mocked(loadMonsters).mockResolvedValue([
+            {
+                index: 'goblin',
+                name: 'Goblin',
+                armor_class: 15,
+                hit_points: 7,
+                ability_scores: { str: 8, dex: 14, con: 10, int: 8, wis: 8, cha: 8 },
+                saving_throws: { str: { modifier: -1 }, dex: { modifier: 2 }, con: { modifier: 0 } },
+                actions: [],
+                size: 'Small',
+                type: 'Humanoid',
+                challenge_rating: 0.25,
+            },
+        ]);
+
+        await handler({ name: 'Goblin' });
+
+        const monster = setViewingMonster.mock.calls[0][0];
+        expect(monster.saving_throws.dex.modifier).toBe(6);
+        expect(monster.saving_throws.con.modifier).toBe(3);
+        expect(monster.saving_throws.str.modifier).toBe(-1);
     });
 });

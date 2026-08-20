@@ -61,6 +61,11 @@ export const ds = (o = {}) => ({
   isNatural20: false, isNatural1: false, timestamp: Date.now(), ...o,
 });
 
+export const heal = (o = {}) => ({
+  id: 'h', type: 'healing', targetName: 'Frodo', sourceName: 'Cleric',
+  amount: 10, resurrection: false, timestamp: Date.now(), ...o,
+});
+
 export const spell = (o = {}) => ({
   id: 's', type: 'spell', characterName: 'Gandalf', spellName: 'Fireball',
   spellLevel: 3, castingTime: 'Action', metamagic: [], spCost: 0,
@@ -71,6 +76,43 @@ export const meta = (o = {}) => ({
   id: 'm', type: 'metamagic', characterName: 'Gandalf', spellName: 'Fireball',
   targetName: 'Orc', originalDamage: 30, newTotal: 38, damageDifference: 8,
   rerolledDiceCount: 2, rollType: 'empowered-spell', timestamp: Date.now(), ...o,
+});
+
+export const automation = (o = {}) => ({
+  id: 'a', type: 'automation', creatureName: 'Orc', name: 'Melee Attack',
+  description: 'Orc attacks with longsword', timestamp: Date.now(), ...o,
+});
+
+export const saveResult = (o = {}) => ({
+  id: 'sr', type: 'save_result', characterName: 'Frodo', targetName: 'Orc',
+  saveType: 'wisdom', saveDc: 13, success: true, timestamp: Date.now(), ...o,
+});
+
+export const psionic = (o = {}) => ({
+  id: 'ps', type: 'psionic_sorcery', characterName: 'Sorcerer',
+  spellName: 'Burning Hands', sorceryPointsSpent: 1, spellLevel: 1,
+  note: '', timestamp: Date.now(), ...o,
+});
+
+export const summons = (o = {}) => ({
+  id: 'su', type: 'summons', characterName: 'Wizard',
+  summonName: 'Small Spider', description: '', summonedCreatures: [],
+  duration: '1 hour', timestamp: Date.now(), ...o,
+});
+
+export const spellEffect = (o = {}) => ({
+  id: 'se', type: 'spell_effect', characterName: 'Cleric',
+  spellName: 'Bless', targetName: 'Party', effects: ['Roll d4 on attack rolls'],
+  timestamp: Date.now(), ...o,
+});
+
+export const buff = (o = {}) => ({
+  id: 'b', type: 'buff', characterName: 'Frodo', buffName: 'Blessing',
+  reason: 'Cleric cast bless', action: 'added', timestamp: Date.now(), ...o,
+});
+
+export const rest = (o = {}) => ({
+  id: 'r', type: 'long_rest', message: 'Full rest | HP restored', timestamp: Date.now(), ...o,
 });
 
 // ── Q helpers so we don't repeat code ───────────────────────

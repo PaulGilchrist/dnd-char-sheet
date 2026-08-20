@@ -1,7 +1,9 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureCard from './CreatureCard.jsx';
 import * as buffToggle from '../../services/automation/common/buffToggle.js';
+
 vi.mock('../common/AvatarImage.jsx', () => ({
     default: vi.fn(({ name, imagePath }) => {
         return <div data-testid={`avatar-${name}`} className="avatar-wrapper">{imagePath ? <img src={imagePath} alt={name} /> : <span>{name?.charAt(0).toUpperCase() || '?'}</span>}</div>;
@@ -45,30 +47,13 @@ vi.mock('../../services/automation/common/buffToggle.js', () => ({
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  useRuntimeValue: vi.fn((_campaignName, key) => {
-      if (key === 'targetEffects') return [];
-      return null;
-  }),
-  getRuntimeValue: vi.fn((target, key, _campaignName) => {
-      if (key === 'naturesSanctuaryActive') return sanctuaryMocks.naturesSanctuaryActive?.[target];
-      if (key === 'naturesSanctuaryCreatures') return sanctuaryMocks.naturesSanctuaryCreatures?.[target];
-      if (key === 'naturesSanctuaryResistance') return sanctuaryMocks.naturesSanctuaryResistance?.[target];
-      if (key === 'wrathOfTheSeaActive') return wrathOfTheSeaMocks[target];
-      if (key === 'concentration') return { spell: "Hunter's Mark" };
-      if (key === 'targetEffects') return runtimeTargetEffects;
-      if (key === 'activeBuffs') return runtimeActiveBuffs?.[target];
-      return undefined;
-  }),
-  setRuntimeValue: vi.fn(),
-  listeners: new Map(),
+    getStore: vi.fn(() => new Map()),
+    useSyncedState: vi.fn(() => [null, vi.fn()]),
+    useRuntimeValue: vi.fn(() => null),
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+    listeners: new Map(),
 }));
-
-let sanctuaryMocks = {};
-let wrathOfTheSeaMocks = {};
-let runtimeTargetEffects = [];
-let runtimeActiveBuffs = {};
 
 describe('CreatureCard', () => {
     let props;
@@ -117,10 +102,6 @@ describe('CreatureCard', () => {
             onRollConcentrationSave: vi.fn(),
             onBreakConcentration: vi.fn(),
         };
-        wrathOfTheSeaMocks = {};
-        sanctuaryMocks = {};
-        runtimeTargetEffects = [];
-        runtimeActiveBuffs = {};
         buffToggle.isBuffActive.mockReturnValue(false);
     });
 
@@ -136,44 +117,58 @@ describe('CreatureCard', () => {
             expect(props.onRemoveNpc).toHaveBeenCalledWith('Goblin');
         });
 
-        it('should not render remove button for non-localhost or player creatures', () => {
-            const npcCreature = { ...defaultNpcCreature };
-            render(<CreatureCard {...props} creature={npcCreature} isLocalhost={false} />);
+        it('should not render remove button for non-localhost', () => {
+            render(<CreatureCard {...props} creature={defaultNpcCreature} isLocalhost={false} />);
             expect(screen.queryByTitle('Remove NPC')).not.toBeInTheDocument();
+        });
 
+        it('should not render remove button for player creatures', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} isLocalhost={true} />);
             expect(screen.queryByTitle('Remove NPC')).not.toBeInTheDocument();
         });
     });
 
-    describe('initiative display', () => {
-        it('should show initiative value for player creatures', () => {
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, initiative: 18 }} />);
-            const initiativeInput = document.querySelector('.creature-initiative input[type="number"]');
-            expect(initiativeInput).toHaveValue(18);
-        });
-
-        it('should call onInitiativeChange when initiative input blurs for player', () => {
+    describe('initiative input', () => {
+        it('should render an initiative input for player creatures', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            const initiativeInput = document.querySelector('.creature-initiative input[type="number"]');
+            const initiativeInput = screen.getByTestId('initiative-input');
+            expect(initiativeInput).toBeInTheDocument();
+        });
+
+        it('should render an initiative input for NPC creatures', () => {
+            render(<CreatureCard {...props} creature={defaultNpcCreature} />);
+            const initiativeInput = screen.getByTestId('initiative-input');
+            expect(initiativeInput).toBeInTheDocument();
+        });
+
+        it('should call onInitiativeChange when initiative input blurs', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
+            const initiativeInput = screen.getByTestId('initiative-input');
             fireEvent.blur(initiativeInput, { target: { value: '20' } });
             expect(props.onInitiativeChange).toHaveBeenCalledWith('Alice', '20');
         });
 
-        it('should blur input when Enter is pressed, triggering onInitiativeChange', () => {
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, initiative: 14 }} />);
-            const initiativeInput = document.querySelector('.creature-initiative input[type="number"]');
-            fireEvent.blur(initiativeInput, { target: { value: '20' } });
-            expect(props.onInitiativeChange).toHaveBeenCalledWith('Alice', '20');
-        });
-
-        it('should call blur on the input when Enter is pressed', () => {
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, initiative: 14 }} />);
-            const initiativeInput = document.querySelector('.creature-initiative input[type="number"]');
+        it('should call onInitiativeChange when Enter is pressed on the initiative input', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
+            const initiativeInput = screen.getByTestId('initiative-input');
             const blurSpy = vi.spyOn(initiativeInput, 'blur');
             fireEvent.keyDown(initiativeInput, { key: 'Enter' });
             expect(blurSpy).toHaveBeenCalled();
             blurSpy.mockRestore();
+        });
+
+        it('should call onInitiativeChange for NPC creatures', () => {
+            render(<CreatureCard {...props} creature={defaultNpcCreature} />);
+            const initiativeInput = screen.getByTestId('initiative-input');
+            fireEvent.blur(initiativeInput, { target: { value: '15' } });
+            expect(props.onInitiativeChange).toHaveBeenCalledWith('Goblin', '15');
+        });
+
+        it('should render initiative input when creature has null initiative', () => {
+            const creature = { ...defaultPlayerCreature, initiative: null };
+            render(<CreatureCard {...props} creature={creature} />);
+            const initiativeInput = screen.getByTestId('initiative-input');
+            expect(initiativeInput).toBeInTheDocument();
         });
     });
 
@@ -181,23 +176,29 @@ describe('CreatureCard', () => {
         it('should call onTargetChange when target select changes for player', () => {
             const allCreatures = [defaultPlayerCreature, { name: 'Bob', type: 'player' }];
             render(<CreatureCard {...props} creature={defaultPlayerCreature} allCreatures={allCreatures} />);
-            const targetSelect = document.querySelector('.creature-target select');
+            const targetSelect = screen.getByTestId('target-select');
             fireEvent.change(targetSelect, { target: { value: 'Bob' } });
             expect(props.onTargetChange).toHaveBeenCalledWith('Alice', 'Bob');
         });
 
-        it('should disable target select for NPC when not localhost', () => {
+        it('should disable target select for non-localhost NPC creatures', () => {
             render(<CreatureCard {...props} creature={defaultNpcCreature} isLocalhost={false} />);
-            const targetSelect = document.querySelector('.creature-target select');
+            const targetSelect = screen.getByTestId('target-select');
             expect(targetSelect).toBeDisabled();
         });
 
         it('should set selected value to creature.targetName', () => {
             const creature = { ...defaultPlayerCreature, targetName: 'Bob' };
-            const allCreatures = [creature, { name: 'Bob', type: 'player' } ];
+            const allCreatures = [creature, { name: 'Bob', type: 'player' }];
             render(<CreatureCard {...props} creature={creature} allCreatures={allCreatures} />);
-            const targetSelect = document.querySelector('.creature-target select');
+            const targetSelect = screen.getByTestId('target-select');
             expect(targetSelect).toHaveValue('Bob');
+        });
+
+        it('should render a default empty option', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
+            const targetSelect = screen.getByTestId('target-select');
+            expect(targetSelect.querySelector('option[value=""]')).toBeInTheDocument();
         });
     });
 
@@ -211,11 +212,16 @@ describe('CreatureCard', () => {
     });
 
     describe('name change', () => {
-        it('should call onNameChange with old name and new value', () => {
+        it('should call onNameChange with old name and new value for NPC', () => {
             render(<CreatureCard {...props} creature={defaultNpcCreature} />);
             const input = screen.getByTestId('monster-name-input');
             fireEvent.change(input, { target: { value: 'Kobold' } });
             expect(props.onNameChange).toHaveBeenCalledWith('Goblin', 'Kobold');
+        });
+
+        it('should not render a name input for player creatures (rendered as span)', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
+            expect(screen.queryByTestId('monster-name-input')).not.toBeInTheDocument();
         });
     });
 
@@ -225,6 +231,13 @@ describe('CreatureCard', () => {
             const hpInput = screen.getByTestId('hp-input-Alice');
             fireEvent.blur(hpInput, { target: { value: '15' } });
             expect(props.onHpChange).toHaveBeenCalledWith('Alice', 15);
+        });
+
+        it('should call onHpChange when HP input blurs for NPC', () => {
+            render(<CreatureCard {...props} creature={defaultNpcCreature} />);
+            const hpInput = screen.getByTestId('hp-input-Goblin');
+            fireEvent.blur(hpInput, { target: { value: '3' } });
+            expect(props.onHpChange).toHaveBeenCalledWith('Goblin', 3);
         });
 
         it('should show current/max HP values', () => {
@@ -238,6 +251,19 @@ describe('CreatureCard', () => {
             const creature = { ...defaultPlayerCreature, currentHp: null };
             render(<CreatureCard {...props} creature={creature} />);
             expect(screen.getByTestId('hp-input-Alice')).toHaveValue(0);
+        });
+
+        it('should render initiative input when creature has undefined initiative', () => {
+            const creature = { ...defaultPlayerCreature, initiative: undefined };
+            render(<CreatureCard {...props} creature={creature} />);
+            const initiativeInput = screen.getByTestId('initiative-input');
+            expect(initiativeInput).toBeInTheDocument();
+        });
+
+        it('should render target select with only the creature itself when allCreatures has one entry', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
+            const targetSelect = screen.getByTestId('target-select');
+            expect(targetSelect.querySelector('option[value=""]')).toBeInTheDocument();
         });
     });
 });

@@ -1,4 +1,5 @@
-import { render, screen, cleanup } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const mockState = vi.hoisted(() => ({ logEntries: [], initialized: true }));
@@ -15,12 +16,6 @@ vi.mock('../../hooks/runtime/useLog.js', () => ({
 import Log from './Log.jsx';
 
 const CHARS = [{ name: 'Frodo' }, { name: 'Aragorn' }];
-
-const meta = (o = {}) => ({
-  id: 'm', type: 'metamagic', characterName: 'Gandalf', spellName: 'Fireball',
-  targetName: 'Orc', originalDamage: 30, newTotal: 38, damageDifference: 8,
-  rerolledDiceCount: 2, rollType: 'empowered-spell', timestamp: Date.now(), ...o,
-});
 
 const metaRegular = (o = {}) => ({
   id: 'mr', type: 'metamagic', characterName: 'Gandalf', spellName: 'Quickened Spell',
@@ -39,6 +34,10 @@ const abilityUse = (o = {}) => ({
   abilityName: 'Healing Hands', description: '', timestamp: Date.now(), ...o,
 });
 
+function q(sel) {
+  return document.querySelector(sel);
+}
+
 function setup(entries, initialized, characters) {
   mockState.logEntries.length = 0;
   if (entries) mockState.logEntries.push(...entries);
@@ -48,7 +47,6 @@ function setup(entries, initialized, characters) {
 
 describe('MetamagicEntry - non-empowered path', () => {
   beforeEach(() => {
-    cleanup();
     mockState.logEntries.length = 0;
     mockState.initialized = true;
     mockAddEntry.mockClear();
@@ -84,44 +82,62 @@ describe('MetamagicEntry - non-empowered path', () => {
     setup([metaRegular({
       options: null,
     })]);
-    expect(screen.queryByText(/log-metamagic-option/i)).not.toBeInTheDocument();
+    expect(q('.log-metamagic-option')).not.toBeInTheDocument();
   });
 
-  it('singular/plural "die/dies" for rerolledDiceCount in empowered path', () => {
-    setup([meta({
-      rollType: 'empowered-spell',
-      rerolledDiceCount: 1,
-    })]);
+  it('renders metamagic_use type entry the same as metamagic', () => {
+    setup([{ ...metaRegular(), type: 'metamagic_use' }]);
+    expect(screen.getByText(/Metamagic Applied/i)).toBeInTheDocument();
+    expect(q('.log-entry.log-metamagic')).toBeInTheDocument();
+  });
+});
+
+describe('MetamagicEntry - empowered path edge cases', () => {
+  beforeEach(() => {
+    mockState.logEntries.length = 0;
+    mockState.initialized = true;
+    mockAddEntry.mockClear();
+  });
+
+  const meta = (o = {}) => ({
+    id: 'm', type: 'metamagic', characterName: 'Gandalf', spellName: 'Fireball',
+    targetName: 'Orc', originalDamage: 30, newTotal: 38, damageDifference: 8,
+    rerolledDiceCount: 2, rollType: 'empowered-spell', timestamp: Date.now(), ...o,
+  });
+
+  it('shows singular "die" when rerolledDiceCount is 1', () => {
+    setup([meta({ rerolledDiceCount: 1 })]);
     expect(q('.log-empowered-dice-info').textContent).toContain('Rerolled 1 die');
-    cleanup();
-    setup([meta({
-      rollType: 'empowered-spell',
-      rerolledDiceCount: 3,
-    })]);
-    expect(q('.log-empowered-dice-info').textContent).toContain('Rerolled 3 dies');
+  });
+
+  it('shows plural "dice" when rerolledDiceCount is greater than 1', () => {
+    setup([meta({ rerolledDiceCount: 3 })]);
+    expect(q('.log-empowered-dice-info').textContent).toContain('Rerolled 3 dice');
   });
 
   it('shows neutral class when damageDifference is zero', () => {
-    setup([meta({
-      damageDifference: 0,
-    })]);
+    setup([meta({ damageDifference: 0 })]);
     expect(q('.log-empowered-neutral')).toBeInTheDocument();
     expect(q('.log-empowered-positive')).not.toBeInTheDocument();
     expect(q('.log-empowered-negative')).not.toBeInTheDocument();
   });
 
-  it('shows negative class when damageDifference is negative', () => {
-    setup([meta({
-      damageDifference: -3,
-    })]);
+  it('shows negative class with minus sign when damageDifference is negative', () => {
+    setup([meta({ damageDifference: -3 })]);
     expect(q('.log-empowered-negative')).toBeInTheDocument();
     expect(screen.getByText(/-3/i)).toBeInTheDocument();
+    expect(q('.log-empowered-positive')).not.toBeInTheDocument();
+  });
+
+  it('shows positive class with plus sign when damageDifference is positive', () => {
+    setup([meta({ damageDifference: 5 })]);
+    expect(q('.log-empowered-positive')).toBeInTheDocument();
+    expect(q('.log-empowered-negative')).not.toBeInTheDocument();
   });
 });
 
 describe('HealingPoolEntry - dice pool and non-dice pool', () => {
   beforeEach(() => {
-    cleanup();
     mockState.logEntries.length = 0;
     mockState.initialized = true;
     mockAddEntry.mockClear();
@@ -153,6 +169,15 @@ describe('HealingPoolEntry - dice pool and non-dice pool', () => {
     expect(screen.getByText(/20 remaining/i)).toBeInTheDocument();
   });
 
+  it('renders non-dice pool when rolls is undefined', () => {
+    setup([pool({
+      rolls: undefined,
+      amount: 3,
+      poolAfter: 17,
+    })]);
+    expect(screen.getByText(/Used 3 HP point from pool/i)).toBeInTheDocument();
+  });
+
   it('shows feature name and target in header', () => {
     setup([pool({
       featureName: 'Divine Favor',
@@ -166,7 +191,6 @@ describe('HealingPoolEntry - dice pool and non-dice pool', () => {
 
 describe('AbilityUseEntry - save details and death save', () => {
   beforeEach(() => {
-    cleanup();
     mockState.logEntries.length = 0;
     mockState.initialized = true;
     mockAddEntry.mockClear();
@@ -203,7 +227,7 @@ describe('AbilityUseEntry - save details and death save', () => {
     expect(q('.log-save-result.log-condition-failure')).toBeInTheDocument();
   });
 
-  it('renders death save details', () => {
+  it('renders death save success', () => {
     setup([abilityUse({
       abilityName: 'Stabilize',
       deathSaveRoll: 16,
@@ -214,6 +238,18 @@ describe('AbilityUseEntry - save details and death save', () => {
     expect(screen.getByText(/SUCCESS/i)).toBeInTheDocument();
     expect(q('.log-ability-death-save')).toBeInTheDocument();
     expect(q('.log-ability-death-save i.fa-skull-crossbones')).toBeInTheDocument();
+  });
+
+  it('renders death save failure', () => {
+    setup([abilityUse({
+      abilityName: 'Stabilize',
+      deathSaveRoll: 8,
+      deathSaveSuccess: false,
+    })]);
+    expect(screen.getByText(/Death Save:/i)).toBeInTheDocument();
+    expect(screen.getByText(/\(8\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/FAILURE/i)).toBeInTheDocument();
+    expect(q('.log-save-result.log-condition-failure')).toBeInTheDocument();
   });
 
   it('renders ability description with dangerouslySetInnerHTML', () => {
@@ -239,9 +275,11 @@ describe('AbilityUseEntry - save details and death save', () => {
     })]);
     expect(q('.log-source-tag')).not.toBeInTheDocument();
   });
-});
 
-// Q helper
-function q(sel) {
-  return document.querySelector(sel);
-}
+  it('renders minimal entry without save details or death save', () => {
+    setup([abilityUse({})]);
+    expect(q('.log-entry.log-ability-use')).toBeInTheDocument();
+    expect(q('.log-ability-save-details')).not.toBeInTheDocument();
+    expect(q('.log-ability-death-save')).not.toBeInTheDocument();
+  });
+});

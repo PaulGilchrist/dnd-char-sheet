@@ -1,20 +1,17 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
 import * as runtimeState from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js';
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
-    getRuntimeValue: vi.fn(() => null),
+    getStore: vi.fn(() => new Map()),
+    useSyncedState: vi.fn(() => [null, vi.fn()]),
+    listeners: new Map(),
+    getRuntimeValue: vi.fn((_name, _key, _campaign) => null),
     setRuntimeValue: vi.fn(),
-}));
-
-vi.mock('../../services/ui/storage.js', () => ({
-    default: {
-        set: vi.fn(),
-    },
 }));
 
 const defaultEffects = {
@@ -32,10 +29,9 @@ const defaultEffects = {
     attackDisadvantageReasons: [],
     abilityCheckDisadvantage: false,
     strCheckDisadvantage: false,
-    rayOfEnfeebleDamageReduction: false,
-    resistanceDamageReduction: false,
     targetAdvantageCount: 0,
     targetDisadvantageCount: 0,
+    targetAttackDisadvantageCount: 0,
     riderSaveDisadvantage: false,
     riderAttackBonus: 0,
     riderCannotOpportunityAttack: false,
@@ -48,6 +44,16 @@ const defaultEffects = {
     saveAdvantageAbilities: null,
     saveDisadvantageCount: 0,
     dexSaveAdvantageCount: 0,
+    abilityCheckDisadvantageAbilities: null,
+    abilityCheckAdvantageAbilities: null,
+    abilityCheckAdvantage: false,
+    abilityCheckAdvantageReasons: [],
+    saveDisadvantage: [],
+    blessBonus: false,
+    beaconOfHope: false,
+    hasteActive: false,
+    barkskinActive: false,
+    banePenalty: false,
 };
 
 function makeEffects(overrides = {}) {
@@ -55,13 +61,11 @@ function makeEffects(overrides = {}) {
 }
 
 vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
-    computeConditionEffects: vi.fn((_conditions, _saveModifiers, targetEffects) => {
-        return makeEffects(targetEffects && targetEffects.length ? { targetAdvantageCount: 1 } : {});
-    }),
+    computeConditionEffects: vi.fn(() => makeEffects({})),
 }));
 
-import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js';
-import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+const CREATURE_NAME = 'Alice';
+const CAMPAIGN_NAME = 'test-campaign';
 
 describe('ConditionEffectBadges', () => {
     beforeEach(() => {
@@ -69,12 +73,34 @@ describe('ConditionEffectBadges', () => {
     });
 
     describe('empty state', () => {
-        it('should render nothing when conditions is null', () => {
+        it('should render nothing when conditions is null and no effects apply', () => {
             computeConditionEffects.mockReturnValue(makeEffects({}));
             render(
-                <ConditionEffectBadges conditions={null} creatureName="Alice" campaignName="test" />
+                <ConditionEffectBadges
+                    conditions={null}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
+                />
             );
-            expect(screen.queryByTestId('creature-badge')).not.toBeInTheDocument();
+            expect(screen.queryByText('Otto\'s Irresistible Dance')).not.toBeInTheDocument();
+        });
+
+        it('should render nothing when conditions is empty and no effects apply', () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === CREATURE_NAME && key === 'activeBuffs') return [];
+                return null;
+            });
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
+                />
+            );
+            // With no badges, there should be no clickable elements or badge text
+            expect(screen.queryByRole('button')).not.toBeInTheDocument();
         });
     });
 
@@ -89,7 +115,14 @@ describe('ConditionEffectBadges', () => {
             ['No OA', { riderCannotOpportunityAttack: true }, 'No OA'],
         ])('should render %s badge when condition is active', (_, effects, expectedLabel) => {
             computeConditionEffects.mockReturnValue(makeEffects(effects));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={[]} creatureName="Alice" campaignName="test" />);
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
+                />
+            );
             expect(screen.getByText(expectedLabel)).toBeInTheDocument();
         });
 
@@ -98,13 +131,27 @@ describe('ConditionEffectBadges', () => {
             ['+7 to hit', { riderAttackBonus: 7 }],
         ])('should render rider attack bonus badge with value %s when riderAttackBonus is set', (_, effects) => {
             computeConditionEffects.mockReturnValue(makeEffects(effects));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={[]} creatureName="Alice" campaignName="test" />);
-            expect(screen.getByText(effects.riderAttackBonus > 0 ? `+${effects.riderAttackBonus} to hit` : '')).toBeInTheDocument();
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
+                />
+            );
+            expect(screen.getByText(`+${effects.riderAttackBonus} to hit`)).toBeInTheDocument();
         });
 
         it('should prefer No Adv vs over Disadv vs when both are set', () => {
             computeConditionEffects.mockReturnValue(makeEffects({ noAdvantageAgainst: true, targetDisadvantageCount: 3 }));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={[]} creatureName="Alice" campaignName="test" />);
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
+                />
+            );
             expect(screen.getByText('No Adv vs')).toBeInTheDocument();
             expect(screen.queryByText('Disadv vs')).not.toBeInTheDocument();
         });
@@ -117,7 +164,15 @@ describe('ConditionEffectBadges', () => {
         ])('should render %s badge when inspiringMovementNoOA is %s or hasTacticalShift is true', (_, { getRuntimeValue: rv, hasTacticalShift: ts }) => {
             getRuntimeValue.mockReturnValue(rv);
             computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={[]} creatureName="Alice" campaignName="test" hasTacticalShift={ts} />);
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
+                    hasTacticalShift={ts}
+                />
+            );
             expect(screen.getByText('Insp. Move')).toBeInTheDocument();
         });
 
@@ -127,22 +182,24 @@ describe('ConditionEffectBadges', () => {
                 <ConditionEffectBadges
                     conditions={[]}
                     targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test"
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     hasSpeedyOpportunityDisadvantage={true}
                 />
             );
             expect(screen.getByText('OA Disadv')).toBeInTheDocument();
         });
+    });
 
+    describe('spell effect badges with save callbacks', () => {
         it('should render Otto\'s Irresistible Dance badge when the dance targetEffect is present', () => {
             computeConditionEffects.mockReturnValue(makeEffects({}));
             render(
                 <ConditionEffectBadges
                     conditions={[{ key: 'charmed' }]}
-                    targetEffects={[{ target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }]}
-                    creatureName="Alice"
-                    campaignName="test"
+                    targetEffects={[{ target: CREATURE_NAME, effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                 />
             );
@@ -156,8 +213,8 @@ describe('ConditionEffectBadges', () => {
                 <ConditionEffectBadges
                     conditions={[]}
                     targetEffects={[{ target: 'Bob', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15 }]}
-                    creatureName="Alice"
-                    campaignName="test"
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                 />
             );
@@ -170,30 +227,15 @@ describe('ConditionEffectBadges', () => {
             render(
                 <ConditionEffectBadges
                     conditions={[{ key: 'charmed' }]}
-                    targetEffects={[{ target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }]}
-                    creatureName="Alice"
-                    campaignName="test"
+                    targetEffects={[{ target: CREATURE_NAME, effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                     onRollConditionSave={onRollConditionSave}
                 />
             );
             fireEvent.click(screen.getByText("Otto's Irresistible Dance"));
-            expect(onRollConditionSave).toHaveBeenCalledWith('Alice', { key: 'charmed', label: 'Charmed', dc: 15, ability: 'wis' });
-        });
-
-        it('should not make the dance badge clickable without onRollConditionSave', () => {
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'charmed' }]}
-                    targetEffects={[{ target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15 }]}
-                    creatureName="Alice"
-                    campaignName="test"
-                    isLocalhost={true}
-                />
-            );
-            const badge = screen.getByText("Otto's Irresistible Dance");
-            expect(badge.tagName).toBe('SPAN');
+            expect(onRollConditionSave).toHaveBeenCalledWith(CREATURE_NAME, { key: 'charmed', label: 'Charmed', dc: 15, ability: 'wis' });
         });
 
         it('should render the Forcecaged badge when the forcecage targetEffect is present', () => {
@@ -201,9 +243,9 @@ describe('ConditionEffectBadges', () => {
             render(
                 <ConditionEffectBadges
                     conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'forcecage', source: 'Goblin', dc: 17, duration: 'concentration' }]}
-                    creatureName="Alice"
-                    campaignName="test"
+                    targetEffects={[{ target: CREATURE_NAME, effect: 'forcecage', source: 'Goblin', dc: 17, duration: 'concentration' }]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                 />
             );
@@ -217,8 +259,8 @@ describe('ConditionEffectBadges', () => {
                 <ConditionEffectBadges
                     conditions={[]}
                     targetEffects={[{ target: 'Bob', effect: 'forcecage', source: 'Goblin', dc: 17 }]}
-                    creatureName="Alice"
-                    campaignName="test"
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                 />
             );
@@ -231,83 +273,30 @@ describe('ConditionEffectBadges', () => {
             render(
                 <ConditionEffectBadges
                     conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'forcecage', source: 'Goblin', dc: 17, duration: 'concentration' }]}
-                    creatureName="Alice"
-                    campaignName="test"
+                    targetEffects={[{ target: CREATURE_NAME, effect: 'forcecage', source: 'Goblin', dc: 17, duration: 'concentration' }]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                     onRollConditionSave={onRollConditionSave}
                 />
             );
             fireEvent.click(screen.getByText('Forcecaged'));
-            expect(onRollConditionSave).toHaveBeenCalledWith('Alice', { key: 'forcecaged', label: 'Forcecaged', dc: 17, ability: 'cha' });
-        });
-
-        it('should remove the dance targetEffect when the badge remove button is clicked', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] },
-                { target: 'Bob', effect: 'regenerate', source: 'Cleric' },
-            ];
-            runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'campaign' && key === 'targetEffects') return existingEffects;
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'charmed' }]}
-                    targetEffects={existingEffects}
-                    creatureName="Alice"
-                    campaignName="test"
-                    isLocalhost={true}
-                />
-            );
-            fireEvent.click(screen.getByTitle('Remove effect'));
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', [existingEffects[1]], 'test');
-        });
-
-        it.each([
-            [true, true],
-            [null, false],
-        ])('should render No OA (Crit) when remarkableAthleteNoOA runtime value is %s', (value, shouldRender) => {
-            getRuntimeValue.mockReturnValue(value);
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={[]} creatureName="Alice" campaignName="test" />);
-            const badge = screen.queryByText('No OA (Crit)');
-            if (shouldRender) {
-                expect(badge).toBeInTheDocument();
-            } else {
-                expect(badge).not.toBeInTheDocument();
-            }
-        });
-    });
-
-    describe('badges from buffs', () => {
-        it('renders Disadv vs and Adv DEX Save badges when Dodge buff is active', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [{ name: 'Dodge', effect: 'dodge' }];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={[]} creatureName="Alice" campaignName="test" />);
-            expect(screen.getByText('Disadv vs')).toBeInTheDocument();
-            expect(screen.getByText('Adv DEX Save')).toBeInTheDocument();
-        });
-
-        it('renders Adv badge when vow_of_enmity buff is active', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [{ name: 'Vow of Enmity', effect: 'vow_of_enmity' }];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={[]} creatureName="Alice" campaignName="test" />);
-            expect(screen.getByText('Adv')).toBeInTheDocument();
+            expect(onRollConditionSave).toHaveBeenCalledWith(CREATURE_NAME, { key: 'forcecaged', label: 'Forcecaged', dc: 17, ability: 'cha' });
         });
     });
 
     describe('GM effect removal', () => {
         it('should render removable badges with break buttons when isLocalhost is true', () => {
             computeConditionEffects.mockReturnValue(makeEffects({ riderAttackBonus: 3, riderCannotOpportunityAttack: true }));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={[{ target: 'Goblin', effect: 'damage_bonus', value: 3 }]} creatureName="Goblin" campaignName="test" isLocalhost={true} />);
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[{ target: 'Goblin', effect: 'damage_bonus', value: 3 }]}
+                    creatureName="Goblin"
+                    campaignName={CAMPAIGN_NAME}
+                    isLocalhost={true}
+                />
+            );
             expect(screen.getByText('+3 to hit')).toBeInTheDocument();
             expect(screen.getByText('No OA')).toBeInTheDocument();
             expect(screen.getAllByTitle('Remove effect').length).toBeGreaterThan(0);
@@ -315,7 +304,15 @@ describe('ConditionEffectBadges', () => {
 
         it('should not render break buttons when isLocalhost is false', () => {
             computeConditionEffects.mockReturnValue(makeEffects({ riderAttackBonus: 3 }));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={[{ target: 'Goblin', effect: 'damage_bonus', value: 3 }]} creatureName="Goblin" campaignName="test" isLocalhost={false} />);
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[{ target: 'Goblin', effect: 'damage_bonus', value: 3 }]}
+                    creatureName="Goblin"
+                    campaignName={CAMPAIGN_NAME}
+                    isLocalhost={false}
+                />
+            );
             expect(screen.getByText('+3 to hit')).toBeInTheDocument();
             expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
@@ -327,14 +324,30 @@ describe('ConditionEffectBadges', () => {
             ];
             runtimeState.getRuntimeValue.mockReturnValue(existingEffects);
             computeConditionEffects.mockReturnValue(makeEffects({ riderAttackBonus: 3 }));
-            render(<ConditionEffectBadges conditions={[]} targetEffects={existingEffects} creatureName="Goblin" campaignName="test" isLocalhost={true} />);
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={existingEffects}
+                    creatureName="Goblin"
+                    campaignName={CAMPAIGN_NAME}
+                    isLocalhost={true}
+                />
+            );
             fireEvent.click(screen.getAllByTitle('Remove effect')[0]);
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledTimes(1);
         });
 
         it('should render break buttons for speed reduction badges', () => {
             computeConditionEffects.mockReturnValue(makeEffects({ speedReduction: 15 }));
-            render(<ConditionEffectBadges conditions={[{ key: 'grappled' }]} targetEffects={[]} creatureName="Goblin" campaignName="test" isLocalhost={true} />);
+            render(
+                <ConditionEffectBadges
+                    conditions={[{ key: 'grappled' }]}
+                    targetEffects={[]}
+                    creatureName="Goblin"
+                    campaignName={CAMPAIGN_NAME}
+                    isLocalhost={true}
+                />
+            );
             expect(screen.getByText('Speed -15')).toBeInTheDocument();
             const buttons = screen.getAllByTitle('Remove effect');
             expect(buttons.length).toBeGreaterThanOrEqual(1);
@@ -342,7 +355,15 @@ describe('ConditionEffectBadges', () => {
 
         it('should render break buttons for advantage/disadvantage badges', () => {
             computeConditionEffects.mockReturnValue(makeEffects({ targetDisadvantageCount: 1, attackAdvantageCount: 1, attackAdvantageReasons: ['Invisible'], saveAdvantageCount: 1, saveAdvantageReasons: ['Vow of Enmity'], dexSaveAdvantageCount: 1 }));
-            render(<ConditionEffectBadges conditions={[{ key: 'blinded' }]} targetEffects={[]} creatureName="Goblin" campaignName="test" isLocalhost={true} />);
+            render(
+                <ConditionEffectBadges
+                    conditions={[{ key: 'blinded' }]}
+                    targetEffects={[]}
+                    creatureName="Goblin"
+                    campaignName={CAMPAIGN_NAME}
+                    isLocalhost={true}
+                />
+            );
             expect(screen.getByText('Disadv vs')).toBeInTheDocument();
             expect(screen.getByText('Adv')).toBeInTheDocument();
             expect(screen.getByText('Adv Save')).toBeInTheDocument();

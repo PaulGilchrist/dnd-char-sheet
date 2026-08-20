@@ -1,41 +1,50 @@
+// @improved-by-ai
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Initiative from './initiative.jsx';
 import { loadCombatSummary, getCombatSummary } from '../../services/encounters/combatData.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import storage from '../../services/ui/storage.js';
+import { clearExpirationEffects } from '../../services/rules/effects/expirations.js';
+
+const PER_ROUND_RESETS = [
+    'activeBuffs',
+    'invokeDuplicityAdvantageTargets',
+    'unbreakableMajestyActive',
+    'unbreakableMajestySaveDc',
+    'wrathOfTheSeaActive',
+    'wrathOfTheSeaDc',
+    'wrathOfTheSeaWisMod',
+    'wrathOfTheSeaSource',
+    'peerlessAthleteActive',
+    'elementalAttunementActive',
+    'elementalAttunementElement',
+    '_CunningStrike_usedRound',
+    '_Charge_Attack_usedRound',
+    '_FastHands_usedRound',
+    '_CunningAction_usedRound',
+    '_Cleave_UsedRound',
+    '_Nick_UsedRound',
+    'surgeUsedRound',
+    'illusoryRealityUsedRound',
+    'portentUsedThisTurn',
+    'psionicStrikeUsedThisTurn',
+    '_BrutalStrike_usedRound',
+    '_fortifiedHealth_usedRound',
+    '_Shield_Bash_usedRound',
+    'piercerPunctureUsedThisTurn',
+];
 
 vi.mock('../../hooks/runtime/useSSEEqualityGuard.js', () => ({ default: (setter) => setter }));
 vi.mock('../../services/ui/utils.js', () => ({ default: { getName: (name) => name } }));
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => {
-    const syncStateStore = new Map();
-    return {
-        getStore: vi.fn(() => syncStateStore),
-        useSyncedState: vi.fn((key, prop, defaultValue) => {
-            const storeKey = `${key}-${prop}`;
-            if (!syncStateStore.has(storeKey)) {
-                syncStateStore.set(storeKey, { value: defaultValue, setter: null });
-            }
-            const entry = syncStateStore.get(storeKey);
-            if (!entry.setter) {
-                entry.setter = vi.fn((newValue) => { entry.value = newValue; });
-            }
-            return [entry.value, entry.setter];
-        }),
-        listeners: new Map(),
-        getRuntimeValue: vi.fn((_key, _prop, _campaign) => {
-            if (_prop === 'currentHitPoints') return 10;
-            if (_prop === 'hitPoints') return 10;
-            if (_prop === 'activeConditions') return [];
-            if (_prop === 'activeBuffs') return [];
-            if (_prop === 'inspiringMovementNoOA') return false;
-            if (_prop === 'targetEffects') return [];
-            if (_prop === 'pendingExpirations') return [];
-            return null;
-        }),
-        setRuntimeValue: vi.fn((_key, _prop, _value, _campaign) => {}),
-        setRuntimeObject: vi.fn(),
-    };
-});
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
+    getStore: vi.fn(() => new Map()),
+    useSyncedState: vi.fn(() => [null, vi.fn()]),
+    listeners: new Map(),
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+    setRuntimeObject: vi.fn(),
+}));
 vi.mock('../../services/ui/storage.js', () => ({
     default: { get: vi.fn(), set: vi.fn(), getProperty: vi.fn(), setProperty: vi.fn() },
 }));
@@ -54,7 +63,11 @@ vi.mock('../../services/combat/conditions/conditionUtils.js', () => ({
 }));
 vi.mock('../../services/npcs/npcsService.js', () => ({ loadNPCs: vi.fn(() => Promise.resolve({ npcs: [] })) }));
 vi.mock('../../services/encounters/npcStatBlockUtils.js', () => ({ npcToMonsterFormat: vi.fn(() => null), npcHasStatBlock: vi.fn(() => true) }));
-vi.mock('../../services/rules/effects/expirations.js', () => ({ expireStaleEffects: vi.fn(), applyTurnStartEffects: vi.fn(), clearExpirationEffects: vi.fn() }));
+vi.mock('../../services/rules/effects/expirations.js', () => ({
+    expireStaleEffects: vi.fn(),
+    applyTurnStartEffects: vi.fn(),
+    clearExpirationEffects: vi.fn(),
+}));
 vi.mock('../../services/encounters/combatData.js', () => {
     const mock = {
         loadCombatSummary: vi.fn(() => Promise.resolve(null)),
@@ -128,19 +141,54 @@ describe('Initiative - Initiative Rolled Handler Paths', () => {
         };
     });
 
-    describe('Hunter\'s Mark concentration clearing', () => {
-        it('should clear Hunter\'s Mark concentration on initiative roll', async () => {
-            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
-                if (key === 'Alice' && prop === 'activeConditions') return [];
-                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
-                if (key === 'Alice' && prop === 'hitPoints') return 20;
-                if (key === 'Alice' && prop === 'activeBuffs') return [];
-                if (prop === 'currentHitPoints') return 10;
-                if (prop === 'hitPoints') return 10;
-                if (prop === 'activeConditions') return [];
-                if (prop === 'activeBuffs') return [];
-                return null;
+    function hasResetCall(creature, prop) {
+        return setRuntimeValue.mock.calls.some(
+            call => call[0] === creature && call[1] === prop
+        );
+    }
+
+    function noResetCalls(creature) {
+        for (const prop of PER_ROUND_RESETS) {
+            expect(hasResetCall(creature, prop)).toBe(false);
+        }
+    }
+
+    describe('initiative-rolled: per-round resets for player creatures', () => {
+        it('should reset all per-round counters for player creatures', async () => {
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
+            await act(async () => {
+                window.dispatchEvent(new Event('initiative-rolled'));
             });
+
+            for (const creature of ['Alice', 'Bob']) {
+                for (const prop of PER_ROUND_RESETS) {
+                    expect(hasResetCall(creature, prop)).toBe(true);
+                }
+            }
+        });
+
+        it('should NOT clear per-round counters for NPC creatures', async () => {
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Goblin', type: 'npc' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Goblin', type: 'npc' }] });
+            await act(async () => {
+                window.dispatchEvent(new Event('initiative-rolled'));
+            });
+
+            expect(hasResetCall('Alice', 'activeBuffs')).toBe(true);
+            noResetCalls('Goblin');
+        });
+    });
+
+    describe('initiative-rolled: Hunter\'s Mark concentration clearing', () => {
+        it('should clear Hunter\'s Mark concentration on initiative roll', async () => {
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
             vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: { spell: "Hunter's Mark", dc: 10 } }, { name: 'Bob', type: 'player' }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
@@ -150,88 +198,194 @@ describe('Initiative - Initiative Rolled Handler Paths', () => {
                 window.dispatchEvent(new Event('initiative-rolled'));
             });
 
-            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'activeBuffs', [], 'test-campaign');
+            expect(hasResetCall('Alice', 'activeBuffs')).toBe(true);
+            expect(storage.set).toHaveBeenCalledTimes(2);
         });
 
-        it('should not clear Hunter\'s Mark when creature has no concentration', async () => {
-            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
-                if (key === 'Alice' && prop === 'activeConditions') return [];
-                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
-                if (key === 'Alice' && prop === 'hitPoints') return 20;
-                if (key === 'Alice' && prop === 'activeBuffs') return [];
-                if (prop === 'currentHitPoints') return 10;
-                if (prop === 'hitPoints') return 10;
-                if (prop === 'activeConditions') return [];
-                if (prop === 'activeBuffs') return [];
-                return null;
-            });
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: null }, { name: 'Bob', type: 'player' }] });
+        it('should call setCombatSummaryG when Hunter\'s Mark is cleared', async () => {
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: { spell: "Hunter's Mark", dc: 10 } }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
 
-            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: null }, { name: 'Bob', type: 'player' }] });
+            const summary = { round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: { spell: "Hunter's Mark", dc: 10 } }] };
+            vi.mocked(getCombatSummary).mockReturnValue(summary);
             await act(async () => {
                 window.dispatchEvent(new Event('initiative-rolled'));
             });
 
-            // Should still clear buffs but not touch concentration
-            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'activeBuffs', [], 'test-campaign');
+            expect(storage.set).toHaveBeenCalledTimes(2);
+        });
+
+        it('should NOT clear concentration when spell is not Hunter\'s Mark', async () => {
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: { spell: 'Shield', dc: 10 } }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: { spell: 'Shield', dc: 10 } }] });
+            await act(async () => {
+                window.dispatchEvent(new Event('initiative-rolled'));
+            });
+
+            expect(hasResetCall('Alice', 'activeBuffs')).toBe(true);
+            expect(storage.set).toHaveBeenCalledTimes(1);
+        });
+
+        it('should NOT clear concentration when concentration is null', async () => {
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: null }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: null }] });
+            await act(async () => {
+                window.dispatchEvent(new Event('initiative-rolled'));
+            });
+
+            expect(hasResetCall('Alice', 'activeBuffs')).toBe(true);
+            expect(storage.set).toHaveBeenCalledTimes(1);
         });
     });
 
-    describe('pendingExpirations handler for dominate', () => {
-        it('should clear dominated expirations on initiative roll', async () => {
-            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
-                if (key === 'Alice' && prop === 'activeConditions') return [];
-                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
-                if (key === 'Alice' && prop === 'hitPoints') return 20;
-                if (key === 'Alice' && prop === 'activeBuffs') return [];
-                if (key === 'Alice' && prop === 'pendingExpirations') return [
+    describe('initiative-rolled: pendingExpirations dominate clearing', () => {
+        it('should clear dominated effects and call clearExpirationEffects', async () => {
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
+            vi.mocked(getRuntimeValue).mockImplementation((_key, _prop, _campaign) => {
+                if (_prop === 'currentHitPoints') return 10;
+                if (_prop === 'hitPoints') return 10;
+                if (_prop === 'activeConditions') return [];
+                if (_prop === 'activeBuffs') return [];
+                if (_prop === 'pendingExpirations') return [
                     { target: 'Enemy1', effects: [{ type: 'dominated', effect: 'dominated', duration: '1 round' }] }
                 ];
-                if (key === 'campaign' && prop === 'targetEffects') return [];
-                if (prop === 'currentHitPoints') return 10;
-                if (prop === 'hitPoints') return 10;
-                if (prop === 'activeConditions') return [];
-                if (prop === 'activeBuffs') return [];
-                if (prop === 'pendingExpirations') return [];
                 return null;
             });
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
 
-            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
+            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
             await act(async () => {
                 window.dispatchEvent(new Event('initiative-rolled'));
             });
 
-            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'pendingExpirations', expect.any(Array), 'test-campaign');
+            expect(clearExpirationEffects).toHaveBeenCalledWith(
+                expect.arrayContaining([expect.objectContaining({ type: 'dominated' })]),
+                'Enemy1',
+                'Alice',
+                'test-campaign'
+            );
+            expect(hasResetCall('Alice', 'pendingExpirations')).toBe(true);
+        });
+
+        it('should preserve non-dominated effects in pendingExpirations', async () => {
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
+            vi.mocked(getRuntimeValue).mockImplementation((_key, _prop, _campaign) => {
+                if (_prop === 'currentHitPoints') return 10;
+                if (_prop === 'hitPoints') return 10;
+                if (_prop === 'activeConditions') return [];
+                if (_prop === 'activeBuffs') return [];
+                if (_prop === 'pendingExpirations') return [
+                    { target: 'Enemy1', effects: [{ type: 'dominated', effect: 'dominated', duration: '1 round' }] },
+                    { target: 'Enemy2', effects: [{ type: 'charmed', effect: 'charmed', duration: '1 turn' }] },
+                ];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => {
+                window.dispatchEvent(new Event('initiative-rolled'));
+            });
+
+            expect(clearExpirationEffects).toHaveBeenCalledTimes(1);
+            expect(hasResetCall('Alice', 'pendingExpirations')).toBe(true);
         });
 
         it('should skip dominate clearing when no pendingExpirations', async () => {
-            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
-                if (key === 'Alice' && prop === 'activeConditions') return [];
-                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
-                if (key === 'Alice' && prop === 'hitPoints') return 20;
-                if (key === 'Alice' && prop === 'activeBuffs') return [];
-                if (prop === 'currentHitPoints') return 10;
-                if (prop === 'hitPoints') return 10;
-                if (prop === 'activeConditions') return [];
-                if (prop === 'activeBuffs') return [];
-                if (prop === 'pendingExpirations') return [];
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
+            vi.mocked(getRuntimeValue).mockImplementation((_key, _prop, _campaign) => {
+                if (_prop === 'currentHitPoints') return 10;
+                if (_prop === 'hitPoints') return 10;
+                if (_prop === 'activeConditions') return [];
+                if (_prop === 'activeBuffs') return [];
+                if (_prop === 'pendingExpirations') return [];
                 return null;
             });
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
 
-            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
+            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
             await act(async () => {
                 window.dispatchEvent(new Event('initiative-rolled'));
             });
 
-            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'activeBuffs', [], 'test-campaign');
+            expect(hasResetCall('Alice', 'activeBuffs')).toBe(true);
+            expect(clearExpirationEffects).not.toHaveBeenCalled();
+        });
+
+        it('should skip dominate clearing when pendingExpirations is null', async () => {
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
+            vi.mocked(getRuntimeValue).mockImplementation((_key, _prop, _campaign) => {
+                if (_prop === 'currentHitPoints') return 10;
+                if (_prop === 'hitPoints') return 10;
+                if (_prop === 'activeConditions') return [];
+                if (_prop === 'activeBuffs') return [];
+                if (_prop === 'pendingExpirations') return null;
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => {
+                window.dispatchEvent(new Event('initiative-rolled'));
+            });
+
+            expect(hasResetCall('Alice', 'activeBuffs')).toBe(true);
+            expect(clearExpirationEffects).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('initiative-rolled: null/empty guard', () => {
+        it('should do nothing when getCombatSummary returns null', async () => {
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            const resetCallsBefore = setRuntimeValue.mock.calls.length;
+            const storageCallsBefore = storage.set.mock.calls.length;
+            const expireCallsBefore = clearExpirationEffects.mock.calls.length;
+
+            vi.mocked(getCombatSummary).mockReturnValue(null);
+            await act(async () => {
+                window.dispatchEvent(new Event('initiative-rolled'));
+            });
+
+            expect(setRuntimeValue.mock.calls.length).toBe(resetCallsBefore);
+            expect(storage.set.mock.calls.length).toBe(storageCallsBefore);
+            expect(clearExpirationEffects.mock.calls.length).toBe(expireCallsBefore);
+        });
+
+        it('should do nothing when creatures array is empty', async () => {
+            vi.mocked(setRuntimeValue).mockImplementation((_key, _prop, _value, _campaign) => {});
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            const resetCallsBefore = setRuntimeValue.mock.calls.length;
+            vi.mocked(getCombatSummary).mockReturnValue({ round: 1, creatures: [] });
+            await act(async () => {
+                window.dispatchEvent(new Event('initiative-rolled'));
+            });
+
+            expect(setRuntimeValue.mock.calls.length).toBe(resetCallsBefore);
         });
     });
 

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
 import { loadMonsters } from '../../services/ui/dataLoader.js';
@@ -60,7 +61,7 @@ describe('createNpcClickHandler - NPC stat block path', () => {
         });
     });
 
-    it('should format NPC via npcToMonsterFormat and set viewing monster', async () => {
+    it('should format NPC via npcToMonsterFormat and set viewing monster when NPC is found', async () => {
         campaignNpcs = [
             {
                 name: 'Goblin Warrior',
@@ -99,11 +100,10 @@ describe('createNpcClickHandler - NPC stat block path', () => {
         expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('Goblin Warrior');
     });
 
-    it('should skip npcToMonsterFormat path when it returns null', async () => {
+    it('should fall through to getMonsterData when npcToMonsterFormat returns null for a found NPC', async () => {
         campaignNpcs = [
             {
                 name: 'Goblin Warrior',
-                // no armorClass, so npcHasStatBlock returns false and npcToMonsterFormat returns null
             },
         ];
         handler = createNpcClickHandler({
@@ -120,10 +120,106 @@ describe('createNpcClickHandler - NPC stat block path', () => {
 
         await handler({ name: 'Goblin Warrior' });
 
+        expect(npcToMonsterFormat).toHaveBeenCalled();
+        expect(getMonsterData).toHaveBeenCalledWith('Goblin Warrior');
         expect(setViewingMonster).toHaveBeenCalledWith(fallbackMonster);
     });
 
-    it('should do case-insensitive NPC name matching', async () => {
+    it('should skip npcToMonsterFormat when campaignNpcs is empty', async () => {
+        campaignNpcs = [];
+        handler = createNpcClickHandler({
+            isLocalhost: true,
+            campaignNpcs,
+            campaignName: 'test-campaign',
+            characters,
+            setViewingMonster,
+            setViewingMonsterCreatureName,
+        });
+        const fallbackMonster = { index: 'goblin', name: 'Goblin' };
+        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
+
+        await handler({ name: 'Goblin' });
+
+        expect(npcToMonsterFormat).not.toHaveBeenCalled();
+        expect(getMonsterData).toHaveBeenCalledWith('Goblin');
+    });
+
+    it('should skip npcToMonsterFormat when NPC name is null', async () => {
+        campaignNpcs = [
+            {
+                name: null,
+                armorClass: 15,
+                hitPoints: 7,
+                abilityScores: {},
+            },
+        ];
+        handler = createNpcClickHandler({
+            isLocalhost: true,
+            campaignNpcs,
+            campaignName: 'test-campaign',
+            characters,
+            setViewingMonster,
+            setViewingMonsterCreatureName,
+        });
+        const fallbackMonster = { index: 'goblin', name: 'Goblin' };
+        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
+
+        await handler({ name: 'Goblin' });
+
+        expect(npcToMonsterFormat).not.toHaveBeenCalled();
+        expect(getMonsterData).toHaveBeenCalledWith('Goblin');
+    });
+
+    it('should skip npcToMonsterFormat when NPC has no name property', async () => {
+        campaignNpcs = [
+            {
+                armorClass: 15,
+                hitPoints: 7,
+                abilityScores: {},
+            },
+        ];
+        handler = createNpcClickHandler({
+            isLocalhost: true,
+            campaignNpcs,
+            campaignName: 'test-campaign',
+            characters,
+            setViewingMonster,
+            setViewingMonsterCreatureName,
+        });
+        const fallbackMonster = { index: 'goblin', name: 'Goblin' };
+        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
+
+        await handler({ name: 'Goblin' });
+
+        expect(npcToMonsterFormat).not.toHaveBeenCalled();
+        expect(getMonsterData).toHaveBeenCalledWith('Goblin');
+    });
+
+    it('should skip npcToMonsterFormat when creature name is null', async () => {
+        campaignNpcs = [
+            {
+                name: 'Goblin',
+                armorClass: 15,
+                hitPoints: 7,
+                abilityScores: {},
+            },
+        ];
+        handler = createNpcClickHandler({
+            isLocalhost: true,
+            campaignNpcs,
+            campaignName: 'test-campaign',
+            characters,
+            setViewingMonster,
+            setViewingMonsterCreatureName,
+        });
+
+        await handler({ name: null });
+
+        expect(npcToMonsterFormat).not.toHaveBeenCalled();
+        expect(setViewingMonster).not.toHaveBeenCalled();
+    });
+
+    it('should perform case-insensitive NPC name matching', async () => {
         campaignNpcs = [
             {
                 name: 'goblin warrior',
@@ -145,7 +241,8 @@ describe('createNpcClickHandler - NPC stat block path', () => {
 
         await handler({ name: 'GOBLIN WARRIOR' });
 
-        expect(npcToMonsterFormat).toHaveBeenCalled();
+        expect(npcToMonsterFormat).toHaveBeenCalledWith(campaignNpcs[0]);
         expect(setViewingMonster).toHaveBeenCalledWith(formatted);
+        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('GOBLIN WARRIOR');
     });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Initiative from './initiative.jsx';
@@ -109,59 +110,23 @@ vi.mock('../encounter/MonsterCardModal.jsx', () => ({ default: () => <div data-t
 vi.mock('../common/Subscriber.jsx', () => ({ default: () => <div data-testid="subscriber" /> }));
 vi.mock('../common/Popup.jsx', () => ({ default: ({ children, onClickOrKeyDown }) => (<div data-testid="popup-overlay" onClick={onClickOrKeyDown}><div data-testid="popup-modal">{children}</div></div>) }));
 vi.mock('../char-sheet/DiceRollResult.jsx', () => ({ default: ({ name }) => <div data-testid="dice-roll-result">{name}</div> }));
-vi.mock('./CreatureCard.jsx', () => ({ default: ({ creature, isActive, isLocalhost, onHpChange, onInitiativeChange, onTargetChange, onRollConditionSave, onBreakCondition, onOpenEffectAdder, onRollConcentrationSave, onBreakConcentration, onRemoveNpc, onNpcClick, onNameChange, allCreatures, overlays, _campaignNpcs }) => (
+vi.mock('./CreatureCard.jsx', () => ({ default: ({ creature, isActive, isLocalhost, onHpChange, onInitiativeChange, onTargetChange, onRemoveNpc, onNameChange }) => (
     <div data-testid={`creature-card-${creature.name}`} className={`creature-card ${creature.type} ${isActive ? 'active' : ''}`}>
         <span>{creature.name}</span>
-        <input data-testid={`hp-input-${creature.name}`} type="number" value={creature.currentHp ?? 0} onChange={(e) => onHpChange(creature.name, parseInt(e.target.value) || 0)} />
-        <input data-testid={`initiative-input-${creature.name}`} type="number" value={creature.initiative} onChange={(e) => onInitiativeChange(creature.name, e.target.value)} />
-        <select data-testid={`target-select-${creature.name}`} value={creature.targetName || ''} onChange={(e) => onTargetChange(creature.name, e.target.value)}>
+        <input data-testid={`hp-input-${creature.name}`} type="number" value={creature.currentHp ?? 0} onChange={(e) => onHpChange && onHpChange(creature.name, parseInt(e.target.value) || 0)} />
+        <input data-testid={`initiative-input-${creature.name}`} type="number" value={creature.initiative} onChange={(e) => onInitiativeChange && onInitiativeChange(creature.name, e.target.value)} />
+        <select data-testid={`target-select-${creature.name}`} value={creature.targetName || ''} onChange={(e) => onTargetChange && onTargetChange(creature.name, e.target.value)}>
             <option value="">— No Target —</option>
-            {(allCreatures || []).filter(c => c.name !== creature.name).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-            {(overlays || []).length > 0 && <optgroup label="─── Overlays ───">{(overlays || []).map(o => <option key={`overlay-${o.id}`} value={`overlay-${o.id}`}>{o.label || o.shape}</option>)}</optgroup>}
         </select>
-        {(creature.conditions || []).map((cond, i) => (
-            <div key={cond.id || i} data-testid={`condition-${cond.id || i}`}>
-                <button data-testid={`condition-save-${cond.id || i}`} onClick={() => onRollConditionSave(creature.name, cond)} type="button">{cond.label}</button>
-                {isLocalhost && <button data-testid={`condition-break-${cond.id || i}`} onClick={() => onBreakCondition(creature.name, cond)} type="button" title="Automatically break condition">X</button>}
-            </div>
-        ))}
-        {isLocalhost && <button data-testid={`effect-add-${creature.name}`} onClick={() => onOpenEffectAdder(creature, 'conditions')} type="button" title="Add condition, effect, or concentration">Add</button>}
-        {creature.concentration ? (
-            <div data-testid={`concentration-badge-${creature.name}`}>
-                <button data-testid={`concentration-save-${creature.name}`} onClick={() => onRollConcentrationSave(creature.name)} type="button">{creature.concentration.spell}</button>
-                <button data-testid={`concentration-break-${creature.name}`} onClick={() => onBreakConcentration(creature.name)} type="button" title="Break concentration">X</button>
-            </div>
-        ) : null}
         {creature.type !== 'player' && isLocalhost && (
-            <button data-testid={`npc-remove-${creature.name}`} onClick={() => onRemoveNpc(creature.name)} type="button" title="Remove NPC">X</button>
+            <button data-testid={`npc-remove-${creature.name}`} onClick={() => onRemoveNpc && onRemoveNpc(creature.name)} type="button" title="Remove NPC">X</button>
         )}
         {creature.type !== 'player' && (
-            <span data-testid={`npc-click-${creature.name}`} onClick={() => onNpcClick(creature)}>Avatar</span>
-        )}
-        {creature.type !== 'player' && (
-            <input data-testid={`name-change-${creature.name}`} value={creature.name} onChange={(e) => onNameChange(creature.name, e.target.value)} />
+            <input data-testid={`name-change-${creature.name}`} value={creature.name} onChange={(e) => onNameChange && onNameChange(creature.name, e.target.value)} />
         )}
     </div>
 ) }));
-vi.mock('./EffectAdder.jsx', () => ({ default: ({ targetName, initialTab, onCancel, onApply }) => (
-    <div className="ea-overlay" onClick={onCancel}>
-        <div className="ea-modal">
-            <h3>{targetName}</h3>
-            <div className="ea-tabs">
-                <button className={`ea-tab ${initialTab === 'conditions' ? 'ea-tab--active' : ''}`} type="button">Conditions</button>
-                <button className={`ea-tab ${initialTab === 'effects' ? 'ea-tab--active' : ''}`} type="button">Effects</button>
-                <button className={`ea-tab ${initialTab === 'concentration' ? 'ea-tab--active' : ''}`} type="button">Concentration</button>
-            </div>
-            <div className="ea-grid">
-                {['Blinded', 'Charmed', 'Poisoned'].map(c => <button key={c} onClick={() => onApply('conditions', { conditionKey: c.toLowerCase(), dc: 10, ability: 'con' })} type="button">{c}</button>)}
-            </div>
-            <div className="ea-actions">
-                <button onClick={onCancel} type="button">Cancel</button>
-                <button onClick={() => onApply('conditions', { conditionKey: 'blinded', dc: 10, ability: 'con' })} type="button">Apply</button>
-            </div>
-        </div>
-    </div>
-) }));
+vi.mock('./EffectAdder.jsx', () => ({ default: ({ targetName }) => (<div data-testid="effect-adder"><span>{targetName}</span></div>) }));
 
 describe('Initiative - Creature & NPC Handlers', () => {
     let props;
@@ -194,6 +159,7 @@ describe('Initiative - Creature & NPC Handlers', () => {
             });
 
             expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'currentHitPoints', 15, 'test-campaign');
+            expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
         });
 
         it('should reset death saves when player goes from <=0 to >0 HP', async () => {
@@ -203,6 +169,7 @@ describe('Initiative - Creature & NPC Handlers', () => {
                 if (prop === 'activeConditions') return [];
                 if (prop === 'activeBuffs') return [];
                 if (prop === 'deathSaves') return [true, false, false];
+                if (prop === 'deathFailures') return [false, false, false];
                 return null;
             });
             vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', currentHp: 0 }] });
@@ -216,10 +183,56 @@ describe('Initiative - Creature & NPC Handlers', () => {
 
             expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'deathSaves', [false, false, false], 'test-campaign');
             expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'deathFailures', [false, false, false], 'test-campaign');
+            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'isDead', 0, 'test-campaign');
             expect(clearDeathSavePrompt).toHaveBeenCalledWith('test-campaign', 'Alice');
         });
 
-        it('should update NPC HP directly without setRuntimeValue', async () => {
+        it('should NOT reset death saves when player goes from negative to 0 HP', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (prop === 'currentHitPoints') return -5;
+                if (prop === 'hitPoints') return 20;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'deathSaves') return [true, false, false];
+                if (prop === 'deathFailures') return [false, false, false];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', currentHp: -5 }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                const hpInput = screen.getByTestId('hp-input-Alice');
+                fireEvent.change(hpInput, { target: { value: '0' } });
+            });
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'deathSaves', [false, false, false], 'test-campaign');
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'isDead', 0, 'test-campaign');
+            expect(clearDeathSavePrompt).not.toHaveBeenCalled();
+        });
+
+        it('should NOT reset death saves when player goes from positive to negative HP', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 20;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', currentHp: 10 }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                const hpInput = screen.getByTestId('hp-input-Alice');
+                fireEvent.change(hpInput, { target: { value: '-3' } });
+            });
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'deathSaves', expect.any(Array), 'test-campaign');
+            expect(clearDeathSavePrompt).not.toHaveBeenCalled();
+        });
+
+        it('should update NPC HP directly without setRuntimeValue for currentHitPoints', async () => {
             vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Goblin', type: 'npc', currentHp: 10 }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Goblin')).toBeInTheDocument(); });
@@ -229,6 +242,7 @@ describe('Initiative - Creature & NPC Handlers', () => {
                 fireEvent.change(hpInput, { target: { value: '5' } });
             });
 
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'currentHitPoints', expect.any(Number), 'test-campaign');
             expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
         });
 
@@ -244,15 +258,6 @@ describe('Initiative - Creature & NPC Handlers', () => {
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
 
-            vi.clearAllMocks();
-            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
-                if (prop === 'currentHitPoints') return 10;
-                if (prop === 'hitPoints') return 20;
-                if (prop === 'activeConditions') return [];
-                if (prop === 'activeBuffs') return [];
-                return null;
-            });
-
             await act(async () => {
                 const hpInput = screen.getByTestId('hp-input-Alice');
                 fireEvent.change(hpInput, { target: { value: '10' } });
@@ -263,7 +268,7 @@ describe('Initiative - Creature & NPC Handlers', () => {
     });
 
     describe('handleInitiativeChange', () => {
-        it('should call setInitiative when initiative input changes', async () => {
+        it('should call setInitiative with combatSummary, creatureName, and value', async () => {
             vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', initiative: 10 }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
@@ -274,6 +279,7 @@ describe('Initiative - Creature & NPC Handlers', () => {
             });
 
             expect(setInitiative).toHaveBeenCalled();
+            expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
         });
     });
 
@@ -304,6 +310,7 @@ describe('Initiative - Creature & NPC Handlers', () => {
             });
 
             expect(setTarget).toHaveBeenCalled();
+            expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
         });
 
         it('should call setTarget when target is an overlay', async () => {
@@ -317,6 +324,7 @@ describe('Initiative - Creature & NPC Handlers', () => {
             });
 
             expect(setTarget).toHaveBeenCalled();
+            expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
         });
     });
 
@@ -345,6 +353,22 @@ describe('Initiative - Creature & NPC Handlers', () => {
                 fireEvent.click(removeBtn);
             });
 
+            expect(window.confirm).toHaveBeenCalledWith('Goblin has 5 HP. Remove anyway?');
+            expect(removeNpc).not.toHaveBeenCalled();
+        });
+
+        it('should confirm before removing NPC with initiative assigned but 0 HP', async () => {
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Goblin', type: 'npc', currentHp: 0, initiative: '12' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Goblin')).toBeInTheDocument(); });
+
+            window.confirm.mockReturnValue(false);
+            await act(async () => {
+                const removeBtn = screen.getByTestId('npc-remove-Goblin');
+                fireEvent.click(removeBtn);
+            });
+
+            expect(window.confirm).toHaveBeenCalledWith('Goblin has initiative assigned. Remove anyway?');
             expect(removeNpc).not.toHaveBeenCalled();
         });
 
@@ -360,6 +384,7 @@ describe('Initiative - Creature & NPC Handlers', () => {
             });
 
             expect(removeNpc).toHaveBeenCalled();
+            expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
         });
 
         it('should not confirm when NPC has 0 HP and no initiative', async () => {

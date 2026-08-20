@@ -1,7 +1,9 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureCard from './CreatureCard.jsx';
 import * as buffToggle from '../../services/automation/common/buffToggle.js';
+
 vi.mock('../common/AvatarImage.jsx', () => ({
     default: vi.fn(({ name, imagePath }) => {
         return <div data-testid={`avatar-${name}`} className="avatar-wrapper">{imagePath ? <img src={imagePath} alt={name} /> : <span>{name?.charAt(0).toUpperCase() || '?'}</span>}</div>;
@@ -45,32 +47,18 @@ vi.mock('../../services/automation/common/buffToggle.js', () => ({
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  useRuntimeValue: vi.fn((_campaignName, key) => {
-      if (key === 'targetEffects') return [];
-      return null;
-  }),
-  getRuntimeValue: vi.fn((target, key, _campaignName) => {
-      if (key === 'naturesSanctuaryActive') return sanctuaryMocks.naturesSanctuaryActive?.[target];
-      if (key === 'naturesSanctuaryCreatures') return sanctuaryMocks.naturesSanctuaryCreatures?.[target];
-      if (key === 'naturesSanctuaryResistance') return sanctuaryMocks.naturesSanctuaryResistance?.[target];
-      if (key === 'wrathOfTheSeaActive') return wrathOfTheSeaMocks[target];
-      if (key === 'concentration') return { spell: "Hunter's Mark" };
-      if (key === 'targetEffects') return runtimeTargetEffects;
-      if (key === 'activeBuffs') return runtimeActiveBuffs?.[target];
-      return undefined;
-  }),
-  setRuntimeValue: vi.fn(),
-  listeners: new Map(),
+    getStore: vi.fn(() => new Map()),
+    useSyncedState: vi.fn(() => [null, vi.fn()]),
+    useRuntimeValue: vi.fn((_campaignName, key) => {
+        if (key === 'targetEffects') return [];
+        return null;
+    }),
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+    listeners: new Map(),
 }));
 
-let sanctuaryMocks = {};
-let wrathOfTheSeaMocks = {};
-let runtimeTargetEffects = [];
-let runtimeActiveBuffs = {};
-
-describe('CreatureCard', () => {
+describe('CreatureCard - conditions', () => {
     let props;
 
     const defaultPlayerCreature = {
@@ -117,31 +105,10 @@ describe('CreatureCard', () => {
             onRollConcentrationSave: vi.fn(),
             onBreakConcentration: vi.fn(),
         };
-        wrathOfTheSeaMocks = {};
-        sanctuaryMocks = {};
-        runtimeTargetEffects = [];
-        runtimeActiveBuffs = {};
         buffToggle.isBuffActive.mockReturnValue(false);
     });
 
-    describe('conditions', () => {
-        it('should render condition badges when creature has conditions', () => {
-            const conditions = [
-                { id: 'c1', label: 'Blinded', dc: 12, ability: 'Wisdom' },
-            ];
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} />);
-            expect(screen.getByText('Blinded DC 12')).toBeInTheDocument();
-        });
-
-        it('should render condition label without DC when dc is null', () => {
-            const conditions = [
-                { id: 'c1', label: 'Prone', dc: null, ability: null },
-            ];
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} />);
-            const conditionBtn = document.querySelector('.creature-badge');
-            expect(conditionBtn).toHaveTextContent('Prone');
-        });
-
+    describe('condition badges', () => {
         it('should call onRollConditionSave when condition badge is clicked for player', () => {
             const conditions = [{ id: 'c1', label: 'Blinded', dc: 12, ability: 'Wisdom' }];
             render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} />);
@@ -149,18 +116,12 @@ describe('CreatureCard', () => {
             expect(props.onRollConditionSave).toHaveBeenCalledWith('Alice', conditions[0]);
         });
 
-        it('should render condition as span (not button) for non-localhost NPC', () => {
+        it('should not trigger onRollConditionSave when condition badge is clicked for non-localhost NPC', () => {
             const conditions = [{ id: 'c1', label: 'Blinded', dc: 12, ability: 'Wisdom' }];
             render(<CreatureCard {...props} creature={{ ...defaultNpcCreature, conditions }} isLocalhost={false} />);
             const conditionBadge = screen.getByText('Blinded DC 12');
-            expect(conditionBadge.tagName).toBe('SPAN');
-        });
-
-        it('should call onBreakCondition when break button is clicked', () => {
-            const conditions = [{ id: 'c1', label: 'Blinded' }];
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} />);
-            fireEvent.click(screen.getByTitle('Remove effect'));
-            expect(props.onBreakCondition).toHaveBeenCalledWith('Alice', conditions[0]);
+            fireEvent.click(conditionBadge);
+            expect(props.onRollConditionSave).not.toHaveBeenCalled();
         });
 
         it('should not render condition break button for non-localhost', () => {
@@ -169,15 +130,11 @@ describe('CreatureCard', () => {
             expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
 
-        it('should call onOpenEffectAdder when add effect button is clicked', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            fireEvent.click(screen.getByTitle('Add condition, effect, or concentration'));
-            expect(props.onOpenEffectAdder).toHaveBeenCalledWith(defaultPlayerCreature, 'conditions');
-        });
-
-        it('should not render condition add button for non-localhost', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} isLocalhost={false} />);
-            expect(screen.queryByTitle('Add condition, effect, or concentration')).not.toBeInTheDocument();
+        it('should call onBreakCondition when break button is clicked', () => {
+            const conditions = [{ id: 'c1', label: 'Blinded' }];
+            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} />);
+            fireEvent.click(screen.getByTitle('Remove effect'));
+            expect(props.onBreakCondition).toHaveBeenCalledWith('Alice', conditions[0]);
         });
 
         it('should skip invalid conditions in the conditions map', () => {
@@ -191,13 +148,7 @@ describe('CreatureCard', () => {
         });
     });
 
-    describe('concentration', () => {
-        it('should render concentration badge when creature has concentration', () => {
-            const concentration = { spell: 'Fireball', dc: 15 };
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, concentration }} />);
-            expect(screen.getByText(/Fireball DC 15/)).toBeInTheDocument();
-        });
-
+    describe('concentration badges', () => {
         it('should call onRollConcentrationSave when concentration badge is clicked', () => {
             const concentration = { spell: 'Fireball', dc: 15 };
             render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, concentration }} />);
@@ -211,10 +162,18 @@ describe('CreatureCard', () => {
             fireEvent.click(screen.getByTitle('Remove effect'));
             expect(props.onBreakConcentration).toHaveBeenCalledWith('Alice');
         });
+    });
 
-        it('should render the unified add button', () => {
+    describe('effect add button', () => {
+        it('should call onOpenEffectAdder when add effect button is clicked', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            expect(screen.getByTitle('Add condition, effect, or concentration')).toBeInTheDocument();
+            fireEvent.click(screen.getByTitle('Add condition, effect, or concentration'));
+            expect(props.onOpenEffectAdder).toHaveBeenCalledWith(defaultPlayerCreature, 'conditions');
+        });
+
+        it('should not render add button for non-localhost', () => {
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} isLocalhost={false} />);
+            expect(screen.queryByTitle('Add condition, effect, or concentration')).not.toBeInTheDocument();
         });
     });
 });

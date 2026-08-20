@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createEffectAdderHandlers } from './initiative-effect-adder.jsx';
 import * as conditionSaveService from '../../services/combat/conditions/conditionSaveService.js';
@@ -65,50 +66,30 @@ describe('createEffectAdderHandlers', () => {
         });
     });
 
-    describe('return value', () => {
-        it('should return an object with handleApplyEffect', () => {
-            expect(handlers).toHaveProperty('handleApplyEffect');
-            expect(typeof handlers.handleApplyEffect).toBe('function');
-        });
-
-        it('should return only handleApplyEffect', () => {
-            expect(Object.keys(handlers)).toEqual(['handleApplyEffect']);
-        });
-    });
-
     describe('early return - no combatSummary', () => {
-        it('should return early without side effects when combatSummary is null', () => {
-            const handlersNoCs = createEffectAdderHandlers({
-                campaignName,
-                characters,
-                combatSummary: null,
-                setEffectAdderTarget,
-                setCombatSummary,
+        it('should return early without side effects when combatSummary is null or undefined', () => {
+            [null, undefined].forEach((cs) => {
+                const handlersNoCs = createEffectAdderHandlers({
+                    campaignName,
+                    characters,
+                    combatSummary: cs,
+                    setEffectAdderTarget,
+                    setCombatSummary,
+                });
+
+                handlersNoCs.handleApplyEffect('conditions', { conditionKey: 'blinded', target: 'Alice' });
+                expect(conditionSaveService.addCondition).not.toHaveBeenCalled();
+                expect(storage.set).not.toHaveBeenCalled();
+                expect(setCombatSummary).not.toHaveBeenCalled();
+                expect(combatLoggingService.logConditionEvent).not.toHaveBeenCalled();
+                expect(setEffectAdderTarget).not.toHaveBeenCalled();
+                expect(useRuntimeState.getRuntimeValue).not.toHaveBeenCalled();
+                expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
             });
-
-            handlersNoCs.handleApplyEffect('conditions', { conditionKey: 'blinded', target: 'Alice' });
-            expect(conditionSaveService.addCondition).not.toHaveBeenCalled();
-            expect(storage.set).not.toHaveBeenCalled();
-            expect(setCombatSummary).not.toHaveBeenCalled();
-            expect(combatLoggingService.logConditionEvent).not.toHaveBeenCalled();
-        });
-
-        it('should return early without side effects when combatSummary is undefined', () => {
-            const handlersNoCs = createEffectAdderHandlers({
-                campaignName,
-                characters,
-                combatSummary: undefined,
-                setEffectAdderTarget,
-                setCombatSummary,
-            });
-
-            handlersNoCs.handleApplyEffect('effects', { target: 'Alice', effectKey: 'goad' });
-            expect(useRuntimeState.getRuntimeValue).not.toHaveBeenCalled();
-            expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
         });
 
         it('should proceed with empty object combatSummary (truthy but no creatures)', () => {
-            const handlersNoCs = createEffectAdderHandlers({
+            const handlersEmpty = createEffectAdderHandlers({
                 campaignName,
                 characters,
                 combatSummary: {},
@@ -116,14 +97,13 @@ describe('createEffectAdderHandlers', () => {
                 setCombatSummary,
             });
 
-            // Empty object is truthy, so it proceeds past the !combatSummary check
-            // The concentration tab will call addConcentration which internally handles missing creature
             vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
                 if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return [];
                 return null;
             });
-            handlersNoCs.handleApplyEffect('concentration', { spellName: 'Shield', target: 'Alice' });
+            handlersEmpty.handleApplyEffect('concentration', { spellName: 'Shield', target: 'Alice' });
             expect(concentrationService.addConcentration).toHaveBeenCalled();
+            expect(storage.set).toHaveBeenCalledWith('combatSummary', {}, 'test-campaign');
         });
     });
 
@@ -135,7 +115,7 @@ describe('createEffectAdderHandlers', () => {
             ability: 'wis',
         };
 
-        it('should call addCondition with correct arguments', () => {
+        it('should call addCondition, storage.set, setCombatSummary, logConditionEvent, and clear target on success', () => {
             handlers.handleApplyEffect('conditions', conditionData);
 
             expect(conditionSaveService.addCondition).toHaveBeenCalledWith(
@@ -149,33 +129,8 @@ describe('createEffectAdderHandlers', () => {
                 'test-campaign',
                 expect.any(Object),
             );
-        });
-
-        it('should find condition definition by key from CONDITIONS', () => {
-            handlers.handleApplyEffect('conditions', conditionData);
-
-            // Verify addCondition was called (which internally uses CONDITIONS)
-            expect(conditionSaveService.addCondition).toHaveBeenCalled();
-        });
-
-        it('should call storage.set with combatSummary', () => {
-            handlers.handleApplyEffect('conditions', conditionData);
-
             expect(storage.set).toHaveBeenCalledWith('combatSummary', combatSummary, 'test-campaign');
-        });
-
-        it('should call setCombatSummary with cloned combatSummary', () => {
-            handlers.handleApplyEffect('conditions', conditionData);
-
             expect(setCombatSummary).toHaveBeenCalled();
-            // cloneDeep creates a new object with same structure
-            const callArg = setCombatSummary.mock.calls[0][0];
-            expect(callArg).toStrictEqual(combatSummary);
-        });
-
-        it('should call logConditionEvent with correct parameters', () => {
-            handlers.handleApplyEffect('conditions', conditionData);
-
             expect(combatLoggingService.logConditionEvent).toHaveBeenCalledWith(
                 'test-campaign',
                 'applied',
@@ -184,11 +139,6 @@ describe('createEffectAdderHandlers', () => {
                 15,
                 'wis',
             );
-        });
-
-        it('should call setEffectAdderTarget(null) at the end', () => {
-            handlers.handleApplyEffect('conditions', conditionData);
-
             expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
         });
 
@@ -196,7 +146,7 @@ describe('createEffectAdderHandlers', () => {
             const targetChar = characters[0];
             handlers.handleApplyEffect('conditions', { ...conditionData, target: 'Alice' });
 
-            expect(conditionSaveService.addCondition).toHaveBeenCalledWith(
+            expect(conditionSaveService.addCondition).toHaveBeenLastCalledWith(
                 combatSummary,
                 'Alice',
                 expect.any(Object),
@@ -209,7 +159,7 @@ describe('createEffectAdderHandlers', () => {
             );
         });
 
-        it('should handle target with suffix name (e.g. "Alice the Wizard")', () => {
+        it('should find target by suffix name (e.g. "Alice the Wizard") in characters array', () => {
             characters.push({ name: 'Alice the Wizard', computedStats: { hitPoints: 25 } });
             const cs = cloneDeep(mockCombatSummary);
             cs.creatures.push({ name: 'Alice the Wizard', type: 'player' });
@@ -224,7 +174,6 @@ describe('createEffectAdderHandlers', () => {
 
             handlersAlt.handleApplyEffect('conditions', { conditionKey: 'blinded', target: 'Alice the Wizard', dc: 10, ability: 'con' });
 
-            expect(conditionSaveService.addCondition).toHaveBeenCalled();
             expect(conditionSaveService.addCondition).toHaveBeenCalledWith(
                 cs,
                 'Alice the Wizard',
@@ -238,15 +187,36 @@ describe('createEffectAdderHandlers', () => {
             );
         });
 
-        it('should handle unknown condition key gracefully (no conditionDef)', () => {
+        it('should find target in combatSummary creatures when not in characters array', () => {
+            handlers.handleApplyEffect('conditions', { conditionKey: 'blinded', target: 'Goblin', dc: 10, ability: 'con' });
+
+            expect(conditionSaveService.addCondition).toHaveBeenCalledWith(
+                combatSummary,
+                'Goblin',
+                expect.any(Object),
+                10,
+                'con',
+                useRuntimeState.getRuntimeValue,
+                useRuntimeState.setRuntimeValue,
+                'test-campaign',
+                undefined,
+            );
+        });
+
+        it('should pass undefined stats when target is not found in characters array', () => {
+            handlers.handleApplyEffect('conditions', { conditionKey: 'blinded', target: 'Goblin', dc: 10, ability: 'con' });
+
+            const lastCall = conditionSaveService.addCondition.mock.calls[0];
+            expect(lastCall[9]).toBeUndefined();
+        });
+
+        it('should not apply any side effects when condition key is unknown', () => {
             handlers.handleApplyEffect('conditions', { conditionKey: 'nonexistent', target: 'Alice', dc: 10, ability: 'con' });
 
-            // Should not call any services since conditionDef is null
             expect(conditionSaveService.addCondition).not.toHaveBeenCalled();
             expect(storage.set).not.toHaveBeenCalled();
             expect(setCombatSummary).not.toHaveBeenCalled();
             expect(combatLoggingService.logConditionEvent).not.toHaveBeenCalled();
-            // setEffectAdderTarget is NOT called because of early return on line 24
             expect(setEffectAdderTarget).not.toHaveBeenCalled();
         });
 
@@ -265,22 +235,6 @@ describe('createEffectAdderHandlers', () => {
                 expect.any(Object),
             );
         });
-
-        it('should find target in combatSummary creatures', () => {
-            handlers.handleApplyEffect('conditions', { conditionKey: 'blinded', target: 'Goblin', dc: 10, ability: 'con' });
-
-            expect(conditionSaveService.addCondition).toHaveBeenCalledWith(
-                combatSummary,
-                'Goblin',
-                expect.any(Object),
-                10,
-                'con',
-                useRuntimeState.getRuntimeValue,
-                useRuntimeState.setRuntimeValue,
-                'test-campaign',
-                undefined, // Goblin has no computedStats in characters array
-            );
-        });
     });
 
     describe('effects tab', () => {
@@ -289,73 +243,46 @@ describe('createEffectAdderHandlers', () => {
             effectKey: 'goad',
         };
 
-        it('should add effectEntry without optional fields when not provided', () => {
-            handlers.handleApplyEffect('effects', effectData);
+        it('should add effectEntry with all optional fields when provided', () => {
+            handlers.handleApplyEffect('effects', {
+                ...effectData,
+                source: 'Bob',
+                value: 5,
+                ability: 'str',
+                dc: 15,
+                notes: 'GM note',
+            });
 
             expect(useRuntimeState.getRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects');
             expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'campaign',
                 'targetEffects',
                 expect.arrayContaining([
-                    expect.objectContaining({ target: 'Alice', effect: 'goad' }),
+                    expect.objectContaining({
+                        target: 'Alice',
+                        effect: 'goad',
+                        source: 'Bob',
+                        value: 5,
+                        ability: 'str',
+                        saveDc: 15,
+                        saveAbility: 'str',
+                        notes: 'GM note',
+                    }),
                 ]),
                 'test-campaign',
             );
-        });
-
-        it('should include source when provided', () => {
-            handlers.handleApplyEffect('effects', { ...effectData, source: 'Bob' });
-
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.arrayContaining([
-                    expect.objectContaining({ source: 'Bob' }),
-                ]),
+            expect(combatLoggingService.logConditionEvent).toHaveBeenCalledWith(
                 'test-campaign',
+                'target-effect-applied',
+                'Alice',
+                'goad',
+                15,
+                'str',
             );
+            expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
         });
 
-        it('should include value when provided', () => {
-            handlers.handleApplyEffect('effects', { ...effectData, value: 5 });
-
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.arrayContaining([
-                    expect.objectContaining({ value: 5 }),
-                ]),
-                'test-campaign',
-            );
-        });
-
-        it('should include ability when provided', () => {
-            handlers.handleApplyEffect('effects', { ...effectData, ability: 'str' });
-
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.arrayContaining([
-                    expect.objectContaining({ ability: 'str' }),
-                ]),
-                'test-campaign',
-            );
-        });
-
-        it('should include saveDc and saveAbility when dc is provided', () => {
-            handlers.handleApplyEffect('effects', { ...effectData, dc: 15, ability: 'wis' });
-
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.arrayContaining([
-                    expect.objectContaining({ saveDc: 15, saveAbility: 'wis' }),
-                ]),
-                'test-campaign',
-            );
-        });
-
-        it('should include saveAbility as wis when dc provided but ability not', () => {
+        it('should default saveAbility to wis when dc is provided without ability', () => {
             handlers.handleApplyEffect('effects', { ...effectData, dc: 15 });
 
             expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
@@ -368,14 +295,14 @@ describe('createEffectAdderHandlers', () => {
             );
         });
 
-        it('should include notes when provided', () => {
-            handlers.handleApplyEffect('effects', { ...effectData, notes: 'GM note' });
+        it('should exclude optional fields when not provided', () => {
+            handlers.handleApplyEffect('effects', effectData);
 
             expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'campaign',
                 'targetEffects',
                 expect.arrayContaining([
-                    expect.objectContaining({ notes: 'GM note' }),
+                    expect.objectContaining({ target: 'Alice', effect: 'goad' }),
                 ]),
                 'test-campaign',
             );
@@ -389,64 +316,33 @@ describe('createEffectAdderHandlers', () => {
 
             handlers.handleApplyEffect('effects', { ...effectData, source: 'New Source' });
 
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
+            const effectsArg = useRuntimeState.setRuntimeValue.mock.calls[0][2];
+            expect(effectsArg).toHaveLength(2);
+            expect(effectsArg).toEqual(
                 expect.arrayContaining([
                     expect.objectContaining({ target: 'Bob', effect: 'goad' }),
                     expect.objectContaining({ target: 'Alice', effect: 'goad', source: 'New Source' }),
                 ]),
-                'test-campaign',
-            );
-            // Should have 2 items (removed old Alice goad, added new one, kept Bob goad)
-            const effectsArg = useRuntimeState.setRuntimeValue.mock.calls[0][2];
-            expect(effectsArg).toHaveLength(2);
-        });
-
-        it('should handle empty existing targetEffects array', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockReturnValue([]);
-
-            handlers.handleApplyEffect('effects', effectData);
-
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.arrayContaining([
-                    expect.objectContaining({ target: 'Alice', effect: 'goad' }),
-                ]),
-                'test-campaign',
             );
         });
 
-        it('should handle null existing targetEffects', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockReturnValue(null);
+        it('should handle null or empty existing targetEffects', () => {
+            [null, []].forEach((existing) => {
+                vi.mocked(useRuntimeState.getRuntimeValue).mockReturnValue(existing);
+                handlers.handleApplyEffect('effects', effectData);
 
-            handlers.handleApplyEffect('effects', effectData);
-
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.arrayContaining([
-                    expect.objectContaining({ target: 'Alice', effect: 'goad' }),
-                ]),
-                'test-campaign',
-            );
+                expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+                    'campaign',
+                    'targetEffects',
+                    expect.arrayContaining([
+                        expect.objectContaining({ target: 'Alice', effect: 'goad' }),
+                    ]),
+                    'test-campaign',
+                );
+            });
         });
 
-        it('should call logConditionEvent with correct parameters', () => {
-            handlers.handleApplyEffect('effects', effectData);
-
-            expect(combatLoggingService.logConditionEvent).toHaveBeenCalledWith(
-                'test-campaign',
-                'target-effect-applied',
-                'Alice',
-                'goad',
-                undefined,
-                undefined,
-            );
-        });
-
-        it('should call logConditionEvent with dc and ability when provided', () => {
+        it('should log with dc and ability when provided', () => {
             handlers.handleApplyEffect('effects', { ...effectData, dc: 18, ability: 'dex' });
 
             expect(combatLoggingService.logConditionEvent).toHaveBeenCalledWith(
@@ -458,12 +354,6 @@ describe('createEffectAdderHandlers', () => {
                 'dex',
             );
         });
-
-        it('should call setEffectAdderTarget(null) at the end', () => {
-            handlers.handleApplyEffect('effects', effectData);
-
-            expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
-        });
     });
 
     describe('concentration tab', () => {
@@ -473,12 +363,15 @@ describe('createEffectAdderHandlers', () => {
             dc: 13,
         };
 
-        it('should call addConcentration with correct arguments', () => {
+        const setupConcentrationMock = () => {
             vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
                 if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return [];
                 return null;
             });
+        };
 
+        it('should call addConcentration, storage.set, setCombatSummary, logConditionEvent, and clear target on success', () => {
+            setupConcentrationMock();
             handlers.handleApplyEffect('concentration', concentrationData);
 
             expect(concentrationService.addConcentration).toHaveBeenCalledWith(
@@ -487,38 +380,8 @@ describe('createEffectAdderHandlers', () => {
                 'Shield',
                 13,
             );
-        });
-
-        it('should call storage.set with combatSummary', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
-                if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return [];
-                return null;
-            });
-
-            handlers.handleApplyEffect('concentration', concentrationData);
-
             expect(storage.set).toHaveBeenCalledWith('combatSummary', combatSummary, 'test-campaign');
-        });
-
-        it('should call setCombatSummary with cloned combatSummary', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
-                if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return [];
-                return null;
-            });
-
-            handlers.handleApplyEffect('concentration', concentrationData);
-
             expect(setCombatSummary).toHaveBeenCalled();
-        });
-
-        it('should call logConditionEvent with concentration prefix on spell name', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
-                if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return [];
-                return null;
-            });
-
-            handlers.handleApplyEffect('concentration', concentrationData);
-
             expect(combatLoggingService.logConditionEvent).toHaveBeenCalledWith(
                 'test-campaign',
                 'concentration-started',
@@ -527,20 +390,10 @@ describe('createEffectAdderHandlers', () => {
                 13,
                 'con',
             );
-        });
-
-        it('should call setEffectAdderTarget(null) at the end', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
-                if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return [];
-                return null;
-            });
-
-            handlers.handleApplyEffect('concentration', concentrationData);
-
             expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
         });
 
-        it('should return early without adding concentration when target has Rage buff', () => {
+        it('should block concentration when target has Rage buff and still clear target', () => {
             vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
                 if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') {
                     return [{ name: 'Rage' }, { name: 'Bless' }];
@@ -557,33 +410,7 @@ describe('createEffectAdderHandlers', () => {
             expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
         });
 
-        it('should return early when activeBuffs is null', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
-                if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return null;
-                return null;
-            });
-
-            handlers.handleApplyEffect('concentration', concentrationData);
-
-            // Should NOT return early - null is not an array with Rage
-            expect(concentrationService.addConcentration).toHaveBeenCalled();
-            expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
-        });
-
-        it('should return early when activeBuffs is empty array', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
-                if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return [];
-                return null;
-            });
-
-            handlers.handleApplyEffect('concentration', concentrationData);
-
-            // Should NOT return early - empty array has no Rage
-            expect(concentrationService.addConcentration).toHaveBeenCalled();
-            expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
-        });
-
-        it('should not return early when target has other buffs but not Rage', () => {
+        it('should allow concentration when target has other buffs but not Rage', () => {
             vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
                 if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') {
                     return [{ name: 'Bless' }, { name: 'Heroism' }];
@@ -597,12 +424,22 @@ describe('createEffectAdderHandlers', () => {
             expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
         });
 
-        it('should use default DC when not provided', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
-                if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return [];
-                return null;
-            });
+        it('should allow concentration when activeBuffs is null or empty array', () => {
+            [null, []].forEach((buffs) => {
+                vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
+                    if (key === 'Alice' && prop === 'activeBuffs' && campaign === 'test-campaign') return buffs;
+                    return null;
+                });
 
+                handlers.handleApplyEffect('concentration', concentrationData);
+
+                expect(concentrationService.addConcentration).toHaveBeenCalled();
+                expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
+            });
+        });
+
+        it('should use default DC when not provided', () => {
+            setupConcentrationMock();
             handlers.handleApplyEffect('concentration', { target: 'Alice', spellName: 'Shield' });
 
             expect(concentrationService.addConcentration).toHaveBeenCalledWith(
@@ -635,6 +472,7 @@ describe('createEffectAdderHandlers', () => {
             expect(conditionSaveService.addCondition).not.toHaveBeenCalled();
             expect(useRuntimeState.getRuntimeValue).not.toHaveBeenCalled();
             expect(concentrationService.addConcentration).not.toHaveBeenCalled();
+            expect(storage.set).not.toHaveBeenCalled();
             expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
         });
     });

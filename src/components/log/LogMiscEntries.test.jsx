@@ -1,75 +1,20 @@
-import { render, screen, cleanup } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-
-const mockState = vi.hoisted(() => ({ logEntries: [], initialized: true }));
-const mockAddEntry = vi.hoisted(() => vi.fn(async () => {}));
-
-vi.mock('../../hooks/runtime/useLog.js', () => ({
-  default: vi.fn(() => ({
-    logEntries: mockState.logEntries,
-    initialized: mockState.initialized,
-    addEntry: mockAddEntry,
-  })),
-}));
+// @improved-by-ai
+import { screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  rest, automation, saveResult, psionic, summons, spellEffect, buff,
+  q, setup, beforeEachSetup,
+} from './log-test-utils.jsx';
 
 import Log from './Log.jsx';
 
-const CHARS = [{ name: 'Frodo' }, { name: 'Aragorn' }];
-
-const rest = (o = {}) => ({
-  id: 'r', type: 'long_rest', message: 'Full rest | HP restored', timestamp: Date.now(), ...o,
-});
-
-const automation = (o = {}) => ({
-  id: 'a', type: 'automation', creatureName: 'Orc', name: 'Melee Attack',
-  description: 'Orc attacks with longsword', timestamp: Date.now(), ...o,
-});
-
-const saveResult = (o = {}) => ({
-  id: 'sr', type: 'save_result', characterName: 'Frodo', targetName: 'Orc',
-  saveType: 'wisdom', saveDc: 13, success: true, timestamp: Date.now(), ...o,
-});
-
-const psionic = (o = {}) => ({
-  id: 'ps', type: 'psionic_sorcery', characterName: 'Sorcerer',
-  spellName: 'Burning Hands', sorceryPointsSpent: 1, spellLevel: 1,
-  note: '', timestamp: Date.now(), ...o,
-});
-
-const summons = (o = {}) => ({
-  id: 'su', type: 'summons', characterName: 'Wizard',
-  summonName: 'Small Spider', description: '', summonedCreatures: [],
-  duration: '1 hour', timestamp: Date.now(), ...o,
-});
-
-const spellEffect = (o = {}) => ({
-  id: 'se', type: 'spell_effect', characterName: 'Cleric',
-  spellName: 'Bless', targetName: 'Party', effects: ['Roll d4 on attack rolls'],
-  timestamp: Date.now(), ...o,
-});
-
-const buff = (o = {}) => ({
-  id: 'b', type: 'buff', characterName: 'Frodo', buffName: 'Blessing',
-  reason: 'Cleric cast bless', action: 'added', timestamp: Date.now(), ...o,
-});
-
-function setup(entries, initialized, characters) {
-  mockState.logEntries.length = 0;
-  if (entries) mockState.logEntries.push(...entries);
-  mockState.initialized = initialized ?? true;
-  return render(<Log campaignName="test-campaign" characters={characters ?? CHARS} />);
-}
-
 describe('RestEntry - long and short rest', () => {
   beforeEach(() => {
-    cleanup();
-    mockState.logEntries.length = 0;
-    mockState.initialized = true;
-    mockAddEntry.mockClear();
+    beforeEachSetup();
   });
 
   it('renders long rest with moon icon and correct classes', () => {
-    setup([rest({
+    setup(Log, [rest({
       type: 'long_rest',
       message: 'Full rest | HP restored',
     })]);
@@ -80,7 +25,7 @@ describe('RestEntry - long and short rest', () => {
   });
 
   it('renders short rest with bed icon and correct classes', () => {
-    setup([rest({
+    setup(Log, [rest({
       type: 'short_rest',
       message: 'Short rest | Minor recovery',
     })]);
@@ -90,8 +35,33 @@ describe('RestEntry - long and short rest', () => {
     expect(q('.log-rest-details')).toHaveTextContent(/Short rest/i);
   });
 
+  it('uses first segment before pipe as character name display', () => {
+    setup(Log, [rest({
+      type: 'long_rest',
+      message: 'Frodo | HP restored',
+    })]);
+    expect(q('.log-character')).toHaveTextContent(/Frodo/i);
+  });
+
+  it('uses first segment before period-space as character name display', () => {
+    setup(Log, [rest({
+      type: 'long_rest',
+      message: 'Frodo. Rested well.',
+    })]);
+    expect(q('.log-character')).toHaveTextContent(/Frodo/i);
+  });
+
+  it('falls back to full message when no pipe or period-space separator', () => {
+    setup(Log, [rest({
+      type: 'long_rest',
+      message: 'Full rest | HP restored',
+    })]);
+    // When message has pipe, character is the part before pipe
+    expect(q('.log-character')).toHaveTextContent(/Full rest/i);
+  });
+
   it('handles missing message gracefully', () => {
-    setup([rest({
+    setup(Log, [rest({
       message: '',
     })]);
     expect(q('.log-rest')).toBeInTheDocument();
@@ -101,14 +71,11 @@ describe('RestEntry - long and short rest', () => {
 
 describe('AutomationEntry', () => {
   beforeEach(() => {
-    cleanup();
-    mockState.logEntries.length = 0;
-    mockState.initialized = true;
-    mockAddEntry.mockClear();
+    beforeEachSetup();
   });
 
   it('renders creatureName, name, and description', () => {
-    setup([automation({
+    setup(Log, [automation({
       creatureName: 'Orc',
       name: 'Melee Attack',
       description: 'Orc attacks with longsword',
@@ -121,7 +88,7 @@ describe('AutomationEntry', () => {
   });
 
   it('falls back to characterName when creatureName missing', () => {
-    setup([automation({
+    setup(Log, [automation({
       creatureName: null,
       characterName: 'Goblin',
       name: 'Hit',
@@ -130,7 +97,7 @@ describe('AutomationEntry', () => {
   });
 
   it('falls back to "Automation" when both missing', () => {
-    setup([automation({
+    setup(Log, [automation({
       creatureName: null,
       characterName: null,
       name: null,
@@ -139,8 +106,16 @@ describe('AutomationEntry', () => {
     expect(q('.log-name')).toHaveTextContent(/Automation/i);
   });
 
+  it('falls back to automationType when name is missing', () => {
+    setup(Log, [automation({
+      name: null,
+      automationType: 'Passive Defense',
+    })]);
+    expect(q('.log-name')).toHaveTextContent(/Passive Defense/i);
+  });
+
   it('hides description when not present', () => {
-    setup([automation({
+    setup(Log, [automation({
       description: '',
     })]);
     expect(q('.log-automation-details')).toBeInTheDocument();
@@ -150,14 +125,11 @@ describe('AutomationEntry', () => {
 
 describe('SaveResultEntry', () => {
   beforeEach(() => {
-    cleanup();
-    mockState.logEntries.length = 0;
-    mockState.initialized = true;
-    mockAddEntry.mockClear();
+    beforeEachSetup();
   });
 
   it('renders save type, DC, success/failure, and description', () => {
-    setup([saveResult({
+    setup(Log, [saveResult({
       saveType: 'wisdom',
       saveDc: 15,
       success: true,
@@ -171,7 +143,7 @@ describe('SaveResultEntry', () => {
   });
 
   it('shows failure state', () => {
-    setup([saveResult({
+    setup(Log, [saveResult({
       saveType: 'strength',
       saveDc: 12,
       success: false,
@@ -181,23 +153,29 @@ describe('SaveResultEntry', () => {
   });
 
   it('hides description when not present', () => {
-    setup([saveResult({
+    setup(Log, [saveResult({
       description: '',
     })]);
     expect(q('.log-save-result-description')).not.toBeInTheDocument();
+  });
+
+  it('renders character name and target name in header', () => {
+    setup(Log, [saveResult({
+      characterName: 'Frodo',
+      targetName: 'Orc',
+    })]);
+    expect(q('.log-character')).toHaveTextContent(/Frodo/i);
+    expect(q('.log-name')).toHaveTextContent(/Saving Throw — Orc/i);
   });
 });
 
 describe('PsionicSorceryEntry', () => {
   beforeEach(() => {
-    cleanup();
-    mockState.logEntries.length = 0;
-    mockState.initialized = true;
-    mockAddEntry.mockClear();
+    beforeEachSetup();
   });
 
   it('renders spell name, sorcery points, spell level, and note', () => {
-    setup([psionic({
+    setup(Log, [psionic({
       spellName: 'Burning Hands',
       sorceryPointsSpent: 2,
       spellLevel: 2,
@@ -212,23 +190,27 @@ describe('PsionicSorceryEntry', () => {
   });
 
   it('hides note when empty', () => {
-    setup([psionic({
+    setup(Log, [psionic({
       note: '',
     })]);
     expect(q('.log-psionic-note')).not.toBeInTheDocument();
+  });
+
+  it('renders character name in header', () => {
+    setup(Log, [psionic({
+      characterName: 'Sorcerer',
+    })]);
+    expect(q('.log-character')).toHaveTextContent(/Sorcerer/i);
   });
 });
 
 describe('SummonsEntry', () => {
   beforeEach(() => {
-    cleanup();
-    mockState.logEntries.length = 0;
-    mockState.initialized = true;
-    mockAddEntry.mockClear();
+    beforeEachSetup();
   });
 
   it('renders summon name, description, creatures list, and duration', () => {
-    setup([summons({
+    setup(Log, [summons({
       summonName: 'Small Spider',
       description: '<p>A spider appears</p>',
       summonedCreatures: ['Small Spider x2'],
@@ -245,25 +227,36 @@ describe('SummonsEntry', () => {
   });
 
   it('hides creatures and duration when not present', () => {
-    setup([summons({
+    setup(Log, [summons({
       summonedCreatures: [],
       duration: '',
     })]);
     expect(q('.log-summons-creatures')).not.toBeInTheDocument();
     expect(q('.log-summons-duration')).not.toBeInTheDocument();
   });
+
+  it('renders character name in header', () => {
+    setup(Log, [summons({
+      characterName: 'Wizard',
+    })]);
+    expect(q('.log-character')).toHaveTextContent(/Wizard/i);
+  });
+
+  it('renders multiple creatures separated by comma', () => {
+    setup(Log, [summons({
+      summonedCreatures: ['Wolf', 'Bear', 'Eagle'],
+    })]);
+    expect(q('.log-summons-creatures')).toHaveTextContent(/Wolf, Bear, Eagle/i);
+  });
 });
 
 describe('SpellEffectEntry', () => {
   beforeEach(() => {
-    cleanup();
-    mockState.logEntries.length = 0;
-    mockState.initialized = true;
-    mockAddEntry.mockClear();
+    beforeEachSetup();
   });
 
   it('renders spell name, target, effects list, and medical icon', () => {
-    setup([spellEffect({
+    setup(Log, [spellEffect({
       spellName: 'Bless',
       targetName: 'Party',
       effects: ['Roll d4 on attack rolls', 'Roll d4 on saving throws'],
@@ -277,30 +270,34 @@ describe('SpellEffectEntry', () => {
   });
 
   it('hides effects when empty', () => {
-    setup([spellEffect({
+    setup(Log, [spellEffect({
       effects: [],
     })]);
     expect(q('.log-effects-list')).not.toBeInTheDocument();
   });
 
   it('hides target when not present', () => {
-    setup([spellEffect({
+    setup(Log, [spellEffect({
       targetName: '',
     })]);
     expect(screen.queryByText(/→ /i)).not.toBeInTheDocument();
+  });
+
+  it('renders character name in header', () => {
+    setup(Log, [spellEffect({
+      characterName: 'Cleric',
+    })]);
+    expect(q('.log-character')).toHaveTextContent(/Cleric/i);
   });
 });
 
 describe('BuffEntry - added and removed', () => {
   beforeEach(() => {
-    cleanup();
-    mockState.logEntries.length = 0;
-    mockState.initialized = true;
-    mockAddEntry.mockClear();
+    beforeEachSetup();
   });
 
   it('renders added buff with heart icon', () => {
-    setup([buff({
+    setup(Log, [buff({
       buffName: 'Blessing',
       reason: 'Cleric cast bless',
       action: 'added',
@@ -313,7 +310,7 @@ describe('BuffEntry - added and removed', () => {
   });
 
   it('renders removed buff with heart-crack icon', () => {
-    setup([buff({
+    setup(Log, [buff({
       buffName: 'Blessing',
       reason: 'Duration expired',
       action: 'removed',
@@ -324,14 +321,18 @@ describe('BuffEntry - added and removed', () => {
   });
 
   it('hides reason when not present', () => {
-    setup([buff({
+    setup(Log, [buff({
       reason: '',
     })]);
     expect(screen.queryByText(/— /i)).not.toBeInTheDocument();
   });
-});
 
-// Q helper
-function q(sel) {
-  return document.querySelector(sel);
-}
+  it('renders character name and buff name in header', () => {
+    setup(Log, [buff({
+      characterName: 'Frodo',
+      buffName: 'Blessing',
+    })]);
+    expect(q('.log-character')).toHaveTextContent(/Frodo/i);
+    expect(q('.log-buff-name')).toHaveTextContent(/Blessing/i);
+  });
+});

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
@@ -15,47 +16,28 @@ describe('createNpcClickHandler - Fallback to getMonsterData', () => {
     let setViewingMonster;
     let setViewingMonsterCreatureName;
     let campaignNpcs;
-    let characters;
 
     beforeEach(() => {
         vi.clearAllMocks();
         setViewingMonster = vi.fn();
         setViewingMonsterCreatureName = vi.fn();
         campaignNpcs = [];
-        characters = [
-            {
-                name: 'DruidAlice',
-                computedStats: {
-                    hitPoints: 20,
-                    currentHitPoints: 20,
-                    armorClass: 15,
-                    abilities: [
-                        { name: 'Intelligence', score: 16 },
-                        { name: 'Wisdom', score: 14 },
-                        { name: 'Charisma', score: 12 },
-                    ],
-                    languages: ['Common', 'Elvish'],
-                    class: { major: { name: 'Circle of the Moon' } },
-                },
-            },
-        ];
         handler = createNpcClickHandler({
             isLocalhost: true,
             campaignNpcs,
             campaignName: 'test-campaign',
-            characters,
+            characters: [],
             setViewingMonster,
             setViewingMonsterCreatureName,
         });
     });
 
-    it('should call getMonsterData when no runtime creature matches', async () => {
+    it('should call getMonsterData when runtime creature has no transformation data', async () => {
         const combatSummary = {
             creatures: [
                 {
                     name: 'UnknownCreature',
                     type: 'npc',
-                    // no wildShapeSource, polymorphSource, shapechangeSource, or monsterIndex
                 },
             ],
         };
@@ -70,7 +52,7 @@ describe('createNpcClickHandler - Fallback to getMonsterData', () => {
         expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('UnknownCreature');
     });
 
-    it('should do nothing when getMonsterData returns null', async () => {
+    it('should not set viewing monster when getMonsterData returns null', async () => {
         const combatSummary = {
             creatures: [
                 {
@@ -86,5 +68,17 @@ describe('createNpcClickHandler - Fallback to getMonsterData', () => {
 
         expect(setViewingMonster).not.toHaveBeenCalled();
         expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
+    });
+
+    it('should call getMonsterData and set viewing monster when combatSummary has no creatures', async () => {
+        vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
+        const fallbackMonster = { index: 'goblin', name: 'Goblin' };
+        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
+
+        await handler({ name: 'Goblin' });
+
+        expect(getMonsterData).toHaveBeenCalledWith('Goblin');
+        expect(setViewingMonster).toHaveBeenCalledWith(fallbackMonster);
+        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('Goblin');
     });
 });

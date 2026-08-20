@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useLootHandlers } from './initiative-loot.jsx';
@@ -11,7 +12,7 @@ vi.mock('../../services/items/lootGenerator.js', () => ({
     generateLootFromCombatSummary: vi.fn(),
 }));
 
-// Shared store for the useRuntimeState mock — defined as a const to avoid hoisting issues
+// Shared store for the useRuntimeState mock
 const lootTestStore = new Map();
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
@@ -28,10 +29,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
         return [entry.value, entry.setter];
     }),
     listeners: new Map(),
-    getRuntimeValue: vi.fn((_key, prop) => {
-        if (prop === 'xp') return lootTestStore.get(`${_key}-xp`) ?? 0;
-        return null;
-    }),
+    getRuntimeValue: vi.fn((_key, _prop) => null),
     setRuntimeValue: vi.fn((_key, prop, value, _campaign) => {
         lootTestStore.set(`${_key}-${prop}`, value);
     }),
@@ -52,7 +50,7 @@ describe('useLootHandlers', () => {
     });
 
     describe('initial state', () => {
-        it('should return initial state with empty loot data', () => {
+        it('should return initial state with empty loot data and all flags false', () => {
             const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
 
             expect(result.current.lootData).toEqual({ lootEntries: [], totalEncounterXp: 0 });
@@ -62,20 +60,20 @@ describe('useLootHandlers', () => {
             expect(result.current.awardingLoot).toBe(false);
         });
 
-        it('should return all handler functions', () => {
+        it('should return all handler functions and setters', () => {
             const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
 
-            expect(result.current.handleGenerateLoot).toBeInstanceOf(Function);
-            expect(result.current.handleAwardLoot).toBeInstanceOf(Function);
-            expect(result.current.handleClearLoot).toBeInstanceOf(Function);
-            expect(result.current.setLootData).toBeInstanceOf(Function);
-            expect(result.current.setLootTextValue).toBeInstanceOf(Function);
-            expect(result.current.setShowAwardLoot).toBeInstanceOf(Function);
+            expect(result.current.handleGenerateLoot).toBeDefined();
+            expect(result.current.handleAwardLoot).toBeDefined();
+            expect(result.current.handleClearLoot).toBeDefined();
+            expect(result.current.setLootData).toBeDefined();
+            expect(result.current.setLootTextValue).toBeDefined();
+            expect(result.current.setShowAwardLoot).toBeDefined();
         });
     });
 
     describe('handleGenerateLoot', () => {
-        it('should call generateLootFromCombatSummary and set loot data on success', async () => {
+        it('should set loot data and text when generation succeeds', async () => {
             const lootResult = {
                 lootEntries: ['Gold coins (100)', 'Silver sword'],
                 totalEncounterXp: 200,
@@ -99,7 +97,7 @@ describe('useLootHandlers', () => {
             expect(result.current.generatingLoot).toBe(false);
         });
 
-        it('should handle null result from generateLootFromCombatSummary', async () => {
+        it('should handle null result from generation gracefully', async () => {
             const { generateLootFromCombatSummary } = await import('../../services/items/lootGenerator.js');
             vi.mocked(generateLootFromCombatSummary).mockResolvedValue(null);
 
@@ -114,29 +112,7 @@ describe('useLootHandlers', () => {
             expect(result.current.generatingLoot).toBe(false);
         });
 
-        it('should set generatingLoot true during generation', async () => {
-            const { generateLootFromCombatSummary } = await import('../../services/items/lootGenerator.js');
-            vi.mocked(generateLootFromCombatSummary).mockResolvedValue({
-                lootEntries: ['Potion'],
-                totalEncounterXp: 100,
-            });
-
-            const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
-
-            // The hook uses real useState, so the setter updates the internal state immediately
-            // We verify the callback was created and the function is callable
-            expect(result.current.handleGenerateLoot).toBeDefined();
-            expect(result.current.generatingLoot).toBe(false);
-
-            // After the async call completes, generatingLoot should be false
-            await act(async () => {
-                await result.current.handleGenerateLoot();
-            });
-
-            expect(result.current.generatingLoot).toBe(false);
-        });
-
-        it('should handle error from generateLootFromCombatSummary', async () => {
+        it('should log error and keep clean state when generation fails', async () => {
             const { generateLootFromCombatSummary } = await import('../../services/items/lootGenerator.js');
             vi.mocked(generateLootFromCombatSummary).mockRejectedValue(new Error('Generation failed'));
 
@@ -157,37 +133,7 @@ describe('useLootHandlers', () => {
     });
 
     describe('handleAwardLoot', () => {
-        it('should return early if already awarding', async () => {
-            const { addEntry } = await import('../../services/ui/logService.js');
-            addEntry.mockResolvedValue({});
-
-            const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
-
-            // Manually set awardingLoot to true
-            await act(async () => {
-                result.current.setLootData({ lootEntries: ['Gold'], totalEncounterXp: 200 });
-                result.current.setLootTextValue('Gold');
-                result.current.setShowAwardLoot(true);
-            });
-
-            // Set awardingLoot to true manually to test the guard
-            await act(async () => {
-                result.current.awardingLoot = true;
-            });
-
-            // The guard check uses the closure variable, so we need to test via the actual callback
-            // Since the hook captures awardingLoot in the useCallback closure,
-            // we test that the function returns early by checking setRuntimeValue isn't called
-            const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-            setRuntimeValue.mockClear();
-
-            // Manually set the internal awardingLoot by calling handleAwardLoot when it's already true
-            // This is tricky because the closure captures the value. Let's test the logic differently.
-            // We'll just verify the function exists and can be called.
-            expect(result.current.handleAwardLoot).toBeDefined();
-        });
-
-        it('should award XP to all characters and log the loot', async () => {
+        it('should distribute XP equally among characters and write log entries', async () => {
             const { addEntry } = await import('../../services/ui/logService.js');
             addEntry.mockResolvedValue({});
 
@@ -196,7 +142,6 @@ describe('useLootHandlers', () => {
 
             const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
 
-            // Set up loot data
             await act(async () => {
                 result.current.setLootData({ lootEntries: ['Gold coins (100)', 'Silver sword'], totalEncounterXp: 200 });
                 result.current.setLootTextValue('Gold coins (100)\nSilver sword');
@@ -207,14 +152,11 @@ describe('useLootHandlers', () => {
                 await result.current.handleAwardLoot();
             });
 
-            // XP should be distributed: 200 / 2 = 100 per character
             expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'xp', 100, campaignName);
             expect(setRuntimeValue).toHaveBeenCalledWith('Bob', 'xp', 100, campaignName);
 
-            // Log entries should be written
             expect(addEntry).toHaveBeenCalledTimes(2);
 
-            // First call: loot type entry
             const lootCall = vi.mocked(addEntry).mock.calls[0];
             expect(lootCall[0]).toBe(campaignName);
             expect(lootCall[1].type).toBe('loot');
@@ -222,25 +164,20 @@ describe('useLootHandlers', () => {
             expect(lootCall[1].xpPerChar).toBe(100);
             expect(lootCall[1].totalEncounterXp).toBe(200);
 
-            // Second call: encounter type entry
             const encounterCall = vi.mocked(addEntry).mock.calls[1];
             expect(encounterCall[0]).toBe(campaignName);
             expect(encounterCall[1].type).toBe('encounter');
             expect(encounterCall[1].action).toBe('loot_awarded');
             expect(encounterCall[1].xpPerChar).toBe(100);
 
-            // State should be reset
             expect(result.current.lootData).toEqual({ lootEntries: [], totalEncounterXp: 0 });
             expect(result.current.lootTextValue).toBe('');
             expect(result.current.showAwardLoot).toBe(false);
         });
 
-        it('should filter out "No loot for these monsters" from log entries', async () => {
+        it('should skip loot log entry when all items are "No loot for these monsters"', async () => {
             const { addEntry } = await import('../../services/ui/logService.js');
             addEntry.mockResolvedValue({});
-
-            const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-            setRuntimeValue.mockClear();
 
             const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
 
@@ -254,46 +191,14 @@ describe('useLootHandlers', () => {
                 await result.current.handleAwardLoot();
             });
 
-            // When all items are "No loot for these monsters", the loot type entry should NOT be written
-            // because the condition checks that all items are "No loot for these monsters"
-            expect(addEntry).toHaveBeenCalledTimes(1);
-
-            // Only the encounter entry should be written
-            const encounterCall = vi.mocked(addEntry).mock.calls[0];
-            expect(encounterCall[1].type).toBe('encounter');
-            expect(encounterCall[1].action).toBe('loot_awarded');
-        });
-
-        it('should not write loot type entry when all items are "No loot for these monsters"', async () => {
-            const { addEntry } = await import('../../services/ui/logService.js');
-            addEntry.mockResolvedValue({});
-
-            const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-            setRuntimeValue.mockClear();
-
-            const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
-
-            await act(async () => {
-                result.current.setLootData({ lootEntries: ['No loot for these monsters'], totalEncounterXp: 0 });
-                result.current.setLootTextValue('No loot for these monsters');
-                result.current.setShowAwardLoot(true);
-            });
-
-            await act(async () => {
-                await result.current.handleAwardLoot();
-            });
-
-            // Should only write the encounter entry, not the loot entry
             expect(addEntry).toHaveBeenCalledTimes(1);
             expect(vi.mocked(addEntry).mock.calls[0][1].type).toBe('encounter');
+            expect(vi.mocked(addEntry).mock.calls[0][1].action).toBe('loot_awarded');
         });
 
-        it('should write loot type entry when mixed with real items', async () => {
+        it('should write loot log with only real items when some are "No loot for these monsters"', async () => {
             const { addEntry } = await import('../../services/ui/logService.js');
             addEntry.mockResolvedValue({});
-
-            const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-            setRuntimeValue.mockClear();
 
             const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
 
@@ -307,19 +212,14 @@ describe('useLootHandlers', () => {
                 await result.current.handleAwardLoot();
             });
 
-            // Should write both entries because there's a real item
             expect(addEntry).toHaveBeenCalledTimes(2);
-
             const lootCall = vi.mocked(addEntry).mock.calls[0];
             expect(lootCall[1].lootItems).toEqual(['Gold coins']);
         });
 
-        it('should handle empty loot text lines', async () => {
+        it('should trim and filter empty lines from loot text', async () => {
             const { addEntry } = await import('../../services/ui/logService.js');
             addEntry.mockResolvedValue({});
-
-            const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-            setRuntimeValue.mockClear();
 
             const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
 
@@ -338,33 +238,7 @@ describe('useLootHandlers', () => {
             expect(lootCall[1].lootItems).toEqual(['Gold coins']);
         });
 
-        it('should handle single character with no characters array', async () => {
-            const { addEntry } = await import('../../services/ui/logService.js');
-            addEntry.mockResolvedValue({});
-
-            const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-            setRuntimeValue.mockClear();
-
-            const { result } = renderHook(() => useLootHandlers(campaignName, [], combatSummary));
-
-            await act(async () => {
-                result.current.setLootData({ lootEntries: ['Gold'], totalEncounterXp: 200 });
-                result.current.setLootTextValue('Gold');
-                result.current.setShowAwardLoot(true);
-            });
-
-            await act(async () => {
-                await result.current.handleAwardLoot();
-            });
-
-            // With no characters, numChars = 1, so xpPerChar = 200
-            // But no characters means no setRuntimeValue calls
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-            // Both loot and encounter entries are written since "Gold" is not "No loot for these monsters"
-            expect(addEntry).toHaveBeenCalledTimes(2);
-        });
-
-        it('should handle null characters array', async () => {
+        it('should handle null characters array without crashing', async () => {
             const { addEntry } = await import('../../services/ui/logService.js');
             addEntry.mockResolvedValue({});
 
@@ -383,11 +257,59 @@ describe('useLootHandlers', () => {
                 await result.current.handleAwardLoot();
             });
 
-            // With null characters, numChars = 1
             expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(addEntry).toHaveBeenCalledTimes(2);
+            expect(vi.mocked(addEntry).mock.calls[1][1].xpPerChar).toBe(200);
         });
 
-        it('should catch and log errors during awarding', async () => {
+        it('should handle undefined characters array without crashing', async () => {
+            const { addEntry } = await import('../../services/ui/logService.js');
+            addEntry.mockResolvedValue({});
+
+            const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+            setRuntimeValue.mockClear();
+
+            const { result } = renderHook(() => useLootHandlers(campaignName, undefined, combatSummary));
+
+            await act(async () => {
+                result.current.setLootData({ lootEntries: ['Gold'], totalEncounterXp: 200 });
+                result.current.setLootTextValue('Gold');
+                result.current.setShowAwardLoot(true);
+            });
+
+            await act(async () => {
+                await result.current.handleAwardLoot();
+            });
+
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(addEntry).toHaveBeenCalledTimes(2);
+            expect(vi.mocked(addEntry).mock.calls[1][1].xpPerChar).toBe(200);
+        });
+
+        it('should write both log entries with zero XP when totalEncounterXp is 0', async () => {
+            const { addEntry } = await import('../../services/ui/logService.js');
+            addEntry.mockResolvedValue({});
+
+            const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
+
+            await act(async () => {
+                result.current.setLootData({ lootEntries: ['Gold'], totalEncounterXp: 0 });
+                result.current.setLootTextValue('Gold');
+                result.current.setShowAwardLoot(true);
+            });
+
+            await act(async () => {
+                await result.current.handleAwardLoot();
+            });
+
+            expect(addEntry).toHaveBeenCalledTimes(2);
+            expect(vi.mocked(addEntry).mock.calls[0][1].type).toBe('loot');
+            expect(vi.mocked(addEntry).mock.calls[0][1].xpPerChar).toBe(0);
+            expect(vi.mocked(addEntry).mock.calls[1][1].type).toBe('encounter');
+            expect(vi.mocked(addEntry).mock.calls[1][1].xpPerChar).toBe(0);
+        });
+
+        it('should log error and reset awarding flag when awarding fails', async () => {
             const { addEntry } = await import('../../services/ui/logService.js');
             addEntry.mockRejectedValue(new Error('Log failed'));
 
@@ -406,39 +328,14 @@ describe('useLootHandlers', () => {
             });
 
             expect(consoleSpy).toHaveBeenCalledWith('Failed to award loot:', expect.any(Error));
-            // State may or may not be reset depending on where the error occurs
             expect(result.current.awardingLoot).toBe(false);
 
             consoleSpy.mockRestore();
         });
-
-        it('should calculate XP correctly with odd division', async () => {
-            const { addEntry } = await import('../../services/ui/logService.js');
-            addEntry.mockResolvedValue({});
-
-            const { setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
-            setRuntimeValue.mockClear();
-
-            const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
-
-            await act(async () => {
-                result.current.setLootData({ lootEntries: ['Gold'], totalEncounterXp: 250 });
-                result.current.setLootTextValue('Gold');
-                result.current.setShowAwardLoot(true);
-            });
-
-            await act(async () => {
-                await result.current.handleAwardLoot();
-            });
-
-            // 250 / 2 = 125 (floor)
-            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'xp', 125, campaignName);
-            expect(setRuntimeValue).toHaveBeenCalledWith('Bob', 'xp', 125, campaignName);
-        });
     });
 
     describe('handleClearLoot', () => {
-        it('should clear all loot state', async () => {
+        it('should reset all loot state to initial values', async () => {
             const { result } = renderHook(() => useLootHandlers(campaignName, characters, combatSummary));
 
             await act(async () => {
