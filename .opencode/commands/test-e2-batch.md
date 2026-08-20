@@ -119,6 +119,8 @@ You must not load any other automations.
      - 1 bonus action
      - 1 reaction
      - unlimited special actions
+   - Keep players at <=4 and NPC at <=4 for any test
+   - Use short timeouts whenever running tests 
 
 6. Playwright workflow:
    - Start dev server (`npm run dev`)

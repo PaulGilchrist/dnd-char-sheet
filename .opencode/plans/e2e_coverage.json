@@ -27,7 +27,10 @@
     "type": "classes",
     "name": "Unarmored Defense",
     "sourceType": "passive_rule",
-    "tested": false
+    "tested": true,
+    "testStatus": "passing",
+    "testDate": "2026-08-20",
+    "testFile": "tests/e2e/classes/unarmored-defense.spec.js"
   },
   {
     "id": 3,
@@ -35,7 +38,10 @@
     "type": "classes",
     "name": "Weapon Mastery",
     "sourceType": "weapon_kind_mastery",
-    "tested": false
+    "tested": true,
+    "testStatus": "passing",
+    "testDate": "2026-08-20",
+    "testFile": "tests/e2e/classes/weapon-mastery.spec.js"
   },
   {
     "id": 4,
@@ -43,7 +49,10 @@
     "type": "classes",
     "name": "Danger Sense",
     "sourceType": "conditional_advantage",
-    "tested": false
+    "tested": true,
+    "testStatus": "passing",
+    "testDate": "2026-08-20",
+    "testFile": "tests/e2e/classes/danger-sense.spec.js"
   },
   {
     "id": 5,
@@ -4307,6 +4316,182 @@
     "type": "spells",
     "name": "Web",
     "sourceType": "unknown",
+    "tested": false
+  },
+  {
+    "id": 538,
+    "file": "weapon-mastery.json",
+    "type": "weapon_mastery",
+    "name": "Cleave",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 539,
+    "file": "weapon-mastery.json",
+    "type": "weapon_mastery",
+    "name": "Graze",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 540,
+    "file": "weapon-mastery.json",
+    "type": "weapon_mastery",
+    "name": "Nick",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 541,
+    "file": "weapon-mastery.json",
+    "type": "weapon_mastery",
+    "name": "Push",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 542,
+    "file": "weapon-mastery.json",
+    "type": "weapon_mastery",
+    "name": "Sap",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 543,
+    "file": "weapon-mastery.json",
+    "type": "weapon_mastery",
+    "name": "Slow",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 544,
+    "file": "weapon-mastery.json",
+    "type": "weapon_mastery",
+    "name": "Topple",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 545,
+    "file": "weapon-mastery.json",
+    "type": "weapon_mastery",
+    "name": "Vex",
+    "sourceType": "weapon_kind_mastery",
+    "tested": false
+  },
+  {
+    "id": 546,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Defense",
+    "sourceType": "fighting_style",
+    "tested": false
+  },
+  {
+    "id": 547,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Great Weapon Fighting",
+    "sourceType": "fighting_style",
+    "tested": false
+  },
+  {
+    "id": 548,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Interception",
+    "sourceType": "fighting_style",
+    "tested": false
+  },
+  {
+    "id": 549,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Shield Master",
+    "sourceType": "fighting_style",
+    "tested": false
+  },
+  {
+    "id": 550,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Two Weapon Fighting",
+    "sourceType": "fighting_style",
+    "tested": false
+  },
+  {
+    "id": 551,
+    "file": "feats.json",
+    "type": "feats",
+    "name": "Unarmed Fighting",
+    "sourceType": "fighting_style",
+    "tested": false
+  },
+  {
+    "id": 552,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Careful Spell",
+    "sourceType": "metamagic",
+    "tested": false
+  },
+  {
+    "id": 553,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Distant Spell",
+    "sourceType": "metamagic",
+    "tested": false
+  },
+  {
+    "id": 554,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Empowered Spell",
+    "sourceType": "metamagic",
+    "tested": false
+  },
+  {
+    "id": 555,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Extended Spell",
+    "sourceType": "metamagic",
+    "tested": false
+  },
+  {
+    "id": 556,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Heightened Spell",
+    "sourceType": "metamagic",
+    "tested": false
+  },
+  {
+    "id": 557,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Quickened Spell",
+    "sourceType": "metamagic",
+    "tested": false
+  },
+  {
+    "id": 558,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Subtle Spell",
+    "sourceType": "metamagic",
+    "tested": false
+  },
+  {
+    "id": 559,
+    "file": "classes.json",
+    "type": "classes",
+    "name": "Twinned Spell",
+    "sourceType": "metamagic",
     "tested": false
   }
 ]
